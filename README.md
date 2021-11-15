@@ -1,6 +1,6 @@
 # SceneView is a 3D/AR Android View with ARCore and Google Filament integrated
 
-## This is the coming next replacement of Sceneform Maintained only accessible to contributors and sponsors for now
+## This is the coming next replacement of Sceneform Maintained only accessible to contributors and sponsors for now here: https://github.com/ThomasGorisse/sceneview-android
 
 ## Features
 
