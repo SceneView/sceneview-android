@@ -18,14 +18,14 @@
 
 *app/build.gradle*
 ```gradle
-repositories {
-    // ...
-    mavenCentral()
-}
-
 dependencies {
     // 3D Only
     implementation 'io.github.sceneview:sceneview:0.2.0'
+}
+```
+
+```gradle
+dependencies {
     // AR + 3D
     implementation 'io.github.sceneview:arsceneview:0.2.0'
 }
@@ -33,6 +33,13 @@ dependencies {
 
 ## Usage
 
+*res/layout/main_fragment.xml*
+```xml
+<io.github.sceneview.ar.ArSceneView
+    android:id="@+id/sceneView"
+    android:layout_width="0dp"
+    android:layout_height="0dp" />
+```
 
 ## Migration from Sceneform
 
