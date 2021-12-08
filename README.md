@@ -36,7 +36,7 @@ dependencies {
 *res/layout/main_fragment.xml*
 ```xml
 // 3D Only
-<io.github.sceneview.ar.SceneView
+<io.github.sceneview.SceneView
     android:id="@+id/sceneView"
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
