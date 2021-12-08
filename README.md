@@ -1,65 +1,40 @@
-# SceneView is a 3D/AR Android View with ARCore and Google Filament integrated
+# SceneView is a 3D/AR Android View with ARCore and Google Filament
 
-## This is the coming next replacement of Sceneform Maintained only accessible to contributors and sponsors for now here: https://github.com/ThomasGorisse/sceneview-android
+## This is the Sceneform replacement
 
 ## Features
 
 - Use SceneView for 3D only or ArSceneView for ARCore + 3D
 - Everything is accessible at the SceneView/ArSceneview level = No more `ArFragment`, no more `sceneFragment.sceneview.scene`, `sceneFragment.session.config`,...
 - Just add the `<ArSceneView>` to your layout or create an `ArSceneview(context)`. *Compose coming next*
-- Camera Permission and ARCore install/update are handled automaticly by the view
-- Latest ARCore features (the coming next will be integrated quicker thanks to Kotlin). *DepthHit and InstantPlacement very soon*
+- Camera Permission and ARCore install/update are handled automatically by the view
+- Latest ARCore features (the coming next will be integrated quicker thanks to Kotlin)
 - Lifecycle aware components = Increased memory cleanup and performances
-- LifecycleScope for ressource loading in coroutines = Started on view created and cancelled on destroy.
-- Mutliple instances is now possible
-
+- LifecycleScope for resource loading in coroutines = Started on view created and cancelled on destroy
+- Multiple instances is now possible
+- Much easier to use. Example: localPosition, worldPosition,...localRotation, worldScale are now directly accessible with a unique property (no more local/world Vector3) `positionX`,...,`rotationY`,...`scale = 0.5`,...)
 
 ## Dependency
 
-### Create an access token for downloading the dependency
-From GitHub: [Settings / Developer settings / Personal access tokens / Generate new token](https://github.com/settings/tokens/new)
-![image](https://user-images.githubusercontent.com/6597529/137579930-037007f5-2f08-48b0-98d2-aae0d859dea8.png)
-- Note = `GitHub Packages - Read`
-- Expiration = `no expiration` (It's only for reading package and you can delete at anytime)
-
-
-- Select scope = `read:packages`
-
-![image](https://user-images.githubusercontent.com/6597529/137579847-6a7acadb-c4dd-4d6a-9712-02dd29532502.png)
-
-- Generate token
-
-![image](https://user-images.githubusercontent.com/6597529/137580809-48fc0d68-f885-4aa5-99f3-b4ae919ab291.png)
-
-- Copy the access token
-
-### Gradle dependency
-
-- *build.gradle*
+*app/build.gradle*
 ```gradle
-allprojects {
-    repositories {
-        ...
-        maven {
-            name = "SceneView"
-            url = uri("https://maven.pkg.github.com/thomasgorisse/sceneview")
-            credentials {
-                username = "YOUR_GITHUB_USERNAME_HERE"
-                password = "PASTE_THE_GITHUB_ACCESS_TOKEN_HERE"
-            }
-        }
-    }
+repositories {
+    // ...
+    mavenCentral()
 }
-```
 
-- *app/build.gradle*
-```gradle
 dependencies {
-     implementation "com.gorisse.thomas:sceneview:1.0.0"
+    // 3D Only
+    implementation 'io.github.sceneview:scene-view:0.2.0'
+    // AR + 3D
+    implementation 'io.github.sceneview:arscene-view:0.2.0'
 }
 ```
 
-## Migration
+## Usage
+
+
+## Migration from Sceneform
 
 Sorry guys you will have a little work to do if coming from the ArFragment way.
 
@@ -79,9 +54,9 @@ Set the `sceneView.onException` lambda property for overriding default permissio
 #### Instructions controller is replaced by `sceneView.instructions`
 Contains a main `infoNode: Node?` which can be one of `searchPlaneInfoNode`, `tapArPlaneInfoNode` and `augmentedImageInfoNode` or your custom one.
 
-By default, thoses nodes are made of `ViewRenderable` with a `TextView` or `ImageView` that displays ARCore infos:
+By default, those nodes are made of `ViewRenderable` with a `TextView` or `ImageView` that displays ARCore infos:
 
-- "Searching Plane", "Not enougth light",..."Tap on plane to add object."
+- "Searching Plane", "Not enough light",..."Tap on plane to add object."
 > Personal note for later: when access to the flash light is finally available with an ARCore shared CameraManager, it will be great to add an enable flash button in here when ArCore returns to less light.
 
 - `tapArPlaneInfoNode` is a centered DepthNode. Which means it follows the orientation of the center ARHitTest and guide user for taping on a plane.

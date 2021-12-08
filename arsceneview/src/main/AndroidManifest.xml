@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.sceneview.ar">
+
+    <!-- Always needed for AR. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application>
+        <!-- Indicates that this app requires Google Play Services for AR ("AR Required") and causes
+        the Google Play Store to download and intall Google Play Services for AR along with the app.
+        For an "AR Optional" app, specify "optional" instead of "required". -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="optional" />
+    </application>
+</manifest>

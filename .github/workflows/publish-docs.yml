@@ -1,0 +1,33 @@
+name: Publish Dokka docs
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Dokka docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          distribution: adopt
+          java-version: 11
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Generate Dokka HTML docs
+        run: ./gradlew dokkaHtml
+      - name: Deploy to GitHub pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          external_repository: SceneView/sceneview.github.io
+          publish_branch: main
+          publish_dir: ./sceneview/build/dokka/html
+          destination_dir: doc/sceneview-android
+          full_commit_message: Dokka docs - sceneview-android
+          enable_jekyll: true

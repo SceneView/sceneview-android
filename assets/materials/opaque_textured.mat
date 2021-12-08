@@ -1,0 +1,37 @@
+material {
+    "name" : "Opaque Textured",
+
+    "parameters" : [
+        {
+           "type" : "sampler2d",
+           "name" : "texture"
+        },
+        {
+           "type" : "float",
+           "name" : "metallic"
+        },
+        {
+            "type" : "float",
+            "name" : "roughness"
+        },
+        {
+            "type" : "float",
+            "name" : "reflectance"
+        }
+    ],
+    "requires" : [
+        "position",
+        "uv0"
+    ],
+    "shadingModel" : "lit",
+    "blending" : "opaque"
+}
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_texture, getUV0());
+        material.metallic = materialParams.metallic;
+        material.roughness = materialParams.roughness;
+        material.reflectance = materialParams.reflectance;
+    }
+}

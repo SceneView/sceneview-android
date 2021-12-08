@@ -1,0 +1,24 @@
+material {
+    name : "Face Mesh",
+
+    parameters : [
+        {
+           type : sampler2d,
+           name : texture
+        }
+    ],
+
+    requires : [
+        uv0
+    ],
+
+    shadingModel : unlit,
+    blending : transparent
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_texture, getUV0());
+    }
+}

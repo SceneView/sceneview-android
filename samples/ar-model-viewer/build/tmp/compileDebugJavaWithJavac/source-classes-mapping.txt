@@ -1,0 +1,2 @@
+com/gorisse/thomas/sceneview/sample/ardepthnode/BuildConfig.java
+ com.gorisse.thomas.sceneview.sample.ardepthnode.BuildConfig
