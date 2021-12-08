@@ -25,9 +25,9 @@ repositories {
 
 dependencies {
     // 3D Only
-    implementation 'io.github.sceneview:scene-view:0.2.0'
+    implementation 'io.github.sceneview:sceneview:0.2.0'
     // AR + 3D
-    implementation 'io.github.sceneview:arscene-view:0.2.0'
+    implementation 'io.github.sceneview:arsceneview:0.2.0'
 }
 ```
 
