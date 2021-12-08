@@ -37,8 +37,8 @@ dependencies {
 ```xml
 <io.github.sceneview.ar.ArSceneView
     android:id="@+id/sceneView"
-    android:layout_width="0dp"
-    android:layout_height="0dp" />
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
 ```
 
 ## Migration from Sceneform
