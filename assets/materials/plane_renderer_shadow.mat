@@ -1,0 +1,24 @@
+material {
+    name : "AR Core Plane Shadow Material",
+    shadingModel : unlit,
+    blending : transparent,
+    shadowMultiplier : true
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        float3 pos = getPosition().xyz;
+
+        // Shift the verticies upwards so we don't z-fight with the plane material.
+        pos.y = 0.005f;
+        material.worldPosition = mulMat4x4Float3(getWorldFromModelMatrix(), pos);
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        material.baseColor = float4(0.0f, 0.0f, 0.0f, .6f);
+    }
+}

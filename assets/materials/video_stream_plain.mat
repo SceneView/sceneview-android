@@ -1,0 +1,23 @@
+material {
+    name : "Video Material",
+    parameters : [
+        {
+            // The texture displaying the frames of the video.
+            type : samplerExternal,
+            name : videoTexture
+        }
+    ],
+    requires : [ uv0 ],
+    shadingModel : unlit,
+    doubleSided : true,
+    blending : opaque
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        vec4 color = texture(materialParams_videoTexture, getUV0()).rgba;
+        material.baseColor.a = color.a;
+        material.baseColor.rgb = inverseTonemapSRGB(color.rgb);
+    }
+}

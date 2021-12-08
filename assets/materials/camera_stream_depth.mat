@@ -1,0 +1,45 @@
+material {
+    name : depth,
+    shadingModel : unlit,
+    blending : opaque,
+    culling : none,
+    vertexDomain : device,
+    parameters : [
+        {
+            type : samplerExternal,
+            name : cameraTexture
+        },
+        {
+            type : sampler2d,
+            name : depthTexture
+        },
+        {
+            type : float4x4,
+            name : uvTransform
+        }
+    ],
+    requires : [
+        uv0
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = inverseTonemapSRGB(texture(materialParams_cameraTexture, getUV0()).rgb);
+        vec2 packed_depth = texture(materialParams_depthTexture, getUV0()).xy;
+        float depth_mm = dot(packed_depth, vec2(255.f, 256.f * 255.f));
+        vec4 view = mulMat4x4Float3(getClipFromViewMatrix(), vec3(0.f, 0.f, (-depth_mm / 1000.f)));
+        float ndc_depth = view.z / view.w;
+        gl_FragDepth = ndc_depth;
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.uv0 = mulMat4x4Float3(materialParams.uvTransform, vec3(material.uv0.x, material.uv0.y, 0.f)).xy;
+        vec4 clip = getPosition();
+        clip.z = 0.9999f;
+        material.worldPosition = mulMat4x4Float3(getWorldFromClipMatrix(), clip.xyz);
+    }
+} 

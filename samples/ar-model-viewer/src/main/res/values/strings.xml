@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AR Depth Node</string>
+    <string name="place_object">Place object</string>
+    <string name="move_object">Move object</string>
+    <string name="instant_placement">Instant Placement</string>
+    <string name="depth_placement">Depth Placement</string>
+</resources>

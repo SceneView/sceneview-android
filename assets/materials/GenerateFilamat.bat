@@ -1,0 +1,1 @@
+for /R %%G in (*.mat) do matc --optimize-size --platform=mobile -o "%%~nG.filamat" "%%G"

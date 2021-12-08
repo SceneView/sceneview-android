@@ -1,0 +1,7 @@
+material {
+    name : "Face Mesh Occluder",
+
+    shadingModel : unlit,
+    colorWrite : false,
+    depthWrite : true
+}

@@ -1,0 +1,37 @@
+material {
+    name : flat,
+    vertexDomain : device,
+    shadingModel : unlit,
+    blending : opaque,
+    culling : none,
+    parameters : [
+        {
+            type : samplerExternal,
+            name : cameraTexture
+        },
+        {
+            type : float4x4,
+            name : uvTransform
+        }
+    ],
+    requires : [
+        uv0
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = inverseTonemapSRGB(texture(materialParams_cameraTexture, getUV0()).rgb);
+        material.baseColor.a = 1.f;
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.uv0 = mulMat4x4Float3(materialParams.uvTransform, vec3(material.uv0.x, material.uv0.y, 0.f)).xy;
+        vec4 clip = getPosition();
+        clip.z = 0.9999f;
+        material.worldPosition = mulMat4x4Float3(getWorldFromClipMatrix(), clip.xyz);
+    }
+} 

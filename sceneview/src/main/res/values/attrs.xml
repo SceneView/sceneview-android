@@ -1,0 +1,5 @@
+<resources>
+    <declare-styleable name="SceneView">
+        <attr name="model" format="reference|string" />
+    </declare-styleable>
+</resources>

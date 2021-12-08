@@ -1,0 +1,47 @@
+material {
+    name : "ChromaKey Video Material",
+    parameters : [
+        {
+            // The texture displaying the frames of the video.
+            type : samplerExternal,
+            name : videoTexture
+        },
+        {
+            // The color to filter out of the video.
+            type : float4,
+            name : keyColor
+        }
+    ],
+    requires : [ uv0 ],
+    shadingModel : unlit,
+    doubleSided : true,
+    blending : masked
+}
+
+fragment {
+    vec3 desaturate(vec3 color, float amount) {
+        // Convert color to grayscale using Luma formula:
+        // https://en.wikipedia.org/wiki/Luma_%28video%29
+        vec3 gray = vec3(dot(vec3(0.2126, 0.7152, 0.0722), color));
+
+        return vec3(mix(color, gray, amount));
+    }
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        vec2 uv = getUV0();
+        if (!gl_FrontFacing) {
+          uv.x = 1.0 - uv.x;
+        }
+        vec4 color = texture(materialParams_videoTexture, uv).rgba;
+        vec3 keyColor = materialParams.keyColor.rgb;
+        float threshold = 0.675;
+        float slope = 0.2;
+        float distance = abs(length(abs(keyColor - color.rgb)));
+        float edge0 = threshold * (1.0 - slope);
+        float alpha = smoothstep(edge0, threshold, distance);
+        color.rgb = desaturate(color.rgb, 1.0 - (alpha * alpha * alpha));
+        material.baseColor.a = alpha;
+        material.baseColor.rgb = inverseTonemapSRGB(color.rgb);
+        material.baseColor.rgb *= material.baseColor.a;
+    }
+}

@@ -1,0 +1,72 @@
+material {
+    name : "AR Core Plane Material",
+
+    "parameters": [
+        {
+            "type": "sampler2d",
+            "name": "texture"
+        },
+        {
+            "type": "float3",
+            "name": "color"
+        },
+        {
+            "type": "float2",
+            "name": "uvScale"
+        },
+        {
+            "type": "float3",
+            "name": "focusPoint"
+        },
+        {
+            "type": "float",
+            "name": "radius"
+        }
+    ],
+    "variables" : [
+        "texCoordsAlpha"
+    ],
+    "requires" : [
+        "position"
+    ],
+    shadingModel : unlit,
+    "blending": "transparent"
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        float3 pos = getPosition().xyz;
+
+        // The Y position of the vertex represents the Alpha of the plane at this Vertex.
+        material.texCoordsAlpha.z = pos.y;
+
+        // Zero out the Y vertex and compute the world position.
+        pos.y = 0.0;
+        material.worldPosition = mulMat4x4Float3(getWorldFromModelMatrix(), pos);
+
+        // Compute the texture coordinates.
+        // The X axis of the texture corresponds to the local X axis of the plane.
+        // The Y axis of the texture corresponds to the local Z axis of the plane.
+        // Scale the texture coordinates by the scale parameter passed into the material.
+        material.texCoordsAlpha.x = pos.x * materialParams.uvScale.x;
+        material.texCoordsAlpha.y = pos.z * materialParams.uvScale.y;
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        material.baseColor = texture(materialParams_texture, variable_texCoordsAlpha.xy);
+        material.baseColor.rgb *= materialParams.color;
+        float textureAlpha = material.baseColor.a;
+
+        // Create a spotlight effect around the focus point.
+        float distToFocus = distance(getWorldPosition() + getWorldOffset(), materialParams.focusPoint);
+        float alpha = 1.0 - smoothstep(materialParams.radius * 0.5, materialParams.radius, distToFocus);
+
+        // Transparent blending uses pre-multiplied alpha,
+        // so multiply the entire baseColor by the alpha for this fragment.
+        material.baseColor *= variable_texCoordsAlpha.z * alpha;
+    }
+}

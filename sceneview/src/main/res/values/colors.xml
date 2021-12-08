@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sceneview">#FF7818a0</color>
+    <color name="translucent">#3F000000</color>
+</resources>
