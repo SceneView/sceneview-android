@@ -3,7 +3,7 @@
     package="com.gorisse.thomas.sceneview.sample.arcursorplacement">
 
     <application
-        android:icon="@mipmap/ic_sceneview_launcher"
+        android:icon="@mipmap/sceneview_ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.SceneViewSample">
         <activity
