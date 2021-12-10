@@ -38,10 +38,10 @@ import io.github.sceneview.node.NodeParent
 import io.github.sceneview.utils.DefaultLifecycle
 import java.util.concurrent.TimeUnit
 
-const val defaultMaxFramesPerSeconds = 60
-const val defaultNodeSelectorModel = "sceneview/models/node_selector.glb"
-const val defaultIblLocation = "sceneview/environments/default_ibl.ktx"
-const val defaultSkyboxLocation = "sceneview/environments/default_skybox.ktx"
+const val defaultMaxFPS = 60
+const val defaultNodeSelector = "sceneview/models/node_selector.glb"
+const val defaultIbl = "sceneview/environments/default_ibl.ktx"
+const val defaultSkybox = "sceneview/environments/default_skybox.ktx"
 
 /**
  * ### A SurfaceView that manages rendering and interactions with the 3D scene.
@@ -136,7 +136,7 @@ open class SceneView @JvmOverloads constructor(
     }
 
     var frameRate = FrameRate.FULL
-    var maxFramesPerSeconds = defaultMaxFramesPerSeconds
+    var maxFramesPerSeconds = defaultMaxFPS
 
     /**
      * ### Defines the lighting environment and the skybox of the scene
@@ -188,20 +188,21 @@ open class SceneView @JvmOverloads constructor(
             mainLight = LightManager.Builder(LightManager.Type.SUN)
                 .intensity(defaultMainLightIntensity)
                 .castShadows(true).build()
-            environment = KTXLoader.loadEnvironment(context, defaultIblLocation)
+            environment = KTXLoader.loadEnvironment(context, defaultIbl)
             nodeSelectorModel = ModelRenderable.builder()
-                .setSource(context, Uri.parse(defaultNodeSelectorModel))
+                .setSource(context, Uri.parse(defaultNodeSelector))
                 .setIsFilamentGltf(true)
                 .await().apply {
                     collisionShape = null
                     BuildConfig.VERSION_NAME
                 }
 
-            context.obtainStyledAttributes(attrs, R.styleable.SceneView, defStyleAttr, defStyleRes).use { typedArray ->
-                if (typedArray.hasValue(R.styleable.SceneView_model)) {
+            context.obtainStyledAttributes(attrs, R.styleable.SceneView, defStyleAttr, defStyleRes)
+                .use { typedArray ->
+                    if (typedArray.hasValue(R.styleable.SceneView_model)) {
 
+                    }
                 }
-            }
         }
     }
 
@@ -294,7 +295,7 @@ open class SceneView @JvmOverloads constructor(
     override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
         // This makes sure that the view's onTouchListener is called.
         if (!super.onTouchEvent(motionEvent)) {
-            onTouch(pickHitTest(motionEvent, selectableNodesOnly = true), motionEvent)
+            onTouchEvent(pickHitTest(motionEvent, selectableNodesOnly = true), motionEvent)
             return true
         }
         return true
@@ -366,16 +367,25 @@ open class SceneView @JvmOverloads constructor(
      * @param pickHitResult: represents the node that was touched
      * @param motionEvent   the motion event
      */
-    open fun onTouch(pickHitResult: PickHitResult, motionEvent: MotionEvent) {
-        if (onTouch?.invoke(pickHitResult, motionEvent) != true) {
+    open fun onTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent) {
+        if (onTouchEvent?.invoke(pickHitResult, motionEvent) != true) {
             nodesTouchEventDispatcher.onTouchEvent(pickHitResult, motionEvent)
             nodeGestureRecognizer.onTouch(pickHitResult, motionEvent)
             surfaceGestureDetector.onTouchEvent(pickHitResult, motionEvent)
         }
     }
 
-    open fun onTap(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
-        return onTap?.invoke(selectedNode, motionEvent) ?: false
+    open fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
+        return onTouch?.invoke(selectedNode, motionEvent) ?: false
+    }
+
+    override fun setOnClickListener(listener: OnClickListener?) {
+        onTouch = listener?.let {
+            { _, _ ->
+                it.onClick(this)
+                true
+            }
+        }
     }
 
     /**
@@ -385,7 +395,7 @@ open class SceneView @JvmOverloads constructor(
      * Node selection, gestures recognizer and surface gesture recognizer won't be updated if you
      * return true.
      *
-     * **Have a look at [onTap] or other gestures listeners**
+     * **Have a look at [onTouch] or other gestures listeners**
      *
      * Called even if the touch is not over a node, in which case [PickHitResult.getNode]
      * will be null.
@@ -394,7 +404,7 @@ open class SceneView @JvmOverloads constructor(
      * - `motionEvent` - the motion event
      * - `return` true if the listener has consumed the event
      */
-    var onTouch: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
+    var onTouchEvent: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
 
     /**
      * ### Register a callback to be invoked on the surface singleTap
@@ -404,7 +414,7 @@ open class SceneView @JvmOverloads constructor(
      * - `selectedNode` - The node that was hit by the hit test. Null when there is no hit
      * - `motionEvent` - The original [MotionEvent]
      */
-    var onTap: ((selectedNode: Node?, motionEvent: MotionEvent) -> Boolean)? = null
+    var onTouch: ((selectedNode: Node?, motionEvent: MotionEvent) -> Boolean)? = null
 
     inner class SurfaceGestureDetector : GestureDetector(context, OnGestureListener()) {
         lateinit var pickHitResult: PickHitResult
@@ -418,7 +428,7 @@ open class SceneView @JvmOverloads constructor(
     inner class OnGestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(motionEvent: MotionEvent): Boolean {
             val hitTestResult = surfaceGestureDetector.pickHitResult
-            onTap(hitTestResult.node, motionEvent)
+            onTouch(hitTestResult.node, motionEvent)
             return true
         }
 

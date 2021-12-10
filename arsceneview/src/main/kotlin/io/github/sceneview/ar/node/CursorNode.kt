@@ -45,7 +45,7 @@ open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope?
     }
 
     open fun applyColor() {
-        renderableInstance?.material?.setEmissiveColor(r = color.r, g = color.g, b = color.b)
+        renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(r = color.r, g = color.g, b = color.b)
     }
 
     override fun onArFrameHitResult(hitResult: HitResult?, isTracking: Boolean) {
@@ -60,10 +60,10 @@ open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope?
 
     override fun createAnchor(): Anchor? {
         lifecycleScope?.launchWhenCreated {
-            renderableInstance?.material?.setEmissiveColor(r = 0.0f, g = 0.0f, b = 0.0f)
+            renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(r = 0.0f, g = 0.0f, b = 0.0f)
             withContext(Dispatchers.IO) {
                 delay(clickDuration)
-                renderableInstance?.material?.setEmissiveColor(r = 1.0f, g = 1.0f, b = 1.0f)
+                renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(r = 1.0f, g = 1.0f, b = 1.0f)
             }
         }
         return super.createAnchor()

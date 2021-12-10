@@ -104,7 +104,6 @@ open class ArSceneView @JvmOverloads constructor(
     val instructions = Instructions(this, lifecycle)
 
     init {
-        renderer
     }
 
     override fun onArSessionCreated(session: ArSession) {
@@ -254,15 +253,15 @@ open class ArSceneView @JvmOverloads constructor(
         }
     }
 
-    override fun onTap(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
-        if (!super.onTap(selectedNode, motionEvent) &&
+    override fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
+        if (!super.onTouch(selectedNode, motionEvent) &&
             selectedNode == null
         ) {
             // TODO : Should be handled by the nodesTouchEventDispatcher
             nodeGestureRecognizer.selectNode(null)
             session?.let { session ->
                 session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
-                    onTapAr(hitResult, motionEvent)
+                    onTouchAr(hitResult, motionEvent)
                     return true
                 }
             }
@@ -291,8 +290,8 @@ open class ArSceneView @JvmOverloads constructor(
      * - plane: The ARCore Plane that was tapped
      * - motionEvent: the motion event that triggered the tap
      */
-    protected open fun onTapAr(hitResult: HitResult, motionEvent: MotionEvent) {
-        onTapAr?.invoke(hitResult, motionEvent)
+    protected open fun onTouchAr(hitResult: HitResult, motionEvent: MotionEvent) {
+        onTouchAr?.invoke(hitResult, motionEvent)
     }
 
     /**
@@ -321,7 +320,7 @@ open class ArSceneView @JvmOverloads constructor(
      * - hitResult: The ARCore hit result that occurred when tapping the plane
      * - motionEvent: the motion event that triggered the tap
      */
-    var onTapAr: ((hitResult: HitResult, motionEvent: MotionEvent) -> Unit)? =
+    var onTouchAr: ((hitResult: HitResult, motionEvent: MotionEvent) -> Unit)? =
         null
 
     /**
@@ -372,7 +371,7 @@ open class ArSceneView @JvmOverloads constructor(
                     .setIsFilamentGltf(true)
                     .await()
                 onLoaded?.invoke(model!!)
-                onTapAr = { hitResult, _ ->
+                onTouchAr = { hitResult, _ ->
                     addChild(ArNode(hitResult).apply {
                         // Create the transformable model and add it to the anchor
                         val modelNode = TransformableNode(nodeGestureRecognizer)
