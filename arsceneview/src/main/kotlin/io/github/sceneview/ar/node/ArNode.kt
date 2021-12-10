@@ -18,7 +18,7 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.rotation
-import io.github.sceneview.defaultMaxFramesPerSeconds
+import io.github.sceneview.defaultMaxFPS
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
@@ -301,7 +301,7 @@ open class ArNode(
     private val smouthLerpFactor: Float
         get() = MathHelper.clamp(
             (1.0f / (sceneView?.maxFramesPerSeconds
-                ?: defaultMaxFramesPerSeconds) * smoothMoveSpeedFactor),
+                ?: defaultMaxFPS) * smoothMoveSpeedFactor),
             0f,
             1f
         )

@@ -1,6 +1,7 @@
 package io.github.sceneview
 
 import com.google.android.filament.EntityManager
+import com.google.android.filament.Filament
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.ResourceLoader
 import com.google.android.filament.gltfio.UbershaderLoader
@@ -8,9 +9,14 @@ import com.google.android.filament.utils.Float3
 import com.google.android.filament.utils.Float4
 import com.google.ar.sceneform.rendering.EngineInstance
 import io.github.sceneview.environment.IBLPrefilter
+import io.github.sceneview.material.MaterialLoader
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
 object Filament {
+
+    init {
+        Filament.init()
+    }
 
     @JvmStatic
     val engine = EngineInstance.getEngine().filamentEngine
@@ -33,6 +39,11 @@ object Filament {
     val lightManager get() = engine.lightManager
 
     val iblPrefilter by lazy { IBLPrefilter(engine) }
+
+    fun destroy() {
+        //TODO : Add every Filament destroys
+        MaterialLoader.destroy()
+    }
 }
 
 fun Float4.toFloatArray() = this.let { (x, y, z, w) -> floatArrayOf(x, y, z, w) }
