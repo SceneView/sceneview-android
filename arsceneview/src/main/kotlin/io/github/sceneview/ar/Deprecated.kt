@@ -46,10 +46,10 @@ open class BaseArFragment {
     )
     fun setOnSessionConfigurationListener(any: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.onTapAr] */
+    /** ## Deprecated: Use [ArSceneView.onTouchAr] */
     @Deprecated(
-        "Use ArSceneView.onTapAr",
-        replaceWith = ReplaceWith(expression = "arSceneView.onTapAr = { hitResult, _ -> }")
+        "Use ArSceneView.onTouchAr",
+        replaceWith = ReplaceWith(expression = "arSceneView.onTouchAr = { hitResult, _ -> }")
     )
     fun setOnTapArPlaneListener(listener: Any?) = null
 

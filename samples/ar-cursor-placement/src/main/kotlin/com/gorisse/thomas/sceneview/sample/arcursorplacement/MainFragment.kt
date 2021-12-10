@@ -7,6 +7,7 @@ import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.ar.core.Anchor
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.CursorNode
@@ -32,6 +33,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         super.onViewCreated(view, savedInstanceState)
 
         sceneView = view.findViewById(R.id.sceneView)
+        sceneView.onTouchAr = { hitResult, _ ->
+            anchorOrMove(hitResult.createAnchor())
+        }
         loadingView = view.findViewById(R.id.loadingView)
         actionButton = view.findViewById<ExtendedFloatingActionButton>(R.id.actionButton).apply {
             val bottomMargin = (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
@@ -39,7 +43,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
                     systemBarsInsets.bottom + bottomMargin
             }
-            setOnClickListener(::actionButtonClicked)
+            setOnClickListener { cursorNode.createAnchor()?.let { anchorOrMove(it) } }
         }
 
         cursorNode = CursorNode(context = requireContext(), coroutineScope = lifecycleScope)
@@ -51,9 +55,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         sceneView.addChild(cursorNode)
     }
 
-    fun actionButtonClicked(view: View? = null) {
+    fun anchorOrMove(anchor: Anchor) {
         if (modelNode == null) {
-            modelNode = cursorNode.createAnchoredNode()?.apply {
+            modelNode = ArNode(anchor).apply {
                 isLoading = true
                 setModel(
                     context = requireContext(),
@@ -68,7 +72,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 sceneView.addChild(this)
             }
         } else {
-            modelNode!!.anchor = cursorNode.createAnchor()
+            modelNode!!.anchor = anchor
         }
     }
 }
