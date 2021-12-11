@@ -86,14 +86,15 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
                 // Do a hittest on the current frame. The result is used to calculate
                 // a focusPoint and to render the top most plane Trackable if
                 // planeRendererMode is set to RENDER_TOP_MOST.
-                val updatedPlanes = arFrame.updatedPlanes
+                val hitResult = getHitResult(arFrame.frame, renderer.desiredWidth, renderer.desiredHeight)
                 // Calculate the focusPoint. It is used to determine the position of
                 // the visualized grid.
-                // TODO : Should we keep it?
-//            val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-//            planeMaterial.setFloat3(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
-                material?.setFloat3(MATERIAL_SPOTLIGHT_FOCUS_POINT, Vector3(0.0f, 0.0f, -2.0f))
+                val focusPoint = getFocusPoint(arFrame.frame, hitResult)
+                material?.setFloat3(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
                 material?.setFloat(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
+
+                val updatedPlanes = arFrame.updatedPlanes
+
                 if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
                     renderAll(updatedPlanes)
                 } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST) {
