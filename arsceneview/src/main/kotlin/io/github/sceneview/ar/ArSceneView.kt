@@ -223,7 +223,7 @@ open class ArSceneView @JvmOverloads constructor(
             arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
         }
 
-        onArFrameUpdated?.invoke(arFrame)
+        onArFrame.forEach{ it(arFrame) }
         lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
             onArFrame(arFrame)
         }
@@ -304,7 +304,7 @@ open class ArSceneView @JvmOverloads constructor(
      *
      * The callback will only be invoked if the Frame is considered as valid.
      */
-    var onArFrameUpdated: ((arFrame: ArFrame) -> Unit)? = null
+    val onArFrame = mutableListOf<(arFrame: ArFrame) -> Unit>()
 
     /**
      * ### Invoked when an ARCore plane is tapped

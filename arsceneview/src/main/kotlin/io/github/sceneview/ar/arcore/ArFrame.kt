@@ -23,7 +23,6 @@ data class ArFrame(
         updatedTrackables = frame.getUpdatedTrackables(Trackable::class.java).toList()
     }
 
-
     /**
      * ### Performs a ray cast to retrieve the hit trackables
      *
@@ -255,14 +254,10 @@ data class ArFrame(
 }
 
 /**
- * Tests to see if a motion event is touching any nodes within the scene, based on a ray hit test
- * whose origin is the screen position of the motion event, and outputs a PickHitResult containing
- * the node closest to the screen.
+ * ### Best HitResult within the list in precision terms
  *
- * @param motionEvent         the motion event to use for the test
- * @param selectableNodesOnly Filter the PickHitResult on only selectable nodes
- * @return the result includes the first node that was hit by the motion event (may be null), and
- * information about where the motion event hit the node in world-space
+ * Hits are sorted by depth. Consider only closest hit on a plane, Oriented Point, Depth Point,
+ * or Instant Placement Point.
  */
 fun Collection<HitResult>.firstValid(camera: Camera) = firstOrNull { hitResult ->
     when (val trackable = hitResult.trackable!!) {

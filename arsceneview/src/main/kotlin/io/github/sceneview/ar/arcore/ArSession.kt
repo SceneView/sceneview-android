@@ -202,7 +202,7 @@ class ArSession(
             }
         }
 
-    var planeFindingEnabled
+    var planeFindingEnabled : Boolean
         get() = config.planeFindingEnabled
         set(value) {
             configure {
@@ -210,7 +210,7 @@ class ArSession(
             }
         }
 
-    var depthEnabled
+    var depthEnabled : Boolean
         get() = config.depthEnabled
         set(value) {
             configure {
@@ -218,7 +218,7 @@ class ArSession(
             }
         }
 
-    var instantPlacementEnabled
+    var instantPlacementEnabled : Boolean
         get() = config.instantPlacementEnabled
         set(value) {
             configure {

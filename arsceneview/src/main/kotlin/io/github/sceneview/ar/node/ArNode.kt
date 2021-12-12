@@ -130,32 +130,48 @@ open class ArNode(
     /** ### TODO : Doc */
     var onPoseChanged: ((node: Node, pose: Pose?) -> Unit)? = null
 
+    /**
+     * @param modelGlbFileLocation the glb file location:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     */
     constructor(
         context: Context,
-        modelGlbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
+        parent: NodeParent? = null,
+        modelGlbFileLocation: String,
         onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null,
         onError: ((error: Exception) -> Unit)? = null,
-        parent: NodeParent? = null,
         position: Vector3 = defaultPosition,
         rotationQuaternion: Quaternion = defaultRotation,
         scales: Vector3 = defaultScales,
     ) : this(position, rotationQuaternion, scales, parent) {
-        setModel(context, modelGlbFileLocation, coroutineScope, onModelLoaded, onError)
+        loadModel(context, modelGlbFileLocation, coroutineScope, onModelLoaded, onError)
     }
 
+    /**
+     * @param modelGlbFileLocation the glb file location:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     */
     constructor(
         context: Context,
-        viewLayoutResId: Int,
         coroutineScope: LifecycleCoroutineScope? = null,
-        onViewLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null,
+        anchor: Anchor,
+        modelGlbFileLocation: String,
+        onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null,
         onError: ((error: Exception) -> Unit)? = null,
-        parent: NodeParent? = null,
-        position: Vector3 = defaultPosition,
-        rotationQuaternion: Quaternion = defaultRotation,
-        scales: Vector3 = defaultScales
-    ) : this(position, rotationQuaternion, scales, parent) {
-        setView(context, viewLayoutResId, coroutineScope, onViewLoaded, onError)
+    ) : this() {
+        this.anchor = anchor
+        loadModel(context, modelGlbFileLocation, coroutineScope, onModelLoaded, onError)
+    }
+
+    constructor(anchor: Anchor) : this() {
+        this.anchor = anchor
     }
 
     constructor(node: ModelNode) : this(
@@ -164,10 +180,6 @@ open class ArNode(
         scales = node.scales
     ) {
         setRenderable(node.renderable)
-    }
-
-    constructor(anchor: Anchor) : this() {
-        this.anchor = anchor
     }
 
     constructor(hitResult: HitResult) : this(hitResult.createAnchor())
@@ -223,6 +235,8 @@ open class ArNode(
      * By default the [positionY] of this Node is used
      *
      * @return the hitResult or null if no info is retrieved
+     *
+     * @see ArFrame.hitTest
      */
     @JvmOverloads
     open fun hitTest(
@@ -234,6 +248,12 @@ open class ArNode(
     /**
      * ### Creates a new anchor actual node worldPosition and worldRotation (hit location)
      *
+     * Creates an anchor at the given pose in the world coordinate space that is attached to this
+     * trackable. The type of trackable will determine the semantics of attachment and how the
+     * anchor's pose will be updated to maintain this relationship. Note that the relative offset
+     * between the pose of multiple anchors attached to a trackable may adjust slightly over time as
+     * ARCore updates its model of the world.
+     *
      * Anchors incur ongoing processing overhead within ARCore. To release unneeded anchors use
      * [Anchor.detach]
      *
@@ -241,8 +261,15 @@ open class ArNode(
      */
     open fun createAnchor(): Anchor? = hitTest()?.createAnchor()
 
-    /** TODO : Doc */
-    @JvmOverloads
+    /**
+     * ### Anchor this node to make it fixed at the actual position and orientation
+     *
+     * Creates an anchor at the given pose in the world coordinate space that is attached to this
+     * trackable. The type of trackable will determine the semantics of attachment and how the
+     * anchor's pose will be updated to maintain this relationship. Note that the relative offset
+     * between the pose of multiple anchors attached to a trackable may adjust slightly over time as
+     * ARCore updates its model of the world.
+     */
     fun anchor(detachPrevious: Boolean = true): Boolean {
         if (detachPrevious) {
             anchor?.detach()
@@ -276,24 +303,24 @@ open class ArNode(
         }
     }
 
-    fun setWorldPosition(position: Vector3, smooth: Boolean = smoothMoves) {
+    fun setWorldPosition(position: Vector3, smoothMove: Boolean = smoothMoves) {
         // If smooth worldPosition will increase in onFrame() until it equals target
         targetWorldPosition = position
         // Else move directly to the target
-        if (!smooth) {
+        if (!smoothMove) {
             worldPosition = targetWorldPosition
         }
     }
 
-    fun setWorldRotation(rotation: Vector3, smooth: Boolean = smoothMoves) {
-        setWorldRotation(Quaternion.eulerAngles(rotation), smooth)
+    fun setWorldRotation(rotation: Vector3, smoothMove: Boolean = smoothMoves) {
+        setWorldRotation(Quaternion.eulerAngles(rotation), smoothMove)
     }
 
-    fun setWorldRotation(rotation: Quaternion, smooth: Boolean = smoothMoves) {
+    fun setWorldRotation(rotation: Quaternion, smoothMove: Boolean = smoothMoves) {
         // If smooth worldRotation will increase in onFrame() until it equals target
         targetWorldRotationQuaternion = rotation
         // Else move directly to the target
-        if (!smooth) {
+        if (!smoothMove) {
             worldRotationQuaternion = targetWorldRotationQuaternion
         }
     }

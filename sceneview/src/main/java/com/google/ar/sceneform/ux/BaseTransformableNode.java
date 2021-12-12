@@ -33,7 +33,7 @@ public abstract class BaseTransformableNode extends Node {
   public BaseTransformableNode(TransformationSystem transformationSystem) {
     this.transformationSystem = transformationSystem;
 
-    setOnTap((hitTestResult, motionEvent) -> {
+    setOnTouched((hitTestResult, motionEvent) -> {
       onTap(hitTestResult, motionEvent);
       return null;
     });

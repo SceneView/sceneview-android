@@ -31,7 +31,7 @@ open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope?
 
     init {
         isSelectable = false
-        setModel(
+        loadModel(
             context = context,
             coroutineScope = coroutineScope,
             glbFileLocation = "sceneview/models/cursor.glb"
