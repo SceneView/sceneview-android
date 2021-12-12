@@ -61,12 +61,12 @@ open class Node(
     val isAttached get() = sceneView != null
 
     /**
-     * ### The node can be selected within the [com.google.ar.sceneform.collision.CollisionSystem]
+     * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
      * when a touch event happened
      *
      * true if the node can be selected
      */
-    var isSelectable = true
+    var isFocusable = true
 
     /**
      * ### The visible state of this node.

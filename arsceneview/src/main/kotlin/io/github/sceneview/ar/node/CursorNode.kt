@@ -30,7 +30,7 @@ open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope?
         }
 
     init {
-        isSelectable = false
+        isFocusable = false
         loadModel(
             context = context,
             coroutineScope = coroutineScope,

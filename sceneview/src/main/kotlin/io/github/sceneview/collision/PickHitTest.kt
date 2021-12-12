@@ -15,26 +15,26 @@ import java.util.*
  * the node closest to the screen.
  *
  * @param motionEvent         the motion event to use for the test
- * @param selectableNodesOnly Filter the PickHitResult on only selectable nodes
+ * @param focusableOnly Filter the PickHitResult on only selectable nodes
  * @return the result includes the first node that was hit by the motion event (may be null), and
  * information about where the motion event hit the node in world-space
  */
-fun SceneView.pickHitTest(motionEvent: MotionEvent, selectableNodesOnly: Boolean): PickHitResult =
-    pickHitTest(camera.motionEventToRay(motionEvent), selectableNodesOnly)
+fun SceneView.pickHitTest(motionEvent: MotionEvent, focusableOnly: Boolean): PickHitResult =
+    pickHitTest(camera.motionEventToRay(motionEvent), focusableOnly)
 
 /**
  * Tests to see if a ray is hitting any nodes within the scene and outputs a PickHitResult
  * containing the node closest to the ray origin that intersects with the ray.
  *
  * @param ray                 the ray to use for the test
- * @param selectableNodesOnly Filter the PickHitResult on only selectable nodes
+ * @param focusableOnly Filter the PickHitResult on only selectable nodes
  * @return the result includes the first node that was hit by the ray (may be null), and
  * information about where the ray hit the node in world-space
  * @see Camera.screenPointToRay
  */
-fun SceneView.pickHitTest(ray: Ray, selectableNodesOnly: Boolean) = PickHitResult()
+fun SceneView.pickHitTest(ray: Ray, focusableOnly: Boolean) = PickHitResult()
     .apply {
-        collisionSystem.raycast(ray, this, selectableNodesOnly)?.let {
+        collisionSystem.raycast(ray, this, focusableOnly)?.let {
             node = it.transformProvider as? Node
         }
     }

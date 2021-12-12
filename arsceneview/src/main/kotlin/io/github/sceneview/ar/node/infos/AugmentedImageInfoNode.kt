@@ -17,7 +17,7 @@ open class AugmentedImageInfoNode(context: Context, coroutineScope: LifecycleCor
     ) {
 
     init {
-        isSelectable = false
+        isFocusable = false
     }
 
     override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {

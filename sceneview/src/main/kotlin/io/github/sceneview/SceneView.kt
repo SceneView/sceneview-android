@@ -295,7 +295,7 @@ open class SceneView @JvmOverloads constructor(
     override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
         // This makes sure that the view's onTouchListener is called.
         if (!super.onTouchEvent(motionEvent)) {
-            onTouchEvent(pickHitTest(motionEvent, selectableNodesOnly = true), motionEvent)
+            onTouchEvent(pickHitTest(motionEvent, focusableOnly = true), motionEvent)
             return true
         }
         return true
