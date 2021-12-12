@@ -67,23 +67,9 @@ open class DepthNode(
         parent: NodeParent? = null,
         position: Vector3 = defaultPosition,
         rotationQuaternion: Quaternion = defaultRotation,
-        scales: Vector3 = defaultScales,
-    ) : this(position, rotationQuaternion, scales, parent) {
-        setModel(context, modelGlbFileLocation, coroutineScope, onModelLoaded, onError)
-    }
-
-    constructor(
-        context: Context,
-        viewLayoutResId: Int,
-        coroutineScope: LifecycleCoroutineScope? = null,
-        onViewLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        parent: NodeParent? = null,
-        position: Vector3 = defaultPosition,
-        rotationQuaternion: Quaternion = defaultRotation,
         scales: Vector3 = defaultScales
     ) : this(position, rotationQuaternion, scales, parent) {
-        setView(context, viewLayoutResId, coroutineScope, onViewLoaded, onError)
+        loadModel(context, modelGlbFileLocation, coroutineScope, onModelLoaded, onError)
     }
 
     override fun onAttachToScene(sceneView: SceneView) {

@@ -11,12 +11,17 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.RenderableInstance
+import io.github.sceneview.SceneView
+import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.R
 import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.node.ModelNode
+import io.github.sceneview.node.ViewNode
 
 open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
-    ModelNode(
+    ViewNode(
+        context = context,
+        coroutineScope = coroutineScope,
+        viewLayoutResId = R.layout.sceneview_view_info_search_plane,
         position = Vector3(0.0f, 0.0f, -2.0f)
     ) {
 
@@ -36,19 +41,23 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
 
     init {
         isSelectable = false
+    }
 
-        setView(
-            context = context,
-            coroutineScope = coroutineScope,
-            layoutResId = R.layout.sceneview_view_info_search_plane,
-            onLoaded = { renderableInstance: RenderableInstance, view: View ->
-                textView = view.findViewById(R.id.textView)
-                renderableInstance.apply {
-                    isShadowCaster = false
-                    isShadowReceiver = false
-                    renderPriority = 0
-                }
-            })
+    override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {
+        super.onViewLoaded(renderableInstance, view)
+
+        textView = view.findViewById(R.id.textView)
+        renderableInstance.apply {
+            isShadowCaster = false
+            isShadowReceiver = false
+            renderPriority = 0
+        }
+    }
+
+    override fun onAttachToScene(sceneView: SceneView) {
+        super.onAttachToScene(sceneView)
+
+        (sceneView as? ArSceneView)?.onArFrame?.add(::onArFrame)
     }
 
     override fun onRenderingChanged(isRendering: Boolean) {
@@ -61,11 +70,11 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
         }
     }
 
-//    override fun onArFrame(arFrame: ArFrame) {
-//        // Show a message based on whether tracking has failed, if planes are detected, and if the user
-//        // has placed any objects.
-//        textView?.text = trackingStateText(arFrame)
-//    }
+    fun onArFrame(arFrame: ArFrame) {
+        // Show a message based on whether tracking has failed, if planes are detected, and if the user
+        // has placed any objects.
+        textView?.text = trackingStateText(arFrame)
+    }
 
     open var trackingStateText: (frame: ArFrame) -> String = { frame ->
         when (val reason = frame.camera.trackingFailureReason) {

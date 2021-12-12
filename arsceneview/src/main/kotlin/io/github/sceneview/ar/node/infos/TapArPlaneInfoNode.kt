@@ -7,10 +7,13 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.R
-import io.github.sceneview.node.ModelNode
+import io.github.sceneview.node.ViewNode
 
 open class TapArPlaneInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
-    ModelNode(
+    ViewNode(
+        context = context,
+        coroutineScope = coroutineScope,
+        viewLayoutResId = R.layout.sceneview_view_info_tap_ar_plane,
         position = Vector3(0.0f, -1.0f, -2.0f),
     ) {
 
@@ -18,19 +21,17 @@ open class TapArPlaneInfoNode(context: Context, coroutineScope: LifecycleCorouti
 
     init {
         isSelectable = false
+    }
 
-        setView(
-            context = context,
-            coroutineScope = coroutineScope,
-            layoutResId = R.layout.sceneview_view_info_tap_ar_plane,
-            onLoaded = { renderableInstance: RenderableInstance, view: View ->
-                textView = view.findViewById(R.id.textView)
-                renderableInstance.apply {
-                    isShadowCaster = false
-                    isShadowReceiver = false
-                    renderPriority = 0
-                }
-            })
+    override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {
+        super.onViewLoaded(renderableInstance, view)
+
+        textView = view.findViewById(R.id.textView)
+        renderableInstance.apply {
+            isShadowCaster = false
+            isShadowReceiver = false
+            renderPriority = 0
+        }
     }
 
     var text
