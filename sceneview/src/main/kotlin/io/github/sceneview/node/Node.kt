@@ -39,9 +39,9 @@ open class Node(
 ) : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     companion object {
-        val defaultPosition = Vector3()
-        val defaultRotation = Quaternion()
-        val defaultScales = Vector3(1.0f, 1.0f, 1.0f)
+        val defaultPosition get() = Vector3(0.0f, 0.0f, -2.0f)
+        val defaultRotation get() = Quaternion()
+        val defaultScales get() = Vector3(1.0f, 1.0f, 1.0f)
     }
 
     /**
@@ -215,6 +215,55 @@ open class Node(
         }
 
     /**
+     * ### The node X center
+     *
+     * - left: < 0.0f
+     * - center: = 0.0f
+     * - right: > 0.0f
+     */
+    var centerX: Float
+        get() = center.x
+        set(value) {
+            center = center.apply { x = value }
+        }
+
+    /**
+     * ### The node Y center
+     *
+     * - top: > 0.0f
+     * - center: = 0.0f
+     * - bottom: < 0.0f
+     */
+    open var centerY: Float
+        get() = center.y
+        set(value) {
+            center = center.apply { y = value }
+        }
+
+    /**
+     * ### The node Z center
+     *
+     * - forward: > 0.0f
+     * - camera position: = 0.0f
+     * - backward: < 0.0f
+     */
+    var centerZ: Float
+        get() = center.z
+        set(value) {
+            center = center.apply { z = value }
+        }
+
+    /** ### The node center */
+    open var center: Vector3 = Vector3()
+        get() = Vector3(field)
+        set(value) {
+            if (field != value) {
+                field = value
+                onTransformChanged()
+            }
+        }
+
+    /**
      * ### The node X rotation in degrees
      *
      * [0..360]
@@ -293,7 +342,7 @@ open class Node(
         private set
 
     // Stores data used for detecting when a tap has occurred on this node.
-    private var tapTrackingData: TapTrackingData? = null
+    private var touchTrackingData: TapTrackingData? = null
 
     /** ### Listener for [onFrame] call */
     val onFrameUpdated = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
@@ -333,14 +382,14 @@ open class Node(
      * events for the gesture.
      *
      * When a touch event is dispatched to a node, the event is first passed to the node's.
-     * If the [onTouch] doesn't handle the event, it is passed to [.onTouchEvent].
+     * If the [onTouchEvent] doesn't handle the event, it is passed to [.onTouchEvent].
      *
      * - `pickHitResult` - Represents the node that was touched and information about where it was
      * touched
      * - `motionEvent` - The MotionEvent object containing full information about the event
      * - `return` true if the listener has consumed the event, false otherwise
      */
-    var onTouch: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
+    var onTouchEvent: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
 
     /**
      * ### Registers a callback to be invoked when this node is tapped.
@@ -353,7 +402,7 @@ open class Node(
      * touched
      * - `motionEvent - The [MotionEvent.ACTION_UP] MotionEvent that caused the tap
      */
-    var onTap: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Unit)? = null
+    var onTouched: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Unit)? = null
 
     constructor(
         position: Vector3 = defaultPosition,
@@ -455,7 +504,7 @@ open class Node(
         if (transformationMatrixChanged) {
             _transformationMatrix.apply {
                 makeTrs(
-                    position,
+                    Vector3.subtract(position, center),
                     rotationQuaternion,
                     scales
                 )
@@ -534,7 +583,7 @@ open class Node(
      * events for the gesture.
      *
      * When a touch event is dispatched to a node, the event is first passed to the node's.
-     * If the [onTouch] doesn't handle the event, it is passed to [onTouchEvent].
+     * If the [onTouchEvent] doesn't handle the event, it is passed to [onTouchEvent].
      *
      * @param pickHitResult Represents the node that was touched, and information about where it was
      * touched. On ACTION_DOWN events, [PickHitResult.getNode] will always be this node or
@@ -551,23 +600,23 @@ open class Node(
         // Reset tap tracking data if a new gesture has started or if the Node has become inactive.
         val actionMasked = motionEvent.actionMasked
         if (actionMasked == MotionEvent.ACTION_DOWN || !isRendered) {
-            tapTrackingData = null
+            touchTrackingData = null
         }
         when (actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 // Only start tacking the tap gesture if there is a tap listener set.
                 // This allows the event to bubble up to the node's parent when there is no listener.
-                if (onTap != null) {
+                if (onTouched != null) {
                     pickHitResult.node?.let { hitNode ->
                         val downPosition = Vector3(motionEvent.x, motionEvent.y, 0.0f)
-                        tapTrackingData = TapTrackingData(hitNode, downPosition)
+                        touchTrackingData = TapTrackingData(hitNode, downPosition)
                         handled = true
                     }
                 }
             }
             MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> {
                 // Assign to local variable for static analysis.
-                tapTrackingData?.let { tapTrackingData ->
+                touchTrackingData?.let { touchTrackingData ->
                     // Determine how much the touch has moved.
                     val touchSlop = sceneView?.let { sceneView ->
                         ViewConfiguration.get(sceneView.context).scaledTouchSlop
@@ -575,23 +624,23 @@ open class Node(
 
                     val upPosition = Vector3(motionEvent.x, motionEvent.y, 0.0f)
                     val touchDelta =
-                        Vector3.subtract(tapTrackingData.downPosition, upPosition).length()
+                        Vector3.subtract(touchTrackingData.downPosition, upPosition).length()
 
                     // Determine if this node or a child node is still being touched.
                     val hitNode = pickHitResult.node
-                    val isHitValid = hitNode === tapTrackingData.downNode
+                    val isHitValid = hitNode === touchTrackingData.downNode
 
                     // Determine if this is a valid tap.
-                    val isTapValid = isHitValid || touchDelta < touchSlop
-                    if (isTapValid) {
+                    val isValidTouch = isHitValid || touchDelta < touchSlop
+                    if (isValidTouch) {
                         handled = true
                         // If this is an ACTION_UP event, it's time to call the listener.
-                        if (actionMasked == MotionEvent.ACTION_UP && onTap != null) {
-                            onTap!!.invoke(pickHitResult, motionEvent)
-                            this.tapTrackingData = null
+                        if (actionMasked == MotionEvent.ACTION_UP && onTouched != null) {
+                            onTouched!!.invoke(pickHitResult, motionEvent)
+                            this.touchTrackingData = null
                         }
                     } else {
-                        this.tapTrackingData = null
+                        this.touchTrackingData = null
                     }
                 }
             }
@@ -616,7 +665,7 @@ open class Node(
      */
     open fun dispatchTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent): Boolean {
         return if (isRendered) {
-            if (onTouch?.invoke(pickHitResult, motionEvent) == true) {
+            if (onTouchEvent?.invoke(pickHitResult, motionEvent) == true) {
                 true
             } else {
                 onTouchEvent(pickHitResult, motionEvent)
@@ -626,6 +675,7 @@ open class Node(
         }
     }
 
+    open fun clone() = copy(Node())
 
     @JvmOverloads
     open fun copy(toNode: Node = Node()): Node = toNode.apply {
