@@ -20,7 +20,7 @@ open class TapArPlaneInfoNode(context: Context, coroutineScope: LifecycleCorouti
     var textView: TextView? = null
 
     init {
-        isSelectable = false
+        isFocusable = false
     }
 
     override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {

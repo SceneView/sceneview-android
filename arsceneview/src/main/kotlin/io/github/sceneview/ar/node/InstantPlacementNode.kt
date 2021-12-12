@@ -1,31 +1,48 @@
 package io.github.sceneview.ar.node
 
 import android.content.Context
-import android.view.View
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
 import com.google.ar.sceneform.math.Quaternion
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.RenderableInstance
-import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.SceneView
+import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.ar.arcore.depthEnabled
+import io.github.sceneview.ar.arcore.instantPlacementEnabled
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.node.NodeParent
 
 /**
- * ### Depth aligned node
+ * ### Instant placed node
  *
- * This [Node] follows the actual ARCore detected depth orientation and position at the provided
- * relative X, Y location in the [ArSceneView]
+ * This [Node] can be placed before ARCore establishes full tracking.
+ * This [Node] is currently intended to be used with hit tests against horizontal surfaces
  *
  * You can:
- * - [anchor] this node at any time to make it fixed at the actual position and rotation.
+ * - [anchor] this node at any time to make it fixed at the actual position with the +Y pointing
+ * upward, against gravity.
  * This node will stop following the hitPostion to stay in place.
  * - [createAnchor] in order to extract a fixed/anchored copy of the actual.
  * This node will continue following the [com.google.ar.core.Camera]
+ *
+ * Hit tests may also be performed against surfaces with any orientation, however:
+ * - The [InstantPlacementNode] will always have a pose with +Y pointing upward, against gravity.
+ * - No guarantees are made with respect to orientation of +X and +Z. Specifically, a hittest
+ * against a vertical surface, such as a wall, will not result in a pose that's in any way aligned
+ * to the plane of the wall, other than +Y being up, against gravity.
+ * - The [InstantPlacementPoint][com.google.ar.core.InstantPlacementPoint]'s tracking method may
+ * never become [com.google.ar.core.InstantPlacementPoint.TrackingMethod.FULL_TRACKING] or may take
+ * a long time to reach this state. The tracking method remains
+ * [com.google.ar.core.InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE]
+ * until a (tiny) horizontal plane is fitted at the point of the hit test.
+ *
+ * The pose and apparent scale of attached objects depends on the
+ * [InstantPlacementPoint][com.google.ar.core.InstantPlacementPoint] tracking method and the
+ * provided approximateDistanceMeters. A discussion of the different tracking methods and the
+ * effects of apparent object scale are described in
+ * [InstantPlacementPoint][com.google.ar.core.InstantPlacementPoint].
  */
 open class InstantPlacementNode(
     position: Vector3 = defaultPosition,
@@ -69,28 +86,14 @@ open class InstantPlacementNode(
         rotationQuaternion: Quaternion = defaultRotation,
         scales: Vector3 = defaultScales,
     ) : this(position, rotationQuaternion, scales, parent) {
-        setModel(context, modelGlbFileLocation, coroutineScope, onModelLoaded, onError)
-    }
-
-    constructor(
-        context: Context,
-        viewLayoutResId: Int,
-        coroutineScope: LifecycleCoroutineScope? = null,
-        onViewLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        parent: NodeParent? = null,
-        position: Vector3 = defaultPosition,
-        rotationQuaternion: Quaternion = defaultRotation,
-        scales: Vector3 = defaultScales
-    ) : this(position, rotationQuaternion, scales, parent) {
-        setView(context, viewLayoutResId, coroutineScope, onViewLoaded, onError)
+        loadModel(context, modelGlbFileLocation, coroutineScope, onModelLoaded, onError)
     }
 
     override fun onAttachToScene(sceneView: SceneView) {
         super.onAttachToScene(sceneView)
 
         (sceneView as? ArSceneView)?.configureSession { config ->
-            config.depthEnabled = true
+            config.instantPlacementEnabled = true
         }
     }
 

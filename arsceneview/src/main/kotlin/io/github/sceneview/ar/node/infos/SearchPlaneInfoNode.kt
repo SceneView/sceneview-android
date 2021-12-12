@@ -40,7 +40,7 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
     }
 
     init {
-        isSelectable = false
+        isFocusable = false
     }
 
     override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {

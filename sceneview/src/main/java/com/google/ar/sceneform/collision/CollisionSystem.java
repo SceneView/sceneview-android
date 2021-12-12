@@ -32,7 +32,7 @@ public class CollisionSystem {
     }
 
     @Nullable
-    public Collider raycast(Ray ray, RayHit resultHit, boolean selectableNodesOnly) {
+    public Collider raycast(Ray ray, RayHit resultHit, boolean focusableOnly) {
         Preconditions.checkNotNull(ray, "Parameter \"ray\" was null.");
         Preconditions.checkNotNull(resultHit, "Parameter \"resultHit\" was null.");
 
@@ -46,9 +46,9 @@ public class CollisionSystem {
             }
             if (collisionShape.rayIntersection(ray, tempResult)) {
                 TransformProvider transformProvider = collider.getTransformProvider();
-                if(!selectableNodesOnly
+                if(!focusableOnly
                         || !(transformProvider instanceof Node)
-                        || ((Node) transformProvider).isSelectable()) {
+                        || ((Node) transformProvider).isFocusable()) {
                     if (tempResult.getDistance() < resultHit.getDistance()) {
                         resultHit.set(tempResult);
                         result = collider;
