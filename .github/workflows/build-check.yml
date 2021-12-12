@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Release build
+    name: Debug build
     runs-on: ubuntu-latest
 
     steps:
@@ -26,4 +26,4 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build library
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew assembleDebug --stacktrace
