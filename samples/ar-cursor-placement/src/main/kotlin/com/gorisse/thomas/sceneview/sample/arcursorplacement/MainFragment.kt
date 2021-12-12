@@ -57,20 +57,18 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     fun anchorOrMove(anchor: Anchor) {
         if (modelNode == null) {
-            modelNode = ArNode(anchor).apply {
-                isLoading = true
-                setModel(
-                    context = requireContext(),
-                    coroutineScope = lifecycleScope,
-                    glbFileLocation = "models/spiderbot.glb",
-                    onLoaded = {
-                        actionButton.text = getString(R.string.move_object)
-                        actionButton.icon = resources.getDrawable(R.drawable.ic_target)
-                        isLoading = false
-                    }
-                )
-                sceneView.addChild(this)
-            }
+            isLoading = true
+            modelNode = ArNode(
+                context = requireContext(),
+                coroutineScope = lifecycleScope,
+                anchor = anchor,
+                modelGlbFileLocation = "models/spiderbot.glb",
+                onModelLoaded = {
+                    actionButton.text = getString(R.string.move_object)
+                    actionButton.icon = resources.getDrawable(R.drawable.ic_target)
+                    isLoading = false
+                })
+            sceneView.addChild(modelNode!!)
         } else {
             modelNode!!.anchor = anchor
         }
