@@ -1,7 +1,6 @@
 package io.github.sceneview.ar.node
 
 import android.content.Context
-import android.view.View
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
@@ -36,9 +35,10 @@ open class ArNode(
 ), ArSceneLifecycleObserver {
 
     companion object {
-        val defaultWorldPosition = Vector3()
-        val defaultWorldRotation = Quaternion()
-        val defaultWorldScale = Vector3(1.0f, 1.0f, 1.0f)
+        val defaultPosition get() = Vector3(0.0f, 0.0f, 0.0f)
+        val defaultWorldPosition get() = Vector3()
+        val defaultWorldRotation get() = Quaternion()
+        val defaultWorldScale get() = Vector3(1.0f, 1.0f, 1.0f)
     }
 
     override val sceneView get() = super.sceneView as? ArSceneView
