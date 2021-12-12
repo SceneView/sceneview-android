@@ -49,11 +49,17 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             onModelLoaded = { modelInstance ->
                 isLoading = false
                 modelInstance.animate(true).start()
-            })
-        depthNode.onTrackingChanged = { _, isTracking ->
-            actionButton.isGone = !isTracking
+            }).apply {
+            // This 3D model is actually body centered so we place it centerY on the bottom
+            // (centerY on his feet)
+            // We could also had changed the positionY in order to make it AR placed downer on the
+            // screen instead of the screen center.
+            centerY = -1.0f
+            onTrackingChanged = { _, isTracking ->
+                actionButton.isGone = !isTracking
+            }
+            sceneView.addChild(this)
         }
-        sceneView.addChild(depthNode)
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
