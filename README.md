@@ -23,14 +23,14 @@
 ```gradle
 dependencies {
     // 3D Only
-    implementation 'io.github.sceneview:sceneview:0.3.0'
+    implementation 'io.github.sceneview:sceneview:0.0.3'
 }
 ```
 
 ```gradle
 dependencies {
     // AR + 3D
-    implementation 'io.github.sceneview:arsceneview:0.3.0'
+    implementation 'io.github.sceneview:arsceneview:0.0.3'
 }
 ```
 
