@@ -36,14 +36,14 @@ import java.nio.ByteOrder
  * positioned specular highlights, and to cast shadows in a direction consistent with other
  * visible real objects.
  */
-data class LightEstimationConfig @JvmOverloads constructor(
+data class LightEstimationMode @JvmOverloads constructor(
     /**
      * ### The behavior of the lighting estimation subsystem.
      *
      * These modes consist of separate APIs that allow for granular and realistic lighting
      * estimation for directional lighting, shadows, specular highlights, and reflections.
      */
-    val mode: Config.LightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
+    val sessionConfigMode: Config.LightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
 
     /**
      * ### Enable reflection cubemap
@@ -108,9 +108,8 @@ data class LightEstimationConfig @JvmOverloads constructor(
          *
          * The reflected environment will the one given by ARCore
          */
-        @JvmField
-        val REALISTIC = LightEstimationConfig(
-            mode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
+        val REALISTIC get() = LightEstimationMode(
+            sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
             environmentalHdrSpecularFilter = true
         )
 
@@ -124,9 +123,8 @@ data class LightEstimationConfig @JvmOverloads constructor(
          *
          * The reflected environment will the one given by ARCore
          */
-        @JvmField
-        val SPECTACULAR = LightEstimationConfig(
-            mode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
+        val SPECTACULAR get() = LightEstimationMode(
+            sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
             environmentalHdrSpecularFilter = false
         )
 
@@ -136,9 +134,8 @@ data class LightEstimationConfig @JvmOverloads constructor(
          * The reflected environment will the default one or the one defined by
          * [SceneView.environment]
          */
-        @JvmField
-        val AMBIENT_INTENSITY =
-            LightEstimationConfig(mode = Config.LightEstimationMode.AMBIENT_INTENSITY)
+        val AMBIENT_INTENSITY get() =
+            LightEstimationMode(sessionConfigMode = Config.LightEstimationMode.AMBIENT_INTENSITY)
 
 
         /**
@@ -147,9 +144,8 @@ data class LightEstimationConfig @JvmOverloads constructor(
          * The reflected environment will the default one or the one defined by
          * [SceneView.environment]
          */
-        @JvmField
-        val DISABLED =
-            LightEstimationConfig(mode = Config.LightEstimationMode.DISABLED)
+        val DISABLED get() =
+            LightEstimationMode(sessionConfigMode = Config.LightEstimationMode.DISABLED)
     }
 }
 
@@ -238,7 +234,7 @@ class EnvironmentLightsEstimate(
  * Infos: https://github.com/ThomasGorisse/SceneformMaintained/pull/156#issuecomment-911873565
  */
 fun ArFrame.environmentLightsEstimate(
-    config: LightEstimationConfig,
+    config: LightEstimationMode,
     previousEstimate: EnvironmentLightsEstimate?,
     baseEnvironment: Environment?,
     baseLight: Light?,
@@ -249,7 +245,7 @@ fun ArFrame.environmentLightsEstimate(
                 it.timestamp != previousEstimate?.timestamp
     }
         ?.let { lightEstimate ->
-            when (config.mode) {
+            when (config.sessionConfigMode) {
                 Config.LightEstimationMode.AMBIENT_INTENSITY ->
                     lightEstimate.ambientIntensityEnvironmentLights(
                         previousEstimate,

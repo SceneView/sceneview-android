@@ -14,9 +14,9 @@ import io.github.sceneview.ar.defaultApproximateDistanceMeters
 class ArSession(
     val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
-    features: Set<Feature> = setOf()
-) :
-    Session(lifecycle.context, features), ArSceneLifecycleObserver {
+    features: Set<Feature> = setOf(),
+    config: (Config) -> Unit = {}
+) : Session(lifecycle.context, features), ArSceneLifecycleObserver {
 
     private var hasSetTextureNames = false
 
@@ -27,7 +27,8 @@ class ArSession(
     var displayWidth = 0
     var displayHeight = 0
 
-    private var _config: Config? = null
+    // TODO: See if it really has a performance impact
+//    private var _config: Config? = null
 
     var hasAugmentedImageDatabase = false
 
@@ -58,6 +59,8 @@ class ArSession(
 
     init {
         lifecycle.addObserver(this)
+
+        configure(config)
     }
 
     override fun onResume(owner: LifecycleOwner) {
@@ -117,20 +120,20 @@ class ArSession(
         displayHeight = heightPx
     }
 
-    /**
-     * ### Gets the current config
-     *
-     * More specifically, returns a copy of the config most recently set by [configure].
-     *
-     * Note: if the session was not explicitly configured, a default configuration is returned
-     * (same as [com.gorisse.thomas.sceneview.ARCore.defaultSessionConfig].
-     */
-    override fun getConfig(): Config {
-        return _config ?: super.getConfig().also {
-            _config = it
-        }
-    }
-
+// TODO: See if it really has a performance impact
+//    /**
+//     * ### Gets the current config
+//     *
+//     * More specifically, returns a copy of the config most recently set by [configure].
+//     *
+//     * Note: if the session was not explicitly configured, a default configuration is returned
+//     * (same as [com.gorisse.thomas.sceneview.ARCore.defaultSessionConfig].
+//     */
+//    override fun getConfig(): Config {
+//        return _config ?: super.getConfig().also {
+//            _config = it
+//        }
+//    }
 
     /**
      * ### Define the session config used by ARCore
@@ -145,9 +148,10 @@ class ArSession(
      *
      * @param applyConfig the apply block for the new config
      */
-    fun configure(applyConfig: (Config) -> Unit) {
-        val sessionConfig = config.apply {
-            applyConfig(this)
+    fun configure(config: (Config) -> Unit) {
+        val sessionConfig = this.config.apply {
+            config(this)
+
             if (depthEnabled && !isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                 depthMode = Config.DepthMode.DISABLED
             }
@@ -188,21 +192,36 @@ class ArSession(
      * positioned specular highlights, and to cast shadows in a direction consistent with other
      * visible real objects.
      *
-     * @see LightEstimationConfig.REALISTIC
-     * @see LightEstimationConfig.SPECTACULAR
-     * @see LightEstimationConfig.AMBIENT_INTENSITY
+     * LightEstimationConfig.SPECTACULAR vs LightEstimationConfig.REALISTIC mostly differs on the
+     * reflections parts and you will mainly only see differences if your model has more metallic
+     * than roughness material values.
+     *
+     * Adjust the based reference/factored lighting intensities and other values with:
+     * - [io.github.sceneview.ar.ArSceneView.mainLight]
+     * - [io.github.sceneview.ar.ArSceneView.environment][io.github.sceneview.environment.Environment.indirectLight]
+     *
+     * @see LightEstimationMode.REALISTIC
+     * @see LightEstimationMode.SPECTACULAR
+     * @see LightEstimationMode.AMBIENT_INTENSITY
+     * @see LightEstimationMode.DISABLED
      */
-    var lightEstimationConfig = LightEstimationConfig()
+    var lightEstimationMode = LightEstimationMode()
         set(value) {
-            if (field != value) {
-                configure { config ->
-                    config.lightEstimationMode = value.mode
-                }
-                field = value
+            configure { config ->
+                config.lightEstimationMode = value.sessionConfigMode
+            }
+            field = value
+        }
+
+    var focusMode: Config.FocusMode
+        get() = config.focusMode
+        set(value) {
+            configure {
+                it.focusMode = value
             }
         }
 
-    var planeFindingEnabled : Boolean
+    var planeFindingEnabled: Boolean
         get() = config.planeFindingEnabled
         set(value) {
             configure {
@@ -210,7 +229,15 @@ class ArSession(
             }
         }
 
-    var depthEnabled : Boolean
+    var planeFindingMode: Config.PlaneFindingMode
+        get() = config.planeFindingMode
+        set(value) {
+            configure {
+                it.planeFindingMode = value
+            }
+        }
+
+    var depthEnabled: Boolean
         get() = config.depthEnabled
         set(value) {
             configure {
@@ -218,7 +245,7 @@ class ArSession(
             }
         }
 
-    var instantPlacementEnabled : Boolean
+    var instantPlacementEnabled: Boolean
         get() = config.instantPlacementEnabled
         set(value) {
             configure {
@@ -304,6 +331,12 @@ var Config.planeFindingEnabled
         }
     }
 
+/**
+ * ### Enable or disable the [Config.DepthMode.AUTOMATIC]
+ *
+ * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether the
+ * current device and the selected camera support a particular depth mode.
+ */
 var Config.depthEnabled
     get() = depthMode != Config.DepthMode.DISABLED
     set(value) {
@@ -314,6 +347,9 @@ var Config.depthEnabled
         }
     }
 
+/**
+ * TODO : Doc
+ */
 var Config.instantPlacementEnabled
     get() = instantPlacementMode != Config.InstantPlacementMode.DISABLED
     set(value) {
