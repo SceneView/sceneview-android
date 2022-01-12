@@ -28,10 +28,7 @@ import com.gorisse.thomas.lifecycle.lifecycleScope
 import io.github.sceneview.collision.pickHitTest
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.loadEnvironment
-import io.github.sceneview.light.Light
-import io.github.sceneview.light.build
-import io.github.sceneview.light.defaultMainLightIntensity
-import io.github.sceneview.light.destroy
+import io.github.sceneview.light.*
 import io.github.sceneview.model.await
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
@@ -69,10 +66,8 @@ open class SceneView @JvmOverloads constructor(
             context.getActivity()!!
         }
 
-    var _sceneLifecycle: SceneLifecycle? = null
-    override fun getLifecycle() = _sceneLifecycle ?: SceneLifecycle(context, this).also {
-        _sceneLifecycle = it
-    }
+    open val sceneLifecycle : SceneLifecycle by lazy {  SceneLifecycle(context, this) }
+    override fun getLifecycle() = sceneLifecycle
 
     private val parentLifecycleObserver = LifecycleEventObserver { _, event ->
         lifecycle.currentState = event.targetState
@@ -89,7 +84,8 @@ open class SceneView @JvmOverloads constructor(
      *
      * The camera is a type of node.
      */
-    open val camera = Camera(this)
+    //TODO : Move it to Lifecycle and NodeParent when Kotlined
+    open val camera: Camera by lazy { Camera(this) }
     val collisionSystem = CollisionSystem()
 
     /**

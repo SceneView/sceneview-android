@@ -1,7 +1,6 @@
 package io.github.sceneview.ar
 
 import android.content.Context
-import android.net.Uri
 import android.util.AttributeSet
 import android.view.MotionEvent
 import androidx.lifecycle.*
@@ -12,21 +11,17 @@ import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.sceneform.ArCamera
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.rendering.*
-import com.google.ar.sceneform.ux.TransformableNode
-import com.gorisse.thomas.lifecycle.lifecycleScope
 import com.gorisse.thomas.sceneview.Instructions
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneLifecycleOwner
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.*
-import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.light.defaultMainLightIntensity
 import io.github.sceneview.light.destroy
 import io.github.sceneview.light.intensity
 import io.github.sceneview.light.sunnyDayMainLightIntensity
-import io.github.sceneview.model.await
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.utils.setKeepScreenOn
@@ -46,15 +41,107 @@ open class ArSceneView @JvmOverloads constructor(
     defStyleRes
 ), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
 
-    override fun getLifecycle(): ArSceneLifecycle =
-        _sceneLifecycle as? ArSceneLifecycle ?: ArSceneLifecycle(context, this).also {
-            _sceneLifecycle = it
+    companion object {
+        val defaultFocusMode = Config.FocusMode.AUTO
+        val defaultPlaneFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+        val defaultDepthEnabled = true
+        val defaultInstantPlacementEnabled = true
+        val defaultLightEstimationMode = LightEstimationMode.REALISTIC
+    }
+
+    /**
+     * ### Sets the desired focus mode
+     *
+     * See [Config.FocusMode] for available options.
+     */
+    var focusMode: Config.FocusMode = defaultFocusMode
+        set(value) {
+            field = value
+            session?.focusMode = value
         }
+
+    /**
+     * ### Sets the desired plane finding mode
+     *
+     * See the [Config.PlaneFindingMode] enum
+     * for available options.
+     */
+    var planeFindingMode: Config.PlaneFindingMode = defaultPlaneFindingMode
+        set(value) {
+            field = value
+            session?.planeFindingMode = value
+        }
+
+    /**
+     * ### Enable or disable the [Config.DepthMode.AUTOMATIC]
+     *
+     * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether the
+     * current device and the selected camera support a particular depth mode.
+     */
+    var depthEnabled: Boolean = defaultDepthEnabled
+        set(value) {
+            field = value
+            session?.depthEnabled = value
+        }
+
+    /**
+     * ### Enable or disable the [Config.InstantPlacementMode.LOCAL_Y_UP]
+     *
+     * // TODO : Doc
+     */
+    var instantPlacementEnabled: Boolean = defaultInstantPlacementEnabled
+        set(value) {
+            field = value
+            session?.instantPlacementEnabled = value
+        }
+
+    /**
+     * ### ARCore light estimation configuration
+     *
+     * ARCore estimate lighting to provide directional light, ambient spherical harmonics,
+     * and reflection cubemap estimation
+     *
+     * Light bounces off of surfaces differently depending on whether the surface has specular
+     * (highly reflective) or diffuse (not reflective) properties.
+     * For example, a metallic ball will be highly specular and reflect its environment, while
+     * another ball painted a dull matte gray will be diffuse. Most real-world objects have a
+     * combination of these properties — think of a scuffed-up bowling ball or a well-used credit
+     * card.
+     *
+     * Reflective surfaces also pick up colors from the ambient environment. The coloring of an
+     * object can be directly affected by the coloring of its environment. For example, a white ball
+     * in a blue room will take on a bluish hue.
+     *
+     * The main directional light API calculates the direction and intensity of the scene's
+     * main light source. This information allows virtual objects in your scene to show reasonably
+     * positioned specular highlights, and to cast shadows in a direction consistent with other
+     * visible real objects.
+     *
+     * LightEstimationConfig.SPECTACULAR vs LightEstimationConfig.REALISTIC mostly differs on the
+     * reflections parts and you will mainly only see differences if your model has more metallic
+     * than roughness material values.
+     *
+     * Adjust the based reference/factored lighting intensities and other values with:
+     * - [io.github.sceneview.ar.ArSceneView.mainLight]
+     * - [io.github.sceneview.ar.ArSceneView.environment][io.github.sceneview.environment.Environment.indirectLight]
+     *
+     * @see LightEstimationMode.REALISTIC
+     * @see LightEstimationMode.SPECTACULAR
+     * @see LightEstimationMode.AMBIENT_INTENSITY
+     * @see LightEstimationMode.DISABLED
+     */
+    var lightEstimationMode: LightEstimationMode = defaultLightEstimationMode
+        set(value) {
+            field = value
+            session?.lightEstimationMode = value
+        }
+
+    override val sceneLifecycle: ArSceneLifecycle = ArSceneLifecycle(context, this)
 
     private val cameraTextureId = GLHelper.createCameraTexture()
 
-    override val camera = ArCamera(this)
-
+    //TODO : Move it to Lifecycle and NodeParent when Kotlined
+    override val camera by lazy { ArCamera(this) }
     override val arCore = ARCore(cameraTextureId, lifecycle)
 
     override val renderer: Renderer by lazy {
@@ -79,7 +166,7 @@ open class ArSceneView @JvmOverloads constructor(
      * - Environment handles a reflections, indirect lighting and skybox.
      * - ARCore will estimate the direction, the intensity and the color of the light
      */
-    var estimatedEnvironmentLights: EnvironmentLightsEstimate? = null
+    var estimatedLights: EnvironmentLightsEstimate? = null
         internal set(value) {
             //TODO: Move to Renderer when kotlined it
             val environment = value?.environment ?: environment
@@ -103,11 +190,14 @@ open class ArSceneView @JvmOverloads constructor(
 
     val instructions = Instructions(this, lifecycle)
 
-    init {
-    }
-
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
+
+        session.focusMode = focusMode
+        session.planeFindingMode = planeFindingMode
+        session.depthEnabled = depthEnabled
+        session.instantPlacementEnabled = instantPlacementEnabled
+        session.lightEstimationMode = lightEstimationMode
 
         // Feature config, therefore facing direction, can only be configured once per session.
         if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
@@ -135,6 +225,7 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun onArSessionConfigChanged(session: ArSession, config: Config) {
         // Set the correct Texture configuration on the camera stream
+        //TODO: Move CameraStream to lifecycle aware
         cameraStream.checkIfDepthIsEnabled(session, config)
 
         mainLight?.intensity = when (config.lightEstimationMode) {
@@ -208,9 +299,9 @@ open class ArSceneView @JvmOverloads constructor(
 
         // Update the light estimate.
         if (session.config.lightEstimationMode != Config.LightEstimationMode.DISABLED) {
-            estimatedEnvironmentLights = arFrame.environmentLightsEstimate(
-                session.lightEstimationConfig,
-                estimatedEnvironmentLights,
+            estimatedLights = arFrame.environmentLightsEstimate(
+                session.lightEstimationMode,
+                estimatedLights,
                 environment,
                 mainLight,
                 renderer.camera.exposureFactor
@@ -225,16 +316,18 @@ open class ArSceneView @JvmOverloads constructor(
             arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
         }
 
-        onArFrame.forEach{ it(arFrame) }
+        onArFrame.forEach { it(arFrame) }
         lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
             onArFrame(arFrame)
         }
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
-        estimatedEnvironmentLights?.destroy()
-        estimatedEnvironmentLights = null
+        estimatedLights?.destroy()
+        estimatedLights = null
     }
+
+    override fun getLifecycle(): ArSceneLifecycle = sceneLifecycle
 
     /**
      * ### Define the session config used by ARCore
@@ -345,50 +438,6 @@ open class ArSceneView @JvmOverloads constructor(
      * @see AugmentedFace.getTrackingState
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
-
-    /**
-     * Loads a monolithic binary glTF and add it to the fragment when the user tap on a detected
-     * plane surface.
-     *
-     * Plays the animations automatically if the model has one.
-     *
-     * @param glbFileLocation Glb file source location can be come from the asset folder ("model.glb")
-     * or an http source ("http://domain.com/model.glb")
-     * @param onModelLoaded Called when an ARCore plane is tapped and the model is added to the
-     * scene. The callback will only be invoked if no [com.google.ar.sceneform.Node] was tapped.
-     * The [RenderableInstance] param is the added instance of the model.
-     * @param onModelError An error occurred while loading the model from the source file location.
-     * @see setOnTapArPlaneListener
-     */
-    fun setOnTapArPlaneGlbModel(
-        glbFileLocation: String,
-        onLoaded: ((renderable: Renderable) -> Unit)? = null,
-        onAdded: ((node: ArNode, renderableInstance: RenderableInstance) -> Unit)? = null,
-        onError: ((exception: Throwable) -> Unit)? = null,
-    ) {
-        lifecycleScope.launchWhenCreated {
-            try {
-                val model = ModelRenderable.builder()
-                    .setSource(context, Uri.parse(glbFileLocation))
-                    .setIsFilamentGltf(true)
-                    .await()
-                onLoaded?.invoke(model!!)
-                onTouchAr = { hitResult, _ ->
-                    addChild(ArNode(hitResult).apply {
-                        // Create the transformable model and add it to the anchor
-                        val modelNode = TransformableNode(nodeGestureRecognizer)
-                        val renderableInstance = setRenderable(model)!!.apply {
-                            animate(true).start()
-                        }
-                        addChild(modelNode)
-                        onAdded?.invoke(this, renderableInstance)
-                    })
-                }
-            } catch (exception: Exception) {
-                onError?.invoke(exception)
-            }
-        }
-    }
 }
 
 /**

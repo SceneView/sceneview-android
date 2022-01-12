@@ -32,16 +32,9 @@ class ARCore(
     val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
     val features: Set<Session.Feature> = setOf(),
+    val config: Config.() -> Unit = {},
     var onException: ((Exception) -> Unit)? = null
 ) : ArSceneLifecycleObserver {
-
-    val defaultSessionConfig: Config.() -> Unit = {
-        focusMode = Config.FocusMode.AUTO
-        lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-        planeFindingEnabled = true
-        depthEnabled = true
-        instantPlacementEnabled = false
-    }
 
     private var installRequested = false
     internal var session: ArSession? = null
@@ -95,8 +88,7 @@ class ARCore(
                     }
                     else -> {
                         // Create a session if Google Play Services for AR is installed and up to date.
-                        ArSession(cameraTextureId, lifecycle, features).also {
-                            it.configure(defaultSessionConfig)
+                        ArSession(cameraTextureId, lifecycle, features, config).also {
                             lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
                                 onArSessionCreated(it)
                             }
