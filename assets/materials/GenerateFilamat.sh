@@ -1,0 +1,1 @@
+for FILE in *.mat; do matc -a all -p mobile -o "${FILE%%.*}.filamat" "$FILE"; done
