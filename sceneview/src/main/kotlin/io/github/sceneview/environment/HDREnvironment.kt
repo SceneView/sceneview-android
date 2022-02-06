@@ -10,8 +10,8 @@ import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.IBLPrefilterContext
 import io.github.sceneview.Filament
 import io.github.sceneview.light.build
-import io.github.sceneview.material.destroy
-import io.github.sceneview.material.use
+import io.github.sceneview.texture.destroy
+import io.github.sceneview.texture.use
 import io.github.sceneview.utils.fileBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

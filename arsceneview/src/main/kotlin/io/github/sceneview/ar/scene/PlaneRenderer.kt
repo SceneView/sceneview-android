@@ -1,18 +1,22 @@
 package io.github.sceneview.ar.scene
 
-import android.net.Uri
 import androidx.lifecycle.coroutineScope
+import com.google.android.filament.MaterialInstance
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.DeadlineExceededException
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.Material
+import com.google.ar.sceneform.rendering.MaterialInternalDataImpl
 import com.google.ar.sceneform.rendering.PlaneVisualizer
-import com.google.ar.sceneform.rendering.Texture
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.arcore.ArSession
 import io.github.sceneview.ar.arcore.ArFrame
-import kotlinx.coroutines.future.await
+import io.github.sceneview.ar.arcore.ArSession
+import io.github.sceneview.colorOf
+import io.github.sceneview.material.*
+import io.github.sceneview.positionOf
+import io.github.sceneview.texture.TextureLoader
+import io.github.sceneview.texture.TextureLoader.TextureType
 import java.util.*
 
 /**
@@ -30,12 +34,20 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     // Per-plane overrides
     private val materialOverrides: Map<Plane, Material> = HashMap()
 
+    // TODO: Remove the Sceneform material when it isn't used in PlaneVisualizer
+    private var sceneformMaterial: Material? = null
+
     /**
      * Returns default material instance used to render the planes.
      */
-    var material: Material? = null
+    var materialInstance: MaterialInstance? = null
         private set
-    private var shadowMaterial: Material? = null
+
+    // TODO: Remove the Sceneform material when it isn't used in PlaneVisualizer
+    private var sceneformShadowMaterial: Material? = null
+
+    var shadowMaterialInstance: MaterialInstance? = null
+        private set
 
     /**
      * <pre>
@@ -90,8 +102,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
                 // Calculate the focusPoint. It is used to determine the position of
                 // the visualized grid.
                 val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-                material?.setFloat3(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
-                material?.setFloat(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
+                materialInstance?.setParameter(MATERIAL_SPOTLIGHT_FOCUS_POINT, positionOf(focusPoint.x, focusPoint.y, focusPoint.z))
 
                 val updatedPlanes = arFrame.updatedPlanes
 
@@ -180,11 +191,11 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
                 val overrideMaterial = materialOverrides[plane]
                 if (overrideMaterial != null) {
                     setPlaneMaterial(overrideMaterial)
-                } else if (material != null) {
-                    setPlaneMaterial(material)
+                } else if (sceneformMaterial != null) {
+                    setPlaneMaterial(sceneformMaterial)
                 }
-                if (shadowMaterial != null) {
-                    setShadowMaterial(shadowMaterial)
+                if (sceneformShadowMaterial != null) {
+                    setShadowMaterial(sceneformShadowMaterial)
                 }
                 setShadowReceiver(isShadowReceiver)
                 setVisible(isVisible)
@@ -215,54 +226,44 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     }
 
     private suspend fun loadShadowMaterial() {
-        shadowMaterial = Material.builder()
-            .setSource(
-                renderer.context,
-                Uri.parse("sceneview/materials/plane_renderer_shadow.filamat")
-            )
-            .build()
-            .await()
-        visualizerMap.values.forEach { it.setShadowMaterial(shadowMaterial) }
+        val material = MaterialLoader.loadMaterial(renderer.context, "sceneview/materials/plane_renderer_shadow.filamat")?.material
+            ?: throw AssertionError("Can't load the plane renderer shadow material")
+
+        sceneformShadowMaterial = Material(MaterialInternalDataImpl(material))
+
+        shadowMaterialInstance = sceneformShadowMaterial?.filamentMaterialInstance
+
+        visualizerMap.values.forEach { it.setShadowMaterial(sceneformShadowMaterial) }
     }
 
     private suspend fun loadPlaneMaterial() {
-        val texture = Texture.builder()
-            .setSource(
-                renderer.context,
-                Uri.parse("sceneview/textures/plane_renderer.png")
-            )
-            .setSampler(
-                Texture.Sampler.builder()
-                    .setMinMagFilter(Texture.Sampler.MagFilter.LINEAR)
-                    .setWrapMode(Texture.Sampler.WrapMode.REPEAT)
-                    .build()
-            )
-            .build()
-            .await()
-        material = Material.builder()
-            .setSource(
-                renderer.context,
-                Uri.parse("sceneview/materials/plane_renderer.filamat")
-            )
-            .build()
-            .await()
-            .apply {
-                setTexture(MATERIAL_TEXTURE, texture)
-                setFloat3(MATERIAL_COLOR, 1.0f, 1.0f, 1.0f)
+        val texture = TextureLoader.loadTexture(renderer.context, "sceneview/textures/plane_renderer.png", TextureType.COLOR)
+            ?: throw AssertionError("Can't load the plane renderer texture")
 
-                // TODO: Don't use hardcoded width and height... Need api for getting
-                // width and
-                // height from the Texture class.
-                val widthToHeightRatio = DEFAULT_TEXTURE_WIDTH / DEFAULT_TEXTURE_HEIGHT
-                val scaleX = BASE_UV_SCALE
-                val scaleY = scaleX * widthToHeightRatio
-                setFloat2(MATERIAL_UV_SCALE, scaleX, scaleY)
-                for ((plane, planeVisualizer) in visualizerMap) {
-                    if (!materialOverrides.containsKey(plane)) {
-                        planeVisualizer.setPlaneMaterial(material)
-                    }
-                }
+        val material = MaterialLoader.loadMaterial(renderer.context, "sceneview/materials/plane_renderer.filamat")?.material
+            ?: throw AssertionError("Can't load the plane renderer material")
+
+        sceneformMaterial = Material(MaterialInternalDataImpl(material))
+
+        materialInstance = sceneformMaterial?.filamentMaterialInstance
+
+        materialInstance?.apply {
+            setTexture(MATERIAL_TEXTURE, texture)
+
+            val widthToHeightRatio = texture.getWidth(0).toFloat() / texture.getHeight(0).toFloat()
+            val scaleX = BASE_UV_SCALE
+            val scaleY = scaleX * widthToHeightRatio
+
+            setParameter(MATERIAL_UV_SCALE, scaleX, scaleY)
+            setParameter(MATERIAL_COLOR, colorOf(1.0f, 1.0f, 1.0f))
+            setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
+        }
+
+        for ((plane, planeVisualizer) in visualizerMap) {
+            if (!materialOverrides.containsKey(plane)) {
+                planeVisualizer.setPlaneMaterial(sceneformMaterial)
             }
+        }
     }
 
     /**
@@ -370,8 +371,6 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
          * Used to control the UV Scale for the default texture.
          */
         private const val BASE_UV_SCALE = 8.0f
-        private const val DEFAULT_TEXTURE_WIDTH = 293f
-        private const val DEFAULT_TEXTURE_HEIGHT = 513f
         private const val SPOTLIGHT_RADIUS = .5f
     }
 }
