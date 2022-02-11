@@ -338,10 +338,24 @@ var Config.planeFindingEnabled
  * current device and the selected camera support a particular depth mode.
  */
 var Config.depthEnabled
-    get() = depthMode != Config.DepthMode.DISABLED
+    get() = depthMode == Config.DepthMode.AUTOMATIC
     set(value) {
         depthMode = if (value) {
             Config.DepthMode.AUTOMATIC
+        } else {
+            Config.DepthMode.DISABLED
+        }
+    }
+
+
+/**
+ * //TODO: Doc
+ */
+var Config.rawDepthEnabled
+    get() = depthMode == Config.DepthMode.RAW_DEPTH_ONLY
+    set(value) {
+        depthMode = if (value) {
+            Config.DepthMode.RAW_DEPTH_ONLY
         } else {
             Config.DepthMode.DISABLED
         }
