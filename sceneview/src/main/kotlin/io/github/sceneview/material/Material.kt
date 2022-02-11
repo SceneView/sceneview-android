@@ -26,7 +26,6 @@ object MaterialLoader {
      * - A File path *Uri.fromFile(myMaterialFile).path*
      * - An http or https url *https://mydomain.com/mymaterial.filamat*
      */
-    @JvmOverloads
     suspend fun loadMaterial(
         context: Context,
         filamatFileLocation: String
@@ -75,7 +74,6 @@ object MaterialLoader {
      * @param filamatBuffer The content of the Filamat File
      * @return the newly created object
      */
-    @JvmOverloads
     fun createMaterial(filamatBuffer: Buffer): MaterialInstance {
         return Material.Builder().payload(filamatBuffer, filamatBuffer.remaining())
             .build(Filament.engine)
@@ -124,15 +122,6 @@ fun MaterialInstance.setExternalTexture(
     name: String,
     texture: Texture
 ) = setTexture(name, texture, TextureSamplerExternal())
-
-fun MaterialInstance.setExternalStreamTexture(
-    name: String,
-    stream: Stream
-) = setTexture(
-    name,
-    Texture.Builder().sampler(Texture.Sampler.SAMPLER_EXTERNAL).format(Texture.InternalFormat.RGB8)
-        .build(), TextureSamplerExternal()
-)
 
 // **********
 // Base Color

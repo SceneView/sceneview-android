@@ -41,7 +41,7 @@ import io.github.sceneview.node.NodeParent;
  * camera turns off rendering.
  */
 public class Camera extends Node implements CameraProvider {
-    protected final Matrix viewMatrix = new Matrix();
+    private final Matrix viewMatrix = new Matrix();
     protected final Matrix projectionMatrix = new Matrix();
 
     private static final float DEFAULT_NEAR_PLANE = 0.01f;

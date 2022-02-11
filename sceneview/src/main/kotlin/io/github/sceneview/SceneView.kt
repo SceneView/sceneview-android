@@ -309,6 +309,7 @@ open class SceneView @JvmOverloads constructor(
                 if (value) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
         }
 
+    // TODO: See if we still need it
 //    /**
 //     * Set the background to a given [Drawable], or remove the background.
 //     * If the background is a [ColorDrawable], then the background color of the [SceneView] is set
@@ -360,7 +361,7 @@ open class SceneView @JvmOverloads constructor(
      * Called even if the touch is not over a node, in which case [PickHitResult.getNode]
      * will be null.
      *
-     * @param pickHitResult: represents the node that was touched
+     * @param pickHitResult represents the node that was touched
      * @param motionEvent   the motion event
      */
     open fun onTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent) {

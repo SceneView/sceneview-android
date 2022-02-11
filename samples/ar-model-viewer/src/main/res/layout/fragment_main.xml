@@ -20,7 +20,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal|bottom"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="32dp"
         android:backgroundTint="@color/translucent"
         android:gravity="center_vertical|left"
         android:text="@string/place_object"
