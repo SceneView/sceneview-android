@@ -2,15 +2,17 @@ package io.github.sceneview.ar.arcore
 
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Texture
-import com.google.android.filament.utils.max
-import com.google.android.filament.utils.pow
 import com.google.ar.core.Config
 import com.google.ar.core.LightEstimate
-import com.gorisse.thomas.sceneview.*
+import dev.romainguy.kotlin.math.max
+import dev.romainguy.kotlin.math.pow
 import io.github.sceneview.*
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.HDREnvironment
 import io.github.sceneview.light.*
+import io.github.sceneview.utils.Color
+import io.github.sceneview.utils.Orientation
+import io.github.sceneview.utils.colorOf
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -299,7 +301,7 @@ fun LightEstimate.ambientIntensityEnvironmentLights(
             // if max = green than colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
             val colorIntensitiesFactors = colorCorrections.slice(0..2)
                 .maxOrNull()?.takeIf { it > 0 }?.let { maxIntensity ->
-                    colorOf(
+                    Color(
                         colorCorrections[0] / maxIntensity,
                         colorCorrections[1] / maxIntensity,
                         colorCorrections[2] / maxIntensity
@@ -518,7 +520,7 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
         (previousEstimate?.mainLight ?: baseLight.clone()).apply {
             if (withDirection) {
                 environmentalHdrMainLightDirection.let { (x, y, z) ->
-                    direction = Direction(-x, -y, -z)
+                    direction = Orientation(-x, -y, -z)
                 }
             }
             if (withIntensity) {
