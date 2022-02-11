@@ -51,6 +51,10 @@ dependencies {
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2"
     api "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2"
 
+    // kotlin-math
+    // TODO: Waiting for the 1.2.1 release -> Delete copied/pasted classes in math package when available
+//    api 'dev.romainguy:kotlin-math:1.2.0'
+
     // Filament
     def filament_version = '1.12.8'
     api "com.google.android.filament:filament-android:$filament_version"

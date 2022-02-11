@@ -4,6 +4,7 @@ import com.google.android.filament.EntityInstance
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
 import io.github.sceneview.*
+import io.github.sceneview.utils.*
 
 /**
  * Default directional light intensity.
@@ -41,7 +42,7 @@ val Light.type: LightManager.Type
  * @see LightManager.getPosition
  * @see LightManager.setPosition
  */
-var Light.position: Direction
+var Light.position: Position
     get() = FloatArray(3).apply {
         Filament.lightManager.getPosition(instance, this)
     }.toPosition()
@@ -51,10 +52,10 @@ var Light.position: Direction
  * @see LightManager.getDirection
  * @see LightManager.setDirection
  */
-var Light.direction: Direction
+var Light.direction: Orientation
     get() = FloatArray(3).apply {
         Filament.lightManager.getDirection(instance, this)
-    }.toDirection()
+    }.toOrientation()
     set(value) = Filament.lightManager.setDirection(instance, value.x, value.y, value.z)
 
 /**

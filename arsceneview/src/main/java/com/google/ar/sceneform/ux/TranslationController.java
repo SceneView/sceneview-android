@@ -37,6 +37,7 @@ import io.github.sceneview.ar.arcore.ArFrame;
 import io.github.sceneview.ar.node.ArNode;
 import io.github.sceneview.node.Node;
 import io.github.sceneview.node.NodeParent;
+import io.github.sceneview.utils.MathKt;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -252,7 +253,7 @@ public class TranslationController extends BaseTransformationController<DragGest
             return;
         }
 
-        Vector3 localPosition = getTransformableNode().getPosition();
+        Vector3 localPosition = MathKt.toVector3(getTransformableNode().getPosition());
         float lerpFactor = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
         localPosition = Vector3.lerp(localPosition, desiredLocalPosition, lerpFactor);
 
@@ -262,7 +263,7 @@ public class TranslationController extends BaseTransformationController<DragGest
             this.desiredLocalPosition = null;
         }
 
-        getTransformableNode().setPosition(localPosition);
+        getTransformableNode().setPosition(MathKt.toFloat3(localPosition));
     }
 
     private void updateRotation(FrameTime frameTime) {
@@ -272,7 +273,8 @@ public class TranslationController extends BaseTransformationController<DragGest
             return;
         }
 
-        Quaternion localRotation = getTransformableNode().getRotationQuaternion();
+        // TODO :  Move to kotlin-math
+        Quaternion localRotation = MathKt.toOldQuaternion(getTransformableNode().getRotationQuaternion());
         float lerpFactor = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
         localRotation = Quaternion.slerp(localRotation, desiredLocalRotation, lerpFactor);
 
@@ -282,7 +284,7 @@ public class TranslationController extends BaseTransformationController<DragGest
             this.desiredLocalRotation = null;
         }
 
-        getTransformableNode().setRotationQuaternion(localRotation);
+        getTransformableNode().setRotationQuaternion(MathKt.toNewQuaternion(localRotation));
     }
 
     /**

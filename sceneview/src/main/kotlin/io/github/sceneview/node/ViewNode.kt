@@ -7,26 +7,20 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.PickHitResult
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
 import com.google.ar.sceneform.utilities.ChangeId
+import io.github.sceneview.SceneView
 import io.github.sceneview.model.await
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
  *
- * This node contains a renderable for the rendering engine to render.
+ * This node contains a View for the rendering engine to render.
  *
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
  */
-open class ViewNode(
-    position: Vector3 = defaultPosition,
-    rotationQuaternion: Quaternion = defaultRotation,
-    scales: Vector3 = defaultScales,
-    parent: NodeParent? = null
-) : Node(position, rotationQuaternion, scales, parent) {
+open class ViewNode() : Node() {
 
     // Rendering fields.
     private var renderableId: Int = ChangeId.EMPTY_ID
@@ -64,36 +58,29 @@ open class ViewNode(
     var onViewLoaded: ((renderableInstance: RenderableInstance, view: View) -> Unit)? = null
     var onError: ((exception: Exception) -> Unit)? = null
 
-    constructor(
-        renderableInstance: RenderableInstance,
-        parent: NodeParent? = null,
-        position: Vector3 = defaultPosition,
-        rotationQuaternion: Quaternion = defaultRotation,
-        scales: Vector3 = defaultScales
-    ) : this(position, rotationQuaternion, scales) {
+    /**
+     * TODO : Doc
+     */
+    constructor(renderableInstance: RenderableInstance) : this() {
         this.renderableInstance = renderableInstance
     }
 
+    /**
+     * TODO : Doc
+     *
+     * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
+     * View before the node is attached to the [SceneView]
+     *
+     * @see loadView
+     */
     constructor(
         context: Context,
         viewLayoutResId: Int,
         coroutineScope: LifecycleCoroutineScope? = null,
         onViewLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        parent: NodeParent? = null,
-        position: Vector3 = defaultPosition,
-        rotationQuaternion: Quaternion = defaultRotation,
-        scales: Vector3 = defaultScales
-    ) : this(position, rotationQuaternion, scales, parent) {
+        onError: ((error: Exception) -> Unit)? = null
+    ) : this() {
         loadView(context, viewLayoutResId, coroutineScope, onViewLoaded, onError)
-    }
-
-    constructor(node: ViewNode) : this(
-        position = node.position,
-        rotationQuaternion = node.rotationQuaternion,
-        scales = node.scales
-    ) {
-        setRenderable(node.renderable)
     }
 
     override fun onFrame(frameTime: FrameTime) {
@@ -133,6 +120,12 @@ open class ViewNode(
         renderableId = renderable?.id?.get() ?: ChangeId.EMPTY_ID
     }
 
+    /**
+     * TODO : Doc
+     *
+     * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
+     * View before the node is attached to the [SceneView]
+     */
     fun loadView(
         context: Context,
         layoutResId: Int,
@@ -150,8 +143,9 @@ open class ViewNode(
                     val instance = setRenderable(renderable)
                     onLoaded?.invoke(instance!!, view)
                     onViewLoaded(instance!!, view)
-                } catch (e: java.lang.Exception) {
-                    onError?.invoke(e)
+                } catch (error: java.lang.Exception) {
+                    onError?.invoke(error)
+                    onError(error)
                 }
             }
         } else {

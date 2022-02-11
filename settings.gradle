@@ -11,7 +11,7 @@ include ':sceneview'
 include ':arsceneview'
 
 // Samples
-include ':sample-ar-depth-node'
-project(':sample-ar-depth-node').projectDir = new File('samples/ar-depth-node')
+include ':sample-ar-model-viewer'
+project(':sample-ar-model-viewer').projectDir = new File('samples/ar-model-viewer')
 include ':sample-ar-cursor-placement'
 project(':sample-ar-cursor-placement').projectDir = new File('samples/ar-cursor-placement')

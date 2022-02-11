@@ -6,16 +6,21 @@ import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
-import io.github.sceneview.Color
+import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.material.setEmissiveColor
+import io.github.sceneview.utils.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 const val clickDuration = 250L
 
-open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope? = null) :
-    DepthNode() {
+open class CursorNode(
+    context: Context,
+    coroutineScope: LifecycleCoroutineScope? = null,
+    glbFileLocation: String = "sceneview/models/cursor.glb"
+) :
+    ArModelNode() {
 
     var validColor: Color = Color(1.0f, 1.0f, 1.0f)
     var invalidColor: Color = Color(1.0f, 0.0f, 0.0f)
@@ -34,7 +39,7 @@ open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope?
         loadModel(
             context = context,
             coroutineScope = coroutineScope,
-            glbFileLocation = "sceneview/models/cursor.glb"
+            glbFileLocation = glbFileLocation
         )
     }
 
@@ -45,13 +50,17 @@ open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope?
     }
 
     open fun applyColor() {
-        renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(r = color.r, g = color.g, b = color.b)
+        renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+            r = color.r,
+            g = color.g,
+            b = color.b
+        )
     }
 
-    override fun onArFrameHitResult(hitResult: HitResult?, isTracking: Boolean) {
-        super.onArFrameHitResult(hitResult, isTracking)
+    override fun onArFrameHitResult(hitResult: HitResult?) {
+        super.onArFrameHitResult(hitResult)
 
-        color = if (isTracking) {
+        color = if (hitResult?.isTracking == true) {
             validColor
         } else {
             invalidColor
@@ -60,10 +69,18 @@ open class CursorNode(context: Context, coroutineScope: LifecycleCoroutineScope?
 
     override fun createAnchor(): Anchor? {
         lifecycleScope?.launchWhenCreated {
-            renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(r = 0.0f, g = 0.0f, b = 0.0f)
+            renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+                r = 0.0f,
+                g = 0.0f,
+                b = 0.0f
+            )
             withContext(Dispatchers.IO) {
                 delay(clickDuration)
-                renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(r = 1.0f, g = 1.0f, b = 1.0f)
+                renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+                    r = 1.0f,
+                    g = 1.0f,
+                    b = 1.0f
+                )
             }
         }
         return super.createAnchor()
