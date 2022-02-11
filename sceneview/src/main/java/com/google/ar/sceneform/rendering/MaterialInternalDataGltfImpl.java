@@ -6,12 +6,12 @@ import com.google.android.filament.Material;
 public class MaterialInternalDataGltfImpl extends MaterialInternalData {
   @Nullable private final Material filamentMaterial;
 
-  MaterialInternalDataGltfImpl(Material filamentMaterial) {
+  public MaterialInternalDataGltfImpl(Material filamentMaterial) {
     this.filamentMaterial = filamentMaterial;
   }
 
   @Override
-  Material getFilamentMaterial() {
+  public Material getFilamentMaterial() {
     if (filamentMaterial == null) {
       throw new IllegalStateException("Filament Material is null.");
     }

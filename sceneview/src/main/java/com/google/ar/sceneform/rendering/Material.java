@@ -32,7 +32,7 @@ public class Material {
 
     @Nullable
     private final MaterialInternalData materialData;
-    final IMaterialInstance internalMaterialInstance;
+    public final IMaterialInstance internalMaterialInstance;
 
     /**
      * Creates a new instance of this Material.
@@ -225,7 +225,7 @@ public class Material {
     }
 
     @SuppressWarnings("initialization")
-    Material(MaterialInternalData materialData) {
+    public Material(MaterialInternalData materialData) {
         this.materialData = materialData;
         materialData.retain();
         if (materialData instanceof MaterialInternalDataImpl) {
