@@ -54,6 +54,14 @@ dependencies {
     android:layout_height="match_parent" />
 ```
 
+## Why do we included the Kotlin-Math library in SceneView?
+
+Earlier versions of OpenGL had a fixed rendering pipeline and provided an API to set positions of vertices, transformation and projection matrices, etc. However, with the new rendering pipeline it is required to prepare this data before passing it to GLSL shaders and OpenGL doesn't provide any mathematical functions to do that.
+
+It is possible to implement the required functions yourself like in [Sceneform](https://github.com/SceneView/sceneform-android) or use an existing library. For example, C++ supports operator overloading and benefits from the excellent [GLM library](https://glm.g-truc.net/0.9.9/) that allows to use the same syntax and features as GLSL.
+
+We use the [Kotlin-Math library](https://github.com/romainguy/kotlin-math) to rely on a well-tested functions and get advantage of using Kotlin operators for vector, matrix and quaternion operations too.
+
 ## Migration from Sceneform
 
 Sorry guys you will have a little work to do if coming from the ArFragment way.
