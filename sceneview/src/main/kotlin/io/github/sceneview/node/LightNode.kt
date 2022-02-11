@@ -1,24 +1,17 @@
 package io.github.sceneview.node
 
-import com.google.ar.sceneform.math.Quaternion
-import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.Light
 import com.google.ar.sceneform.rendering.LightInstance
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
  *
- * It contains a light for the rendering engine to render.
+ * This node contains a light for the rendering engine to render.
  *
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
  */
-class LightNode(
-    position: Vector3 = defaultPosition,
-    rotationQuaternion: Quaternion = defaultRotation,
-    scales: Vector3 = defaultScales,
-    parent: NodeParent? = null
-) : Node(position, rotationQuaternion, scales, parent) {
+open class LightNode() : Node() {
 
     /**
      * ### The [Light] to display.
@@ -32,6 +25,7 @@ class LightNode(
     var lightInstance: LightInstance? = null
         set(value) {
             if (field != value) {
+                field?.renderer = null
                 field?.destroy()
                 field = value
                 value?.renderer = if (shouldBeRendered) renderer else null
@@ -49,26 +43,21 @@ class LightNode(
             super.isRendered = value
         }
 
-    constructor(
-        lightInstance: LightInstance? = null,
-        parent: NodeParent? = null,
-        position: Vector3 = Vector3(),
-        rotationQuaternion: Quaternion = Quaternion(),
-        scales: Vector3 = Vector3(1.0f, 1.0f, 1.0f)
-    ) : this(position, rotationQuaternion, scales, parent) {
+    /**
+     * TODO : Doc
+     */
+    constructor(light: Light? = null) : this() {
+        setLight(light)
+    }
+
+    /**
+     * TODO : Doc
+     */
+    constructor(lightInstance: LightInstance) : this() {
         this.lightInstance = lightInstance
     }
 
-    constructor(node: LightNode) : this(
-        position = node.position,
-        rotationQuaternion = node.rotationQuaternion,
-        scales = node.scales
-    ) {
-        setLight(node.light)
-    }
-
     open fun onLightChanged() {
-
     }
 
     fun setLight(light: Light?): LightInstance? =
@@ -81,6 +70,8 @@ class LightNode(
         super.destroy()
         lightInstance?.destroy()
     }
+
+    override fun clone() = copy(LightNode())
 
     fun copy(toNode: LightNode = LightNode()): LightNode = toNode.apply {
         super.copy(toNode)

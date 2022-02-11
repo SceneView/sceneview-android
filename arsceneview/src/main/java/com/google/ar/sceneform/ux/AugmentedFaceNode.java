@@ -29,7 +29,6 @@ import com.google.ar.core.AugmentedFace.RegionType;
 import com.google.ar.core.Pose;
 import com.google.ar.core.TrackingState;
 import com.google.ar.sceneform.FrameTime;
-import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.EngineInstance;
 import com.google.ar.sceneform.rendering.Material;
@@ -42,6 +41,7 @@ import com.google.ar.sceneform.rendering.Texture;
 import com.google.ar.sceneform.rendering.Vertex;
 import com.google.ar.sceneform.rendering.Vertex.UvCoordinate;
 import io.github.sceneview.SceneView;
+import io.github.sceneview.ar.arcore.PoseKt;
 import io.github.sceneview.ar.node.ArNode;
 import io.github.sceneview.node.ModelNode;
 
@@ -279,8 +279,8 @@ public class AugmentedFaceNode extends ArNode {
     private void updateTransform() {
         // Update this node to be positioned at the center pose of the face.
         Pose centerPose = checkNotNull(augmentedFace).getCenterPose();
-        setWorldPosition(new Vector3(centerPose.tx(), centerPose.ty(), centerPose.tz()), false);
-        setWorldRotation(new Quaternion(centerPose.qx(), centerPose.qy(), centerPose.qz(), centerPose.qw()), false);
+        setPosition(PoseKt.getPosition(centerPose));
+        setRotationQuaternion(PoseKt.getRotation(centerPose));
     }
 
     private void updateRegionNodes() {
@@ -313,7 +313,8 @@ public class AugmentedFaceNode extends ArNode {
         faceRegionNode.getRenderableInstance().getFilamentAsset().getAnimator().updateBoneMatrices();
     }
 
-    private boolean isTracking() {
+    @Override
+    public boolean isTracking() {
         return augmentedFace != null && augmentedFace.getTrackingState() == TrackingState.TRACKING;
     }
 

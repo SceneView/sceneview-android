@@ -11,15 +11,13 @@ import com.google.ar.sceneform.collision.CollisionShape
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.common.TransformProvider
 import com.google.ar.sceneform.math.Matrix
-import com.google.ar.sceneform.math.Quaternion
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
+import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
-import kotlin.math.abs
-
-private const val directionUpEpsilon = 0.99f
+import io.github.sceneview.utils.*
 
 // This is the default from the ViewConfiguration class.
 private const val defaultTouchSlop = 8
@@ -31,17 +29,28 @@ private const val defaultTouchSlop = 8
  *
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
+ *
+ * ------- +y ----- -z
+ *
+ * ---------|----/----
+ *
+ * ---------|--/------
+ *
+ * -x - - - 0 - - - +x
+ *
+ * ------/--|---------
+ *
+ * ----/----|---------
+ *
+ * +z ---- -y --------
  */
-open class Node(
-    position: Vector3 = defaultPosition,
-    rotationQuaternion: Quaternion = defaultRotation,
-    scales: Vector3 = defaultScales
-) : NodeParent, TransformProvider, SceneLifecycleObserver {
+open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     companion object {
-        val defaultPosition get() = Vector3(0.0f, 0.0f, -2.0f)
-        val defaultRotation get() = Quaternion()
-        val defaultScales get() = Vector3(1.0f, 1.0f, 1.0f)
+        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = -2.0f)
+        val DEFAULT_ROTATION get() = Quaternion()
+        val DEFAULT_SCALE get() = Scale(1.0f, 1.0f, 1.0f)
+        const val DEFAULT_ROTATION_DOT_THRESHOLD = 0.95f
     }
 
     /**
@@ -51,7 +60,7 @@ open class Node(
      */
     protected open val sceneView: SceneView? get() = parent as? SceneView ?: parentNode?.sceneView
 
-    // TODO : Remove when every dependendent is kotlined
+    // TODO : Remove when every dependent is kotlined
     fun getSceneViewInternal() = sceneView
     protected open val lifecycle: SceneLifecycle? get() = sceneView?.lifecycle
     protected val lifecycleScope get() = sceneView?.lifecycleScope
@@ -59,6 +68,154 @@ open class Node(
     private val collisionSystem: CollisionSystem? get() = sceneView?.collisionSystem
 
     val isAttached get() = sceneView != null
+
+    /**
+     * ### The node position
+     *
+     * The node's position locates it within the coordinate system of its parent.
+     * The default position is the zero vector, indicating that the node is placed at the origin of
+     * the parent node's coordinate system.
+     *
+     * **Horizontal (X):**
+     * - left: x < 0.0f
+     * - center horizontal: x = 0.0f
+     * - right: x > 0.0f
+     *
+     * **Vertical (Y):**
+     * - top: y > 0.0f
+     * - center vertical : y = 0.0f
+     * - bottom: y < 0.0f
+     *
+     * **Depth (Z):**
+     * - forward: z < 0.0f
+     * - origin/camera position: z = 0.0f
+     * - backward: z > 0.0f
+     */
+    var position: Position = DEFAULT_POSITION
+
+    /**
+     * ### The node orientation in Euler Angles Degrees per axis.
+     *
+     * `[0..360]`
+     *
+     * The three-component rotation vector specifies the direction of the rotation axis in degrees.
+     *
+     * The default rotation is the zero vector, specifying no rotation.
+     * Rotation is applied relative to the node's origin property.
+     *
+     * ------- +y ----- -z
+     *
+     * ---------|----/----
+     *
+     * ---------|--/------
+     *
+     * -x - - - 0 - - - +x
+     *
+     * ------/--|---------
+     *
+     * ----/----|---------
+     *
+     * +z ---- -y --------
+     */
+    var rotation: Rotation
+        get() = rotationQuaternion.toEulerAngles()
+        set(value) {
+            rotationQuaternion = Quaternion.fromEuler(value)
+        }
+
+    var rotationQuaternion: Quaternion = DEFAULT_ROTATION
+
+    /**
+     * ### The node scales
+     *
+     * - reduce size: scale < 1.0f
+     * - same size: scale = 1.0f
+     * - increase size: scale > 1.0f
+     */
+    var scale: Scale = DEFAULT_SCALE
+
+    open var transform: Transform
+        get() = transpose(translation(position) * rotation(rotationQuaternion) * scale(scale))
+        set(value) {
+            position = Position(value.position)
+            rotationQuaternion = Quaternion(value.toQuaternion())
+            scale = Scale(value.scale)
+        }
+
+    /**
+     * ### The node content origin (center)
+     *
+     * A node's content origin is the transformation between its coordinate space and that used by
+     * its [position]. The default origin is zero vector, specifying that the node's position
+     * locates the origin of its coordinate system relatively to that center point.
+     *
+     * Changing the origin transform alters these behaviors in many useful ways.
+     * You can offset the node's contents relative to its position.
+     * For example, by setting the pivot to a translation transform you can position a node
+     * containing a sphere geometry relative to where the sphere would rest on a floor instead of
+     * relative to its center.
+     */
+    open var contentPosition = Position()
+
+    /**
+     * ### The node content orientation
+     *
+     * A node's content origin is the transformation between its coordinate space and that used by
+     * its [quaternion]. The default origin is zero vector, specifying that the node's orientation
+     * locates the origin of its rotation relatively to that center point.
+     *
+     * `[0..360]`
+     *
+     * Changing the origin transform alters these behaviors in many useful ways.
+     * You can move the node's axis of rotation.
+     * For example, with a translation transform you can cause a node to revolve around a faraway
+     * point instead of rotating around its center, and with a rotation transform you can tilt the
+     * axis of rotation.
+     */
+    var contentRotation = Rotation()
+
+    /**
+     * ### The node content scale
+     */
+    open var contentScale = Scale(1.0f, 1.0f, 1.0f)
+
+    open val contentTransform: Transform
+        get() =
+            transpose(
+                translation(contentPosition) *
+                        rotation(contentRotation) *
+                        scale(contentScale)
+            )
+
+    /**
+     * ## The smooth position, rotation and scale speed
+     *
+     * Expressed in units per seconds.
+     * On an AR context, 1 unit = 1 meter. So, for position, this value defines the meters per
+     * seconds for a node move.
+     * This value is used by [smoothPosition] and [smoothRotation]
+     */
+    var smoothMoveSpeed = 5.0f
+
+    /**
+     * ## The smooth rotation minimum change limit
+     *
+     * This is used to avoid very near rotations smooth modifications. It prevents the rotation to
+     * appear too quick if the ranges are too close and uses linearly interpolation for upper dot
+     * products.
+     *
+     * Expressed in quaternion dot product
+     * This value is used by [smooth]
+     */
+    var smoothRotationThreshold = DEFAULT_ROTATION_DOT_THRESHOLD
+
+    private var smoothPosition: Position? = null
+    private var smoothRotation: Quaternion? = null
+
+    val worldTransform: Mat4
+        get() = (parentNode?.let { parent ->
+            transform * contentTransform * parent.worldTransform
+        } ?: transform * contentTransform)
 
     /**
      * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
@@ -165,178 +322,6 @@ open class Node(
 
     private var allowDispatchTransformChanged = true
 
-    /**
-     * ### The node X position
-     *
-     * - left: < 0.0f
-     * - center: = 0.0f
-     * - right: > 0.0f
-     */
-    var positionX: Float
-        get() = position.x
-        set(value) {
-            position = position.apply { x = value }
-        }
-
-    /**
-     * ### The node Y position
-     *
-     * - top: > 0.0f
-     * - center: = 0.0f
-     * - bottom: < 0.0f
-     */
-    open var positionY: Float
-        get() = position.y
-        set(value) {
-            position = position.apply { y = value }
-        }
-
-    /**
-     * ### The node Z position
-     *
-     * - forward: < 0.0f
-     * - camera position: = 0.0f
-     * - backward: > 0.0f
-     */
-    var positionZ: Float
-        get() = position.z
-        set(value) {
-            position = position.apply { z = value }
-        }
-
-    /** ### The node position */
-    open var position: Vector3 = position
-        get() = Vector3(field)
-        set(value) {
-            if (field != value) {
-                field = value
-                onTransformChanged()
-            }
-        }
-
-    /**
-     * ### The node X center
-     *
-     * - left: < 0.0f
-     * - center: = 0.0f
-     * - right: > 0.0f
-     */
-    var centerX: Float
-        get() = center.x
-        set(value) {
-            center = center.apply { x = value }
-        }
-
-    /**
-     * ### The node Y center
-     *
-     * - top: > 0.0f
-     * - center: = 0.0f
-     * - bottom: < 0.0f
-     */
-    open var centerY: Float
-        get() = center.y
-        set(value) {
-            center = center.apply { y = value }
-        }
-
-    /**
-     * ### The node Z center
-     *
-     * - forward: > 0.0f
-     * - camera position: = 0.0f
-     * - backward: < 0.0f
-     */
-    var centerZ: Float
-        get() = center.z
-        set(value) {
-            center = center.apply { z = value }
-        }
-
-    /** ### The node center */
-    open var center: Vector3 = Vector3()
-        get() = Vector3(field)
-        set(value) {
-            if (field != value) {
-                field = value
-                onTransformChanged()
-            }
-        }
-
-    /**
-     * ### The node X rotation in degrees
-     *
-     * [0..360]
-     */
-    var rotationX: Float
-        get() = rotation.x
-        set(value) {
-            rotation = rotation.apply { x = value }
-        }
-
-    /**
-     *  ### The node Y rotation in degrees
-     *
-     *  [0..360]
-     */
-    var rotationY: Float
-        get() = rotation.y
-        set(value) {
-            rotation = rotation.apply { y = value }
-        }
-
-    /**
-     * ### The node Z rotation in degrees
-     *
-     * [0..360]
-     */
-    var rotationZ: Float
-        get() = rotation.z
-        set(value) {
-            rotation = rotation.apply { z = value }
-        }
-
-    /** ### The node rotation in Euler Angles Degrees */
-    var rotation: Vector3
-        get() = rotationQuaternion.eulerAngles
-        set(value) {
-            rotationQuaternion = Quaternion.eulerAngles(value)
-        }
-
-    open var rotationQuaternion: Quaternion = rotationQuaternion
-        set(value) {
-            if (field != value) {
-                field = value
-                onTransformChanged()
-            }
-        }
-
-    /**
-     * ### The node scale
-     *
-     * - down: < 1.0f
-     * - original size: = 1.0f
-     * - up: > 1.0f
-     */
-    open var scale: Float
-        get() = arrayOf(scales.x, scales.y, scales.y).average().toFloat()
-        set(value) {
-            scales = scales.apply {
-                x = value
-                y = value
-                z = value
-            }
-        }
-
-    /** ### The node scales */
-    open var scales: Vector3 = scales
-        set(value) {
-            if (field != value) {
-                field = value
-                onTransformChanged()
-            }
-        }
-
     // Collision fields.
     var collider: Collider? = null
         private set
@@ -350,8 +335,8 @@ open class Node(
     /** ### Listener for [onAttachToScene] call */
     val onAttachedToScene = mutableListOf<((scene: SceneView) -> Unit)>()
 
-    /** ### Listener for [onDetachFromScene] call */
-    val onDetachFromScene = mutableListOf<((scene: SceneView) -> Unit)>()
+    /** ### Listener for [onDetachedFromScene] call */
+    val onDetachedFromScene = mutableListOf<((scene: SceneView) -> Unit)>()
 
     /** ### Listener for [onRenderingChanged] call */
     val onRenderingChanged = mutableListOf<((node: Node, isRendering: Boolean) -> Unit)>()
@@ -404,27 +389,12 @@ open class Node(
      */
     var onTouched: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Unit)? = null
 
-    constructor(
-        position: Vector3 = defaultPosition,
-        rotationQuaternion: Quaternion = defaultRotation,
-        scales: Vector3 = defaultScales,
-        parent: NodeParent? = null
-    ) : this(position, rotationQuaternion, scales) {
-        this.parent = parent
-    }
-
-    constructor(node: Node) : this(
-        position = node.position,
-        rotationQuaternion = node.rotationQuaternion,
-        scales = node.scales
-    )
-
     open fun onAttachToScene(sceneView: SceneView) {
-        onAttachedToScene.forEach { it(sceneView) }
+        onAttachedToScene.toList().forEach { it(sceneView) }
     }
 
     open fun onDetachFromScene(sceneView: SceneView) {
-        onDetachFromScene.forEach { it(sceneView) }
+        onDetachedFromScene.toList().forEach { it(sceneView) }
     }
 
     /**
@@ -434,10 +404,25 @@ open class Node(
      * Override to perform any setup that needs to occur when the node is active or not.
      */
     open fun onRenderingChanged(isRendering: Boolean) {
-        onRenderingChanged.forEach { it(this, isRendering) }
+        onRenderingChanged.toList().forEach { it(this, isRendering) }
     }
 
     override fun onFrame(frameTime: FrameTime) {
+        // Smooth value compare
+        smoothPosition?.let { desiredPosition ->
+            position = lerp(position, desiredPosition, smoothMoveSpeed * frameTime.deltaSeconds)
+            if (position == desiredPosition) {
+                this.smoothPosition = null
+            }
+        }
+        smoothRotation?.let { desiredRotation ->
+            val slerpFactor = clamp(frameTime.deltaSeconds * smoothMoveSpeed, 0f, 1f)
+            rotationQuaternion = slerp(rotationQuaternion, normalize(desiredRotation), slerpFactor)
+            // TODO: Move adjust this smooth precision angle
+            if (angle(rotationQuaternion, desiredRotation) < 0.01f) {
+                smoothRotation = null
+            }
+        }
         if (isRendered) {
             onFrameUpdated(frameTime)
         }
@@ -463,7 +448,6 @@ open class Node(
         // TODO : Kotlin Collider for more comprehension
         collider?.markWorldShapeDirty()
         children.forEach { it.onTransformChanged() }
-        transformationMatrixChanged = true
         onTransformChanged.forEach { it(this) }
     }
 
@@ -490,6 +474,77 @@ open class Node(
     }
 
     /**
+     * ### The node scale
+     *
+     * - reduce size: scale < 1.0f
+     * - same size: scale = 1.0f
+     * - increase size: scale > 1.0f
+     */
+    fun scale(scale: Float) {
+        this.scale.xyz = Scale(scale)
+    }
+
+    /**
+     * ## Change the node transform
+     *
+     * @see position
+     * @see rotation
+     * @see scale
+     */
+    fun transform(
+        position: Position = this.position,
+        rotation: Rotation = this.rotation,
+        scale: Scale = this.scale
+    ) {
+        this.position = position
+        this.rotation = rotation
+        this.scale = scale
+    }
+
+
+    /**
+     * ## Change the node transform
+     *
+     * @see position
+     * @see rotation
+     * @see scale
+     */
+    fun transform(
+        position: Position = this.position,
+        rotation: Quaternion = this.rotationQuaternion,
+        scale: Scale = this.scale
+    ) {
+        this.position = position
+        this.rotationQuaternion = rotation
+        this.scale = scale
+    }
+
+    /**
+     * ## Move/smooth change the node transform
+     *
+     * @see position
+     * @see rotation
+     * @see scale
+     * @see smoothSpeed
+     */
+    fun smooth(
+        position: Position = this.position,
+        rotation: Quaternion = this.rotationQuaternion,
+        //TODO : Handle those parameters
+//        scale: Scale = this.scale,
+//        contentPosition: Position = this.contentPosition,
+//        contentRotation: Rotation = this.contentRotation,
+//        contentScale: Scale = this.contentScale
+    ) {
+        if (position != this.position) {
+            smoothPosition = position
+        }
+        if (rotation != this.rotationQuaternion) {
+            smoothRotation = rotation
+        }
+    }
+
+    /**
      * ### Checks whether the given node parent is an ancestor of this node recursively
      *
      * Return true if the node is an ancestor of this node
@@ -497,30 +552,42 @@ open class Node(
     fun isDescendantOf(ancestor: NodeParent): Boolean =
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
 
-    // Reuse to limit frame instantiations
-    protected var transformationMatrixChanged = true
-    private val _transformationMatrix = Matrix()
+    /**
+     * ### The node world-space position
+     *
+     * The world position of this node (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local position with its parent's world
+     * position.
+     *
+     * @see worldTransform
+     */
+    open val worldPosition: Position get() = worldTransform.position
+
+    /**
+     * ### The node world-space rotation
+     *
+     * The world rotation of this node (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local rotation with its parent's world
+     * rotation.
+     *
+     * @see worldTransform
+     */
+    open val worldRotation: Rotation get() = worldTransform.rotation
+
+    /**
+     * ### The node world-space scale
+     *
+     * The world scale of this node (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local scale with its parent's world
+     * scale.
+     *
+     * @see worldTransform
+     */
+    open val worldScales: Scale get() = worldTransform.scale
+
+    // TODO : Remove this to full Kotlin Math
     override fun getTransformationMatrix(): Matrix {
-        if (transformationMatrixChanged) {
-            _transformationMatrix.apply {
-                makeTrs(
-                    Vector3.subtract(position, center),
-                    rotationQuaternion,
-                    scales
-                )
-            }
-            parentNode?.let { parentNode ->
-                _transformationMatrix.apply {
-                    Matrix.multiply(
-                        parentNode.transformationMatrix,
-                        _transformationMatrix,
-                        this
-                    )
-                }
-            }
-            transformationMatrixChanged = false
-        }
-        return _transformationMatrix
+        return Matrix(worldTransform.toFloatArray())
     }
 
     // Reuse this to limit frame instantiations
@@ -680,7 +747,7 @@ open class Node(
     @JvmOverloads
     open fun copy(toNode: Node = Node()): Node = toNode.apply {
         position = this@Node.position
-        rotation = this@Node.rotation
+        rotationQuaternion = this@Node.rotationQuaternion
         scale = this@Node.scale
     }
 
@@ -689,45 +756,46 @@ open class Node(
         this.parent = null
     }
 
-    /**
-     * ### Sets the direction that the node is looking at in world-space
-     *
-     * After calling this, [forward] will match the look direction passed in.
-     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
-     * direction.
-     *
-     * @param lookDirection a vector representing the desired look direction in world-space
-     */
-    fun setLookDirection(lookDirection: Vector3) {
-        // Default up direction
-        var upDirection = Vector3.up()
-        // First determine if the look direction and default up direction are far enough apart to
-        // produce a numerically stable cross product.
-        val directionUpMatch = abs(Vector3.dot(lookDirection, upDirection))
-        if (directionUpMatch > directionUpEpsilon) {
-            // If the direction vector and up vector coincide choose a new up vector.
-            upDirection = Vector3(0.0f, 0.0f, 1.0f)
-        }
+    // TODO : Use kotlin math
+//    /**
+//     * ### Sets the direction that the node is looking at in world-space
+//     *
+//     * After calling this, [forward] will match the look direction passed in.
+//     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
+//     * direction.
+//     *
+//     * @param lookDirection a vector representing the desired look direction in world-space
+//     */
+//    fun setLookDirection(lookDirection: Vector3) {
+//        // Default up direction
+//        var upDirection = Vector3.up()
+//        // First determine if the look direction and default up direction are far enough apart to
+//        // produce a numerically stable cross product.
+//        val directionUpMatch = abs(Vector3.dot(lookDirection, upDirection))
+//        if (directionUpMatch > directionUpEpsilon) {
+//            // If the direction vector and up vector coincide choose a new up vector.
+//            upDirection = Vector3(0.0f, 0.0f, 1.0f)
+//        }
+//
+//        // Finally build the rotation with the proper up vector.
+//        setLookDirection(lookDirection, upDirection)
+//    }
 
-        // Finally build the rotation with the proper up vector.
-        setLookDirection(lookDirection, upDirection)
-    }
-
-    /**
-     * ### Sets the direction that the node is looking at in world-space
-     *
-     * After calling this, [forward] will match the look direction passed in.
-     * The up direction will determine the orientation of the node around the direction.
-     * The look direction and up direction cannot be coincident (parallel) or the orientation will
-     * be invalid.
-     *
-     * @param lookDirection a vector representing the desired look direction in world-space
-     * @param upDirection   a vector representing a valid up vector to use, such as Vector3.up()
-     */
-    fun setLookDirection(lookDirection: Vector3, upDirection: Vector3) {
-        rotationQuaternion = Quaternion.lookRotation(lookDirection, upDirection)
-    }
-
+//    /**
+//     * ### Sets the direction that the node is looking at in world-space
+//     *
+//     * After calling this, [forward] will match the look direction passed in.
+//     * The up direction will determine the orientation of the node around the direction.
+//     * The look direction and up direction cannot be coincident (parallel) or the orientation will
+//     * be invalid.
+//     *
+//     * @param lookDirection a vector representing the desired look direction in world-space
+//     * @param upDirection   a vector representing a valid up vector to use, such as Vector3.up()
+//     */
+//    fun setLookDirection(lookDirection: Vector3, upDirection: Vector3) {
+//
+//        orientation = Quaternion.lookRotation(lookDirection, upDirection)
+//    }
 
     /**
      * ### Performs the given action when the node is attached to the scene.
