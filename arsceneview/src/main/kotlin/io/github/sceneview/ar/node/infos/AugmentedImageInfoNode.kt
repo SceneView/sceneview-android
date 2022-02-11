@@ -3,21 +3,18 @@ package io.github.sceneview.ar.node.infos
 import android.content.Context
 import android.view.View
 import androidx.lifecycle.LifecycleCoroutineScope
-import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.R
 import io.github.sceneview.node.ViewNode
+import io.github.sceneview.utils.Position
 
 open class AugmentedImageInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
-    ViewNode(
-        context = context,
-        coroutineScope = coroutineScope,
-        position = Vector3(0.5f, 0.5f, 0f),
-        viewLayoutResId = R.layout.sceneview_view_info_augmented_image,
-    ) {
+    ViewNode() {
 
     init {
         isFocusable = false
+        position = Position(x = 0.5f, y = 0.5f, z = 0f)
+        loadView(context, R.layout.sceneview_view_info_augmented_image, coroutineScope)
     }
 
     override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {

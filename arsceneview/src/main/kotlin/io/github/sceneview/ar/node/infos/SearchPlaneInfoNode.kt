@@ -9,29 +9,25 @@ import android.view.animation.LinearInterpolator
 import android.widget.TextView
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.core.TrackingFailureReason
-import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.R
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.node.ViewNode
+import io.github.sceneview.utils.Position
 
 open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
-    ViewNode(
-        context = context,
-        coroutineScope = coroutineScope,
-        viewLayoutResId = R.layout.sceneview_view_info_search_plane,
-        position = Vector3(0.0f, 0.0f, -2.0f)
-    ) {
+    ViewNode() {
 
     var textView: TextView? = null
 
+    // TODO: Move to Quaternion
     private val animator by lazy {
         ObjectAnimator.ofPropertyValuesHolder(
-            this,
-            PropertyValuesHolder.ofFloat("rotationX", 0.0f, 15.0f, -15.0f, 0.0f),
-            PropertyValuesHolder.ofFloat("rotationY", 0.0f, 15.0f, -15.0f, 0.0f)
+            this.rotation,
+            PropertyValuesHolder.ofFloat("x", 0.0f, 15.0f, -15.0f, 0.0f),
+            PropertyValuesHolder.ofFloat("y", 0.0f, 15.0f, -15.0f, 0.0f)
         ).apply {
             interpolator = LinearInterpolator()
             duration = 2500
@@ -41,6 +37,8 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
 
     init {
         isFocusable = false
+        position = Position(x = 0.0f, y = 0.0f, z = -2.0f)
+        loadView(context, R.layout.sceneview_view_info_search_plane, coroutineScope)
     }
 
     override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {

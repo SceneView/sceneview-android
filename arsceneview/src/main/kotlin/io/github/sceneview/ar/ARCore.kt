@@ -54,11 +54,13 @@ class ARCore(
             registerForCameraPermissionResult(lifecycle.activity)
         } catch (exception: Exception) {
             throw AssertionError(
-                "######################################################################\n" +
+                "\n######################################################################\n" +
                         "# Camera permission result must be registered before Activity resume #\n" +
                         "#                                                                    #\n" +
                         "# - Add the ArSceneView before onResume()                            #\n" +
+                        "#                                                                    #\n" +
                         "# OR                                                                 #\n" +
+                        "#                                                                    #\n" +
                         "# - Add this call in your Activity onCreate():                       #\n" +
                         "#                                                                    #\n" +
                         "# ARCore.registerForCameraPermissionResult(this)                     #\n" +

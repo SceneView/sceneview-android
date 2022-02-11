@@ -2,6 +2,8 @@ package com.google.ar.sceneform.math;
 
 import com.google.ar.sceneform.utilities.Preconditions;
 
+import dev.romainguy.kotlin.math.Float3;
+
 /** A Vector with 3 floats. */
 // TODO: Evaluate consolidating internal math. Additional bugs: b/69935335
 public class Vector3 {
