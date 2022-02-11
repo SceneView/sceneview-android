@@ -1,0 +1,1 @@
+for /R %%G in (..\assets\environments\*.hdr) do cmgen --deploy ./output --format=ktx --size=256 --extract-blur=0.1 "%%G"
