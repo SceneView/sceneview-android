@@ -7,7 +7,8 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.node.DepthNode
+import io.github.sceneview.ar.node.ArModelNode
+import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {
@@ -16,7 +17,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     lateinit var loadingView: View
     lateinit var actionButton: ExtendedFloatingActionButton
 
-    lateinit var depthNode: DepthNode
+    lateinit var modelNode: ArModelNode
 
     var isLoading = false
         set(value) {
@@ -42,18 +43,18 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         isLoading = true
-        depthNode = DepthNode(
-            context = requireContext(),
-            coroutineScope = lifecycleScope,
-            modelGlbFileLocation = "models/halloween.glb",
-            onModelLoaded = { modelInstance ->
-                isLoading = false
-                modelInstance.animate(true).start()
-            })
-        depthNode.onTrackingChanged = { _, isTracking ->
-            actionButton.isGone = !isTracking
+        modelNode = ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE).apply {
+            loadModel(
+                context = requireContext(),
+                coroutineScope = lifecycleScope,
+                glbFileLocation = "models/spiderbot.glb",
+                animated = true,
+                onLoaded = { isLoading = false })
+            onTrackingChanged = { _, isTracking, _ ->
+                actionButton.isGone = !isTracking
+            }
         }
-        sceneView.addChild(depthNode)
+        sceneView.addChild(modelNode)
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -62,25 +63,23 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.menuInstantPlacement -> {
-                item.isChecked = !item.isChecked
-                true
-            }
-            R.id.menuDepthPlacement -> {
-                item.isChecked = !item.isChecked
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+        item.isChecked = !item.isChecked
+        modelNode.placementMode = when (item.itemId) {
+            R.id.menuPlanePlacement -> PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL
+            R.id.menuInstantPlacement -> PlacementMode.INSTANT
+            R.id.menuDepthPlacement -> PlacementMode.DEPTH
+            R.id.menuBestPlacement -> PlacementMode.BEST_AVAILABLE
+            else -> PlacementMode.DISABLED
         }
+        return true
     }
 
     fun actionButtonClicked(view: View? = null) {
-        if (!depthNode.isAnchored && depthNode.anchor()) {
+        if (!modelNode.isAnchored && modelNode.anchor()) {
             actionButton.text = getString(R.string.move_object)
             actionButton.icon = resources.getDrawable(R.drawable.ic_target)
         } else {
-            depthNode.anchor = null
+            modelNode.anchor = null
             actionButton.text = getString(R.string.place_object)
             actionButton.icon = resources.getDrawable(R.drawable.ic_anchor)
         }

@@ -9,7 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.node.ArNode
+import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.CursorNode
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
@@ -20,7 +20,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     lateinit var actionButton: ExtendedFloatingActionButton
 
     lateinit var cursorNode: CursorNode
-    var modelNode: ArNode? = null
+    var modelNode: ArModelNode? = null
 
     var isLoading = false
         set(value) {
@@ -47,7 +47,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         cursorNode = CursorNode(context = requireContext(), coroutineScope = lifecycleScope)
-        cursorNode.onTrackingChanged = { _, isTracking ->
+        cursorNode.onTrackingChanged = { _, isTracking, _ ->
             if (!isLoading) {
                 actionButton.isGone = !isTracking
             }
@@ -58,19 +58,18 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     fun anchorOrMove(anchor: Anchor) {
         if (modelNode == null) {
             isLoading = true
-            modelNode = ArNode(
-                context = requireContext(),
-                coroutineScope = lifecycleScope,
-                anchor = anchor,
-                modelGlbFileLocation = "models/spiderbot.glb",
-                onModelLoaded = {
-                    actionButton.text = getString(R.string.move_object)
-                    actionButton.icon = resources.getDrawable(R.drawable.ic_target)
-                    isLoading = false
-                })
-            sceneView.addChild(modelNode!!)
-        } else {
-            modelNode!!.anchor = anchor
+            modelNode = ArModelNode().apply {
+                loadModel(context = requireContext(),
+                    coroutineScope = lifecycleScope,
+                    glbFileLocation = "models/spiderbot.glb",
+                    onLoaded = {
+                        actionButton.text = getString(R.string.move_object)
+                        actionButton.icon = resources.getDrawable(R.drawable.ic_target)
+                        isLoading = false
+                    })
+                sceneView.addChild(this)
+            }
         }
+        modelNode!!.anchor = anchor
     }
 }

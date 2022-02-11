@@ -145,7 +145,7 @@ public class Quaternion {
    *
    * @return the negated Quaternion
    */
-  Quaternion negated() {
+  public Quaternion negated() {
     return new Quaternion(-this.x, -this.y, -this.z, -this.w);
   }
 
@@ -271,7 +271,7 @@ public class Quaternion {
    *
    * @return The combined Quaternion
    */
-  static Quaternion add(Quaternion lhs, Quaternion rhs) {
+  public static Quaternion add(Quaternion lhs, Quaternion rhs) {
     Preconditions.checkNotNull(lhs, "Parameter \"lhs\" was null.");
     Preconditions.checkNotNull(rhs, "Parameter \"rhs\" was null.");
     Quaternion result = new Quaternion();

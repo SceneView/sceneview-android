@@ -1,9 +1,6 @@
 package io.github.sceneview.utils
 
 import com.google.android.filament.utils.pow
-import io.github.sceneview.Color
-import io.github.sceneview.colorOf
-import io.github.sceneview.toFloatArray
 
 /**
  * @see FloatArray.toLinearSpace
