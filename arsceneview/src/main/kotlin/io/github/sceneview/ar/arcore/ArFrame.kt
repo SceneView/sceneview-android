@@ -92,7 +92,7 @@ data class ArFrame(
         depth: Boolean = session.depthEnabled,
         instantPlacement: Boolean = session.instantPlacementEnabled
     ): List<HitResult> {
-        if(camera.isTracking) {
+        if (camera.isTracking) {
             if (plane || depth) {
                 frame.hitTest(xPx, yPx).takeIf { it.isNotEmpty() }?.let {
                     return it
@@ -125,7 +125,7 @@ data class ArFrame(
             plane = plane,
             depth = depth,
             instantPlacement = instantPlacement
-        ).firstValid(camera)
+        ).firstValid(camera, plane, depth, instantPlacement)
     }
 
     /**
@@ -146,7 +146,7 @@ data class ArFrame(
         plane = plane,
         depth = depth,
         instantPlacement = instantPlacement
-    ).firstValid(frame.camera)
+    ).firstValid(frame.camera, plane, depth, instantPlacement)
 
     /**
      * ### Creates a new anchor at the hit location.
@@ -257,14 +257,19 @@ data class ArFrame(
  * Hits are sorted by depth. Consider only closest hit on a plane, Oriented Point, Depth Point,
  * or Instant Placement Point.
  */
-fun Collection<HitResult>.firstValid(camera: Camera): HitResult? {
+fun Collection<HitResult>.firstValid(
+    camera: Camera,
+    plane: Boolean,
+    depth: Boolean,
+    instantPlacement: Boolean
+): HitResult? {
     return firstOrNull { hitResult ->
         when (val trackable = hitResult.trackable!!) {
-            is Plane -> trackable.isPoseInPolygon(hitResult.hitPose) &&
+            is Plane -> plane && trackable.isPoseInPolygon(hitResult.hitPose) &&
                     hitResult.hitPose.calculateDistanceToPlane(camera.pose) > 0.0f
-            is DepthPoint -> trackable.isTracking
-            is Point -> trackable.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
-            is InstantPlacementPoint -> true
+            is DepthPoint -> depth && trackable.isTracking
+            is Point -> depth && trackable.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
+            is InstantPlacementPoint -> instantPlacement
             else -> false
         }
     }
