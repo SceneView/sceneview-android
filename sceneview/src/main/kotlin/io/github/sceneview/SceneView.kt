@@ -66,7 +66,7 @@ open class SceneView @JvmOverloads constructor(
             context.getActivity()!!
         }
 
-    open val sceneLifecycle : SceneLifecycle by lazy {  SceneLifecycle(context, this) }
+    open val sceneLifecycle: SceneLifecycle by lazy { SceneLifecycle(context, this) }
     override fun getLifecycle() = sceneLifecycle
 
     private val parentLifecycleObserver = LifecycleEventObserver { _, event ->
@@ -177,28 +177,39 @@ open class SceneView @JvmOverloads constructor(
 //        }
 
     init {
-        // TODO : Remove it here when moved Filament to lifecycle aware
-        EngineInstance.getEngine()
+        try {
+            // TODO : Remove it here when moved Filament to lifecycle aware
+            EngineInstance.getEngine()
 
-        lifecycleScope.launchWhenCreated {
-            mainLight = LightManager.Builder(LightManager.Type.SUN)
-                .intensity(defaultMainLightIntensity)
-                .castShadows(true).build()
-            environment = KTXLoader.loadEnvironment(context, defaultIbl)
-            nodeSelectorModel = ModelRenderable.builder()
-                .setSource(context, Uri.parse(defaultNodeSelector))
-                .setIsFilamentGltf(true)
-                .await().apply {
-                    collisionShape = null
-                    BuildConfig.VERSION_NAME
-                }
-
-            context.obtainStyledAttributes(attrs, R.styleable.SceneView, defStyleAttr, defStyleRes)
-                .use { typedArray ->
-                    if (typedArray.hasValue(R.styleable.SceneView_model)) {
-
+            lifecycleScope.launchWhenCreated {
+                mainLight = LightManager.Builder(LightManager.Type.SUN)
+                    .intensity(defaultMainLightIntensity)
+                    .castShadows(true).build()
+                environment = KTXLoader.loadEnvironment(context, defaultIbl)
+                nodeSelectorModel = ModelRenderable.builder()
+                    .setSource(context, Uri.parse(defaultNodeSelector))
+                    .setIsFilamentGltf(true)
+                    .await().apply {
+                        collisionShape = null
+                        BuildConfig.VERSION_NAME
                     }
-                }
+
+                context.obtainStyledAttributes(
+                    attrs,
+                    R.styleable.SceneView,
+                    defStyleAttr,
+                    defStyleRes
+                )
+                    .use { typedArray ->
+                        if (typedArray.hasValue(R.styleable.SceneView_model)) {
+
+                        }
+                    }
+            }
+        } catch (exception: Exception) {
+            // TODO: This is actually a none sens to call listener on init. Move the try/catch when
+            // Filament is kotlined
+            onOpenGLNotSupported(exception)
         }
     }
 
@@ -262,6 +273,10 @@ open class SceneView @JvmOverloads constructor(
                 bottom - top
             )
         }
+    }
+
+    fun onOpenGLNotSupported(exception: Exception) {
+        onOpenGLNotSupported?.invoke(exception)
     }
 
     /**
@@ -354,7 +369,6 @@ open class SceneView @JvmOverloads constructor(
      */
     fun stopMirroringToSurface(surface: Surface) = renderer.stopMirroring(surface)
 
-
     /**
      * ### Invoked when the scene is touched.
      *
@@ -384,6 +398,8 @@ open class SceneView @JvmOverloads constructor(
             }
         }
     }
+
+    var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
 
     /**
      * ### Register a callback to be invoked when the scene is touched.
