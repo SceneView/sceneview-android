@@ -33,9 +33,9 @@ data class Quaternion(
         var x: Float = 0.0f,
         var y: Float = 0.0f,
         var z: Float = 0.0f,
-        var w: Float = 0.0f) {
+        var w: Float = 1.0f) {
 
-    constructor(v: Float3, w: Float = 0.0f) : this(v.x, v.y, v.z, w)
+    constructor(v: Float3, w: Float = 1.0f) : this(v.x, v.y, v.z, w)
     constructor(v: Float4) : this(v.x, v.y, v.z, v.w)
     constructor(q: Quaternion) : this(q.x, q.y, q.z, q.w)
 
