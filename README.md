@@ -8,18 +8,19 @@
 ## Features
 
 - Use `SceneView` for 3D only or `ArSceneView` for 3D and ARCore.
-- Everything is accessible at the `SceneView`/`ArSceneView` level. For example, no more `ArFragment` and code like `arFragment.arSceneView.scene`, `arFragment.session.config`, etc.
+- Everything is accessible at the `SceneView`/`ArSceneView` level. For example, no more ~`ArFragment`~ and code like ~`arFragment.arSceneView.scene`~, ~`arFragment.session.config`~, etc.
 - Just add the `<ArSceneView>` tag to your layout or call the `ArSceneview(context: Context)` constructor in your code. *Compose is coming next ...*
 - Requesting the camera permission and installing/updating the Google Play Services for AR is handled automatically in the `ArSceneView`.
 - Support for the latest ARCore features (the upcoming features will be integrated quicker thanks to Kotlin).
 - Lifecycle-aware components = Better memory management and performance.
 - Resources are loaded using coroutines launched in the `LifecycleCoroutineScope` of the `SceneView`/`ArSceneView`. This means that loading is started when the view is created and cancelled when it is destroyed.
 - Multiple instances are now possible.
-- Much easier to use. For example, the local and world `position`, `rotation` and `scale` of the `Node` are now directly accessible without creating new `Vector3` objects (`position.x = 1f`, `rotation.xy = Float2(90f, 180f)`, `scale = Scale(0.5f)`, etc.).
+- Much easier to use. For example, the local and world `position`, `rotation` and `scale` of the `Node` are now directly accessible without creating ~`Vector3`~ objects (`position.x = 1f`, `rotation.xy = Float2(90f, 180f)`, `scale = Scale(0.5f)`, etc.).
 
 ## Dependency
 
 *app/build.gradle*
+- 3D only
 ```gradle
 dependencies {
     // 3D only
@@ -27,6 +28,7 @@ dependencies {
 }
 ```
 
+- 3D and ARCore
 ```gradle
 dependencies {
     // 3D and ARCore
@@ -53,29 +55,40 @@ dependencies {
     android:layout_height="match_parent" />
 ```
 
-## Camera Permission and ARCore install/update/unsupported
+## Camera Permission and ARCore install/update/unavailable
 
-The `ArSceneView` handles the camera permission ask and the ARCore requirements automatically and will be proceed when your view is attached to the Activity/Fragment 
-If you need it, you can add a listener on both ARCore success or failed session creation (including 
-camera permission denied since a session cannot be created without it).
+`ArSceneView` automatically handles the camera permission prompt and the ARCore requirements checks.
+Everything is proceed when the attached view Activity/Fragment is resumed but you can also add your `ArSceneView` at any time, the prompt will then occure when first `addView(arSceneView)` is called.
+
+If you need it, you can add a listener on both ARCore success or failed session creation (including camera permission denied since a session cannot be created without it)
 
 - Camera permission has been granted and latest ARCore Services version are already installed or have been installed during the auto check
 ```kotlin
-// 
 sceneView.onArSessionCreated = { arSession: ArSession ->
 }
 ```
 
 - Handle a fallback in case of camera permission denied or AR unavailable and possibly move to 3D only usage
 
-The exception contains the failure reason.
-*e.g. SecurityException in case of camera permission denied*
 ```kotlin
 sceneView.onArSessionFailed = { exception: Exception ->
     // If AR is not available, we add the model directly to the scene for a 3D only usage
     sceneView.addChild(modelNode)
 }
 ```
+The exception contains the failure reason. *e.g. SecurityException in case of camera permission denied*
+
+## Customizing the instructions
+
+- The default instruction nodes have a `ViewRenderable` with a `TextView` or `ImageView`
+- The text and images of the instruction nodes can be overridden at the resource level (in the `strings.xml` file and `drawable` directory of your project).
+- Custom instruction nodes can have an arbitrary number of child nodes with `ModelRenderable`s and `ViewRenderable`s. It is even possible to play animation for a `ModelRenderable` if it is defined in a `.glb` file or a video using the `VideoNode`
+- The `infoNode` can have one of the following values depending on the ARCore features used and the current ARCore state: `searchPlaneInfoNode`, `tapArPlaneInfoNode` and `augmentedImageInfoNode`. Alternatively, it is possible to create your own instruction nodes.
+- The `SearchPlaneInfoNode` displays messages related to the ARCore state. For example, `Searching for surfaces...`, `Too dark. Try moving to a well-lit area`, `Moving too fast. Slow down`, etc.
+- The `TapArPlaneInfoNode` displays a message that helps users to understand how an object can be placed in AR when no objects are currently present in the scene.
+- The `AugmentedImageInfoNode` displays a frame with white corners when no augmented image is currently tracked.
+
+:bulb: **Idea for future:** when access to the flashlight is finally available with the ARCore shared `CameraManager`, it will be great to add a button to the `SearchPlaneInfoNode` to enable the flashlight when there isn't enough light.
 
 ## Why have we included the Kotlin-Math library in SceneView?
 
@@ -104,18 +117,3 @@ This is handled automatically in the `ArSceneView`. You can use the `ArSceneView
 The `InstructionsController` in the `BaseArFragment` has been replaced with the `Instructions` in the `ArSceneView`.
 
 The `Instructions` use a `Node` that is a part of the scene instead of a `View`, as opposed to the `InstructionsController`. This provides more flexibility for customizing the instructions. The `Instructions` have the main `Node` that can be accessed through the `Instructions.infoNode` property.
-
-The `infoNode` can have one of the following values depending on the ARCore features used and the current ARCore state: `searchPlaneInfoNode`, `tapArPlaneInfoNode` and `augmentedImageInfoNode`. Alternatively, it is possible to create your own instruction nodes.
-
-The default instruction nodes have a `ViewRenderable` with a `TextView` or `ImageView`:
-
-- The `SearchPlaneInfoNode` displays messages related to the ARCore state. For example, `Searching for surfaces...`, `Too dark. Try moving to a well-lit area`, `Moving too fast. Slow down`, etc.
-- The `TapArPlaneInfoNode` displays a message that helps users to understand how an object can be placed in AR when no objects are currently present in the scene.
-- The `AugmentedImageInfoNode` displays a frame with white corners when no augmented image is currently tracked.
-
-:bulb: **Idea for future:** when access to the flashlight is finally available with the ARCore shared `CameraManager`, it will be great to add a button to the `SearchPlaneInfoNode` to enable the flashlight when there isn't enough light.
-
-#### Customizing the instructions
-
-- The text and images of the instruction nodes can be overridden at the resource level (in the `strings.xml` file and `drawable` directory of your project).
-- Custom instruction nodes can have an arbitrary number of child nodes with `ModelRenderable`s and `ViewRenderable`s. It is even possible to play animation for a `ModelRenderable` if it is defined in a `.glb` file.
