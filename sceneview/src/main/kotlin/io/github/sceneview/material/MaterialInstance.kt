@@ -4,8 +4,8 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Stream
 import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
-import com.google.android.filament.utils.Float3
-import com.google.android.filament.utils.Float4
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.Float4
 import io.github.sceneview.Filament
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.TextureSamplerExternal

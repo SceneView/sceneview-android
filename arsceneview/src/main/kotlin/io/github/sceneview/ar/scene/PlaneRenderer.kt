@@ -4,19 +4,21 @@ import androidx.lifecycle.coroutineScope
 import com.google.android.filament.MaterialInstance
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.DeadlineExceededException
-import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.Material
 import com.google.ar.sceneform.rendering.MaterialInternalDataImpl
 import com.google.ar.sceneform.rendering.PlaneVisualizer
+import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.ArSession
-import io.github.sceneview.colorOf
+import io.github.sceneview.ar.arcore.position
+import io.github.sceneview.ar.arcore.zDirection
 import io.github.sceneview.material.*
-import io.github.sceneview.positionOf
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
+import io.github.sceneview.utils.Color
+import io.github.sceneview.utils.Position
 import java.util.*
 
 /**
@@ -77,7 +79,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     var planeRendererMode = PlaneRendererMode.RENDER_ALL
 
     // Distance from the camera to last plane hit, default value is 4 meters (standing height).
-    private var lastPlaneHitDistance = 4.0f
+    private var planeHitDistance = 4.0f
 
     init {
         lifecycle.addObserver(this)
@@ -89,20 +91,32 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
 
     override fun onArSessionConfigChanged(session: ArSession, config: Config) {
         // Disable the rendering of detected planes if no PlaneFindingMode
-        isEnabled = config.planeFindingMode != Config.PlaneFindingMode.DISABLED
+//        isEnabled = config.planeFindingMode != Config.PlaneFindingMode.DISABLED
     }
 
     override fun onArFrame(arFrame: ArFrame) {
         if (isEnabled) {
             try {
-                // Do a hittest on the current frame. The result is used to calculate
-                // a focusPoint and to render the top most plane Trackable if
-                // planeRendererMode is set to RENDER_TOP_MOST.
-                val hitResult = getHitResult(arFrame.frame, renderer.desiredWidth, renderer.desiredHeight)
+                // Do a hitTest on the current frame. The result is used to calculate a focusPoint
+                // and to render the top most plane Trackable if planeRendererMode is set to
+                // RENDER_TOP_MOST
+                val session = arFrame.session
+                // If we hit a plane, return the hit point.
+                val hitResult = arFrame.hitTest(
+                    xPx = session.displayWidth / 2.0f,
+                    yPx = session.displayHeight / 2.0f,
+                    plane = true,
+                    depth = false,
+                    instantPlacement = false
+                )
+
                 // Calculate the focusPoint. It is used to determine the position of
                 // the visualized grid.
                 val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-                materialInstance?.setParameter(MATERIAL_SPOTLIGHT_FOCUS_POINT, positionOf(focusPoint.x, focusPoint.y, focusPoint.z))
+                materialInstance?.setParameter(
+                    MATERIAL_SPOTLIGHT_FOCUS_POINT,
+                    Position(focusPoint.x, focusPoint.y, focusPoint.z)
+                )
 
                 val updatedPlanes = arFrame.updatedPlanes
 
@@ -226,7 +240,10 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     }
 
     private suspend fun loadShadowMaterial() {
-        val material = MaterialLoader.loadMaterial(renderer.context, "sceneview/materials/plane_renderer_shadow.filamat")?.material
+        val material = MaterialLoader.loadMaterial(
+            renderer.context,
+            "sceneview/materials/plane_renderer_shadow.filamat"
+        )?.material
             ?: throw AssertionError("Can't load the plane renderer shadow material")
 
         sceneformShadowMaterial = Material(MaterialInternalDataImpl(material))
@@ -237,10 +254,17 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     }
 
     private suspend fun loadPlaneMaterial() {
-        val texture = TextureLoader.loadTexture(renderer.context, "sceneview/textures/plane_renderer.png", TextureType.COLOR)
+        val texture = TextureLoader.loadTexture(
+            renderer.context,
+            "sceneview/textures/plane_renderer.png",
+            TextureType.COLOR
+        )
             ?: throw AssertionError("Can't load the plane renderer texture")
 
-        val material = MaterialLoader.loadMaterial(renderer.context, "sceneview/materials/plane_renderer.filamat")?.material
+        val material = MaterialLoader.loadMaterial(
+            renderer.context,
+            "sceneview/materials/plane_renderer.filamat"
+        )?.material
             ?: throw AssertionError("Can't load the plane renderer material")
 
         sceneformMaterial = Material(MaterialInternalDataImpl(material))
@@ -255,7 +279,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
             val scaleY = scaleX * widthToHeightRatio
 
             setParameter(MATERIAL_UV_SCALE, scaleX, scaleY)
-            setParameter(MATERIAL_COLOR, colorOf(1.0f, 1.0f, 1.0f))
+            setParameter(MATERIAL_COLOR, Color(1.0f, 1.0f, 1.0f))
             setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
         }
 
@@ -267,58 +291,23 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     }
 
     /**
-     * <pre>
-     * Cast a ray from the centre of the screen onto the scene and check
-     * if any plane is hit. The result is a [HitResult] with information
-     * about the hit position as a [Pose] and the trackable which got hit.
-    </pre> *
+     * ### Calculate the FocusPoint based on a [HitResult] on the current [Frame]
      *
-     * @param frame  [Frame]
-     * @param width  int
-     * @param height int
-     * @return [HitResult]
-     */
-    private fun getHitResult(frame: Frame, width: Int, height: Int): HitResult? {
-        // If we hit a plane, return the hit point.
-        val hits = frame.hitTest(width / 2f, height / 2f)
-        if (hits != null && !hits.isEmpty()) {
-            for (hit in hits) {
-                val trackable = hit.trackable
-                val hitPose = hit.hitPose
-                if (trackable is Plane && trackable.isPoseInPolygon(hitPose)) {
-                    return hit
-                }
-            }
-        }
-        return null
-    }
-
-    /**
-     * <pre>
-     * Calculate the FocusPoint based on a [HitResult] on the current [Frame].
      * The FocusPoint is used to determine the position of the visualized plane.
-     * If the [HitResult] is null, we use the last known distance of the camera to
-     * the last hit plane.
-    </pre> *
-     *
-     * @param frame [Frame]
-     * @param hit   [HitResult]
-     * @return [Vector3]
+     * If the [HitResult] is null, we use the last known distance of the camera to the last hit
+     * plane.
      */
-    private fun getFocusPoint(frame: Frame, hit: HitResult?): Vector3 {
-        if (hit != null) {
-            val hitPose = hit.hitPose
-            lastPlaneHitDistance = hit.distance
-            return Vector3(hitPose.tx(), hitPose.ty(), hitPose.tz())
+    private fun getFocusPoint(frame: Frame, hit: HitResult?): Float3 {
+        return if (hit != null) {
+            planeHitDistance = hit.distance
+            hit.hitPose.position
+        } else {
+            // If we didn't hit anything, project a point in front of the camera so that the spotlight
+            // rolls off the edge smoothly.
+            val cameraPose = frame.camera.pose
+            // -Z is in front of camera
+            cameraPose.position + cameraPose.zDirection * -planeHitDistance
         }
-
-        // If we didn't hit anything, project a point in front of the camera so that the spotlight
-        // rolls off the edge smoothly.
-        val cameraPose = frame.camera.pose
-        val cameraPosition = Vector3(cameraPose.tx(), cameraPose.ty(), cameraPose.tz())
-        val zAxis = cameraPose.zAxis
-        val backwards = Vector3(zAxis[0], zAxis[1], zAxis[2])
-        return Vector3.add(cameraPosition, backwards.scaled(-lastPlaneHitDistance))
     }
 
     /**
