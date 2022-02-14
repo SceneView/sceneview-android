@@ -48,7 +48,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     companion object {
         val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = -2.0f)
-        val DEFAULT_ROTATION get() = Quaternion()
+        val DEFAULT_ROTATION_QUATERNION get() = Quaternion()
+        val DEFAULT_ROTATION get() = DEFAULT_ROTATION_QUATERNION.toEulerAngles()
         val DEFAULT_SCALE get() = Scale(1.0f, 1.0f, 1.0f)
         const val DEFAULT_ROTATION_DOT_THRESHOLD = 0.95f
     }
@@ -90,8 +91,27 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - forward: z < 0.0f
      * - origin/camera position: z = 0.0f
      * - backward: z > 0.0f
+     *
+     * ------- +y ----- -z
+     *
+     * ---------|----/----
+     *
+     * ---------|--/------
+     *
+     * -x - - - 0 - - - +x
+     *
+     * ------/--|---------
+     *
+     * ----/----|---------
+     *
+     * +z ---- -y --------
      */
     var position: Position = DEFAULT_POSITION
+
+    /**
+     * TODO: Doc
+     */
+    var rotationQuaternion: Quaternion = DEFAULT_ROTATION_QUATERNION
 
     /**
      * ### The node orientation in Euler Angles Degrees per axis.
@@ -122,8 +142,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         set(value) {
             rotationQuaternion = Quaternion.fromEuler(value)
         }
-
-    var rotationQuaternion: Quaternion = DEFAULT_ROTATION
 
     /**
      * ### The node scales
@@ -158,10 +176,15 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     open var contentPosition = Position()
 
     /**
+     * TODO: Doc
+     */
+    var contentRotationQuaternion: Quaternion = Quaternion()
+
+    /**
      * ### The node content orientation
      *
      * A node's content origin is the transformation between its coordinate space and that used by
-     * its [quaternion]. The default origin is zero vector, specifying that the node's orientation
+     * its [rotationQuaternion]. The default origin is zero vector, specifying that the node's orientation
      * locates the origin of its rotation relatively to that center point.
      *
      * `[0..360]`
@@ -172,20 +195,24 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * point instead of rotating around its center, and with a rotation transform you can tilt the
      * axis of rotation.
      */
-    var contentRotation = Rotation()
+    open var contentRotation: Rotation
+        get() = contentRotationQuaternion.toEulerAngles()
+        set(value) {
+            contentRotationQuaternion = Quaternion.fromEuler(value)
+        }
 
     /**
      * ### The node content scale
      */
     open var contentScale = Scale(1.0f, 1.0f, 1.0f)
 
-    open val contentTransform: Transform
-        get() =
-            transpose(
-                translation(contentPosition) *
-                        rotation(contentRotation) *
-                        scale(contentScale)
-            )
+    open var contentTransform: Transform
+        get() = transpose(translation(contentPosition) * rotation(contentRotationQuaternion) * scale(contentScale))
+        set(value) {
+            contentPosition = Position(value.position)
+            contentRotationQuaternion = Quaternion(value.toQuaternion())
+            contentScale = Scale(value.scale)
+        }
 
     /**
      * ## The smooth position, rotation and scale speed
