@@ -52,10 +52,10 @@ var Light.position: Position
  * @see LightManager.getDirection
  * @see LightManager.setDirection
  */
-var Light.direction: Orientation
+var Light.direction: Direction
     get() = FloatArray(3).apply {
         Filament.lightManager.getDirection(instance, this)
-    }.toOrientation()
+    }.toDirection()
     set(value) = Filament.lightManager.setDirection(instance, value.x, value.y, value.z)
 
 /**
