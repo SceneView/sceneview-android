@@ -156,7 +156,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         get() = transpose(translation(position) * rotation(rotationQuaternion) * scale(scale))
         set(value) {
             position = Position(value.position)
-            rotationQuaternion = Quaternion(value.toQuaternion())
+            rotationQuaternion = rotation(value).toQuaternion()
             scale = Scale(value.scale)
         }
 
@@ -210,7 +210,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         get() = transpose(translation(contentPosition) * rotation(contentRotationQuaternion) * scale(contentScale))
         set(value) {
             contentPosition = Position(value.position)
-            contentRotationQuaternion = Quaternion(value.toQuaternion())
+            contentRotationQuaternion = rotation(value).toQuaternion()
             contentScale = Scale(value.scale)
         }
 
@@ -241,7 +241,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     val worldTransform: Mat4
         get() = (parentNode?.let { parent ->
-            transform * contentTransform * parent.worldTransform
+            parent.worldTransform * transform * contentTransform
         } ?: transform * contentTransform)
 
     /**
