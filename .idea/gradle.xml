@@ -11,6 +11,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/arsceneview" />
+            <option value="$PROJECT_DIR$/buildSrc" />
             <option value="$PROJECT_DIR$/samples/ar-cursor-placement" />
             <option value="$PROJECT_DIR$/samples/ar-model-viewer" />
             <option value="$PROJECT_DIR$/sceneview" />

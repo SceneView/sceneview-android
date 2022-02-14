@@ -37,21 +37,44 @@ dependencies {
 ## Usage
 
 *res/layout/main_fragment.xml*
+- 3D only
 ```xml
-// 3D only
 <io.github.sceneview.SceneView
     android:id="@+id/sceneView"
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 ```
 
-
+- 3D and ARCore
 ```xml
-// 3D and ARCore
 <io.github.sceneview.ar.ArSceneView
     android:id="@+id/sceneView"
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
+```
+
+## Camera Permission and ARCore install/update/unsupported
+
+The `ArSceneView` handles the camera permission ask and the ARCore requirements automatically and will be proceed when your view is attached to the Activity/Fragment 
+If you need it, you can add a listener on both ARCore success or failed session creation (including 
+camera permission denied since a session cannot be created without it).
+
+- Camera permission has been granted and latest ARCore Services version are already installed or have been installed during the auto check
+```kotlin
+// 
+sceneView.onArSessionCreated = { arSession: ArSession ->
+}
+```
+
+- Handle a fallback in case of camera permission denied or AR unavailable and possibly move to 3D only usage
+
+The exception contains the failure reason.
+*e.g. SecurityException in case of camera permission denied*
+```kotlin
+sceneView.onArSessionFailed = { exception: Exception ->
+    // If AR is not available, we add the model directly to the scene for a 3D only usage
+    sceneView.addChild(modelNode)
+}
 ```
 
 ## Why have we included the Kotlin-Math library in SceneView?
@@ -75,7 +98,7 @@ You will have a little work to do if you are using the `ArFragment` in Sceneform
 After the migration you should get cleaner code and all of the benefits described in the [Features](#Features) section :tada:
 
 #### Requesting the camera permission and installing/updating the Google Play Services for AR
-This is handled automatically in the `ArSceneView`. You can use the `ArSceneView.onARCoreException` property to register a callback to be invoked when the ARCore Session cannot be initialized because ARCore is not available on the device or the camera permission has been denied.
+This is handled automatically in the `ArSceneView`. You can use the `ArSceneView.onArSessionFailed` property to register a callback to be invoked when the ARCore Session cannot be initialized because ARCore is not available on the device or the camera permission has been denied.
 
 #### Instructions for AR
 The `InstructionsController` in the `BaseArFragment` has been replaced with the `Instructions` in the `ArSceneView`.

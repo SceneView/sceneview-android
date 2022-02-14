@@ -20,7 +20,19 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     lateinit var actionButton: ExtendedFloatingActionButton
 
     lateinit var cursorNode: CursorNode
-    var modelNode: ArModelNode? = null
+    val modelNode: ArModelNode by lazy {
+        isLoading = true
+        ArModelNode().apply {
+            loadModel(context = requireContext(),
+                coroutineScope = lifecycleScope,
+                glbFileLocation = "models/spiderbot.glb",
+                onLoaded = {
+                    actionButton.text = getString(R.string.move_object)
+                    actionButton.icon = resources.getDrawable(R.drawable.ic_target)
+                    isLoading = false
+                })
+        }
+    }
 
     var isLoading = false
         set(value) {
@@ -33,6 +45,15 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         super.onViewCreated(view, savedInstanceState)
 
         sceneView = view.findViewById(R.id.sceneView)
+        sceneView.planeRenderer.isEnabled = false
+//        sceneView.planeRenderer.isVisible = false
+        // Handle a fallback in case of non AR usage
+        // The exception contains the failure reason
+        // e.g. SecurityException in case of camera permission denied
+        sceneView.onArSessionFailed = { exception: Exception ->
+            // If AR is not available, we add the model directly to the scene for a 3D only usage
+            sceneView.addChild(modelNode)
+        }
         sceneView.onTouchAr = { hitResult, _ ->
             anchorOrMove(hitResult.createAnchor())
         }
@@ -56,20 +77,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     fun anchorOrMove(anchor: Anchor) {
-        if (modelNode == null) {
-            isLoading = true
-            modelNode = ArModelNode().apply {
-                loadModel(context = requireContext(),
-                    coroutineScope = lifecycleScope,
-                    glbFileLocation = "models/spiderbot.glb",
-                    onLoaded = {
-                        actionButton.text = getString(R.string.move_object)
-                        actionButton.icon = resources.getDrawable(R.drawable.ic_target)
-                        isLoading = false
-                    })
-                sceneView.addChild(this)
-            }
+        if (!sceneView.children.contains(modelNode)) {
+            sceneView.addChild(modelNode)
         }
-        modelNode!!.anchor = anchor
+        modelNode.anchor = anchor
     }
 }
