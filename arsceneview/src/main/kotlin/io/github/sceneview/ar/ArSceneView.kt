@@ -206,6 +206,14 @@ open class ArSceneView @JvmOverloads constructor(
 
         // Set max frames per seconds here.
         maxFramesPerSeconds = session.cameraConfig.fpsRange.upper
+
+        onArSessionCreated?.invoke(session)
+    }
+
+    override fun onArSessionFailed(exception: Exception) {
+        super.onArSessionFailed(exception)
+
+        onArSessionFailed?.invoke(exception)
     }
 
     override fun onArSessionResumed(session: ArSession) {
@@ -221,9 +229,13 @@ open class ArSceneView @JvmOverloads constructor(
                 renderer.desiredHeight
             )
         }
+
+        onArSessionResumed?.invoke(session)
     }
 
     override fun onArSessionConfigChanged(session: ArSession, config: Config) {
+        super.onArSessionConfigChanged(session, config)
+
         // Set the correct Texture configuration on the camera stream
         //TODO: Move CameraStream to lifecycle aware
         cameraStream.checkIfDepthIsEnabled(session, config)
@@ -232,6 +244,8 @@ open class ArSceneView @JvmOverloads constructor(
             Config.LightEstimationMode.DISABLED -> defaultMainLightIntensity
             else -> sunnyDayMainLightIntensity
         }
+
+        onArSessionConfigChanged?.invoke(session, config)
     }
 
     /**
@@ -243,15 +257,17 @@ open class ArSceneView @JvmOverloads constructor(
      */
     override fun doFrame(frameTime: FrameTime) {
         // TODO : Move to dedicated Lifecycle aware classes when Kotlined them
-        val session = session?.takeIf { !isProcessingFrame } ?: return
-
-        // No new frame, no drawing
-        session.updateFrame(frameTime)?.let { frame ->
-            isProcessingFrame = true
-            doArFrame(frame)
-            super.doFrame(frameTime)
-            isProcessingFrame = false
-        }
+        session?.let { session ->
+            if (!isProcessingFrame) {
+                // No new frame, no drawing
+                session.updateFrame(frameTime)?.let { frame ->
+                    isProcessingFrame = true
+                    doArFrame(frame)
+                    super.doFrame(frameTime)
+                    isProcessingFrame = false
+                }
+            }
+        } ?: super.doFrame(frameTime)
     }
 
     /**
@@ -316,10 +332,10 @@ open class ArSceneView @JvmOverloads constructor(
             arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
         }
 
-        onArFrame.forEach { it(arFrame) }
         lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
             onArFrame(arFrame)
         }
+        onArFrame.forEach { it(arFrame) }
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
@@ -365,18 +381,6 @@ open class ArSceneView @JvmOverloads constructor(
     }
 
     /**
-     * ### Invoked when an ARCore error occurred
-     *
-     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
-     * ARCore is not available on the device or the camera permission has been denied.
-     */
-    var onARCoreException: ((exception: Exception) -> Unit)?
-        get() = arCore.onException
-        set(value) {
-            arCore.onException = value
-        }
-
-    /**
      * ### Invoked when an ARCore [Trackable] is tapped
      *
      * The callback will only be invoked if **no** [com.google.ar.sceneform.Node] was tapped.
@@ -388,6 +392,18 @@ open class ArSceneView @JvmOverloads constructor(
     protected open fun onTouchAr(hitResult: HitResult, motionEvent: MotionEvent) {
         onTouchAr?.invoke(hitResult, motionEvent)
     }
+
+    var onArSessionCreated: ((session: ArSession) -> Unit)? = null
+
+    /**
+     * ### Invoked when an ARCore error occurred
+     *
+     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+     * ARCore is not available on the device or the camera permission has been denied.
+     */
+    var onArSessionFailed: ((exception: Exception) -> Unit)? = null
+    var onArSessionResumed: ((session: ArSession) -> Unit)? = null
+    var onArSessionConfigChanged: ((session: ArSession, config: Config) -> Unit)? = null
 
     /**
      * ### Invoked when an ARCore frame is processed
@@ -471,13 +487,18 @@ class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwn
 
     fun addObserver(
         onArSessionCreated: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
+        onArSessionFailed: (ArSceneLifecycleObserver.(exception: Exception) -> Unit)? = null,
         onArSessionResumed: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
         onArSessionConfigChanged: (ArSceneLifecycleObserver.(session: ArSession, config: Config) -> Unit)? = null,
-        onArFrameUpdated: (ArSceneLifecycleObserver.(arFrame: ArFrame) -> Unit)? = null
+        onArFrame: (ArSceneLifecycleObserver.(arFrame: ArFrame) -> Unit)? = null
     ) {
         addObserver(object : ArSceneLifecycleObserver {
             override fun onArSessionCreated(session: ArSession) {
                 onArSessionCreated?.invoke(this, session)
+            }
+
+            override fun onArSessionFailed(exception: Exception) {
+                onArSessionFailed?.invoke(this, exception)
             }
 
             override fun onArSessionResumed(session: ArSession) {
@@ -489,7 +510,7 @@ class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwn
             }
 
             override fun onArFrame(arFrame: ArFrame) {
-                onArFrameUpdated?.invoke(this, arFrame)
+                onArFrame?.invoke(this, arFrame)
             }
         })
     }
@@ -498,6 +519,9 @@ class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwn
 interface ArSceneLifecycleObserver : SceneLifecycleObserver {
 
     fun onArSessionCreated(session: ArSession) {
+    }
+
+    fun onArSessionFailed(exception: Exception) {
     }
 
     fun onArSessionResumed(session: ArSession) {
