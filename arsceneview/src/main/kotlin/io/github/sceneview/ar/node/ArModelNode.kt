@@ -26,7 +26,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
 
     companion object {
         val defaultPlacementPosition get() = Position(0.0f, 0.0f, -2.0f)
-        val defaultPlacementMode get() = PlacementMode.DEPTH
+        val defaultPlacementMode get() = PlacementMode.BEST_AVAILABLE
     }
 
     /**
@@ -82,21 +82,18 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
             position = Float3(value)
         }
 
-    /**
-     * TODO: Doc
-     */
     var placementMode: PlacementMode = defaultPlacementMode
         set(value) {
             field = value
             doOnAttachedToScene { sceneView ->
                 (sceneView as? ArSceneView)?.apply {
                     planeFindingMode = when (placementMode) {
-                        PlacementMode.DISABLED, PlacementMode.INSTANT -> PlaneFindingMode.DISABLED
+                        PlacementMode.DISABLED, PlacementMode.INSTANT, PlacementMode.DEPTH -> PlaneFindingMode.DISABLED
                         // TODO: Don't limit whole config instead filter horizontal/vertical hitTests
                         PlacementMode.PLANE_HORIZONTAL -> PlaneFindingMode.HORIZONTAL
                         // TODO: Don't limit whole config instead filter horizontal/vertical hitTests
                         PlacementMode.PLANE_VERTICAL -> PlaneFindingMode.VERTICAL
-                        else -> PlaneFindingMode.DISABLED
+                        else -> PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     }
                     depthEnabled = placementMode.depthEnabled
                     instantPlacementEnabled = placementMode.instantPlacementEnabled

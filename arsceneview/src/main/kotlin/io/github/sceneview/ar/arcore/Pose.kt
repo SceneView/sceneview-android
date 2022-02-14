@@ -2,12 +2,27 @@ package io.github.sceneview.ar.arcore
 
 import com.google.ar.core.Pose
 import dev.romainguy.kotlin.math.Quaternion
+import io.github.sceneview.utils.Direction
 import io.github.sceneview.utils.Position
 
 val Pose.position: Position get() = Position(x = tx(), y = ty(), z = tz())
 val Pose.rotation: Quaternion
     get() = rotationQuaternion!!.let { (x, y, z, w) ->
         Quaternion(x, y, z, w)
+    }
+val Pose.xDirection: Direction
+    get() = xAxis!!.let { (x, y, z) ->
+        Direction(x, y, z)
+    }
+
+val Pose.yDirection: Direction
+    get() = yAxis!!.let { (x, y, z) ->
+        Direction(x, y, z)
+    }
+
+val Pose.zDirection: Direction
+    get() = zAxis!!.let { (x, y, z) ->
+        Direction(x, y, z)
     }
 
 /**
