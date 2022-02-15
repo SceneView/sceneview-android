@@ -48,7 +48,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 context = requireContext(),
                 coroutineScope = lifecycleScope,
                 glbFileLocation = "models/spiderbot.glb",
-                animated = true,
+                autoAnimate = true,
                 onLoaded = { isLoading = false })
             onTrackingChanged = { _, isTracking, _ ->
                 actionButton.isGone = !isTracking
@@ -64,6 +64,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         item.isChecked = !item.isChecked
+        modelNode.detachAnchor()
         modelNode.placementMode = when (item.itemId) {
             R.id.menuPlanePlacement -> PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL
             R.id.menuInstantPlacement -> PlacementMode.INSTANT
