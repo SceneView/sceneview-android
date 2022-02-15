@@ -342,7 +342,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         /**
          * Used to control the UV Scale for the default texture.
          */
-        private const val BASE_UV_SCALE = 8.0f
-        private const val SPOTLIGHT_RADIUS = .5f
+        private const val BASE_UV_SCALE = 12.0f
+        private const val SPOTLIGHT_RADIUS = 1.5f
     }
 }
