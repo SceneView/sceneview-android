@@ -10,10 +10,7 @@ import com.google.ar.sceneform.rendering.PlaneVisualizer
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.ar.arcore.ArSession
-import io.github.sceneview.ar.arcore.position
-import io.github.sceneview.ar.arcore.zDirection
+import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.material.*
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
@@ -31,13 +28,10 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
 
     private val renderer get() = lifecycle.renderer
 
-    private val visualizerMap: MutableMap<Plane, PlaneVisualizer> = HashMap()
+    private val visualizers: MutableMap<Plane, PlaneVisualizer> = HashMap()
 
-    // Per-plane overrides
-    private val materialOverrides: Map<Plane, Material> = HashMap()
-
-    // TODO: Remove the Sceneform material when it isn't used in PlaneVisualizer
-    private var sceneformMaterial: Material? = null
+    // TODO: Remove when it isn't used in PlaneVisualizer
+    private var planeMaterial: Material? = null
 
     /**
      * Returns default material instance used to render the planes.
@@ -45,8 +39,8 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     var materialInstance: MaterialInstance? = null
         private set
 
-    // TODO: Remove the Sceneform material when it isn't used in PlaneVisualizer
-    private var sceneformShadowMaterial: Material? = null
+    // TODO: Remove when it isn't used in PlaneVisualizer
+    private var shadowMaterial: Material? = null
 
     var shadowMaterialInstance: MaterialInstance? = null
         private set
@@ -87,11 +81,6 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
             loadPlaneMaterial()
             loadShadowMaterial()
         }
-    }
-
-    override fun onArSessionConfigChanged(session: ArSession, config: Config) {
-        // Disable the rendering of detected planes if no PlaneFindingMode
-//        isEnabled = config.planeFindingMode != Config.PlaneFindingMode.DISABLED
     }
 
     override fun onArFrame(arFrame: ArFrame) {
@@ -142,10 +131,9 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         set(value) {
             if (field != value) {
                 field = value
-                visualizerMap.values.forEach { it.setEnabled(value) }
+                visualizers.values.forEach { it.setEnabled(value) }
             }
         }
-
 
     /**
      * ### Control visibility of plane visualization.
@@ -157,7 +145,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         set(value) {
             if (field != value) {
                 field = value
-                visualizerMap.values.forEach { it.setVisible(value) }
+                visualizers.values.forEach { it.setVisible(value) }
             }
         }
 
@@ -170,7 +158,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         set(value) {
             if (field != value) {
                 field = value
-                visualizerMap.values.forEach { it.setShadowReceiver(value) }
+                visualizers.values.forEach { it.setShadowReceiver(value) }
             }
         }
 
@@ -200,22 +188,19 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     private fun renderPlane(plane: Plane) {
         // Find the plane visualizer if it already exists.
         // If not, create a new plane visualizer for this plane.
-        val planeVisualizer = visualizerMap[plane]
+        val planeVisualizer = visualizers[plane]
             ?: PlaneVisualizer(plane, renderer).apply {
-                val overrideMaterial = materialOverrides[plane]
-                if (overrideMaterial != null) {
-                    setPlaneMaterial(overrideMaterial)
-                } else if (sceneformMaterial != null) {
-                    setPlaneMaterial(sceneformMaterial)
+                if (planeMaterial != null) {
+                    setPlaneMaterial(planeMaterial)
                 }
-                if (sceneformShadowMaterial != null) {
-                    setShadowMaterial(sceneformShadowMaterial)
+                if (shadowMaterial != null) {
+                    setShadowMaterial(shadowMaterial)
                 }
                 setShadowReceiver(isShadowReceiver)
                 setVisible(isVisible)
                 setEnabled(isEnabled)
             }.also {
-                visualizerMap[plane] = it
+                visualizers[plane] = it
             }
         // Update the plane visualizer.
         planeVisualizer.updatePlane()
@@ -227,7 +212,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
      * Update the material parameters for all remaining planes.
      */
     private fun cleanupOldPlaneVisualizer() {
-        visualizerMap.entries.removeAll { (plane, planeVisualizer) ->
+        visualizers.entries.removeAll { (plane, planeVisualizer) ->
             // If this plane was subsumed by another plane or it has permanently stopped tracking,
             // remove it.
             if (plane.subsumedBy != null || plane.trackingState == TrackingState.STOPPED) {
@@ -246,11 +231,11 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         )?.material
             ?: throw AssertionError("Can't load the plane renderer shadow material")
 
-        sceneformShadowMaterial = Material(MaterialInternalDataImpl(material))
+        shadowMaterial = Material(MaterialInternalDataImpl(material))
 
-        shadowMaterialInstance = sceneformShadowMaterial?.filamentMaterialInstance
+        shadowMaterialInstance = shadowMaterial?.filamentMaterialInstance
 
-        visualizerMap.values.forEach { it.setShadowMaterial(sceneformShadowMaterial) }
+        visualizers.values.forEach { it.setShadowMaterial(shadowMaterial) }
     }
 
     private suspend fun loadPlaneMaterial() {
@@ -267,9 +252,9 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         )?.material
             ?: throw AssertionError("Can't load the plane renderer material")
 
-        sceneformMaterial = Material(MaterialInternalDataImpl(material))
+        planeMaterial = Material(MaterialInternalDataImpl(material))
 
-        materialInstance = sceneformMaterial?.filamentMaterialInstance
+        materialInstance = planeMaterial?.filamentMaterialInstance
 
         materialInstance?.apply {
             setTexture(MATERIAL_TEXTURE, texture)
@@ -283,10 +268,8 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
             setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
         }
 
-        for ((plane, planeVisualizer) in visualizerMap) {
-            if (!materialOverrides.containsKey(plane)) {
-                planeVisualizer.setPlaneMaterial(sceneformMaterial)
-            }
+        for (planeVisualizer in visualizers.values) {
+            planeVisualizer.setPlaneMaterial(planeMaterial)
         }
     }
 
