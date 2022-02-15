@@ -82,22 +82,49 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
             position = Float3(value)
         }
 
+    /**
+     * ### How/where does the node is positioned in the real world
+     *
+     * Depending on your need, you can change it to adjust between a quick
+     * ([PlacementMode.INSTANT]), more accurate ([PlacementMode.DEPTH]), only on planes/walls
+     * ([PlacementMode.PLANE_HORIZONTAL], [PlacementMode.PLANE_VERTICAL],
+     * [PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL]) or auto refining accuracy
+     * ([PlacementMode.BEST_AVAILABLE]) placement.
+     * The [hitTest], [pose] and [anchor] will be influenced by this choice.
+     */
     var placementMode: PlacementMode = defaultPlacementMode
         set(value) {
             field = value
             doOnAttachedToScene { sceneView ->
                 (sceneView as? ArSceneView)?.apply {
-                    planeFindingMode = when (placementMode) {
-                        PlacementMode.DISABLED, PlacementMode.INSTANT, PlacementMode.DEPTH -> PlaneFindingMode.DISABLED
-                        // TODO: Don't limit whole config instead filter horizontal/vertical hitTests
-                        PlacementMode.PLANE_HORIZONTAL -> PlaneFindingMode.HORIZONTAL
-                        // TODO: Don't limit whole config instead filter horizontal/vertical hitTests
-                        PlacementMode.PLANE_VERTICAL -> PlaneFindingMode.VERTICAL
-                        else -> PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                    }
-                    depthEnabled = placementMode.depthEnabled
-                    instantPlacementEnabled = placementMode.instantPlacementEnabled
+                    planeFindingMode = value.planeFindingMode
+                    depthEnabled = value.depthEnabled
+                    instantPlacementEnabled = value.instantPlacementEnabled
                 }
+            }
+        }
+
+    /**
+     * ### Anchor the node as soon as an AR position/rotation is found
+     *
+     * - `true` The node will be anchored in the real world at the first suitable place available.
+     * Depending on your need, you can change the [placementMode] to adjust between a quick
+     * ([PlacementMode.INSTANT]), more accurate ([PlacementMode.DEPTH]), only on planes/walls
+     * ([PlacementMode.PLANE_HORIZONTAL], [PlacementMode.PLANE_VERTICAL],
+     * [PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL]) or auto refining accuracy
+     * ([PlacementMode.BEST_AVAILABLE]) placement.
+     * - `false` The node will follow its AR [pose] and update it constantly to follow the
+     * camera [placementPosition] on the real world.
+     */
+    var autoAnchor = false
+        set(value) {
+            field = value
+            if (value) {
+                // Try to anchor the node. If it's return false, the anchor will be tried on each
+                // frame until an anchor is founded
+                anchor()
+            } else if (isAnchored) {
+                detachAnchor()
             }
         }
 
@@ -120,7 +147,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
 //    var maxHitPerSeconds = 10
 
     var lastArFrame: ArFrame? = null
-    var lastTrackedHitResult: HitResult? = null
+    var lastHitResult: HitResult? = null
 
     /**
      * TODO : Doc
@@ -176,7 +203,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
          *
          * +z ---- -y --------
          */
-        cameraPosition: Position = defaultPlacementPosition,
+        placementPosition: Position = defaultPlacementPosition,
         /**
          * TODO : Doc
          *
@@ -184,7 +211,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
          */
         placementMode: PlacementMode = defaultPlacementMode,
     ) : super() {
-        this.placementPosition = cameraPosition
+        this.placementPosition = placementPosition
         this.placementMode = placementMode
     }
 
@@ -226,29 +253,32 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
 //                frame.timestamp - (lastArFrame?.timestamp ?: 0)
 //            ) > Duration.seconds(1.0 / maxHitPerSeconds)
 //        ) {
-            if (anchor == null) {
+        if (!isAnchored) {
+            if (!autoAnchor || !anchor()) {
                 onArFrameHitResult(hitTest(arFrame))
             }
-            lastArFrame = arFrame
+        }
+        lastArFrame = arFrame
 //        }
     }
 
     open fun onArFrameHitResult(hitResult: HitResult?) {
         // Keep the last position when no tracking result
         if (hitResult?.isTracking == true) {
-            lastTrackedHitResult = hitResult
+            lastHitResult = hitResult
             hitResult.hitPose?.let { hitPose ->
                 // TODO : Handle precision in here
-                this.pose = hitPose
+                pose = hitPose
             }
         }
         onArFrameHitResult?.invoke(this, hitResult, isTracking)
     }
 
     override fun createAnchor(): Anchor? {
-        return hitTest()?.createAnchor() ?: if (lastTrackedHitResult?.isTracking == true) {
-            lastTrackedHitResult?.createAnchor()
-        } else null
+        val hitResult = hitTest()
+        return (hitResult?.takeIf { it.isTracking } ?: lastHitResult?.takeIf { it.isTracking }
+        ?: hitResult ?: lastHitResult)
+            ?.createAnchor()
     }
 
     override fun clone() = copy(ModelNode())
@@ -298,7 +328,7 @@ enum class PlacementMode {
     /**
      * ### Instantly place only nodes at a fixed orientation and an approximate distance
      *
-     * No AR orientation will be provided = fixed +Y pointing upward, against gravity)
+     * No AR orientation will be provided = fixed +Y pointing upward, against gravity
      *
      * This mode is currently intended to be used with hit tests against horizontal surfaces.
      * Hit tests may also be performed against surfaces with any orientation, however:
@@ -324,9 +354,20 @@ enum class PlacementMode {
     BEST_AVAILABLE;
 
     val planeEnabled: Boolean
-        get() = when (this) {
-            PLANE_HORIZONTAL, PLANE_VERTICAL, DEPTH, BEST_AVAILABLE -> true
+        get() = when (planeFindingMode) {
+            PlaneFindingMode.HORIZONTAL,
+            PlaneFindingMode.VERTICAL,
+            PlaneFindingMode.HORIZONTAL_AND_VERTICAL -> true
             else -> false
+        }
+
+    val planeFindingMode: PlaneFindingMode
+        get() = when (this) {
+            PLANE_HORIZONTAL -> PlaneFindingMode.HORIZONTAL
+            PLANE_VERTICAL -> PlaneFindingMode.VERTICAL
+            PLANE_HORIZONTAL_AND_VERTICAL,
+            BEST_AVAILABLE -> PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+            else -> PlaneFindingMode.DISABLED
         }
 
     val depthEnabled: Boolean

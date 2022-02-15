@@ -36,7 +36,9 @@
         <entry key="..\:/Projects/Android/sceneview-android/samples/model-viewer/src/main/res/drawable/target.xml" value="0.1675925925925926" />
         <entry key="..\:/Projects/Android/sceneview-android/samples/model-viewer/src/main/res/layout/activity.xml" value="0.19166666666666668" />
         <entry key="..\:/Projects/Android/sceneview-android/samples/model-viewer/src/main/res/layout/fragment_main.xml" value="0.25" />
+        <entry key="..\:/Projects/Android/sceneview-android/sceneview/src/main/res/drawable-xxxhdpi/sceneview_info_background.xml" value="0.1" />
         <entry key="..\:/Projects/Android/sceneview-android/sceneview/src/main/res/drawable/sceneview_info_background.xml" value="0.19375" />
+        <entry key="..\:/Projects/Android/sceneview-android/sceneview/src/main/res/layout/sceneview_loading_node.xml" value="0.33" />
         <entry key="..\:/Projects/Android/sceneview-android/sceneview/src/main/res/layout/view_info_search_plane.xml" value="0.2409090909090909" />
         <entry key="..\:/Projects/Android/sceneview-android/sceneview/src/main/res/layout/view_info_tap_ar_plane.xml" value="0.13518518518518519" />
         <entry key="..\:/Projects/Android/sceneview-android/sceneview/src/main/res/mipmap-anydpi-v26/ic_sceneview_launcher_round.xml" value="0.2078125" />
