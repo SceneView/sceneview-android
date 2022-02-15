@@ -7,7 +7,7 @@ android {
     compileSdk 31
 
     defaultConfig {
-        applicationId "com.gorisse.thomas.sceneview.sample.arcursorplacement"
+        applicationId "io.github.sceneview.sample.arcursorplacement"
         minSdk 24
         targetSdk 31
         versionCode 1

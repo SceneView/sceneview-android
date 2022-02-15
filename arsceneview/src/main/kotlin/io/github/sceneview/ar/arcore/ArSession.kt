@@ -86,7 +86,7 @@ class ArSession(
         setDisplayGeometry(display.rotation, width, height)
     }
 
-    override fun onArFrame(frame: ArFrame) {
+    override fun onArFrame(arFrame: ArFrame) {
         allTrackables = getAllTrackables(Trackable::class.java).toList()
     }
 

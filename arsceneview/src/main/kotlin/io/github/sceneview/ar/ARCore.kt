@@ -16,7 +16,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.*
 import com.google.ar.core.ArCoreApk.Availability
-import com.gorisse.thomas.sceneview.*
 import io.github.sceneview.ar.arcore.*
 
 /**

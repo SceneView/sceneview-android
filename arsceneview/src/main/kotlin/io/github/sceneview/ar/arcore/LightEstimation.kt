@@ -245,31 +245,29 @@ fun ArFrame.environmentLightsEstimate(
     frame.lightEstimate?.takeIf {
         it.state == LightEstimate.State.VALID &&
                 it.timestamp != previousEstimate?.timestamp
-    }
-        ?.let { lightEstimate ->
-            when (config.sessionConfigMode) {
-                Config.LightEstimationMode.AMBIENT_INTENSITY ->
-                    lightEstimate.ambientIntensityEnvironmentLights(
-                        previousEstimate,
-                        baseEnvironment,
-                        baseLight
-                    )
-                Config.LightEstimationMode.ENVIRONMENTAL_HDR ->
-                    lightEstimate.environmentalHdrEnvironmentLights(
-                        previousEstimate,
-                        baseEnvironment,
-                        baseLight,
-                        cameraExposureFactor,
-                        config.environmentalHdrReflections,
-                        config.environmentalHdrSphericalHarmonics,
-                        config.environmentalHdrSpecularFilter,
-                        config.environmentalHdrMainLightDirection,
-                        config.environmentalHdrMainLightIntensity
-                    )
-                else -> null
-            }
-        } ?: previousEstimate?.also {
-    }
+    }?.let { lightEstimate ->
+        when (config.sessionConfigMode) {
+            Config.LightEstimationMode.AMBIENT_INTENSITY ->
+                lightEstimate.ambientIntensityEnvironmentLights(
+                    previousEstimate,
+                    baseEnvironment,
+                    baseLight
+                )
+            Config.LightEstimationMode.ENVIRONMENTAL_HDR ->
+                lightEstimate.environmentalHdrEnvironmentLights(
+                    previousEstimate,
+                    baseEnvironment,
+                    baseLight,
+                    cameraExposureFactor,
+                    config.environmentalHdrReflections,
+                    config.environmentalHdrSphericalHarmonics,
+                    config.environmentalHdrSpecularFilter,
+                    config.environmentalHdrMainLightDirection,
+                    config.environmentalHdrMainLightIntensity
+                )
+            else -> null
+        }
+    } ?: previousEstimate
 
 /**
  * ### Ambient Intensity mode estimated environment
@@ -492,14 +490,12 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
             baseEnvironment?.indirectLight?.reflectionsTexture
         },
         irradiance = if (withSphericalHarmonics) {
-            environmentalHdrAmbientSphericalHarmonics?.let { sphericalHarmonics ->
-                sphericalHarmonics.mapIndexed { index, sphericalHarmonic ->
-                    sphericalHarmonic *
-                            // Convert Environmental HDR's spherical harmonics to Filament
-                            // irradiance spherical harmonics.
-                            EnvironmentLightsEstimate.SPHERICAL_HARMONICS_IRRADIANCE_FACTORS[index / 3]
-                }.toFloatArray()
-            }
+            environmentalHdrAmbientSphericalHarmonics?.mapIndexed { index, sphericalHarmonic ->
+                sphericalHarmonic *
+                        // Convert Environmental HDR's spherical harmonics to Filament
+                        // irradiance spherical harmonics.
+                        EnvironmentLightsEstimate.SPHERICAL_HARMONICS_IRRADIANCE_FACTORS[index / 3]
+            }?.toFloatArray()
         } else {
             baseEnvironment?.sphericalHarmonics
         },
