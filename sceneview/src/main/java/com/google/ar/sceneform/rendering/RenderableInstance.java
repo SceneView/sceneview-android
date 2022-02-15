@@ -282,9 +282,9 @@ public class RenderableInstance implements AnimatableModel {
      * (rendered first) and 7 (rendered last). The default value is 4.
      */
     public void setRenderPriority(@IntRange(from = Renderable.RENDER_PRIORITY_FIRST, to = Renderable.RENDER_PRIORITY_LAST) int renderPriority) {
-        int[] entities = getFilamentAsset().getEntities();
         this.renderPriority = Math.min(Renderable.RENDER_PRIORITY_LAST, Math.max(Renderable.RENDER_PRIORITY_FIRST, renderPriority));
         RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+        int[] entities = getFilamentAsset().getEntities();
         for (int i = 0; i < entities.length; i++) {
             @EntityInstance int renderableInstance = renderableManager.getInstance(entities[i]);
             if (renderableInstance != 0) {
@@ -313,7 +313,7 @@ public class RenderableInstance implements AnimatableModel {
         //TODO : Verify if we don't need to apply the parameter to child entities
 //        int[] entities = getFilamentAsset().getEntities();
 //        for (int i = 0; i < entities.length; i++) {
-//            @EntityInstance int renderableInstance = renderableManager.getInstance(entities[i]);
+//            renderableInstance = renderableManager.getInstance(entities[i]);
 //            if (renderableInstance != 0) {
 //                renderableManager.setCastShadows(renderableInstance, isShadowCaster);
 //            }
@@ -335,9 +335,10 @@ public class RenderableInstance implements AnimatableModel {
         RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(getEntity());
         if (renderableInstance != 0) {
-            renderableManager.setCastShadows(renderableInstance, isShadowCaster);
+            renderableManager.setReceiveShadows(renderableInstance, isShadowReceiver);
         }
         //TODO : Verify if we don't need to apply the parameter to child entities
+//        int[] entities = getFilamentAsset().getEntities();
 //        for (int i = 0; i < entities.length; i++) {
 //            @EntityInstance int renderableInstance = renderableManager.getInstance(entities[i]);
 //            if (renderableInstance != 0) {
