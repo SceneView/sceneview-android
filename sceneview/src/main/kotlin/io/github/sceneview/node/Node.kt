@@ -153,7 +153,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     var scale: Scale = DEFAULT_SCALE
 
     open var transform: Transform
-        get() = transpose(translation(position) * rotation(rotationQuaternion) * scale(scale))
+        get() = translation(position) * rotation(rotationQuaternion) * scale(scale)
         set(value) {
             position = Position(value.position)
             rotationQuaternion = rotation(value).toQuaternion()
@@ -207,7 +207,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     open var contentScale = Scale(1.0f, 1.0f, 1.0f)
 
     open var contentTransform: Transform
-        get() = transpose(translation(contentPosition) * rotation(contentRotationQuaternion) * scale(contentScale))
+        get() = translation(contentPosition) * rotation(contentRotationQuaternion) * scale(contentScale)
         set(value) {
             contentPosition = Position(value.position)
             contentRotationQuaternion = rotation(value).toQuaternion()
@@ -614,7 +614,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     // TODO : Remove this to full Kotlin Math
     override fun getTransformationMatrix(): Matrix {
-        return Matrix(worldTransform.toFloatArray())
+        return Matrix(worldTransform.toColumnsFloatArray())
     }
 
     // Reuse this to limit frame instantiations
