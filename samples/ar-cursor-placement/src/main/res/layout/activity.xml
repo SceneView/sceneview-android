@@ -4,7 +4,7 @@
     android:id="@+id/rootView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Activity">
+    tools:context="io.github.sceneview.sample.arcursorplacement.Activity">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/containerFragment"

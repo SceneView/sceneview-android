@@ -218,8 +218,8 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     ): HitResult? =
         frame?.hitTest(xPx, yPx, approximateDistanceMeters, plane, depth, instantPlacement)
 
-    override fun onArFrame(frame: ArFrame) {
-        super<ArNode>.onArFrame(frame)
+    override fun onArFrame(arFrame: ArFrame) {
+        super<ArNode>.onArFrame(arFrame)
 
         // TODO: Add this with precision vars
 //        if (Duration.nanoseconds(
@@ -227,9 +227,9 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
 //            ) > Duration.seconds(1.0 / maxHitPerSeconds)
 //        ) {
             if (anchor == null) {
-                onArFrameHitResult(hitTest(frame))
+                onArFrameHitResult(hitTest(arFrame))
             }
-            lastArFrame = frame
+            lastArFrame = arFrame
 //        }
     }
 
@@ -325,7 +325,7 @@ enum class PlacementMode {
 
     val planeEnabled: Boolean
         get() = when (this) {
-            PLANE_HORIZONTAL, PLANE_VERTICAL, PLANE_VERTICAL, DEPTH, BEST_AVAILABLE -> true
+            PLANE_HORIZONTAL, PLANE_VERTICAL, DEPTH, BEST_AVAILABLE -> true
             else -> false
         }
 

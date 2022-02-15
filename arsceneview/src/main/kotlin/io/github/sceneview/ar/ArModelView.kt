@@ -53,10 +53,6 @@ open class ArModelView @JvmOverloads constructor(
             modelNode.placementMode = value
         }
 
-    init {
-    }
-
-
     /**
      * Loads a monolithic binary glTF and add it to the fragment when the user tap on a detected
      * plane surface.

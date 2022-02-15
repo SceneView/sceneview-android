@@ -1,4 +1,4 @@
-package com.gorisse.thomas.sceneview.sample.arcursorplacement
+package io.github.sceneview.sample.ardepthnode
 
 import android.os.Bundle
 import android.view.ViewGroup

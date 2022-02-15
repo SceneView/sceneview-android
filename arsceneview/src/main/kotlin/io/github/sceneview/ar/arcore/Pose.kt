@@ -5,11 +5,12 @@ import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.utils.Direction
 import io.github.sceneview.utils.Position
 
-val Pose.position: Position get() = Position(x = tx(), y = ty(), z = tz())
+val Pose.position: Position
+    get() = Position(x = tx(), y = ty(), z = tz())
+
 val Pose.rotation: Quaternion
-    get() = rotationQuaternion!!.let { (x, y, z, w) ->
-        Quaternion(x, y, z, w)
-    }
+    get() = Quaternion(x = qx(), y = qy(), z = qz(), w = qw())
+
 val Pose.xDirection: Direction
     get() = xAxis!!.let { (x, y, z) ->
         Direction(x, y, z)

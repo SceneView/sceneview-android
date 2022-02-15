@@ -82,7 +82,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
         this.anchor = anchor
     }
 
-    override fun onArFrame(frame: ArFrame) {
+    override fun onArFrame(arFrame: ArFrame) {
         // Update the anchor position if any
         if (anchor?.trackingState == TrackingState.TRACKING) {
             pose = anchor?.pose
