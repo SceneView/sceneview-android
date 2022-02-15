@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipToPadding="false"
-    tools:context=".Activity">
+    tools:context="io.github.sceneview.sample.arcursorplacement.Activity">
 
     <io.github.sceneview.ar.ArSceneView
         android:id="@+id/sceneView"

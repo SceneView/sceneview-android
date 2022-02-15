@@ -1,4 +1,4 @@
-package com.gorisse.thomas.sceneview
+package io.github.sceneview.ar
 
 import androidx.lifecycle.coroutineScope
 import com.google.ar.core.Config
@@ -10,8 +10,6 @@ import io.github.sceneview.ar.node.infos.AugmentedImageInfoNode
 import io.github.sceneview.ar.node.infos.SearchPlaneInfoNode
 import io.github.sceneview.ar.node.infos.TapArPlaneInfoNode
 import io.github.sceneview.SceneView
-import io.github.sceneview.ar.ArSceneLifecycle
-import io.github.sceneview.ar.ArSceneLifecycleObserver
 
 class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
     ArSceneLifecycleObserver {
@@ -79,15 +77,15 @@ class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
         }
     }
 
-    override fun onArFrame(frame: ArFrame) {
-        super.onArFrame(frame)
+    override fun onArFrame(arFrame: ArFrame) {
+        super.onArFrame(arFrame)
 
         infoNode = when {
-            frame.session.hasAugmentedImageDatabase && !frame.isTrackingAugmentedImage -> {
+            arFrame.session.hasAugmentedImageDatabase && !arFrame.isTrackingAugmentedImage -> {
                 augmentedImageInfoNode
             }
-            frame.session.planeFindingEnabled -> when {
-                !frame.session.hasTrackedPlane -> {
+            arFrame.session.planeFindingEnabled -> when {
+                !arFrame.session.hasTrackedPlane -> {
                     searchPlaneInfoNode
                 }
                 sceneView.children.count { it is ArNode } == 0 -> {

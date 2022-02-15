@@ -181,7 +181,7 @@ fun Session.configure(config: Config) = null
     "Use position",
     replaceWith = ReplaceWith(expression = "position")
 )
-var Node.localPositions
+var Node.localPosition
     get() = position
     set(value) {
         position = value
@@ -193,7 +193,7 @@ var Node.localPositions
     "Use rotation",
     replaceWith = ReplaceWith(expression = "rotation")
 )
-var Node.localRotations
+var Node.localRotation
     get() = rotation
     set(value) {
         rotation = value
@@ -202,10 +202,10 @@ var Node.localRotations
 
 /** ## Deprecated: Use [Node.scale] */
 @Deprecated(
-    "Use scales",
-    replaceWith = ReplaceWith(expression = "scales")
+    "Use scale",
+    replaceWith = ReplaceWith(expression = "scale")
 )
-var Node.localScales
+var Node.localScale
     get() = scale
     set(value) {
         scale = value

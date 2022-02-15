@@ -10,9 +10,7 @@ typealias Direction = Float3
 typealias Color = Float4
 typealias Transform = Mat4
 
-fun Float3.toFloatArray() = this.let { (x, y, z) -> floatArrayOf(x, y, z) }
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
-fun Float4.toFloatArray() = this.let { (x, y, z, w) -> floatArrayOf(x, y, z, w) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }
 fun FloatArray.toPosition() = this.let { (x, y, z) -> Position(x, y, z) }
 fun FloatArray.toRotation() = this.let { (x, y, z) -> Rotation(x, y, z) }

@@ -11,7 +11,6 @@ import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.sceneform.ArCamera
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.rendering.*
-import com.gorisse.thomas.sceneview.Instructions
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneLifecycleOwner

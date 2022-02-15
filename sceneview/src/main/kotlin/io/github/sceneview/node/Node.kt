@@ -144,7 +144,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         }
 
     /**
-     * ### The node scales
+     * ### The node scale on each axis.
      *
      * - reduce size: scale < 1.0f
      * - same size: scale = 1.0f
@@ -610,7 +610,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      *
      * @see worldTransform
      */
-    open val worldScales: Scale get() = worldTransform.scale
+    open val worldScale: Scale get() = worldTransform.scale
 
     // TODO : Remove this to full Kotlin Math
     override fun getTransformationMatrix(): Matrix {
