@@ -196,13 +196,13 @@ open class ModelNode() : Node() {
      * - An http or https url *https://mydomain.com/mymodel.glb*
      * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
      * 3D model before the node is attached to the [SceneView]
-     * @param animated Plays the animations automatically if the model has one
+     * @param autoAnimate Plays the animations automatically if the model has one
      */
     fun loadModel(
         context: Context,
         glbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
-        animated: Boolean = true,
+        autoAnimate: Boolean = true,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null,
         onError: ((error: Exception) -> Unit)? = null
     ) {
@@ -212,7 +212,7 @@ open class ModelNode() : Node() {
                 try {
                     val instance =
                         setRenderable(GlbLoader.loadModel(context, glbFileLocation))?.apply {
-                            if (animated && animationCount > 0) {
+                            if (autoAnimate && animationCount > 0) {
                                 animate(true)?.start()
                             }
                         }
@@ -229,7 +229,7 @@ open class ModelNode() : Node() {
                     context,
                     glbFileLocation,
                     scene.lifecycleScope,
-                    animated,
+                    autoAnimate,
                     onLoaded,
                     onError
                 )
