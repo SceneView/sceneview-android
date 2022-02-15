@@ -193,18 +193,6 @@ open class SceneView @JvmOverloads constructor(
                         collisionShape = null
                         BuildConfig.VERSION_NAME
                     }
-
-                context.obtainStyledAttributes(
-                    attrs,
-                    R.styleable.SceneView,
-                    defStyleAttr,
-                    defStyleRes
-                )
-                    .use { typedArray ->
-                        if (typedArray.hasValue(R.styleable.SceneView_model)) {
-
-                        }
-                    }
             }
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
