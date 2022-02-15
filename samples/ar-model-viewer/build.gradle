@@ -7,7 +7,7 @@ android {
     compileSdk 31
 
     defaultConfig {
-        applicationId "io.github.sceneview.sample.ardepthnode"
+        applicationId "io.github.sceneview.sample.armodelviewer"
         minSdk 24
         targetSdk 31
         versionCode 1
