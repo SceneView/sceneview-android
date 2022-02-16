@@ -8,7 +8,6 @@ import android.net.Uri
 import android.util.AttributeSet
 import android.view.*
 import androidx.activity.ComponentActivity
-import androidx.core.content.res.use
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.*
@@ -254,12 +253,12 @@ open class SceneView @JvmOverloads constructor(
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        //TODO move to lifecycle when Rendere is kotlined
+        val width = right - left
+        val height = bottom - top
         renderer.setDesiredSize(width, height)
         lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onSurfaceChanged(
-                right - left,
-                bottom - top
-            )
+            onSurfaceChanged(width, height)
         }
     }
 
