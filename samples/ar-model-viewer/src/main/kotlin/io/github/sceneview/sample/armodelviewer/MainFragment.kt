@@ -1,4 +1,4 @@
-package io.github.sceneview.sample.ardepthnode
+package io.github.sceneview.sample.armodelviewer
 
 import android.os.Bundle
 import android.view.*
