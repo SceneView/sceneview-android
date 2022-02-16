@@ -218,17 +218,6 @@ open class ArSceneView @JvmOverloads constructor(
     override fun onArSessionResumed(session: ArSession) {
         super.onArSessionResumed(session)
 
-        // Don't remove this code-block. It is important to correctly set the DisplayGeometry for
-        // the ArCore-Session if for example the permission Dialog is shown on the screen.
-        // If we remove this part, the camera is flickering if returned from the permission Dialog.
-        if (renderer.desiredWidth != 0 && renderer.desiredHeight != 0) {
-            session.setDisplayGeometry(
-                display!!.rotation,
-                renderer.desiredWidth,
-                renderer.desiredHeight
-            )
-        }
-
         onArSessionResumed?.invoke(session)
     }
 

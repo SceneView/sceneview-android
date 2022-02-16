@@ -23,9 +23,15 @@ class ArSession(
     val display: Display by lazy {
         (lifecycle.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
     }
-    var displayRotation = 0
-    var displayWidth = 0
-    var displayHeight = 0
+    // We use device display sizes by default cause the onSurfaceChanged may be called after the
+    // onResume and ARCore doesn't appreciate that we do things on session before calling
+    // setDisplayGeometry()
+    // = flickering screen if the phone is locked when starting the app
+    var displayRotation = display.rotation
+    var displayWidth = display.width
+    var displayHeight = display.height
+
+    var isResumed = false
 
     // TODO: See if it really has a performance impact
 //    private var _config: Config? = null
@@ -64,11 +70,26 @@ class ArSession(
     }
 
     override fun onResume(owner: LifecycleOwner) {
+        resume()
+    }
+
+    override fun resume() {
+        isResumed = true
         super.resume()
+
+        // Don't remove this code-block. It is important to correctly set the DisplayGeometry for
+        // the ArCore-Session if for example the permission Dialog is shown on the screen.
+        // If we remove this part, the camera is flickering if returned from the permission Dialog.
+        setDisplayGeometry(displayRotation, displayWidth, displayHeight)
         lifecycle.dispatchEvent<ArSceneLifecycleObserver> { onArSessionResumed(this@ArSession) }
     }
 
     override fun onPause(owner: LifecycleOwner) {
+        pause()
+    }
+
+    override fun pause() {
+        isResumed = false
         super.pause()
     }
 
@@ -114,10 +135,12 @@ class ArSession(
     }
 
     override fun setDisplayGeometry(rotation: Int, widthPx: Int, heightPx: Int) {
-        super.setDisplayGeometry(displayRotation, widthPx, heightPx)
         displayRotation = rotation
         displayWidth = widthPx
         displayHeight = heightPx
+        if (isResumed) {
+            super.setDisplayGeometry(displayRotation, widthPx, heightPx)
+        }
     }
 
 // TODO: See if it really has a performance impact
