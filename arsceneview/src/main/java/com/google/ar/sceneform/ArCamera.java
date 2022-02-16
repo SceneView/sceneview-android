@@ -89,7 +89,7 @@ public class ArCamera extends Camera {
         // Update the node's transformation properties to match the tracked pose.
         Pose pose = camera.getDisplayOrientedPose();
         super.setPosition(PoseKt.getPosition(pose));
-        super.setRotationQuaternion(PoseKt.getRotation(pose));
+        super.setQuaternion(PoseKt.getRotation(pose));
 
         areMatricesInitialized = true;
     }

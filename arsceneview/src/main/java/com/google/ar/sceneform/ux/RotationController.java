@@ -50,10 +50,11 @@ public class RotationController extends BaseTransformationController<TwistGestur
   @Override
   public void onContinueTransformation(TwistGesture gesture) {
     float rotationAmount = -gesture.getDeltaRotationDegrees() * rotationRateDegrees;
+    // TODO :  Move to kotlin-math
     Quaternion rotationDelta = new Quaternion(Vector3.up(), rotationAmount);
-    Quaternion localrotation = MathKt.toOldQuaternion(getTransformableNode().getRotationQuaternion());
-    localrotation = Quaternion.multiply(localrotation, rotationDelta);
-    getTransformableNode().setRotationQuaternion(MathKt.toNewQuaternion(localrotation));
+    Quaternion localQuaternion = MathKt.toOldQuaternion(getTransformableNode().getQuaternion());
+    localQuaternion = Quaternion.multiply(localQuaternion, rotationDelta);
+    getTransformableNode().setQuaternion(MathKt.toNewQuaternion(localQuaternion));
   }
 
   @Override

@@ -25,7 +25,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     /**
      * ### Move smoothly/slowly when there is a pose (AR position and rotation) update
      *
-     * Use [smoothMoveSpeed] to change the position/rotation smooth update speed
+     * Use [smoothSpeed] to adjust the position and rotation change smoothness level
      */
     var smoothPose = true
 
@@ -35,14 +35,14 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     var pose: Pose? = null
         set(value) {
             val position = value?.position
-            val rotation = value?.rotation
-            if (position != field?.position || rotation != field?.rotation) {
+            val quaternion = value?.rotation
+            if (position != field?.position || quaternion != field?.rotation) {
                 field = value
-                if (position != null && rotation != null) {
+                if (position != null && quaternion != null) {
                     if (smoothPose) {
-                        smooth(position = position, rotation = rotation)
+                        smooth(position = position, rotation = quaternion)
                     } else {
-                        transform(position = position, rotation = rotation)
+                        transform(position = position, rotation = quaternion)
                     }
                 }
                 onTrackingChanged(isTracking, value)
@@ -204,7 +204,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * @return a new vector that represents the direction in world-space
      */
 //    fun localToWorldDirection(direction: Vector3) =
-//        Quaternion.rotateVector(worldRotationQuaternion, direction)
+//        Quaternion.rotateVector(worldQuaternion, direction)
 
     /**
      * ### Converts a direction from world-space to the local-space of this node.
@@ -215,7 +215,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * @return a new vector that represents the direction in local-space
      */
 //    fun worldToLocalDirection(direction: Vector3) =
-//        Quaternion.inverseRotateVector(worldRotationQuaternion, direction)
+//        Quaternion.inverseRotateVector(worldQuaternion, direction)
 
     /** ### Gets the world-space forward direction vector (-z) of this node */
 //    val worldForward get() = localToWorldDirection(Vector3.forward())
