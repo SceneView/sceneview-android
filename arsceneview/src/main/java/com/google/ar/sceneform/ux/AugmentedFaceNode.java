@@ -280,7 +280,7 @@ public class AugmentedFaceNode extends ArNode {
         // Update this node to be positioned at the center pose of the face.
         Pose centerPose = checkNotNull(augmentedFace).getCenterPose();
         setPosition(PoseKt.getPosition(centerPose));
-        setRotationQuaternion(PoseKt.getRotation(centerPose));
+        setQuaternion(PoseKt.getRotation(centerPose));
     }
 
     private void updateRegionNodes() {

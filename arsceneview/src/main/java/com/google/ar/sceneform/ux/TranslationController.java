@@ -217,7 +217,7 @@ public class TranslationController extends BaseTransformationController<DragGest
 //      // coordinate space. Local variable for nullness analysis.
 //      Quaternion desiredLocalRotation = this.desiredLocalRotation;
 //      if (desiredLocalRotation != null) {
-//        getTransformableNode().setRotationQuaternion(desiredLocalRotation);
+//        getTransformableNode().setQuaternion(desiredLocalRotation);
 //        finalDesiredWorldRotation = getTransformableNode().getWorldRotation();
 //      }
 //
@@ -274,17 +274,17 @@ public class TranslationController extends BaseTransformationController<DragGest
         }
 
         // TODO :  Move to kotlin-math
-        Quaternion localRotation = MathKt.toOldQuaternion(getTransformableNode().getRotationQuaternion());
+        Quaternion localQuaternion = MathKt.toOldQuaternion(getTransformableNode().getQuaternion());
         float lerpFactor = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
-        localRotation = Quaternion.slerp(localRotation, desiredLocalRotation, lerpFactor);
+        localQuaternion = Quaternion.slerp(localQuaternion, desiredLocalRotation, lerpFactor);
 
-        float dot = Math.abs(dotQuaternion(localRotation, desiredLocalRotation));
+        float dot = Math.abs(dotQuaternion(localQuaternion, desiredLocalRotation));
         if (dot >= ROTATION_DOT_THRESHOLD) {
-            localRotation = desiredLocalRotation;
+            localQuaternion = desiredLocalRotation;
             this.desiredLocalRotation = null;
         }
 
-        getTransformableNode().setRotationQuaternion(MathKt.toNewQuaternion(localRotation));
+        getTransformableNode().setQuaternion(MathKt.toNewQuaternion(localQuaternion));
     }
 
     /**
