@@ -642,7 +642,7 @@ public class Renderer implements UiHelper.RendererCallback {
         // Change the ToneMapper to FILMIC to avoid some over saturated
         // colors, for example material orange 500.
         view.setColorGrading(new ColorGrading.Builder()
-                .toneMapper(new ToneMapper.Filmic())
+                .toneMapping(ColorGrading.ToneMapping.FILMIC)
                 .build(engine.getFilamentEngine())
         );
         emptyView = engine.createView();
