@@ -32,4 +32,11 @@ fun Quaternion.toOldQuaternion() = com.google.ar.sceneform.math.Quaternion(x, y,
 //TODO: Remove when everything use Quaternion
 fun com.google.ar.sceneform.math.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
 
+fun Mat4.toColumnsFloatArray() = floatArrayOf(
+    x.x, x.y, x.z, x.w,
+    y.x, y.y, y.z, y.w,
+    z.x, z.y, z.z, z.w,
+    w.x, w.y, w.z, w.w
+)
+
 fun lerp(a: Float3, b: Float3, t:Float) = mix(a, b, t)
