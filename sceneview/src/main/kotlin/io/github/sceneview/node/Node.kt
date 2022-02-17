@@ -423,6 +423,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * @param rotation See [Node.rotation]
      * @param scale See [Node.scale]
      */
+    @JvmOverloads
     constructor(
         position: Position = DEFAULT_POSITION,
         rotation: Rotation = DEFAULT_ROTATION,

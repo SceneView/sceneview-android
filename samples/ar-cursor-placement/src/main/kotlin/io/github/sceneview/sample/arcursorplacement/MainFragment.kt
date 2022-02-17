@@ -28,7 +28,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 glbFileLocation = "models/spiderbot.glb",
                 onLoaded = {
                     actionButton.text = getString(R.string.move_object)
-                    actionButton.icon = resources.getDrawable(R.drawable.ic_target)
+                    actionButton.setIconResource(R.drawable.ic_target)
                     isLoading = false
                 })
         }
@@ -50,7 +50,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         // Handle a fallback in case of non AR usage
         // The exception contains the failure reason
         // e.g. SecurityException in case of camera permission denied
-        sceneView.onArSessionFailed = { exception: Exception ->
+        sceneView.onArSessionFailed = { _: Exception ->
             // If AR is not available, we add the model directly to the scene for a 3D only usage
             sceneView.addChild(modelNode)
         }

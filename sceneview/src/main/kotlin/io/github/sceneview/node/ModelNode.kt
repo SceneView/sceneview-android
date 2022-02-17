@@ -4,7 +4,8 @@ import android.content.Context
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
 import com.google.ar.sceneform.FrameTime
-import com.google.ar.sceneform.rendering.*
+import com.google.ar.sceneform.rendering.Renderable
+import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
 import io.github.sceneview.SceneView
 import io.github.sceneview.model.GlbLoader
@@ -127,6 +128,7 @@ open class ModelNode : Node {
      * @param rotation See [Node.rotation]
      * @param scale See [Node.scale]
      */
+    @JvmOverloads
     constructor(
         position: Position = DEFAULT_POSITION,
         rotation: Rotation = DEFAULT_ROTATION,

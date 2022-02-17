@@ -39,7 +39,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
                     systemBarsInsets.bottom + bottomMargin
             }
-            setOnClickListener(::actionButtonClicked)
+            setOnClickListener { actionButtonClicked() }
         }
 
         isLoading = true
@@ -75,14 +75,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         return true
     }
 
-    fun actionButtonClicked(view: View? = null) {
+    fun actionButtonClicked() {
         if (!modelNode.isAnchored && modelNode.anchor()) {
             actionButton.text = getString(R.string.move_object)
-            actionButton.icon = resources.getDrawable(R.drawable.ic_target)
+            actionButton.setIconResource(R.drawable.ic_target)
         } else {
             modelNode.anchor = null
             actionButton.text = getString(R.string.place_object)
-            actionButton.icon = resources.getDrawable(R.drawable.ic_anchor)
+            actionButton.setIconResource(R.drawable.ic_anchor)
         }
     }
 }
