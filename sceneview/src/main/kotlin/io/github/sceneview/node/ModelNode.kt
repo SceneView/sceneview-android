@@ -8,6 +8,9 @@ import com.google.ar.sceneform.rendering.*
 import com.google.ar.sceneform.utilities.ChangeId
 import io.github.sceneview.SceneView
 import io.github.sceneview.model.GlbLoader
+import io.github.sceneview.utils.Position
+import io.github.sceneview.utils.Rotation
+import io.github.sceneview.utils.Scale
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -17,7 +20,7 @@ import io.github.sceneview.model.GlbLoader
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
  */
-open class ModelNode() : Node() {
+open class ModelNode : Node {
 
     /**
      * ### The node model origin (center)
@@ -118,16 +121,22 @@ open class ModelNode() : Node() {
     var onError: ((exception: Exception) -> Unit)? = null
 
     /**
-     * TODO : Doc
+     * ### Construct a [ModelNode] with it Position, Rotation and Scale
+     *
+     * @param position See [Node.position]
+     * @param rotation See [Node.rotation]
+     * @param scale See [Node.scale]
      */
-    constructor(renderableInstance: RenderableInstance) : this() {
-        this.renderableInstance = renderableInstance
-    }
+    constructor(
+        position: Position = DEFAULT_POSITION,
+        rotation: Rotation = DEFAULT_ROTATION,
+        scale: Scale = DEFAULT_SCALE
+    ) : super(position, rotation, scale)
 
     /**
      * ### Loads a monolithic binary glTF and add it to the Node
      *
-     * @param modelLocation the glb file location:
+     * @param glbFileLocation the glb file location:
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
      * - A File path *Uri.fromFile(myModelFile).path*
@@ -140,13 +149,21 @@ open class ModelNode() : Node() {
      */
     constructor(
         context: Context,
-        modelLocation: String,
+        glbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
         animate: Boolean = true,
-        onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null,
-        onError: ((error: Exception) -> Unit)? = null
+        onError: ((error: Exception) -> Unit)? = null,
+        onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null
     ) : this() {
-        loadModel(context, modelLocation, coroutineScope, animate, onModelLoaded, onError)
+        loadModel(context, glbFileLocation, coroutineScope, animate, onModelLoaded, onError)
+    }
+
+
+    /**
+     * TODO : Doc
+     */
+    constructor(renderableInstance: RenderableInstance) : this() {
+        this.renderableInstance = renderableInstance
     }
 
     override fun onFrame(frameTime: FrameTime) {

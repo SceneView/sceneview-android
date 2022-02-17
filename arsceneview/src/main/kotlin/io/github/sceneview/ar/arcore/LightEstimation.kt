@@ -37,65 +37,54 @@ import java.nio.ByteOrder
  * main light source. This information allows virtual objects in your scene to show reasonably
  * positioned specular highlights, and to cast shadows in a direction consistent with other
  * visible real objects.
- */
+ *
+ * @param sessionConfigMode ### The behavior of the lighting estimation subsystem.
+ * These modes consist of separate APIs that allow for granular and realistic lighting
+ * estimation for directional lighting, shadows, specular highlights, and reflections.
+ *
+ * @param environmentalHdrReflections ### Enable reflection cubemap
+ *
+ * - true if the AR Core reflection cubemap should be used
+ * - false for using the default/static/fake environment reflections
+ *
+ * Use the HDR cubemap to render realistic reflections on virtual objects with medium to high
+ * glossiness, such as shiny metallic surfaces. The cubemap also affects the shading and
+ * appearance of objects. For example, the material of a specular object surrounded by a blue
+ * environment will reflect blue hues. Calculating the HDR cubemap requires a small amount of
+ * additional CPU computation.
+ *
+ * @param environmentalHdrSphericalHarmonics ### Ambient spherical harmonics
+ *
+ * In addition to the light energy in the main directional light, ARCore provides spherical
+ * harmonics, representing the overall ambient light coming in from all directions in the scene.
+ * Add subtle cues that bring out the definition of virtual objects.
+ *
+ * @param environmentalHdrSpecularFilter ### SpecularFilter applies a filter based on the BRDF
+ * used for lighting
+ *
+ * Specular highlights are the shiny bits of surfaces that reflect a light source directly.
+ * Highlights on an object change relative to the position of a viewer in a scene.
+ *
+ * `true` = Reduce the amount of reflectivity a surface has. It is a key component in determining
+ * the brightness of specular highlights, along with shininess to determine the size of the
+ * highlights.
+ *
+ * @param environmentalHdrMainLightDirection ### Move the directional light
+ *
+ * When the main light source or a lit object is in motion, the specular highlight on the
+ * object adjusts its position in real time relative to the light source.
+ *
+ * Directional shadows also adjust their length and direction relative to the position of the
+ * main light source, just as they do in the real world.
+ *
+ * @param environmentalHdrMainLightIntensity ### Modulate the main directional light (sun) intensity
+*/
 data class LightEstimationMode @JvmOverloads constructor(
-    /**
-     * ### The behavior of the lighting estimation subsystem.
-     *
-     * These modes consist of separate APIs that allow for granular and realistic lighting
-     * estimation for directional lighting, shadows, specular highlights, and reflections.
-     */
     val sessionConfigMode: Config.LightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
-
-    /**
-     * ### Enable reflection cubemap
-     *
-     * - true if the AR Core reflection cubemap should be used
-     * - false for using the default/static/fake environment reflections
-     *
-     * Use the HDR cubemap to render realistic reflections on virtual objects with medium to high
-     * glossiness, such as shiny metallic surfaces. The cubemap also affects the shading and
-     * appearance of objects. For example, the material of a specular object surrounded by a blue
-     * environment will reflect blue hues. Calculating the HDR cubemap requires a small amount of
-     * additional CPU computation.
-     */
     val environmentalHdrReflections: Boolean = true,
-
-    /**
-     * ### Ambient spherical harmonics
-     *
-     * In addition to the light energy in the main directional light, ARCore provides spherical
-     * harmonics, representing the overall ambient light coming in from all directions in the scene.
-     * Add subtle cues that bring out the definition of virtual objects.
-     */
     val environmentalHdrSphericalHarmonics: Boolean = true,
-
-    /**
-     * ### SpecularFilter applies a filter based on the BRDF used for lighting
-     *
-     * Specular highlights are the shiny bits of surfaces that reflect a light source directly.
-     * Highlights on an object change relative to the position of a viewer in a scene.
-     *
-     * `true` = Reduce the amount of reflectivity a surface has. It is a key component in determining
-     * the brightness of specular highlights, along with shininess to determine the size of the
-     * highlights.
-     */
     val environmentalHdrSpecularFilter: Boolean = true,
-
-    /**
-     * ### Move the directional light
-     *
-     * When the main light source or a lit object is in motion, the specular highlight on the
-     * object adjusts its position in real time relative to the light source.
-     *
-     * Directional shadows also adjust their length and direction relative to the position of the
-     * main light source, just as they do in the real world.
-     */
     val environmentalHdrMainLightDirection: Boolean = true,
-
-    /**
-     * ### Modulate the main directional light (sun) intensity
-     */
     val environmentalHdrMainLightIntensity: Boolean = true
 ) {
 
@@ -151,28 +140,27 @@ data class LightEstimationMode @JvmOverloads constructor(
     }
 }
 
+/**
+ * ### Per frame AR light estimation values
+ *
+ * @param environment ### The retrieved environment
+ *
+ * Environmental HDR mode uses machine learning to analyze the camera images in real time
+ * and synthesize environmental lighting to support realistic rendering of virtual objects.
+ *
+ * - Ambient spherical harmonics. Represents the remaining ambient light energy in the scene
+ * - An HDR cubemap is used to render reflections in shiny metallic objects.
+ *
+ * @param mainLight ### Main directionnal light (Usually the sun)
+ *
+ * The main directional light API calculates the direction and intensity of the scene's
+ * main light source. This information allows virtual objects in your scene to show reasonably
+ * positioned specular highlights, and to cast shadows in a direction consistent with other
+ * visible real objects.
+*/
 class EnvironmentLightsEstimate(
     val timestamp: Long,
-
-    /**
-     * ### The retrieved environment
-     *
-     * Environmental HDR mode uses machine learning to analyze the camera images in real time
-     * and synthesize environmental lighting to support realistic rendering of virtual objects.
-     *
-     * - Ambient spherical harmonics. Represents the remaining ambient light energy in the scene
-     * - An HDR cubemap is used to render reflections in shiny metallic objects.
-     */
     val environment: Environment,
-
-    /**
-     * ### Main directionnal light (Usually the sun)
-     *
-     * The main directional light API calculates the direction and intensity of the scene's
-     * main light source. This information allows virtual objects in your scene to show reasonably
-     * positioned specular highlights, and to cast shadows in a direction consistent with other
-     * visible real objects.
-     */
     val mainLight: Light? = null
 ) {
     fun destroy() {

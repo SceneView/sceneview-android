@@ -8,18 +8,29 @@ import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.R
 import io.github.sceneview.utils.Position
+import io.github.sceneview.utils.Rotation
+import io.github.sceneview.utils.Scale
 
+/**
+ * ### Construct a [LoadingNode] with it Position, Rotation and Scale
+ *
+ * @param position See [Node.position]
+ * @param rotation See [Node.rotation]
+ * @param scale See [Node.scale]
+ */
 open class LoadingNode(
     context: Context,
-    coroutineScope: LifecycleCoroutineScope
-) : ViewNode() {
+    coroutineScope: LifecycleCoroutineScope,
+    position: Position = DEFAULT_POSITION,
+    rotation: Rotation = DEFAULT_ROTATION,
+    scale: Scale = DEFAULT_SCALE
+) : ViewNode(position, rotation, scale) {
 
     var progressIndicator: CircularProgressIndicator? = null
     var textView: TextView? = null
 
     init {
         isFocusable = false
-        position = Position(x = 0.0f, y = -2.0f, z = 0.0f)
         loadView(context, R.layout.sceneview_loading_node, coroutineScope)
     }
 

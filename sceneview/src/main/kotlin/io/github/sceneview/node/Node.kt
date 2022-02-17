@@ -416,6 +416,23 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     var onTouched: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Unit)? = null
 
+    /**
+     * ### Construct a [Node] with it Position, Rotation and Scale
+     *
+     * @param position See [Node.position]
+     * @param rotation See [Node.rotation]
+     * @param scale See [Node.scale]
+     */
+    constructor(
+        position: Position = DEFAULT_POSITION,
+        rotation: Rotation = DEFAULT_ROTATION,
+        scale: Scale = DEFAULT_SCALE
+    ) : super() {
+        this.position = position
+        this.rotation = rotation
+        this.scale = scale
+    }
+
     open fun onAttachToScene(sceneView: SceneView) {
         onAttachedToScene.toList().forEach { it(sceneView) }
     }
@@ -689,8 +706,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      *
      * @return true if the event was handled, false otherwise.
      */
-// TODO : Cleanup
     fun onTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent): Boolean {
+        // TODO : Cleanup
         var handled = false
 
         // Reset tap tracking data if a new gesture has started or if the Node has become inactive.
