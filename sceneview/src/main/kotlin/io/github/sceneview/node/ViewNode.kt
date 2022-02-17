@@ -11,6 +11,9 @@ import com.google.ar.sceneform.rendering.*
 import com.google.ar.sceneform.utilities.ChangeId
 import io.github.sceneview.SceneView
 import io.github.sceneview.model.await
+import io.github.sceneview.utils.Position
+import io.github.sceneview.utils.Rotation
+import io.github.sceneview.utils.Scale
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -20,7 +23,7 @@ import io.github.sceneview.model.await
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
  */
-open class ViewNode() : Node() {
+open class ViewNode : Node {
 
     // Rendering fields.
     private var renderableId: Int = ChangeId.EMPTY_ID
@@ -59,11 +62,17 @@ open class ViewNode() : Node() {
     var onError: ((exception: Exception) -> Unit)? = null
 
     /**
-     * TODO : Doc
+     * ### Construct a [LightNode] with it Position, Rotation and Scale
+     *
+     * @param position See [Node.position]
+     * @param rotation See [Node.rotation]
+     * @param scale See [Node.scale]
      */
-    constructor(renderableInstance: RenderableInstance) : this() {
-        this.renderableInstance = renderableInstance
-    }
+    constructor(
+        position: Position = DEFAULT_POSITION,
+        rotation: Rotation = DEFAULT_ROTATION,
+        scale: Scale = DEFAULT_SCALE
+    ) : super(position, rotation, scale)
 
     /**
      * TODO : Doc
@@ -77,10 +86,17 @@ open class ViewNode() : Node() {
         context: Context,
         viewLayoutResId: Int,
         coroutineScope: LifecycleCoroutineScope? = null,
-        onViewLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null,
-        onError: ((error: Exception) -> Unit)? = null
+        onError: ((error: Exception) -> Unit)? = null,
+        onViewLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null
     ) : this() {
         loadView(context, viewLayoutResId, coroutineScope, onViewLoaded, onError)
+    }
+
+    /**
+     * TODO : Doc
+     */
+    constructor(renderableInstance: RenderableInstance) : this() {
+        this.renderableInstance = renderableInstance
     }
 
     override fun onFrame(frameTime: FrameTime) {

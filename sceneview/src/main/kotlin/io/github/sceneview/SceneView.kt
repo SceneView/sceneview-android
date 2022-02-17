@@ -31,6 +31,7 @@ import io.github.sceneview.light.*
 import io.github.sceneview.model.await
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
+import com.google.ar.sceneform.rendering.Color
 import io.github.sceneview.utils.DefaultLifecycle
 import java.util.concurrent.TimeUnit
 

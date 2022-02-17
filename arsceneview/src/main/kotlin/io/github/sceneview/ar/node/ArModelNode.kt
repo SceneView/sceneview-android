@@ -1,8 +1,11 @@
 package io.github.sceneview.ar.node
 
+import android.content.Context
+import androidx.lifecycle.LifecycleCoroutineScope
 import dev.romainguy.kotlin.math.*
 import com.google.ar.core.*
 import com.google.ar.core.Config.PlaneFindingMode
+import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.*
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
@@ -13,8 +16,8 @@ import io.github.sceneview.utils.Position
 /**
  * ### AR positioned 3D model node
  *
- * This [Node] follows the actual ARCore detected orientation and position at the provided relative
- * X, Y location in the [ArSceneView]
+ * This [io.github.sceneview.node.Node] follows the actual ARCore detected orientation and position
+ * at the provided relative X, Y location in the [ArSceneView]
  *
  * You can:
  * - [anchor] this node at any time to make it fixed at the actual position and rotation.
@@ -36,7 +39,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      * so it stays at this camera/screen relative position [com.google.ar.sceneform.Camera] node is
      * considered as the parent
      * - ARCore will try to find the real world position of this screen position and the node
-     * [worldPosition] will be updated so.
+     * [io.github.sceneview.node.Node.worldPosition] will be updated so.
      *
      * The Z value is only used when no surface is actually detected or when instant placement is
      * enabled:
@@ -155,64 +158,46 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     var onArFrameHitResult: ((node: ArNode, hitResult: HitResult?, isTracking: Boolean) -> Unit)? =
         null
 
+    /**
+     * ### Construct a new placement ArModelNode
+     *
+     * @param placementPosition See [ArModelNode.placementPosition]
+     * @param placementMode See [ArModelNode.placementMode]
+    */
     constructor(
-        /**
-         * ### The node camera/screen position
-         *
-         * - While there is no AR tracking information available, the node is following the camera moves
-         * so it stays at this camera/screen relative position [com.google.ar.sceneform.Camera] node is
-         * considered as the parent)
-         * - ARCore will try to find the real world position of this screen position and the node
-         * [worldPosition] will be updated so.
-         *
-         * The Z value is only used when no surface is actually detected or when instant placement is
-         * enabled:
-         * - In case of instant placement disabled, the z position will be estimated by the AR surface
-         * distance at the (x,y) so this value is not used.
-         * - In case of instant placement enabled, this value is used as
-         * [approximateDistanceMeters][ArFrame.hitTest] to help ARCore positioning result.
-         *
-         * By default, the node is positioned at the center screen, 2 meters forward
-         *
-         * **Horizontal (X):**
-         * - left: x < 0.0f
-         * - center horizontal: x = 0.0f
-         * - right: x > 0.0f
-         *
-         * **Vertical (Y):**
-         * - top: y > 0.0f
-         * - center vertical : y = 0.0f
-         * - bottom: y < 0.0f
-         *
-         * **Depth (Z):**
-         * - forward: z < 0.0f
-         * - origin/camera position: z = 0.0f
-         * - backward: z > 0.0f
-         *
-         * ------- +y ----- -z
-         *
-         * ---------|----/----
-         *
-         * ---------|--/------
-         *
-         * -x - - - 0 - - - +x
-         *
-         * ------/--|---------
-         *
-         * ----/----|---------
-         *
-         * +z ---- -y --------
-         */
         placementPosition: Position = defaultPlacementPosition,
-        /**
-         * TODO : Doc
-         *
-         * @see io.github.sceneview.ar.node.ArModelNode.placementMode
-         */
         placementMode: PlacementMode = defaultPlacementMode,
     ) : super() {
         this.placementPosition = placementPosition
         this.placementMode = placementMode
+    }
+
+
+    /**
+     * ### Loads a monolithic binary glTF and add it to the Node
+     *
+     * @param glbFileLocation the glb file location:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
+     * 3D model before the node is attached to the [SceneView]
+     * @param animate Plays the animations automatically if the model has one
+     *
+     * @see loadModel
+     */
+    constructor(
+        context: Context,
+        glbFileLocation: String,
+        coroutineScope: LifecycleCoroutineScope? = null,
+        animate: Boolean = true,
+        placementPosition: Position = defaultPlacementPosition,
+        placementMode: PlacementMode = defaultPlacementMode,
+        onError: ((error: Exception) -> Unit)? = null,
+        onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null
+    ) : this(placementPosition, placementMode) {
+        loadModel(context, glbFileLocation, coroutineScope, animate, onModelLoaded, onError)
     }
 
     /**

@@ -2,6 +2,9 @@ package io.github.sceneview.node
 
 import com.google.ar.sceneform.rendering.Light
 import com.google.ar.sceneform.rendering.LightInstance
+import io.github.sceneview.utils.Position
+import io.github.sceneview.utils.Rotation
+import io.github.sceneview.utils.Scale
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -11,7 +14,7 @@ import com.google.ar.sceneform.rendering.LightInstance
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
  */
-open class LightNode() : Node() {
+open class LightNode : Node {
 
     /**
      * ### The [Light] to display.
@@ -44,9 +47,22 @@ open class LightNode() : Node() {
         }
 
     /**
+     * ### Construct a [LightNode] with it Position, Rotation and Scale
+     *
+     * @param position See [Node.position]
+     * @param rotation See [Node.rotation]
+     * @param scale See [Node.scale]
+     */
+    constructor(
+        position: Position = DEFAULT_POSITION,
+        rotation: Rotation = DEFAULT_ROTATION,
+        scale: Scale = DEFAULT_SCALE
+    ) : super(position, rotation, scale)
+
+    /**
      * TODO : Doc
      */
-    constructor(light: Light? = null) : this() {
+    constructor(light: Light) : this() {
         setLight(light)
     }
 
