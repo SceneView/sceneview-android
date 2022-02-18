@@ -82,6 +82,10 @@ class RenderViewToExternalTexture extends FrameLayout {
     return externalTexture;
   }
 
+  public boolean isViewTextureReady() {
+    return externalTexture.getFilamentStream().getTimestamp() > 0;
+  }
+
   boolean hasDrawnToSurfaceTexture() {
     return hasDrawnToSurfaceTexture;
   }
