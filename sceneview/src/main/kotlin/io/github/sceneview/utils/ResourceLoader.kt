@@ -50,10 +50,11 @@ object ResourceLoader {
             ContentResolver.SCHEME_CONTENT -> {
                 context.contentResolver.openInputStream(uri)?.toByteArray()
             }
-            ContentResolver.SCHEME_ANDROID_RESOURCE ->
+            ContentResolver.SCHEME_ANDROID_RESOURCE -> {
                 // Expected format: android.resource://example.package.name/12345678
                 context.resources.openRawResource(uri.pathSegments.lastOrNull()?.toInt()!!)
                     .toByteArray()
+            }
             "http", "https" -> {
                 fuelManager.get(fileLocation).awaitByteArray()
             }

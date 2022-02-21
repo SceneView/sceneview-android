@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.*
+import com.google.android.filament.Colors
 import com.google.android.filament.Entity
 import com.google.android.filament.LightManager
 import com.google.android.filament.View
@@ -18,6 +19,7 @@ import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
+import com.google.ar.sceneform.rendering.Color
 import com.google.ar.sceneform.rendering.EngineInstance
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
@@ -31,7 +33,6 @@ import io.github.sceneview.light.*
 import io.github.sceneview.model.await
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
-import com.google.ar.sceneform.rendering.Color
 import io.github.sceneview.utils.DefaultLifecycle
 import java.util.concurrent.TimeUnit
 
@@ -58,6 +59,18 @@ open class SceneView @JvmOverloads constructor(
     DefaultLifecycleObserver,
     Choreographer.FrameCallback,
     NodeParent {
+
+    companion object {
+        val defaultMainLight: Light by lazy {
+            LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
+                val (r, g, b) = Colors.cct(6_500.0f)
+                color(r, g, b)
+                intensity(100_000.0f)
+                direction(0.28f, -0.6f, -0.76f)
+                castShadows(true)
+            }.build()
+        }
+    }
 
     override val activity
         get() = try {
@@ -163,28 +176,27 @@ open class SceneView @JvmOverloads constructor(
      *
      * Usually the Sun.
      */
-    @Entity // Public until full moving to Kotlin
+    @Entity
     var mainLight: Light? = null
         set(value) {
             field = value
             renderer.setMainLight(value)
         }
 
-//    var backgroundColor: Color? = null
-//        set(value) {
-//            field = value
-//            renderer.setClearColor(backgroundColor)
-//        }
+    var backgroundColor: Color? = null
+        set(value) {
+            field = value
+            renderer.setClearColor(backgroundColor)
+        }
 
     init {
         try {
             // TODO : Remove it here when moved Filament to lifecycle aware
             EngineInstance.getEngine()
 
+            mainLight = defaultMainLight
+
             lifecycleScope.launchWhenCreated {
-                mainLight = LightManager.Builder(LightManager.Type.SUN)
-                    .intensity(defaultMainLightIntensity)
-                    .castShadows(true).build()
                 environment = KTXLoader.loadEnvironment(context, defaultIbl)
                 nodeSelectorModel = ModelRenderable.builder()
                     .setSource(context, Uri.parse(defaultNodeSelector))

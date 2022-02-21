@@ -47,16 +47,16 @@ const val defaultIndirectLightIntensity = 30_000.0f
  * @see [HDRLoader.loadEnvironment]
  */
 open class Environment(
-    sphericalHarmonics: FloatArray? = null,
     indirectLight: IndirectLight? = null,
-    skybox: Skybox? = null
+    skybox: Skybox? = null,
+    sphericalHarmonics: FloatArray? = null
 ) : Closeable {
 
     var indirectLight: IndirectLight? = indirectLight
         private set
-    var sphericalHarmonics: FloatArray? = sphericalHarmonics
-        private set
     var skybox: Skybox? = skybox
+        private set
+    var sphericalHarmonics: FloatArray? = sphericalHarmonics
         private set
 
     /**
