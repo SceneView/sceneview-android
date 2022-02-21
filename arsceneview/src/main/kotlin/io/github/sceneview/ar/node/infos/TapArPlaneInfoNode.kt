@@ -16,7 +16,7 @@ open class TapArPlaneInfoNode(context: Context, coroutineScope: LifecycleCorouti
 
     init {
         isFocusable = false
-        position = Position(x = 0.0f, y = -1.0f, z = -2.0f)
+        position = Position(x = 0.0f, y = -0.75f, z = -2.0f)
         loadView(context, R.layout.sceneview_view_info_tap_ar_plane, coroutineScope)
     }
 
