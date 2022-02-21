@@ -17,10 +17,7 @@ import io.github.sceneview.SceneLifecycleOwner
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.light.defaultMainLightIntensity
 import io.github.sceneview.light.destroy
-import io.github.sceneview.light.intensity
-import io.github.sceneview.light.sunnyDayMainLightIntensity
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.utils.setKeepScreenOn
@@ -228,11 +225,6 @@ open class ArSceneView @JvmOverloads constructor(
         //TODO: Move CameraStream to lifecycle aware
         cameraStream.checkIfDepthIsEnabled(session, config)
 
-        mainLight?.intensity = when (config.lightEstimationMode) {
-            Config.LightEstimationMode.DISABLED -> defaultMainLightIntensity
-            else -> sunnyDayMainLightIntensity
-        }
-
         onArSessionConfigChanged?.invoke(session, config)
     }
 
@@ -302,15 +294,16 @@ open class ArSceneView @JvmOverloads constructor(
         this.camera.updateTrackedPose(arCamera)
 
         // Update the light estimate.
-        if (session.config.lightEstimationMode != Config.LightEstimationMode.DISABLED) {
-            estimatedLights = arFrame.environmentLightsEstimate(
-                session.lightEstimationMode,
-                estimatedLights,
-                environment,
-                mainLight,
-                renderer.camera.exposureFactor
-            )
-        }
+        estimatedLights =
+            if (session.config.lightEstimationMode != Config.LightEstimationMode.DISABLED) {
+                arFrame.environmentLightsEstimate(
+                    session.lightEstimationMode,
+                    estimatedLights,
+                    environment,
+                    mainLight,
+                    renderer.camera.exposureFactor
+                )
+            } else null
 
         if (onAugmentedImageUpdate != null) {
             arFrame.updatedAugmentedImages.forEach(onAugmentedImageUpdate)

@@ -3,18 +3,8 @@ package io.github.sceneview.light
 import com.google.android.filament.EntityInstance
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
-import io.github.sceneview.*
+import io.github.sceneview.Filament
 import io.github.sceneview.utils.*
-
-/**
- * Default directional light intensity.
- */
-const val defaultMainLightIntensity = 5_000.0f
-
-/**
- * Default sunny day sun directional light intensity
- */
-const val sunnyDayMainLightIntensity = 100_000.0f
 
 typealias Light = Int
 typealias LightInstance = Int
