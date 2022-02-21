@@ -7,12 +7,13 @@ import androidx.annotation.VisibleForTesting;
 import com.google.ar.sceneform.collision.Ray;
 import com.google.ar.sceneform.math.MathHelper;
 import com.google.ar.sceneform.math.Matrix;
-import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.CameraProvider;
 import com.google.ar.sceneform.rendering.EngineInstance;
 import com.google.ar.sceneform.utilities.Preconditions;
 
+import dev.romainguy.kotlin.math.Float3;
+import dev.romainguy.kotlin.math.Quaternion;
 import io.github.sceneview.SceneView;
 import io.github.sceneview.node.Node;
 import io.github.sceneview.node.NodeParent;
@@ -32,7 +33,7 @@ import io.github.sceneview.node.NodeParent;
  *       controlled by the ARCore camera pose.
  *   <li>{@link #setPosition(Float3)} - Camera's position cannot be changed, it is controlled
  *       by the ARCore camera pose.
- *   <li>{@link #setOrientation(Float3)} - Camera's rotation cannot be changed, it is
+ *   <li>{@link #setRotation(Float3)} - Camera's rotation cannot be changed, it is
  *       controlled by the ARCore camera pose.
  * </ul>
  * <p>
@@ -44,10 +45,13 @@ public class Camera extends Node implements CameraProvider {
     protected final Matrix viewMatrix = new Matrix();
     protected final Matrix projectionMatrix = new Matrix();
 
-    private static final float DEFAULT_NEAR_PLANE = 0.01f;
-    private static final float DEFAULT_FAR_PLANE = 30.0f;
-    private static final int FALLBACK_VIEW_WIDTH = 1920;
-    private static final int FALLBACK_VIEW_HEIGHT = 1080;
+    private static final Float3 DEFAULT_POSITION = new Float3(0.0f, 0.0f, 0.0f);
+    private static final Quaternion DEFAULT_QUATERNION = new Quaternion();
+
+    public static final float DEFAULT_NEAR_PLANE = 0.01f;
+    public static final float DEFAULT_FAR_PLANE = 30.0f;
+    public static final int FALLBACK_VIEW_WIDTH = 1920;
+    public static final int FALLBACK_VIEW_HEIGHT = 1080;
 
     // Default vertical field of view for non-ar camera.
     private static final float DEFAULT_VERTICAL_FOV_DEGREES = 90.0f;
@@ -68,6 +72,8 @@ public class Camera extends Node implements CameraProvider {
     public Camera(SceneView scene, boolean isFixed) {
         super();
         this.isFixed = isFixed;
+        setPosition(DEFAULT_POSITION);
+        setQuaternion(DEFAULT_QUATERNION);
 
         Preconditions.checkNotNull(scene, "Parameter \"scene\" was null.");
         super.setParent(scene);
