@@ -37,7 +37,7 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
 
     init {
         isFocusable = false
-        position = Position(x = 0.0f, y = 0.0f, z = -2.0f)
+        position = Position(x = 0.0f, y = -0.75f, z = -2.0f)
         loadView(context, R.layout.sceneview_view_info_search_plane, coroutineScope)
     }
 

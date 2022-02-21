@@ -13,7 +13,7 @@ open class AugmentedImageInfoNode(context: Context, coroutineScope: LifecycleCor
 
     init {
         isFocusable = false
-        position = Position(x = 0.5f, y = 0.5f, z = 0f)
+        position = Position(x = 0.0f, y = 0.0f, z = -2.0f)
         loadView(context, R.layout.sceneview_view_info_augmented_image, coroutineScope)
     }
 
