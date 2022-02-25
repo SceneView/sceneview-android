@@ -45,9 +45,8 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-
     // Preserve compression of filament files
-    aaptOptions {
+    androidResources {
         noCompress 'filamat', 'ktx'
     }
 }
