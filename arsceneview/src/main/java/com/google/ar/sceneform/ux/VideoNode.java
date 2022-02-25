@@ -4,14 +4,19 @@ import android.content.Context;
 import android.media.MediaPlayer;
 import android.net.Uri;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.ar.sceneform.FrameTime;
+import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.ExternalTexture;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.PlaneFactory;
 import com.google.ar.sceneform.rendering.Renderable;
+
+import io.github.sceneview.math.UtilsKt;
 import io.github.sceneview.node.ModelNode;
 
 /**
@@ -35,13 +40,14 @@ public class VideoNode extends ModelNode {
     private final ExternalTexture texture;
     private final Color chromaKeyColor;
     private final Listener listener;
+    private boolean rotateAlwaysToCamera = false;
 
     /**
      * Create a new VideoNode for showing a video from a MediaPlayer instance inside a node on an
      * adjusted plane renderable
      *
-     * @param context       Resources context
-     * @param player        The video media player to render on the plane node
+     * @param context  Resources context
+     * @param player   The video media player to render on the plane node
      * @param listener Loading listener
      */
     public VideoNode(Context context, MediaPlayer player, @Nullable Listener listener) {
@@ -55,7 +61,7 @@ public class VideoNode extends ModelNode {
      * @param context        Resources context
      * @param player         The video media player to render on the plane node
      * @param chromaKeyColor Chroma Key color to made the video transparent from
-     * @param listener  Loading listener
+     * @param listener       Loading listener
      */
     public VideoNode(Context context, MediaPlayer player, @Nullable Color chromaKeyColor,
                      @Nullable Listener listener) {
@@ -71,7 +77,7 @@ public class VideoNode extends ModelNode {
      * @param chromaKeyColor Chroma Key color to made the video transparent from
      * @param texture        Custom ExternalTexture for using your own renderable and material.
      *                       Null for default Plane shape renderable.
-     * @param listener  Loading listener
+     * @param listener       Loading listener
      */
     public VideoNode(Context context, MediaPlayer player, @Nullable Color chromaKeyColor,
                      @Nullable ExternalTexture texture, @Nullable Listener listener) {
@@ -135,9 +141,22 @@ public class VideoNode extends ModelNode {
     public Renderable makePlane(float width, float height, Material material) {
         return PlaneFactory.makePlane(
                 new Vector3(width, height, 0.0f),
-                new Vector3(width, height, 0.0f),
+                new Vector3(0.0f, height / 2.0f, 0.0f),
                 material
         );
+    }
+
+    @Override
+    public void onFrame(@NonNull FrameTime frameTime) {
+        super.onFrame(frameTime);
+
+        if (rotateAlwaysToCamera && getSceneView() != null) {
+            Vector3 cameraPosition = UtilsKt.toVector3(getSceneView().getCamera().getWorldPosition());
+            Vector3 cardPosition = UtilsKt.toVector3(getWorldPosition());
+            Vector3 direction = Vector3.subtract(cameraPosition, cardPosition);
+            Quaternion lookRotation = Quaternion.lookRotation(direction, Vector3.up());
+            setQuaternion(UtilsKt.toNewQuaternion(lookRotation));
+        }
     }
 
     public MediaPlayer getPlayer() {
@@ -150,6 +169,20 @@ public class VideoNode extends ModelNode {
 
     public Color getChromaKeyColor() {
         return chromaKeyColor;
+    }
+
+    public boolean isRotateAlwaysToCamera() {
+        return rotateAlwaysToCamera;
+    }
+
+    /**
+     * If this Flag is set to true, the VideoNode will always
+     * point to the Camera (You).
+     *
+     * @param rotateAlwaysToCamera boolean
+     */
+    public void setRotateAlwaysToCamera(boolean rotateAlwaysToCamera) {
+        this.rotateAlwaysToCamera = rotateAlwaysToCamera;
     }
 
     private void onCreated(VideoNode videoNode) {

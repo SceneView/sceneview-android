@@ -6,13 +6,14 @@ import com.google.ar.core.Config
 import com.google.ar.core.LightEstimate
 import dev.romainguy.kotlin.math.max
 import dev.romainguy.kotlin.math.pow
-import io.github.sceneview.*
+import io.github.sceneview.Filament
+import io.github.sceneview.SceneView
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.HDREnvironment
 import io.github.sceneview.environment.build
 import io.github.sceneview.light.*
-import io.github.sceneview.utils.Color
 import io.github.sceneview.math.Direction
+import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.colorOf
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -79,7 +80,7 @@ import java.nio.ByteOrder
  * main light source, just as they do in the real world.
  *
  * @param environmentalHdrMainLightIntensity ### Modulate the main directional light (sun) intensity
-*/
+ */
 data class LightEstimationMode @JvmOverloads constructor(
     val sessionConfigMode: Config.LightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
     val environmentalHdrReflections: Boolean = true,
@@ -100,10 +101,11 @@ data class LightEstimationMode @JvmOverloads constructor(
          *
          * The reflected environment will the one given by ARCore
          */
-        val REALISTIC get() = LightEstimationMode(
-            sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
-            environmentalHdrSpecularFilter = true
-        )
+        val REALISTIC
+            get() = LightEstimationMode(
+                sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
+                environmentalHdrSpecularFilter = true
+            )
 
         /**
          * ### Use this mode if you want your objects to be more spectacular.
@@ -115,10 +117,11 @@ data class LightEstimationMode @JvmOverloads constructor(
          *
          * The reflected environment will the one given by ARCore
          */
-        val SPECTACULAR get() = LightEstimationMode(
-            sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
-            environmentalHdrSpecularFilter = false
-        )
+        val SPECTACULAR
+            get() = LightEstimationMode(
+                sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
+                environmentalHdrSpecularFilter = false
+            )
 
         /**
          * ### Use this mode if you only want to apply ARCore lights colors and intensity
@@ -126,18 +129,20 @@ data class LightEstimationMode @JvmOverloads constructor(
          * The reflected environment will the default one or the one defined by
          * [SceneView.environment]
          */
-        val AMBIENT_INTENSITY get() =
-            LightEstimationMode(sessionConfigMode = Config.LightEstimationMode.AMBIENT_INTENSITY)
+        val AMBIENT_INTENSITY
+            get() =
+                LightEstimationMode(sessionConfigMode = Config.LightEstimationMode.AMBIENT_INTENSITY)
 
 
         /**
-         * ### Use this mode if you only want to disable all ARCore light estimation lights
+         * ### Use this mode if you want to disable all ARCore light estimation
          *
          * The reflected environment will the default one or the one defined by
          * [SceneView.environment]
          */
-        val DISABLED get() =
-            LightEstimationMode(sessionConfigMode = Config.LightEstimationMode.DISABLED)
+        val DISABLED
+            get() =
+                LightEstimationMode(sessionConfigMode = Config.LightEstimationMode.DISABLED)
     }
 }
 
@@ -158,7 +163,7 @@ data class LightEstimationMode @JvmOverloads constructor(
  * main light source. This information allows virtual objects in your scene to show reasonably
  * positioned specular highlights, and to cast shadows in a direction consistent with other
  * visible real objects.
-*/
+ */
 class EnvironmentLightsEstimate(
     val timestamp: Long,
     val environment: Environment,
