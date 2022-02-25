@@ -9,6 +9,7 @@ import com.google.android.material.floatingactionbutton.ExtendedFloatingActionBu
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
+import io.github.sceneview.utils.Position
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {
@@ -43,16 +44,16 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         isLoading = true
-        modelNode = ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE).apply {
-            loadModel(
-                context = requireContext(),
-                coroutineScope = lifecycleScope,
-                glbFileLocation = "models/spiderbot.glb",
-                autoAnimate = true,
-                onLoaded = { isLoading = false })
-            onTrackingChanged = { _, isTracking, _ ->
-                actionButton.isGone = !isTracking
-            }
+        modelNode = ArModelNode(
+            placementMode = PlacementMode.BEST_AVAILABLE,
+            context = requireContext(),
+            glbFileLocation = "models/spiderbot.glb",
+            coroutineScope = lifecycleScope,
+            autoAnimate = true,
+            centerOrigin = Position(x = 0.0f, y = -1.0f, z = 0.0f),
+            onModelLoaded = { isLoading = false })
+        modelNode.onTrackingChanged = { _, isTracking, _ ->
+            actionButton.isGone = !isTracking
         }
         sceneView.addChild(modelNode)
     }

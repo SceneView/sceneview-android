@@ -7,11 +7,13 @@ import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
+import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
 import io.github.sceneview.model.GlbLoader
 import io.github.sceneview.utils.Position
 import io.github.sceneview.utils.Rotation
 import io.github.sceneview.utils.Scale
+import io.github.sceneview.utils.Transform
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -23,38 +25,69 @@ import io.github.sceneview.utils.Scale
  */
 open class ModelNode : Node {
 
+    companion object {
+        val DEFAULT_MODEL_POSITION = Position(x = 0.0f, y = 0.0f, z = 0.0f)
+        val DEFAULT_MODEL_QUATERNION = Quaternion()
+        val DEFAULT_MODEL_ROTATION = DEFAULT_MODEL_QUATERNION.toEulerAngles()
+        val DEFAULT_MODEL_SCALE = Scale(1.0f)
+    }
+
     /**
      * ### The node model origin (center)
      *
-     * @see contentPosition
+     * A node's content origin is the transformation between its coordinate space and that used by
+     * its [position]. The default origin is zero vector, specifying that the node's position
+     * locates the origin of its coordinate system relatively to that center point.
+     *
+     * Changing the origin transform alters these behaviors in many useful ways.
+     * You can offset the node's contents relative to its position.
+     * For example, by setting the pivot to a translation transform you can position a node
+     * containing a sphere geometry relative to where the sphere would rest on a floor instead of
+     * relative to its center.
      */
-    var modelPosition
-        get() = contentPosition
-        set(value) {
-            contentPosition = value
-        }
+    open var modelPosition = DEFAULT_MODEL_POSITION
+
+    /**
+     * TODO: Doc
+     */
+    var modelQuaternion: Quaternion = DEFAULT_MODEL_QUATERNION
 
     /**
      * ### The node model orientation
      *
-     * @see contentRotation
+     * A node's content origin is the transformation between its coordinate space and that used by
+     * its [quaternion]. The default origin is zero vector, specifying that the node's orientation
+     * locates the origin of its rotation relatively to that center point.
+     *
+     * `[0..360]`
+     *
+     * Changing the origin transform alters these behaviors in many useful ways.
+     * You can move the node's axis of rotation.
+     * For example, with a translation transform you can cause a node to revolve around a faraway
+     * point instead of rotating around its center, and with a rotation transform you can tilt the
+     * axis of rotation.
      */
-    open var modelRotation
-        get() = contentRotation
+    open var modelRotation: Rotation
+        get() = modelQuaternion.toEulerAngles()
         set(value) {
-            contentRotation = value
+            modelQuaternion = Quaternion.fromEuler(value)
         }
 
     /**
      * ### The node model scale
-     *
-     * @see contentScale
      */
-    open var modelScale
-        get() = contentScale
+    open var modelScale = DEFAULT_MODEL_SCALE
+
+    open var modelTransform: Transform
+        get() = translation(modelPosition) * rotation(modelQuaternion) * scale(modelScale)
         set(value) {
-            contentScale = value
+            modelPosition = Position(value.position)
+            modelQuaternion = rotation(value).toQuaternion()
+            modelScale = Scale(value.scale)
         }
+
+    override val worldTransform: Mat4
+        get() = super.worldTransform * modelTransform
 
     /**
      * ### Loads a monolithic binary glTF and add it to the Node
@@ -145,7 +178,14 @@ open class ModelNode : Node {
      * - An http or https url *https://mydomain.com/mymodel.glb*
      * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
      * 3D model before the node is attached to the [SceneView]
-     * @param animate Plays the animations automatically if the model has one
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param autoScale Scale the model to fit a unit cube
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - null = Keep the original model center point
+     * - (0, -1, 0) = Center the model horizontally and vertically
+     * - (0, -1, 0) = center horizontal | bottom aligned
+     * - (-1, 1, 0) = left | top aligned
+     * - ...
      *
      * @see loadModel
      */
@@ -153,13 +193,23 @@ open class ModelNode : Node {
         context: Context,
         glbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
-        animate: Boolean = true,
+        autoAnimate: Boolean = true,
+        autoScale: Boolean = true,
+        centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null
     ) : this() {
-        loadModel(context, glbFileLocation, coroutineScope, animate, onModelLoaded, onError)
+        loadModel(
+            context = context,
+            glbFileLocation = glbFileLocation,
+            coroutineScope = coroutineScope,
+            autoAnimate = autoAnimate,
+            autoScale = autoScale,
+            centerOrigin = centerOrigin,
+            onError = onError,
+            onLoaded = onModelLoaded
+        )
     }
-
 
     /**
      * TODO : Doc
@@ -216,16 +266,24 @@ open class ModelNode : Node {
      * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
      * 3D model before the node is attached to the [SceneView]
      * @param autoAnimate Plays the animations automatically if the model has one
+     * @param autoScale Scale the model to fit a unit cube
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - null = Keep the original model center point
+     * - (0, -1, 0) = Center the model horizontally and vertically
+     * - (0, -1, 0) = center horizontal | bottom aligned
+     * - (-1, 1, 0) = left | top aligned
+     * - ...
      */
     fun loadModel(
         context: Context,
         glbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
         autoAnimate: Boolean = true,
-        onLoaded: ((instance: RenderableInstance) -> Unit)? = null,
-        onError: ((error: Exception) -> Unit)? = null
+        autoScale: Boolean = true,
+        centerOrigin: Position? = null,
+        onError: ((error: Exception) -> Unit)? = null,
+        onLoaded: ((instance: RenderableInstance) -> Unit)? = null
     ) {
-        this.glbFileLocation = glbFileLocation
         if (coroutineScope != null) {
             coroutineScope.launchWhenCreated {
                 try {
@@ -234,23 +292,29 @@ open class ModelNode : Node {
                             if (autoAnimate && animationCount > 0) {
                                 animate(true)?.start()
                             }
+                            if (autoScale) {
+                                scaleModel()
+                            }
+                            centerOrigin?.let { centerModel(it) }
                         }
-                    onLoaded?.invoke(instance!!)
                     onModelLoaded(instance!!)
+                    onLoaded?.invoke(instance)
                 } catch (error: Exception) {
-                    onError?.invoke(error)
                     onError(error)
+                    onError?.invoke(error)
                 }
             }
         } else {
             doOnAttachedToScene { scene ->
                 loadModel(
-                    context,
-                    glbFileLocation,
-                    scene.lifecycleScope,
-                    autoAnimate,
-                    onLoaded,
-                    onError
+                    context = context,
+                    glbFileLocation = glbFileLocation,
+                    coroutineScope = scene.lifecycleScope,
+                    autoAnimate = autoAnimate,
+                    autoScale = autoScale,
+                    centerOrigin = centerOrigin,
+                    onError = onError,
+                    onLoaded = onLoaded
                 )
             }
         }
@@ -259,6 +323,34 @@ open class ModelNode : Node {
     open fun setRenderable(renderable: Renderable?): RenderableInstance? {
         renderableInstance = renderable?.createInstance(this)
         return renderableInstance
+    }
+
+    /**
+     * ### Sets up a root transform on the current model to make it fit into a unit cube
+     *
+     * @param units the number of units of the cube to scale into.
+     */
+    fun scaleModel(units: Float = 1.0f) {
+        renderableInstance?.filamentAsset?.let { asset ->
+            val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+            modelScale = Scale(units / max(halfExtent))
+        }
+    }
+
+    /**
+     * ### Sets up a root transform on the current model to make it centered
+     *
+     * @param origin Coordinate inside the model unit cube from where it is centered
+     * - defaults to [0, 0, 0] will center the model on its center
+     * - center horizontal | bottom aligned = [0, -1, 0]
+     * - left | top aligned: [-1, 1, 0]
+     */
+    fun centerModel(origin: Position = Position(x = 0f, y = 0.0f, z = 0.0f)) {
+        renderableInstance?.filamentAsset?.let { asset ->
+            val center = asset.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
+            val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+            modelPosition = -(center + halfExtent * origin) * modelScale
+        }
     }
 
     /** ### Detach and destroy the node */
