@@ -67,16 +67,16 @@ public final class ShapeFactory {
                 Vertex.builder().setPosition(p4).setNormal(left).setUvCoordinate(uv11).build(),
                 Vertex.builder().setPosition(p0).setNormal(left).setUvCoordinate(uv10).build(),
                 Vertex.builder().setPosition(p3).setNormal(left).setUvCoordinate(uv00).build(),
-                // Front
-                Vertex.builder().setPosition(p4).setNormal(front).setUvCoordinate(uv01).build(),
-                Vertex.builder().setPosition(p5).setNormal(front).setUvCoordinate(uv11).build(),
-                Vertex.builder().setPosition(p1).setNormal(front).setUvCoordinate(uv10).build(),
-                Vertex.builder().setPosition(p0).setNormal(front).setUvCoordinate(uv00).build(),
                 // Back
-                Vertex.builder().setPosition(p6).setNormal(back).setUvCoordinate(uv01).build(),
-                Vertex.builder().setPosition(p7).setNormal(back).setUvCoordinate(uv11).build(),
-                Vertex.builder().setPosition(p3).setNormal(back).setUvCoordinate(uv10).build(),
-                Vertex.builder().setPosition(p2).setNormal(back).setUvCoordinate(uv00).build(),
+                Vertex.builder().setPosition(p4).setNormal(back).setUvCoordinate(uv01).build(),
+                Vertex.builder().setPosition(p5).setNormal(back).setUvCoordinate(uv11).build(),
+                Vertex.builder().setPosition(p1).setNormal(back).setUvCoordinate(uv10).build(),
+                Vertex.builder().setPosition(p0).setNormal(back).setUvCoordinate(uv00).build(),
+                // Front
+                Vertex.builder().setPosition(p6).setNormal(front).setUvCoordinate(uv01).build(),
+                Vertex.builder().setPosition(p7).setNormal(front).setUvCoordinate(uv11).build(),
+                Vertex.builder().setPosition(p3).setNormal(front).setUvCoordinate(uv10).build(),
+                Vertex.builder().setPosition(p2).setNormal(front).setUvCoordinate(uv00).build(),
                 // Right
                 Vertex.builder().setPosition(p5).setNormal(right).setUvCoordinate(uv01).build(),
                 Vertex.builder().setPosition(p6).setNormal(right).setUvCoordinate(uv11).build(),
