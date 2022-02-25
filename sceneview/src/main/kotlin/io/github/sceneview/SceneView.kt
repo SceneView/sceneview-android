@@ -3,8 +3,10 @@ package io.github.sceneview
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.Color.BLACK
 import android.graphics.PixelFormat
-import android.net.Uri
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.*
 import androidx.activity.ComponentActivity
@@ -19,7 +21,6 @@ import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
-import com.google.ar.sceneform.rendering.Color
 import com.google.ar.sceneform.rendering.EngineInstance
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
@@ -28,12 +29,13 @@ import com.google.ar.sceneform.ux.TransformationSystem
 import com.gorisse.thomas.lifecycle.lifecycleScope
 import io.github.sceneview.collision.pickHitTest
 import io.github.sceneview.environment.Environment
+import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.light.*
-import io.github.sceneview.model.await
+import io.github.sceneview.model.GlbLoader
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
-import io.github.sceneview.utils.DefaultLifecycle
+import io.github.sceneview.utils.*
 import java.util.concurrent.TimeUnit
 
 const val defaultMaxFPS = 60
@@ -169,6 +171,7 @@ open class SceneView @JvmOverloads constructor(
         set(value) {
             renderer.setEnvironment(value)
             field = value
+            updateBackground()
         }
 
     /**
@@ -183,29 +186,21 @@ open class SceneView @JvmOverloads constructor(
             renderer.setMainLight(value)
         }
 
-    var backgroundColor: Color? = null
-        set(value) {
-            field = value
-            renderer.setClearColor(backgroundColor)
-        }
-
     init {
         try {
             // TODO : Remove it here when moved Filament to lifecycle aware
             EngineInstance.getEngine()
 
             mainLight = defaultMainLight
+            environment = KTXLoader.createEnvironment(context.fileBufferLocal(defaultIbl))
 
             lifecycleScope.launchWhenCreated {
-                environment = KTXLoader.loadEnvironment(context, defaultIbl)
-                nodeSelectorModel = ModelRenderable.builder()
-                    .setSource(context, Uri.parse(defaultNodeSelector))
-                    .setIsFilamentGltf(true)
-                    .await().apply {
-                        collisionShape = null
-                        BuildConfig.VERSION_NAME
-                    }
+                nodeSelectorModel = GlbLoader.loadModel(context, defaultNodeSelector)?.apply {
+                    collisionShape = null
+                    BuildConfig.VERSION_NAME
+                }
             }
+            updateBackground()
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
             // Filament is kotlined
@@ -312,16 +307,44 @@ open class SceneView @JvmOverloads constructor(
         return true
     }
 
+    override fun setBackgroundDrawable(background: Drawable?) {
+        super.setBackgroundDrawable(background)
+
+        if (holder != null) {
+            updateBackground()
+        }
+    }
+
+    private fun updateBackground() {
+        if ((background is ColorDrawable && background.alpha == 255) || environment?.skybox != null) {
+            backgroundColor = colorOf((background as? ColorDrawable)?.color ?: BLACK)
+            isTransparent = false
+        } else {
+            backgroundColor = colorOf(1.0f, 1.0f, 1.0f, 0.0f)
+            isTransparent = true
+        }
+    }
+
+    var backgroundColor: Color? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                renderer.setClearColor(backgroundColor)
+            }
+        }
+
     /**
      * ### Set the background to transparent.
      */
     var isTransparent: Boolean = false
         set(value) {
-            field = value
-            setZOrderOnTop(value)
-            holder.setFormat(if (value) PixelFormat.TRANSLUCENT else PixelFormat.OPAQUE)
-            renderer.filamentView.blendMode =
-                if (value) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
+            if (field != value) {
+                field = value
+                setZOrderOnTop(value)
+                holder.setFormat(if (value) PixelFormat.TRANSLUCENT else PixelFormat.OPAQUE)
+                renderer.filamentView.blendMode =
+                    if (value) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
+            }
         }
 
     // TODO: See if we still need it

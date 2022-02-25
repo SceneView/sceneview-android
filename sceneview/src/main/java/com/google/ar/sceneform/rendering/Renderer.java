@@ -17,20 +17,21 @@ import com.google.android.filament.IndirectLight;
 import com.google.android.filament.Scene;
 import com.google.android.filament.Skybox;
 import com.google.android.filament.SwapChain;
-import com.google.android.filament.ToneMapper;
 import com.google.android.filament.TransformManager;
 import com.google.android.filament.View.DynamicResolutionOptions;
 import com.google.android.filament.Viewport;
 import com.google.android.filament.android.UiHelper;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.Preconditions;
-import io.github.sceneview.environment.Environment;
-import io.github.sceneview.scene.CameraKt;
-import io.github.sceneview.scene.SceneKt;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import dev.romainguy.kotlin.math.Float4;
+import io.github.sceneview.environment.Environment;
+import io.github.sceneview.scene.CameraKt;
+import io.github.sceneview.scene.SceneKt;
 
 /**
  * A rendering context.
@@ -41,7 +42,7 @@ import java.util.List;
  */
 public class Renderer implements UiHelper.RendererCallback {
 
-    private static final Color DEFAULT_CLEAR_COLOR = new Color(0.0f, 0.0f, 0.0f, 1.0f);
+    private static final Float4 DEFAULT_CLEAR_COLOR = new Float4(0.0f, 0.0f, 0.0f, 1.0f);
 
     // Limit resolution to 1080p for the minor edge. This is enough for Filament.
     private static final int MAXIMUM_RESOLUTION = 1080;
@@ -161,14 +162,14 @@ public class Renderer implements UiHelper.RendererCallback {
     /**
      * @hide
      */
-    public void setClearColor(Color color) {
+    public void setClearColor(Float4 color) {
         com.google.android.filament.Renderer.ClearOptions options = new com.google.android.filament.Renderer.ClearOptions();
         options.clear = true;
-        if (color.a > 0) {
-            options.clearColor[0] = color.r;
-            options.clearColor[1] = color.g;
-            options.clearColor[2] = color.b;
-            options.clearColor[3] = color.a;
+        if (color.getA() > 0) {
+            options.clearColor[0] = color.getR();
+            options.clearColor[1] = color.getG();
+            options.clearColor[2] = color.getB();
+            options.clearColor[3] = color.getA();
         }
         renderer.setClearOptions(options);
     }
