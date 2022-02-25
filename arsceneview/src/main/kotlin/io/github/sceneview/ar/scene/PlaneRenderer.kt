@@ -16,7 +16,7 @@ import io.github.sceneview.material.*
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
 import io.github.sceneview.utils.Color
-import io.github.sceneview.utils.Position
+import io.github.sceneview.math.Position
 import java.util.*
 
 /**

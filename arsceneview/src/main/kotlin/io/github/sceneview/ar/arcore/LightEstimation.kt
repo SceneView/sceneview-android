@@ -11,7 +11,7 @@ import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.HDREnvironment
 import io.github.sceneview.light.*
 import io.github.sceneview.utils.Color
-import io.github.sceneview.utils.Direction
+import io.github.sceneview.math.Direction
 import io.github.sceneview.utils.colorOf
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

@@ -16,7 +16,7 @@ import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.defaultMaxFPS
 import io.github.sceneview.node.ModelNode
-import io.github.sceneview.utils.Position
+import io.github.sceneview.math.Position
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 

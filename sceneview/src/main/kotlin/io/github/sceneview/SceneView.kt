@@ -253,7 +253,7 @@ open class SceneView @JvmOverloads constructor(
         super.onDestroy(owner)
 
         renderer.destroyAllResources()
-        camera.destroy();
+        camera.destroy()
         environment?.destroy()
         environment = null
         mainLight?.destroy()

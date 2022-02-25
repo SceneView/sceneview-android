@@ -4,7 +4,12 @@ import com.google.android.filament.EntityInstance
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
 import io.github.sceneview.Filament
-import io.github.sceneview.utils.*
+import io.github.sceneview.math.Direction
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.toDirection
+import io.github.sceneview.math.toPosition
+import io.github.sceneview.utils.Color
+import io.github.sceneview.utils.toColor
 
 typealias Light = Int
 typealias LightInstance = Int

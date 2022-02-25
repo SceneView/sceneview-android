@@ -12,9 +12,9 @@ import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.SceneView
 import io.github.sceneview.model.await
-import io.github.sceneview.utils.Position
-import io.github.sceneview.utils.Rotation
-import io.github.sceneview.utils.Scale
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
