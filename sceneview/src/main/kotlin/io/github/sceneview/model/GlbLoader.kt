@@ -4,6 +4,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.sceneform.rendering.ModelRenderable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withContext
 
 object GlbLoader {
 
@@ -19,10 +22,9 @@ object GlbLoader {
     suspend fun loadModel(
         context: Context,
         glbFileLocation: String
-    ): ModelRenderable? = ModelRenderable.builder()
-        .setSource(context, Uri.parse(glbFileLocation))
-        .setIsFilamentGltf(true)
-        .await()
+    ): ModelRenderable? = withContext(Dispatchers.Main) {
+        createModel(context, glbFileLocation).await()
+    }
 
     /**
      * ### Utility for loading a glTF 3D model
@@ -44,4 +46,10 @@ object GlbLoader {
             loadModel(context, glbFileLocation)
         )
     }
+
+    fun createModel(context: Context, glbFileLocation: String) =
+        ModelRenderable.builder()
+            .setSource(context, Uri.parse(glbFileLocation))
+            .setIsFilamentGltf(true)
+            .build()
 }
