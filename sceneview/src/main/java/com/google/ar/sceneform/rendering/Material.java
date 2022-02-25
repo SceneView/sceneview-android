@@ -42,7 +42,7 @@ public class Material {
      * instances.
      */
     public Material makeCopy() {
-        return new Material(this);
+        return new Material(this, true);
     }
 
     public void setBoolean(String name, boolean x) {
@@ -225,7 +225,7 @@ public class Material {
     }
 
     @SuppressWarnings("initialization")
-    public Material(MaterialInternalData materialData) {
+    public Material(MaterialInternalData materialData, boolean cleanupResource) {
         this.materialData = materialData;
         materialData.retain();
         if (materialData instanceof MaterialInternalDataImpl) {
@@ -237,9 +237,11 @@ public class Material {
             internalMaterialInstance = new InternalGltfMaterialInstance();
         }
 
-        ResourceManager.getInstance()
-                .getMaterialCleanupRegistry()
-                .register(this, new CleanupCallback(internalMaterialInstance, materialData));
+        if(cleanupResource) {
+            ResourceManager.getInstance()
+                    .getMaterialCleanupRegistry()
+                    .register(this, new CleanupCallback(internalMaterialInstance, materialData));
+        }
     }
 
     void updateGltfMaterialInstance(MaterialInstance instance) {
@@ -250,9 +252,20 @@ public class Material {
     }
 
     @SuppressWarnings("initialization")
-    private Material(Material other) {
-        this(other.materialData);
+    private Material(Material other, boolean cleanupResource) {
+        this(other.materialData, cleanupResource);
         copyMaterialParameters(other.materialParameters);
+    }
+
+
+    public void destroy() {
+        if (internalMaterialInstance != null) {
+            internalMaterialInstance.dispose();
+        }
+
+        if (materialData != null) {
+            materialData.release();
+        }
     }
 
     /**
@@ -279,6 +292,8 @@ public class Material {
 
         @Nullable
         private Object registryId;
+
+        private boolean cleanupResource = true;
 
         /**
          * Constructor for asynchronous building. The sourceBuffer will be read later.
@@ -368,6 +383,11 @@ public class Material {
             return this;
         }
 
+        public Builder setCleanupResource(boolean cleanupResource) {
+            this.cleanupResource = cleanupResource;
+            return this;
+        }
+
         /**
          * Creates a new {@link Material} based on the parameters set previously. A source must be
          * specified.
@@ -398,7 +418,7 @@ public class Material {
             if (sourceBuffer != null) {
                 MaterialInternalDataImpl materialData =
                         new MaterialInternalDataImpl(createFilamentMaterial(sourceBuffer));
-                Material material = new Material(materialData);
+                Material material = new Material(materialData, this.cleanupResource);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -413,7 +433,7 @@ public class Material {
             } else if (existingMaterial != null) {
                 MaterialInternalDataGltfImpl materialData =
                         new MaterialInternalDataGltfImpl(existingMaterial);
-                Material material = new Material(materialData);
+                Material material = new Material(materialData, cleanupResource);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -459,7 +479,7 @@ public class Material {
                                     byteBuffer -> {
                                         MaterialInternalDataImpl materialData =
                                                 new MaterialInternalDataImpl(createFilamentMaterial(byteBuffer));
-                                        Material material = new Material(materialData);
+                                        Material material = new Material(materialData, cleanupResource);
                                         return material;
                                     },
                                     ThreadPools.getMainExecutor());

@@ -12,8 +12,6 @@ import java.nio.Buffer
 
 object MaterialLoader {
 
-    var cache = mutableMapOf<String, Material>()
-
     /**
      * ### Load a Material object from an filamat file
      *
@@ -30,15 +28,12 @@ object MaterialLoader {
         filamatFileLocation: String
     ): MaterialInstance? {
         return try {
-            cache[filamatFileLocation]?.createInstance()
-                ?: context.fileBuffer(filamatFileLocation)
-                    ?.let { buffer ->
-                        withContext(Dispatchers.Main) {
-                            createMaterial(buffer).also {
-                                cache += filamatFileLocation to it.material
-                            }
-                        }
+            context.fileBuffer(filamatFileLocation)
+                ?.let { buffer ->
+                    withContext(Dispatchers.Main) {
+                        createMaterial(buffer)
                     }
+                }
         } finally {
             // TODO: See why the finally is called before the onDestroy()
 //        material?.destroy()
@@ -77,14 +72,5 @@ object MaterialLoader {
         return Material.Builder().payload(filamatBuffer, filamatBuffer.remaining())
             .build(Filament.engine)
             .defaultInstance
-    }
-
-    fun clearCache() {
-        cache.clear()
-    }
-
-    fun destroy() {
-        cache.forEach { (_, material) -> material.destroy() }
-        cache.clear()
     }
 }
