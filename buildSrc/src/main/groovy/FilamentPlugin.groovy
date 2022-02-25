@@ -160,6 +160,10 @@ abstract class IblGenerator extends TaskWithBinary {
     @Optional
     abstract Property<String> getCmgenArgs()
 
+    @Input
+    @Optional
+    abstract Property<String> getFormat()
+
     @Incremental
     @InputFile
     abstract RegularFileProperty getInputFile()
@@ -206,9 +210,10 @@ abstract class IblGenerator extends TaskWithBinary {
                 def outputPath = outputDir.get().asFile
                 def commandArgs = cmgenArgs.getOrNull()
                 if (commandArgs == null) {
+                    def format = format.getOrElse("rgb32f")
                     commandArgs =
-                            '-q -x ' + outputPath + ' --format=rgb32f ' +
-                                    '--extract-blur=0.08 --extract=' + outputPath.absolutePath
+                            '-q -x ' + outputPath + ' --format=' + format +
+                                    ' --extract-blur=0.08 --extract=' + outputPath.absolutePath
                 }
                 commandArgs = commandArgs + " " + file
 
@@ -294,6 +299,7 @@ class FilamentToolsPluginExtension {
     String cmgenArgs
     RegularFileProperty iblInputFile
     DirectoryProperty iblOutputDir
+    String iblFormat
 
     RegularFileProperty meshInputFile
     DirectoryProperty meshOutputDir
@@ -324,6 +330,7 @@ class FilamentToolsPlugin implements Plugin<Project> {
             cmgenArgs = extension.cmgenArgs
             inputFile = extension.iblInputFile.getOrNull()
             outputDir = extension.iblOutputDir.getOrNull()
+            format = extension.iblFormat
         }
 
         project.preBuild.dependsOn "filamentGenerateIbl"

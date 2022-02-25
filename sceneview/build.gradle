@@ -9,6 +9,9 @@ if (project.properties['filamentPluginEnabled']?.toBoolean()) {
     filamentTools {
         materialInputDir = project.layout.projectDirectory.dir("../assets/materials")
         materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/materials")
+        iblInputFile = project.layout.projectDirectory.file("../assets/environments/default.hdr")
+        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/environments/default")
+        iblFormat = "ktx"
     }
 
     clean.doFirst {
@@ -21,6 +24,7 @@ version = VERSION_NAME
 
 android {
     compileSdk 31
+    compileSdkVersion 31
 
     defaultConfig {
         minSdk 24
