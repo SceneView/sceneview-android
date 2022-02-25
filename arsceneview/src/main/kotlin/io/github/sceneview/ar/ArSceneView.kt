@@ -134,7 +134,7 @@ open class ArSceneView @JvmOverloads constructor(
 
     override val sceneLifecycle: ArSceneLifecycle = ArSceneLifecycle(context, this)
 
-    private val cameraTextureId = GLHelper.createCameraTexture()
+    val cameraTextureId = GLHelper.createCameraTexture()
 
     //TODO : Move it to Lifecycle and NodeParent when Kotlined
     override val camera by lazy { ArCamera(this) }
