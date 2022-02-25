@@ -34,12 +34,35 @@ object ResourceLoader {
      * @see okHttpClient
      */
     @JvmStatic
-    suspend fun fileBuffer(
-        context: Context,
-        fileLocation: String
-    ): ByteBuffer? = withContext(Dispatchers.IO) {
+    suspend fun fileBuffer(context: Context, fileLocation: String): ByteBuffer? {
         val uri = Uri.parse(fileLocation)
-        when (uri.scheme) {
+        return withContext(Dispatchers.IO) {
+            when (uri.scheme) {
+                "http", "https" -> {
+                    ByteBuffer.wrap(fuelManager.get(fileLocation).awaitByteArray())
+                }
+                else -> {
+                    fileBufferLocal(context, fileLocation)
+                }
+            }
+        }
+    }
+
+    /**
+     * ### Load a file content buffer from different sources
+     *
+     * The file location can be:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     *
+     * @see okHttpClient
+     */
+    @JvmStatic
+    fun fileBufferLocal(context: Context, fileLocation: String): ByteBuffer? {
+        val uri = Uri.parse(fileLocation)
+        return when (uri.scheme) {
             ContentResolver.SCHEME_FILE -> if (uri.firstPathSegment == ASSET_FILE_PATH_ROOT) {
                 context.assets.open(
                     uri.pathSegments.drop(1).joinToString("/")
@@ -54,9 +77,6 @@ object ResourceLoader {
                 // Expected format: android.resource://example.package.name/12345678
                 context.resources.openRawResource(uri.pathSegments.lastOrNull()?.toInt()!!)
                     .toByteArray()
-            }
-            "http", "https" -> {
-                fuelManager.get(fileLocation).awaitByteArray()
             }
             else -> context.assets.open(fileLocation).toByteArray()
         }?.let { byteArray ->
@@ -76,6 +96,15 @@ object ResourceLoader {
  */
 suspend fun Context.fileBuffer(fileLocation: String): ByteBuffer? =
     ResourceLoader.fileBuffer(this, fileLocation)
+
+
+/**
+ * ### Load a file content buffer from different local sources
+ *
+ * @see ResourceLoader.fileBuffer
+ */
+fun Context.fileBufferLocal(fileLocation: String): ByteBuffer? =
+    ResourceLoader.fileBufferLocal(this, fileLocation)
 
 /**
  * ### Retrieve a android resource uri from a res id
