@@ -2,16 +2,23 @@ package io.github.sceneview.ar.node
 
 import android.content.Context
 import androidx.lifecycle.LifecycleCoroutineScope
-import dev.romainguy.kotlin.math.*
-import com.google.ar.core.*
+import com.google.ar.core.Anchor
+import com.google.ar.core.Config
 import com.google.ar.core.Config.PlaneFindingMode
+import com.google.ar.core.HitResult
+import com.google.ar.core.InstantPlacementPoint
 import com.google.ar.sceneform.rendering.RenderableInstance
-import io.github.sceneview.*
+import dev.romainguy.kotlin.math.Float3
+import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.ar.arcore.ArFrame
+import io.github.sceneview.ar.arcore.isTracking
+import io.github.sceneview.defaultMaxFPS
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.Position
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
 /**
  * ### AR positioned 3D model node
@@ -28,8 +35,8 @@ import io.github.sceneview.utils.Position
 open class ArModelNode : ArNode, ArSceneLifecycleObserver {
 
     companion object {
-        val defaultPlacementPosition get() = Position(0.0f, 0.0f, -2.0f)
-        val defaultPlacementMode get() = PlacementMode.BEST_AVAILABLE
+        val DEFAULT_PLACEMENT_POSITION = Position(0.0f, 0.0f, -2.0f)
+        val DEFAULT_PLACEMENT_MODE = PlacementMode.BEST_AVAILABLE
     }
 
     /**
@@ -79,7 +86,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      *
      * +z ---- -y --------
      */
-    var placementPosition: Position = defaultPlacementPosition
+    var placementPosition: Position = DEFAULT_PLACEMENT_POSITION
         set(value) {
             field = value
             position = Float3(value)
@@ -95,7 +102,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      * ([PlacementMode.BEST_AVAILABLE]) placement.
      * The [hitTest], [pose] and [anchor] will be influenced by this choice.
      */
-    var placementMode: PlacementMode = defaultPlacementMode
+    var placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE
         set(value) {
             field = value
             doOnAttachedToScene { sceneView ->
@@ -132,24 +139,15 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         }
 
     /**
-     * ## How precise must be the placement
+     * ### The max number of HitTest that can occur per seconds
      *
-     * 1 = Full precision BUT may produce artifacts due to the average
-     * 0 = The placement
-     * The smooth rotation minimum change limit
-     *
-     * This is used to avoid very near rotations smooth modifications. It prevents the rotation to
-     * appear too quick if the ranges are too close and uses linearly interpolation for upper dot
-     * products.
-     *
-     * Expressed in quaternion dot product
-     * This value is used by [smooth]
+     * Increase this value for more precision rate or reduce it for higher performances and lower
+     * consuming
      */
-    // TODO: add those vars
-//    var precision = 0.1
-//    var maxHitPerSeconds = 10
+    var maxHitPerSeconds = defaultMaxFPS / 2.0f
 
     var lastArFrame: ArFrame? = null
+    var lastHitFrame: ArFrame? = null
     var lastHitResult: HitResult? = null
 
     /**
@@ -163,10 +161,10 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      *
      * @param placementPosition See [ArModelNode.placementPosition]
      * @param placementMode See [ArModelNode.placementMode]
-    */
+     */
     constructor(
-        placementPosition: Position = defaultPlacementPosition,
-        placementMode: PlacementMode = defaultPlacementMode,
+        placementPosition: Position = DEFAULT_PLACEMENT_POSITION,
+        placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE,
     ) : super() {
         this.placementPosition = placementPosition
         this.placementMode = placementMode
@@ -183,21 +181,39 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      * - An http or https url *https://mydomain.com/mymodel.glb*
      * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
      * 3D model before the node is attached to the [SceneView]
-     * @param animate Plays the animations automatically if the model has one
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param autoScale Scale the model to fit a unit cube
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - null = Keep the original model center point
+     * - (0, -1, 0) = Center the model horizontally and vertically
+     * - (0, -1, 0) = center horizontal | bottom aligned
+     * - (-1, 1, 0) = left | top aligned
+     * - ...
      *
      * @see loadModel
      */
     constructor(
+        placementPosition: Position = DEFAULT_PLACEMENT_POSITION,
+        placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE,
         context: Context,
         glbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
-        animate: Boolean = true,
-        placementPosition: Position = defaultPlacementPosition,
-        placementMode: PlacementMode = defaultPlacementMode,
+        autoAnimate: Boolean = true,
+        autoScale: Boolean = false,
+        centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null
     ) : this(placementPosition, placementMode) {
-        loadModel(context, glbFileLocation, coroutineScope, animate, onModelLoaded, onError)
+        loadModel(
+            context = context,
+            glbFileLocation = glbFileLocation,
+            coroutineScope = coroutineScope,
+            autoAnimate = autoAnimate,
+            autoScale = autoScale,
+            centerOrigin = centerOrigin,
+            onError = onError,
+            onLoaded = onModelLoaded
+        )
     }
 
     /**
@@ -230,21 +246,23 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     ): HitResult? =
         frame?.hitTest(xPx, yPx, approximateDistanceMeters, plane, depth, instantPlacement)
 
+    @OptIn(ExperimentalTime::class)
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
         // TODO: Add this with precision vars
-//        if (Duration.nanoseconds(
-//                frame.timestamp - (lastArFrame?.timestamp ?: 0)
-//            ) > Duration.seconds(1.0 / maxHitPerSeconds)
-//        ) {
-        if (!isAnchored) {
-            if (!autoAnchor || !anchor()) {
-                onArFrameHitResult(hitTest(arFrame))
+        if (Duration.nanoseconds(
+                arFrame.timestamp - (lastHitFrame?.timestamp ?: 0)
+            ) >= Duration.seconds(1.0 / maxHitPerSeconds)
+        ) {
+            if (!isAnchored) {
+                if (!autoAnchor || !anchor()) {
+                    onArFrameHitResult(hitTest(arFrame))
+                }
             }
+            lastHitFrame = arFrame
         }
         lastArFrame = arFrame
-//        }
     }
 
     open fun onArFrameHitResult(hitResult: HitResult?) {
@@ -252,7 +270,6 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         if (hitResult?.isTracking == true) {
             lastHitResult = hitResult
             hitResult.hitPose?.let { hitPose ->
-                // TODO : Handle precision in here
                 pose = hitPose
             }
         }
