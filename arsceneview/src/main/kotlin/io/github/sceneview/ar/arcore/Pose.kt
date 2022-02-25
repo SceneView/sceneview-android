@@ -2,8 +2,8 @@ package io.github.sceneview.ar.arcore
 
 import com.google.ar.core.Pose
 import dev.romainguy.kotlin.math.Quaternion
-import io.github.sceneview.utils.Direction
-import io.github.sceneview.utils.Position
+import io.github.sceneview.math.Direction
+import io.github.sceneview.math.Position
 
 val Pose.position: Position
     get() = Position(x = tx(), y = ty(), z = tz())
