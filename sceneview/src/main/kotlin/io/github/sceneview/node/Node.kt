@@ -47,10 +47,11 @@ private const val defaultTouchSlop = 8
 open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     companion object {
-        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = -2.0f)
-        val DEFAULT_QUATERNION get() = Quaternion()
-        val DEFAULT_ROTATION get() = DEFAULT_QUATERNION.toEulerAngles()
-        val DEFAULT_SCALE get() = Scale(1.0f, 1.0f, 1.0f)
+        val DEFAULT_POSITION = Position(x = 0.0f, y = 0.0f, z = -4.0f)
+        val DEFAULT_QUATERNION = Quaternion()
+        val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
+        val DEFAULT_SCALE = Scale(1.0f)
+
         const val DEFAULT_ROTATION_DOT_THRESHOLD = 0.95f
     }
 
@@ -161,60 +162,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         }
 
     /**
-     * ### The node content origin (center)
-     *
-     * A node's content origin is the transformation between its coordinate space and that used by
-     * its [position]. The default origin is zero vector, specifying that the node's position
-     * locates the origin of its coordinate system relatively to that center point.
-     *
-     * Changing the origin transform alters these behaviors in many useful ways.
-     * You can offset the node's contents relative to its position.
-     * For example, by setting the pivot to a translation transform you can position a node
-     * containing a sphere geometry relative to where the sphere would rest on a floor instead of
-     * relative to its center.
-     */
-    open var contentPosition = Position()
-
-    /**
-     * TODO: Doc
-     */
-    var contentQuaternion: Quaternion = Quaternion()
-
-    /**
-     * ### The node content orientation
-     *
-     * A node's content origin is the transformation between its coordinate space and that used by
-     * its [quaternion]. The default origin is zero vector, specifying that the node's orientation
-     * locates the origin of its rotation relatively to that center point.
-     *
-     * `[0..360]`
-     *
-     * Changing the origin transform alters these behaviors in many useful ways.
-     * You can move the node's axis of rotation.
-     * For example, with a translation transform you can cause a node to revolve around a faraway
-     * point instead of rotating around its center, and with a rotation transform you can tilt the
-     * axis of rotation.
-     */
-    open var contentRotation: Rotation
-        get() = contentQuaternion.toEulerAngles()
-        set(value) {
-            contentQuaternion = Quaternion.fromEuler(value)
-        }
-
-    /**
-     * ### The node content scale
-     */
-    open var contentScale = Scale(1.0f, 1.0f, 1.0f)
-
-    open var contentTransform: Transform
-        get() = translation(contentPosition) * rotation(contentQuaternion) * scale(contentScale)
-        set(value) {
-            contentPosition = Position(value.position)
-            contentQuaternion = rotation(value).toQuaternion()
-            contentScale = Scale(value.scale)
-        }
-
-    /**
      * ## The smooth position, rotation and scale speed
      *
      * Expressed in units per seconds.
@@ -239,10 +186,10 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     private var smoothPosition: Position? = null
     private var smoothQuaternion: Quaternion? = null
 
-    val worldTransform: Mat4
+    open val worldTransform: Mat4
         get() = (parentNode?.let { parent ->
-            parent.worldTransform * transform * contentTransform
-        } ?: transform * contentTransform)
+            parent.worldTransform * transform
+        } ?: transform)
 
     /**
      * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
@@ -538,24 +485,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     fun transform(
         position: Position = this.position,
-        rotation: Rotation = this.rotation,
-        scale: Scale = this.scale
-    ) {
-        this.position = position
-        this.rotation = rotation
-        this.scale = scale
-    }
-
-
-    /**
-     * ## Change the node transform
-     *
-     * @see position
-     * @see rotation
-     * @see scale
-     */
-    fun transform(
-        position: Position = this.position,
         rotation: Quaternion = this.quaternion,
         scale: Scale = this.scale
     ) {
@@ -590,6 +519,25 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
             smoothQuaternion = rotation
         }
     }
+
+    // TODO
+//
+//    /**
+//     * ### Rotates the node to face a point in world space
+//     *
+//     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
+//     * direction.
+//     *
+//     * @param position The position to look at in world space
+//     * @param up The up direction will determine the orientation of the node around the direction
+//     */
+//    fun lookAt(position: Position, up: Direction = Direction(y=1.0f), smooth: Boolean = false) {
+//        if(smooth) {
+//            smooth(quaternion = rotation(lookAt(this.worldPosition, position, up)).toQuaternion())
+//        } else {
+//            transform(rotation = rotation(lookAt(this.worldPosition, position, up)).toQuaternion())
+//        }
+//    }
 
     /**
      * ### Checks whether the given node parent is an ancestor of this node recursively
@@ -804,29 +752,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     }
 
     // TODO : Use kotlin math
-//    /**
-//     * ### Sets the direction that the node is looking at in world-space
-//     *
-//     * After calling this, [forward] will match the look direction passed in.
-//     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
-//     * direction.
-//     *
-//     * @param lookDirection a vector representing the desired look direction in world-space
-//     */
-//    fun setLookDirection(lookDirection: Vector3) {
-//        // Default up direction
-//        var upDirection = Vector3.up()
-//        // First determine if the look direction and default up direction are far enough apart to
-//        // produce a numerically stable cross product.
-//        val directionUpMatch = abs(Vector3.dot(lookDirection, upDirection))
-//        if (directionUpMatch > directionUpEpsilon) {
-//            // If the direction vector and up vector coincide choose a new up vector.
-//            upDirection = Vector3(0.0f, 0.0f, 1.0f)
-//        }
-//
-//        // Finally build the rotation with the proper up vector.
-//        setLookDirection(lookDirection, upDirection)
-//    }
 
 //    /**
 //     * ### Sets the direction that the node is looking at in world-space
@@ -840,6 +765,14 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 //     * @param upDirection   a vector representing a valid up vector to use, such as Vector3.up()
 //     */
 //    fun setLookDirection(lookDirection: Vector3, upDirection: Vector3) {
+//        val cameraPosition: Vector3 = getScene().getCamera().getWorldPosition()
+//        val cardPosition: Vector3 = getWorldPosition()
+//        sceneView.renderer.camera.lookAt()
+//        val direction = Vector3.subtract(cameraPosition, cardPosition)
+//        val lookRotation =
+//            com.google.ar.sceneform.math.Quaternion.lookRotation(direction, Vector3.up())
+//        setWorldRotation(lookRotation)
+//
 //
 //        orientation = Quaternion.lookRotation(lookDirection, upDirection)
 //    }

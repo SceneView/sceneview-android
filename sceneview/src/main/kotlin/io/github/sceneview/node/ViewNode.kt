@@ -9,6 +9,7 @@ import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.rendering.*
 import com.google.ar.sceneform.utilities.ChangeId
+import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.SceneView
 import io.github.sceneview.model.await
 import io.github.sceneview.utils.Position
@@ -24,6 +25,13 @@ import io.github.sceneview.utils.Scale
  * another node, or the scene.
  */
 open class ViewNode : Node {
+
+    companion object {
+        val DEFAULT_POSITION = Position(x = 0.0f, y = 0.0f, z = -0.1f)
+        val DEFAULT_QUATERNION = Quaternion()
+        val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
+        val DEFAULT_SCALE  = Scale(1.0f)
+    }
 
     // Rendering fields.
     private var renderableId: Int = ChangeId.EMPTY_ID
