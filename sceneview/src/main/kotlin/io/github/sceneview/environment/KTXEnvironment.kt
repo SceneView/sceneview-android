@@ -13,12 +13,12 @@ import java.nio.Buffer
 
 class KTXEnvironment(
     indirectLight: IndirectLight?,
-    sphericalHarmonics: FloatArray? = null,
-    skybox: Skybox? = null
+    skybox: Skybox? = null,
+    sphericalHarmonics: FloatArray? = null
 ) : Environment(
     indirectLight = indirectLight,
-    sphericalHarmonics = sphericalHarmonics,
-    skybox = skybox
+    skybox = skybox,
+    sphericalHarmonics = sphericalHarmonics
 )
 
 /**
