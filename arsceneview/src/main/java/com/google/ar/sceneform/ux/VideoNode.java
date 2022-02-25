@@ -121,7 +121,7 @@ public class VideoNode extends ModelNode {
      *
      * @param player   the media player
      * @param material the material to apply to your custom model
-     * @return the the renderable with the applied material.
+     * @return the renderable with the applied material.
      */
     public Renderable createModel(MediaPlayer player, Material material) {
         final int width = player.getVideoWidth();
