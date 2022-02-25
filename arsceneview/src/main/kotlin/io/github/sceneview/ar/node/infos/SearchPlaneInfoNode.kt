@@ -15,7 +15,7 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.R
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.node.ViewNode
-import io.github.sceneview.utils.Position
+import io.github.sceneview.math.Position
 
 open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
     ViewNode() {

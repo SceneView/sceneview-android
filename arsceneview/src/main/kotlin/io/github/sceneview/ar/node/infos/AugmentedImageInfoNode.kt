@@ -6,7 +6,7 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.R
 import io.github.sceneview.node.ViewNode
-import io.github.sceneview.utils.Position
+import io.github.sceneview.math.Position
 
 open class AugmentedImageInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
     ViewNode() {

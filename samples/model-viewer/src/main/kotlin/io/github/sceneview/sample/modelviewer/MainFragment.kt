@@ -10,8 +10,8 @@ import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.SceneView
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.node.ModelNode
-import io.github.sceneview.utils.Position
-import io.github.sceneview.utils.Rotation
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

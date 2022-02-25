@@ -7,9 +7,9 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.R
-import io.github.sceneview.utils.Position
-import io.github.sceneview.utils.Rotation
-import io.github.sceneview.utils.Scale
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
 
 /**
  * ### Construct a [LoadingNode] with it Position, Rotation and Scale

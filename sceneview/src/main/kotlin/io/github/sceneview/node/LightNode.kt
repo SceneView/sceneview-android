@@ -2,9 +2,9 @@ package io.github.sceneview.node
 
 import com.google.ar.sceneform.rendering.Light
 import com.google.ar.sceneform.rendering.LightInstance
-import io.github.sceneview.utils.Position
-import io.github.sceneview.utils.Rotation
-import io.github.sceneview.utils.Scale
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.

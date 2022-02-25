@@ -18,7 +18,7 @@ package com.google.ar.sceneform.ux;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 
-import io.github.sceneview.utils.MathKt;
+import io.github.sceneview.math.UtilsKt;
 
 /**
  * Manipulates the rotation of a {@link BaseTransformableNode} using a {@link
@@ -52,9 +52,9 @@ public class RotationController extends BaseTransformationController<TwistGestur
     float rotationAmount = -gesture.getDeltaRotationDegrees() * rotationRateDegrees;
     // TODO :  Move to kotlin-math
     Quaternion rotationDelta = new Quaternion(Vector3.up(), rotationAmount);
-    Quaternion localQuaternion = MathKt.toOldQuaternion(getTransformableNode().getQuaternion());
+    Quaternion localQuaternion = UtilsKt.toOldQuaternion(getTransformableNode().getQuaternion());
     localQuaternion = Quaternion.multiply(localQuaternion, rotationDelta);
-    getTransformableNode().setQuaternion(MathKt.toNewQuaternion(localQuaternion));
+    getTransformableNode().setQuaternion(UtilsKt.toNewQuaternion(localQuaternion));
   }
 
   @Override

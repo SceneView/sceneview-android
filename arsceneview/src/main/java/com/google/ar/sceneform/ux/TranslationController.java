@@ -35,9 +35,9 @@ import io.github.sceneview.SceneView;
 import io.github.sceneview.ar.ArSceneView;
 import io.github.sceneview.ar.arcore.ArFrame;
 import io.github.sceneview.ar.node.ArNode;
+import io.github.sceneview.math.UtilsKt;
 import io.github.sceneview.node.Node;
 import io.github.sceneview.node.NodeParent;
-import io.github.sceneview.utils.MathKt;
 
 import java.util.EnumSet;
 import java.util.List;
@@ -253,7 +253,7 @@ public class TranslationController extends BaseTransformationController<DragGest
             return;
         }
 
-        Vector3 localPosition = MathKt.toVector3(getTransformableNode().getPosition());
+        Vector3 localPosition = UtilsKt.toVector3(getTransformableNode().getPosition());
         float lerpFactor = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
         localPosition = Vector3.lerp(localPosition, desiredLocalPosition, lerpFactor);
 
@@ -263,7 +263,7 @@ public class TranslationController extends BaseTransformationController<DragGest
             this.desiredLocalPosition = null;
         }
 
-        getTransformableNode().setPosition(MathKt.toFloat3(localPosition));
+        getTransformableNode().setPosition(UtilsKt.toFloat3(localPosition));
     }
 
     private void updateRotation(FrameTime frameTime) {
@@ -274,7 +274,7 @@ public class TranslationController extends BaseTransformationController<DragGest
         }
 
         // TODO :  Move to kotlin-math
-        Quaternion localQuaternion = MathKt.toOldQuaternion(getTransformableNode().getQuaternion());
+        Quaternion localQuaternion = UtilsKt.toOldQuaternion(getTransformableNode().getQuaternion());
         float lerpFactor = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
         localQuaternion = Quaternion.slerp(localQuaternion, desiredLocalRotation, lerpFactor);
 
@@ -284,7 +284,7 @@ public class TranslationController extends BaseTransformationController<DragGest
             this.desiredLocalRotation = null;
         }
 
-        getTransformableNode().setQuaternion(MathKt.toNewQuaternion(localQuaternion));
+        getTransformableNode().setQuaternion(UtilsKt.toNewQuaternion(localQuaternion));
     }
 
     /**

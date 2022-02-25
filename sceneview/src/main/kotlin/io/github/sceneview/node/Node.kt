@@ -10,6 +10,7 @@ import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.common.TransformProvider
+import com.google.ar.sceneform.math.MathHelper.clamp
 import com.google.ar.sceneform.math.Matrix
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
@@ -17,7 +18,7 @@ import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
-import io.github.sceneview.utils.*
+import io.github.sceneview.math.*
 
 // This is the default from the ViewConfiguration class.
 private const val defaultTouchSlop = 8

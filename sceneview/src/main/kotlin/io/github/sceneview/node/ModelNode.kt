@@ -10,10 +10,10 @@ import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
 import io.github.sceneview.model.GlbLoader
-import io.github.sceneview.utils.Position
-import io.github.sceneview.utils.Rotation
-import io.github.sceneview.utils.Scale
-import io.github.sceneview.utils.Transform
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
+import io.github.sceneview.math.Transform
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.

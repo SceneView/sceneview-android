@@ -18,8 +18,8 @@ package com.google.ar.sceneform.ux;
 import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.math.MathHelper;
 import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.math.UtilsKt;
 import io.github.sceneview.node.Node;
-import io.github.sceneview.utils.MathKt;
 
 /**
  * Manipulates the Scale of a {@link BaseTransformableNode} using a Pinch {@link
@@ -82,7 +82,7 @@ public class ScaleController extends BaseTransformationController<PinchGesture> 
   @Override
   public void onActivated(Node node) {
     super.onActivated(node);
-    Vector3 scale = MathKt.toVector3(getTransformableNode().getScale());
+    Vector3 scale = UtilsKt.toVector3(getTransformableNode().getScale());
     currentScaleRatio = (scale.x - minScale) / getScaleDelta();
   }
 
@@ -96,7 +96,7 @@ public class ScaleController extends BaseTransformationController<PinchGesture> 
     currentScaleRatio = MathHelper.lerp(currentScaleRatio, getClampedScaleRatio(), t);
     float finalScaleValue = getFinalScale();
     Vector3 finalScale = new Vector3(finalScaleValue, finalScaleValue, finalScaleValue);
-    getTransformableNode().setScale(MathKt.toFloat3(finalScale));
+    getTransformableNode().setScale(UtilsKt.toFloat3(finalScale));
   }
 
   @Override
@@ -110,7 +110,7 @@ public class ScaleController extends BaseTransformationController<PinchGesture> 
 
     float finalScaleValue = getFinalScale();
     Vector3 finalScale = new Vector3(finalScaleValue, finalScaleValue, finalScaleValue);
-    getTransformableNode().setScale(MathKt.toFloat3(finalScale));
+    getTransformableNode().setScale(UtilsKt.toFloat3(finalScale));
 
     if (currentScaleRatio < -ELASTIC_RATIO_LIMIT
         || currentScaleRatio > (1.0f + ELASTIC_RATIO_LIMIT)) {
