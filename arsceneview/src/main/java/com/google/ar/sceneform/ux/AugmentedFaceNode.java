@@ -40,17 +40,17 @@ import com.google.ar.sceneform.rendering.RenderableInstance;
 import com.google.ar.sceneform.rendering.Texture;
 import com.google.ar.sceneform.rendering.Vertex;
 import com.google.ar.sceneform.rendering.Vertex.UvCoordinate;
-import io.github.sceneview.SceneView;
-import io.github.sceneview.ar.arcore.PoseKt;
-import io.github.sceneview.ar.node.ArNode;
-import io.github.sceneview.node.ModelNode;
 
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
+
+import io.github.sceneview.SceneView;
+import io.github.sceneview.ar.arcore.PoseKt;
+import io.github.sceneview.ar.node.ArNode;
+import io.github.sceneview.node.ModelNode;
 
 /**
  * Node used to render visual effects on a face with ARCore's {@link AugmentedFace} feature.
@@ -292,25 +292,29 @@ public class AugmentedFaceNode extends ArNode {
 
         Matrix.invertM(inverseRootNodeMatrix, 0, getTransformationMatrix().data, 0);
 
-        for(RegionType type : RegionType.values()) {
+        for (RegionType type : RegionType.values()) {
             Pose pose = augmentedFace.getRegionPose(type);
 
-            Log.d(TAG, type + " " + pose.toString());
+            // Log Pose
+//            Log.d(TAG, type + " " + pose.toString());
 
             pose.toMatrix(regionPoseMatrix, 0);
 
             Matrix.multiplyMM(matrix, 0, inverseRootNodeMatrix, 0, regionPoseMatrix, 0);
 
-            int instance = tfm.getInstance(faceMeshSkeleton.get(type));
-
-            tfm.setTransform(instance, matrix);
-
-            tfm.getWorldTransform(instance, matrix);
-            float[] position = new float[4];
-            Matrix.multiplyMV(position, 0, matrix, 0, new float[] { 0, 0, 0, 1 }, 0);
-            Log.d(TAG, type + " " + Arrays.toString(position));
+            if (faceMeshSkeleton.containsKey(type)) {
+                int instance = tfm.getInstance(faceMeshSkeleton.get(type));
+                tfm.setTransform(instance, matrix);
+                tfm.getWorldTransform(instance, matrix);
+            }
+            // Log Position
+//            float[] position = new float[4];
+//            Matrix.multiplyMV(position, 0, matrix, 0, new float[] { 0, 0, 0, 1 }, 0);
+//            Log.d(TAG, type + " " + Arrays.toString(position));
         }
-        faceRegionNode.getRenderableInstance().getFilamentAsset().getAnimator().updateBoneMatrices();
+        if (faceRegionNode != null && faceRegionNode.getRenderableInstance() != null) {
+            faceRegionNode.getRenderableInstance().getFilamentAsset().getAnimator().updateBoneMatrices();
+        }
     }
 
     @Override
