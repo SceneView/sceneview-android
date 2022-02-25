@@ -192,7 +192,7 @@ public class RenderableInstance implements AnimatableModel {
                 materialNames.add(materialInstance.getName());
 
                 MaterialInternalDataGltfImpl materialData = new MaterialInternalDataGltfImpl(materialInstance.getMaterial());
-                Material material = new Material(materialData);
+                Material material = new Material(materialData, true);
                 material.updateGltfMaterialInstance(materialInstance);
                 materialBindings.add(material);
             }

@@ -1,5 +1,6 @@
 package io.github.sceneview.ar.scene
 
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.MaterialInstance
 import com.google.ar.core.*
@@ -75,6 +76,45 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     // Distance from the camera to last plane hit, default value is 4 meters (standing height).
     private var planeHitDistance = 4.0f
 
+
+    /**
+     * ### Enable/disable the plane renderer.
+     */
+    var isEnabled = true
+        set(value) {
+            if (field != value) {
+                field = value
+                visualizers.values.forEach { it.setEnabled(value) }
+            }
+        }
+
+    /**
+     * ### Control visibility of plane visualization.
+     *
+     * If false - no planes are drawn. Note that shadow visibility is independent of plane
+     * visibility.
+     */
+    var isVisible = true
+        set(value) {
+            if (field != value) {
+                field = value
+                visualizers.values.forEach { it.setVisible(value) }
+            }
+        }
+
+    /**
+     * ### Control whether Renderables in the scene should cast shadows onto the planes
+     *
+     * If false - no planes receive shadows, regardless of the per-plane setting.
+     */
+    var isShadowReceiver = true
+        set(value) {
+            if (field != value) {
+                field = value
+                visualizers.values.forEach { it.setShadowReceiver(value) }
+            }
+        }
+
     init {
         lifecycle.addObserver(this)
         lifecycle.coroutineScope.launchWhenCreated {
@@ -124,43 +164,17 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         }
     }
 
-    /**
-     * ### Enable/disable the plane renderer.
-     */
-    var isEnabled = true
-        set(value) {
-            if (field != value) {
-                field = value
-                visualizers.values.forEach { it.setEnabled(value) }
-            }
-        }
+    override fun onDestroy(owner: LifecycleOwner) {
+        super.onDestroy(owner)
 
-    /**
-     * ### Control visibility of plane visualization.
-     *
-     * If false - no planes are drawn. Note that shadow visibility is independent of plane
-     * visibility.
-     */
-    var isVisible = true
-        set(value) {
-            if (field != value) {
-                field = value
-                visualizers.values.forEach { it.setVisible(value) }
-            }
-        }
+        destroy()
+    }
 
-    /**
-     * ### Control whether Renderables in the scene should cast shadows onto the planes
-     *
-     * If false - no planes receive shadows, regardless of the per-plane setting.
-     */
-    var isShadowReceiver = true
-        set(value) {
-            if (field != value) {
-                field = value
-                visualizers.values.forEach { it.setShadowReceiver(value) }
-            }
-        }
+    fun destroy() {
+        visualizers.forEach { (_, planeVisualizer) -> planeVisualizer.release() }
+        planeMaterial?.destroy()
+        shadowMaterial?.destroy()
+    }
 
     /**
      * <pre>
@@ -231,7 +245,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         )?.material
             ?: throw AssertionError("Can't load the plane renderer shadow material")
 
-        shadowMaterial = Material(MaterialInternalDataImpl(material))
+        shadowMaterial = Material(MaterialInternalDataImpl(material), false)
 
         shadowMaterialInstance = shadowMaterial?.filamentMaterialInstance
 
@@ -252,7 +266,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         )?.material
             ?: throw AssertionError("Can't load the plane renderer material")
 
-        planeMaterial = Material(MaterialInternalDataImpl(material))
+        planeMaterial = Material(MaterialInternalDataImpl(material), false)
 
         materialInstance = planeMaterial?.filamentMaterialInstance
 

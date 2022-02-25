@@ -40,6 +40,5 @@ object Filament {
 
     fun destroy() {
         //TODO : Add every Filament destroys
-        MaterialLoader.destroy()
     }
 }
