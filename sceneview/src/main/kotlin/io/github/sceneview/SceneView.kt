@@ -40,8 +40,8 @@ import java.util.concurrent.TimeUnit
 
 const val defaultMaxFPS = 60
 const val defaultNodeSelector = "sceneview/models/node_selector.glb"
-const val defaultIbl = "sceneview/environments/default_ibl.ktx"
-const val defaultSkybox = "sceneview/environments/default_skybox.ktx"
+const val defaultIbl = "sceneview/environments/default/default_ibl.ktx"
+const val defaultSkybox = "sceneview/environments/default/default_skybox.ktx"
 
 /**
  * ### A SurfaceView that manages rendering and interactions with the 3D scene.

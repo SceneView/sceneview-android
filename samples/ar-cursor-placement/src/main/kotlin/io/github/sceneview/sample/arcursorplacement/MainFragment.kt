@@ -45,8 +45,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         super.onViewCreated(view, savedInstanceState)
 
         sceneView = view.findViewById(R.id.sceneView)
-        sceneView.planeRenderer.isEnabled = false
-//        sceneView.planeRenderer.isVisible = false
+        sceneView.planeRenderer.isVisible = false
         // Handle a fallback in case of non AR usage
         // The exception contains the failure reason
         // e.g. SecurityException in case of camera permission denied
