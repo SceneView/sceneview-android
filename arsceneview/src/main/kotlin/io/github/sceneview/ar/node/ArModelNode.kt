@@ -15,10 +15,10 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.defaultMaxFPS
-import io.github.sceneview.node.ModelNode
 import io.github.sceneview.math.Position
-import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
+import io.github.sceneview.node.ModelNode
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * ### AR positioned 3D model node
@@ -246,13 +246,11 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     ): HitResult? =
         frame?.hitTest(xPx, yPx, approximateDistanceMeters, plane, depth, instantPlacement)
 
-    @OptIn(ExperimentalTime::class)
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
-        if (Duration.nanoseconds(
-                arFrame.timestamp - (lastHitFrame?.timestamp ?: 0)
-            ) >= Duration.seconds(1.0 / maxHitPerSeconds)
+        if ((arFrame.timestamp - (lastHitFrame?.timestamp?: 0)).nanoseconds >=
+            (1.0 / maxHitPerSeconds).seconds
         ) {
             if (!isAnchored) {
                 if (!autoAnchor || !anchor()) {
