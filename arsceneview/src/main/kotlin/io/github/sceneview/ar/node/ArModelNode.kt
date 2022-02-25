@@ -144,7 +144,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      * Increase this value for more precision rate or reduce it for higher performances and lower
      * consuming
      */
-    var maxHitPerSeconds = defaultMaxFPS / 2.0f
+    var maxHitPerSeconds : Int = (defaultMaxFPS / 2.0f).toInt()
 
     var lastArFrame: ArFrame? = null
     var lastHitFrame: ArFrame? = null

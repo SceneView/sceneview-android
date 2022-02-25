@@ -7,6 +7,7 @@ import com.google.ar.core.HitResult
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.arcore.isTracking
+import io.github.sceneview.defaultMaxFPS
 import io.github.sceneview.material.setEmissiveColor
 import io.github.sceneview.utils.Color
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,7 @@ open class CursorNode(
 
     init {
         isFocusable = false
+        maxHitPerSeconds = defaultMaxFPS
         loadModel(
             context = context,
             coroutineScope = coroutineScope,
