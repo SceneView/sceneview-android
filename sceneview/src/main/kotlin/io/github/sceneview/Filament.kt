@@ -32,7 +32,7 @@ object Filament {
 
     val transformManager get() = engine.transformManager
 
-    val resourceLoader by lazy { ResourceLoader(engine, true, false) }
+    val resourceLoader by lazy { ResourceLoader(engine, true, false, false) }
 
     val lightManager get() = engine.lightManager
 
