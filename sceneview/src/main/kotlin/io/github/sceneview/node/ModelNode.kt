@@ -9,11 +9,11 @@ import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
-import io.github.sceneview.model.GlbLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Transform
+import io.github.sceneview.model.GLBLoader
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -288,7 +288,7 @@ open class ModelNode : Node {
             coroutineScope.launchWhenCreated {
                 try {
                     val instance =
-                        setRenderable(GlbLoader.loadModel(context, glbFileLocation))?.apply {
+                        setRenderable(GLBLoader.loadModel(context, glbFileLocation))?.apply {
                             if (autoAnimate && animationCount > 0) {
                                 animate(true)?.start()
                             }

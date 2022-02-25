@@ -26,6 +26,26 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+/*###########!!!!!!!!!!!!!!!!################
+/*###########!!!!!!!!!!!!!!!!################
+/*         PLEASE KILL ME !!!!!!
+/*###########!!!!!!!!!!!!!!!!################
+/*
+/* I had a great life and I even changed
+/* from sfb to filament but I'm too old now.
+/* Someone please move me to only Filament
+/* in order for me to start a new life.
+/*
+/* Maybe by directly adding the FilamentAsset
+/* to the ModelNode class and exclude the
+/* renderableData nightmare from my variables
+/*
+/*###########!!!!!!!!!!!!!!!!################
+/* ;-)
+/*###########!!!!!!!!!!!!!!!!################
+/*###########!!!!!!!!!!!!!!!!################
+*/
+
 /**
  * Base class for rendering in 3D space by attaching to a {@link com.google.ar.sceneform.Node} with
  * {@link com.google.ar.sceneform.Node#setRenderable(Renderable)}.

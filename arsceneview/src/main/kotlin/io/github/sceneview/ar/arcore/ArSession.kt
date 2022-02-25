@@ -113,8 +113,8 @@ class ArSession(
 
     fun updateFrame(frameTime: FrameTime): ArFrame? {
         // Texture names should only be set once on a GL thread unless they change.
-        // This is done during onBeginFrame rather than setSession since the session is
-        // not guaranteed to have been initialized during the execution of setSession.
+        // This is done during updateFrame rather than init since the session is
+        // not guaranteed to have been initialized during the execution of init.
         if (!hasSetTextureNames) {
             setCameraTextureName(cameraTextureId)
             hasSetTextureNames = true
