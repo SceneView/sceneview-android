@@ -91,7 +91,7 @@ class ARCore(
         }
     }
 
-    var onAppSettingsResult: (result: ActivityResult) -> Unit = { result ->
+    var onAppSettingsResult: (result: ActivityResult) -> Unit = { _ ->
         appSettingsRequested = false
     }
 
@@ -213,7 +213,7 @@ class ARCore(
     }
 
     /** Check to see we have the necessary permissions for this app.  */
-    fun isInstalled(context: Context) = ArCoreApk.getInstance().checkAvailability(lifecycle.activity) == Availability.SUPPORTED_INSTALLED
+    fun isInstalled(context: Context) = ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
 
     fun install(activity: Activity, installRequested: Boolean) : Boolean {
         return ArCoreApk.getInstance().requestInstall(

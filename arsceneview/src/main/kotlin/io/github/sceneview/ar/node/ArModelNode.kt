@@ -250,7 +250,6 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
-        // TODO: Add this with precision vars
         if (Duration.nanoseconds(
                 arFrame.timestamp - (lastHitFrame?.timestamp ?: 0)
             ) >= Duration.seconds(1.0 / maxHitPerSeconds)

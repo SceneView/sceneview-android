@@ -1,7 +1,6 @@
 package io.github.sceneview.light
 
 import com.google.android.filament.EntityInstance
-import com.google.android.filament.IndirectLight
 import com.google.android.filament.LightManager
 import io.github.sceneview.Filament
 import io.github.sceneview.math.Direction
@@ -147,16 +146,4 @@ fun Light.clone() = LightManager.Builder(type)
  */
 fun Light.destroy() {
     Filament.lightManager.destroy(this)
-}
-
-/**
- * @see IndirectLight.Builder.build
- */
-fun IndirectLight.Builder.build(): IndirectLight = build(Filament.engine)
-
-/**
- * Destroys an IndirectLight and frees all its associated resources.
- */
-fun IndirectLight.destroy() {
-    Filament.engine.destroyIndirectLight(this)
 }

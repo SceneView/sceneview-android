@@ -4,8 +4,6 @@ import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
-import io.github.sceneview.Filament
-import io.github.sceneview.light.destroy
 import java.io.Closeable
 
 /**
@@ -71,16 +69,4 @@ open class Environment(
     }
 
     override fun close() = destroy()
-}
-
-/**
- * @see Skybox.Builder.build
- */
-fun Skybox.Builder.build(): Skybox = build(Filament.engine)
-
-/**
- * Destroys a Skybox and frees all its associated resources.
- */
-fun Skybox.destroy() {
-    Filament.engine.destroySkybox(this)
 }

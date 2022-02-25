@@ -32,7 +32,7 @@ import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.light.*
-import io.github.sceneview.model.GlbLoader
+import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
 import io.github.sceneview.utils.*
@@ -195,7 +195,7 @@ open class SceneView @JvmOverloads constructor(
             environment = KTXLoader.createEnvironment(context.fileBufferLocal(defaultIbl))
 
             lifecycleScope.launchWhenCreated {
-                nodeSelectorModel = GlbLoader.loadModel(context, defaultNodeSelector)?.apply {
+                nodeSelectorModel = GLBLoader.loadModel(context, defaultNodeSelector)?.apply {
                     collisionShape = null
                     BuildConfig.VERSION_NAME
                 }

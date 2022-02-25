@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 
-object GlbLoader {
+object GLBLoader {
 
     /**
      * ### Utility for loading a glTF 3D model
@@ -31,9 +31,9 @@ object GlbLoader {
      *
      * For Java compatibility usage.
      *
-     * Kotlin developers should use [GlbLoader.loadModel]
+     * Kotlin developers should use [GLBLoader.loadModel]
      *
-     * [Documentation][GlbLoader.loadEnvironment]
+     * [Documentation][GLBLoader.loadEnvironment]
      *
      */
     fun loadModelAsync(
