@@ -36,7 +36,7 @@ open class CursorNode(
 
     init {
         isFocusable = false
-        maxHitPerSeconds = defaultMaxFPS
+        maxHitsPerSecond = defaultMaxFPS
         loadModel(
             context = context,
             coroutineScope = coroutineScope,

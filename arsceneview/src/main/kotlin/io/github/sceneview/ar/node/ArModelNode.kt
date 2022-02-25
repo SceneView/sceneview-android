@@ -139,12 +139,12 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         }
 
     /**
-     * ### The max number of HitTest that can occur per seconds
+     * ### The maximum number of hit tests that can occur per second
      *
-     * Increase this value for more precision rate or reduce it for higher performances and lower
-     * consuming
+     * Increase this value for more precision or reduce it for higher performance and lower
+     * energy consumption
      */
-    var maxHitPerSeconds : Int = (defaultMaxFPS / 2.0f).toInt()
+    var maxHitsPerSecond : Int = (defaultMaxFPS / 2.0f).toInt()
 
     var lastArFrame: ArFrame? = null
     var lastHitFrame: ArFrame? = null
@@ -250,7 +250,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         super<ArNode>.onArFrame(arFrame)
 
         if ((arFrame.timestamp - (lastHitFrame?.timestamp?: 0)).nanoseconds >=
-            (1.0 / maxHitPerSeconds).seconds
+            (1.0 / maxHitsPerSecond).seconds
         ) {
             if (!isAnchored) {
                 if (!autoAnchor || !anchor()) {
