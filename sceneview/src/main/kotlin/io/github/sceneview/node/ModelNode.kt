@@ -279,7 +279,7 @@ open class ModelNode : Node {
         glbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
         autoAnimate: Boolean = true,
-        autoScale: Boolean = true,
+        autoScale: Boolean = false,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null

@@ -39,7 +39,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         lifecycleScope.launchWhenCreated {
             sceneView.environment = HDRLoader.loadEnvironment(
                 context = requireContext(),
-                hdrFileLocation = "environments/studio_small_09_2k.hdr"
+                hdrFileLocation = "environments/studio_small_09_2k.hdr",
+                specularFilter = false
             )
         }
         sceneView.addChild(
