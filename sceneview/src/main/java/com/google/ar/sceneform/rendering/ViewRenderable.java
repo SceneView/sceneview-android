@@ -38,7 +38,7 @@ import io.github.sceneview.node.ModelNode;
 
 /**
  * Renders a 2D Android view in 3D space by attaching it to a {@link Node}
- * with {@link ModelNode#setRenderable(Renderable)}. By default, the size of the
+ * with {@link ModelNode#setModel(Renderable)}. By default, the size of the
  * view is 1 meter in the {@link SceneView} per 250dp in the layout. Use a
  * {@link ViewSizer} to control how the size of the view in the {@link
  * SceneView} is calculated.

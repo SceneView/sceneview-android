@@ -20,19 +20,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     lateinit var actionButton: ExtendedFloatingActionButton
 
     lateinit var cursorNode: CursorNode
-    val modelNode: ArModelNode by lazy {
-        isLoading = true
-        ArModelNode().apply {
-            loadModel(context = requireContext(),
-                coroutineScope = lifecycleScope,
-                glbFileLocation = "models/spiderbot.glb",
-                onLoaded = {
-                    actionButton.text = getString(R.string.move_object)
-                    actionButton.setIconResource(R.drawable.ic_target)
-                    isLoading = false
-                })
-        }
-    }
+    lateinit var modelNode: ArModelNode
 
     var isLoading = false
         set(value) {
@@ -44,18 +32,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        sceneView = view.findViewById(R.id.sceneView)
-        sceneView.planeRenderer.isVisible = false
-        // Handle a fallback in case of non AR usage
-        // The exception contains the failure reason
-        // e.g. SecurityException in case of camera permission denied
-        sceneView.onArSessionFailed = { _: Exception ->
-            // If AR is not available, we add the model directly to the scene for a 3D only usage
-            sceneView.addChild(modelNode)
-        }
-        sceneView.onTouchAr = { hitResult, _ ->
-            anchorOrMove(hitResult.createAnchor())
-        }
         loadingView = view.findViewById(R.id.loadingView)
         actionButton = view.findViewById<ExtendedFloatingActionButton>(R.id.actionButton).apply {
             val bottomMargin = (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
@@ -66,13 +42,39 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             setOnClickListener { cursorNode.createAnchor()?.let { anchorOrMove(it) } }
         }
 
-        cursorNode = CursorNode(context = requireContext(), coroutineScope = lifecycleScope)
-        cursorNode.onTrackingChanged = { _, isTracking, _ ->
-            if (!isLoading) {
-                actionButton.isGone = !isTracking
+        sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
+            planeRenderer.isVisible = false
+            // Handle a fallback in case of non AR usage. The exception contains the failure reason
+            // e.g. SecurityException in case of camera permission denied
+            onArSessionFailed = { _: Exception ->
+                // If AR is not available, we add the model directly to the scene for a 3D only
+                // usage
+                sceneView.addChild(modelNode)
+            }
+            onTouchAr = { hitResult, _ ->
+                anchorOrMove(hitResult.createAnchor())
+            }
+        }
+
+        cursorNode = CursorNode(context = requireContext(), coroutineScope = lifecycleScope).apply {
+            onTrackingChanged = { _, isTracking, _ ->
+                if (!isLoading) {
+                    actionButton.isGone = !isTracking
+                }
             }
         }
         sceneView.addChild(cursorNode)
+
+        isLoading = true
+        modelNode = ArModelNode()
+        modelNode.loadModelAsync(context = requireContext(),
+            coroutineScope = lifecycleScope,
+            glbFileLocation = "models/spiderbot.glb",
+            onLoaded = {
+                actionButton.text = getString(R.string.move_object)
+                actionButton.setIconResource(R.drawable.ic_target)
+                isLoading = false
+            })
     }
 
     fun anchorOrMove(anchor: Anchor) {

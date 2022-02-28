@@ -14,6 +14,8 @@ import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Transform
 import io.github.sceneview.model.GLBLoader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -104,16 +106,16 @@ open class ModelNode : Node {
      *
      * @see loadModel
      */
-    var glbFileLocation: String? = null
+    var modelFileLocation: String? = null
         set(value) {
             if (field != value) {
                 field = value
                 if (value != null) {
                     doOnAttachedToScene { sceneView: SceneView ->
-                        loadModel(sceneView.context, value, sceneView.lifecycleScope)
+                        loadModelAsync(sceneView.context, value, sceneView.lifecycleScope)
                     }
                 } else {
-                    setRenderable(null)
+                    setModel(null)
                 }
             }
         }
@@ -130,29 +132,29 @@ open class ModelNode : Node {
      * The renderable is usually a 3D model.
      * If null, this node's current renderable will be removed.
      */
-    var renderableInstance: RenderableInstance? = null
+    var modelInstance: RenderableInstance? = null
         set(value) {
             if (field != value) {
                 field?.renderer = null
                 field?.destroy()
                 field = value
                 value?.renderer = if (shouldBeRendered) renderer else null
-                onRenderableChanged()
+                onModelChanged()
             }
         }
 
-    val renderable: Renderable?
-        get() = renderableInstance?.renderable
+    val model: Renderable?
+        get() = modelInstance?.renderable
 
     override var isRendered: Boolean
         get() = super.isRendered
         set(value) {
-            renderableInstance?.renderer = if (value) renderer else null
+            modelInstance?.renderer = if (value) renderer else null
             super.isRendered = value
         }
 
     var onModelLoaded: ((renderableInstance: RenderableInstance) -> Unit)? = null
-    var onError: ((exception: Exception) -> Unit)? = null
+    var onModelError: ((exception: Exception) -> Unit)? = null
 
     /**
      * ### Construct a [ModelNode] with it Position, Rotation and Scale
@@ -169,62 +171,19 @@ open class ModelNode : Node {
     ) : super(position, rotation, scale)
 
     /**
-     * ### Loads a monolithic binary glTF and add it to the Node
-     *
-     * @param glbFileLocation the glb file location:
-     * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
-     * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
-     * 3D model before the node is attached to the [SceneView]
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - null = Keep the original model center point
-     * - (0, -1, 0) = Center the model horizontally and vertically
-     * - (0, -1, 0) = center horizontal | bottom aligned
-     * - (-1, 1, 0) = left | top aligned
-     * - ...
-     *
-     * @see loadModel
-     */
-    constructor(
-        context: Context,
-        glbFileLocation: String,
-        coroutineScope: LifecycleCoroutineScope? = null,
-        autoAnimate: Boolean = true,
-        autoScale: Boolean = true,
-        centerOrigin: Position? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null
-    ) : this() {
-        loadModel(
-            context = context,
-            glbFileLocation = glbFileLocation,
-            coroutineScope = coroutineScope,
-            autoAnimate = autoAnimate,
-            autoScale = autoScale,
-            centerOrigin = centerOrigin,
-            onError = onError,
-            onLoaded = onModelLoaded
-        )
-    }
-
-    /**
      * TODO : Doc
      */
     constructor(renderableInstance: RenderableInstance) : this() {
-        this.renderableInstance = renderableInstance
+        this.modelInstance = renderableInstance
     }
 
     override fun onFrame(frameTime: FrameTime) {
         if (isRendered) {
             // TODO : Remove the renderable.id thing when Renderable is kotlined
             // Update state when the renderable has changed.
-            renderable?.let { renderable ->
-                if (renderable.id.checkChanged(renderableId)) {
-                    onRenderableChanged()
+            model?.let { model ->
+                if (model.id.checkChanged(renderableId)) {
+                    onModelChanged()
                 }
             }
         }
@@ -235,8 +194,8 @@ open class ModelNode : Node {
         onModelLoaded?.invoke(renderableInstance)
     }
 
-    open fun onError(exception: Exception) {
-        onError?.invoke(exception)
+    open fun onModelError(exception: Exception) {
+        onModelError?.invoke(exception)
     }
 
     /**
@@ -245,14 +204,53 @@ open class ModelNode : Node {
      * If node A's position is changed, then that will trigger [onTransformChanged] to be
      * called for all of it's descendants.
      */
-    open fun onRenderableChanged() {
+    open fun onModelChanged() {
         // Refresh the collider to ensure it is using the correct collision shape now
         // that the renderable has changed.
         onTransformChanged()
 
-        collisionShape = renderable?.collisionShape
+        collisionShape = model?.collisionShape
         // TODO : Clean when Renderable is kotlined
-        renderableId = renderable?.id?.get() ?: ChangeId.EMPTY_ID
+        renderableId = model?.id?.get() ?: ChangeId.EMPTY_ID
+    }
+
+    /**
+     * ### Loads a monolithic binary glTF and add it to the Node
+     *
+     * @param glbFileLocation the glb file location:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param autoScale Scale the model to fit a unit cube
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - null = Keep the original model center point
+     * - (0, -1, 0) = Center the model horizontally and vertically
+     * - (0, -1, 0) = center horizontal | bottom aligned
+     * - (-1, 1, 0) = left | top aligned
+     * - ...
+     */
+    suspend fun loadModel(
+        context: Context,
+        glbFileLocation: String,
+        autoAnimate: Boolean = true,
+        autoScale: Boolean = false,
+        centerOrigin: Position? = null,
+        onError: ((error: Exception) -> Unit)? = null
+    ): RenderableInstance? {
+        return try {
+            val model = GLBLoader.loadModel(context, glbFileLocation)
+            withContext(Dispatchers.Main) {
+                setModel(model, autoAnimate, autoScale, centerOrigin)?.also {
+                    onModelLoaded(it)
+                }
+            }
+        } catch (error: Exception) {
+            onModelError(error)
+            onError?.invoke(error)
+            null
+        }
     }
 
     /**
@@ -274,7 +272,7 @@ open class ModelNode : Node {
      * - (-1, 1, 0) = left | top aligned
      * - ...
      */
-    fun loadModel(
+    fun loadModelAsync(
         context: Context,
         glbFileLocation: String,
         coroutineScope: LifecycleCoroutineScope? = null,
@@ -286,43 +284,49 @@ open class ModelNode : Node {
     ) {
         if (coroutineScope != null) {
             coroutineScope.launchWhenCreated {
-                try {
-                    val instance =
-                        setRenderable(GLBLoader.loadModel(context, glbFileLocation))?.apply {
-                            if (autoAnimate && animationCount > 0) {
-                                animate(true)?.start()
-                            }
-                            if (autoScale) {
-                                scaleModel()
-                            }
-                            centerOrigin?.let { centerModel(it) }
-                        }
-                    onModelLoaded(instance!!)
-                    onLoaded?.invoke(instance)
-                } catch (error: Exception) {
-                    onError(error)
-                    onError?.invoke(error)
-                }
+                loadModel(context, glbFileLocation, autoAnimate, autoScale, centerOrigin, onError)
+                    ?.let { onLoaded?.invoke(it) }
             }
         } else {
-            doOnAttachedToScene { scene ->
-                loadModel(
-                    context = context,
-                    glbFileLocation = glbFileLocation,
-                    coroutineScope = scene.lifecycleScope,
-                    autoAnimate = autoAnimate,
-                    autoScale = autoScale,
-                    centerOrigin = centerOrigin,
-                    onError = onError,
-                    onLoaded = onLoaded
+            doOnAttachedToScene { sceneView ->
+                loadModelAsync(
+                    context, glbFileLocation, sceneView.lifecycleScope, autoAnimate, autoScale,
+                    centerOrigin, onError, onLoaded
                 )
             }
         }
     }
 
-    open fun setRenderable(renderable: Renderable?): RenderableInstance? {
-        renderableInstance = renderable?.createInstance(this)
-        return renderableInstance
+    /**
+     * ### Set the node model
+     *
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param autoScale Scale the model to fit a unit cube
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - null = Keep the original model center point
+     * - (0, -1, 0) = Center the model horizontally and vertically
+     * - (0, -1, 0) = center horizontal | bottom aligned
+     * - (-1, 1, 0) = left | top aligned
+     * - ...
+     */
+    @JvmOverloads
+    open fun setModel(
+        renderable: Renderable?,
+        autoAnimate: Boolean = true,
+        autoScale: Boolean = false,
+        centerOrigin: Position? = null,
+    ): RenderableInstance? {
+        modelInstance = renderable?.createInstance(this)
+        modelInstance?.let { modelInstance ->
+            if (autoAnimate && modelInstance.animationCount > 0) {
+                modelInstance.animate(true)?.start()
+            }
+            if (autoScale) {
+                scaleModel()
+            }
+            centerOrigin?.let { centerModel(it) }
+        }
+        return modelInstance
     }
 
     /**
@@ -331,7 +335,7 @@ open class ModelNode : Node {
      * @param units the number of units of the cube to scale into.
      */
     fun scaleModel(units: Float = 1.0f) {
-        renderableInstance?.filamentAsset?.let { asset ->
+        modelInstance?.filamentAsset?.let { asset ->
             val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
             modelScale = Scale(units / max(halfExtent))
         }
@@ -346,7 +350,7 @@ open class ModelNode : Node {
      * - left | top aligned: [-1, 1, 0]
      */
     fun centerModel(origin: Position = Position(x = 0f, y = 0.0f, z = 0.0f)) {
-        renderableInstance?.filamentAsset?.let { asset ->
+        modelInstance?.filamentAsset?.let { asset ->
             val center = asset.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
             val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
             modelPosition = -(center + halfExtent * origin) * modelScale
@@ -356,13 +360,13 @@ open class ModelNode : Node {
     /** ### Detach and destroy the node */
     override fun destroy() {
         super.destroy()
-        renderableInstance?.destroy()
+        modelInstance?.destroy()
     }
 
     override fun clone() = copy(ModelNode())
 
     open fun copy(toNode: ModelNode = ModelNode()): ModelNode = toNode.apply {
         super.copy(toNode)
-        setRenderable(this@ModelNode.renderable)
+        setModel(this@ModelNode.model)
     }
 }

@@ -1,15 +1,11 @@
 package io.github.sceneview.ar.node
 
-import android.content.Context
-import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
 import com.google.ar.core.Config.PlaneFindingMode
 import com.google.ar.core.HitResult
 import com.google.ar.core.InstantPlacementPoint
-import com.google.ar.sceneform.rendering.RenderableInstance
 import dev.romainguy.kotlin.math.Float3
-import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
@@ -144,7 +140,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      * Increase this value for more precision or reduce it for higher performance and lower
      * energy consumption
      */
-    var maxHitsPerSecond : Int = (defaultMaxFPS / 2.0f).toInt()
+    var maxHitsPerSecond: Int = (defaultMaxFPS / 2.0f).toInt()
 
     var lastArFrame: ArFrame? = null
     var lastHitFrame: ArFrame? = null
@@ -168,52 +164,6 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     ) : super() {
         this.placementPosition = placementPosition
         this.placementMode = placementMode
-    }
-
-
-    /**
-     * ### Loads a monolithic binary glTF and add it to the Node
-     *
-     * @param glbFileLocation the glb file location:
-     * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
-     * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
-     * 3D model before the node is attached to the [SceneView]
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - null = Keep the original model center point
-     * - (0, -1, 0) = Center the model horizontally and vertically
-     * - (0, -1, 0) = center horizontal | bottom aligned
-     * - (-1, 1, 0) = left | top aligned
-     * - ...
-     *
-     * @see loadModel
-     */
-    constructor(
-        placementPosition: Position = DEFAULT_PLACEMENT_POSITION,
-        placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE,
-        context: Context,
-        glbFileLocation: String,
-        coroutineScope: LifecycleCoroutineScope? = null,
-        autoAnimate: Boolean = true,
-        autoScale: Boolean = false,
-        centerOrigin: Position? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        onModelLoaded: ((instance: RenderableInstance) -> Unit)? = null
-    ) : this(placementPosition, placementMode) {
-        loadModel(
-            context = context,
-            glbFileLocation = glbFileLocation,
-            coroutineScope = coroutineScope,
-            autoAnimate = autoAnimate,
-            autoScale = autoScale,
-            centerOrigin = centerOrigin,
-            onError = onError,
-            onLoaded = onModelLoaded
-        )
     }
 
     /**
@@ -249,7 +199,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
-        if ((arFrame.timestamp - (lastHitFrame?.timestamp?: 0)).nanoseconds >=
+        if ((arFrame.timestamp - (lastHitFrame?.timestamp ?: 0)).nanoseconds >=
             (1.0 / maxHitsPerSecond).seconds
         ) {
             if (!isAnchored) {

@@ -105,7 +105,7 @@ public class VideoNode extends ModelNode {
                         material.setFloat4(MATERIAL_PARAMETER_CHROMA_KEY_COLOR, chromaKeyColor);
                     }
                     final Renderable renderable = createModel(player, material);
-                    setRenderable(renderable);
+                    setModel(renderable);
                     onCreated(this);
                 })
                 .exceptionally(throwable -> {

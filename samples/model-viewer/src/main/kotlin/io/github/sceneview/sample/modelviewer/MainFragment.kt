@@ -36,35 +36,33 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         isLoading = true
         sceneView.camera.position = Position(x = 4.0f, y = -1.0f)
         sceneView.camera.quaternion = Quaternion.fromEuler(Rotation(x = 0.0f, y = 80.0f))
+
+        val modelNode = ModelNode()
+        sceneView.addChild(modelNode)
+
         lifecycleScope.launchWhenCreated {
             sceneView.environment = HDRLoader.loadEnvironment(
                 context = requireContext(),
                 hdrFileLocation = "environments/studio_small_09_2k.hdr",
                 specularFilter = false
             )
-        }
-        sceneView.addChild(
-            ModelNode(
+            modelNode.loadModel(
                 context = requireContext(),
-                coroutineScope = lifecycleScope,
                 glbFileLocation = "https://sceneview.github.io/assets/models/MaterialSuite.glb",
                 autoAnimate = true,
-                autoScale = true,
-                onModelLoaded = {
-                    lifecycleScope.launchWhenCreated {
-                        // We actually have an issue while the model render not completely loaded
-                        withContext(Dispatchers.IO) {
-                            delay(500)
-                        }
-                        isLoading = false
-                        sceneView.camera.smooth(
-                            position = Position(x = -2.0f, y = 1.0f, z = -2.5f),
-                            rotation = Quaternion.fromEuler(Rotation(x = -15.0f, y = -50.0f)),
-                            smoothSpeed = 0.5f
-                        )
-                    }
-                }
+                autoScale = true
             )
-        )
+
+            // We actually have an issue while the model render is not completely loaded
+            withContext(Dispatchers.IO) {
+                delay(200)
+            }
+            isLoading = false
+            sceneView.camera.smooth(
+                position = Position(x = -1.0f, y = 1.5f, z = -3.5f),
+                rotation = Quaternion.fromEuler(Rotation(x = -60.0f, y = -50.0f)),
+                smoothSpeed = 0.5f
+            )
+        }
     }
 }
