@@ -39,7 +39,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.5.0'
 
     // SceneView
-    releaseApi "io.github.sceneview:sceneview:0.0.3"
+    releaseApi "io.github.sceneview:sceneview:0.1.0"
     debugApi project(":sceneview")
 
     // ARCore
