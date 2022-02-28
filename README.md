@@ -24,7 +24,7 @@
 ```gradle
 dependencies {
     // 3D only
-    implementation 'io.github.sceneview:sceneview:0.0.3'
+    implementation 'io.github.sceneview:sceneview:0.1.0'
 }
 ```
 
@@ -32,7 +32,7 @@ dependencies {
 ```gradle
 dependencies {
     // 3D and ARCore
-    implementation 'io.github.sceneview:arsceneview:0.0.3'
+    implementation 'io.github.sceneview:arsceneview:0.1.0'
 }
 ```
 
