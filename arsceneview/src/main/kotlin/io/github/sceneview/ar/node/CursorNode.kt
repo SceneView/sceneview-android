@@ -9,6 +9,7 @@ import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.defaultMaxFPS
 import io.github.sceneview.material.setEmissiveColor
+import io.github.sceneview.math.Position
 import io.github.sceneview.utils.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -37,21 +38,22 @@ open class CursorNode(
     init {
         isFocusable = false
         maxHitsPerSecond = defaultMaxFPS
-        loadModel(
-            context = context,
-            coroutineScope = coroutineScope,
-            glbFileLocation = glbFileLocation
-        )
+        loadModelAsync(context, glbFileLocation, coroutineScope)
     }
 
-    override fun setRenderable(renderable: Renderable?): RenderableInstance? {
-        return super.setRenderable(renderable).also {
+    override fun setModel(
+        renderable: Renderable?,
+        autoAnimate: Boolean,
+        autoScale: Boolean,
+        centerOrigin: Position?
+    ): RenderableInstance? {
+        return super.setModel(renderable, autoAnimate, autoScale, centerOrigin).also {
             applyColor()
         }
     }
 
     open fun applyColor() {
-        renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+        modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
             r = color.r,
             g = color.g,
             b = color.b
@@ -70,14 +72,14 @@ open class CursorNode(
 
     override fun createAnchor(): Anchor? {
         lifecycleScope?.launchWhenCreated {
-            renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+            modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
                 r = 0.0f,
                 g = 0.0f,
                 b = 0.0f
             )
             withContext(Dispatchers.IO) {
                 delay(clickDuration)
-                renderableInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+                modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
                     r = 1.0f,
                     g = 1.0f,
                     b = 1.0f

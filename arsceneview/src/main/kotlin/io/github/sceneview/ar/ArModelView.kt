@@ -7,7 +7,7 @@ import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
 
 // TODO: Use it for more actual ArNode and use view layout parameters for placement and glb file
-open class ArModelView @JvmOverloads constructor(
+internal class ArModelView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
@@ -24,12 +24,12 @@ open class ArModelView @JvmOverloads constructor(
     /**
      * TODO: Doc
      *
-     * @see io.github.sceneview.ar.node.ArModelNode.glbFileLocation
+     * @see io.github.sceneview.ar.node.ArModelNode.modelFileLocation
      */
     var model: String?
-        get() = modelNode.glbFileLocation
+        get() = modelNode.modelFileLocation
         set(value) {
-            modelNode.glbFileLocation = value
+            modelNode.modelFileLocation = value
         }
 
     /**

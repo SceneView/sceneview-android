@@ -191,8 +191,8 @@ public class AugmentedFaceNode extends ArNode {
     }
 
     public RenderableInstance setFaceRegionsRenderable(ModelRenderable renderable) {
-        faceRegionNode.setRenderable(renderable);
-        RenderableInstance renderableInstance = faceRegionNode.getRenderableInstance();
+        faceRegionNode.setModel(renderable);
+        RenderableInstance renderableInstance = faceRegionNode.getModelInstance();
         updateSubmeshes();
         extractBonesFromRenderable();
         return renderableInstance;
@@ -205,7 +205,7 @@ public class AugmentedFaceNode extends ArNode {
 
         for (RegionType type : RegionType.values()) {
             String boneName = boneNameForRegion(type);
-            int entity = faceRegionNode.getRenderableInstance().getFilamentAsset().getFirstEntityByName(boneName);
+            int entity = faceRegionNode.getModelInstance().getFilamentAsset().getFirstEntityByName(boneName);
             if (entity == 0) {
                 Log.w(TAG, "Face mesh model is missing bone " + boneName + ". Tracking might not be accurate");
                 continue;
@@ -216,7 +216,7 @@ public class AugmentedFaceNode extends ArNode {
 
     @Nullable
     public ModelRenderable getFaceRegionsRenderable() {
-        Renderable renderable = faceRegionNode.getRenderable();
+        Renderable renderable = faceRegionNode.getModel();
         if (renderable != null && !(renderable instanceof ModelRenderable)) {
             throw new IllegalStateException("Face Regions Renderable must be a ModelRenderable.");
         }
@@ -312,8 +312,8 @@ public class AugmentedFaceNode extends ArNode {
 //            Matrix.multiplyMV(position, 0, matrix, 0, new float[] { 0, 0, 0, 1 }, 0);
 //            Log.d(TAG, type + " " + Arrays.toString(position));
         }
-        if (faceRegionNode != null && faceRegionNode.getRenderableInstance() != null) {
-            faceRegionNode.getRenderableInstance().getFilamentAsset().getAnimator().updateBoneMatrices();
+        if (faceRegionNode != null && faceRegionNode.getModelInstance() != null) {
+            faceRegionNode.getModelInstance().getFilamentAsset().getAnimator().updateBoneMatrices();
         }
     }
 
@@ -343,7 +343,7 @@ public class AugmentedFaceNode extends ArNode {
             checkNotNull(faceMeshRenderable).setShadowReceiver(false);
             checkNotNull(faceMeshRenderable).setShadowCaster(false);
 
-            faceMeshNode.setRenderable(faceMeshRenderable);
+            faceMeshNode.setModel(faceMeshRenderable);
         } else {
             // Face mesh renderable already exists, so update it to match the face mesh definition.
             faceMeshRenderable.updateFromDefinition(checkNotNull(faceMeshDefinition));
