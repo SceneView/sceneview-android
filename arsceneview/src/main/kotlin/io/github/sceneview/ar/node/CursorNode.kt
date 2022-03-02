@@ -21,7 +21,7 @@ open class CursorNode(
     context: Context,
     coroutineScope: LifecycleCoroutineScope? = null,
     glbFileLocation: String = "sceneview/models/cursor.glb"
-) : ArModelNode() {
+) : ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE) {
 
     var validColor: Color = Color(1.0f, 1.0f, 1.0f)
     var invalidColor: Color = Color(1.0f, 0.0f, 0.0f)
