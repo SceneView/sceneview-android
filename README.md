@@ -1,6 +1,7 @@
-# SceneView is a 3D/AR Android View with ARCore and Google Filament
+# SceneView Android
+### 3D/AR Android View with ARCore and Google Filament
 
-## This is a Sceneform replacement
+This is a Sceneform replacement in Kotlin
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.github.sceneview%22)
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
