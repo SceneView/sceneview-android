@@ -15,8 +15,24 @@ class ArSession(
     val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
     features: Set<Feature> = setOf(),
-    config: (Config) -> Unit = {}
+    config: (Config) -> Unit = defaultConfig
 ) : Session(lifecycle.context, features), ArSceneLifecycleObserver {
+
+    companion object {
+        val defaultFocusMode = Config.FocusMode.AUTO
+        val defaultPlaneFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+        val defaultDepthEnabled = true
+        val defaultInstantPlacementEnabled = true
+        val defaultLightEstimationMode = LightEstimationMode.REALISTIC
+
+        val defaultConfig = { config: Config ->
+            config.focusMode = defaultFocusMode
+            config.planeFindingMode = defaultPlaneFindingMode
+            config.depthEnabled = defaultDepthEnabled
+            config.instantPlacementEnabled = defaultInstantPlacementEnabled
+            config.lightEstimationMode = defaultLightEstimationMode.sessionConfigMode
+        }
+    }
 
     private var hasSetTextureNames = false
 
@@ -228,7 +244,7 @@ class ArSession(
      * @see LightEstimationMode.AMBIENT_INTENSITY
      * @see LightEstimationMode.DISABLED
      */
-    var lightEstimationMode = LightEstimationMode()
+    var lightEstimationMode = defaultLightEstimationMode
         set(value) {
             configure { config ->
                 config.lightEstimationMode = value.sessionConfigMode

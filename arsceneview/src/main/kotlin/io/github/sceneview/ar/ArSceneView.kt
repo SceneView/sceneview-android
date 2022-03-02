@@ -37,23 +37,17 @@ open class ArSceneView @JvmOverloads constructor(
     defStyleRes
 ), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
 
-    companion object {
-        val defaultFocusMode = Config.FocusMode.AUTO
-        val defaultPlaneFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-        val defaultDepthEnabled = true
-        val defaultInstantPlacementEnabled = true
-        val defaultLightEstimationMode = LightEstimationMode.REALISTIC
-    }
-
     /**
      * ### Sets the desired focus mode
      *
      * See [Config.FocusMode] for available options.
      */
-    var focusMode: Config.FocusMode = defaultFocusMode
+    var focusMode: Config.FocusMode
+        get() = session?.focusMode ?: ArSession.defaultFocusMode
         set(value) {
-            field = value
-            session?.focusMode = value
+            configureSession { _, config ->
+                config.focusMode = value
+            }
         }
 
     /**
@@ -62,10 +56,12 @@ open class ArSceneView @JvmOverloads constructor(
      * See the [Config.PlaneFindingMode] enum
      * for available options.
      */
-    var planeFindingMode: Config.PlaneFindingMode = defaultPlaneFindingMode
+    var planeFindingMode: Config.PlaneFindingMode
+        get() = session?.planeFindingMode ?: ArSession.defaultPlaneFindingMode
         set(value) {
-            field = value
-            session?.planeFindingMode = value
+            configureSession { _, config ->
+                config.planeFindingMode = value
+            }
         }
 
     /**
@@ -74,10 +70,12 @@ open class ArSceneView @JvmOverloads constructor(
      * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether the
      * current device and the selected camera support a particular depth mode.
      */
-    var depthEnabled: Boolean = defaultDepthEnabled
+    var depthEnabled: Boolean
+        get() = session?.depthEnabled ?: ArSession.defaultDepthEnabled
         set(value) {
-            field = value
-            session?.depthEnabled = value
+            configureSession { _, config ->
+                config.depthEnabled = value
+            }
         }
 
     /**
@@ -85,10 +83,12 @@ open class ArSceneView @JvmOverloads constructor(
      *
      * // TODO : Doc
      */
-    var instantPlacementEnabled: Boolean = defaultInstantPlacementEnabled
+    var instantPlacementEnabled: Boolean
+        get() = session?.instantPlacementEnabled ?: ArSession.defaultInstantPlacementEnabled
         set(value) {
-            field = value
-            session?.instantPlacementEnabled = value
+            configureSession { _, config ->
+                config.instantPlacementEnabled = value
+            }
         }
 
     /**
@@ -126,10 +126,12 @@ open class ArSceneView @JvmOverloads constructor(
      * @see LightEstimationMode.AMBIENT_INTENSITY
      * @see LightEstimationMode.DISABLED
      */
-    var lightEstimationMode: LightEstimationMode = defaultLightEstimationMode
+    var lightEstimationMode: LightEstimationMode
+        get() = session?.lightEstimationMode ?: ArSession.defaultLightEstimationMode
         set(value) {
-            field = value
-            session?.lightEstimationMode = value
+            configureSession { session, _ ->
+                session.lightEstimationMode = value
+            }
         }
 
     override val sceneLifecycle: ArSceneLifecycle = ArSceneLifecycle(context, this)
@@ -208,7 +210,7 @@ open class ArSceneView @JvmOverloads constructor(
      *
      * The callback will only be invoked if the Frame is considered as valid.
      */
-    var onArFrame : ((arFrame: ArFrame) -> Unit)? = null
+    var onArFrame: ((arFrame: ArFrame) -> Unit)? = null
 
     /**
      * ### Invoked when an ARCore plane is tapped
@@ -250,12 +252,6 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
-
-        session.focusMode = focusMode
-        session.planeFindingMode = planeFindingMode
-        session.depthEnabled = depthEnabled
-        session.instantPlacementEnabled = instantPlacementEnabled
-        session.lightEstimationMode = lightEstimationMode
 
         // Feature config, therefore facing direction, can only be configured once per session.
         if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
@@ -401,7 +397,7 @@ open class ArSceneView @JvmOverloads constructor(
      *
      * @param applyConfig the apply block for the new config
      */
-    fun configureSession(applyConfig: (Session, Config) -> Unit) {
+    fun configureSession(applyConfig: (ArSession, Config) -> Unit) {
         lifecycle.doOnArSessionCreated { session ->
             session.configure { config ->
                 applyConfig.invoke(session, config)
