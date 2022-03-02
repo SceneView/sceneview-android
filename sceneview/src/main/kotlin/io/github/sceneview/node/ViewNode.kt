@@ -84,24 +84,6 @@ open class ViewNode : Node {
 
     /**
      * TODO : Doc
-     *
-     * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
-     * View before the node is attached to the [SceneView]
-     *
-     * @see loadView
-     */
-    constructor(
-        context: Context,
-        viewLayoutResId: Int,
-        coroutineScope: LifecycleCoroutineScope? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        onViewLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null
-    ) : this() {
-        loadView(context, viewLayoutResId, coroutineScope, onViewLoaded, onError)
-    }
-
-    /**
-     * TODO : Doc
      */
     constructor(renderableInstance: RenderableInstance) : this() {
         this.renderableInstance = renderableInstance
@@ -154,8 +136,8 @@ open class ViewNode : Node {
         context: Context,
         layoutResId: Int,
         coroutineScope: LifecycleCoroutineScope? = null,
-        onLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null,
-        onError: ((error: Exception) -> Unit)? = null
+        onError: ((error: Exception) -> Unit)? = null,
+        onLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null
     ) {
         if (coroutineScope != null) {
             coroutineScope.launchWhenCreated {
@@ -174,7 +156,7 @@ open class ViewNode : Node {
             }
         } else {
             doOnAttachedToScene { scene ->
-                loadView(context, layoutResId, scene.lifecycleScope, onLoaded, onError)
+                loadView(context, layoutResId, scene.lifecycleScope, onError, onLoaded)
             }
         }
     }
