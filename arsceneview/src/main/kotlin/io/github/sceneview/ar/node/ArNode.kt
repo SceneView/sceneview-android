@@ -73,7 +73,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     /**
      * TODO : Doc
      */
-    val onAnchorChanged = mutableListOf<(node: Node, anchor: Anchor?) -> Unit>()
+    var onAnchorChanged: ((node: Node, anchor: Anchor?) -> Unit)? = null
 
     /**
      * TODO : Doc
@@ -100,7 +100,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * TODO : Doc
      */
     open fun onAnchorChanged(anchor: Anchor?) {
-        onAnchorChanged.forEach { it(this, anchor) }
+        onAnchorChanged?.invoke(this, anchor)
     }
 
     /**

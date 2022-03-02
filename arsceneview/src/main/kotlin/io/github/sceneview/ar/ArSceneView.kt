@@ -186,6 +186,68 @@ open class ArSceneView @JvmOverloads constructor(
 
     val instructions = Instructions(this, lifecycle)
 
+    var onArSessionCreated: ((session: ArSession) -> Unit)? = null
+
+    /**
+     * ### Invoked when an ARCore error occurred
+     *
+     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+     * ARCore is not available on the device or the camera permission has been denied.
+     */
+    var onArSessionFailed: ((exception: Exception) -> Unit)? = null
+    var onArSessionResumed: ((session: ArSession) -> Unit)? = null
+    var onArSessionConfigChanged: ((session: ArSession, config: Config) -> Unit)? = null
+
+    /**
+     * ### Invoked when an ARCore frame is processed
+     *
+     * Registers a callback to be invoked when a valid ARCore Frame is processing.
+     *
+     * The callback to be invoked once per frame **immediately before the scene
+     * is updated**.
+     *
+     * The callback will only be invoked if the Frame is considered as valid.
+     */
+    var onArFrame : ((arFrame: ArFrame) -> Unit)? = null
+
+    /**
+     * ### Invoked when an ARCore plane is tapped
+     *
+     * Registers a callback to be invoked when an ARCore [Trackable] is tapped.
+     * Depending on the session config you defined, the [HitResult.getTrackable] can be:
+     * - a [Plane] if [ArSession.planeFindingEnabled]
+     * - an [InstantPlacementPoint] if [ArSession.instantPlacementEnabled]
+     * - a [DepthPoint] if [ArSession.depthEnabled]
+     *
+     * The callback will only be invoked if no [com.google.ar.sceneform.Node] was tapped.
+     *
+     * - hitResult: The ARCore hit result that occurred when tapping the plane
+     * - motionEvent: the motion event that triggered the tap
+     */
+    var onTouchAr: ((hitResult: HitResult, motionEvent: MotionEvent) -> Unit)? =
+        null
+
+    /**
+     * ### Invoked when an ARCore AugmentedImage TrackingState/TrackingMethod is updated
+     *
+     * Registers a callback to be invoked when an ARCore AugmentedImage TrackingState/TrackingMethod
+     * is updated. The callback will be invoked on each AugmentedImage update.
+     *
+     * @see AugmentedImage.getTrackingState
+     * @see AugmentedImage.getTrackingMethod
+     */
+    var onAugmentedImageUpdate: ((augmentedImage: AugmentedImage) -> Unit)? = null
+
+    /**
+     * ### Invoked when an ARCore AugmentedFace TrackingState is updated
+     *
+     * Registers a callback to be invoked when an ARCore AugmentedFace TrackingState is updated. The
+     * callback will be invoked on each AugmentedFace update.
+     *
+     * @see AugmentedFace.getTrackingState
+     */
+    var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
+
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
 
@@ -316,7 +378,7 @@ open class ArSceneView @JvmOverloads constructor(
         lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
             onArFrame(arFrame)
         }
-        onArFrame.forEach { it(arFrame) }
+        onArFrame?.invoke(arFrame)
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
@@ -339,9 +401,11 @@ open class ArSceneView @JvmOverloads constructor(
      *
      * @param applyConfig the apply block for the new config
      */
-    fun configureSession(applyConfig: (Config) -> Unit) {
+    fun configureSession(applyConfig: (Session, Config) -> Unit) {
         lifecycle.doOnArSessionCreated { session ->
-            session.configure(applyConfig)
+            session.configure { config ->
+                applyConfig.invoke(session, config)
+            }
         }
     }
 
@@ -373,68 +437,6 @@ open class ArSceneView @JvmOverloads constructor(
     protected open fun onTouchAr(hitResult: HitResult, motionEvent: MotionEvent) {
         onTouchAr?.invoke(hitResult, motionEvent)
     }
-
-    var onArSessionCreated: ((session: ArSession) -> Unit)? = null
-
-    /**
-     * ### Invoked when an ARCore error occurred
-     *
-     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
-     * ARCore is not available on the device or the camera permission has been denied.
-     */
-    var onArSessionFailed: ((exception: Exception) -> Unit)? = null
-    var onArSessionResumed: ((session: ArSession) -> Unit)? = null
-    var onArSessionConfigChanged: ((session: ArSession, config: Config) -> Unit)? = null
-
-    /**
-     * ### Invoked when an ARCore frame is processed
-     *
-     * Registers a callback to be invoked when a valid ARCore Frame is processing.
-     *
-     * The callback to be invoked once per frame **immediately before the scene
-     * is updated**.
-     *
-     * The callback will only be invoked if the Frame is considered as valid.
-     */
-    val onArFrame = mutableListOf<(arFrame: ArFrame) -> Unit>()
-
-    /**
-     * ### Invoked when an ARCore plane is tapped
-     *
-     * Registers a callback to be invoked when an ARCore [Trackable] is tapped.
-     * Depending on the session config you defined, the [HitResult.getTrackable] can be:
-     * - a [Plane] if [ArSession.planeFindingEnabled]
-     * - an [InstantPlacementPoint] if [ArSession.instantPlacementEnabled]
-     * - a [DepthPoint] if [ArSession.depthEnabled]
-     *
-     * The callback will only be invoked if no [com.google.ar.sceneform.Node] was tapped.
-     *
-     * - hitResult: The ARCore hit result that occurred when tapping the plane
-     * - motionEvent: the motion event that triggered the tap
-     */
-    var onTouchAr: ((hitResult: HitResult, motionEvent: MotionEvent) -> Unit)? =
-        null
-
-    /**
-     * ### Invoked when an ARCore AugmentedImage TrackingState/TrackingMethod is updated
-     *
-     * Registers a callback to be invoked when an ARCore AugmentedImage TrackingState/TrackingMethod
-     * is updated. The callback will be invoked on each AugmentedImage update.
-     *
-     * @see AugmentedImage.getTrackingState
-     * @see AugmentedImage.getTrackingMethod
-     */
-    var onAugmentedImageUpdate: ((augmentedImage: AugmentedImage) -> Unit)? = null
-
-    /**
-     * ### Invoked when an ARCore AugmentedFace TrackingState is updated
-     *
-     * Registers a callback to be invoked when an ARCore AugmentedFace TrackingState is updated. The
-     * callback will be invoked on each AugmentedFace update.
-     *
-     * @see AugmentedFace.getTrackingState
-     */
-    var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
 }
 
 /**

@@ -49,7 +49,7 @@ public abstract class BaseTransformationController<T extends BaseGesture<T>>
       }
       return null;
     });
-    this.transformableNode.getOnFrameUpdated().add((frameTime, node) -> {
+    this.transformableNode.getOnFrameUpdate().add((frameTime, node) -> {
       onFrameUpdated(frameTime, node);
       return null;
     });
