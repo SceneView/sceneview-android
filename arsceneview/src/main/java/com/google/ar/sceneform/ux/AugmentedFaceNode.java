@@ -262,7 +262,7 @@ public class AugmentedFaceNode extends ArNode {
     }
 
     @Override
-    public void onFrameUpdated(FrameTime frameTime) {
+    public void onFrameUpdate(FrameTime frameTime) {
         boolean isTracking = isTracking();
 
         // Only render the visual effects when the augmented face is tracking.

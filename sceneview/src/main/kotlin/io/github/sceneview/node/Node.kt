@@ -223,7 +223,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - The node is enabled.
      *
      * An active Node has the following behavior:
-     * - The node's [onFrameUpdated] function will be called every frame.
+     * - The node's [onFrameUpdate] function will be called every frame.
      * - The node's [renderable] will be rendered.
      * - The node's [collisionShape] will be checked in calls to Scene.hitTest.
      * - The node's [onTouchEvent] function will be called when the node is touched.
@@ -305,7 +305,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     private var touchTrackingData: TapTrackingData? = null
 
     /** ### Listener for [onFrame] call */
-    val onFrameUpdated = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
+    val onFrameUpdate = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
 
     /** ### Listener for [onAttachToScene] call */
     val onAttachedToScene = mutableListOf<((scene: SceneView) -> Unit)>()
@@ -417,7 +417,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
             }
         }
         if (isRendered) {
-            onFrameUpdated(frameTime)
+            onFrameUpdate(frameTime)
         }
     }
 
@@ -427,8 +427,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * A node is updated before rendering each frame. This is only called when the node is active.
      * Override to perform any updates that need to occur each frame.
      */
-    open fun onFrameUpdated(frameTime: FrameTime) {
-        onFrameUpdated.forEach { it(frameTime, this) }
+    open fun onFrameUpdate(frameTime: FrameTime) {
+        onFrameUpdate.forEach { it(frameTime, this) }
     }
 
     /**

@@ -10,15 +10,14 @@ import android.widget.TextView
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.sceneform.rendering.RenderableInstance
-import io.github.sceneview.SceneView
-import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.R
 import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.node.ViewNode
 import io.github.sceneview.math.Position
+import io.github.sceneview.node.ViewNode
 
 open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
-    ViewNode() {
+    ViewNode(), ArSceneLifecycleObserver {
 
     var textView: TextView? = null
 
@@ -52,12 +51,6 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
         }
     }
 
-    override fun onAttachToScene(sceneView: SceneView) {
-        super.onAttachToScene(sceneView)
-
-        (sceneView as? ArSceneView)?.onArFrame?.add(::onArFrame)
-    }
-
     override fun onRenderingChanged(isRendering: Boolean) {
         super.onRenderingChanged(isRendering)
 
@@ -68,7 +61,7 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
         }
     }
 
-    fun onArFrame(arFrame: ArFrame) {
+    override fun onArFrame(arFrame: ArFrame) {
         // Show a message based on whether tracking has failed, if planes are detected, and if the user
         // has placed any objects.
         textView?.text = trackingStateText(arFrame)

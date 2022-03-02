@@ -223,14 +223,14 @@ var Node.isSelectable
         isFocusable = value
     }
 
-/** ## Deprecated: Use [Node.onFrameUpdated] */
+/** ## Deprecated: Use [Node.onFrameUpdate] */
 @Deprecated(
     "Use Node.onFrameUpdated()",
     replaceWith = ReplaceWith(expression = "onFrameUpdated()")
 )
 fun Node.onUpdated(node: Node, frameTime: FrameTime) = null
 
-/** ## Deprecated: Use [Node.onFrameUpdated] */
+/** ## Deprecated: Use [Node.onFrameUpdate] */
 @Deprecated(
     "Use Node.onFrameUpdated()",
     replaceWith = ReplaceWith(expression = "onFrameUpdated = {}")

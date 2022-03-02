@@ -186,6 +186,48 @@ open class SceneView @JvmOverloads constructor(
             renderer.setMainLight(value)
         }
 
+    var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
+
+    /**
+     * ### Invoked when an frame is processed
+     *
+     * Registers a callback to be invoked when a valid Frame is processing.
+     *
+     * The callback to be invoked once per frame **immediately before the scene
+     * is updated**.
+     *
+     * The callback will only be invoked if the Frame is considered as valid.
+     */
+    var onFrame : ((frameTime: FrameTime) -> Unit)? = null
+
+    /**
+     * ### Register a callback to be invoked when the scene is touched.
+     *
+     * You should not use this callback in you have anything on your scene.
+     * Node selection, gestures recognizer and surface gesture recognizer won't be updated if you
+     * return true.
+     *
+     * **Have a look at [onTouch] or other gestures listeners**
+     *
+     * Called even if the touch is not over a node, in which case [PickHitResult.getNode]
+     * will be null.
+     *
+     * - `pickHitResult` - represents the node that was touched if any
+     * - `motionEvent` - the motion event
+     * - `return` true if the listener has consumed the event
+     */
+    var onTouchEvent: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
+
+    /**
+     * ### Register a callback to be invoked on the surface singleTap
+     *
+     * Called even if the touch is not over a selectable node, in which case `node` will be null.
+     *
+     * - `selectedNode` - The node that was hit by the hit test. Null when there is no hit
+     * - `motionEvent` - The original [MotionEvent]
+     */
+    var onTouch: ((selectedNode: Node?, motionEvent: MotionEvent) -> Boolean)? = null
+
     init {
         try {
             // TODO : Remove it here when moved Filament to lifecycle aware
@@ -293,7 +335,11 @@ open class SceneView @JvmOverloads constructor(
     }
 
     open fun doFrame(frameTime: FrameTime) {
-        lifecycle.dispatchEvent<SceneLifecycleObserver> { onFrame(frameTime) }
+        lifecycle.dispatchEvent<SceneLifecycleObserver> {
+            onFrame(frameTime)
+        }
+        onFrame?.invoke(frameTime)
+
         renderer.render(frameTime.nanoTime, false)
     }
 
@@ -421,36 +467,6 @@ open class SceneView @JvmOverloads constructor(
             }
         }
     }
-
-    var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
-
-    /**
-     * ### Register a callback to be invoked when the scene is touched.
-     *
-     * You should not use this callback in you have anything on your scene.
-     * Node selection, gestures recognizer and surface gesture recognizer won't be updated if you
-     * return true.
-     *
-     * **Have a look at [onTouch] or other gestures listeners**
-     *
-     * Called even if the touch is not over a node, in which case [PickHitResult.getNode]
-     * will be null.
-     *
-     * - `pickHitResult` - represents the node that was touched if any
-     * - `motionEvent` - the motion event
-     * - `return` true if the listener has consumed the event
-     */
-    var onTouchEvent: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
-
-    /**
-     * ### Register a callback to be invoked on the surface singleTap
-     *
-     * Called even if the touch is not over a selectable node, in which case `node` will be null.
-     *
-     * - `selectedNode` - The node that was hit by the hit test. Null when there is no hit
-     * - `motionEvent` - The original [MotionEvent]
-     */
-    var onTouch: ((selectedNode: Node?, motionEvent: MotionEvent) -> Boolean)? = null
 
     inner class SurfaceGestureDetector : GestureDetector(context, OnGestureListener()) {
         lateinit var pickHitResult: PickHitResult
