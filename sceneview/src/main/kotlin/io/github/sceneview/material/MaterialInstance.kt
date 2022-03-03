@@ -8,6 +8,7 @@ import dev.romainguy.kotlin.math.Float4
 import io.github.sceneview.Filament
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.TextureSamplerExternal
+import io.github.sceneview.utils.Color
 
 fun MaterialInstance.newInstance(): MaterialInstance = material.createInstance()
 
@@ -48,12 +49,7 @@ fun MaterialInstance.setExternalTexture(
 // Base Color
 // **********
 fun MaterialInstance.setBaseColorIndex(value: Int) = setParameter("baseColorIndex", value)
-fun MaterialInstance.setBaseColor(
-    r: Float = 0.0f,
-    g: Float = 0.0f,
-    b: Float = 0.0f,
-    a: Float = 1.0f
-) = setParameter("baseColorFactor", Float4(r, g, b, a))
+fun MaterialInstance.setBaseColor(value: Color) = setParameter("baseColorFactor", value)
 
 fun MaterialInstance.setBaseColorMap(
     texture: Texture,
@@ -97,8 +93,7 @@ fun MaterialInstance.setOcclusionMap(
 // Emissive Map
 // ************
 fun MaterialInstance.setEmissiveIndex(value: Int) = setParameter("emissiveIndex", value)
-fun MaterialInstance.setEmissiveColor(r: Float = 0.0f, g: Float = 0.0f, b: Float = 0.0f) =
-    setParameter("emissiveFactor", Float3(r, g, b))
+fun MaterialInstance.setEmissiveColor(value: Color) = setParameter("emissiveFactor", value)
 
 fun MaterialInstance.setEmissiveMap(
     texture: Texture,
