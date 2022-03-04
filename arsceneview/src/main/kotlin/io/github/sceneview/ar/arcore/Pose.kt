@@ -4,12 +4,16 @@ import com.google.ar.core.Pose
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
 
 val Pose.position: Position
     get() = Position(x = tx(), y = ty(), z = tz())
 
-val Pose.rotation: Quaternion
+val Pose.quaternion: Quaternion
     get() = Quaternion(x = qx(), y = qy(), z = qz(), w = qw())
+
+val Pose.rotation: Rotation
+    get() = quaternion.toEulerAngles()
 
 val Pose.xDirection: Direction
     get() = xAxis!!.let { (x, y, z) ->
