@@ -24,8 +24,9 @@ import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.EngineInstance
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
-import com.google.ar.sceneform.ux.FootprintSelectionVisualizer
-import com.google.ar.sceneform.ux.TransformationSystem
+import io.github.sceneview.scene.BaseTransformationController
+import com.google.ar.sceneform.ux.DragGesture
+import com.google.ar.sceneform.ux.DragGestureRecognizer
 import com.gorisse.thomas.lifecycle.lifecycleScope
 import io.github.sceneview.collision.pickHitTest
 import io.github.sceneview.environment.Environment
@@ -35,6 +36,9 @@ import io.github.sceneview.light.*
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
+import io.github.sceneview.scene.FootprintSelectionVisualizer
+import io.github.sceneview.scene.SelectionManager
+import io.github.sceneview.scene.TransformableManager
 import io.github.sceneview.utils.*
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
@@ -116,7 +120,7 @@ open class SceneView @JvmOverloads constructor(
      * Can be overridden to create a custom transformation system.
      */
     val nodeGestureRecognizer by lazy {
-        TransformationSystem(resources.displayMetrics, FootprintSelectionVisualizer())
+        TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
     }
 
     var nodeSelectorModel: ModelRenderable?

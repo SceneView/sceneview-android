@@ -13,16 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.ar.sceneform.ux;
+package io.github.sceneview.scene
 
-/** Interface to visual when a {@link BaseTransformableNode} is selected. */
-public interface SelectionVisualizer {
+import io.github.sceneview.node.Node
 
-  /** Adds a visual that indicates a {@link BaseTransformableNode} is currently selected. */
-  void applySelectionVisual(BaseTransformableNode node);
+/** Interface to visual when a [io.github.sceneview.node.Node] is selected.  */
+interface SelectionVisualizer {
+    /** Adds a visual that indicates a [io.github.sceneview.node.Node] is currently selected.  */
+    fun applySelectionVisual(node: Node)
 
-  /**
-   * Removes the visual that was indicating a {@link BaseTransformableNode} is currently selected.
-   */
-  void removeSelectionVisual(BaseTransformableNode node);
+    /**
+     * Removes the visual that was indicating a [io.github.sceneview.node.Node] is currently selected.
+     */
+    fun removeSelectionVisual(node: Node)
 }

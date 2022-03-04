@@ -108,7 +108,7 @@ public abstract class BaseGesture<T extends BaseGesture<T>> {
 
   protected abstract void onFinish();
 
-  protected void cancel() {
+  public void cancel() {
     wasCancelled = true;
     onCancel();
     complete();

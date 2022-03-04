@@ -10,6 +10,7 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.math.Position
+import io.github.sceneview.scene.Transformable
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {
@@ -59,6 +60,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             onTrackingChanged = { _, isTracking, _ ->
                 actionButton.isGone = !isTracking
             }
+            editModes = setOf(Transformable.EditMode.ROTATE, Transformable.EditMode.SCALE)
         }
         sceneView.addChild(modelNode)
     }

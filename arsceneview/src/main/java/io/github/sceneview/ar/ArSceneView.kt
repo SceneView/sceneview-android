@@ -10,11 +10,17 @@ import com.google.ar.core.exceptions.DeadlineExceededException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.sceneform.ArCamera
 import com.google.ar.sceneform.rendering.*
+import io.github.sceneview.scene.BaseTransformationController
+import com.google.ar.sceneform.ux.DragGesture
+import com.google.ar.sceneform.ux.DragGestureRecognizer
+import com.google.ar.sceneform.ux.TranslationController
 import io.github.sceneview.*
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
+import io.github.sceneview.scene.SelectionManager
+import io.github.sceneview.scene.TransformableManager
 import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
@@ -258,6 +264,18 @@ open class ArSceneView @JvmOverloads constructor(
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
 
+    init {
+        nodeGestureRecognizer.translationControllerBuilder =
+            object : TransformableManager.TranslationControllerBuilder {
+                override fun build(
+                    node: Node,
+                    selectionManager: SelectionManager,
+                    gestureRecognizer: DragGestureRecognizer
+                ): BaseTransformationController<DragGesture> =
+                    TranslationController(node, gestureRecognizer, selectionManager)
+            }
+    }
+
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
 
@@ -408,7 +426,7 @@ open class ArSceneView @JvmOverloads constructor(
             selectedNode == null
         ) {
             // TODO : Should be handled by the nodesTouchEventDispatcher
-            nodeGestureRecognizer.selectNode(null)
+            nodeGestureRecognizer.onNodeTap(null)
             arSession?.let { session ->
                 session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
                     onTouchAr(hitResult, motionEvent)
