@@ -2,23 +2,22 @@ package io.github.sceneview.ar.arcore
 
 import android.view.MotionEvent
 import com.google.ar.core.*
-import com.google.ar.sceneform.FrameTime
+import io.github.sceneview.utils.FrameTime
 
 /**
  * ### Captures the state and changes to the AR system from a call to [Session.update]
  */
 data class ArFrame(
     val session: ArSession,
-    val frameTime: FrameTime,
+    val time: FrameTime,
     val frame: Frame,
     val camera: Camera
 ) {
 
     // TODO : Make a quick test with androidCameraTimestamp
-    val timestamp get() = frame.timestamp
-    var updatedTrackables: List<Trackable> =
+    val updatedTrackables: List<Trackable> by lazy {
         frame.getUpdatedTrackables(Trackable::class.java).toList()
-
+    }
 
     /**
      * ### Performs a ray cast to retrieve the hit trackables
@@ -208,9 +207,9 @@ data class ArFrame(
      * @return true if the frame is tracking at least one plane
      */
     val isTrackingPlane: Boolean
-        get() = updatedPlanes.filter {
+        get() = updatedPlanes.any {
             it.trackingState == TrackingState.TRACKING
-        }.isNotEmpty()
+        }
 
 
     /**
@@ -227,10 +226,10 @@ data class ArFrame(
      * @return true if the frame is fully tracking at least one Augmented Image
      */
     val isTrackingAugmentedImage: Boolean
-        get() = updatedAugmentedImages.filter {
+        get() = updatedAugmentedImages.any {
             it.trackingMethod == AugmentedImage.TrackingMethod.FULL_TRACKING
                     && it.trackingState == TrackingState.TRACKING
-        }.isNotEmpty()
+        }
 
     /**
      * ### Retrieve the frame tracked Augmented Faces
@@ -246,9 +245,9 @@ data class ArFrame(
      * @return true if the frame is fully tracking at least one Augmented Face
      */
     val isTrackingAugmentedFace: Boolean
-        get() = updatedAugmentedFaces.filter {
+        get() = updatedAugmentedFaces.any {
             it.trackingState == TrackingState.TRACKING
-        }.isNotEmpty()
+        }
 }
 
 /**
