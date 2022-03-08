@@ -4,7 +4,6 @@ import android.view.MotionEvent
 import android.view.ViewConfiguration
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
@@ -19,6 +18,7 @@ import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.*
+import io.github.sceneview.utils.FrameTime
 
 // This is the default from the ViewConfiguration class.
 private const val defaultTouchSlop = 8
@@ -48,10 +48,10 @@ private const val defaultTouchSlop = 8
 open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     companion object {
-        val DEFAULT_POSITION = Position(x = 0.0f, y = 0.0f, z = -4.0f)
-        val DEFAULT_QUATERNION = Quaternion()
+        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = -4.0f)
+        val DEFAULT_QUATERNION get() = Quaternion()
         val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
-        val DEFAULT_SCALE = Scale(1.0f)
+        val DEFAULT_SCALE get() = Scale(1.0f)
 
         const val DEFAULT_ROTATION_DOT_THRESHOLD = 0.95f
     }
@@ -223,8 +223,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - The node is enabled.
      *
      * An active Node has the following behavior:
-     * - The node's [onFrameUpdate] function will be called every frame.
-     * - The node's [renderable] will be rendered.
+     * - The node's [onFrame] function will be called every frame.
+     * - The node's [Renderable] will be rendered.
      * - The node's [collisionShape] will be checked in calls to Scene.hitTest.
      * - The node's [onTouchEvent] function will be called when the node is touched.
      */
@@ -305,7 +305,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     private var touchTrackingData: TapTrackingData? = null
 
     /** ### Listener for [onFrame] call */
-    val onFrameUpdate = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
+    val onFrame = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
 
     /** ### Listener for [onAttachToScene] call */
     val onAttachedToScene = mutableListOf<((scene: SceneView) -> Unit)>()
@@ -402,33 +402,25 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     override fun onFrame(frameTime: FrameTime) {
         // Smooth value compare
-        smoothPosition?.let { desiredPosition ->
-            position = lerp(position, desiredPosition, smoothSpeed * frameTime.deltaSeconds)
+        val lerpFactor = clamp((frameTime.intervalSeconds * smoothSpeed).toFloat(), 0.0f, 1.0f)
+        smoothPosition?.takeIf { it != position }?.let { desiredPosition ->
+            position = lerp(position, desiredPosition, lerpFactor).takeIf {
+                distance(position, it) > 0.00001f
+            } ?: desiredPosition
+
             if (position == desiredPosition) {
-                this.smoothPosition = null
+                smoothPosition = null
             }
         }
-        smoothQuaternion?.let { desiredRotation ->
-            val slerpFactor = clamp(frameTime.deltaSeconds * smoothSpeed, 0f, 1f)
-            quaternion = slerp(quaternion, normalize(desiredRotation), slerpFactor)
-            // TODO: Add a var named smooth precision angle
-            if (angle(quaternion, desiredRotation) < 0.01f) {
+        smoothQuaternion?.takeIf { it != quaternion }?.let { desiredQuaternion ->
+            quaternion = slerp(quaternion, normalize(desiredQuaternion), lerpFactor).takeIf {
+                angle(quaternion, desiredQuaternion) > 0.00001f
+            } ?: desiredQuaternion
+            if (quaternion == desiredQuaternion) {
                 smoothQuaternion = null
             }
         }
-        if (isRendered) {
-            onFrameUpdate(frameTime)
-        }
-    }
-
-    /**
-     * ### Handles when this node is updated
-     *
-     * A node is updated before rendering each frame. This is only called when the node is active.
-     * Override to perform any updates that need to occur each frame.
-     */
-    open fun onFrameUpdate(frameTime: FrameTime) {
-        onFrameUpdate.forEach { it(frameTime, this) }
+        onFrame.forEach { it(frameTime, this) }
     }
 
     /**
@@ -486,11 +478,16 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     fun transform(
         position: Position = this.position,
-        rotation: Quaternion = this.quaternion,
+        quaternion: Quaternion = this.quaternion,
+        rotation: Rotation = this.rotation,
         scale: Scale = this.scale
     ) {
         this.position = position
-        this.quaternion = rotation
+        if (quaternion != this.quaternion) {
+            this.quaternion = quaternion
+        } else if (rotation != this.rotation) {
+            this.rotation = rotation
+        }
         this.scale = scale
     }
 
@@ -499,25 +496,24 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      *
      * @see position
      * @see rotation
+     * @see quaternion
      * @see scale
-     * @see smoothSpeed
+     * @see speed
      */
     fun smooth(
         position: Position = this.position,
-        rotation: Quaternion = this.quaternion,
-        //TODO : Handle those parameters
-//        scale: Scale = this.scale,
-//        contentPosition: Position = this.contentPosition,
-//        contentRotation: Rotation = this.contentRotation,
-//        contentScale: Scale = this.contentScale
-        smoothSpeed: Float = this.smoothSpeed
+        quaternion: Quaternion = this.quaternion,
+        rotation: Rotation = this.rotation,
+        speed: Float = this.smoothSpeed
     ) {
-        this.smoothSpeed = smoothSpeed
+        this.smoothSpeed = speed
         if (position != this.position) {
             smoothPosition = position
         }
-        if (rotation != this.quaternion) {
-            smoothQuaternion = rotation
+        if (quaternion != this.quaternion) {
+            smoothQuaternion = quaternion
+        } else if (rotation != this.rotation) {
+            smoothQuaternion = rotation.toQuaternion()
         }
     }
 
