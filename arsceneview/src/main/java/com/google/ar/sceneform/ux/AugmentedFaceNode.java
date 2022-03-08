@@ -28,7 +28,6 @@ import com.google.ar.core.AugmentedFace;
 import com.google.ar.core.AugmentedFace.RegionType;
 import com.google.ar.core.Pose;
 import com.google.ar.core.TrackingState;
-import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.EngineInstance;
 import com.google.ar.sceneform.rendering.Material;
@@ -51,6 +50,7 @@ import io.github.sceneview.SceneView;
 import io.github.sceneview.ar.arcore.PoseKt;
 import io.github.sceneview.ar.node.ArNode;
 import io.github.sceneview.node.ModelNode;
+import io.github.sceneview.utils.FrameTime;
 
 /**
  * Node used to render visual effects on a face with ARCore's {@link AugmentedFace} feature.
@@ -280,7 +280,7 @@ public class AugmentedFaceNode extends ArNode {
         // Update this node to be positioned at the center pose of the face.
         Pose centerPose = checkNotNull(augmentedFace).getCenterPose();
         setPosition(PoseKt.getPosition(centerPose));
-        setQuaternion(PoseKt.getRotation(centerPose));
+        setQuaternion(PoseKt.getQuaternion(centerPose));
     }
 
     private void updateRegionNodes() {

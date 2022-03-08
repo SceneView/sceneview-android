@@ -1,9 +1,9 @@
 package io.github.sceneview.ar
 
 import com.google.ar.core.*
-import com.google.ar.sceneform.FrameTime
 import io.github.sceneview.SceneView
 import io.github.sceneview.node.Node
+import io.github.sceneview.utils.FrameTime
 
 // Deprecated
 

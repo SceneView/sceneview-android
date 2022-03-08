@@ -24,12 +24,14 @@ import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Trackable;
 import com.google.ar.core.TrackingState;
-import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.math.MathHelper;
 import com.google.ar.sceneform.math.Matrix;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.utilities.Preconditions;
+
+import java.util.EnumSet;
+import java.util.List;
 
 import io.github.sceneview.SceneView;
 import io.github.sceneview.ar.ArSceneView;
@@ -38,9 +40,7 @@ import io.github.sceneview.ar.node.ArNode;
 import io.github.sceneview.math.UtilsKt;
 import io.github.sceneview.node.Node;
 import io.github.sceneview.node.NodeParent;
-
-import java.util.EnumSet;
-import java.util.List;
+import io.github.sceneview.utils.FrameTime;
 
 /**
  * Manipulates the position of a {@link BaseTransformableNode} using a {@link
@@ -254,7 +254,7 @@ public class TranslationController extends BaseTransformationController<DragGest
         }
 
         Vector3 localPosition = UtilsKt.toVector3(getTransformableNode().getPosition());
-        float lerpFactor = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
+        float lerpFactor = MathHelper.clamp((float) (frameTime.getIntervalSeconds() * LERP_SPEED), 0, 1);
         localPosition = Vector3.lerp(localPosition, desiredLocalPosition, lerpFactor);
 
         float lengthDiff = Math.abs(Vector3.subtract(desiredLocalPosition, localPosition).length());
@@ -275,7 +275,7 @@ public class TranslationController extends BaseTransformationController<DragGest
 
         // TODO :  Move to kotlin-math
         Quaternion localQuaternion = UtilsKt.toOldQuaternion(getTransformableNode().getQuaternion());
-        float lerpFactor = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
+        float lerpFactor = MathHelper.clamp((float) (frameTime.getIntervalSeconds() * LERP_SPEED), 0, 1);
         localQuaternion = Quaternion.slerp(localQuaternion, desiredLocalRotation, lerpFactor);
 
         float dot = Math.abs(dotQuaternion(localQuaternion, desiredLocalRotation));
