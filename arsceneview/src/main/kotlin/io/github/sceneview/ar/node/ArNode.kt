@@ -35,14 +35,14 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     var pose: Pose? = null
         set(value) {
             val position = value?.position
-            val quaternion = value?.rotation
-            if (position != field?.position || quaternion != field?.rotation) {
+            val quaternion = value?.quaternion
+            if (position != field?.position || quaternion != field?.quaternion) {
                 field = value
                 if (position != null && quaternion != null) {
                     if (smoothPose) {
-                        smooth(position = position, rotation = quaternion)
+                        smooth(position = position, quaternion = quaternion)
                     } else {
-                        transform(position = position, rotation = quaternion)
+                        transform(position = position, quaternion = quaternion)
                     }
                 }
                 onTrackingChanged(isTracking, value)
