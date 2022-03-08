@@ -297,13 +297,13 @@ public class Renderer implements UiHelper.RendererCallback {
     /**
      * @hide
      */
-    public void render(long frameTimeNanos, boolean debugEnabled) {
+    public boolean render(long frameTimeNanos) {
         doRecreationOfSwapChain();
         updateMirrorConfig();
 
         @Nullable SwapChain swapChainLocal = swapChain;
         if (swapChainLocal == null)
-            return;
+            return false;
 
         // Render the scene, unless the renderer wants to skip the frame.
         // This means you are sending frames too quickly to the GPU
@@ -351,6 +351,9 @@ public class Renderer implements UiHelper.RendererCallback {
 
                 reclaimReleasedResources();
             }
+            return true;
+        } else {
+            return false;
         }
     }
 

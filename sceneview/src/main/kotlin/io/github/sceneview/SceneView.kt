@@ -36,12 +36,10 @@ import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
 import io.github.sceneview.utils.*
-import java.util.concurrent.TimeUnit
 
-const val defaultMaxFPS = 60
-const val defaultNodeSelector = "sceneview/models/node_selector.glb"
 const val defaultIbl = "sceneview/environments/default/default_ibl.ktx"
 const val defaultSkybox = "sceneview/environments/default/default_skybox.ktx"
+const val defaultNodeSelector = "sceneview/models/node_selector.glb"
 
 /**
  * ### A SurfaceView that manages rendering and interactions with the 3D scene.
@@ -91,8 +89,7 @@ open class SceneView @JvmOverloads constructor(
     override var _children = listOf<Node>()
 
     // TODO : Move to the Render when Kotlined it
-    private var currentFrameTick = 0L
-    private val currentFrameTime = FrameTime()
+    var currentFrameTime: FrameTime = FrameTime(0)
 
     /**
      * ### The camera that is used to render the scene
@@ -128,26 +125,6 @@ open class SceneView @JvmOverloads constructor(
             (nodeGestureRecognizer.selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable =
                 value
         }
-
-    enum class FrameRate(val factor: Int) {
-        /**
-         * Divide the maximal allowed frame rate by 1
-         */
-        FULL(1),
-
-        /**
-         * Divide the maximal allowed frame rate by 2
-         */
-        HALF(2),
-
-        /**
-         * Divide the maximal allowed frame rate by 3
-         */
-        THIRD(3);
-    }
-
-    var frameRate = FrameRate.FULL
-    var maxFramesPerSeconds = defaultMaxFPS
 
     /**
      * ### Defines the lighting environment and the skybox of the scene
@@ -198,7 +175,7 @@ open class SceneView @JvmOverloads constructor(
      *
      * The callback will only be invoked if the Frame is considered as valid.
      */
-    var onFrame : ((frameTime: FrameTime) -> Unit)? = null
+    var onFrame: ((frameTime: FrameTime) -> Unit)? = null
 
     /**
      * ### Register a callback to be invoked when the scene is touched.
@@ -316,6 +293,8 @@ open class SceneView @JvmOverloads constructor(
         onOpenGLNotSupported?.invoke(exception)
     }
 
+    var lastNanoseconds = 0L
+
     /**
      * Callback that occurs for each display frame. Updates the scene and reposts itself to be called
      * by the choreographer on the next frame.
@@ -324,23 +303,17 @@ open class SceneView @JvmOverloads constructor(
         // Always post the callback for the next frame.
         Choreographer.getInstance().postFrameCallback(this)
 
-        // TODO : Move the frame rate part to the Renderer when Kotlined it
-        // limit to max fps
-        val tick = System.nanoTime() / (TimeUnit.SECONDS.toNanos(1) / maxFramesPerSeconds)
-        if (currentFrameTick / frameRate.factor != tick / frameRate.factor) {
-            currentFrameTick = tick
-            currentFrameTime.update(frameTimeNanos)
-            doFrame(currentFrameTime)
-        }
+        currentFrameTime = FrameTime(frameTimeNanos, currentFrameTime.nanoseconds)
+        doFrame(currentFrameTime)
     }
 
     open fun doFrame(frameTime: FrameTime) {
-        lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onFrame(frameTime)
+        if (renderer.render(frameTime.nanoseconds)) {
+            lifecycle.dispatchEvent<SceneLifecycleObserver> {
+                onFrame(frameTime)
+            }
+            onFrame?.invoke(frameTime)
         }
-        onFrame?.invoke(frameTime)
-
-        renderer.render(frameTime.nanoTime, false)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -363,10 +336,10 @@ open class SceneView @JvmOverloads constructor(
 
     private fun updateBackground() {
         if ((background is ColorDrawable && background.alpha == 255) || environment?.skybox != null) {
-            backgroundColor = colorOf((background as? ColorDrawable)?.color ?: BLACK)
+            backgroundColor = colorOf(color = (background as? ColorDrawable)?.color ?: BLACK)
             isTransparent = false
         } else {
-            backgroundColor = colorOf(1.0f, 1.0f, 1.0f, 0.0f)
+            backgroundColor = colorOf(a = 0.0f)
             isTransparent = true
         }
     }
