@@ -17,6 +17,11 @@ fun FloatArray.toRotation() = this.let { (x, y, z) -> Rotation(x, y, z) }
 fun FloatArray.toScale() = this.let { (x, y, z) -> Scale(x, y, z) }
 fun FloatArray.toDirection() = this.let { (x, y, z) -> Direction(x, y, z) }
 
+fun Rotation.toQuaternion(order: RotationsOrder = RotationsOrder.ZYX) =
+    Quaternion.fromEuler(this, order)
+
+fun Quaternion.toRotation(order: RotationsOrder = RotationsOrder.ZYX) = eulerAngles(this, order)
+
 //TODO: Remove when everything use Float3
 fun Float3.toVector3() = Vector3(x, y, z)
 
