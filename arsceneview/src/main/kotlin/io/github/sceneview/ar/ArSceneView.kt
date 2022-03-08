@@ -9,17 +9,14 @@ import com.google.ar.core.CameraConfig.FacingDirection
 import com.google.ar.core.exceptions.DeadlineExceededException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.sceneform.ArCamera
-import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.rendering.*
-import io.github.sceneview.SceneLifecycle
-import io.github.sceneview.SceneLifecycleObserver
-import io.github.sceneview.SceneLifecycleOwner
-import io.github.sceneview.SceneView
+import io.github.sceneview.*
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.exposureFactor
+import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
 
 /**
@@ -142,6 +139,8 @@ open class ArSceneView @JvmOverloads constructor(
     override val camera by lazy { ArCamera(this) }
     override val arCore = ARCore(cameraTextureId, lifecycle)
 
+    var currentFrame: ArFrame? = null
+
     override val renderer: Renderer by lazy {
         ArRenderer(this, camera).apply {
             enablePerformanceMode()
@@ -183,8 +182,6 @@ open class ArSceneView @JvmOverloads constructor(
             }
             field = value
         }
-
-    private var isProcessingFrame = false
 
     val instructions = Instructions(this, lifecycle)
 
@@ -258,9 +255,6 @@ open class ArSceneView @JvmOverloads constructor(
             renderer.isFrontFaceWindingInverted = true
         }
 
-        // Set max frames per seconds here.
-        maxFramesPerSeconds = session.cameraConfig.fpsRange.upper
-
         onArSessionCreated?.invoke(session)
     }
 
@@ -294,18 +288,10 @@ open class ArSceneView @JvmOverloads constructor(
      * obtained. Update the scene before rendering.
      */
     override fun doFrame(frameTime: FrameTime) {
-        // TODO : Move to dedicated Lifecycle aware classes when Kotlined them
-        session?.let { session ->
-            if (!isProcessingFrame) {
-                // No new frame, no drawing
-                session.updateFrame(frameTime)?.let { frame ->
-                    isProcessingFrame = true
-                    doArFrame(frame)
-                    super.doFrame(frameTime)
-                    isProcessingFrame = false
-                }
-            }
-        } ?: super.doFrame(frameTime)
+        session?.update(frameTime)?.let { frame ->
+            doArFrame(frame)
+        }
+        super.doFrame(frameTime)
     }
 
     /**
@@ -315,21 +301,21 @@ open class ArSceneView @JvmOverloads constructor(
      */
     protected open fun doArFrame(arFrame: ArFrame) {
         // TODO : Move to dedicated Lifecycle aware classes when Kotlined them
-        val (session, _, frame, arCamera) = arFrame
-        if (arCamera.isTracking != session.previousFrame?.camera?.isTracking) {
+        val (session, _, frame) = arFrame
+        if (arFrame.camera.isTracking != currentFrame?.camera?.isTracking) {
             // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
             // You will say thanks when still have battery after a long day debugging an AR app.
             // ...and it's better for your users
-            activity.setKeepScreenOn(arCamera.isTracking)
+            activity.setKeepScreenOn(arFrame.camera.isTracking)
         }
 
         cameraStream.apply {
             // Setup Camera Stream if needed.
             if (!isTextureInitialized) {
-                initializeTexture(arCamera)
+                initializeTexture(arFrame.camera)
             }
             // Recalculate camera Uvs if necessary.
-            if (frame.hasDisplayGeometryChanged()) {
+            if (currentFrame == null || frame.hasDisplayGeometryChanged()) {
                 recalculateCameraUvs(frame)
             }
             if (depthOcclusionMode == CameraStream.DepthOcclusionMode.DEPTH_OCCLUSION_ENABLED) {
@@ -349,7 +335,7 @@ open class ArSceneView @JvmOverloads constructor(
 
         // At the start of the frame, update the tracked pose of the camera
         // to use in any calculations during the frame.
-        this.camera.updateTrackedPose(arCamera)
+        this.camera.updateTrackedPose(arFrame.camera)
 
         // Update the light estimate.
         estimatedLights =
@@ -371,6 +357,7 @@ open class ArSceneView @JvmOverloads constructor(
             arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
         }
 
+        currentFrame = arFrame
         lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
             onArFrame(arFrame)
         }

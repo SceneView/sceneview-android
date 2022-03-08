@@ -3,13 +3,12 @@ package io.github.sceneview.ar.arcore
 import android.content.Context
 import android.view.Display
 import android.view.WindowManager
-import androidx.annotation.UiThread
 import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.*
-import com.google.ar.sceneform.FrameTime
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.defaultApproximateDistanceMeters
+import io.github.sceneview.utils.FrameTime
 
 class ArSession(
     val cameraTextureId: Int,
@@ -39,6 +38,7 @@ class ArSession(
     val display: Display by lazy {
         (lifecycle.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
     }
+
     // We use device display sizes by default cause the onSurfaceChanged may be called after the
     // onResume and ARCore doesn't appreciate that we do things on session before calling
     // setDisplayGeometry()
@@ -62,10 +62,6 @@ class ArSession(
      */
     val approximateDistanceMeters = defaultApproximateDistanceMeters
 
-    @get:UiThread
-    var previousFrame: ArFrame? = null
-        private set
-
     /**
      * ### The most recent ARCore Frame if it is available
      *
@@ -73,7 +69,6 @@ class ArSession(
      * Callers of this method should not retain a reference to the return value, since it will be
      * invalid to use the ARCore frame starting with the next frame.
      */
-    @get:UiThread
     var currentFrame: ArFrame? = null
         private set
 
@@ -127,7 +122,7 @@ class ArSession(
         allTrackables = getAllTrackables(Trackable::class.java).toList()
     }
 
-    fun updateFrame(frameTime: FrameTime): ArFrame? {
+    fun update(frameTime: FrameTime): ArFrame? {
         // Texture names should only be set once on a GL thread unless they change.
         // This is done during updateFrame rather than init since the session is
         // not guaranteed to have been initialized during the execution of init.
@@ -136,18 +131,13 @@ class ArSession(
             hasSetTextureNames = true
         }
         // Check if no frame or same timestamp, no drawing.
-        val frame = super.update()
-        val camera = frame?.camera
-        return if (frame != null &&
-            frame.timestamp != currentFrame?.timestamp &&
-            // No camera, no drawing
-            camera != null
-        ) {
-            ArFrame(this, frameTime, frame, camera).also {
-                previousFrame = currentFrame
+        return super.update()?.takeIf {
+            it.timestamp != (currentFrame?.frame?.timestamp ?: 0) && it.camera != null
+        }?.let { frame ->
+            ArFrame(this, frameTime, frame).also {
                 currentFrame = it
             }
-        } else null
+        }
     }
 
     override fun setDisplayGeometry(rotation: Int, widthPx: Int, heightPx: Int) {
@@ -185,7 +175,7 @@ class ArSession(
      * Please check that all your Session Config parameters are taken in account by ARCore at
      * runtime.
      *
-     * @param applyConfig the apply block for the new config
+     * @param config the apply block for the new config
      */
     fun configure(config: (Config) -> Unit) {
         val sessionConfig = this.config.apply {
