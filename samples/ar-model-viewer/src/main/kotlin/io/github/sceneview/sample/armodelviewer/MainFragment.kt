@@ -45,11 +45,15 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         isLoading = true
         modelNode = ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE).apply {
-            loadModelAsync(context = requireContext(),
+            loadModelAsync(
+                context = requireContext(),
                 glbFileLocation = "models/spiderbot.glb",
                 coroutineScope = lifecycleScope,
                 autoAnimate = true,
-                centerOrigin = Position(x = 0.0f, y = -1.0f, z = 0.0f)) {
+                autoScale = false,
+                // Place the model origin at the bottom center
+                centerOrigin = Position(y = -1.0f)
+            ) {
                 isLoading = false
             }
             onTrackingChanged = { _, isTracking, _ ->

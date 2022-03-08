@@ -349,7 +349,7 @@ open class ModelNode : Node {
      * - center horizontal | bottom aligned = [0, -1, 0]
      * - left | top aligned: [-1, 1, 0]
      */
-    fun centerModel(origin: Position = Position(x = 0f, y = 0.0f, z = 0.0f)) {
+    fun centerModel(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
         modelInstance?.filamentAsset?.let { asset ->
             val center = asset.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
             val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
