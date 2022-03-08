@@ -5,6 +5,7 @@ import android.util.AttributeSet
 import androidx.core.content.res.use
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
+import io.github.sceneview.ar.scene.PlaneRenderer
 
 // TODO: Use it for more actual ArNode and use view layout parameters for placement and glb file
 internal class ArModelView @JvmOverloads constructor(
@@ -46,7 +47,7 @@ internal class ArModelView @JvmOverloads constructor(
     /**
      * TODO: Doc
      *
-     * @see io.github.sceneview.ar.node.ArModelNode.autoAnchor
+     * @see ArModelNode.autoAnchor
      */
     var autoAnchor: Boolean
         get() = modelNode.autoAnchor
@@ -56,10 +57,9 @@ internal class ArModelView @JvmOverloads constructor(
 
     /**
      * TODO: Doc
-     *
-     * @see io.github.sceneview.ar.node.ArModelNode.autoAnchor
+     * @see PlaneRenderer.isVisible
      */
-    var planeVisible: Boolean
+    var isPlaneVisible: Boolean
         get() = planeRenderer.isVisible
         set(value) {
             planeRenderer.isVisible = value
@@ -81,9 +81,11 @@ internal class ArModelView @JvmOverloads constructor(
                     autoAnchor =
                         typedArray.getBoolean(R.styleable.ArModelView_autoAnchor, autoAnchor)
                 }
-                if (typedArray.hasValue(R.styleable.ArModelView_planeVisible)) {
-                    planeVisible =
-                        typedArray.getBoolean(R.styleable.ArModelView_planeVisible, planeVisible)
+                if (typedArray.hasValue(R.styleable.ArModelView_isPlaneVisible)) {
+                    isPlaneVisible = typedArray.getBoolean(
+                        R.styleable.ArModelView_isPlaneVisible,
+                        isPlaneVisible
+                    )
                 }
             }
     }

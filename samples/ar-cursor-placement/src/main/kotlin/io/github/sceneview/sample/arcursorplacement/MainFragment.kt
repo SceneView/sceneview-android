@@ -11,6 +11,7 @@ import com.google.ar.core.Anchor
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.CursorNode
+import io.github.sceneview.math.Position
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {
@@ -47,8 +48,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             // Handle a fallback in case of non AR usage. The exception contains the failure reason
             // e.g. SecurityException in case of camera permission denied
             onArSessionFailed = { _: Exception ->
-                // If AR is not available, we add the model directly to the scene for a 3D only
-                // usage
+                // If AR is not available or the camara permission has been denied, we add the model
+                // directly to the scene for a fallback 3D only usage
+                modelNode.centerModel(origin = Position(x = 0.0f, y = 0.0f, z = 0.0f))
+                modelNode.scaleModel(units = 1.0f)
                 sceneView.addChild(modelNode)
             }
             onTouchAr = { hitResult, _ ->

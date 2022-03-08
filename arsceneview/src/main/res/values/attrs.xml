@@ -23,6 +23,6 @@
             <enum name="best_available" value="6" />
         </attr>
         <attr name="autoAnchor" format="boolean" />
-        <attr name="planeVisible" format="boolean" />
+        <attr name="isPlaneVisible" format="boolean" />
     </declare-styleable>
 </resources>
