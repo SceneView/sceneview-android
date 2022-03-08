@@ -52,4 +52,7 @@ object GLBLoader {
             .setSource(context, Uri.parse(glbFileLocation))
             .setIsFilamentGltf(true)
             .build()
+            .exceptionally {
+                throw it
+            }
 }
