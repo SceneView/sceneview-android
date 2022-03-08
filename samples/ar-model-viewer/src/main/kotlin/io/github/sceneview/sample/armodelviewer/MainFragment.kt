@@ -85,10 +85,12 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         if (!modelNode.isAnchored && modelNode.anchor()) {
             actionButton.text = getString(R.string.move_object)
             actionButton.setIconResource(R.drawable.ic_target)
+            sceneView.planeRenderer.isVisible = false
         } else {
             modelNode.anchor = null
             actionButton.text = getString(R.string.place_object)
             actionButton.setIconResource(R.drawable.ic_anchor)
+            sceneView.planeRenderer.isVisible = true
         }
     }
 }
