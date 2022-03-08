@@ -5,16 +5,18 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
-import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.PickHitResult
-import com.google.ar.sceneform.rendering.*
+import com.google.ar.sceneform.rendering.Renderable
+import com.google.ar.sceneform.rendering.RenderableInstance
+import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.SceneView
-import io.github.sceneview.model.await
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
+import io.github.sceneview.model.await
+import io.github.sceneview.utils.FrameTime
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -30,7 +32,7 @@ open class ViewNode : Node {
         val DEFAULT_POSITION = Position(x = 0.0f, y = 0.0f, z = -0.1f)
         val DEFAULT_QUATERNION = Quaternion()
         val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
-        val DEFAULT_SCALE  = Scale(1.0f)
+        val DEFAULT_SCALE = Scale(1.0f)
     }
 
     // Rendering fields.

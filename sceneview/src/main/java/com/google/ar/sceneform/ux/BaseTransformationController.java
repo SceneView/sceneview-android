@@ -18,14 +18,14 @@ package com.google.ar.sceneform.ux;
 import androidx.annotation.CallSuper;
 import androidx.annotation.Nullable;
 
-import com.google.ar.sceneform.FrameTime;
 import io.github.sceneview.node.Node;
+import io.github.sceneview.utils.FrameTime;
 
 /**
  * Manipulates the transform properties (i.e. scale/rotation/translation) of a {@link
  * BaseTransformableNode} by responding to Gestures via a {@link BaseGestureRecognizer}.
  *
- * <p>Example's include, changing the {@link TransformableNode}'s Scale based on a Pinch Gesture.
+ * <p>Example's include, changing the TransformableNode's Scale based on a Pinch Gesture.
  */
 public abstract class BaseTransformationController<T extends BaseGesture<T>>
     implements BaseGestureRecognizer.OnGestureStartedListener<T>,

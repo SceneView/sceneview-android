@@ -7,7 +7,6 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
@@ -18,6 +17,7 @@ import com.google.ar.sceneform.rendering.Renderable;
 
 import io.github.sceneview.math.UtilsKt;
 import io.github.sceneview.node.ModelNode;
+import io.github.sceneview.utils.FrameTime;
 
 /**
  * Node that can show a video by passing a {@link MediaPlayer} instance. Note that

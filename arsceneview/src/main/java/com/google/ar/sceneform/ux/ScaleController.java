@@ -15,11 +15,12 @@
  */
 package com.google.ar.sceneform.ux;
 
-import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.math.MathHelper;
 import com.google.ar.sceneform.math.Vector3;
+
 import io.github.sceneview.math.UtilsKt;
 import io.github.sceneview.node.Node;
+import io.github.sceneview.utils.FrameTime;
 
 /**
  * Manipulates the Scale of a {@link BaseTransformableNode} using a Pinch {@link
@@ -92,7 +93,7 @@ public class ScaleController extends BaseTransformationController<PinchGesture> 
       return;
     }
 
-    float t = MathHelper.clamp(frameTime.getDeltaSeconds() * LERP_SPEED, 0, 1);
+    float t = MathHelper.clamp((float) (frameTime.getIntervalSeconds() * LERP_SPEED), 0, 1);
     currentScaleRatio = MathHelper.lerp(currentScaleRatio, getClampedScaleRatio(), t);
     float finalScaleValue = getFinalScale();
     Vector3 finalScale = new Vector3(finalScaleValue, finalScaleValue, finalScaleValue);
