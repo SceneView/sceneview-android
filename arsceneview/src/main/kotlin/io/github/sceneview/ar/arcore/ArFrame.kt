@@ -10,9 +10,10 @@ import io.github.sceneview.utils.FrameTime
 data class ArFrame(
     val session: ArSession,
     val time: FrameTime,
-    val frame: Frame,
-    val camera: Camera
+    val frame: Frame
 ) {
+
+    val camera: Camera by lazy { frame.camera }
 
     // TODO : Make a quick test with androidCameraTimestamp
     val updatedTrackables: List<Trackable> by lazy {
