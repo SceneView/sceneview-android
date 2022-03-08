@@ -10,11 +10,8 @@ import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
-import io.github.sceneview.defaultMaxFPS
 import io.github.sceneview.math.Position
 import io.github.sceneview.node.ModelNode
-import kotlin.time.Duration.Companion.nanoseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * ### AR positioned 3D model node
@@ -140,7 +137,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      * Increase this value for more precision or reduce it for higher performance and lower
      * energy consumption
      */
-    var maxHitsPerSecond: Int = (defaultMaxFPS / 2.0f).toInt()
+    var maxHitsPerSecond: Int? = null
 
     var lastArFrame: ArFrame? = null
     var lastHitFrame: ArFrame? = null
@@ -155,15 +152,18 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     /**
      * ### Construct a new placement ArModelNode
      *
-     * @param placementPosition See [ArModelNode.placementPosition]
      * @param placementMode See [ArModelNode.placementMode]
+     * @param autoAnchor See [ArModelNode.autoAnchor]
+     * @param placementPosition See [ArModelNode.placementPosition]
      */
     constructor(
-        placementPosition: Position = DEFAULT_PLACEMENT_POSITION,
         placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE,
+        autoAnchor: Boolean = false,
+        placementPosition: Position = DEFAULT_PLACEMENT_POSITION
     ) : super() {
-        this.placementPosition = placementPosition
         this.placementMode = placementMode
+        this.placementPosition = placementPosition
+        this.autoAnchor = autoAnchor
     }
 
     /**
@@ -199,8 +199,8 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
-        if ((arFrame.timestamp - (lastHitFrame?.timestamp ?: 0)).nanoseconds >=
-            (1.0 / maxHitsPerSecond).seconds
+         if (maxHitsPerSecond == null ||
+            ((lastHitFrame?.let { arFrame.time.fps(it.time.nanoseconds) } ?: 0.0) <= maxHitsPerSecond!!)
         ) {
             if (!isAnchored) {
                 if (!autoAnchor || !anchor()) {
