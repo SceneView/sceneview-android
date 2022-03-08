@@ -404,13 +404,13 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
             .let { colorCorrections ->
                 colorCorrections.maxOrNull()?.takeIf { it > 0 }?.let { maxIntensity ->
                     colorOf(
-                        colorCorrections[0] / maxIntensity,
-                        colorCorrections[1] / maxIntensity,
-                        colorCorrections[2] / maxIntensity
+                        r = colorCorrections[0] / maxIntensity,
+                        g = colorCorrections[1] / maxIntensity,
+                        b = colorCorrections[2] / maxIntensity
                     )
                 }
-            } ?: Color(0.0001f, 0.0001f, 0.0001f)
-    } else Color(1.0f, 1.0f, 1.0f)
+            } ?: colorOf(r = 0.0001f, g = 0.0001f, b = 0.0001f)
+    } else colorOf(r = 1.0f, g = 1.0f, b = 1.0f)
 
     val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
 

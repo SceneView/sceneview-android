@@ -7,13 +7,11 @@ import com.google.ar.core.HitResult
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.arcore.isTracking
-import io.github.sceneview.defaultMaxFPS
 import io.github.sceneview.material.setEmissiveColor
 import io.github.sceneview.math.Position
 import io.github.sceneview.utils.Color
-import kotlinx.coroutines.Dispatchers
+import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 const val clickDuration = 250L
 
@@ -23,9 +21,8 @@ open class CursorNode(
     glbFileLocation: String = "sceneview/models/cursor.glb"
 ) : ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE) {
 
-    var validColor: Color = Color(1.0f, 1.0f, 1.0f)
-    var invalidColor: Color = Color(1.0f, 0.0f, 0.0f)
-    var clickColor: Color = Color(0.0f, 0.0f, 0.0f)
+    var validColor: Color = colorOf(rgb = 1.0f)
+    var invalidColor: Color = colorOf(r = 1.0f, g = 0.0f, b = 0.0f)
 
     open var color: Color = validColor
         set(value) {
@@ -37,7 +34,6 @@ open class CursorNode(
 
     init {
         isFocusable = false
-        maxHitsPerSecond = defaultMaxFPS
         loadModelAsync(context, glbFileLocation, coroutineScope)
     }
 
@@ -53,11 +49,7 @@ open class CursorNode(
     }
 
     open fun applyColor() {
-        modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
-            r = color.r,
-            g = color.g,
-            b = color.b
-        )
+        modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(color)
     }
 
     override fun onArFrameHitResult(hitResult: HitResult?) {
@@ -73,18 +65,12 @@ open class CursorNode(
     override fun createAnchor(): Anchor? {
         lifecycleScope?.launchWhenCreated {
             modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
-                r = 0.0f,
-                g = 0.0f,
-                b = 0.0f
+                colorOf(rgb = 0.0f)
             )
-            withContext(Dispatchers.IO) {
-                delay(clickDuration)
-                modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
-                    r = 1.0f,
-                    g = 1.0f,
-                    b = 1.0f
-                )
-            }
+            delay(clickDuration)
+            modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+                colorOf(rgb = 1.0f)
+            )
         }
         return super.createAnchor()
     }
