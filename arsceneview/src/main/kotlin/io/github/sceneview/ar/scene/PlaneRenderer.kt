@@ -13,10 +13,10 @@ import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.material.*
+import io.github.sceneview.math.Position
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
 import io.github.sceneview.utils.Color
-import io.github.sceneview.math.Position
 import java.util.*
 
 /**
@@ -130,29 +130,30 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
                 // and to render the top most plane Trackable if planeRendererMode is set to
                 // RENDER_TOP_MOST
                 val session = arFrame.session
-                // If we hit a plane, return the hit point.
-                val hitResult = arFrame.hitTest(
-                    xPx = session.displayWidth / 2.0f,
-                    yPx = session.displayHeight / 2.0f,
-                    plane = true,
-                    depth = false,
-                    instantPlacement = false
-                )
 
-                // Calculate the focusPoint. It is used to determine the position of
-                // the visualized grid.
-                val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-                materialInstance?.setParameter(
-                    MATERIAL_SPOTLIGHT_FOCUS_POINT,
-                    Position(focusPoint.x, focusPoint.y, focusPoint.z)
-                )
+                if (isVisible) {
+                    // If we hit a plane, return the hit point.
+                    val hitResult = arFrame.hitTest(
+                        xPx = session.displayWidth / 2.0f,
+                        yPx = session.displayHeight / 2.0f,
+                        plane = true,
+                        depth = false,
+                        instantPlacement = false
+                    )
 
-                val updatedPlanes = arFrame.updatedPlanes
+                    // Calculate the focusPoint. It is used to determine the position of
+                    // the visualized grid.
+                    val focusPoint = getFocusPoint(arFrame.frame, hitResult)
+                    materialInstance?.setParameter(
+                        MATERIAL_SPOTLIGHT_FOCUS_POINT,
+                        Position(focusPoint.x, focusPoint.y, focusPoint.z)
+                    )
+                }
 
                 if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
-                    renderAll(updatedPlanes)
+                    renderAll(session.allPlanes)
                 } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST) {
-                    updatedPlanes.firstOrNull()?.let { topMostPlane ->
+                    arFrame.updatedPlanes.firstOrNull()?.let { topMostPlane ->
                         renderPlane(topMostPlane)
                     }
                 }
