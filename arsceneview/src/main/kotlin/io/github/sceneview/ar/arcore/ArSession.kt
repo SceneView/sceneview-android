@@ -13,7 +13,7 @@ import io.github.sceneview.utils.FrameTime
 class ArSession(
     val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
-    features: Set<Feature> = setOf(),
+    features: Set<Feature> = defaultFeatures,
     config: (Config) -> Unit = defaultConfig
 ) : Session(lifecycle.context, features), ArSceneLifecycleObserver {
 
@@ -23,6 +23,8 @@ class ArSession(
         val defaultDepthEnabled = true
         val defaultInstantPlacementEnabled = true
         val defaultLightEstimationMode = LightEstimationMode.REALISTIC
+
+        val defaultFeatures = setOf<Feature>()
 
         val defaultConfig = { config: Config ->
             config.focusMode = defaultFocusMode

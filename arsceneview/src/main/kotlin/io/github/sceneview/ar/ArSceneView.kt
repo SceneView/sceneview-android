@@ -137,7 +137,18 @@ open class ArSceneView @JvmOverloads constructor(
 
     //TODO : Move it to Lifecycle and NodeParent when Kotlined
     override val camera by lazy { ArCamera(this) }
-    override val arCore = ARCore(cameraTextureId, lifecycle)
+
+    /**
+     * ### Fundamental session features
+     *
+     * Must be set before session creation = before the [onResume] call
+     */
+    var arSessionFeatures = { ArSession.defaultFeatures }
+    override val arCore = ARCore(
+        cameraTextureId = cameraTextureId,
+        lifecycle = lifecycle,
+        features = arSessionFeatures
+    )
 
     var currentFrame: ArFrame? = null
 

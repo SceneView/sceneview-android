@@ -42,7 +42,7 @@ const val defaultApproximateDistanceMeters = 2.0f
 class ARCore(
     val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
-    val features: Set<Session.Feature> = setOf(),
+    val features: () -> Set<Session.Feature> = { ArSession.defaultFeatures },
     val config: Config.() -> Unit = ArSession.defaultConfig
 ) : ArSceneLifecycleObserver {
 
@@ -146,7 +146,7 @@ class ARCore(
                     } else {
                         // Create a session if Google Play Services for AR is installed and up to
                         // date.
-                        session = createSession(cameraTextureId, lifecycle, features, config)
+                        session = createSession(cameraTextureId, lifecycle, features(), config)
                         session?.let {
                             lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
                                 onArSessionCreated(it)
