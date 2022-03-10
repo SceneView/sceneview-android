@@ -146,7 +146,7 @@ public class TranslationController extends BaseTransformationController<DragGest
             return;
         }
 
-        ArFrame frame = ((ArSceneView) scene).getSession().getCurrentFrame();
+        ArFrame frame = ((ArSceneView) scene).getArSession().getCurrentFrame();
         if (frame == null) {
             return;
         }

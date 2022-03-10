@@ -159,7 +159,7 @@ fun SceneView.getScene() = null
 
 // Session
 
-/** ## Deprecated: Use [ArSceneView.sessionConfig] */
+/** ## Deprecated: Use [ArSceneView.arSessionConfig] */
 @Deprecated(
     "Use ArSceneView.sessionConfig",
     replaceWith = ReplaceWith(expression = "arSceneView.sessionConfig()")

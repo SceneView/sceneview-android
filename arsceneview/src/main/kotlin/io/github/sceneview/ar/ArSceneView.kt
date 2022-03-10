@@ -40,7 +40,7 @@ open class ArSceneView @JvmOverloads constructor(
      * See [Config.FocusMode] for available options.
      */
     var focusMode: Config.FocusMode
-        get() = session?.focusMode ?: ArSession.defaultFocusMode
+        get() = arSession?.focusMode ?: ArSession.defaultFocusMode
         set(value) {
             configureSession { _, config ->
                 config.focusMode = value
@@ -54,7 +54,7 @@ open class ArSceneView @JvmOverloads constructor(
      * for available options.
      */
     var planeFindingMode: Config.PlaneFindingMode
-        get() = session?.planeFindingMode ?: ArSession.defaultPlaneFindingMode
+        get() = arSession?.planeFindingMode ?: ArSession.defaultPlaneFindingMode
         set(value) {
             configureSession { _, config ->
                 config.planeFindingMode = value
@@ -68,7 +68,7 @@ open class ArSceneView @JvmOverloads constructor(
      * current device and the selected camera support a particular depth mode.
      */
     var depthEnabled: Boolean
-        get() = session?.depthEnabled ?: ArSession.defaultDepthEnabled
+        get() = arSession?.depthEnabled ?: ArSession.defaultDepthEnabled
         set(value) {
             configureSession { _, config ->
                 config.depthEnabled = value
@@ -81,7 +81,7 @@ open class ArSceneView @JvmOverloads constructor(
      * // TODO : Doc
      */
     var instantPlacementEnabled: Boolean
-        get() = session?.instantPlacementEnabled ?: ArSession.defaultInstantPlacementEnabled
+        get() = arSession?.instantPlacementEnabled ?: ArSession.defaultInstantPlacementEnabled
         set(value) {
             configureSession { _, config ->
                 config.instantPlacementEnabled = value
@@ -124,7 +124,7 @@ open class ArSceneView @JvmOverloads constructor(
      * @see LightEstimationMode.DISABLED
      */
     var lightEstimationMode: LightEstimationMode
-        get() = session?.lightEstimationMode ?: ArSession.defaultLightEstimationMode
+        get() = arSession?.lightEstimationMode ?: ArSession.defaultLightEstimationMode
         set(value) {
             configureSession { session, _ ->
                 session.lightEstimationMode = value
@@ -299,7 +299,7 @@ open class ArSceneView @JvmOverloads constructor(
      * obtained. Update the scene before rendering.
      */
     override fun doFrame(frameTime: FrameTime) {
-        session?.update(frameTime)?.let { frame ->
+        arSession?.update(frameTime)?.let { frame ->
             doArFrame(frame)
         }
         super.doFrame(frameTime)
@@ -409,7 +409,7 @@ open class ArSceneView @JvmOverloads constructor(
         ) {
             // TODO : Should be handled by the nodesTouchEventDispatcher
             nodeGestureRecognizer.selectNode(null)
-            session?.let { session ->
+            arSession?.let { session ->
                 session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
                     onTouchAr(hitResult, motionEvent)
                     return true
@@ -438,15 +438,15 @@ open class ArSceneView @JvmOverloads constructor(
  */
 interface ArSceneLifecycleOwner : SceneLifecycleOwner {
     val arCore: ARCore
-    val session get() = arCore.session
-    val sessionConfig get() = session?.config
+    val arSession get() = arCore.session
+    val arSessionConfig get() = arSession?.config
 }
 
 class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwner) :
     SceneLifecycle(context, owner) {
     val arCore get() = owner.arCore
-    val session get() = owner.session
-    val sessionConfig get() = owner.sessionConfig
+    val arSession get() = owner.arSession
+    val arSessionConfig get() = owner.arSessionConfig
 
     /**
      * ### Performs the given action when ARCore session is created
@@ -456,7 +456,7 @@ class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwn
      * The action will only be invoked once, and any listeners will then be removed.
      */
     fun doOnArSessionCreated(action: (session: ArSession) -> Unit) {
-        session?.let(action) ?: addObserver(onArSessionCreated = {
+        arSession?.let(action) ?: addObserver(onArSessionCreated = {
             removeObserver(this)
             action(it)
         })

@@ -15,7 +15,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     override val sceneView: ArSceneView? get() = super.sceneView as? ArSceneView
     override val lifecycle: ArSceneLifecycle? get() = sceneView?.lifecycle
-    protected val session: ArSession? get() = sceneView?.session
+    protected val arSession: ArSession? get() = sceneView?.arSession
 
     /**
      * TODO : Doc

@@ -186,9 +186,9 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      * @see ArFrame.hitTest
      */
     fun hitTest(
-        frame: ArFrame? = session?.currentFrame,
-        xPx: Float = (session?.displayWidth ?: 0) / 2.0f * (1.0f + placementPosition.x),
-        yPx: Float = (session?.displayHeight ?: 0) / 2.0f * (1.0f - placementPosition.y),
+        frame: ArFrame? = arSession?.currentFrame,
+        xPx: Float = (arSession?.displayWidth ?: 0) / 2.0f * (1.0f + placementPosition.x),
+        yPx: Float = (arSession?.displayHeight ?: 0) / 2.0f * (1.0f - placementPosition.y),
         approximateDistanceMeters: Float = kotlin.math.abs(placementPosition.z),
         plane: Boolean = placementMode.planeEnabled,
         depth: Boolean = placementMode.depthEnabled,
