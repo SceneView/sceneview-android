@@ -415,7 +415,7 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
     val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
 
     val environment = HDREnvironment(
-        cubemap = if (withReflections) {
+        indirectLightCubemap = if (withReflections) {
             acquireEnvironmentalHdrCubeMap()?.let { arImages ->
                 val width = arImages[0].width
                 val height = arImages[0].height
@@ -452,7 +452,7 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
 
                 // Reuse the previous texture instead of creating a new one for performance and
                 // memory
-                val texture = (previousEstimate?.environment as? HDREnvironment)?.cubemap?.takeIf {
+                val texture = (previousEstimate?.environment as? HDREnvironment)?.indirectLightCubemap?.takeIf {
                     it.getWidth(0) == width && it.getHeight(0) == height
                 } ?: Texture.Builder()
                     .width(width)
@@ -483,7 +483,7 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
         } else {
             baseEnvironment?.indirectLight?.reflectionsTexture
         },
-        irradiance = if (withSphericalHarmonics) {
+        indirectLightIrradiance = if (withSphericalHarmonics) {
             environmentalHdrAmbientSphericalHarmonics?.mapIndexed { index, sphericalHarmonic ->
                 sphericalHarmonic *
                         // Convert Environmental HDR's spherical harmonics to Filament
@@ -499,8 +499,8 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
         //  the rendering too laggy
         //  https://github.com/google/filament/discussions/4665
 //        specularFilter = withReflections && withSpecularFilter,
-        specularFilter = false,
-        intensity = baseEnvironment?.indirectLight?.intensity?.let { it * colorIntensity }
+        indirectLightSpecularFilter = false,
+        indirectLightIntensity = baseEnvironment?.indirectLight?.intensity?.let { it * colorIntensity }
     ).apply {
         // Prevent destroying the reused cubemap
         sharedCubemap = true

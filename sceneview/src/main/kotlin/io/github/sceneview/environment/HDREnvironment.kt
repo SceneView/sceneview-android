@@ -11,42 +11,42 @@ import io.github.sceneview.texture.destroy
 const val defaultSpecularFilter = true
 
 open class HDREnvironment(
-    cubemap: Texture? = null,
-    irradiance: FloatArray? = null,
-    intensity: Float? = null,
-    skyboxEnvironment: Texture? = null,
-    specularFilter: Boolean = defaultSpecularFilter
+    indirectLightCubemap: Texture? = null,
+    indirectLightIrradiance: FloatArray? = null,
+    indirectLightIntensity: Float? = null,
+    indirectLightSpecularFilter: Boolean = defaultSpecularFilter,
+    skyboxCubemap: Texture? = null
 ) : Environment(
     indirectLight = IndirectLight.Builder().apply {
-        cubemap?.let {
+        indirectLightCubemap?.let {
             reflections(
-                if (specularFilter) {
+                if (indirectLightSpecularFilter) {
                     Filament.iblPrefilter.specularFilter(it)
                 } else {
                     it
                 }
             )
         }
-        irradiance?.let {
+        indirectLightIrradiance?.let {
             irradiance(3, it)
         }
-        intensity?.let {
+        indirectLightIntensity?.let {
             intensity(it)
         }
     }.build(),
-    sphericalHarmonics = irradiance,
-    skybox = skyboxEnvironment?.let {
+    sphericalHarmonics = indirectLightIrradiance,
+    skybox = skyboxCubemap?.let {
         Skybox.Builder().apply {
             environment(it)
         }.build()
     }
 ) {
 
-    var cubemap: Texture? = cubemap
+    var indirectLightCubemap: Texture? = indirectLightCubemap
         internal set
-    var intensity: Float? = intensity
+    var indirectLightIntensity: Float? = indirectLightIntensity
         private set
-    var skyboxEnvironment: Texture? = skyboxEnvironment
+    var skyboxCubemap: Texture? = skyboxCubemap
         private set
 
     var sharedCubemap = false
@@ -58,12 +58,12 @@ open class HDREnvironment(
         super.destroy()
 
         if (!sharedCubemap) {
-            cubemap?.destroy()
-            cubemap = null
+            indirectLightCubemap?.destroy()
+            indirectLightCubemap = null
         }
-        intensity = null
-        skyboxEnvironment?.destroy()
-        skyboxEnvironment = null
+        indirectLightIntensity = null
+        skyboxCubemap?.destroy()
+        skyboxCubemap = null
     }
 }
 

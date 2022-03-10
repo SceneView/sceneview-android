@@ -82,5 +82,5 @@ fun HDRLoader.createEnvironment(
 ) = createTexture(Filament.engine, hdrBuffer)?.use { hdrTexture ->
     Filament.iblPrefilter.equirectangularToCubemap(hdrTexture)
 }?.let { cubemap ->
-    HDREnvironment(cubemap = cubemap, skyboxEnvironment = cubemap, specularFilter = specularFilter)
+    HDREnvironment(indirectLightCubemap = cubemap, indirectLightSpecularFilter = specularFilter, skyboxCubemap = cubemap)
 }
