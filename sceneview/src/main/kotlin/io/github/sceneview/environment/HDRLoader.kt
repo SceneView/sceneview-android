@@ -26,12 +26,13 @@ import java.nio.Buffer
 suspend fun HDRLoader.loadEnvironment(
     context: Context,
     hdrFileLocation: String,
-    specularFilter: Boolean = defaultSpecularFilter
+    specularFilter: Boolean = defaultSpecularFilter,
+    createSkybox: Boolean = defaultCreateSkybox
 ): HDREnvironment? {
     return try {
         context.fileBuffer(hdrFileLocation)?.let { buffer ->
             withContext(Dispatchers.Main) {
-                createEnvironment(buffer, specularFilter)
+                createEnvironment(buffer, specularFilter, createSkybox)
             }
         }
     } finally {
@@ -54,11 +55,17 @@ fun HDRLoader.loadEnvironmentAsync(
     context: Context,
     hdrFileLocation: String,
     specularFilter: Boolean = defaultSpecularFilter,
+    createSkybox: Boolean = defaultCreateSkybox,
     coroutineScope: LifecycleCoroutineScope,
     result: (HDREnvironment?) -> Unit
 ) = coroutineScope.launchWhenCreated {
     result(
-        HDRLoader.loadEnvironment(context, hdrFileLocation, specularFilter)
+        HDRLoader.loadEnvironment(
+            context = context,
+            hdrFileLocation = hdrFileLocation,
+            specularFilter = specularFilter,
+            createSkybox = createSkybox
+        )
     )
 }
 
@@ -78,9 +85,14 @@ fun HDRLoader.loadEnvironmentAsync(
 @JvmOverloads
 fun HDRLoader.createEnvironment(
     hdrBuffer: Buffer,
-    specularFilter: Boolean = defaultSpecularFilter
+    specularFilter: Boolean = defaultSpecularFilter,
+    createSkybox: Boolean = defaultCreateSkybox
 ) = createTexture(Filament.engine, hdrBuffer)?.use { hdrTexture ->
     Filament.iblPrefilter.equirectangularToCubemap(hdrTexture)
 }?.let { cubemap ->
-    HDREnvironment(indirectLightCubemap = cubemap, indirectLightSpecularFilter = specularFilter, skyboxCubemap = cubemap)
+    HDREnvironment(
+        cubemap = cubemap,
+        indirectLightSpecularFilter = specularFilter,
+        createSkybox = createSkybox
+    )
 }

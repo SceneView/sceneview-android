@@ -415,7 +415,7 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
     val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
 
     val environment = HDREnvironment(
-        indirectLightCubemap = if (withReflections) {
+        cubemap = if (withReflections) {
             acquireEnvironmentalHdrCubeMap()?.let { arImages ->
                 val width = arImages[0].width
                 val height = arImages[0].height
@@ -451,8 +451,8 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
                 )
 
                 // Reuse the previous texture instead of creating a new one for performance and
-                // memory
-                val texture = (previousEstimate?.environment as? HDREnvironment)?.indirectLightCubemap?.takeIf {
+                // memory reasons
+                val texture = (previousEstimate?.environment as? HDREnvironment)?.cubemap?.takeIf {
                     it.getWidth(0) == width && it.getHeight(0) == height
                 } ?: Texture.Builder()
                     .width(width)
@@ -500,7 +500,8 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
         //  https://github.com/google/filament/discussions/4665
 //        specularFilter = withReflections && withSpecularFilter,
         indirectLightSpecularFilter = false,
-        indirectLightIntensity = baseEnvironment?.indirectLight?.intensity?.let { it * colorIntensity }
+        indirectLightIntensity = baseEnvironment?.indirectLight?.intensity?.let { it * colorIntensity },
+        createSkybox = false
     ).apply {
         // Prevent destroying the reused cubemap
         sharedCubemap = true
