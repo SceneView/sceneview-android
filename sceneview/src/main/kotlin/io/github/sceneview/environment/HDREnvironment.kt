@@ -9,16 +9,17 @@ import io.github.sceneview.Filament
 import io.github.sceneview.texture.destroy
 
 const val defaultSpecularFilter = true
+const val defaultCreateSkybox = true
 
 open class HDREnvironment(
-    indirectLightCubemap: Texture? = null,
+    cubemap: Texture? = null,
     indirectLightIrradiance: FloatArray? = null,
     indirectLightIntensity: Float? = null,
     indirectLightSpecularFilter: Boolean = defaultSpecularFilter,
-    skyboxCubemap: Texture? = null
+    createSkybox: Boolean = defaultCreateSkybox
 ) : Environment(
     indirectLight = IndirectLight.Builder().apply {
-        indirectLightCubemap?.let {
+        cubemap?.let {
             reflections(
                 if (indirectLightSpecularFilter) {
                     Filament.iblPrefilter.specularFilter(it)
@@ -35,21 +36,17 @@ open class HDREnvironment(
         }
     }.build(),
     sphericalHarmonics = indirectLightIrradiance,
-    skybox = skyboxCubemap?.let {
+    skybox = cubemap?.takeIf { createSkybox }?.let {
         Skybox.Builder().apply {
             environment(it)
         }.build()
     }
 ) {
-
-    var indirectLightCubemap: Texture? = indirectLightCubemap
+    var cubemap: Texture? = cubemap
         internal set
+    var sharedCubemap = false
     var indirectLightIntensity: Float? = indirectLightIntensity
         private set
-    var skyboxCubemap: Texture? = skyboxCubemap
-        private set
-
-    var sharedCubemap = false
 
     /**
      * ### Destroys the EnvironmentLights and frees all its associated resources.
@@ -58,12 +55,11 @@ open class HDREnvironment(
         super.destroy()
 
         if (!sharedCubemap) {
-            indirectLightCubemap?.destroy()
-            indirectLightCubemap = null
+            cubemap?.destroy()
+            cubemap = null
         }
+
         indirectLightIntensity = null
-        skyboxCubemap?.destroy()
-        skyboxCubemap = null
     }
 }
 
@@ -105,7 +101,8 @@ class IBLPrefilter(engine: Engine) {
      *
      * @see [EquirectangularToCubemap]
      */
-    fun equirectangularToCubemap(equirect: Texture) = equirectangularToCubemap.run(equirect)
+    fun equirectangularToCubemap(equirect: Texture): Texture =
+        equirectangularToCubemap.run(equirect)
 
     /**
      * Created specular (reflections) filter. This operation generates the kernel, so it's
