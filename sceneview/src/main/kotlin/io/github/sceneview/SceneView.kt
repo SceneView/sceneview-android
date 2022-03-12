@@ -10,6 +10,7 @@ import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.*
 import androidx.activity.ComponentActivity
+import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.*
@@ -37,6 +38,7 @@ import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
 import io.github.sceneview.utils.*
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 const val defaultMaxFPS = 60
 const val defaultNodeSelector = "sceneview/models/node_selector.glb"
@@ -72,6 +74,11 @@ open class SceneView @JvmOverloads constructor(
                 castShadows(true)
             }.build()
         }
+
+        // needed to detect swipes
+        private const val SWIPE_MIN_DISTANCE = 120
+        private const val SWIPE_MAX_OFF_PATH = 250
+        private const val SWIPE_THRESHOLD_VELOCITY = 200
     }
 
     override val activity
@@ -448,6 +455,7 @@ open class SceneView @JvmOverloads constructor(
      * @param motionEvent   the motion event
      */
     open fun onTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent) {
+        gestureDetectorCompat.onTouchEvent(motionEvent)
         if (onTouchEvent?.invoke(pickHitResult, motionEvent) != true) {
             nodesTouchEventDispatcher.onTouchEvent(pickHitResult, motionEvent)
             nodeGestureRecognizer.onTouch(pickHitResult, motionEvent)
@@ -477,6 +485,19 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
+    enum class GestureType {
+        NONE, SINGLE_TAP, DOUBLE_TAP, LONG_PRESS,
+        FLING_UP, FLING_DOWN, FLING_LEFT, FLING_RIGHT
+    }
+
+    var gestureType = GestureType.NONE
+
+    fun resetGestureType() {
+        gestureType = GestureType.NONE
+    }
+
+    private val gestureDetectorCompat: GestureDetectorCompat = GestureDetectorCompat(context, OnGestureListener())
+
     inner class OnGestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(motionEvent: MotionEvent): Boolean {
             val hitTestResult = surfaceGestureDetector.pickHitResult
@@ -486,6 +507,57 @@ open class SceneView @JvmOverloads constructor(
 
         override fun onDown(e: MotionEvent): Boolean {
             return true
+        }
+
+        override fun onSingleTapConfirmed(e: MotionEvent?): Boolean {
+            gestureType = GestureType.SINGLE_TAP
+            return super.onSingleTapConfirmed(e)
+        }
+
+        override fun onDoubleTap(e: MotionEvent?): Boolean {
+            gestureType = GestureType.DOUBLE_TAP
+            return super.onDoubleTap(e)
+        }
+
+        override fun onLongPress(e: MotionEvent?) {
+            super.onLongPress(e)
+            gestureType = GestureType.LONG_PRESS
+        }
+
+        // https://gist.github.com/TheIcemanCometh/57d0f9ae7b70dcdcc4d9
+        override fun onFling(
+            e1: MotionEvent?,
+            e2: MotionEvent?,
+            velocityX: Float,
+            velocityY: Float
+        ): Boolean {
+            if (e1 != null && e2 != null) {
+                val diffY = abs(e1.y - e2.y)
+                val diffX = abs(e1.x - e2.x)
+                if (diffY > SWIPE_MAX_OFF_PATH) {
+                    if (diffX > SWIPE_MAX_OFF_PATH || abs(velocityY) < SWIPE_THRESHOLD_VELOCITY) {
+                        return false
+                    }
+                    if (e1.y - e2.y > SWIPE_MIN_DISTANCE) {
+                        gestureType = GestureType.FLING_UP
+                    }
+                    else if (e2.y - e1.y > SWIPE_MIN_DISTANCE) {
+                        gestureType = GestureType.FLING_DOWN
+                    }
+                }
+                else {
+                    if (abs(velocityX) < SWIPE_THRESHOLD_VELOCITY) {
+                        return false
+                    }
+                    if (e1.x - e2.x > SWIPE_MIN_DISTANCE) {
+                        gestureType = GestureType.FLING_LEFT
+                    }
+                    else if (e2.x - e1.x > SWIPE_MIN_DISTANCE) {
+                        gestureType = GestureType.FLING_RIGHT
+                    }
+                }
+            }
+            return super.onFling(e1, e2, velocityX, velocityY)
         }
     }
 }

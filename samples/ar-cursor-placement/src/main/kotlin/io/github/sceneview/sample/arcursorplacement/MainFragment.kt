@@ -3,11 +3,13 @@ package io.github.sceneview.sample.arcursorplacement
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
+import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.CursorNode
@@ -64,6 +66,69 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
         }
         sceneView.addChild(cursorNode)
+        sceneView.onTouch = { selectedNode, motionEvent ->
+            when (sceneView.gestureType) {
+                SceneView.GestureType.SINGLE_TAP -> {
+                    if (selectedNode == null) {
+                        Toast.makeText(context, "SINGLE TAP on screen", Toast.LENGTH_SHORT).show()
+                    }
+                    else {
+                        Toast.makeText(context, "SINGLE TAP on node", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                SceneView.GestureType.DOUBLE_TAP -> {
+                    if (selectedNode == null) {
+                        Toast.makeText(context, "DOUBLE TAP on screen", Toast.LENGTH_SHORT).show()
+                    }
+                    else {
+                        Toast.makeText(context, "DOUBLE TAP on node", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                SceneView.GestureType.LONG_PRESS -> {
+                    if (selectedNode == null) {
+                        Toast.makeText(context, "LONG PRESS on screen", Toast.LENGTH_SHORT).show()
+                    }
+                    else {
+                        Toast.makeText(context, "LONG PRESS on node", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                SceneView.GestureType.FLING_UP -> {
+                    if (selectedNode == null) {
+                        Toast.makeText(context, "FLING UP on screen", Toast.LENGTH_SHORT).show()
+                    }
+                    else {
+                        Toast.makeText(context, "FLING UP on node", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                SceneView.GestureType.FLING_DOWN -> {
+                    if (selectedNode == null) {
+                        Toast.makeText(context, "FLING DOWN on screen", Toast.LENGTH_SHORT).show()
+                    }
+                    else {
+                        Toast.makeText(context, "FLING DOWN on node", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                SceneView.GestureType.FLING_LEFT -> {
+                    if (selectedNode == null) {
+                        Toast.makeText(context, "FLING LEFT on screen", Toast.LENGTH_SHORT).show()
+                    }
+                    else {
+                        Toast.makeText(context, "FLING LEFT on node", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                SceneView.GestureType.FLING_RIGHT -> {
+                    if (selectedNode == null) {
+                        Toast.makeText(context, "FLING RIGHT on screen", Toast.LENGTH_SHORT).show()
+                    }
+                    else {
+                        Toast.makeText(context, "FLING RIGHT on node", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                else -> { }
+            }
+            sceneView.resetGestureType()
+            true
+        }
 
         isLoading = true
         modelNode = ArModelNode()
