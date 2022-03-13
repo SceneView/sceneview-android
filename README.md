@@ -28,6 +28,7 @@ dependencies {
     implementation 'io.github.sceneview:sceneview:0.1.0'
 }
 ```
+[API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
 - 3D and ARCore
 ```gradle
@@ -36,6 +37,7 @@ dependencies {
     implementation 'io.github.sceneview:arsceneview:0.1.0'
 }
 ```
+[API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
 
 ## Usage
 
@@ -47,7 +49,7 @@ dependencies {
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 ```
-
+[![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
 - 3D and ARCore
 ```xml
 <io.github.sceneview.ar.ArSceneView
