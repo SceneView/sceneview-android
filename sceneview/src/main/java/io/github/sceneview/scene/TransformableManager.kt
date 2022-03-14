@@ -58,11 +58,6 @@ class TransformableManager(
 
         node.editModes.forEach {
             val gestureController = when (it) {
-                Transformable.EditMode.ROTATE -> RotationController(
-                    node,
-                    twistGestureRecognizer,
-                    this
-                )
                 Transformable.EditMode.SCALE -> ScaleController(node, pinchGestureRecognizer, this)
                 Transformable.EditMode.MOVE -> checkNotNull(
                     translationControllerBuilder?.build(
@@ -71,8 +66,9 @@ class TransformableManager(
                         dragGestureRecognizer
                     )
                 ) { "translationControllerBuilder needs to be set to use MOVE gesture." }
+                else -> {null}
             }
-            activeTransformationControllers.add(gestureController)
+           gestureController?.let { activeTransformationControllers.add(gestureController) }
         }
         selectNode(node)
     }

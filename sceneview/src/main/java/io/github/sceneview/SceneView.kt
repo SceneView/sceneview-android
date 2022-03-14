@@ -7,6 +7,7 @@ import android.graphics.Color.BLACK
 import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.os.HandlerThread
 import android.util.AttributeSet
 import android.view.*
 import androidx.activity.ComponentActivity
@@ -22,24 +23,18 @@ import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.EngineInstance
-import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
-import io.github.sceneview.scene.BaseTransformationController
-import com.google.ar.sceneform.ux.DragGesture
-import com.google.ar.sceneform.ux.DragGestureRecognizer
-import com.gorisse.thomas.lifecycle.lifecycleScope
-import io.github.sceneview.collision.pickHitTest
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
+import io.github.sceneview.interaction.CameraGestureHandler
+import io.github.sceneview.interaction.GestureHandler
 import io.github.sceneview.light.*
-import io.github.sceneview.model.GLBLoader
+import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
-import io.github.sceneview.scene.FootprintSelectionVisualizer
-import io.github.sceneview.scene.SelectionManager
-import io.github.sceneview.scene.TransformableManager
 import io.github.sceneview.utils.*
+import kotlin.math.roundToInt
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
 const val defaultSkybox = "sceneview/environments/indoor_studio/indoor_studio_skybox.ktx"
@@ -63,6 +58,11 @@ open class SceneView @JvmOverloads constructor(
     DefaultLifecycleObserver,
     Choreographer.FrameCallback,
     NodeParent {
+
+    private val pickingHandlerThread = HandlerThread("picking").also {
+        it.start()
+    }
+    private val pickingHandler = android.os.Handler(pickingHandlerThread.looper)
 
     companion object {
         val defaultMainLight: Light by lazy {
@@ -109,8 +109,6 @@ open class SceneView @JvmOverloads constructor(
      */
     override val renderer by lazy { Renderer(this, camera) }
 
-    // TODO: Remove this nightmare class quick and replace it with the new Filament Pick system
-    private val nodesTouchEventDispatcher by lazy { TouchEventSystem() }
     private val surfaceGestureDetector by lazy { SurfaceGestureDetector() }
 
     /**
@@ -119,16 +117,18 @@ open class SceneView @JvmOverloads constructor(
      * Used by [TransformableNode] for detecting gestures and coordinating which node is selected.
      * Can be overridden to create a custom transformation system.
      */
-    val nodeGestureRecognizer by lazy {
-        TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
-    }
+    //val nodeGestureRecognizer by lazy {
+    //    TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
+    //}
 
-    var nodeSelectorModel: ModelRenderable?
-        get() = (nodeGestureRecognizer.selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable
-        set(value) {
-            (nodeGestureRecognizer.selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable =
-                value
-        }
+    open val gestureHandler: GestureHandler by lazy { CameraGestureHandler(this) }
+
+    //var nodeSelectorModel: ModelRenderable?
+    //    get() = (nodeGestureRecognizer.selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable
+    //    set(value) {
+    //        (nodeGestureRecognizer.selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable =
+    //            value
+    //    }
 
     /**
      * ### Defines the lighting environment and the skybox of the scene
@@ -197,7 +197,7 @@ open class SceneView @JvmOverloads constructor(
      * - `motionEvent` - the motion event
      * - `return` true if the listener has consumed the event
      */
-    var onTouchEvent: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
+    var onTouchEvent: ((selectedNode: Node?, motionEvent: MotionEvent) -> Boolean)? = null
 
     /**
      * ### Register a callback to be invoked on the surface singleTap
@@ -217,12 +217,12 @@ open class SceneView @JvmOverloads constructor(
             mainLight = defaultMainLight
             environment = KTXLoader.createEnvironment(context.fileBufferLocal(defaultIbl))
 
-            lifecycleScope.launchWhenCreated {
+            /*lifecycleScope.launchWhenCreated {
                 nodeSelectorModel = GLBLoader.loadModel(context, defaultNodeSelector)?.apply {
                     collisionShape = null
                     BuildConfig.VERSION_NAME
                 }
-            }
+            }*/
             updateBackground()
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
@@ -322,10 +322,20 @@ open class SceneView @JvmOverloads constructor(
     override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
         // This makes sure that the view's onTouchListener is called.
         if (!super.onTouchEvent(motionEvent)) {
-            onTouchEvent(pickHitTest(motionEvent, focusableOnly = true), motionEvent)
+            renderer.filamentView.pick(
+                motionEvent.x.roundToInt(),
+                motionEvent.y.roundToInt(),
+                pickingHandler
+            ) {
+                val renderableId = it.renderable
+                val allChilds = allChildren
+                val selectedNode =
+                    allChilds.firstOrNull { node -> (node as? ModelNode)?.modelInstance?.entity == renderableId }
+                onTouchEvent(selectedNode, motionEvent)
+            }
             return true
         }
-        return true
+        return false
     }
 
     override fun setBackgroundDrawable(background: Drawable?) {
@@ -422,11 +432,16 @@ open class SceneView @JvmOverloads constructor(
      * @param pickHitResult represents the node that was touched
      * @param motionEvent   the motion event
      */
-    open fun onTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent) {
-        if (onTouchEvent?.invoke(pickHitResult, motionEvent) != true) {
-            nodesTouchEventDispatcher.onTouchEvent(pickHitResult, motionEvent)
-            nodeGestureRecognizer.onTouch(pickHitResult, motionEvent)
-            surfaceGestureDetector.onTouchEvent(pickHitResult, motionEvent)
+    open fun onTouchEvent(selectedNode: Node?, motionEvent: MotionEvent) {
+        if (onTouchEvent?.invoke(selectedNode, motionEvent) != true) {
+            if (selectedNode != null) {
+                gestureHandler.onNodeTouch(selectedNode)
+            } else {
+                gestureHandler.onTouchEvent(motionEvent)
+                surfaceGestureDetector.onTouchEvent(motionEvent)
+            }
+
+            // nodeGestureRecognizer.onTouch(pickHitResult, motionEvent)
         }
     }
 
@@ -443,19 +458,11 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    inner class SurfaceGestureDetector : GestureDetector(context, OnGestureListener()) {
-        lateinit var pickHitResult: PickHitResult
-
-        fun onTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent): Boolean {
-            this.pickHitResult = pickHitResult
-            return onTouchEvent(motionEvent)
-        }
-    }
+    inner class SurfaceGestureDetector : GestureDetector(context, OnGestureListener())
 
     inner class OnGestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(motionEvent: MotionEvent): Boolean {
-            val hitTestResult = surfaceGestureDetector.pickHitResult
-            onTouch(hitTestResult.node, motionEvent)
+            onTouch(null, motionEvent)
             return true
         }
 

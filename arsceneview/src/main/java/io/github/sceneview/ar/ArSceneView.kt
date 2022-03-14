@@ -10,17 +10,13 @@ import com.google.ar.core.exceptions.DeadlineExceededException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.sceneform.ArCamera
 import com.google.ar.sceneform.rendering.*
-import io.github.sceneview.scene.BaseTransformationController
-import com.google.ar.sceneform.ux.DragGesture
-import com.google.ar.sceneform.ux.DragGestureRecognizer
-import com.google.ar.sceneform.ux.TranslationController
 import io.github.sceneview.*
 import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.ar.interaction.ArNodeManipulator
 import io.github.sceneview.ar.scene.PlaneRenderer
+import io.github.sceneview.interaction.GestureHandler
 import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
-import io.github.sceneview.scene.SelectionManager
-import io.github.sceneview.scene.TransformableManager
 import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
@@ -204,6 +200,8 @@ open class ArSceneView @JvmOverloads constructor(
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
+    override val gestureHandler: GestureHandler by lazy { ArNodeManipulator(this) }
+
     /**
      * ### Invoked when an ARCore error occurred
      *
@@ -263,18 +261,6 @@ open class ArSceneView @JvmOverloads constructor(
      * @see AugmentedFace.getTrackingState
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
-
-    init {
-        nodeGestureRecognizer.translationControllerBuilder =
-            object : TransformableManager.TranslationControllerBuilder {
-                override fun build(
-                    node: Node,
-                    selectionManager: SelectionManager,
-                    gestureRecognizer: DragGestureRecognizer
-                ): BaseTransformationController<DragGesture> =
-                    TranslationController(node, gestureRecognizer, selectionManager)
-            }
-    }
 
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
@@ -422,16 +408,12 @@ open class ArSceneView @JvmOverloads constructor(
     }
 
     override fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
-        if (!super.onTouch(selectedNode, motionEvent) &&
-            selectedNode == null
-        ) {
-            // TODO : Should be handled by the nodesTouchEventDispatcher
-            nodeGestureRecognizer.onNodeTap(null)
-            arSession?.let { session ->
-                session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
-                    onTouchAr(hitResult, motionEvent)
-                    return true
-                }
+        // TODO : Should be handled by the nodesTouchEventDispatcher
+        //nodeGestureRecognizer.onNodeTap(null)
+        arSession?.let { session ->
+            session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
+                onTouchAr(hitResult, motionEvent)
+                return true
             }
         }
         return false
