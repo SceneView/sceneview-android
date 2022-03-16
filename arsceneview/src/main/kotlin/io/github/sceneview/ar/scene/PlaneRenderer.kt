@@ -13,7 +13,6 @@ import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.material.*
-import io.github.sceneview.math.Position
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
 import io.github.sceneview.utils.Color
@@ -35,7 +34,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     private var planeMaterial: Material? = null
 
     /**
-     * Returns default material instance used to render the planes.
+     * Default material instance used to render the planes.
      */
     var materialInstance: MaterialInstance? = null
         private set
@@ -47,18 +46,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         private set
 
     /**
-     * <pre>
-     * Return the used [PlaneRendererMode]. Two options are available,
-     * `RENDER_ALL` and `RENDER_TOP_MOST`. See
-     * [PlaneRendererMode] and
-     * [.setPlaneRendererMode] for more information.
-    </pre> *
-     *
-     * @return [PlaneRendererMode]
-     */
-    /**
-     * <pre>
-     * Set here how tracked planes should be visualized on the screen. Two options are available,
+     * Determines how tracked planes should be visualized on the screen. Two options are available,
      * `RENDER_ALL` and `RENDER_TOP_MOST`.
      * To see all tracked planes which are visible to the camera set the PlaneRendererMode to
      * `RENDER_ALL`. This mode eats up quite a few resources and should only be set
@@ -67,9 +55,6 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
      * Especially on weaker smartphone models this improves the overall performance.
      *
      * The default mode is `RENDER_TOP_MOST`
-    </pre> *
-     *
-     * @param planeRendererMode [PlaneRendererMode]
      */
     var planeRendererMode = PlaneRendererMode.RENDER_TOP_MOST
 
@@ -126,36 +111,28 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     override fun onArFrame(arFrame: ArFrame) {
         if (isEnabled) {
             try {
+                val session = arFrame.session
+
                 // Do a hitTest on the current frame. The result is used to calculate a focusPoint
                 // and to render the top most plane Trackable if planeRendererMode is set to
                 // RENDER_TOP_MOST
-                val session = arFrame.session
+                val hitResult = arFrame.hitTest(
+                    xPx = session.displayWidth / 2.0f,
+                    yPx = session.displayHeight / 2.0f,
+                    plane = true,
+                    depth = false,
+                    instantPlacement = false
+                )
 
-                if (isVisible) {
-                    // If we hit a plane, return the hit point.
-                    val hitResult = arFrame.hitTest(
-                        xPx = session.displayWidth / 2.0f,
-                        yPx = session.displayHeight / 2.0f,
-                        plane = true,
-                        depth = false,
-                        instantPlacement = false
-                    )
-
-                    // Calculate the focusPoint. It is used to determine the position of
-                    // the visualized grid.
-                    val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-                    materialInstance?.setParameter(
-                        MATERIAL_SPOTLIGHT_FOCUS_POINT,
-                        Position(focusPoint.x, focusPoint.y, focusPoint.z)
-                    )
-                }
+                // Calculate the focusPoint. It is used to determine the position of
+                // the visualized grid.
+                val focusPoint = getFocusPoint(arFrame.frame, hitResult)
+                materialInstance?.setParameter(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
 
                 if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
-                    renderAll(session.allPlanes)
-                } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST) {
-                    arFrame.updatedPlanes.firstOrNull()?.let { topMostPlane ->
-                        renderPlane(topMostPlane)
-                    }
+                    renderAll(arFrame.updatedPlanes)
+                } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST && hitResult != null) {
+                    renderPlane(hitResult.trackable as Plane)
                 }
 
                 // Check for not tracking Plane-Trackables and remove them.
@@ -178,27 +155,21 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     }
 
     /**
-     * <pre>
      * Render all tracked Planes
-    </pre> *
      *
      * @param updatedPlanes [Collection]<[Plane]>
-     * @param planeMaterial [Material]
      */
     private fun renderAll(updatedPlanes: Collection<Plane>) {
         updatedPlanes.forEach { renderPlane(it) }
     }
 
     /**
-     * <pre>
      * This function is responsible to update the rendering
      * of a [PlaneVisualizer]. If for the given [Plane]
      * no [PlaneVisualizer] exists, create a new one and add
-     * it to the `visualizerMap`.
-    </pre> *
+     * it to the [visualizers].
      *
-     * @param plane         [Plane]
-     * @param planeMaterial [Material]
+     * @param plane [Plane]
      */
     private fun renderPlane(plane: Plane) {
         // Find the plane visualizer if it already exists.
@@ -243,8 +214,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         val material = MaterialLoader.loadMaterial(
             renderer.context,
             "sceneview/materials/plane_renderer_shadow.filamat"
-        )?.material
-            ?: throw AssertionError("Can't load the plane renderer shadow material")
+        )?.material ?: throw AssertionError("Can't load the plane renderer shadow material")
 
         shadowMaterial = Material(MaterialInternalDataImpl(material), false)
 
@@ -258,14 +228,12 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
             renderer.context,
             "sceneview/textures/plane_renderer.png",
             TextureType.COLOR
-        )
-            ?: throw AssertionError("Can't load the plane renderer texture")
+        ) ?: throw AssertionError("Can't load the plane renderer texture")
 
         val material = MaterialLoader.loadMaterial(
             renderer.context,
             "sceneview/materials/plane_renderer.filamat"
-        )?.material
-            ?: throw AssertionError("Can't load the plane renderer material")
+        )?.material ?: throw AssertionError("Can't load the plane renderer material")
 
         planeMaterial = Material(MaterialInternalDataImpl(material), false)
 
@@ -309,11 +277,9 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     }
 
     /**
-     * <pre>
      * Use this enum to configure the Plane Rendering.
      *
      * For performance reasons use `RENDER_TOP_MOST`.
-    </pre> *
      */
     enum class PlaneRendererMode {
         /**
@@ -357,7 +323,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         /**
          * Used to control the UV Scale for the default texture.
          */
-        private const val BASE_UV_SCALE = 12.0f
-        private const val SPOTLIGHT_RADIUS = 1.5f
+        private const val BASE_UV_SCALE = 8.0f
+        private const val SPOTLIGHT_RADIUS = 0.5f
     }
 }
