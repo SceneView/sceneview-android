@@ -71,7 +71,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
      *
      * @param planeRendererMode [PlaneRendererMode]
      */
-    var planeRendererMode = PlaneRendererMode.RENDER_ALL
+    var planeRendererMode = PlaneRendererMode.RENDER_TOP_MOST
 
     // Distance from the camera to last plane hit, default value is 4 meters (standing height).
     private var planeHitDistance = 4.0f
