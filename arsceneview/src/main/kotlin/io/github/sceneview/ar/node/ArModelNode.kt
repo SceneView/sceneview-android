@@ -199,8 +199,9 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
-         if (maxHitsPerSecond == null ||
-            ((lastHitFrame?.let { arFrame.time.fps(it.time.nanoseconds) } ?: 0.0) <= maxHitsPerSecond!!)
+        if (maxHitsPerSecond == null ||
+            ((lastHitFrame?.let { arFrame.time.fps(it.time.nanoseconds) }
+                ?: 0.0) <= maxHitsPerSecond!!)
         ) {
             if (!isAnchored) {
                 if (!autoAnchor || !anchor()) {
@@ -224,10 +225,12 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     }
 
     override fun createAnchor(): Anchor? {
-        val hitResult = hitTest()
-        return (hitResult?.takeIf { it.isTracking } ?: lastHitResult?.takeIf { it.isTracking }
-        ?: hitResult ?: lastHitResult)
-            ?.createAnchor()
+        return (hitTest() ?: lastHitResult)?.let { hitResult -> createAnchor(hitResult) }
+    }
+
+    fun createAnchor(hitResult: HitResult): Anchor? {
+        return (hitResult.takeIf { it.isTracking } ?: lastHitResult?.takeIf { it.isTracking }
+        ?: hitResult).createAnchor()
     }
 
     override fun clone() = copy(ModelNode())
