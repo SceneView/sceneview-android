@@ -21,20 +21,51 @@ open class CursorNode(
     glbFileLocation: String = "sceneview/models/cursor.glb"
 ) : ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE) {
 
-    var validColor: Color = colorOf(rgb = 1.0f)
-    var invalidColor: Color = colorOf(r = 1.0f, g = 0.0f, b = 0.0f)
-
-    open var color: Color = validColor
+    override var isTracking: Boolean = false
         set(value) {
             if (field != value) {
                 field = value
                 applyColor()
             }
         }
+    var isClicked = false
+        set(value) {
+            if (field != value) {
+                field = value
+                applyColor()
+                if (value) {
+                    lifecycleScope?.launchWhenCreated {
+                        delay(clickDuration)
+                        isClicked = false
+                    }
+                }
+            }
+        }
+    var colorTracking: Color = colorOf(rgb = 1.0f)
+        set(value) {
+            field = value
+            applyColor()
+        }
+    var colorNotTracking: Color = colorOf(r = 1.0f)
+        set(value) {
+            field = value
+            applyColor()
+        }
+    var colorClicked: Color = colorOf(rgb = 0.1f)
+        set(value) {
+            field = value
+            applyColor()
+        }
 
     init {
         isFocusable = false
         loadModelAsync(context, glbFileLocation, coroutineScope)
+    }
+
+    override fun onArFrameHitResult(hitResult: HitResult?) {
+        super.onArFrameHitResult(hitResult)
+
+        isTracking = hitResult?.isTracking ?: false
     }
 
     override fun setModel(
@@ -49,29 +80,20 @@ open class CursorNode(
     }
 
     open fun applyColor() {
-        modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(color)
-    }
-
-    override fun onArFrameHitResult(hitResult: HitResult?) {
-        super.onArFrameHitResult(hitResult)
-
-        color = if (hitResult?.isTracking == true) {
-            validColor
-        } else {
-            invalidColor
-        }
+        modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+            when {
+                isClicked -> colorClicked
+                isTracking -> colorTracking
+                else -> colorNotTracking
+            }
+        )
     }
 
     override fun createAnchor(): Anchor? {
-        lifecycleScope?.launchWhenCreated {
-            modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
-                colorOf(rgb = 0.0f)
-            )
-            delay(clickDuration)
-            modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
-                colorOf(rgb = 1.0f)
-            )
-        }
-        return super.createAnchor()
+        return (lastHitResult?.takeIf { it.isTracking }?.let { super.createAnchor(it) }
+            ?: super.createAnchor())
+            .also {
+                isClicked = it != null
+            }
     }
 }

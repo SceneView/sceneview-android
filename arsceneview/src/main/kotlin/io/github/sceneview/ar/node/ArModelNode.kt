@@ -225,12 +225,13 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     }
 
     override fun createAnchor(): Anchor? {
-        return (hitTest() ?: lastHitResult)?.let { hitResult -> createAnchor(hitResult) }
+        return (hitTest()?.takeIf { it.isTracking }
+            ?: lastHitResult?.takeIf { it.isTracking })
+            ?.let { createAnchor(it) }
     }
 
     fun createAnchor(hitResult: HitResult): Anchor? {
-        return (hitResult.takeIf { it.isTracking } ?: lastHitResult?.takeIf { it.isTracking }
-        ?: hitResult).createAnchor()
+        return hitResult.takeIf { it.isTracking }?.createAnchor()
     }
 
     override fun clone() = copy(ModelNode())
