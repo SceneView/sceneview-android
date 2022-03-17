@@ -37,8 +37,8 @@ import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
 import io.github.sceneview.utils.*
 
-const val defaultIbl = "sceneview/environments/default/default_ibl.ktx"
-const val defaultSkybox = "sceneview/environments/default/default_skybox.ktx"
+const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
+const val defaultSkybox = "sceneview/environments/indoor_studio/indoor_studio_skybox.ktx"
 const val defaultNodeSelector = "sceneview/models/node_selector.glb"
 
 /**
@@ -231,8 +231,6 @@ open class SceneView @JvmOverloads constructor(
         super.onAttachedToWindow()
 
         lifecycle.addObserver(this)
-
-//        lifecycle.currentState = Lifecycle.State.CREATED
 
         findViewTreeLifecycleOwner()?.let { parentLifecycleOwner ->
             parentLifecycleOwner.lifecycle.addObserver(parentLifecycleObserver)
