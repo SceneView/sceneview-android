@@ -47,12 +47,12 @@ class ARCore(
 ) : ArSceneLifecycleObserver {
 
     /**
-     * //TODO: Doc
+     * ### Enable/Disable the auto camera permission check
      */
     var checkCameraPermission = true
 
     /**
-     * // TODO: Doc
+     * ### Enable/Disable Google Play Services for AR availability check, auto install and update
      */
     var checkAvailability = true
 
@@ -214,9 +214,10 @@ class ARCore(
     }
 
     /** Check to see we have the necessary permissions for this app.  */
-    fun isInstalled(context: Context) = ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
+    fun isInstalled(context: Context) =
+        ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
 
-    fun install(activity: Activity, installRequested: Boolean) : Boolean {
+    fun install(activity: Activity, installRequested: Boolean): Boolean {
         return ArCoreApk.getInstance().requestInstall(
             activity,
             !installRequested
