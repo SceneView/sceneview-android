@@ -11,18 +11,18 @@ buildscript {
         // Maven Central Publish
         classpath "com.vanniktech:gradle-maven-publish-plugin:0.18.0"
         // Dokka
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.6.0"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.6.10"
     }
 }
 
 apply plugin: 'org.jetbrains.dokka'
 
 afterEvaluate {
-    if (tasks.findByName('dokkaHtmlPartial') == null) {
+    if (tasks.findByName('dokkaGfmPartial') == null) {
         // If dokka isn't enabled on this module, skip
         return
     }
-    tasks.named('dokkaHtmlPartial') {
+    tasks.named('dokkaGfmPartial') {
         dokkaSourceSets.configureEach {
             reportUndocumented.set(true)
             skipEmptyPackages.set(true)
