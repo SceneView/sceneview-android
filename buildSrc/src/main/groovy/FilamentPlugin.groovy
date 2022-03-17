@@ -165,8 +165,8 @@ abstract class IblGenerator extends TaskWithBinary {
     abstract Property<String> getFormat()
 
     @Incremental
-    @InputFile
-    abstract RegularFileProperty getInputFile()
+    @InputDirectory
+    abstract DirectoryProperty getInputDir()
 
     @OutputDirectory
     abstract DirectoryProperty getOutputDir()
@@ -187,7 +187,7 @@ abstract class IblGenerator extends TaskWithBinary {
             })
         }
 
-        inputs.getFileChanges(inputFile).each { InputFileDetails change ->
+        inputs.getFileChanges(inputDir).each { InputFileDetails change ->
             if (change.fileType == FileType.DIRECTORY) return
 
             def file = change.file
@@ -207,7 +207,7 @@ abstract class IblGenerator extends TaskWithBinary {
                             " Ensure Filament has been built/installed before building this app.")
                 }
 
-                def outputPath = outputDir.get().asFile
+                def outputPath = getOutputFile(file)//outputDir.get().asFile
                 def commandArgs = cmgenArgs.getOrNull()
                 if (commandArgs == null) {
                     def format = format.getOrElse("rgb32f")
@@ -297,7 +297,7 @@ class FilamentToolsPluginExtension {
     DirectoryProperty materialOutputDir
 
     String cmgenArgs
-    RegularFileProperty iblInputFile
+    DirectoryProperty iblInputDir
     DirectoryProperty iblOutputDir
     String iblFormat
 
@@ -310,7 +310,7 @@ class FilamentToolsPlugin implements Plugin<Project> {
         def extension = project.extensions.create('filamentTools', FilamentToolsPluginExtension)
         extension.materialInputDir = project.objects.directoryProperty()
         extension.materialOutputDir = project.objects.directoryProperty()
-        extension.iblInputFile = project.objects.fileProperty()
+        extension.iblInputDir = project.objects.directoryProperty()
         extension.iblOutputDir = project.objects.directoryProperty()
         extension.meshInputFile = project.objects.fileProperty()
         extension.meshOutputDir = project.objects.directoryProperty()
@@ -326,9 +326,9 @@ class FilamentToolsPlugin implements Plugin<Project> {
         project.preBuild.dependsOn "filamentCompileMaterials"
 
         project.tasks.register("filamentGenerateIbl", IblGenerator) {
-            enabled = extension.iblInputFile.isPresent() && extension.iblOutputDir.isPresent()
+            enabled = extension.iblInputDir.isPresent() && extension.iblOutputDir.isPresent()
             cmgenArgs = extension.cmgenArgs
-            inputFile = extension.iblInputFile.getOrNull()
+            inputDir = extension.iblInputDir.getOrNull()
             outputDir = extension.iblOutputDir.getOrNull()
             format = extension.iblFormat
         }
