@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-//    id 'org.jetbrains.dokka'
+    id 'org.jetbrains.dokka'
 }
 
 android {
@@ -39,8 +39,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.5.0'
 
     // SceneView
-    releaseApi "io.github.sceneview:sceneview:0.1.0"
-    debugApi project(":sceneview")
+    api project(":sceneview")
 
     // ARCore
     def arcore_version = '1.29.0'
