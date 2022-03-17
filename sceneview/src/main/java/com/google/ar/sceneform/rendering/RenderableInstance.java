@@ -71,7 +71,7 @@ public class RenderableInstance implements AnimatableModel {
     @Nullable
     Renderer renderer;
     @Entity
-    private int entity = 0;
+    int entity = 0;
     @Entity
     private int childEntity = 0;
     public int renderableId = ChangeId.EMPTY_ID;
