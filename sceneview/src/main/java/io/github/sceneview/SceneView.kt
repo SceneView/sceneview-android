@@ -7,7 +7,8 @@ import android.graphics.Color.BLACK
 import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.os.HandlerThread
+import android.os.Handler
+import android.os.Looper
 import android.util.AttributeSet
 import android.view.*
 import androidx.activity.ComponentActivity
@@ -59,22 +60,7 @@ open class SceneView @JvmOverloads constructor(
     Choreographer.FrameCallback,
     NodeParent {
 
-    private val pickingHandlerThread = HandlerThread("picking").also {
-        it.start()
-    }
-    private val pickingHandler = android.os.Handler(pickingHandlerThread.looper)
-
-    companion object {
-        val defaultMainLight: Light by lazy {
-            LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
-                val (r, g, b) = Colors.cct(6_500.0f)
-                color(r, g, b)
-                intensity(100_000.0f)
-                direction(0.28f, -0.6f, -0.76f)
-                castShadows(true)
-            }.build()
-        }
-    }
+    private val pickingHandler by lazy { Handler(Looper.getMainLooper()) }
 
     override val activity
         get() = try {
@@ -326,11 +312,17 @@ open class SceneView @JvmOverloads constructor(
                 motionEvent.x.roundToInt(),
                 motionEvent.y.roundToInt(),
                 pickingHandler
-            ) {
-                val renderableId = it.renderable
-                val allChilds = allChildren
-                val selectedNode =
-                    allChilds.firstOrNull { node -> (node as? ModelNode)?.modelInstance?.entity == renderableId }
+            ) { pickResult ->
+                val pickedEntity = pickResult.renderable
+                val selectedNode = allChildren
+                    .mapNotNull { it as? ModelNode }
+                    .firstOrNull { modelNode ->
+                        modelNode.modelInstance?.let { modelInstance ->
+                            modelInstance.entity == pickedEntity ||
+                                    modelInstance.childEntities.contains(pickedEntity
+                            )
+                        } ?: false
+                    }
                 onTouchEvent(selectedNode, motionEvent)
             }
             return true
@@ -468,6 +460,18 @@ open class SceneView @JvmOverloads constructor(
 
         override fun onDown(e: MotionEvent): Boolean {
             return true
+        }
+    }
+
+    companion object {
+        val defaultMainLight: Light by lazy {
+            LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
+                val (r, g, b) = Colors.cct(6_500.0f)
+                color(r, g, b)
+                intensity(100_000.0f)
+                direction(0.28f, -0.6f, -0.76f)
+                castShadows(true)
+            }.build()
         }
     }
 }

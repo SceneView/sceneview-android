@@ -19,7 +19,7 @@ class CameraGestureHandler(private val sceneView: SceneView) : GestureHandler(sc
     private val upward = FloatArray(3)
 
     init {
-        sceneView.sceneLifecycle.addObserver(this)
+        sceneView.lifecycle.addObserver(this)
     }
 
     override fun onTouchEvent(event: MotionEvent) {
