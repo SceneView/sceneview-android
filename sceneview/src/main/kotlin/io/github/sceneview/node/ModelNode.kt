@@ -17,6 +17,8 @@ import io.github.sceneview.utils.FrameTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+typealias OnModelLoaded = (modelInstance: RenderableInstance) -> Unit
+
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
  *
@@ -153,7 +155,7 @@ open class ModelNode : Node {
             super.isRendered = value
         }
 
-    var onModelLoaded: ((renderableInstance: RenderableInstance) -> Unit)? = null
+    var onModelLoaded = mutableListOf<OnModelLoaded>()
     var onModelError: ((exception: Exception) -> Unit)? = null
 
     /**
@@ -173,8 +175,8 @@ open class ModelNode : Node {
     /**
      * TODO : Doc
      */
-    constructor(renderableInstance: RenderableInstance) : this() {
-        this.modelInstance = renderableInstance
+    constructor(modelInstance: RenderableInstance) : this() {
+        this.modelInstance = modelInstance
     }
 
     override fun onFrame(frameTime: FrameTime) {
@@ -190,8 +192,8 @@ open class ModelNode : Node {
         super.onFrame(frameTime)
     }
 
-    open fun onModelLoaded(renderableInstance: RenderableInstance) {
-        onModelLoaded?.invoke(renderableInstance)
+    open fun onModelLoaded(modelInstance: RenderableInstance) {
+        onModelLoaded.forEach { it(modelInstance) }
     }
 
     open fun onModelError(exception: Exception) {
@@ -214,6 +216,19 @@ open class ModelNode : Node {
         renderableId = model?.id?.get() ?: ChangeId.EMPTY_ID
     }
 
+    fun doOnModelLoaded(action: (modelInstance: RenderableInstance) -> Unit) {
+        if (modelInstance != null) {
+            action(modelInstance!!)
+        } else {
+            onModelLoaded += object : OnModelLoaded {
+                override fun invoke(modelInstance: RenderableInstance) {
+                    onModelLoaded -= this
+                    action(modelInstance)
+                }
+            }
+        }
+    }
+
     /**
      * ### Loads a monolithic binary glTF and add it to the Node
      *
@@ -225,10 +240,10 @@ open class ModelNode : Node {
      * @param autoAnimate Plays the animations automatically if the model has one
      * @param autoScale Scale the model to fit a unit cube
      * @param centerOrigin Center the model origin to this unit cube position
-     * - null = Keep the original model center point
-     * - (0, -1, 0) = Center the model horizontally and vertically
-     * - (0, -1, 0) = center horizontal | bottom aligned
-     * - (-1, 1, 0) = left | top aligned
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      */
     suspend fun loadModel(
@@ -266,10 +281,10 @@ open class ModelNode : Node {
      * @param autoAnimate Plays the animations automatically if the model has one
      * @param autoScale Scale the model to fit a unit cube
      * @param centerOrigin Center the model origin to this unit cube position
-     * - null = Keep the original model center point
-     * - (0, -1, 0) = Center the model horizontally and vertically
-     * - (0, -1, 0) = center horizontal | bottom aligned
-     * - (-1, 1, 0) = left | top aligned
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      */
     fun loadModelAsync(
@@ -303,10 +318,10 @@ open class ModelNode : Node {
      * @param autoAnimate Plays the animations automatically if the model has one
      * @param autoScale Scale the model to fit a unit cube
      * @param centerOrigin Center the model origin to this unit cube position
-     * - null = Keep the original model center point
-     * - (0, -1, 0) = Center the model horizontally and vertically
-     * - (0, -1, 0) = center horizontal | bottom aligned
-     * - (-1, 1, 0) = left | top aligned
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      */
     @JvmOverloads
@@ -335,9 +350,11 @@ open class ModelNode : Node {
      * @param units the number of units of the cube to scale into.
      */
     fun scaleModel(units: Float = 1.0f) {
-        modelInstance?.filamentAsset?.let { asset ->
-            val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
-            modelScale = Scale(units / max(halfExtent))
+        doOnModelLoaded { modelInstance ->
+            modelInstance.filamentAsset?.let { asset ->
+                val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+                modelScale = Scale(units / max(halfExtent))
+            }
         }
     }
 
@@ -350,10 +367,12 @@ open class ModelNode : Node {
      * - left | top aligned: [-1, 1, 0]
      */
     fun centerModel(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
-        modelInstance?.filamentAsset?.let { asset ->
-            val center = asset.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
-            val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
-            modelPosition = -(center + halfExtent * origin) * modelScale
+        doOnModelLoaded { modelInstance ->
+            modelInstance.filamentAsset?.let { asset ->
+                val center = asset.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
+                val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+                modelPosition = -(center + halfExtent * origin) * modelScale
+            }
         }
     }
 
