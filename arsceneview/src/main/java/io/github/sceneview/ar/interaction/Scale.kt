@@ -3,7 +3,7 @@ package io.github.sceneview.ar.interaction
 import dev.romainguy.kotlin.math.clamp
 import io.github.sceneview.ar.node.ArNode
 
-class Scale(arNode: ArNode) : GestureStrategy(arNode) {
+class ScaleGesture(arNode: ArNode) : GestureStrategy(arNode) {
     override fun scroll(scrollDelta: Float) {
         arNode.scale = clamp(
             arNode.scale + (-scrollDelta * 0.05f),
