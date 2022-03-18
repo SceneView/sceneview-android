@@ -9,7 +9,7 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.math.toFloat4
 
-internal class Translation(arNode: ArNode) : GestureStrategy(arNode) {
+internal class TranslationGesture(arNode: ArNode) : GestureStrategy(arNode) {
     private var lastArHitResult: HitResult? = null
 
     override fun continueGesture(x: Int, y: Int) {
