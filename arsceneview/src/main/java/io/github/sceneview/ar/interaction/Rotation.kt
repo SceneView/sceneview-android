@@ -8,8 +8,6 @@ import io.github.sceneview.ar.node.ArNode
 class Rotation(arNode: ArNode) : GestureStrategy(arNode) {
     override fun rotate(rotateDelta: Float) {
         val rotationDelta = Quaternion.fromAxisAngle(Float3(0f, 1f, 0f), rotateDelta * 2.5f)
-        val localQuaternion = arNode.modelQuaternion * rotationDelta
-        arNode.modelQuaternion = localQuaternion
-        Log.d("Rotate", "Rotate delta: ${rotateDelta * 2.5f}")
+arNode.modelQuaternion = arNode.modelQuaternion * rotationDelta
     }
 }
