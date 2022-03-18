@@ -15,10 +15,7 @@ internal class TranslationGesture(arNode: ArNode) : GestureStrategy(arNode) {
     override fun continueGesture(x: Int, y: Int) {
         val scene = arNode.getSceneViewInternal() ?: return
         val frame = (scene as ArSceneView).currentFrame ?: return
-        val arCamera = frame.camera
-        if (arCamera.trackingState != TrackingState.TRACKING) {
-            return
-        }
+        val arCamera = frame.camera?.takeIf { it.isTracking } ?: return
 
         val hitResultList = frame.hitTests(x.toFloat(), y.toFloat())
         hitResultList.forEach {
