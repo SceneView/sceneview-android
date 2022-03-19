@@ -47,9 +47,9 @@ class ArNodeManipulator(sceneView: SceneView) : GestureHandler(sceneView), Manip
         val arNode = currentNode ?: return
         currentGesture = gesture
         activeGesture = when (gesture) {
-            GestureDetector.Gesture.ZOOM -> Scale(arNode)
-            GestureDetector.Gesture.ORBIT -> Translation(arNode)
-            GestureDetector.Gesture.TWIST -> Rotation(arNode)
+            GestureDetector.Gesture.ZOOM -> ScaleGesture(arNode)
+            GestureDetector.Gesture.ORBIT -> TranslationGesture(arNode)
+            GestureDetector.Gesture.TWIST -> RotationGesture(arNode)
             else -> null
         }
     }

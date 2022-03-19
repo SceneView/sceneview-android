@@ -6,16 +6,20 @@ import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.math.toFloat4
 
 internal class TranslationGesture(arNode: ArNode) : GestureStrategy(arNode) {
     private var lastArHitResult: HitResult? = null
 
+    override fun beginGesture(x: Int, y: Int) {
+        arNode.detachAnchor()
+    }
+
     override fun continueGesture(x: Int, y: Int) {
         val scene = arNode.getSceneViewInternal() ?: return
         val frame = (scene as ArSceneView).currentFrame ?: return
-        val arCamera = frame.camera?.takeIf { it.isTracking } ?: return
 
         val hitResultList = frame.hitTests(x.toFloat(), y.toFloat())
         hitResultList.forEach {
