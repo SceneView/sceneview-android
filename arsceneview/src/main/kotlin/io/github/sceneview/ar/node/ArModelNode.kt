@@ -171,31 +171,6 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      */
     constructor(hitResult: HitResult) : super(hitResult.createAnchor())
 
-    /**
-     * ### Performs a ray cast to retrieve the ARCore info at this camera point
-     *
-     * @param frame the [ArFrame] from where we take the [HitResult]
-     * By default the latest session frame if any exist
-     * @param xPx x view coordinate in pixels
-     * By default the [cameraPosition.x][placementPosition] of this Node is used
-     * @property yPx y view coordinate in pixels
-     * By default the [cameraPosition.y][placementPosition] of this Node is used
-     *
-     * @return the hitResult or null if no info is retrieved
-     *
-     * @see ArFrame.hitTest
-     */
-    fun hitTest(
-        frame: ArFrame? = arSession?.currentFrame,
-        xPx: Float = (arSession?.displayWidth ?: 0) / 2.0f * (1.0f + placementPosition.x),
-        yPx: Float = (arSession?.displayHeight ?: 0) / 2.0f * (1.0f - placementPosition.y),
-        approximateDistanceMeters: Float = kotlin.math.abs(placementPosition.z),
-        plane: Boolean = placementMode.planeEnabled,
-        depth: Boolean = placementMode.depthEnabled,
-        instantPlacement: Boolean = placementMode.instantPlacementEnabled
-    ): HitResult? =
-        frame?.hitTest(xPx, yPx, approximateDistanceMeters, plane, depth, instantPlacement)
-
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
@@ -223,6 +198,31 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         }
         onArFrameHitResult?.invoke(this, hitResult, isTracking)
     }
+
+    /**
+     * ### Performs a ray cast to retrieve the ARCore info at this camera point
+     *
+     * @param frame the [ArFrame] from where we take the [HitResult]
+     * By default the latest session frame if any exist
+     * @param xPx x view coordinate in pixels
+     * By default the [cameraPosition.x][placementPosition] of this Node is used
+     * @property yPx y view coordinate in pixels
+     * By default the [cameraPosition.y][placementPosition] of this Node is used
+     *
+     * @return the hitResult or null if no info is retrieved
+     *
+     * @see ArFrame.hitTest
+     */
+    fun hitTest(
+        frame: ArFrame? = arSession?.currentFrame,
+        xPx: Float = (arSession?.displayWidth ?: 0) / 2.0f * (1.0f + placementPosition.x),
+        yPx: Float = (arSession?.displayHeight ?: 0) / 2.0f * (1.0f - placementPosition.y),
+        approximateDistanceMeters: Float = kotlin.math.abs(placementPosition.z),
+        plane: Boolean = placementMode.planeEnabled,
+        depth: Boolean = placementMode.depthEnabled,
+        instantPlacement: Boolean = placementMode.instantPlacementEnabled
+    ): HitResult? =
+        frame?.hitTest(xPx, yPx, approximateDistanceMeters, plane, depth, instantPlacement)
 
     override fun createAnchor(): Anchor? {
         return (hitTest()?.takeIf { it.isTracking }
