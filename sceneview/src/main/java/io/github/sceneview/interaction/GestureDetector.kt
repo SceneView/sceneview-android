@@ -93,66 +93,58 @@ class GestureDetector(
 
                 // UPDATE EXISTING GESTURE
 
-                if (currentGesture == Gesture.ZOOM) {
-                    val d0 = previousTouch.separation
-                    val d1 = touch.separation
-                    manipulator.scroll(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
-                    previousTouch = touch
-                    return
-                }
+                when (currentGesture) {
+                    Gesture.ZOOM -> {
+                        val d0 = previousTouch.separation
+                        val d1 = touch.separation
+                        manipulator.scroll(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
+                        previousTouch = touch
+                    }
+                    Gesture.TWIST -> {
+                        val degree = calculateDeltaRotation(
+                            touch.pt0,
+                            touch.pt1,
+                            previousTouch.pt0,
+                            previousTouch.pt1
+                        )
+                        manipulator.rotate(degree)
+                        previousTouch = touch
+                    }
+                    Gesture.NONE -> {
+                        // DETECT NEW GESTURE
 
-                if (currentGesture == Gesture.TWIST) {
-                    val degree = calculateDeltaRotation(
-                        touch.pt0,
-                        touch.pt1,
-                        previousTouch.pt0,
-                        previousTouch.pt1
-                    )
-                    manipulator.rotate(degree)
-                    previousTouch = touch
-                    return
-                }
+                        if (event.pointerCount == 1) {
+                            tentativeOrbitEvents.add(touch)
+                        }
 
-                if (currentGesture != Gesture.NONE) {
-                    manipulator.grabUpdate(touch.x, touch.y)
-                    return
-                }
+                        if (event.pointerCount == 2) {
+                            tentativePanEvents.add(touch)
+                            tentativeZoomEvents.add(touch)
+                            tentativeTwistEvents.add(touch)
+                        }
 
-                // DETECT NEW GESTURE
-
-                if (event.pointerCount == 1) {
-                    tentativeOrbitEvents.add(touch)
-                }
-
-                if (event.pointerCount == 2) {
-                    tentativePanEvents.add(touch)
-                    tentativeZoomEvents.add(touch)
-                    tentativeTwistEvents.add(touch)
-                }
-
-                if (isOrbitGesture()) {
-                    manipulator.grabBegin(touch.x, touch.y, false)
-                    currentGesture = Gesture.ORBIT
-                    return
-                }
-
-                if (supportsTwist && isTwistGesture()) {
-                    currentGesture = Gesture.TWIST
-                    manipulator.grabBegin(touch.x, touch.y, true)
-                    return
-                }
-
-                if (isZoomGesture()) {
-                    currentGesture = Gesture.ZOOM
-                    previousTouch = touch
-                    return
-                }
-
-                if (isPanGesture()) {
-                    currentGesture = Gesture.PAN
-                    manipulator.grabBegin(touch.x, touch.y, true)
-
-                    return
+                        when {
+                            isOrbitGesture() -> {
+                                manipulator.grabBegin(touch.x, touch.y, false)
+                                currentGesture = Gesture.ORBIT
+                            }
+                            supportsTwist && isTwistGesture() -> {
+                                currentGesture = Gesture.TWIST
+                                manipulator.grabBegin(touch.x, touch.y, true)
+                            }
+                            isZoomGesture() -> {
+                                currentGesture = Gesture.ZOOM
+                                previousTouch = touch
+                            }
+                            isPanGesture() -> {
+                                currentGesture = Gesture.PAN
+                                manipulator.grabBegin(touch.x, touch.y, true)
+                            }
+                        }
+                    }
+                    else -> {
+                        manipulator.grabUpdate(touch.x, touch.y)
+                    }
                 }
             }
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
@@ -199,12 +191,14 @@ class GestureDetector(
         val oldest = tentativeTwistEvents.first()
         val newest = tentativeTwistEvents.last()
 
-        return abs(calculateDeltaRotation(
-            newest.pt0,
-            newest.pt1,
-            oldest.pt0,
-            oldest.pt1
-        )) > kTwistConfidenceRotation
+        return abs(
+            calculateDeltaRotation(
+                newest.pt0,
+                newest.pt1,
+                oldest.pt0,
+                oldest.pt1
+            )
+        ) > kTwistConfidenceRotation
     }
 
     private fun calculateDeltaRotation(
