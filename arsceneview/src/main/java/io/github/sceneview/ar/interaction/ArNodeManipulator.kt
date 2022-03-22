@@ -52,9 +52,7 @@ class ArNodeManipulator(sceneView: SceneView) : GestureHandler(sceneView), Manip
             gesture == GestureDetector.Gesture.ZOOM &&
                 supportsEditMode(Transformable.EditMode.SCALE) -> ScaleGesture(arNode)
             gesture == GestureDetector.Gesture.ORBIT &&
-                supportsEditMode(Transformable.EditMode.MOVE) -> (arNode as? ArModelNode)?.let {
-                TranslationGesture(arNode)
-            }
+                supportsEditMode(Transformable.EditMode.MOVE) -> TranslationGesture(arNode)
             gesture == GestureDetector.Gesture.TWIST &&
                 supportsEditMode(Transformable.EditMode.ROTATE) -> RotationGesture(arNode)
             else -> null
