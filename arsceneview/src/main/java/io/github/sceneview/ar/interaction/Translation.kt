@@ -26,12 +26,18 @@ internal class TranslationGesture(private var arModelNode: ArModelNode) :
     }
 
     override fun continueGesture(x: Int, y: Int) {
-        arModelNode.hitTest(xPx = x.toFloat(), yPx = y.toFloat())?.takeIf { it.isTracking }
-            ?.let { hitResult ->
-                val trackable = hitResult.trackable
-                if (trackable is Plane && !allowedPlaneTypes.contains(trackable.type)) return
-                arNode.pose = hitResult.hitPose
-                lastArHitResult = hitResult
+ val arFrame = (arNode.getSceneViewInternal() as? ArSceneView)?.currentFrame ?: return
+        arFrame.hitTest(
+            xPx = x.toFloat(), yPx = y.toFloat(),
+            plane = placementMode.planeEnabled,
+            depth = placementMode.depthEnabled,
+            instantPlacement = placementMode.instantPlacementEnabled
+        )?.takeIf { it.isTracking }?.let { hitResult ->
+            lastHitResult = hitResult
+            hitResult.hitPose?.let { hitPose ->
+                arNode.pose = hitPose
+            }
+        }
             }
     }
 
