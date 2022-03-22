@@ -8,6 +8,7 @@ import io.github.sceneview.interaction.GestureDetector
 import io.github.sceneview.interaction.GestureHandler
 import io.github.sceneview.interaction.Manipulator
 import io.github.sceneview.node.Node
+import io.github.sceneview.scene.Transformable
 
 class ArNodeManipulator(sceneView: SceneView) : GestureHandler(sceneView), Manipulator {
     private val gestureDetector = GestureDetector(sceneView, this, supportsTwist = true)
@@ -47,13 +48,19 @@ class ArNodeManipulator(sceneView: SceneView) : GestureHandler(sceneView), Manip
     override fun gestureChanged(gesture: GestureDetector.Gesture) {
         val arNode = currentNode ?: return
         currentGesture = gesture
-        activeGesture = when (gesture) {
-            GestureDetector.Gesture.ZOOM -> ScaleGesture(arNode)
-            GestureDetector.Gesture.ORBIT -> (arNode as? ArModelNode)?.let {
+        activeGesture = when {
+            gesture == GestureDetector.Gesture.ZOOM &&
+                supportsEditMode(Transformable.EditMode.SCALE) -> ScaleGesture(arNode)
+            gesture == GestureDetector.Gesture.ORBIT &&
+                supportsEditMode(Transformable.EditMode.MOVE) -> (arNode as? ArModelNode)?.let {
                 TranslationGesture(arNode)
             }
-            GestureDetector.Gesture.TWIST -> RotationGesture(arNode)
+            gesture == GestureDetector.Gesture.TWIST &&
+                supportsEditMode(Transformable.EditMode.ROTATE) -> RotationGesture(arNode)
             else -> null
         }
     }
+
+    private fun supportsEditMode(mode: Transformable.EditMode) =
+        currentNode?.editModes?.contains(mode) == true
 }
