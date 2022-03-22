@@ -6,12 +6,22 @@ import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.node.ArNode
+import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.math.toFloat4
 
 internal class TranslationGesture(arNode: ArNode) : GestureStrategy(arNode) {
     private var lastArHitResult: HitResult? = null
+
+    private val allowedPlaneTypes: Set<Plane.Type> = when (arNode.placementMode) {
+        PlacementMode.PLANE_HORIZONTAL -> setOf(
+            Plane.Type.HORIZONTAL_UPWARD_FACING,
+            Plane.Type.HORIZONTAL_DOWNWARD_FACING
+        )
+        PlacementMode.PLANE_VERTICAL -> setOf(Plane.Type.VERTICAL)
+        PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL -> Plane.Type.values().toSet()
+        else -> emptySet()
+    }
 
     override fun beginGesture(x: Int, y: Int) {
         arNode.detachAnchor()
@@ -27,8 +37,7 @@ internal class TranslationGesture(arNode: ArNode) : GestureStrategy(arNode) {
             val pose = it.hitPose
             if (trackable is Plane) {
                 val plane = trackable
-                if (plane.isPoseInPolygon(pose)
-                /**&& allowedPlaneTypes.contains(plane.type)**/
+                if (plane.isPoseInPolygon(pose) && allowedPlaneTypes.contains(plane.type)
                 ) {
                     arNode.smooth(
                         Float3(pose.tx(), pose.ty(), pose.tz()),

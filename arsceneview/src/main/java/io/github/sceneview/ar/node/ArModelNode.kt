@@ -86,28 +86,6 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         }
 
     /**
-     * ### How/where does the node is positioned in the real world
-     *
-     * Depending on your need, you can change it to adjust between a quick
-     * ([PlacementMode.INSTANT]), more accurate ([PlacementMode.DEPTH]), only on planes/walls
-     * ([PlacementMode.PLANE_HORIZONTAL], [PlacementMode.PLANE_VERTICAL],
-     * [PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL]) or auto refining accuracy
-     * ([PlacementMode.BEST_AVAILABLE]) placement.
-     * The [hitTest], [pose] and [anchor] will be influenced by this choice.
-     */
-    var placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE
-        set(value) {
-            field = value
-            doOnAttachedToScene { sceneView ->
-                (sceneView as? ArSceneView)?.apply {
-                    planeFindingMode = value.planeFindingMode
-                    depthEnabled = value.depthEnabled
-                    instantPlacementEnabled = value.instantPlacementEnabled
-                }
-            }
-        }
-
-    /**
      * ### Anchor the node as soon as an AR position/rotation is found
      *
      * - `true` The node will be anchored in the real world at the first suitable place available.
