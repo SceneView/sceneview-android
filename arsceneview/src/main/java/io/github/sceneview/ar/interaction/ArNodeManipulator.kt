@@ -2,6 +2,7 @@ package io.github.sceneview.ar.interaction
 
 import android.view.MotionEvent
 import io.github.sceneview.SceneView
+import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.interaction.GestureDetector
 import io.github.sceneview.interaction.GestureHandler
@@ -48,7 +49,9 @@ class ArNodeManipulator(sceneView: SceneView) : GestureHandler(sceneView), Manip
         currentGesture = gesture
         activeGesture = when (gesture) {
             GestureDetector.Gesture.ZOOM -> ScaleGesture(arNode)
-            GestureDetector.Gesture.ORBIT -> TranslationGesture(arNode)
+            GestureDetector.Gesture.ORBIT -> (arNode as? ArModelNode)?.let {
+                TranslationGesture(arNode)
+            }
             GestureDetector.Gesture.TWIST -> RotationGesture(arNode)
             else -> null
         }
