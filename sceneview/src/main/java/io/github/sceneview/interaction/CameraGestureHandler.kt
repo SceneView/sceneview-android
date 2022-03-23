@@ -5,13 +5,22 @@ import com.google.android.filament.utils.Manipulator
 import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
+import io.github.sceneview.math.Position
 import io.github.sceneview.math.toFloat3
 import io.github.sceneview.node.Node
 import io.github.sceneview.utils.FrameTime
 
-class CameraGestureHandler(private val sceneView: SceneView) : GestureHandler(sceneView),
+class CameraGestureHandler(
+    private val sceneView: SceneView,
+    orbitSpeed: Float = 0.001f,
+    targetPosition: Position = Position(0f, 0f, 0f)
+) :
+    GestureHandler(sceneView),
     SceneLifecycleObserver {
-    private val manipulator = Manipulator.Builder().build(Manipulator.Mode.ORBIT)
+    private val manipulator = Manipulator.Builder().viewport(sceneView.width, sceneView.height)
+        .orbitSpeed(orbitSpeed, orbitSpeed)
+        .targetPosition(targetPosition.x, targetPosition.y, targetPosition.z)
+        .build(Manipulator.Mode.ORBIT)
     private val gestureDetector = GestureDetector(view, FilamentManipulatorAdapter(manipulator))
 
     private val eyePos = FloatArray(3)
