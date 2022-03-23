@@ -60,7 +60,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             onTrackingChanged = { _, isTracking, _ ->
                 actionButton.isGone = !isTracking
             }
-            editModes = setOf(Transformable.EditMode.ROTATE, Transformable.EditMode.SCALE)
+            editModes = setOf(
+                Transformable.EditMode.MOVE,
+                Transformable.EditMode.ROTATE,
+                Transformable.EditMode.SCALE,
+            )
         }
         sceneView.addChild(modelNode)
     }

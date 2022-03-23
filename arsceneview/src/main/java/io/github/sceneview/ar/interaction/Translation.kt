@@ -1,6 +1,7 @@
 package io.github.sceneview.ar.interaction
 
 import com.google.ar.core.HitResult
+import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.depthEnabled
 import io.github.sceneview.ar.arcore.instantPlacementEnabled
@@ -33,8 +34,9 @@ internal class TranslationGesture(arNode: ArNode) : GestureStrategy(arNode) {
     }
 
     override fun endGesture() {
-        lastArHitResult?.let { hitResult ->
-            arNode.anchor = hitResult.createAnchor()
-        }
+        lastArHitResult?.takeIf { it.trackable.trackingState == TrackingState.TRACKING }
+            ?.let { hitResult ->
+                arNode.anchor = hitResult.createAnchor()
+            }
     }
 }
