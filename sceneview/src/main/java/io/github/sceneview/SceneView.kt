@@ -24,6 +24,7 @@ import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.EngineInstance
+import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
@@ -31,9 +32,12 @@ import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.interaction.CameraGestureHandler
 import io.github.sceneview.interaction.GestureHandler
 import io.github.sceneview.light.*
+import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
+import io.github.sceneview.scene.FootprintSelectionVisualizer
+import io.github.sceneview.scene.SelectionVisualizer
 import io.github.sceneview.utils.*
 import kotlin.math.roundToInt
 
@@ -109,12 +113,14 @@ open class SceneView @JvmOverloads constructor(
 
     open val gestureHandler: GestureHandler by lazy { CameraGestureHandler(this) }
 
-    //var nodeSelectorModel: ModelRenderable?
-    //    get() = (nodeGestureRecognizer.selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable
-    //    set(value) {
-    //        (nodeGestureRecognizer.selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable =
-    //            value
-    //    }
+    open val selectionVisualizer : SelectionVisualizer by lazy { FootprintSelectionVisualizer()}
+
+    var nodeSelectorModel: ModelRenderable?
+        get() = (selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable
+        set(value) {
+            (selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable =
+                value
+        }
 
     /**
      * ### Defines the lighting environment and the skybox of the scene
@@ -203,12 +209,12 @@ open class SceneView @JvmOverloads constructor(
             mainLight = defaultMainLight
             environment = KTXLoader.createEnvironment(context.fileBufferLocal(defaultIbl))
 
-            /*lifecycleScope.launchWhenCreated {
+            lifecycleScope.launchWhenCreated {
                 nodeSelectorModel = GLBLoader.loadModel(context, defaultNodeSelector)?.apply {
                     collisionShape = null
                     BuildConfig.VERSION_NAME
                 }
-            }*/
+            }
             updateBackground()
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
@@ -432,8 +438,6 @@ open class SceneView @JvmOverloads constructor(
                 gestureHandler.onTouchEvent(motionEvent)
                 surfaceGestureDetector.onTouchEvent(motionEvent)
             }
-
-            // nodeGestureRecognizer.onTouch(pickHitResult, motionEvent)
         }
     }
 

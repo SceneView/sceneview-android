@@ -8,9 +8,10 @@ import io.github.sceneview.interaction.GestureDetector
 import io.github.sceneview.interaction.GestureHandler
 import io.github.sceneview.interaction.Manipulator
 import io.github.sceneview.node.Node
+import io.github.sceneview.scene.SelectionVisualizer
 import io.github.sceneview.scene.Transformable
 
-class ArNodeManipulator(sceneView: SceneView) : GestureHandler(sceneView), Manipulator {
+class ArNodeManipulator(private val selectionVisualizer: SelectionVisualizer, sceneView: SceneView) : GestureHandler(sceneView), Manipulator {
     private val gestureDetector = GestureDetector(sceneView, this, supportsTwist = true)
     private var currentGesture: GestureDetector.Gesture = GestureDetector.Gesture.NONE
 
@@ -18,7 +19,11 @@ class ArNodeManipulator(sceneView: SceneView) : GestureHandler(sceneView), Manip
     var currentNode: ArNode? = null
 
     override fun onNodeTouch(node: Node) {
+        val oldCurrentNode = currentNode
         currentNode = node as? ArNode
+        if (oldCurrentNode == currentNode) return
+        currentNode?.let { selectionVisualizer.applySelectionVisual(it) }
+        oldCurrentNode?.let { selectionVisualizer.removeSelectionVisual(it) }
     }
 
     override fun onTouchEvent(event: MotionEvent) {
