@@ -11,9 +11,8 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.scene.Transformable
 
-open class ArNode() : ModelNode(), ArSceneLifecycleObserver, Transformable {
+open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     override val sceneView: ArSceneView? get() = super.sceneView as? ArSceneView
     override val lifecycle: ArSceneLifecycle? get() = sceneView?.lifecycle
@@ -91,7 +90,8 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver, Transformable {
 
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
-    override var editModes: Set<Transformable.EditMode> = emptySet()
+    open val isEditable: Boolean = true
+    open var editableTransforms: Set<EditableTransform> = EditableTransform.ALL
 
     /**
      * ### How/where does the node is positioned in the real world
@@ -103,7 +103,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver, Transformable {
      * ([PlacementMode.BEST_AVAILABLE]) placement.
      * The [hitTest], [pose] and [anchor] will be influenced by this choice.
      */
-    var placementMode: PlacementMode = ArModelNode.DEFAULT_PLACEMENT_MODE
+    var placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE
         set(value) {
             field = value
             doOnAttachedToScene { sceneView ->
@@ -335,4 +335,25 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver, Transformable {
 
     /** ### Gets the world-space down direction vector (-y) of this node */
 //    val worldDown get() = localToWorldDirection(Vector3.down())
+
+    override fun clone() = copy(ArNode())
+
+    fun copy(toNode: ArNode = ArNode()) = toNode.apply {
+        super.copy(toNode)
+
+        placementMode = this@ArNode.placementMode
+    }
+
+    companion object {
+        val DEFAULT_PLACEMENT_MODE = PlacementMode.BEST_AVAILABLE
+    }
+}
+
+enum class EditableTransform {
+    POSITION, ROTATION, SCALE;
+
+    companion object {
+        val ALL = setOf(POSITION, ROTATION, SCALE)
+        val NONE = setOf<EditableTransform>()
+    }
 }
