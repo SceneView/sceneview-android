@@ -13,8 +13,8 @@ import com.google.ar.sceneform.rendering.*
 import io.github.sceneview.*
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.interaction.ArNodeManipulator
+import io.github.sceneview.ar.interaction.ArSceneGestureDetector
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.interaction.GestureHandler
 import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.exposureFactor
@@ -25,15 +25,15 @@ import io.github.sceneview.utils.setKeepScreenOn
  * A SurfaceView that integrates with ARCore and renders a scene.
  */
 open class ArSceneView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0,
-    defStyleRes: Int = 0
+        context: Context,
+        attrs: AttributeSet? = null,
+        defStyleAttr: Int = 0,
+        defStyleRes: Int = 0
 ) : SceneView(
-    context,
-    attrs,
-    defStyleAttr,
-    defStyleRes
+        context,
+        attrs,
+        defStyleAttr,
+        defStyleRes
 ), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
 
     /**
@@ -147,9 +147,9 @@ open class ArSceneView @JvmOverloads constructor(
      */
     var arSessionFeatures = { ArSession.defaultFeatures }
     override val arCore = ARCore(
-        cameraTextureId = cameraTextureId,
-        lifecycle = lifecycle,
-        features = arSessionFeatures
+            cameraTextureId = cameraTextureId,
+            lifecycle = lifecycle,
+            features = arSessionFeatures
     )
 
     var currentFrame: ArFrame? = null
@@ -200,7 +200,10 @@ open class ArSceneView @JvmOverloads constructor(
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
-    override val gestureHandler: GestureHandler by lazy { ArNodeManipulator(selectionVisualizer,this) }
+    override val gestureHandler: ArSceneGestureDetector by lazy {
+        ArSceneGestureDetector(this, nodeManipulator =
+        ArNodeManipulator(this))
+    }
 
     /**
      * ### Invoked when an ARCore error occurred
@@ -239,7 +242,7 @@ open class ArSceneView @JvmOverloads constructor(
      * - motionEvent: the motion event that triggered the tap
      */
     var onTouchAr: ((hitResult: HitResult, motionEvent: MotionEvent) -> Unit)? =
-        null
+            null
 
     /**
      * ### Invoked when an ARCore AugmentedImage TrackingState/TrackingMethod is updated
@@ -354,15 +357,15 @@ open class ArSceneView @JvmOverloads constructor(
 
         // Update the light estimate.
         estimatedLights =
-            if (session.config.lightEstimationMode != Config.LightEstimationMode.DISABLED) {
-                arFrame.environmentLightsEstimate(
-                    session.lightEstimationMode,
-                    estimatedLights,
-                    environment,
-                    mainLight,
-                    renderer.camera.exposureFactor
-                )
-            } else null
+                if (session.config.lightEstimationMode != Config.LightEstimationMode.DISABLED) {
+                    arFrame.environmentLightsEstimate(
+                            session.lightEstimationMode,
+                            estimatedLights,
+                            environment,
+                            mainLight,
+                            renderer.camera.exposureFactor
+                    )
+                } else null
 
         if (onAugmentedImageUpdate != null) {
             arFrame.updatedAugmentedImages.forEach(onAugmentedImageUpdate)
@@ -410,6 +413,7 @@ open class ArSceneView @JvmOverloads constructor(
     override fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
         // TODO : Should be handled by the nodesTouchEventDispatcher
         //nodeGestureRecognizer.onNodeTap(null)
+
         arSession?.let { session ->
             session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
                 onTouchAr(hitResult, motionEvent)
@@ -443,7 +447,7 @@ interface ArSceneLifecycleOwner : SceneLifecycleOwner {
 }
 
 class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwner) :
-    SceneLifecycle(context, owner) {
+        SceneLifecycle(context, owner) {
     val arCore get() = owner.arCore
     val arSession get() = owner.arSession
     val arSessionConfig get() = owner.arSessionConfig
@@ -463,11 +467,11 @@ class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwn
     }
 
     fun addObserver(
-        onArSessionCreated: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
-        onArSessionFailed: (ArSceneLifecycleObserver.(exception: Exception) -> Unit)? = null,
-        onArSessionResumed: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
-        onArSessionConfigChanged: (ArSceneLifecycleObserver.(session: ArSession, config: Config) -> Unit)? = null,
-        onArFrame: (ArSceneLifecycleObserver.(arFrame: ArFrame) -> Unit)? = null
+            onArSessionCreated: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
+            onArSessionFailed: (ArSceneLifecycleObserver.(exception: Exception) -> Unit)? = null,
+            onArSessionResumed: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
+            onArSessionConfigChanged: (ArSceneLifecycleObserver.(session: ArSession, config: Config) -> Unit)? = null,
+            onArFrame: (ArSceneLifecycleObserver.(arFrame: ArFrame) -> Unit)? = null
     ) {
         addObserver(object : ArSceneLifecycleObserver {
             override fun onArSessionCreated(session: ArSession) {

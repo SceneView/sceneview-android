@@ -92,7 +92,7 @@ class MoveGestureDetector(
      * accumulated moving factor in an overridden [OnMoveGestureListener.onMoveEnd].
      * [OnMoveGestureListener.onMoveBegin] returns `true`.
      */
-    class SimpleOnMoveGestureListener : OnMoveGestureListener {
+    open class SimpleOnMoveGestureListener : OnMoveGestureListener {
         override fun onMove(detector: MoveGestureDetector): Boolean {
             return false
         }

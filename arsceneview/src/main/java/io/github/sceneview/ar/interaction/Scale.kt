@@ -1,14 +1,12 @@
 package io.github.sceneview.ar.interaction
 
+import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.clamp
 import io.github.sceneview.ar.node.ArNode
 
 class ScaleGesture(arNode: ArNode) : GestureStrategy(arNode) {
-    override fun scroll(delta: Float) {
+    override fun scale(scaleFactor: Float) {
         arNode.scale = clamp(
-            arNode.scale + (-delta * 0.05f),
-            0.5f,
-            1.5f
-        ) // TODO: Make min max scale configurable
+                arNode.scale + Float3(scaleFactor, scaleFactor, scaleFactor), 0.5f, 1.5f)
     }
 }

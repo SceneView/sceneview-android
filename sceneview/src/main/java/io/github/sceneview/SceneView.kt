@@ -31,6 +31,7 @@ import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.interaction.CameraGestureHandler
 import io.github.sceneview.interaction.GestureHandler
+import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.light.*
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.ModelNode
@@ -111,7 +112,7 @@ open class SceneView @JvmOverloads constructor(
     //    TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
     //}
 
-    open val gestureHandler: GestureHandler by lazy { CameraGestureHandler(this) }
+    open val gestureHandler: SceneGestureDetector by lazy { SceneGestureDetector(this) }
 
     open val selectionVisualizer : SelectionVisualizer by lazy { FootprintSelectionVisualizer()}
 

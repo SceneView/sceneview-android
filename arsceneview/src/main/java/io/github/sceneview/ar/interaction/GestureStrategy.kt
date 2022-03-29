@@ -12,4 +12,6 @@ abstract class GestureStrategy(val arNode: ArNode) {
     open fun scroll(scrollDelta: Float) {}
 
     open fun rotate(rotateDelta: Float) {}
+
+    open fun scale(scaleFactor: Float) {}
 }

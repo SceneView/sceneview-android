@@ -14,7 +14,7 @@ typealias FilamentGestureDetector = com.google.android.filament.utils.GestureDet
  *
  * Camera supports one-touch orbit, two-touch pan, and pinch-to-zoom.
  */
-class SceneGestureDetector(
+open class SceneGestureDetector(
     sceneView: SceneView,
     listener: OnSceneGestureListener? = null,
     cameraManipulator: Manipulator? = Manipulator.Builder()
@@ -28,18 +28,18 @@ class SceneGestureDetector(
             setOnDoubleTapListener(listener)
         }
     }
-    var moveGestureDetector = listener?.let { MoveGestureDetector(sceneView.context, it) }
-    var rotateGestureDetector = listener?.let { RotateGestureDetector(sceneView.context, it) }
-    var scaleGestureDetector = listener?.let { ScaleGestureDetector(sceneView.context, it) }
-    var filamentGestureDetector = cameraManipulator?.let { FilamentGestureDetector(sceneView, it) }
+    open var moveGestureDetector = listener?.let { MoveGestureDetector(sceneView.context, it) }
+    open var rotateGestureDetector = listener?.let { RotateGestureDetector(sceneView.context, it) }
+    open var scaleGestureDetector = listener?.let { ScaleGestureDetector(sceneView.context, it) }
+    open var filamentGestureDetector = cameraManipulator?.let { FilamentGestureDetector(sceneView, it) }
 
-    var gestureDetectors = listOfNotNull(
+    private val gestureDetectors : List<*> by lazy { listOfNotNull(
         gestureDetector,
         moveGestureDetector,
         rotateGestureDetector,
         scaleGestureDetector,
         filamentGestureDetector
-    )
+    ) }
 
     fun onTouchEvent(event: MotionEvent) {
         gestureDetectors.forEach {
@@ -51,6 +51,10 @@ class SceneGestureDetector(
                 is FilamentGestureDetector -> it.onTouchEvent(event)
             }
         }
+    }
+
+    open fun onNodeTouch(selectedNode: Node) : Boolean {
+        return false
     }
 
     interface OnSceneGestureListener :

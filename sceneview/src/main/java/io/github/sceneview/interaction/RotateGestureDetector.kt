@@ -96,7 +96,7 @@ class RotateGestureDetector(
      * accumulated rotation factor in an overridden [OnRotateGestureListener.onRotateEnd].
      * [OnRotateGestureListener.onRotateBegin] returns `true`.
      */
-    class SimpleOnRotateGestureListener : OnRotateGestureListener {
+    open class SimpleOnRotateGestureListener : OnRotateGestureListener {
         override fun onRotate(detector: RotateGestureDetector): Boolean {
             return false
         }
@@ -335,6 +335,10 @@ class RotateGestureDetector(
 
     private fun update(event: MotionEvent) {
         val previousEvent = previousEvent ?: return
+        if (event.pointerCount < 2) {
+            reset()
+            return
+        }
 
         // Reset mCurrEvent
         currentEvent?.recycle()
