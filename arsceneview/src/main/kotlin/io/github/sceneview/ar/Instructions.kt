@@ -2,14 +2,14 @@ package io.github.sceneview.ar
 
 import androidx.lifecycle.coroutineScope
 import com.google.ar.core.Config
+import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.ArSession
 import io.github.sceneview.ar.node.ArNode
-import io.github.sceneview.node.Node
 import io.github.sceneview.ar.node.infos.AugmentedImageInfoNode
 import io.github.sceneview.ar.node.infos.SearchPlaneInfoNode
 import io.github.sceneview.ar.node.infos.TapArPlaneInfoNode
-import io.github.sceneview.SceneView
+import io.github.sceneview.node.Node
 
 class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
     ArSceneLifecycleObserver {
@@ -81,15 +81,17 @@ class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
         super.onArFrame(arFrame)
 
         infoNode = when {
-            arFrame.session.hasAugmentedImageDatabase && !arFrame.isTrackingAugmentedImage -> {
+            augmentedImageInfoEnabled &&
+                    arFrame.session.hasAugmentedImageDatabase &&
+                    !arFrame.isTrackingAugmentedImage -> {
                 augmentedImageInfoNode
             }
             arFrame.session.planeFindingEnabled -> when {
-                !arFrame.session.hasTrackedPlane -> {
+                searchPlaneInfoEnabled && !arFrame.session.hasTrackedPlane -> {
                     searchPlaneInfoNode
                 }
-                sceneView.children.count { it is ArNode } == 0 -> {
-                    tapArPlaneInfoNode
+                tapArPlaneInfoEnabled && sceneView.children.count { it is ArNode } == 0 -> {
+                    null
                 }
                 else -> null
             }
