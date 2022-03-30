@@ -229,7 +229,7 @@ class ArSession(
      *
      * Adjust the based reference/factored lighting intensities and other values with:
      * - [io.github.sceneview.ar.ArSceneView.mainLight]
-     * - [io.github.sceneview.ar.ArSceneView.environment][io.github.sceneview.environment.Environment.indirectLight]
+     * - [io.github.sceneview.environment.Environment.indirectLight]
      *
      * @see LightEstimationMode.REALISTIC
      * @see LightEstimationMode.SPECTACULAR
