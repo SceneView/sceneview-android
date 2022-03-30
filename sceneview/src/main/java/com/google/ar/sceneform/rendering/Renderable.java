@@ -401,11 +401,19 @@ public abstract class Renderable {
         }
 
         public B setSource(Context context, Uri sourceUri) {
-            return setRemoteSourceHelper(context, sourceUri, true);
+            return setSource(context, sourceUri, source -> {
+                String url = sourceUri.toString();
+                url = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+                int lastSeparatorIndex = url.lastIndexOf('/');
+                return Uri.parse((lastSeparatorIndex != -1 ?
+                        url.substring(0, lastSeparatorIndex + 1) : ""
+                ) + source);
+            });
         }
 
-        public B setSource(Context context, Uri sourceUri, boolean enableCaching) {
-            return null;
+        public B setSource(Context context, Uri sourceUri, Function<String, Uri> uriResolver) {
+            this.uriResolver = uriResolver;
+            return setRemoteSourceHelper(context, sourceUri, true);
         }
 
         public B setSource(Context context, int resource) {
