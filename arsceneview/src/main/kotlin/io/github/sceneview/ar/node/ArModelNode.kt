@@ -244,7 +244,13 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     }
 }
 
-enum class PlacementMode {
+/**
+ * # How an object is placed on the real world
+ *
+ * @param instantPlacementFallback Fallback to instantly place nodes at a fixed orientation and an
+ * approximate distance when the base placement type is not available yet or at all.
+ */
+enum class PlacementMode(var instantPlacementFallback: Boolean = false) {
     /**
      * ### Disable every AR placement
      * @see PlaneFindingMode.DISABLED
@@ -304,7 +310,7 @@ enum class PlacementMode {
      * The node will be placed instantly and then adjusted to fit the best accurate, precise,
      * available placement.
      */
-    BEST_AVAILABLE;
+    BEST_AVAILABLE(instantPlacementFallback = true);
 
     val planeEnabled: Boolean
         get() = when (planeFindingMode) {
@@ -330,8 +336,8 @@ enum class PlacementMode {
         }
 
     val instantPlacementEnabled: Boolean
-        get() = when (this) {
-            INSTANT, BEST_AVAILABLE -> true
+        get() = when {
+            this == INSTANT || instantPlacementFallback -> true
             else -> false
         }
 }
