@@ -46,7 +46,7 @@ dependencies {
     api project(":sceneview")
 
     // ARCore
-    def arcore_version = '1.29.0'
+    def arcore_version = '1.30.0'
     api "com.google.ar:core:$arcore_version"
 }
 
