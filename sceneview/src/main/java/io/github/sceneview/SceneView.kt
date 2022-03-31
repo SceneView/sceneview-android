@@ -29,8 +29,6 @@ import com.google.ar.sceneform.rendering.Renderer
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
-import io.github.sceneview.interaction.CameraGestureHandler
-import io.github.sceneview.interaction.GestureHandler
 import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.light.*
 import io.github.sceneview.model.GLBLoader
@@ -112,7 +110,7 @@ open class SceneView @JvmOverloads constructor(
     //    TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
     //}
 
-    open val gestureHandler: SceneGestureDetector by lazy { SceneGestureDetector(this) }
+    open val gestureDetector: SceneGestureDetector by lazy { SceneGestureDetector(this) }
 
     open val selectionVisualizer : SelectionVisualizer by lazy { FootprintSelectionVisualizer()}
 
@@ -434,9 +432,9 @@ open class SceneView @JvmOverloads constructor(
     open fun onTouchEvent(selectedNode: Node?, motionEvent: MotionEvent) {
         if (onTouchEvent?.invoke(selectedNode, motionEvent) != true) {
             if (selectedNode != null) {
-                gestureHandler.onNodeTouch(selectedNode)
+                gestureDetector.onTouchNode(selectedNode)
             } else {
-                gestureHandler.onTouchEvent(motionEvent)
+                gestureDetector.onTouchEvent(motionEvent)
                 surfaceGestureDetector.onTouchEvent(motionEvent)
             }
         }

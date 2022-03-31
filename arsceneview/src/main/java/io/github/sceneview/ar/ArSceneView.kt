@@ -200,7 +200,7 @@ open class ArSceneView @JvmOverloads constructor(
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
-    override val gestureHandler: ArSceneGestureDetector by lazy {
+    override val gestureDetector: ArSceneGestureDetector by lazy {
         ArSceneGestureDetector(this, nodeManipulator =
         ArNodeManipulator(this))
     }

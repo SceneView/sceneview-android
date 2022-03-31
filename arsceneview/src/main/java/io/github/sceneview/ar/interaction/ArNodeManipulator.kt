@@ -1,18 +1,22 @@
 package io.github.sceneview.ar.interaction
 
+import android.util.Log
+import com.google.ar.core.HitResult
+import com.google.ar.core.TrackingState
+import dev.romainguy.kotlin.math.*
 import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.arcore.depthEnabled
+import io.github.sceneview.ar.arcore.instantPlacementEnabled
+import io.github.sceneview.ar.arcore.isTracking
+import io.github.sceneview.ar.arcore.planeFindingEnabled
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.EditableTransform
-import io.github.sceneview.interaction.GestureDetector
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.SelectionVisualizer
 
 class ArNodeManipulator(
     private val sceneView: ArSceneView
 ) {
-    private var currentGesture: GestureDetector.Gesture = GestureDetector.Gesture.NONE
-
-    private var activeGesture: GestureStrategy? = null
     var currentNode: ArNode? = null
     private val selectionVisualizer: SelectionVisualizer
         get() = sceneView.selectionVisualizer
@@ -25,32 +29,63 @@ class ArNodeManipulator(
         oldCurrentNode?.let { selectionVisualizer.removeSelectionVisual(it) }
     }
 
-
     fun rotate(deltaDegree: Float) {
-        activeGesture?.rotate(deltaDegree)
+        val nodeToRotate = currentNode?.takeIf { it.rotationEditable } ?: return
+        Log.d("Rotation", "Rotation delta: $deltaDegree")
+        val rotationDelta =
+            normalize(Quaternion.fromAxisAngle(Float3(0f, 1f, 0f), degrees(deltaDegree)))
+        nodeToRotate.modelQuaternion = nodeToRotate.modelQuaternion * rotationDelta
     }
 
-    fun gestureChanged(gesture: GestureDetector.Gesture) {
-        val arNode = currentNode ?: return
-        currentGesture = gesture
-        activeGesture = when {
-            gesture == GestureDetector.Gesture.ZOOM &&
-                    supportsEditMode(EditableTransform.SCALE) -> ScaleGesture(arNode)
-            gesture == GestureDetector.Gesture.ORBIT &&
-                    supportsEditMode(EditableTransform.POSITION) -> TranslationGesture(arNode)
-            gesture == GestureDetector.Gesture.TWIST &&
-                    supportsEditMode(EditableTransform.ROTATION) -> RotationGesture(arNode)
-            else -> null
+    fun scale(factor: Float): Boolean {
+        val nodeToScale = currentNode?.takeIf { it.scaleEditable } ?: return false
+        nodeToScale.scale = clamp(
+            nodeToScale.scale + factor, 0.5f, 1.5f
+        )
+        return true
+    }
+
+    private var lastArHitResult: HitResult? = null
+
+    fun beginTransform() {
+        lastArHitResult = null
+        val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
+        nodeToTransform.detachAnchor()
+    }
+
+    fun continueTransform(x: Int, y: Int) {
+        val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
+        val sceneView = nodeToTransform.getSceneViewInternal() as? ArSceneView ?: return
+        val config = sceneView.arSessionConfig ?: return
+        val arFrame = sceneView.currentFrame ?: return
+        arFrame.hitTest(
+            xPx = x.toFloat(), yPx = y.toFloat(),
+            plane = config.planeFindingEnabled,
+            depth = config.depthEnabled,
+            instantPlacement = config.instantPlacementEnabled
+        )?.takeIf { it.isTracking }?.let { hitResult ->
+            lastArHitResult = hitResult
+            hitResult.hitPose?.let { hitPose ->
+                nodeToTransform.pose = hitPose
+            }
         }
     }
 
-    private fun supportsEditMode(mode: EditableTransform): Boolean {
-        return currentNode?.isEditable == true &&
-                currentNode?.editableTransforms?.contains(mode) == true
+    fun endTransform() {
+        val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
+        lastArHitResult?.takeIf { it.trackable.trackingState == TrackingState.TRACKING }
+            ?.let { hitResult ->
+                nodeToTransform.anchor = hitResult.createAnchor()
+            }
     }
 
-    fun scale(scaleFactor: Float): Boolean {
-        activeGesture?.scale(scaleFactor)
-        return activeGesture is ScaleGesture
-    }
 }
+
+private val ArNode.positionEditable: Boolean
+    get() = editableTransforms.contains(EditableTransform.POSITION)
+
+private val ArNode.rotationEditable: Boolean
+    get() = editableTransforms.contains(EditableTransform.ROTATION)
+
+private val ArNode.scaleEditable: Boolean
+    get() = editableTransforms.contains(EditableTransform.SCALE)

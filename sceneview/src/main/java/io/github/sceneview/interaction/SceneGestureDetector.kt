@@ -53,7 +53,7 @@ open class SceneGestureDetector(
         }
     }
 
-    open fun onNodeTouch(selectedNode: Node) : Boolean {
+    open fun onTouchNode(selectedNode: Node) : Boolean {
         return false
     }
 
