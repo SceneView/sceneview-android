@@ -180,7 +180,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
         if (anchor == null) throw IllegalStateException("The anchor shouldn't be null")
 
-        this.anchor = arSession?.hostCloudAnchorWithTtl(anchor, ttlDays)
+        anchor = arSession?.hostCloudAnchorWithTtl(anchor, ttlDays)
         cloudAnchorRequestInProgress = true
         onCloudAnchorRequestComplete = onRequestComplete
     }
@@ -196,7 +196,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     fun resolveCloudAnchor(cloudAnchorId: String, onRequestComplete: (anchor: Anchor, success: Boolean) -> Unit) {
         checkCloudAnchorRequestState()
 
-        this.anchor = arSession?.resolveCloudAnchor(cloudAnchorId)
+        anchor = arSession?.resolveCloudAnchor(cloudAnchorId)
         cloudAnchorRequestInProgress = true
         onCloudAnchorRequestComplete = onRequestComplete
     }
