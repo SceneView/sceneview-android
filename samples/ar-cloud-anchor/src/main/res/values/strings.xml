@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AR Cloud Anchor Sample</string>
+    <string name="resolve_object">Resolve Anchor</string>
+    <string name="resolving_object">Resolving…</string>
+</resources>
