@@ -206,6 +206,19 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     }
 
     /**
+     * ### Cancels a resolve request
+     *
+     * The [anchor] is detached to cancel the resolve request.
+     */
+    fun cancelResolveRequest() {
+        if (cloudAnchorRequestInProgress) {
+            anchor?.detach()
+            cloudAnchorRequestInProgress = false
+            onCloudAnchorRequestComplete = null
+        }
+    }
+
+    /**
      * ### Creates a new anchored Node at the actual worldPosition and worldRotation
      *
      * The returned node position and rotation will be fixed within camera movements.
