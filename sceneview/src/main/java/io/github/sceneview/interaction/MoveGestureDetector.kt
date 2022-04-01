@@ -2,7 +2,9 @@ package io.github.sceneview.interaction
 
 import android.content.Context
 import android.os.Handler
+import android.view.GestureDetector
 import android.view.MotionEvent
+import androidx.core.view.GestureDetectorCompat
 import io.github.sceneview.interaction.MoveGestureDetector.OnMoveGestureListener
 
 
@@ -28,6 +30,39 @@ class MoveGestureDetector(
     var listener: OnMoveGestureListener,
     var handler: Handler? = null
 ) {
+    private var gestureInProgress = false
+
+    private val moveListener = object: GestureDetector.SimpleOnGestureListener() {
+        override fun onScroll(
+            e1: MotionEvent,
+            e2: MotionEvent,
+            distanceX: Float,
+            distanceY: Float
+        ): Boolean {
+            if (!gestureInProgress) {
+                listener.onMoveBegin(this@MoveGestureDetector)
+                gestureInProgress = true
+            }
+            firstMotionEvent = e1
+            currentMotionEvent = e2
+
+            lastDistanceX = distanceX
+            lastDistanceY = distanceY
+
+            listener.onMove(this@MoveGestureDetector)
+
+            return true
+        }
+
+    }
+
+    private val gestureDetectorCompat = GestureDetectorCompat(context, moveListener, handler)
+
+    var lastDistanceX : Float? = null
+    var lastDistanceY : Float? = null
+
+    var firstMotionEvent: MotionEvent? = null
+    var currentMotionEvent: MotionEvent? = null
 
     /**
      * ### The listener for receiving notifications when gestures occur
@@ -107,7 +142,15 @@ class MoveGestureDetector(
 
 
     fun onTouchEvent(event: MotionEvent): Boolean {
-        //TODO
-        return true
+        val consumed = gestureDetectorCompat.onTouchEvent(event)
+        if (!consumed && gestureInProgress) {
+            val action = event.actionMasked
+            if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
+                listener.onMoveEnd(this)
+                gestureInProgress = false
+                return true
+            }
+        }
+        return consumed
     }
 }

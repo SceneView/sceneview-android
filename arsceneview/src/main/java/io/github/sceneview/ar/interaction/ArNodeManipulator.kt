@@ -14,14 +14,14 @@ import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.SelectionVisualizer
 
-class ArNodeManipulator(
-    private val sceneView: ArSceneView
+open class ArNodeManipulator(
+    protected val sceneView: ArSceneView
 ) {
     var currentNode: ArNode? = null
-    private val selectionVisualizer: SelectionVisualizer
+    protected open val selectionVisualizer: SelectionVisualizer
         get() = sceneView.selectionVisualizer
 
-    fun onNodeTouch(node: Node) {
+    open fun onNodeTouch(node: Node) {
         val oldCurrentNode = currentNode
         currentNode = node as? ArNode
         if (oldCurrentNode == currentNode) return
@@ -29,7 +29,7 @@ class ArNodeManipulator(
         oldCurrentNode?.let { selectionVisualizer.removeSelectionVisual(it) }
     }
 
-    fun rotate(deltaDegree: Float) {
+    open fun rotate(deltaDegree: Float) {
         val nodeToRotate = currentNode?.takeIf { it.rotationEditable } ?: return
         Log.d("Rotation", "Rotation delta: $deltaDegree")
         val rotationDelta =
@@ -37,7 +37,7 @@ class ArNodeManipulator(
         nodeToRotate.modelQuaternion = nodeToRotate.modelQuaternion * rotationDelta
     }
 
-    fun scale(factor: Float): Boolean {
+    open fun scale(factor: Float): Boolean {
         val nodeToScale = currentNode?.takeIf { it.scaleEditable } ?: return false
         nodeToScale.scale = clamp(
             nodeToScale.scale + factor, 0.5f, 1.5f
@@ -45,21 +45,21 @@ class ArNodeManipulator(
         return true
     }
 
-    private var lastArHitResult: HitResult? = null
+    protected var lastArHitResult: HitResult? = null
 
-    fun beginTransform() {
+    open fun beginTransform() {
         lastArHitResult = null
         val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
         nodeToTransform.detachAnchor()
     }
 
-    fun continueTransform(x: Int, y: Int) {
+    open fun continueTransform(x: Float, y: Float) {
         val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
         val sceneView = nodeToTransform.getSceneViewInternal() as? ArSceneView ?: return
         val config = sceneView.arSessionConfig ?: return
         val arFrame = sceneView.currentFrame ?: return
         arFrame.hitTest(
-            xPx = x.toFloat(), yPx = y.toFloat(),
+            xPx = x, yPx = y,
             plane = config.planeFindingEnabled,
             depth = config.depthEnabled,
             instantPlacement = config.instantPlacementEnabled
@@ -71,7 +71,7 @@ class ArNodeManipulator(
         }
     }
 
-    fun endTransform() {
+    open fun endTransform() {
         val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
         lastArHitResult?.takeIf { it.trackable.trackingState == TrackingState.TRACKING }
             ?.let { hitResult ->
@@ -81,11 +81,11 @@ class ArNodeManipulator(
 
 }
 
-private val ArNode.positionEditable: Boolean
+internal val ArNode.positionEditable: Boolean
     get() = editableTransforms.contains(EditableTransform.POSITION)
 
-private val ArNode.rotationEditable: Boolean
+internal val ArNode.rotationEditable: Boolean
     get() = editableTransforms.contains(EditableTransform.ROTATION)
 
-private val ArNode.scaleEditable: Boolean
+internal val ArNode.scaleEditable: Boolean
     get() = editableTransforms.contains(EditableTransform.SCALE)
