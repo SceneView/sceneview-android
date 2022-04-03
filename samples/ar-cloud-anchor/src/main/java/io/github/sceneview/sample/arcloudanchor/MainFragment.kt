@@ -130,7 +130,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                     }
                 }
 
-                actionButton.setText(R.string.hosting)
+                actionButton.apply {
+                    setText(R.string.hosting)
+                    isEnabled = true
+                }
             }
             Mode.RESOLVE -> {
                 cloudAnchorNode.resolveCloudAnchor(editText.text.toString()) { anchor: Anchor, success: Boolean ->
@@ -143,11 +146,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                         selectMode(Mode.RESOLVE)
                     }
                 }
-                actionButton.setText(R.string.resolving)
-                actionButton.isEnabled = false
+
+                actionButton.apply {
+                    setText(R.string.resolving)
+                    isEnabled = false
+                }
             }
             Mode.RESET -> {
-                cloudAnchorNode.anchor?.detach()
+                cloudAnchorNode.detachAnchor()
                 selectMode(Mode.HOME)
             }
         }
