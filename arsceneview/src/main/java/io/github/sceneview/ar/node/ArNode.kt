@@ -223,7 +223,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      *
      * The returned node position and rotation will be fixed within camera movements.
      *
-     * See [hitTest] and [ArFrame.hitTests] for details.
+     * See [ArFrame.hitTest] and [ArFrame.hitTests] for details.
      *
      * Anchors incur ongoing processing overhead within ARCore.
      * To release unneeded anchors use [destroy].
