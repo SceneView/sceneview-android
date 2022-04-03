@@ -2,32 +2,40 @@ package io.github.sceneview.sample.arcloudanchor
 
 import android.os.Bundle
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.Guideline
 import androidx.core.view.isGone
+import androidx.core.view.isVisible
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
-import com.google.ar.core.HitResult
+import com.google.ar.core.Session
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.ArSession
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
-    lateinit var sceneView: ArSceneView
-    lateinit var loadingView: View
-    lateinit var actionButton: ExtendedFloatingActionButton
+    private lateinit var sceneView: ArSceneView
+    private lateinit var loadingView: View
+    private lateinit var editText: EditText
+    private lateinit var hostButton: Button
+    private lateinit var resolveButton: Button
+    private lateinit var actionButton: ExtendedFloatingActionButton
 
-    lateinit var cloudAnchorNode: ArModelNode
-    private var anchorId: String = ""
+    private lateinit var cloudAnchorNode: ArModelNode
 
-    var isLoading = false
+    private var mode = Mode.HOME
+
+    private var isLoading = false
         set(value) {
             field = value
             loadingView.isGone = !value
@@ -36,26 +44,54 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setHasOptionsMenu(true)
+        val topGuideline = view.findViewById<Guideline>(R.id.topGuideline)
+        topGuideline.doOnApplyWindowInsets { systemBarsInsets ->
+            // Add the action bar margin
+            val actionBarHeight = (requireActivity() as AppCompatActivity).supportActionBar?.height ?: 0
+            topGuideline.setGuidelineBegin(systemBarsInsets.top + actionBarHeight)
+        }
+        val bottomGuideline = view.findViewById<Guideline>(R.id.bottomGuideline)
+        bottomGuideline.doOnApplyWindowInsets { systemBarsInsets ->
+            // Add the navigation bar margin
+            bottomGuideline.setGuidelineEnd(systemBarsInsets.bottom)
+        }
 
         sceneView = view.findViewById(R.id.sceneView)
-        loadingView = view.findViewById(R.id.loadingView)
-        actionButton = view.findViewById<ExtendedFloatingActionButton>(R.id.actionButton).apply {
-            // Add system bar margins
-            val bottomMargin = (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
-            doOnApplyWindowInsets { systemBarsInsets ->
-                (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
-                    systemBarsInsets.bottom + bottomMargin
+        sceneView.apply {
+            configureSession { _, config ->
+                config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
             }
-            setOnClickListener { actionButtonClicked() }
+            // Move the instructions up to avoid an overlap with the buttons
+            instructions.searchPlaneInfoNode.position.y = -0.5f
         }
-        sceneView.configureSession { _: ArSession, config: Config ->
-            config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
-            config.lightEstimationMode = Config.LightEstimationMode.DISABLED //to combat maxImages buffer filling to quickly
+
+        loadingView = view.findViewById(R.id.loadingView)
+
+        actionButton = view.findViewById(R.id.actionButton)
+        actionButton.setOnClickListener {
+            actionButtonClicked()
+        }
+
+        editText = view.findViewById(R.id.editText)
+        editText.addTextChangedListener {
+            actionButton.isEnabled = !it.isNullOrBlank()
+        }
+
+        hostButton = view.findViewById(R.id.hostButton)
+        hostButton.setOnClickListener {
+            selectMode(Mode.HOST)
+        }
+
+        resolveButton = view.findViewById(R.id.resolveButton)
+        resolveButton.setOnClickListener {
+            selectMode(Mode.RESOLVE)
         }
 
         isLoading = true
         cloudAnchorNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+            parent = sceneView
+            smoothPose = false
+            isVisible = false
             loadModelAsync(
                 context = requireContext(),
                 glbFileLocation = "models/spiderbot.glb",
@@ -66,63 +102,106 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 isLoading = false
             }
         }
-        sceneView.onTouchAr = { hitResult: HitResult, motionEvent: MotionEvent ->
-            cloudAnchorNode.anchor = hitResult.createAnchor()
-            cloudAnchorNode.parent = sceneView
-            sceneView.addChild(cloudAnchorNode)
-            cloudAnchorNode.hostCloudAnchor(1) { anchor: Anchor, success: Boolean ->
-                if (success) {
-                    if (cloudAnchorNode.anchor == anchor) {
-                        anchorId = anchor.cloudAnchorId
-                        cloudAnchorNode.parent = null
-                        cloudAnchorNode.anchor = null
-                        actionButton.visibility = View.VISIBLE
-                        Log.d("DEBUG", "Hosting success with id ${anchor.cloudAnchorId}")
-                    } else {
-                        Log.d(
-                            "DEBUG",
-                            "Hosting successful, but anchor != cloudAnchornode.anchor"
-                        )
-                    }
-                } else {
-                    cloudAnchorNode.parent = null
-                    cloudAnchorNode.anchor = null
-                    actionButton.visibility = View.GONE
-                    Log.d("DEBUG", "Hosting complete but unsuccessful")
-                }
-            }
+    }
 
+    private fun actionButtonClicked() {
+        when (mode) {
+            Mode.HOME -> { }
+            Mode.HOST -> {
+                val frame = sceneView.currentFrame ?: return
+
+                if (!cloudAnchorNode.isAnchored) {
+                    cloudAnchorNode.anchor()
+                }
+
+                if (sceneView.arSession?.estimateFeatureMapQualityForHosting(frame.camera.pose) == Session.FeatureMapQuality.INSUFFICIENT) {
+                    Toast.makeText(context, R.string.insufficient_visual_data, Toast.LENGTH_LONG).show()
+                    return
+                }
+
+                cloudAnchorNode.hostCloudAnchor { anchor: Anchor, success: Boolean ->
+                    if (success) {
+                        editText.setText(anchor.cloudAnchorId)
+                        selectMode(Mode.RESET)
+                    } else {
+                        Toast.makeText(context, R.string.error_occurred, Toast.LENGTH_LONG).show()
+                        Log.d(TAG, "Unable to host the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}")
+                        selectMode(Mode.HOST)
+                    }
+                }
+
+                actionButton.setText(R.string.hosting)
+            }
+            Mode.RESOLVE -> {
+                cloudAnchorNode.resolveCloudAnchor(editText.text.toString()) { anchor: Anchor, success: Boolean ->
+                    if (success) {
+                        cloudAnchorNode.isVisible = true
+                        selectMode(Mode.RESET)
+                    } else {
+                        Toast.makeText(context, R.string.error_occurred, Toast.LENGTH_LONG).show()
+                        Log.d(TAG, "Unable to resolve the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}")
+                        selectMode(Mode.RESOLVE)
+                    }
+                }
+
+                actionButton.setText(R.string.resolving)
+            }
+            Mode.RESET -> {
+                selectMode(Mode.HOME)
+            }
         }
     }
 
-    fun actionButtonClicked() {
-        if (anchorId.isNotBlank()) {
-            actionButton.isEnabled = false
-            actionButton.setText(R.string.resolving_object)
-            Log.d("DEBUG", "Resolving clicked with id: $anchorId")
-            cloudAnchorNode.resolveCloudAnchor(anchorId) { anchor: Anchor, success: Boolean ->
-                Log.d("DEBUG", "Resolve Completed")
-                actionButton.isEnabled = true
-                if (success) {
-                    if (cloudAnchorNode.anchor == anchor) {
-                        Log.d("DEBUG", "Resolve Success")
-                        cloudAnchorNode.anchor = anchor
-                        cloudAnchorNode.parent = sceneView
-                        sceneView.addChild(cloudAnchorNode)
-                    } else {
-                        Log.d(
-                            "DEBUG",
-                            "Resolved successful, but anchor != cloudAnchornode.anchor"
-                        )
-                    }
-                } else {
-                    Log.d("DEBUG", "Resolved complete but unsuccessful")
+    private fun selectMode(mode: Mode) {
+        this.mode = mode
+
+        when (mode) {
+            Mode.HOME -> {
+                editText.isVisible = false
+                hostButton.isVisible = true
+                resolveButton.isVisible = true
+                actionButton.isVisible = false
+                cloudAnchorNode.isVisible = false
+            }
+            Mode.HOST -> {
+                hostButton.isVisible = false
+                resolveButton.isVisible = false
+                actionButton.apply {
+                    setIconResource(R.drawable.ic_host)
+                    setText(R.string.host)
+                    isVisible = true
+                    isEnabled = true
+                }
+                cloudAnchorNode.isVisible = true
+            }
+            Mode.RESOLVE -> {
+                editText.isVisible = true
+                hostButton.isVisible = false
+                resolveButton.isVisible = false
+                actionButton.apply {
+                    setIconResource(R.drawable.ic_resolve)
+                    setText(R.string.resolve)
+                    isVisible = true
+                    isEnabled = editText.text.isNotEmpty()
                 }
             }
-        } else {
-            Log.d("DEBUG", "Resolved clicked but nothing hosted yet")
+            Mode.RESET -> {
+                editText.isVisible = true
+                actionButton.apply {
+                    setIconResource(R.drawable.ic_reset)
+                    setText(R.string.reset)
+                    isEnabled = true
+                }
+            }
         }
     }
 
+    private enum class Mode {
+        HOME, HOST, RESOLVE, RESET
+    }
+
+    companion object {
+        private const val TAG = "MainFragment"
+    }
 
 }
