@@ -143,10 +143,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                         selectMode(Mode.RESOLVE)
                     }
                 }
-
                 actionButton.setText(R.string.resolving)
+                actionButton.isEnabled = false
             }
             Mode.RESET -> {
+                cloudAnchorNode.anchor?.detach()
                 selectMode(Mode.HOME)
             }
         }
