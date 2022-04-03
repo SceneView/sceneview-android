@@ -70,29 +70,27 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             cloudAnchorNode.anchor = hitResult.createAnchor()
             cloudAnchorNode.parent = sceneView
             sceneView.addChild(cloudAnchorNode)
-            cloudAnchorNode.hostCloudAnchor(
-                1,
-                onRequestComplete = { anchor: Anchor, success: Boolean ->
-                    if (success) {
-                        if (cloudAnchorNode.anchor == anchor) {
-                            anchorId = anchor.cloudAnchorId
-                            cloudAnchorNode.parent = null
-                            cloudAnchorNode.anchor = null
-                            actionButton.visibility = View.VISIBLE
-                            Log.d("DEBUG", "Hosting success with id ${anchor.cloudAnchorId}")
-                        } else {
-                            Log.d(
-                                "DEBUG",
-                                "Hosting successful, but anchor != cloudAnchornode.anchor"
-                            )
-                        }
-                    } else {
+            cloudAnchorNode.hostCloudAnchor(1) { anchor: Anchor, success: Boolean ->
+                if (success) {
+                    if (cloudAnchorNode.anchor == anchor) {
+                        anchorId = anchor.cloudAnchorId
                         cloudAnchorNode.parent = null
                         cloudAnchorNode.anchor = null
-                        actionButton.visibility = View.GONE
-                        Log.d("DEBUG", "Hosting complete but unsuccessful")
+                        actionButton.visibility = View.VISIBLE
+                        Log.d("DEBUG", "Hosting success with id ${anchor.cloudAnchorId}")
+                    } else {
+                        Log.d(
+                            "DEBUG",
+                            "Hosting successful, but anchor != cloudAnchornode.anchor"
+                        )
                     }
-                })
+                } else {
+                    cloudAnchorNode.parent = null
+                    cloudAnchorNode.anchor = null
+                    actionButton.visibility = View.GONE
+                    Log.d("DEBUG", "Hosting complete but unsuccessful")
+                }
+            }
 
         }
     }
@@ -102,27 +100,25 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             actionButton.isEnabled = false
             actionButton.setText(R.string.resolving_object)
             Log.d("DEBUG", "Resolving clicked with id: $anchorId")
-            cloudAnchorNode.resolveCloudAnchor(
-                anchorId,
-                onRequestComplete = { anchor: Anchor, success: Boolean ->
-                    Log.d("DEBUG", "Resolve Completed")
-                    actionButton.isEnabled = true
-                    if (success) {
-                        if (cloudAnchorNode.anchor == anchor) {
-                            Log.d("DEBUG", "Resolve Success")
-                            cloudAnchorNode.anchor = anchor
-                            cloudAnchorNode.parent = sceneView
-                            sceneView.addChild(cloudAnchorNode)
-                        } else {
-                            Log.d(
-                                "DEBUG",
-                                "Resolved successful, but anchor != cloudAnchornode.anchor"
-                            )
-                        }
+            cloudAnchorNode.resolveCloudAnchor(anchorId) { anchor: Anchor, success: Boolean ->
+                Log.d("DEBUG", "Resolve Completed")
+                actionButton.isEnabled = true
+                if (success) {
+                    if (cloudAnchorNode.anchor == anchor) {
+                        Log.d("DEBUG", "Resolve Success")
+                        cloudAnchorNode.anchor = anchor
+                        cloudAnchorNode.parent = sceneView
+                        sceneView.addChild(cloudAnchorNode)
                     } else {
-                        Log.d("DEBUG", "Resolved complete but unsuccessful")
+                        Log.d(
+                            "DEBUG",
+                            "Resolved successful, but anchor != cloudAnchornode.anchor"
+                        )
                     }
-                })
+                } else {
+                    Log.d("DEBUG", "Resolved complete but unsuccessful")
+                }
+            }
         } else {
             Log.d("DEBUG", "Resolved clicked but nothing hosted yet")
         }
