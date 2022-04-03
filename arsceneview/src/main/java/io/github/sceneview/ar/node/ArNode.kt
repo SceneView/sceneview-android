@@ -67,9 +67,15 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
         }
 
     /**
+     * ### The current cloud anchor state of the [anchor].
+     */
+    val cloudAnchorState: CloudAnchorState
+        get() = anchor?.cloudAnchorState ?: CloudAnchorState.NONE
+
+    /**
      * ### Whether a Cloud Anchor is currently being hosted or resolved
      */
-    var requestInProgress = false
+    var cloudAnchorTaskInProgress = false
         private set
 
     /**
@@ -82,7 +88,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      */
     var onAnchorChanged: ((node: Node, anchor: Anchor?) -> Unit)? = null
 
-    private var onRequestComplete: ((anchor: Anchor, success: Boolean) -> Unit)? = null
+    private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
     /**
      * TODO : Doc
@@ -99,14 +105,12 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
             pose = anchor.pose
         }
 
-        if (requestInProgress) {
-            val state = anchor.cloudAnchorState
-
-            // Call the listener when the request completes successfully or with an error
-            if (state != CloudAnchorState.NONE && state != CloudAnchorState.TASK_IN_PROGRESS) {
-                requestInProgress = false
-                onRequestComplete?.invoke(anchor, state == CloudAnchorState.SUCCESS)
-                onRequestComplete = null
+        if (cloudAnchorTaskInProgress) {
+            // Call the listener when the task completes successfully or with an error
+            if (cloudAnchorState != CloudAnchorState.NONE && cloudAnchorState != CloudAnchorState.TASK_IN_PROGRESS) {
+                cloudAnchorTaskInProgress = false
+                onCloudAnchorTaskCompleted?.invoke(anchor, cloudAnchorState == CloudAnchorState.SUCCESS)
+                onCloudAnchorTaskCompleted = null
             }
         }
     }
@@ -173,16 +177,16 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * The [anchor] is replaced with a new anchor returned by [Session.hostCloudAnchorWithTtl].
      *
      * @param ttlDays The lifetime of the anchor in days. See [Session.hostCloudAnchorWithTtl] for more details.
-     * @param onRequestComplete Called when the request completes successfully or with an error.
+     * @param onTaskCompleted Called when the task completes successfully or with an error.
      */
-    fun hostCloudAnchor(ttlDays: Int = 1, onRequestComplete: (anchor: Anchor, success: Boolean) -> Unit) {
-        checkRequestState()
+    fun hostCloudAnchor(ttlDays: Int = 1, onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit) {
+        if (cloudAnchorTaskInProgress) throw IllegalStateException("The task is already in progress")
 
         if (anchor == null) throw IllegalStateException("The anchor shouldn't be null")
 
         anchor = arSession?.hostCloudAnchorWithTtl(anchor, ttlDays)
-        requestInProgress = true
-        this.onRequestComplete = onRequestComplete
+        cloudAnchorTaskInProgress = true
+        onCloudAnchorTaskCompleted = onTaskCompleted
     }
 
     /**
@@ -191,30 +195,26 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * The [anchor] is replaced with a new anchor returned by [Session.resolveCloudAnchor].
      *
      * @param cloudAnchorId The Cloud Anchor ID of the Cloud Anchor.
-     * @param onRequestComplete Called when the request completes successfully or with an error.
+     * @param onTaskCompleted Called when the task completes successfully or with an error.
      */
-    fun resolveCloudAnchor(cloudAnchorId: String, onRequestComplete: (anchor: Anchor, success: Boolean) -> Unit) {
-        checkRequestState()
+    fun resolveCloudAnchor(cloudAnchorId: String, onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit) {
+        if (cloudAnchorTaskInProgress) throw IllegalStateException("The task is already in progress")
 
         anchor = arSession?.resolveCloudAnchor(cloudAnchorId)
-        requestInProgress = true
-        this.onRequestComplete = onRequestComplete
-    }
-
-    private fun checkRequestState() {
-        if (requestInProgress) throw IllegalStateException("The request is already in progress")
+        cloudAnchorTaskInProgress = true
+        onCloudAnchorTaskCompleted = onTaskCompleted
     }
 
     /**
-     * ### Cancels a resolve request
+     * ### Cancels a resolve task
      *
-     * The [anchor] is detached to cancel the resolve request.
+     * The [anchor] is detached to cancel the resolve task.
      */
-    fun cancelResolveRequest() {
-        if (requestInProgress) {
+    fun cancelCloudAnchorResolveTask() {
+        if (cloudAnchorTaskInProgress) {
             anchor?.detach()
-            requestInProgress = false
-            onRequestComplete = null
+            cloudAnchorTaskInProgress = false
+            onCloudAnchorTaskCompleted = null
         }
     }
 
@@ -248,6 +248,9 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
         anchor?.detach()
         anchor = null
+
+        cloudAnchorTaskInProgress = false
+        onCloudAnchorTaskCompleted = null
     }
 
     //TODO : Move all those functions
