@@ -26,11 +26,13 @@ import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.EngineInstance
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
+import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.light.*
+import io.github.sceneview.math.toFloat3
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
@@ -98,8 +100,6 @@ open class SceneView @JvmOverloads constructor(
      */
     override val renderer by lazy { Renderer(this, camera) }
 
-    private val surfaceGestureDetector by lazy { SurfaceGestureDetector() }
-
     /**
      * ### The transformation system
      *
@@ -110,9 +110,17 @@ open class SceneView @JvmOverloads constructor(
     //    TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
     //}
 
-    open val gestureDetector: SceneGestureDetector by lazy { SceneGestureDetector(this) }
+    open val gestureListener: SceneGestureDetector.OnSceneGestureListener =
+        DefaultSceneGestureListener()
 
-    open val selectionVisualizer : SelectionVisualizer by lazy { FootprintSelectionVisualizer()}
+    open val gestureDetector: SceneGestureDetector by lazy {
+        SceneGestureDetector(
+            this,
+            listener = gestureListener
+        )
+    }
+
+    open val selectionVisualizer: SelectionVisualizer by lazy { FootprintSelectionVisualizer() }
 
     var nodeSelectorModel: ModelRenderable?
         get() = (selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable
@@ -313,23 +321,7 @@ open class SceneView @JvmOverloads constructor(
     override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
         // This makes sure that the view's onTouchListener is called.
         if (!super.onTouchEvent(motionEvent)) {
-            renderer.filamentView.pick(
-                motionEvent.x.roundToInt(),
-                motionEvent.y.roundToInt(),
-                pickingHandler
-            ) { pickResult ->
-                val pickedEntity = pickResult.renderable
-                val selectedNode = allChildren
-                    .mapNotNull { it as? ModelNode }
-                    .firstOrNull { modelNode ->
-                        modelNode.modelInstance?.let { modelInstance ->
-                            modelInstance.entity == pickedEntity ||
-                                    modelInstance.childEntities.contains(pickedEntity
-                            )
-                        } ?: false
-                    }
-                onTouchEvent(selectedNode, motionEvent)
-            }
+            gestureDetector.onTouchEvent(motionEvent)
             return true
         }
         return false
@@ -429,15 +421,14 @@ open class SceneView @JvmOverloads constructor(
      * @param pickHitResult represents the node that was touched
      * @param motionEvent   the motion event
      */
-    open fun onTouchEvent(selectedNode: Node?, motionEvent: MotionEvent) {
-        if (onTouchEvent?.invoke(selectedNode, motionEvent) != true) {
-            if (selectedNode != null) {
-                gestureDetector.onTouchNode(selectedNode)
-            } else {
-                gestureDetector.onTouchEvent(motionEvent)
-                surfaceGestureDetector.onTouchEvent(motionEvent)
-            }
+    open fun onSceneTouch(motionEvent: MotionEvent) {
+        if (onTouchEvent?.invoke(null, motionEvent) != true) {
+            gestureDetector.onTouchEvent(motionEvent)
         }
+    }
+
+    open fun onPickNode(selectedNode: ModelNode) {
+        gestureDetector.onTouchNode(selectedNode)
     }
 
     open fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
@@ -453,19 +444,6 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    inner class SurfaceGestureDetector : GestureDetector(context, OnGestureListener())
-
-    inner class OnGestureListener : GestureDetector.SimpleOnGestureListener() {
-        override fun onSingleTapUp(motionEvent: MotionEvent): Boolean {
-            onTouch(null, motionEvent)
-            return true
-        }
-
-        override fun onDown(e: MotionEvent): Boolean {
-            return true
-        }
-    }
-
     companion object {
         val defaultMainLight: Light by lazy {
             LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
@@ -475,6 +453,30 @@ open class SceneView @JvmOverloads constructor(
                 direction(0.28f, -0.6f, -0.76f)
                 castShadows(true)
             }.build()
+        }
+    }
+
+    open inner class DefaultSceneGestureListener : SceneGestureDetector.OnSceneGestureListener {
+        override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+            renderer.filamentView.pick(
+                e.x.roundToInt(),
+                e.y.roundToInt(),
+                pickingHandler
+            ) { pickResult ->
+                val pickedEntity = pickResult.renderable
+                val selectedNode = allChildren
+                    .mapNotNull { it as? ModelNode }
+                    .firstOrNull { modelNode ->
+                        modelNode.modelInstance?.let { modelInstance ->
+                            modelInstance.entity == pickedEntity ||
+                                    modelInstance.childEntities.contains(
+                                        pickedEntity
+                                    )
+                        } ?: false
+                    }
+                selectedNode?.let { onPickNode(it) }
+            }
+            return true
         }
     }
 }

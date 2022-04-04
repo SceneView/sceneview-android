@@ -38,6 +38,7 @@ open class ArNodeManipulator(
     }
 
     open fun scale(factor: Float): Boolean {
+        Log.d("Rotation", "Scale factor: $factor")
         val nodeToScale = currentNode?.takeIf { it.scaleEditable } ?: return false
         nodeToScale.scale = clamp(
             nodeToScale.scale + factor, 0.5f, 1.5f

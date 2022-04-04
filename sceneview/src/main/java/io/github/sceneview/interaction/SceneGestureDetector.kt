@@ -17,7 +17,7 @@ typealias FilamentGestureDetector = com.google.android.filament.utils.GestureDet
 open class SceneGestureDetector(
     sceneView: SceneView,
     listener: OnSceneGestureListener? = null,
-    cameraManipulator: Manipulator? = Manipulator.Builder()
+    val cameraManipulator: Manipulator? = Manipulator.Builder()
         .targetPosition(Node.DEFAULT_POSITION.x, Node.DEFAULT_POSITION.y, Node.DEFAULT_POSITION.z)
         .viewport(sceneView.width, sceneView.height)
         .build(Manipulator.Mode.ORBIT)
@@ -65,7 +65,7 @@ open class SceneGestureDetector(
         RotateGestureDetector.OnRotateGestureListener,
         ScaleGestureDetector.OnScaleGestureListener {
 
-        override fun onSingleTapUp(e: MotionEvent?): Boolean {
+        override fun onSingleTapUp(e: MotionEvent): Boolean {
             return false
         }
 
