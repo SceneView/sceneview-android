@@ -313,6 +313,13 @@ open class SceneView @JvmOverloads constructor(
             lifecycle.dispatchEvent<SceneLifecycleObserver> {
                 onFrame(frameTime)
             }
+            gestureDetector.cameraManipulator?.let {
+                val eye = FloatArray(3)
+                val target = FloatArray(3)
+                val up = FloatArray(3)
+                it.getLookAt(eye, target, up)
+                camera.transform = lookAt(eye.toFloat3(), target.toFloat3())
+            }
             onFrame?.invoke(frameTime)
         }
     }
