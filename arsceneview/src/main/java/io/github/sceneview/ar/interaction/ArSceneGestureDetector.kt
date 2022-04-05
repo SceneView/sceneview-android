@@ -14,14 +14,15 @@ class ArSceneGestureDetector(
 ) :
     SceneGestureDetector(sceneView, listener) {
     private val moveListener = object : MoveGestureDetector.OnMoveGestureListener {
-        override fun onMove(detector: MoveGestureDetector): Boolean {
-            val nodeManipulator = nodeManipulator ?: return listener?.onMove(detector) ?: false
+        override fun onMoveBegin(detector: MoveGestureDetector): Boolean {
+            val nodeManipulator = nodeManipulator ?: return listener?.onMoveBegin(detector) ?: false
+            if (!nodeManipulator.positionIsEditable) return false
             nodeManipulator.beginTransform()
             return true
         }
 
-        override fun onMoveBegin(detector: MoveGestureDetector): Boolean {
-            val nodeManipulator = nodeManipulator ?: return listener?.onMoveBegin(detector) ?: false
+        override fun onMove(detector: MoveGestureDetector): Boolean {
+            val nodeManipulator = nodeManipulator ?: return listener?.onMove(detector) ?: false
             val lastMotionEvent = detector.currentMotionEvent ?: return false
             nodeManipulator.continueTransform(lastMotionEvent.x, lastMotionEvent.y)
             return true
@@ -31,24 +32,29 @@ class ArSceneGestureDetector(
             nodeManipulator?.endTransform() ?: listener?.onMoveBegin(detector)
         }
     }
+
+    private var lastRotationAngle: Float = 0f
+
     private val rotateListener = object : RotateGestureDetector.OnRotateGestureListener {
         override fun onRotateBegin(detector: RotateGestureDetector): Boolean {
-            return nodeManipulator?.let { true } ?: listener?.onRotateBegin(detector) ?: false
+            return nodeManipulator?.beginRotate() ?: listener?.onRotateBegin(detector) ?: false
         }
 
         override fun onRotate(detector: RotateGestureDetector): Boolean {
             val nodeManipulator = nodeManipulator ?: return listener?.onRotate(detector) ?: false
-            nodeManipulator.rotate(detector.currentAngle)
-            return true
+            val diff = detector.currentAngle - lastRotationAngle
+            lastRotationAngle = detector.currentAngle
+            return nodeManipulator.rotate(diff)
         }
 
         override fun onRotateEnd(detector: RotateGestureDetector) {
+            lastRotationAngle = 0f
             if (nodeManipulator == null) listener?.onRotateEnd(detector)
         }
     }
     private val scaleListener = object : ScaleGestureDetector.OnScaleGestureListener {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            return nodeManipulator?.let { true } ?: listener?.onScaleBegin(detector) ?: false
+            return nodeManipulator?.beginScale() ?: listener?.onScaleBegin(detector) ?: false
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {

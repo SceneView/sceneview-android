@@ -90,7 +90,8 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
-    open val isEditable: Boolean = true
+    open val isEditable: Boolean
+        get() = editableTransforms.isNotEmpty()
     open var editableTransforms: Set<EditableTransform> = EditableTransform.ALL
 
     /**

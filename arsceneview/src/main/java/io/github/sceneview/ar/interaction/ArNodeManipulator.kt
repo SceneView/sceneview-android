@@ -29,24 +29,32 @@ open class ArNodeManipulator(
         oldCurrentNode?.let { selectionVisualizer.removeSelectionVisual(it) }
     }
 
-    open fun rotate(deltaDegree: Float) {
-        val nodeToRotate = currentNode?.takeIf { it.rotationEditable } ?: return
-        Log.d("Rotation", "Rotation delta: $deltaDegree")
+    open fun beginRotate(): Boolean = currentNode?.rotationEditable ?: false
+
+    open fun rotate(deltaDegree: Float): Boolean {
+        val nodeToRotate = currentNode?.takeIf { it.rotationEditable } ?: return false
+        Log.d(this::class.toString(), "Rotation delta: $deltaDegree")
         val rotationDelta =
             normalize(Quaternion.fromAxisAngle(Float3(0f, 1f, 0f), degrees(deltaDegree)))
         nodeToRotate.modelQuaternion = nodeToRotate.modelQuaternion * rotationDelta
+        return true
     }
 
+    open fun beginScale(): Boolean = currentNode?.scaleEditable ?: false
+
     open fun scale(factor: Float): Boolean {
-        Log.d("Rotation", "Scale factor: $factor")
+        Log.d(this::class.toString(), "Scale factor: $factor")
         val nodeToScale = currentNode?.takeIf { it.scaleEditable } ?: return false
-        nodeToScale.scale = clamp(
-            nodeToScale.scale + factor, 0.5f, 1.5f
+        val newScale = clamp(
+            nodeToScale.scale * factor, 0.5f, 1.5f
         )
+        nodeToScale.scale = newScale
         return true
     }
 
     protected var lastArHitResult: HitResult? = null
+
+    val positionIsEditable: Boolean = currentNode?.positionEditable ?: false
 
     open fun beginTransform() {
         lastArHitResult = null
