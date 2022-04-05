@@ -5,10 +5,7 @@ import com.google.ar.core.HitResult
 import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.depthEnabled
-import io.github.sceneview.ar.arcore.instantPlacementEnabled
-import io.github.sceneview.ar.arcore.isTracking
-import io.github.sceneview.ar.arcore.planeFindingEnabled
+import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.node.Node
@@ -18,6 +15,8 @@ open class ArNodeManipulator(
     protected val sceneView: ArSceneView
 ) {
     var currentNode: ArNode? = null
+    private var gestureInProgress = false
+
     protected open val selectionVisualizer: SelectionVisualizer
         get() = sceneView.selectionVisualizer
 
@@ -29,7 +28,11 @@ open class ArNodeManipulator(
         oldCurrentNode?.let { selectionVisualizer.removeSelectionVisual(it) }
     }
 
-    open fun beginRotate(): Boolean = currentNode?.rotationEditable ?: false
+    open fun beginRotate(): Boolean {
+        if (!(currentNode?.rotationEditable == true && !gestureInProgress)) return false
+        gestureInProgress = true
+        return true
+    }
 
     open fun rotate(deltaDegree: Float): Boolean {
         val nodeToRotate = currentNode?.takeIf { it.rotationEditable } ?: return false
@@ -40,7 +43,15 @@ open class ArNodeManipulator(
         return true
     }
 
-    open fun beginScale(): Boolean = currentNode?.scaleEditable ?: false
+    open fun endRotate() {
+        gestureInProgress = false
+    }
+
+    open fun beginScale(): Boolean {
+        if (!(currentNode?.scaleEditable == true && !gestureInProgress)) return false
+        gestureInProgress = true
+        return true
+    }
 
     open fun scale(factor: Float): Boolean {
         Log.d(this::class.toString(), "Scale factor: $factor")
@@ -52,14 +63,21 @@ open class ArNodeManipulator(
         return true
     }
 
+    open fun endScale() {
+        gestureInProgress = false
+    }
+
     protected var lastArHitResult: HitResult? = null
 
     val positionIsEditable: Boolean = currentNode?.positionEditable ?: false
 
-    open fun beginTransform() {
+    open fun beginTransform(): Boolean {
+        if (gestureInProgress) return false
+        gestureInProgress = true
         lastArHitResult = null
-        val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
+        val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return false
         nodeToTransform.detachAnchor()
+        return true
     }
 
     open fun continueTransform(x: Float, y: Float) {
@@ -75,7 +93,8 @@ open class ArNodeManipulator(
         )?.takeIf { it.isTracking }?.let { hitResult ->
             lastArHitResult = hitResult
             hitResult.hitPose?.let { hitPose ->
-                nodeToTransform.pose = hitPose
+                Log.d("Transform", "New pose")
+                nodeToTransform.smooth(hitPose.position, quaternion = hitPose.quaternion)
             }
         }
     }
@@ -84,8 +103,10 @@ open class ArNodeManipulator(
         val nodeToTransform = currentNode?.takeIf { it.positionEditable } ?: return
         lastArHitResult?.takeIf { it.trackable.trackingState == TrackingState.TRACKING }
             ?.let { hitResult ->
+                Log.d("Transform", "New anchor")
                 nodeToTransform.anchor = hitResult.createAnchor()
             }
+        gestureInProgress = false
     }
 
 }

@@ -17,8 +17,7 @@ class ArSceneGestureDetector(
         override fun onMoveBegin(detector: MoveGestureDetector): Boolean {
             val nodeManipulator = nodeManipulator ?: return listener?.onMoveBegin(detector) ?: false
             if (!nodeManipulator.positionIsEditable) return false
-            nodeManipulator.beginTransform()
-            return true
+            return nodeManipulator.beginTransform()
         }
 
         override fun onMove(detector: MoveGestureDetector): Boolean {
@@ -49,7 +48,7 @@ class ArSceneGestureDetector(
 
         override fun onRotateEnd(detector: RotateGestureDetector) {
             lastRotationAngle = 0f
-            if (nodeManipulator == null) listener?.onRotateEnd(detector)
+            nodeManipulator?.endRotate() ?: listener?.onRotateEnd(detector)
         }
     }
     private val scaleListener = object : ScaleGestureDetector.OnScaleGestureListener {
@@ -64,7 +63,7 @@ class ArSceneGestureDetector(
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
-            if (nodeManipulator == null) listener?.onScaleEnd(detector)
+            nodeManipulator?.endScale() ?: listener?.onScaleEnd(detector)
         }
     }
 

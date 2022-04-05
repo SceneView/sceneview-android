@@ -36,8 +36,8 @@ open class SceneGestureDetector(
     private val gestureDetectors : List<*> by lazy { listOfNotNull(
         gestureDetector,
         moveGestureDetector,
-        rotateGestureDetector,
         scaleGestureDetector,
+        rotateGestureDetector,
         filamentGestureDetector
     ) }
 

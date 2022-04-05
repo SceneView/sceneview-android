@@ -8,6 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
+import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.math.Position
 import io.github.sceneview.utils.doOnApplyWindowInsets
@@ -59,6 +60,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             onTrackingChanged = { _, isTracking, _ ->
                 actionButton.isGone = !isTracking
             }
+            editableTransforms = EditableTransform.ALL
         }
         sceneView.addChild(modelNode)
     }
