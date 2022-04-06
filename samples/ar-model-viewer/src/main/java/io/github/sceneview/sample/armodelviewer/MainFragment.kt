@@ -63,6 +63,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             editableTransforms = EditableTransform.ALL
         }
         sceneView.addChild(modelNode)
+        sceneView.gestureDetector.onTouchNode(modelNode)
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
