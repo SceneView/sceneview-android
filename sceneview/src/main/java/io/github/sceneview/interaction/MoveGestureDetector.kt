@@ -142,8 +142,8 @@ class MoveGestureDetector(
 
 
     fun onTouchEvent(event: MotionEvent): Boolean {
-        val consumed = gestureDetectorCompat.onTouchEvent(event)
-        if (!consumed && gestureInProgress) {
+        val result = gestureDetectorCompat.onTouchEvent(event)
+        if (gestureInProgress) {
             val action = event.actionMasked
             if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
                 listener.onMoveEnd(this)
@@ -151,6 +151,6 @@ class MoveGestureDetector(
                 return true
             }
         }
-        return consumed
+        return result
     }
 }
