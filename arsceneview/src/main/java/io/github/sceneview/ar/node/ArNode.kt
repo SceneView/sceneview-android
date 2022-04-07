@@ -1,6 +1,7 @@
 package io.github.sceneview.ar.node
 
 import com.google.ar.core.*
+import com.google.ar.core.Anchor.CloudAnchorState
 import com.google.ar.sceneform.math.Vector3
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.*
@@ -66,6 +67,18 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
         }
 
     /**
+     * ### The current cloud anchor state of the [anchor].
+     */
+    val cloudAnchorState: CloudAnchorState
+        get() = anchor?.cloudAnchorState ?: CloudAnchorState.NONE
+
+    /**
+     * ### Whether a Cloud Anchor is currently being hosted or resolved
+     */
+    var cloudAnchorTaskInProgress = false
+        private set
+
+    /**
      * TODO : Doc
      */
     var onTrackingChanged: ((node: ArNode, isTracking: Boolean, pose: Pose?) -> Unit)? = null
@@ -75,6 +88,8 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      */
     var onAnchorChanged: ((node: Node, anchor: Anchor?) -> Unit)? = null
 
+    private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
+
     /**
      * TODO : Doc
      */
@@ -83,9 +98,20 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     }
 
     override fun onArFrame(arFrame: ArFrame) {
+        val anchor = anchor ?: return
+
         // Update the anchor position if any
-        if (anchor?.trackingState == TrackingState.TRACKING) {
-            pose = anchor?.pose
+        if (anchor.trackingState == TrackingState.TRACKING) {
+            pose = anchor.pose
+        }
+
+        if (cloudAnchorTaskInProgress) {
+            // Call the listener when the task completes successfully or with an error
+            if (cloudAnchorState != CloudAnchorState.NONE && cloudAnchorState != CloudAnchorState.TASK_IN_PROGRESS) {
+                cloudAnchorTaskInProgress = false
+                onCloudAnchorTaskCompleted?.invoke(anchor, cloudAnchorState == CloudAnchorState.SUCCESS)
+                onCloudAnchorTaskCompleted = null
+            }
         }
     }
 
@@ -146,11 +172,58 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     }
 
     /**
+     * ### Hosts a Cloud Anchor based on the [anchor]
+     *
+     * The [anchor] is replaced with a new anchor returned by [Session.hostCloudAnchorWithTtl].
+     *
+     * @param ttlDays The lifetime of the anchor in days. See [Session.hostCloudAnchorWithTtl] for more details.
+     * @param onTaskCompleted Called when the task completes successfully or with an error.
+     */
+    fun hostCloudAnchor(ttlDays: Int = 1, onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit) {
+        if (cloudAnchorTaskInProgress) throw IllegalStateException("The task is already in progress")
+
+        if (anchor == null) throw IllegalStateException("The anchor shouldn't be null")
+
+        anchor = arSession?.hostCloudAnchorWithTtl(anchor, ttlDays)
+        cloudAnchorTaskInProgress = true
+        onCloudAnchorTaskCompleted = onTaskCompleted
+    }
+
+    /**
+     * ### Resolves a Cloud Anchor
+     *
+     * The [anchor] is replaced with a new anchor returned by [Session.resolveCloudAnchor].
+     *
+     * @param cloudAnchorId The Cloud Anchor ID of the Cloud Anchor.
+     * @param onTaskCompleted Called when the task completes successfully or with an error.
+     */
+    fun resolveCloudAnchor(cloudAnchorId: String, onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit) {
+        if (cloudAnchorTaskInProgress) throw IllegalStateException("The task is already in progress")
+
+        anchor = arSession?.resolveCloudAnchor(cloudAnchorId)
+        cloudAnchorTaskInProgress = true
+        onCloudAnchorTaskCompleted = onTaskCompleted
+    }
+
+    /**
+     * ### Cancels a resolve task
+     *
+     * The [anchor] is detached to cancel the resolve task.
+     */
+    fun cancelCloudAnchorResolveTask() {
+        if (cloudAnchorTaskInProgress) {
+            anchor?.detach()
+            cloudAnchorTaskInProgress = false
+            onCloudAnchorTaskCompleted = null
+        }
+    }
+
+    /**
      * ### Creates a new anchored Node at the actual worldPosition and worldRotation
      *
      * The returned node position and rotation will be fixed within camera movements.
      *
-     * See [hitTest] and [ArFrame.hitTests] for details.
+     * See [ArFrame.hitTest] and [ArFrame.hitTests] for details.
      *
      * Anchors incur ongoing processing overhead within ARCore.
      * To release unneeded anchors use [destroy].
@@ -175,6 +248,9 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
         anchor?.detach()
         anchor = null
+
+        cloudAnchorTaskInProgress = false
+        onCloudAnchorTaskCompleted = null
     }
 
     //TODO : Move all those functions
