@@ -2,10 +2,9 @@ package io.github.sceneview.interaction
 
 import android.content.Context
 import android.os.Handler
-import android.view.GestureDetector
 import android.view.MotionEvent
-import androidx.core.view.GestureDetectorCompat
 import io.github.sceneview.interaction.MoveGestureDetector.OnMoveGestureListener
+import kotlin.math.pow
 
 
 /**
@@ -25,44 +24,93 @@ import io.github.sceneview.interaction.MoveGestureDetector.OnMoveGestureListener
  * @param listener the listener invoked for all the callbacks, this must not be null
  * @param handler the handler to use for running deferred listener events
  */
+
+private const val MIN_DRAG_DISTANCE = 1000f
+
 class MoveGestureDetector(
     val context: Context,
-    var listener: OnMoveGestureListener,
-    var handler: Handler? = null
+    var listener: OnMoveGestureListener
 ) {
     private var gestureInProgress = false
+    private var detectionInProgress = false
 
-    private val moveListener = object: GestureDetector.SimpleOnGestureListener() {
-        override fun onScroll(
-            e1: MotionEvent,
-            e2: MotionEvent,
-            distanceX: Float,
-            distanceY: Float
-        ): Boolean {
-            if (!gestureInProgress) {
-                listener.onMoveBegin(this@MoveGestureDetector)
-                gestureInProgress = true
-            }
-            firstMotionEvent = e1
-            currentMotionEvent = e2
-
-            lastDistanceX = distanceX
-            lastDistanceY = distanceY
-
-            listener.onMove(this@MoveGestureDetector)
-
-            return true
-        }
-
-    }
-
-    private val gestureDetectorCompat = GestureDetectorCompat(context, moveListener, handler)
-
-    var lastDistanceX : Float? = null
-    var lastDistanceY : Float? = null
+    var lastDistanceX: Float? = null
+    var lastDistanceY: Float? = null
 
     var firstMotionEvent: MotionEvent? = null
+        private set
     var currentMotionEvent: MotionEvent? = null
+        private set
+
+    private fun update(event: MotionEvent) {
+        if (firstMotionEvent == null) {
+            firstMotionEvent = MotionEvent.obtain(event)
+        }
+        currentMotionEvent?.recycle()
+        currentMotionEvent = MotionEvent.obtain(event)
+
+        val firstEvent = firstMotionEvent ?: return
+        val lastEvent = currentMotionEvent ?: return
+        lastDistanceX = lastEvent.x - firstEvent.x
+        lastDistanceY = lastEvent.y - firstEvent.y
+    }
+
+    private fun reset() {
+        currentMotionEvent?.recycle()
+        currentMotionEvent = null
+        firstMotionEvent?.recycle()
+        firstMotionEvent = null
+        lastDistanceX = 0f
+        lastDistanceY = 0f
+        gestureInProgress = false
+        detectionInProgress = false
+    }
+
+    fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.pointerCount > 1) {
+            if (gestureInProgress || detectionInProgress) {
+                listener.onMoveEnd(this)
+                reset()
+                return true
+            }
+            return false
+        }
+        return if (gestureInProgress || detectionInProgress) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    update(event)
+                    if (detectionInProgress) {
+                        val distanceSquared =
+                            (lastDistanceX ?: 0f).pow(2) + (lastDistanceY ?: 0f).pow(2)
+                        if (distanceSquared >= MIN_DRAG_DISTANCE) {
+                            detectionInProgress = false
+                            gestureInProgress = true
+                            listener.onMoveBegin(this)
+                        } else {
+                            return false
+                        }
+                    }
+                    listener.onMove(this)
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
+                    reset()
+                    listener.onMoveEnd(this)
+                    true
+                }
+                else -> false
+            }
+        } else {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    update(event)
+                    detectionInProgress = true
+                    false
+                }
+                else -> false
+            }
+        }
+    }
 
     /**
      * ### The listener for receiving notifications when gestures occur
@@ -141,16 +189,4 @@ class MoveGestureDetector(
     }
 
 
-    fun onTouchEvent(event: MotionEvent): Boolean {
-        val result = gestureDetectorCompat.onTouchEvent(event)
-        if (gestureInProgress) {
-            val action = event.actionMasked
-            if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
-                listener.onMoveEnd(this)
-                gestureInProgress = false
-                return true
-            }
-        }
-        return result
-    }
 }

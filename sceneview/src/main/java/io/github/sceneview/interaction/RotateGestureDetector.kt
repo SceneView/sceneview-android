@@ -6,6 +6,8 @@ import android.util.DisplayMetrics
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import io.github.sceneview.interaction.RotateGestureDetector.OnRotateGestureListener
+import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -257,8 +259,6 @@ class RotateGestureDetector(
                         focusX = event.getX(0);
                         focusY = event.getY(0);
                         isSloppyGesture = true
-                    } else {
-                        isGestureInProgress = listener.onRotateBegin(this);
                     }
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -277,7 +277,11 @@ class RotateGestureDetector(
                             focusY = event.getY(0);
                         } else {
                             isSloppyGesture = false
-                            isGestureInProgress = listener.onRotateBegin(this);
+                        }
+                    } else {
+                        update(event)
+                        if (abs(currentAngle) >= 0.09f) {
+                            isGestureInProgress = listener.onRotateBegin(this)
                         }
                     }
                 }
