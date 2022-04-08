@@ -269,12 +269,12 @@ open class SceneView @JvmOverloads constructor(
     override fun onDestroy(owner: LifecycleOwner) {
         super.onDestroy(owner)
 
-        renderer.destroyAllResources()
         camera.destroy()
         environment?.destroy()
         environment = null
         mainLight?.destroy()
         mainLight = null
+        renderer.destroyAllResources()
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
