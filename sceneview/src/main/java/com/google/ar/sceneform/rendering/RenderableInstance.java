@@ -257,6 +257,10 @@ public class RenderableInstance implements AnimatableModel {
         return entity;
     }
 
+    public @Entity int[] getChildEntities() {
+        return filamentAsset!=null ? filamentAsset.getEntities() : new int[0];
+    }
+
     public @Entity
     int getRenderedEntity() {
         return (childEntity == 0) ? entity : childEntity;
