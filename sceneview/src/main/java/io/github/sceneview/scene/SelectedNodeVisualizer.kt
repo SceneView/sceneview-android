@@ -18,7 +18,7 @@ package io.github.sceneview.scene
 import io.github.sceneview.node.Node
 
 /** Interface to visual when a [io.github.sceneview.node.Node] is selected.  */
-interface SelectionVisualizer {
+interface SelectedNodeVisualizer {
     /** Adds a visual that indicates a [io.github.sceneview.node.Node] is currently selected.  */
     fun applySelectionVisual(node: Node)
 

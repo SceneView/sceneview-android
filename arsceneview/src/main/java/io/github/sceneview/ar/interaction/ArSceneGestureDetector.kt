@@ -15,20 +15,25 @@ class ArSceneGestureDetector(
     SceneGestureDetector(sceneView, listener) {
     private val moveListener = object : MoveGestureDetector.OnMoveGestureListener {
         override fun onMoveBegin(detector: MoveGestureDetector): Boolean {
-            val nodeManipulator = nodeManipulator ?: return listener?.onMoveBegin(detector) ?: false
-            if (!nodeManipulator.positionIsEditable) return false
-            return nodeManipulator.beginTransform()
+            val listenerResult = listener?.onMoveBegin(detector) ?: false
+            if (nodeManipulator?.positionIsEditable == true) return listenerResult
+            return listOfNotNull(nodeManipulator?.beginTransform(), listenerResult).any()
         }
 
         override fun onMove(detector: MoveGestureDetector): Boolean {
-            val nodeManipulator = nodeManipulator ?: return listener?.onMove(detector) ?: false
-            val lastMotionEvent = detector.currentMotionEvent ?: return false
-            nodeManipulator.continueTransform(lastMotionEvent.x, lastMotionEvent.y)
-            return true
+            val listenerResult = listener?.onMove(detector) ?: false
+            val lastMotionEvent = detector.currentMotionEvent ?: return listenerResult
+            return listOfNotNull(
+                nodeManipulator?.continueTransform(
+                    lastMotionEvent.x,
+                    lastMotionEvent.y
+                ), listenerResult
+            ).any()
         }
 
         override fun onMoveEnd(detector: MoveGestureDetector) {
-            nodeManipulator?.endTransform() ?: listener?.onMoveBegin(detector)
+            listener?.onMoveEnd(detector)
+            nodeManipulator?.endTransform()
         }
     }
 
@@ -36,34 +41,43 @@ class ArSceneGestureDetector(
 
     private val rotateListener = object : RotateGestureDetector.OnRotateGestureListener {
         override fun onRotateBegin(detector: RotateGestureDetector): Boolean {
-            return nodeManipulator?.beginRotate() ?: listener?.onRotateBegin(detector) ?: false
+            return listOfNotNull(
+                nodeManipulator?.beginRotate(),
+                listener?.onRotateBegin(detector)
+            ).any()
         }
 
         override fun onRotate(detector: RotateGestureDetector): Boolean {
-            val nodeManipulator = nodeManipulator ?: return listener?.onRotate(detector) ?: false
+            val listenerResult = listener?.onRotate(detector) ?: false
             val diff = detector.currentAngle - lastRotationAngle
             lastRotationAngle = detector.currentAngle
-            return nodeManipulator.rotate(diff)
+            return listOfNotNull(nodeManipulator?.rotate(diff), listenerResult).any()
         }
 
         override fun onRotateEnd(detector: RotateGestureDetector) {
             lastRotationAngle = 0f
-            nodeManipulator?.endRotate() ?: listener?.onRotateEnd(detector)
+            listener?.onRotateEnd(detector)
+            nodeManipulator?.endRotate()
         }
     }
     private val scaleListener = object : ScaleGestureDetector.OnScaleGestureListener {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            return nodeManipulator?.beginScale() ?: listener?.onScaleBegin(detector) ?: false
+            return listOfNotNull(
+                nodeManipulator?.beginScale(),
+                listener?.onScaleBegin(detector)
+            ).any()
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            val nodeManipulator = nodeManipulator ?: return listener?.onScale(detector) ?: false
-            nodeManipulator.scale(detector.scaleFactor)
-            return true
+            return listOfNotNull(
+                listener?.onScale(detector),
+                nodeManipulator?.scale(detector.scaleFactor)
+            ).any()
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
-            nodeManipulator?.endScale() ?: listener?.onScaleEnd(detector)
+            listener?.onScaleEnd(detector)
+            nodeManipulator?.endScale()
         }
     }
 

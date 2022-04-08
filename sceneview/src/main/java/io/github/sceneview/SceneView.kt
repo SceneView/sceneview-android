@@ -37,8 +37,8 @@ import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
-import io.github.sceneview.scene.FootprintSelectionVisualizer
-import io.github.sceneview.scene.SelectionVisualizer
+import io.github.sceneview.scene.MarkerSelectedNodeVisualizer
+import io.github.sceneview.scene.SelectedNodeVisualizer
 import io.github.sceneview.utils.*
 import kotlin.math.roundToInt
 
@@ -120,12 +120,12 @@ open class SceneView @JvmOverloads constructor(
         )
     }
 
-    open val selectionVisualizer: SelectionVisualizer by lazy { FootprintSelectionVisualizer() }
+    open val selectedNodeVisualizer: SelectedNodeVisualizer by lazy { MarkerSelectedNodeVisualizer() }
 
     var nodeSelectorModel: ModelRenderable?
-        get() = (selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable
+        get() = (selectedNodeVisualizer as? MarkerSelectedNodeVisualizer)?.markerRenderable
         set(value) {
-            (selectionVisualizer as? FootprintSelectionVisualizer)?.footprintRenderable =
+            (selectedNodeVisualizer as? MarkerSelectedNodeVisualizer)?.markerRenderable =
                 value
         }
 

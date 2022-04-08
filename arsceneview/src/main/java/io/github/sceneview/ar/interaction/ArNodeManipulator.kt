@@ -8,7 +8,7 @@ import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.node.Node
-import io.github.sceneview.scene.SelectionVisualizer
+import io.github.sceneview.scene.SelectedNodeVisualizer
 
 open class ArNodeManipulator(
     protected val sceneView: ArSceneView
@@ -16,15 +16,15 @@ open class ArNodeManipulator(
     var currentNode: ArNode? = null
     private var currentGesture: EditableTransform? = null
 
-    protected open val selectionVisualizer: SelectionVisualizer
-        get() = sceneView.selectionVisualizer
+    protected open val selectedNodeVisualizer: SelectedNodeVisualizer
+        get() = sceneView.selectedNodeVisualizer
 
     open fun onNodeTouch(node: Node) {
         val oldCurrentNode = currentNode
         currentNode = node as? ArNode
         if (oldCurrentNode == currentNode) return
-        currentNode?.let { selectionVisualizer.applySelectionVisual(it) }
-        oldCurrentNode?.let { selectionVisualizer.removeSelectionVisual(it) }
+        currentNode?.let { selectedNodeVisualizer.applySelectionVisual(it) }
+        oldCurrentNode?.let { selectedNodeVisualizer.removeSelectionVisual(it) }
     }
 
     open fun beginRotate(): Boolean {

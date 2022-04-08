@@ -23,23 +23,23 @@ import io.github.sceneview.node.Node
  * Visualizes that a [Node] is selected by rendering a footprint for the
  * selected node.
  */
-class FootprintSelectionVisualizer : SelectionVisualizer {
-    private val footprintNode: ModelNode = ModelNode()
-    var footprintRenderable: ModelRenderable? = null
+class MarkerSelectedNodeVisualizer : SelectedNodeVisualizer {
+    private val markerNode: ModelNode = ModelNode()
+    var markerRenderable: ModelRenderable? = null
         set(newValue) {
             val copyRenderable = newValue?.makeCopy()
             copyRenderable?.let {
-                footprintNode.setModel(it)
+                markerNode.setModel(it)
                 copyRenderable.collisionShape = null
             }
             field = copyRenderable
         }
 
     override fun applySelectionVisual(node: Node) {
-        footprintNode.parent = node
+        markerNode.parent = node
     }
 
     override fun removeSelectionVisual(node: Node) {
-        footprintNode.parent = null
+        markerNode.parent = null
     }
 }
