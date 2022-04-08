@@ -43,8 +43,9 @@ open class ArNodeManipulator(
             true
         }
 
-    open fun endRotate() {
+    open fun endRotate() = runIfCurrentGestureIs(EditableTransform.ROTATION) {
         currentGesture = null
+        true
     }
 
     open fun beginScale(): Boolean {
@@ -62,8 +63,9 @@ open class ArNodeManipulator(
         true
     }
 
-    open fun endScale() {
+    open fun endScale() = runIfCurrentGestureIs(EditableTransform.SCALE) {
         currentGesture = null
+        true
     }
 
     protected var lastArHitResult: HitResult? = null

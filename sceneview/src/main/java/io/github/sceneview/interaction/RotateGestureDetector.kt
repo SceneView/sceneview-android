@@ -2,12 +2,8 @@ package io.github.sceneview.interaction
 
 import android.content.Context
 import android.os.Handler
-import android.util.DisplayMetrics
 import android.view.MotionEvent
-import android.view.ViewConfiguration
 import io.github.sceneview.interaction.RotateGestureDetector.OnRotateGestureListener
-import kotlin.math.abs
-import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -152,24 +148,6 @@ class RotateGestureDetector(
     private var currentFingerDiffX: Float? = null
     private var currentFingerDiffY: Float? = null
 
-
-    /**
-     * ### The current distance in pixels between the two pointers forming the gesture in progress
-     */
-    var currentSlope: Float? = null
-
-    /**
-     * ### The previous distance in pixels between the two pointers forming the gesture in progress
-     */
-    var previousSlope: Float? = null
-
-    private val edgeSlop = ViewConfiguration.get(context).scaledEdgeSlop
-
-    var rightSlopEdge: Int? = null
-    var bottomSlopEdge: Int? = null
-    var isSloppyGesture = false
-        private set
-
     /**
      * ### The current distance in pixels between the two pointers forming the gesture in progress
      */
@@ -212,6 +190,8 @@ class RotateGestureDetector(
     var timeDelta: Long? = null
         private set
 
+    var tentativeFirstRotateEvent: MotionEvent? = null
+
     /**
      * ### Accepts MotionEvents and dispatches events to a [OnRotateGestureListener] when
      * appropriate
@@ -228,71 +208,22 @@ class RotateGestureDetector(
         val actionCode = event.action and MotionEvent.ACTION_MASK
         if (!isGestureInProgress) {
             when (actionCode) {
-                MotionEvent.ACTION_POINTER_DOWN -> {
-                    // As orientation can change, query the metrics in touch down
-                    val metrics: DisplayMetrics = context.resources.displayMetrics
-                    rightSlopEdge = metrics.widthPixels - edgeSlop
-                    bottomSlopEdge = metrics.heightPixels - edgeSlop
-
-                    // At least the second finger is on screen now
-                    reset() // In case we missed an UP/CANCEL event
-                    previousEvent = MotionEvent.obtain(event)
-                    timeDelta = 0
-
-                    update(event)
-
-                    // Check if we have a sloppy gesture. If so, delay
-                    // the beginning of the gesture until we're sure that's
-                    // what the user wanted. Sloppy gestures can happen if the
-                    // edge of the user's hand is touching the screen, for example.
-                    val (p0sloppy, p1sloppy) = isSloppyGesture(event)
-
-                    if (p0sloppy && p1sloppy) {
-                        focusX = null
-                        focusY = null
-                        isSloppyGesture = true
-                    } else if (p0sloppy) {
-                        focusX = event.getX(1);
-                        focusY = event.getY(1);
-                        isSloppyGesture = true
-                    } else if (p1sloppy) {
-                        focusX = event.getX(0);
-                        focusY = event.getY(0);
-                        isSloppyGesture = true
-                    }
-                }
                 MotionEvent.ACTION_MOVE -> {
-                    if (isSloppyGesture) {
-                        // See if we still have a sloppy gesture
-                        val (p0sloppy, p1sloppy) = isSloppyGesture(event)
-
-                        if (p0sloppy && p1sloppy) {
-                            focusX = null
-                            focusY = null
-                        } else if (p0sloppy) {
-                            focusX = event.getX(1);
-                            focusY = event.getY(1);
-                        } else if (p1sloppy) {
-                            focusX = event.getX(0);
-                            focusY = event.getY(0);
-                        } else {
-                            isSloppyGesture = false
-                        }
-                    } else {
-                        update(event)
-                        if (abs(currentAngle) >= 0.09f) {
-                            isGestureInProgress = listener.onRotateBegin(this)
-                        }
+                    if (event.pointerCount != 2) return false
+                    if (tentativeFirstRotateEvent == null) {
+                        tentativeFirstRotateEvent = MotionEvent.obtain(event)
+                        return false
+                    }
+                    previousEvent = tentativeFirstRotateEvent
+                    update(event)
+                    if (currentAngle > 0.1) {
+                        listener.onRotateBegin(this)
+                        tentativeFirstRotateEvent?.recycle()
+                        tentativeFirstRotateEvent = null
+                        isGestureInProgress = true
                     }
                 }
-                MotionEvent.ACTION_POINTER_UP -> if (isSloppyGesture) {
-                    /// Set focus point to the remaining finger
-                    val id = if ((event.action and MotionEvent.ACTION_POINTER_INDEX_MASK
-                                shr MotionEvent.ACTION_POINTER_INDEX_SHIFT) == 0
-                    ) 1 else 0
-                    focusX = event.getX(id)
-                    focusY = event.getY(id)
-                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> reset()
             }
         } else {
             when (actionCode) {
@@ -307,20 +238,21 @@ class RotateGestureDetector(
                     focusX = event.getX(id)
                     focusY = event.getY(id)
 
-                    if (!isSloppyGesture) {
-                        listener.onRotateEnd(this)
-                    }
+                    listener.onRotateEnd(this)
                     reset()
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    if (!isSloppyGesture) {
-                        listener.onRotateEnd(this)
-                    }
+                    listener.onRotateEnd(this)
                     reset()
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    update(event)
+                    if (event.pointerCount > 2) {
+                        listener.onRotateEnd(this)
+                        reset()
+                        return false
+                    }
 
+                    update(event)
                     // Only accept the event if our relative pressure is within
                     // a certain limit. This can help filter shaky data as a
                     // finger is lifted.
@@ -339,10 +271,6 @@ class RotateGestureDetector(
 
     private fun update(event: MotionEvent) {
         val previousEvent = previousEvent ?: return
-        if (event.pointerCount < 2) {
-            reset()
-            return
-        }
 
         // Reset mCurrEvent
         currentEvent?.recycle()
@@ -380,50 +308,9 @@ class RotateGestureDetector(
         previousEvent = null
         currentEvent?.recycle()
         currentEvent = null
-        isSloppyGesture = false
         isGestureInProgress = false
-    }
-
-    /**
-     * ### MotionEvent has no getRawX(int) method; simulate it pending future API approval
-     */
-    fun getRawX(event: MotionEvent, pointerIndex: Int): Float {
-        return if (pointerIndex < event.pointerCount) {
-            event.getX(pointerIndex) + (event.rawX - event.x)
-        } else 0f
-    }
-
-    /**
-     * ### MotionEvent has no getRawY(int) method; simulate it pending future API approval
-     */
-    fun getRawY(event: MotionEvent, pointerIndex: Int): Float {
-        return if (pointerIndex < event.pointerCount) {
-            event.getY(pointerIndex) + (event.rawY - event.y)
-        } else 0f
-    }
-
-    /**
-     * ### Check if we have a sloppy gesture
-     *
-     * Sloppy gestures can happen if the edge of the user's hand is touching the screen, for
-     * example.
-     */
-    protected fun isSloppyGesture(event: MotionEvent): Pair<Boolean, Boolean> {
-        // As orientation can change, query the metrics in touch down
-        val metrics: DisplayMetrics = context.resources.displayMetrics
-        rightSlopEdge = metrics.widthPixels - edgeSlop
-        bottomSlopEdge = metrics.heightPixels - edgeSlop
-        val x1 = getRawX(event, 1)
-        val y1 = getRawY(event, 1)
-        val p0sloppy = event.rawX < edgeSlop ||
-                event.rawY < edgeSlop ||
-                event.rawX > rightSlopEdge!! ||
-                event.rawY > bottomSlopEdge!!
-        val p1sloppy = x1 < edgeSlop ||
-                y1 < edgeSlop ||
-                x1 > rightSlopEdge!! ||
-                y1 > bottomSlopEdge!!
-        return p0sloppy to p1sloppy
+        tentativeFirstRotateEvent?.recycle()
+        tentativeFirstRotateEvent = null
     }
 
     companion object {
