@@ -218,7 +218,6 @@ class RotateGestureDetector(
                     update(event)
                     if (currentAngle > 0.1) {
                         listener.onRotateBegin(this)
-                        tentativeFirstRotateEvent?.recycle()
                         tentativeFirstRotateEvent = null
                         isGestureInProgress = true
                     }
@@ -309,7 +308,6 @@ class RotateGestureDetector(
         currentEvent?.recycle()
         currentEvent = null
         isGestureInProgress = false
-        tentativeFirstRotateEvent?.recycle()
         tentativeFirstRotateEvent = null
     }
 
