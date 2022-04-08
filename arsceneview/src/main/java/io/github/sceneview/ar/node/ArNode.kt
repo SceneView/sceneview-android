@@ -90,6 +90,32 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
+    open val isEditable: Boolean
+        get() = editableTransforms.isNotEmpty()
+    open var editableTransforms: Set<EditableTransform> = EditableTransform.ALL
+
+    /**
+     * ### How/where does the node is positioned in the real world
+     *
+     * Depending on your need, you can change it to adjust between a quick
+     * ([PlacementMode.INSTANT]), more accurate ([PlacementMode.DEPTH]), only on planes/walls
+     * ([PlacementMode.PLANE_HORIZONTAL], [PlacementMode.PLANE_VERTICAL],
+     * [PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL]) or auto refining accuracy
+     * ([PlacementMode.BEST_AVAILABLE]) placement.
+     * The [hitTest], [pose] and [anchor] will be influenced by this choice.
+     */
+    var placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE
+        set(value) {
+            field = value
+            doOnAttachedToScene { sceneView ->
+                (sceneView as? ArSceneView)?.apply {
+                    planeFindingMode = value.planeFindingMode
+                    depthEnabled = value.depthEnabled
+                    instantPlacementEnabled = value.instantPlacementEnabled
+                }
+            }
+        }
+
     /**
      * TODO : Doc
      */
@@ -310,4 +336,25 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     /** ### Gets the world-space down direction vector (-y) of this node */
 //    val worldDown get() = localToWorldDirection(Vector3.down())
+
+    override fun clone() = copy(ArNode())
+
+    fun copy(toNode: ArNode = ArNode()) = toNode.apply {
+        super.copy(toNode)
+
+        placementMode = this@ArNode.placementMode
+    }
+
+    companion object {
+        val DEFAULT_PLACEMENT_MODE = PlacementMode.BEST_AVAILABLE
+    }
+}
+
+enum class EditableTransform {
+    POSITION, ROTATION, SCALE;
+
+    companion object {
+        val ALL = setOf(POSITION, ROTATION, SCALE)
+        val NONE = setOf<EditableTransform>()
+    }
 }

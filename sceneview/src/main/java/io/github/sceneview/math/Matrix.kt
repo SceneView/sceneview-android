@@ -18,16 +18,23 @@
 
 package dev.romainguy.kotlin.math
 
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.math.tan
 
 enum class MatrixColumn {
     X, Y, Z, W
 }
 
 enum class RotationsOrder(
-        val yaw: VectorComponent,
-        val pitch: VectorComponent,
-        val roll: VectorComponent) {
+    val yaw: VectorComponent,
+    val pitch: VectorComponent,
+    val roll: VectorComponent
+) {
     XYZ(VectorComponent.X, VectorComponent.Y, VectorComponent.Z),
     XZY(VectorComponent.X, VectorComponent.Z, VectorComponent.Y),
     YXZ(VectorComponent.Y, VectorComponent.X, VectorComponent.Z),
@@ -37,16 +44,17 @@ enum class RotationsOrder(
 }
 
 data class Mat2(
-        var x: Float2 = Float2(x = 1.0f),
-        var y: Float2 = Float2(y = 1.0f)) {
+    var x: Float2 = Float2(x = 1.0f),
+    var y: Float2 = Float2(y = 1.0f)
+) {
     constructor(m: Mat2) : this(m.x.copy(), m.y.copy())
 
     companion object {
         fun of(vararg a: Float): Mat2 {
             require(a.size >= 4)
             return Mat2(
-                    Float2(a[0], a[2]),
-                    Float2(a[1], a[3])
+                Float2(a[0], a[2]),
+                Float2(a[1], a[3])
             )
         }
 
@@ -58,6 +66,7 @@ data class Mat2(
         1 -> y
         else -> throw IllegalArgumentException("column must be in 0..1")
     }
+
     operator fun get(column: Int, row: Int) = get(column)[row]
 
     operator fun get(column: MatrixColumn) = when (column) {
@@ -65,6 +74,7 @@ data class Mat2(
         MatrixColumn.Y -> y
         else -> throw IllegalArgumentException("column must be X or Y")
     }
+
     operator fun get(column: MatrixColumn, row: Int) = get(column)[row]
 
     operator fun invoke(row: Int, column: Int) = get(column - 1)[row - 1]
@@ -73,6 +83,7 @@ data class Mat2(
     operator fun set(column: Int, v: Float2) {
         this[column].xy = v
     }
+
     operator fun set(column: Int, row: Int, v: Float) {
         this[column][row] = v
     }
@@ -87,25 +98,24 @@ data class Mat2(
     operator fun div(v: Float) = Mat2(x / v, y / v)
 
     operator fun times(m: Mat2) = Mat2(
-            Float2(
-                    x.x * m.x.x + y.x * m.x.y,
-                    x.y * m.x.x + y.y * m.x.y,
-            ),
-            Float2(
-                    x.x * m.y.x + y.x * m.y.y,
-                    x.y * m.y.x + y.y * m.y.y,
-            )
+        Float2(
+            x.x * m.x.x + y.x * m.x.y,
+            x.y * m.x.x + y.y * m.x.y,
+        ),
+        Float2(
+            x.x * m.y.x + y.x * m.y.y,
+            x.y * m.y.x + y.y * m.y.y,
+        )
     )
 
     operator fun times(v: Float2) = Float2(
-            x.x * v.x + y.x * v.y,
-            x.y * v.x + y.y * v.y,
+        x.x * v.x + y.x * v.y,
+        x.y * v.x + y.y * v.y,
     )
 
-
     fun toFloatArray() = floatArrayOf(
-            x.x, y.x,
-            x.y, y.y
+        x.x, y.x,
+        x.y, y.y
     )
 
     override fun toString(): String {
@@ -114,22 +124,22 @@ data class Mat2(
             |${x.y} ${y.y}|
             """.trimIndent()
     }
-
 }
 
 data class Mat3(
-        var x: Float3 = Float3(x = 1.0f),
-        var y: Float3 = Float3(y = 1.0f),
-        var z: Float3 = Float3(z = 1.0f)) {
+    var x: Float3 = Float3(x = 1.0f),
+    var y: Float3 = Float3(y = 1.0f),
+    var z: Float3 = Float3(z = 1.0f)
+) {
     constructor(m: Mat3) : this(m.x.copy(), m.y.copy(), m.z.copy())
 
     companion object {
         fun of(vararg a: Float): Mat3 {
             require(a.size >= 9)
             return Mat3(
-                    Float3(a[0], a[3], a[6]),
-                    Float3(a[1], a[4], a[7]),
-                    Float3(a[2], a[5], a[8])
+                Float3(a[0], a[3], a[6]),
+                Float3(a[1], a[4], a[7]),
+                Float3(a[2], a[5], a[8])
             )
         }
 
@@ -142,6 +152,7 @@ data class Mat3(
         2 -> z
         else -> throw IllegalArgumentException("column must be in 0..2")
     }
+
     operator fun get(column: Int, row: Int) = get(column)[row]
 
     operator fun get(column: MatrixColumn) = when (column) {
@@ -150,6 +161,7 @@ data class Mat3(
         MatrixColumn.Z -> z
         else -> throw IllegalArgumentException("column must be X, Y or Z")
     }
+
     operator fun get(column: MatrixColumn, row: Int) = get(column)[row]
 
     operator fun invoke(row: Int, column: Int) = get(column - 1)[row - 1]
@@ -158,6 +170,7 @@ data class Mat3(
     operator fun set(column: Int, v: Float3) {
         this[column].xyz = v
     }
+
     operator fun set(column: Int, row: Int, v: Float) {
         this[column][row] = v
     }
@@ -172,33 +185,33 @@ data class Mat3(
     operator fun div(v: Float) = Mat3(x / v, y / v, z / v)
 
     operator fun times(m: Mat3) = Mat3(
-            Float3(
-                    x.x * m.x.x + y.x * m.x.y + z.x * m.x.z,
-                    x.y * m.x.x + y.y * m.x.y + z.y * m.x.z,
-                    x.z * m.x.x + y.z * m.x.y + z.z * m.x.z,
-            ),
-            Float3(
-                    x.x * m.y.x + y.x * m.y.y + z.x * m.y.z,
-                    x.y * m.y.x + y.y * m.y.y + z.y * m.y.z,
-                    x.z * m.y.x + y.z * m.y.y + z.z * m.y.z,
-            ),
-            Float3(
-                    x.x * m.z.x + y.x * m.z.y + z.x * m.z.z,
-                    x.y * m.z.x + y.y * m.z.y + z.y * m.z.z,
-                    x.z * m.z.x + y.z * m.z.y + z.z * m.z.z,
-            )
+        Float3(
+            x.x * m.x.x + y.x * m.x.y + z.x * m.x.z,
+            x.y * m.x.x + y.y * m.x.y + z.y * m.x.z,
+            x.z * m.x.x + y.z * m.x.y + z.z * m.x.z,
+        ),
+        Float3(
+            x.x * m.y.x + y.x * m.y.y + z.x * m.y.z,
+            x.y * m.y.x + y.y * m.y.y + z.y * m.y.z,
+            x.z * m.y.x + y.z * m.y.y + z.z * m.y.z,
+        ),
+        Float3(
+            x.x * m.z.x + y.x * m.z.y + z.x * m.z.z,
+            x.y * m.z.x + y.y * m.z.y + z.y * m.z.z,
+            x.z * m.z.x + y.z * m.z.y + z.z * m.z.z,
+        )
     )
 
     operator fun times(v: Float3) = Float3(
-            x.x * v.x + y.x * v.y + z.x * v.z,
-            x.y * v.x + y.y * v.y + z.y * v.z,
-            x.z * v.x + y.z * v.y + z.z * v.z,
+        x.x * v.x + y.x * v.y + z.x * v.z,
+        x.y * v.x + y.y * v.y + z.y * v.z,
+        x.z * v.x + y.z * v.y + z.z * v.z,
     )
 
     fun toFloatArray() = floatArrayOf(
-            x.x, y.x, z.x,
-            x.y, y.y, z.y,
-            x.z, y.z, z.z
+        x.x, y.x, z.x,
+        x.y, y.y, z.y,
+        x.z, y.z, z.z
     )
 
     override fun toString(): String {
@@ -211,12 +224,14 @@ data class Mat3(
 }
 
 data class Mat4(
-        var x: Float4 = Float4(x = 1.0f),
-        var y: Float4 = Float4(y = 1.0f),
-        var z: Float4 = Float4(z = 1.0f),
-        var w: Float4 = Float4(w = 1.0f)) {
+    var x: Float4 = Float4(x = 1.0f),
+    var y: Float4 = Float4(y = 1.0f),
+    var z: Float4 = Float4(z = 1.0f),
+    var w: Float4 = Float4(w = 1.0f)
+) {
     constructor(right: Float3, up: Float3, forward: Float3, position: Float3 = Float3()) :
-            this(Float4(right), Float4(up), Float4(forward), Float4(position, 1.0f))
+        this(Float4(right), Float4(up), Float4(forward), Float4(position, 1.0f))
+
     constructor(m: Mat4) : this(m.x.copy(), m.y.copy(), m.z.copy(), m.w.copy())
 
     companion object {
@@ -224,10 +239,10 @@ data class Mat4(
         fun of(vararg a: Float): Mat4 {
             require(a.size >= 16)
             return Mat4(
-                    Float4(a[0], a[4], a[8],  a[12]),
-                    Float4(a[1], a[5], a[9],  a[13]),
-                    Float4(a[2], a[6], a[10], a[14]),
-                    Float4(a[3], a[7], a[11], a[15])
+                Float4(a[0], a[4], a[8], a[12]),
+                Float4(a[1], a[5], a[9], a[13]),
+                Float4(a[2], a[6], a[10], a[14]),
+                Float4(a[3], a[7], a[11], a[15])
             )
         }
 
@@ -266,10 +281,11 @@ data class Mat4(
             val z = normalize(forward)
 
             return when {
-                z.y <= -1.0f -> Float3(degrees(-HALF_PI), 0.0f, degrees(atan2( x.z,  y.z)))
-                z.y >=  1.0f -> Float3(degrees( HALF_PI), 0.0f, degrees(atan2(-x.z, -y.z)))
+                z.y <= -1.0f -> Float3(degrees(-HALF_PI), 0.0f, degrees(atan2(x.z, y.z)))
+                z.y >= 1.0f -> Float3(degrees(HALF_PI), 0.0f, degrees(atan2(-x.z, -y.z)))
                 else -> Float3(
-                        degrees(-asin(z.y)), degrees(-atan2(z.x, z.z)), degrees(atan2( x.y,  y.y)))
+                    degrees(-asin(z.y)), degrees(-atan2(z.x, z.z)), degrees(atan2(x.y, y.y))
+                )
             }
         }
 
@@ -283,6 +299,7 @@ data class Mat4(
         3 -> w
         else -> throw IllegalArgumentException("column must be in 0..3")
     }
+
     operator fun get(column: Int, row: Int) = get(column)[row]
 
     operator fun get(column: MatrixColumn) = when (column) {
@@ -291,6 +308,7 @@ data class Mat4(
         MatrixColumn.Z -> z
         MatrixColumn.W -> w
     }
+
     operator fun get(column: MatrixColumn, row: Int) = get(column)[row]
 
     operator fun invoke(row: Int, column: Int) = get(column - 1)[row - 1]
@@ -299,6 +317,7 @@ data class Mat4(
     operator fun set(column: Int, v: Float4) {
         this[column].xyzw = v
     }
+
     operator fun set(column: Int, row: Int, v: Float) {
         this[column][row] = v
     }
@@ -313,37 +332,37 @@ data class Mat4(
     operator fun div(v: Float) = Mat4(x / v, y / v, z / v, w / v)
 
     operator fun times(m: Mat4) = Mat4(
-            Float4(
-                    x.x * m.x.x + y.x * m.x.y + z.x * m.x.z + w.x * m.x.w,
-                    x.y * m.x.x + y.y * m.x.y + z.y * m.x.z + w.y * m.x.w,
-                    x.z * m.x.x + y.z * m.x.y + z.z * m.x.z + w.z * m.x.w,
-                    x.w * m.x.x + y.w * m.x.y + z.w * m.x.z + w.w * m.x.w,
-            ),
-            Float4(
-                    x.x * m.y.x + y.x * m.y.y + z.x * m.y.z + w.x * m.y.w,
-                    x.y * m.y.x + y.y * m.y.y + z.y * m.y.z + w.y * m.y.w,
-                    x.z * m.y.x + y.z * m.y.y + z.z * m.y.z + w.z * m.y.w,
-                    x.w * m.y.x + y.w * m.y.y + z.w * m.y.z + w.w * m.y.w,
-            ),
-            Float4(
-                    x.x * m.z.x + y.x * m.z.y + z.x * m.z.z + w.x * m.z.w,
-                    x.y * m.z.x + y.y * m.z.y + z.y * m.z.z + w.y * m.z.w,
-                    x.z * m.z.x + y.z * m.z.y + z.z * m.z.z + w.z * m.z.w,
-                    x.w * m.z.x + y.w * m.z.y + z.w * m.z.z + w.w * m.z.w,
-            ),
-            Float4(
-                    x.x * m.w.x + y.x * m.w.y + z.x * m.w.z + w.x * m.w.w,
-                    x.y * m.w.x + y.y * m.w.y + z.y * m.w.z + w.y * m.w.w,
-                    x.z * m.w.x + y.z * m.w.y + z.z * m.w.z + w.z * m.w.w,
-                    x.w * m.w.x + y.w * m.w.y + z.w * m.w.z + w.w * m.w.w,
-            )
+        Float4(
+            x.x * m.x.x + y.x * m.x.y + z.x * m.x.z + w.x * m.x.w,
+            x.y * m.x.x + y.y * m.x.y + z.y * m.x.z + w.y * m.x.w,
+            x.z * m.x.x + y.z * m.x.y + z.z * m.x.z + w.z * m.x.w,
+            x.w * m.x.x + y.w * m.x.y + z.w * m.x.z + w.w * m.x.w,
+        ),
+        Float4(
+            x.x * m.y.x + y.x * m.y.y + z.x * m.y.z + w.x * m.y.w,
+            x.y * m.y.x + y.y * m.y.y + z.y * m.y.z + w.y * m.y.w,
+            x.z * m.y.x + y.z * m.y.y + z.z * m.y.z + w.z * m.y.w,
+            x.w * m.y.x + y.w * m.y.y + z.w * m.y.z + w.w * m.y.w,
+        ),
+        Float4(
+            x.x * m.z.x + y.x * m.z.y + z.x * m.z.z + w.x * m.z.w,
+            x.y * m.z.x + y.y * m.z.y + z.y * m.z.z + w.y * m.z.w,
+            x.z * m.z.x + y.z * m.z.y + z.z * m.z.z + w.z * m.z.w,
+            x.w * m.z.x + y.w * m.z.y + z.w * m.z.z + w.w * m.z.w,
+        ),
+        Float4(
+            x.x * m.w.x + y.x * m.w.y + z.x * m.w.z + w.x * m.w.w,
+            x.y * m.w.x + y.y * m.w.y + z.y * m.w.z + w.y * m.w.w,
+            x.z * m.w.x + y.z * m.w.y + z.z * m.w.z + w.z * m.w.w,
+            x.w * m.w.x + y.w * m.w.y + z.w * m.w.z + w.w * m.w.w,
+        )
     )
 
     operator fun times(v: Float4) = Float4(
-            x.x * v.x + y.x * v.y + z.x * v.z+ w.x * v.w,
-            x.y * v.x + y.y * v.y + z.y * v.z+ w.y * v.w,
-            x.z * v.x + y.z * v.y + z.z * v.z+ w.z * v.w,
-            x.w * v.x + y.w * v.y + z.w * v.z+ w.w * v.w
+        x.x * v.x + y.x * v.y + z.x * v.z + w.x * v.w,
+        x.y * v.x + y.y * v.y + z.y * v.z + w.y * v.w,
+        x.z * v.x + y.z * v.y + z.z * v.z + w.z * v.w,
+        x.w * v.x + y.w * v.y + z.w * v.z + w.w * v.w
     )
 
     /**
@@ -369,10 +388,10 @@ data class Mat4(
     fun toQuaternion() = quaternion(this)
 
     fun toFloatArray() = floatArrayOf(
-            x.x, y.x, z.x, w.x,
-            x.y, y.y, z.y, w.y,
-            x.z, y.z, z.z, w.z,
-            x.w, y.w, z.w, w.w
+        x.x, y.x, z.x, w.x,
+        x.y, y.y, z.y, w.y,
+        x.z, y.z, z.z, w.z,
+        x.w, y.w, z.w, w.w
     )
 
     override fun toString(): String {
@@ -386,14 +405,14 @@ data class Mat4(
 }
 
 fun transpose(m: Mat2) = Mat2(
-        Float2(m.x.x, m.y.x),
-        Float2(m.x.y, m.y.y)
+    Float2(m.x.x, m.y.x),
+    Float2(m.x.y, m.y.y)
 )
 
 fun transpose(m: Mat3) = Mat3(
-        Float3(m.x.x, m.y.x, m.z.x),
-        Float3(m.x.y, m.y.y, m.z.y),
-        Float3(m.x.z, m.y.z, m.z.z)
+    Float3(m.x.x, m.y.x, m.z.x),
+    Float3(m.x.y, m.y.y, m.z.y),
+    Float3(m.x.z, m.y.z, m.z.z)
 )
 
 @Suppress("LocalVariableName")
@@ -415,50 +434,50 @@ fun inverse(m: Mat3): Mat3 {
     val det = a * A + b * B + c * C
 
     return Mat3.of(
-            A / det, B / det, C / det,
-            (c * h - b * i) / det, (a * i - c * g) / det, (b * g - a * h) / det,
-            (b * f - c * e) / det, (c * d - a * f) / det, (a * e - b * d) / det
+        A / det, B / det, C / det,
+        (c * h - b * i) / det, (a * i - c * g) / det, (b * g - a * h) / det,
+        (b * f - c * e) / det, (c * d - a * f) / det, (a * e - b * d) / det
     )
 }
 
 fun transpose(m: Mat4) = Mat4(
-        Float4(m.x.x, m.y.x, m.z.x, m.w.x),
-        Float4(m.x.y, m.y.y, m.z.y, m.w.y),
-        Float4(m.x.z, m.y.z, m.z.z, m.w.z),
-        Float4(m.x.w, m.y.w, m.z.w, m.w.w)
+    Float4(m.x.x, m.y.x, m.z.x, m.w.x),
+    Float4(m.x.y, m.y.y, m.z.y, m.w.y),
+    Float4(m.x.z, m.y.z, m.z.z, m.w.z),
+    Float4(m.x.w, m.y.w, m.z.w, m.w.w)
 )
 
 fun inverse(m: Mat4): Mat4 {
     val result = Mat4()
 
-    var pair0  = m.z.z * m.w.w
-    var pair1  = m.w.z * m.z.w
-    var pair2  = m.y.z * m.w.w
-    var pair3  = m.w.z * m.y.w
-    var pair4  = m.y.z * m.z.w
-    var pair5  = m.z.z * m.y.w
-    var pair6  = m.x.z * m.w.w
-    var pair7  = m.w.z * m.x.w
-    var pair8  = m.x.z * m.z.w
-    var pair9  = m.z.z * m.x.w
+    var pair0 = m.z.z * m.w.w
+    var pair1 = m.w.z * m.z.w
+    var pair2 = m.y.z * m.w.w
+    var pair3 = m.w.z * m.y.w
+    var pair4 = m.y.z * m.z.w
+    var pair5 = m.z.z * m.y.w
+    var pair6 = m.x.z * m.w.w
+    var pair7 = m.w.z * m.x.w
+    var pair8 = m.x.z * m.z.w
+    var pair9 = m.z.z * m.x.w
     var pair10 = m.x.z * m.y.w
     var pair11 = m.y.z * m.x.w
 
-    result.x.x  = pair0 * m.y.y + pair3 * m.z.y + pair4 * m.w.y
+    result.x.x = pair0 * m.y.y + pair3 * m.z.y + pair4 * m.w.y
     result.x.x -= pair1 * m.y.y + pair2 * m.z.y + pair5 * m.w.y
-    result.x.y  = pair1 * m.x.y + pair6 * m.z.y + pair9 * m.w.y
+    result.x.y = pair1 * m.x.y + pair6 * m.z.y + pair9 * m.w.y
     result.x.y -= pair0 * m.x.y + pair7 * m.z.y + pair8 * m.w.y
-    result.x.z  = pair2 * m.x.y + pair7 * m.y.y + pair10 * m.w.y
+    result.x.z = pair2 * m.x.y + pair7 * m.y.y + pair10 * m.w.y
     result.x.z -= pair3 * m.x.y + pair6 * m.y.y + pair11 * m.w.y
-    result.x.w  = pair5 * m.x.y + pair8 * m.y.y + pair11 * m.z.y
+    result.x.w = pair5 * m.x.y + pair8 * m.y.y + pair11 * m.z.y
     result.x.w -= pair4 * m.x.y + pair9 * m.y.y + pair10 * m.z.y
-    result.y.x  = pair1 * m.y.x + pair2 * m.z.x + pair5 * m.w.x
+    result.y.x = pair1 * m.y.x + pair2 * m.z.x + pair5 * m.w.x
     result.y.x -= pair0 * m.y.x + pair3 * m.z.x + pair4 * m.w.x
-    result.y.y  = pair0 * m.x.x + pair7 * m.z.x + pair8 * m.w.x
+    result.y.y = pair0 * m.x.x + pair7 * m.z.x + pair8 * m.w.x
     result.y.y -= pair1 * m.x.x + pair6 * m.z.x + pair9 * m.w.x
-    result.y.z  = pair3 * m.x.x + pair6 * m.y.x + pair11 * m.w.x
+    result.y.z = pair3 * m.x.x + pair6 * m.y.x + pair11 * m.w.x
     result.y.z -= pair2 * m.x.x + pair7 * m.y.x + pair10 * m.w.x
-    result.y.w  = pair4 * m.x.x + pair9 * m.y.x + pair10 * m.z.x
+    result.y.w = pair4 * m.x.x + pair9 * m.y.x + pair10 * m.z.x
     result.y.w -= pair5 * m.x.x + pair8 * m.y.x + pair11 * m.z.x
 
     pair0 = m.z.x * m.w.y
@@ -474,24 +493,25 @@ fun inverse(m: Mat4): Mat4 {
     pair10 = m.x.x * m.y.y
     pair11 = m.y.x * m.x.y
 
-    result.z.x  = pair0 * m.y.w + pair3 * m.z.w + pair4 * m.w.w
+    result.z.x = pair0 * m.y.w + pair3 * m.z.w + pair4 * m.w.w
     result.z.x -= pair1 * m.y.w + pair2 * m.z.w + pair5 * m.w.w
-    result.z.y  = pair1 * m.x.w + pair6 * m.z.w + pair9 * m.w.w
+    result.z.y = pair1 * m.x.w + pair6 * m.z.w + pair9 * m.w.w
     result.z.y -= pair0 * m.x.w + pair7 * m.z.w + pair8 * m.w.w
-    result.z.z  = pair2 * m.x.w + pair7 * m.y.w + pair10 * m.w.w
+    result.z.z = pair2 * m.x.w + pair7 * m.y.w + pair10 * m.w.w
     result.z.z -= pair3 * m.x.w + pair6 * m.y.w + pair11 * m.w.w
-    result.z.w  = pair5 * m.x.w + pair8 * m.y.w + pair11 * m.z.w
+    result.z.w = pair5 * m.x.w + pair8 * m.y.w + pair11 * m.z.w
     result.z.w -= pair4 * m.x.w + pair9 * m.y.w + pair10 * m.z.w
-    result.w.x  = pair2 * m.z.z + pair5 * m.w.z + pair1 * m.y.z
+    result.w.x = pair2 * m.z.z + pair5 * m.w.z + pair1 * m.y.z
     result.w.x -= pair4 * m.w.z + pair0 * m.y.z + pair3 * m.z.z
-    result.w.y  = pair8 * m.w.z + pair0 * m.x.z + pair7 * m.z.z
+    result.w.y = pair8 * m.w.z + pair0 * m.x.z + pair7 * m.z.z
     result.w.y -= pair6 * m.z.z + pair9 * m.w.z + pair1 * m.x.z
-    result.w.z  = pair6 * m.y.z + pair11 * m.w.z + pair3 * m.x.z
+    result.w.z = pair6 * m.y.z + pair11 * m.w.z + pair3 * m.x.z
     result.w.z -= pair10 * m.w.z + pair2 * m.x.z + pair7 * m.y.z
-    result.w.w  = pair10 * m.z.z + pair4 * m.x.z + pair9 * m.y.z
+    result.w.w = pair10 * m.z.z + pair4 * m.x.z + pair9 * m.y.z
     result.w.w -= pair8 * m.y.z + pair11 * m.z.z + pair5 * m.x.z
 
-    val determinant = m.x.x * result.x.x + m.y.x * result.x.y + m.z.x * result.x.z + m.w.x * result.x.w
+    val determinant =
+        m.x.x * result.x.x + m.y.x * result.x.y + m.z.x * result.x.z + m.w.x * result.x.w
 
     return result / determinant
 }
@@ -538,7 +558,12 @@ fun rotation(d: Float3, order: RotationsOrder = RotationsOrder.ZYX): Mat4 {
  *
  * @return The rotation matrix
  */
-fun rotation(yaw: Float = 0.0f, pitch: Float = 0.0f, roll: Float = 0.0f, order: RotationsOrder = RotationsOrder.ZYX): Mat4 {
+fun rotation(
+    yaw: Float = 0.0f,
+    pitch: Float = 0.0f,
+    roll: Float = 0.0f,
+    order: RotationsOrder = RotationsOrder.ZYX
+): Mat4 {
     val c1 = cos(yaw)
     val s1 = sin(yaw)
     val c2 = cos(pitch)
@@ -548,35 +573,41 @@ fun rotation(yaw: Float = 0.0f, pitch: Float = 0.0f, roll: Float = 0.0f, order: 
 
     return when (order) {
         RotationsOrder.XZY -> Mat4.of(
-                c2 * c3, -s2, c2 * s3, 0.0f,
-                s1 * s3 + c1 * c3 * s2, c1 * c2, c1 * s2 * s3 - c3 * s1, 0.0f,
-                c3 * s1 * s2 - c1 * s3, c2 * s1, c1 * c3 + s1 * s2 * s3, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f)
+            c2 * c3, -s2, c2 * s3, 0.0f,
+            s1 * s3 + c1 * c3 * s2, c1 * c2, c1 * s2 * s3 - c3 * s1, 0.0f,
+            c3 * s1 * s2 - c1 * s3, c2 * s1, c1 * c3 + s1 * s2 * s3, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        )
         RotationsOrder.XYZ -> Mat4.of(
-                c2 * c3, -c2 * s3, s2, 0.0f,
-                c1 * s3 + c3 * s1 * s2, c1 * c3 - s1 * s2 * s3, -c2 * s1, 0.0f,
-                s1 * s3 - c1 * c3 * s2, c3 * s1 + c1 * s2 * s3, c1 * c2, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f)
+            c2 * c3, -c2 * s3, s2, 0.0f,
+            c1 * s3 + c3 * s1 * s2, c1 * c3 - s1 * s2 * s3, -c2 * s1, 0.0f,
+            s1 * s3 - c1 * c3 * s2, c3 * s1 + c1 * s2 * s3, c1 * c2, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        )
         RotationsOrder.YXZ -> Mat4.of(
-                c1 * c3 + s1 * s2 * s3, c3 * s1 * s2 - c1 * s3, c2 * s1, 0.0f,
-                c2 * s3, c2 * c3, -s2, 0.0f,
-                c1 * s2 * s3 - c3 * s1, c1 * c3 * s2 + s1 * s3, c1 * c2, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f)
+            c1 * c3 + s1 * s2 * s3, c3 * s1 * s2 - c1 * s3, c2 * s1, 0.0f,
+            c2 * s3, c2 * c3, -s2, 0.0f,
+            c1 * s2 * s3 - c3 * s1, c1 * c3 * s2 + s1 * s3, c1 * c2, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        )
         RotationsOrder.YZX -> Mat4.of(
-                c1 * c2, s1 * s3 - c1 * c3 * s2, c3 * s1 + c1 * s2 * s3, 0.0f,
-                s2, c2 * c3, -c2 * s3, 0.0f,
-                -c2 * s1, c1 * s3 + c3 * s1 * s2, c1 * c3 - s1 * s2 * s3, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f)
+            c1 * c2, s1 * s3 - c1 * c3 * s2, c3 * s1 + c1 * s2 * s3, 0.0f,
+            s2, c2 * c3, -c2 * s3, 0.0f,
+            -c2 * s1, c1 * s3 + c3 * s1 * s2, c1 * c3 - s1 * s2 * s3, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        )
         RotationsOrder.ZYX -> Mat4.of(
-                c1 * c2, c1 * s2 * s3 - c3 * s1, s1 * s3 + c1 * c3 * s2, 0.0f,
-                c2 * s1, c1 * c3 + s1 * s2 * s3, c3 * s1 * s2 - c1 * s3, 0.0f,
-                -s2, c2 * s3, c2 * c3, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f)
+            c1 * c2, c1 * s2 * s3 - c3 * s1, s1 * s3 + c1 * c3 * s2, 0.0f,
+            c2 * s1, c1 * c3 + s1 * s2 * s3, c3 * s1 * s2 - c1 * s3, 0.0f,
+            -s2, c2 * s3, c2 * c3, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        )
         RotationsOrder.ZXY -> Mat4.of(
-                c1 * c3 - s1 * s2 * s3, -c2 * s1, c1 * s3 + c3 * s1 * s2, 0.0f,
-                c3 * s1 + c1 * s2 * s3, c1 * c2, s1 * s3 - c1 * c3 * s2, 0.0f,
-                -c2 * s3, s2, c2 * c3, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f)
+            c1 * c3 - s1 * s2 * s3, -c2 * s1, c1 * s3 + c3 * s1 * s2, 0.0f,
+            c3 * s1 + c1 * s2 * s3, c1 * c2, s1 * s3 - c1 * c3 * s2, 0.0f,
+            -c2 * s3, s2, c2 * c3, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        )
     }
 }
 
@@ -591,10 +622,10 @@ fun rotation(axis: Float3, angle: Float): Mat4 {
     val d = 1.0f - c
 
     return Mat4.of(
-            x * x * d + c, x * y * d - z * s, x * z * d + y * s, 0.0f,
-            y * x * d + z * s, y * y * d + c, y * z * d - x * s, 0.0f,
-            z * x * d - y * s, z * y * d + x * s, z * z * d + c, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
+        x * x * d + c, x * y * d - z * s, x * z * d + y * s, 0.0f,
+        y * x * d + z * s, y * y * d + c, y * z * d - x * s, 0.0f,
+        z * x * d - y * s, z * y * d + x * s, z * z * d + c, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
     )
 }
 
@@ -608,21 +639,21 @@ fun rotation(axis: Float3, angle: Float): Mat4 {
 fun rotation(quaternion: Quaternion): Mat4 {
     val n = normalize(quaternion)
     return Mat4(
-            Float4(
-                1.0f - 2.0f * (n.y * n.y + n.z * n.z),
-                2.0f * (n.x * n.y + n.z * n.w),
-                2.0f * (n.x * n.z - n.y * n.w),
-            ),
-            Float4(
-                2.0f * (n.x * n.y - n.z * n.w),
-                1.0f - 2.0f * (n.x * n.x + n.z * n.z),
-                2.0f * (n.y * n.z + n.x * n.w),
-            ),
-            Float4(
-                2.0f * (n.x * n.z + n.y * n.w),
-                2.0f * (n.y * n.z - n.x * n.w),
-                1.0f - 2.0f * (n.x * n.x + n.y * n.y)
-            )
+        Float4(
+            1.0f - 2.0f * (n.y * n.y + n.z * n.z),
+            2.0f * (n.x * n.y + n.z * n.w),
+            2.0f * (n.x * n.z - n.y * n.w),
+        ),
+        Float4(
+            2.0f * (n.x * n.y - n.z * n.w),
+            1.0f - 2.0f * (n.x * n.x + n.z * n.z),
+            2.0f * (n.y * n.z + n.x * n.w),
+        ),
+        Float4(
+            2.0f * (n.x * n.z + n.y * n.w),
+            2.0f * (n.y * n.z - n.x * n.w),
+            1.0f - 2.0f * (n.x * n.x + n.y * n.y)
+        )
     )
 }
 
@@ -763,7 +794,7 @@ fun lookTowards(eye: Float3, forward: Float3, up: Float3 = Float3(z = 1.0f)): Ma
     val f = normalize(forward)
     val r = normalize(f x up)
     val u = normalize(r x f)
-    return Mat4(Float4(r), Float4(u), Float4(f), Float4(eye, 1.0f))
+    return Mat4(Float4(r), Float4(u), Float4(-f), Float4(eye, 1.0f))
 }
 
 fun perspective(fov: Float, ratio: Float, near: Float, far: Float): Mat4 {
@@ -775,9 +806,8 @@ fun perspective(fov: Float, ratio: Float, near: Float, far: Float): Mat4 {
 }
 
 fun ortho(l: Float, r: Float, b: Float, t: Float, n: Float, f: Float) = Mat4(
-        Float4(x = 2.0f / (r - 1.0f)),
-        Float4(y = 2.0f / (t - b)),
-        Float4(z = -2.0f / (f - n)),
-        Float4(-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1.0f)
+    Float4(x = 2.0f / (r - 1.0f)),
+    Float4(y = 2.0f / (t - b)),
+    Float4(z = -2.0f / (f - n)),
+    Float4(-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1.0f)
 )
-

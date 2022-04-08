@@ -4,14 +4,12 @@ import com.google.ar.core.Anchor
 import com.google.ar.core.Config
 import com.google.ar.core.Config.PlaneFindingMode
 import com.google.ar.core.HitResult
-import com.google.ar.core.InstantPlacementPoint
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.math.Position
-import io.github.sceneview.node.ModelNode
 
 /**
  * ### AR positioned 3D model node
@@ -26,11 +24,6 @@ import io.github.sceneview.node.ModelNode
  * This node will continue following the [com.google.ar.core.Camera]
  */
 open class ArModelNode : ArNode, ArSceneLifecycleObserver {
-
-    companion object {
-        val DEFAULT_PLACEMENT_POSITION = Position(0.0f, 0.0f, -2.0f)
-        val DEFAULT_PLACEMENT_MODE = PlacementMode.BEST_AVAILABLE
-    }
 
     /**
      * ### The node camera/screen position
@@ -86,28 +79,6 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         }
 
     /**
-     * ### How/where does the node is positioned in the real world
-     *
-     * Depending on your need, you can change it to adjust between a quick
-     * ([PlacementMode.INSTANT]), more accurate ([PlacementMode.DEPTH]), only on planes/walls
-     * ([PlacementMode.PLANE_HORIZONTAL], [PlacementMode.PLANE_VERTICAL],
-     * [PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL]) or auto refining accuracy
-     * ([PlacementMode.BEST_AVAILABLE]) placement.
-     * The [hitTest], [pose] and [anchor] will be influenced by this choice.
-     */
-    var placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE
-        set(value) {
-            field = value
-            doOnAttachedToScene { sceneView ->
-                (sceneView as? ArSceneView)?.apply {
-                    planeFindingMode = value.planeFindingMode
-                    depthEnabled = value.depthEnabled
-                    instantPlacementEnabled = value.instantPlacementEnabled
-                }
-            }
-        }
-
-    /**
      * ### Anchor the node as soon as an AR position/rotation is found
      *
      * - `true` The node will be anchored in the real world at the first suitable place available.
@@ -130,6 +101,8 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
                 detachAnchor()
             }
         }
+
+    override var editableTransforms = setOf(EditableTransform.ROTATION, EditableTransform.SCALE)
 
     /**
      * ### The maximum number of hit tests that can occur per second
@@ -234,13 +207,17 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         return hitResult.takeIf { it.isTracking }?.createAnchor()
     }
 
-    override fun clone() = copy(ModelNode())
+    override fun clone() = copy(ArModelNode())
 
-    fun copy(toNode: ArModelNode = ArModelNode()): ArModelNode = toNode.apply {
+    fun copy(toNode: ArModelNode = ArModelNode()) = toNode.apply {
         super.copy(toNode)
 
         placementPosition = this@ArModelNode.placementPosition
         placementMode = this@ArModelNode.placementMode
+    }
+
+    companion object {
+        val DEFAULT_PLACEMENT_POSITION = Position(0.0f, 0.0f, -2.0f)
     }
 }
 

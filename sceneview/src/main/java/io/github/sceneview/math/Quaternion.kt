@@ -30,10 +30,10 @@ enum class QuaternionComponent {
  * Default: Identity
  */
 data class Quaternion(
-        var x: Float = 0.0f,
-        var y: Float = 0.0f,
-        var z: Float = 0.0f,
-        var w: Float = 1.0f) {
+    var x: Float = 0.0f,
+    var y: Float = 0.0f,
+    var z: Float = 0.0f,
+    var w: Float = 1.0f) {
 
     constructor(v: Float3, w: Float = 1.0f) : this(v.x, v.y, v.z, w)
     constructor(v: Float4) : this(v.x, v.y, v.z, v.w)
@@ -90,39 +90,39 @@ data class Quaternion(
             val s3 = sin(roll * 0.5f)
             return when (order) {
                 RotationsOrder.XZY -> Quaternion(
-                        s1 * c2 * c3 - c1 * s2 * s3,
-                        c1 * c2 * s3 - s1 * s2 * c3,
-                        s1 * c2 * s3 + c1 * s2 * c3,
-                        s1 * s2 * s3 + c1 * c2 * c3)
+                    s1 * c2 * c3 - c1 * s2 * s3,
+                    c1 * c2 * s3 - s1 * s2 * c3,
+                    s1 * c2 * s3 + c1 * s2 * c3,
+                    s1 * s2 * s3 + c1 * c2 * c3)
                 RotationsOrder.XYZ -> Quaternion(
-                        s1 * c2 * c3 + s2 * s3 * c1,
-                        s2 * c1 * c3 - s1 * s3 * c2,
-                        s1 * s2 * c3 + s3 * c1 * c2,
-                        c1 * c2 * c3 - s1 * s2 * s3
+                    s1 * c2 * c3 + s2 * s3 * c1,
+                    s2 * c1 * c3 - s1 * s3 * c2,
+                    s1 * s2 * c3 + s3 * c1 * c2,
+                    c1 * c2 * c3 - s1 * s2 * s3
                 )
                 RotationsOrder.YXZ -> Quaternion(
-                        s1 * c2 * s3 + c1 * s2 * c3,
-                        s1 * c2 * c3 - c1 * s2 * s3,
-                        c1 * c2 * s3 - s1 * s2 * c3,
-                        s1 * s2 * s3 + c1 * c2 * c3
+                    s1 * c2 * s3 + c1 * s2 * c3,
+                    s1 * c2 * c3 - c1 * s2 * s3,
+                    c1 * c2 * s3 - s1 * s2 * c3,
+                    s1 * s2 * s3 + c1 * c2 * c3
                 )
                 RotationsOrder.YZX -> Quaternion(
-                        s1 * s2 * c3 + c1 * c2 * s3,
-                        s1 * c2 * c3 + c1 * s2 * s3,
-                        c1 * s2 * c3 - s1 * c2 * s3,
-                        c1 * c2 * c3 - s1 * s2 * s3
+                    s1 * s2 * c3 + c1 * c2 * s3,
+                    s1 * c2 * c3 + c1 * s2 * s3,
+                    c1 * s2 * c3 - s1 * c2 * s3,
+                    c1 * c2 * c3 - s1 * s2 * s3
                 )
                 RotationsOrder.ZYX -> Quaternion(
-                        c1 * c2 * s3 - s1 * s2 * c3,
-                        s1 * c2 * s3 + c1 * s2 * c3,
-                        s1 * c2 * c3 - c1 * s2 * s3,
-                        s1 * s2 * s3 + c1 * c2 * c3
+                    c1 * c2 * s3 - s1 * s2 * c3,
+                    s1 * c2 * s3 + c1 * s2 * c3,
+                    s1 * c2 * c3 - c1 * s2 * s3,
+                    s1 * s2 * s3 + c1 * c2 * c3
                 )
                 RotationsOrder.ZXY -> Quaternion(
-                        c1 * s2 * c3 - s1 * c2 * s3,
-                        s1 * s2 * c3 + c1 * c2 * s3,
-                        s1 * c2 * c3 + c1 * s2 * s3,
-                        c1 * c2 * c3 - s1 * s2 * s3
+                    c1 * s2 * c3 - s1 * c2 * s3,
+                    s1 * s2 * c3 + c1 * c2 * s3,
+                    s1 * c2 * c3 + c1 * s2 * s3,
+                    c1 * c2 * c3 - s1 * s2 * s3
                 )
             }
         }
@@ -167,17 +167,17 @@ data class Quaternion(
     }
 
     operator fun get(
-            index1: QuaternionComponent,
-            index2: QuaternionComponent,
-            index3: QuaternionComponent): Float3 {
+        index1: QuaternionComponent,
+        index2: QuaternionComponent,
+        index3: QuaternionComponent): Float3 {
         return Float3(get(index1), get(index2), get(index3))
     }
 
     operator fun get(
-            index1: QuaternionComponent,
-            index2: QuaternionComponent,
-            index3: QuaternionComponent,
-            index4: QuaternionComponent): Quaternion {
+        index1: QuaternionComponent,
+        index2: QuaternionComponent,
+        index3: QuaternionComponent,
+        index4: QuaternionComponent): Quaternion {
         return Quaternion(get(index1), get(index2), get(index3), get(index4))
     }
 
@@ -238,15 +238,15 @@ data class Quaternion(
     }
 
     operator fun set(
-            index1: QuaternionComponent, index2: QuaternionComponent, index3: QuaternionComponent, v: Float) {
+        index1: QuaternionComponent, index2: QuaternionComponent, index3: QuaternionComponent, v: Float) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
     }
 
     operator fun set(
-            index1: QuaternionComponent, index2: QuaternionComponent,
-            index3: QuaternionComponent, index4: QuaternionComponent, v: Float) {
+        index1: QuaternionComponent, index2: QuaternionComponent,
+        index3: QuaternionComponent, index4: QuaternionComponent, v: Float) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
@@ -265,10 +265,10 @@ data class Quaternion(
     inline operator fun plus(q: Quaternion) = Quaternion(x + q.x, y + q.y, z + q.z, w + q.w)
     inline operator fun minus(q: Quaternion) = Quaternion(x - q.x, y - q.y, z - q.z, w - q.w)
     inline operator fun times(q: Quaternion) = Quaternion(
-            w * q.x + x * q.w + y * q.z - z * q.y,
-            w * q.y - x * q.z + y * q.w + z * q.x,
-            w * q.z + x * q.y - y * q.x + z * q.w,
-            w * q.w - x * q.x - y * q.y - z * q.z)
+        w * q.x + x * q.w + y * q.z - z * q.y,
+        w * q.y - x * q.z + y * q.w + z * q.x,
+        w * q.z + x * q.y - y * q.x + z * q.w,
+        w * q.w - x * q.x - y * q.y - z * q.z)
 
     inline fun transform(block: (Float) -> Float): Quaternion {
         x = block(x)
