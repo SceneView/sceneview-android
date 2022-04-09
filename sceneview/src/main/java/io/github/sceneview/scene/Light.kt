@@ -1,4 +1,4 @@
-package io.github.sceneview.light
+package io.github.sceneview.scene
 
 import com.google.android.filament.EntityInstance
 import com.google.android.filament.LightManager
@@ -12,6 +12,10 @@ import io.github.sceneview.utils.toColor
 
 typealias Light = Int
 typealias LightInstance = Int
+
+typealias LightBuilder = LightManager.Builder
+
+val lightManager: LightManager get() = Filament.lightManager
 
 /**
  * @see LightManager.getInstance
@@ -30,7 +34,7 @@ fun LightManager.Builder.build(): Light =
  * @see LightManager.getType
  */
 val Light.type: LightManager.Type
-    get() = Filament.lightManager.getType(instance)
+    get() = lightManager.getType(instance)
 
 /**
  * @see LightManager.getPosition
@@ -38,9 +42,9 @@ val Light.type: LightManager.Type
  */
 var Light.position: Position
     get() = FloatArray(3).apply {
-        Filament.lightManager.getPosition(instance, this)
+        lightManager.getPosition(instance, this)
     }.toPosition()
-    set(value) = Filament.lightManager.setPosition(instance, value.x, value.y, value.z)
+    set(value) = lightManager.setPosition(instance, value.x, value.y, value.z)
 
 /**
  * @see LightManager.getDirection
@@ -48,17 +52,17 @@ var Light.position: Position
  */
 var Light.direction: Direction
     get() = FloatArray(3).apply {
-        Filament.lightManager.getDirection(instance, this)
+        lightManager.getDirection(instance, this)
     }.toDirection()
-    set(value) = Filament.lightManager.setDirection(instance, value.x, value.y, value.z)
+    set(value) = lightManager.setDirection(instance, value.x, value.y, value.z)
 
 /**
  * @see LightManager.getIntensity
  * @see LightManager.setIntensity
  */
 var Light.intensity: Float
-    get() = Filament.lightManager.getIntensity(instance)
-    set(value) = Filament.lightManager.setIntensity(instance, value)
+    get() = lightManager.getIntensity(instance)
+    set(value) = lightManager.setIntensity(instance, value)
 
 /**
  * @see LightManager.getColor
@@ -66,66 +70,65 @@ var Light.intensity: Float
  */
 var Light.color: Color
     get() = FloatArray(3).apply {
-        Filament.lightManager.getColor(instance, this)
+        lightManager.getColor(instance, this)
     }.toColor()
-    set(value) = Filament.lightManager.setColor(instance, value.r, value.g, value.b)
+    set(value) = lightManager.setColor(instance, value.r, value.g, value.b)
 
 /**
  * @see LightManager.isShadowCaster
  * @see LightManager.setShadowCaster
  */
 var Light.isShadowCaster: Boolean
-    get() = Filament.lightManager.isShadowCaster(instance)
-    set(value) = Filament.lightManager.setShadowCaster(instance, value)
+    get() = lightManager.isShadowCaster(instance)
+    set(value) = lightManager.setShadowCaster(instance, value)
 
 /**
  * @see LightManager.getFalloff
  * @see LightManager.setFalloff
  */
 var Light.falloff: Float
-    get() = Filament.lightManager.getFalloff(instance)
-    set(value) = Filament.lightManager.setFalloff(instance, value)
-
+    get() = lightManager.getFalloff(instance)
+    set(value) = lightManager.setFalloff(instance, value)
 
 /**
  * @see LightManager.getSunHaloFalloff
  * @see LightManager.setSunHaloFalloff
  */
 var Light.sunHaloFalloff: Float
-    get() = Filament.lightManager.getSunHaloFalloff(instance)
-    set(value) = Filament.lightManager.setSunHaloFalloff(instance, value)
+    get() = lightManager.getSunHaloFalloff(instance)
+    set(value) = lightManager.setSunHaloFalloff(instance, value)
 
 /**
  * @see LightManager.getSunHaloSize
  * @see LightManager.setSunHaloSize
  */
 var Light.sunHaloSize: Float
-    get() = Filament.lightManager.getSunHaloSize(instance)
-    set(value) = Filament.lightManager.setSunHaloSize(instance, value)
+    get() = lightManager.getSunHaloSize(instance)
+    set(value) = lightManager.setSunHaloSize(instance, value)
 
 /**
  * @see LightManager.getSunAngularRadius
  * @see LightManager.setSunAngularRadius
  */
 var Light.sunAngularRadius: Float
-    get() = Filament.lightManager.getSunAngularRadius(instance)
-    set(value) = Filament.lightManager.setSunAngularRadius(instance, value)
+    get() = lightManager.getSunAngularRadius(instance)
+    set(value) = lightManager.setSunAngularRadius(instance, value)
 
 /**
  * @see LightManager.getInnerConeAngle
  * @see LightManager.setSpotLightCone
  */
 var Light.innerConeAngle: Float
-    get() = Filament.lightManager.getInnerConeAngle(instance)
-    set(value) = Filament.lightManager.setSpotLightCone(instance, value, outerConeAngle)
+    get() = lightManager.getInnerConeAngle(instance)
+    set(value) = lightManager.setSpotLightCone(instance, value, outerConeAngle)
 
 /**
  * @see LightManager.getOuterConeAngle
  * @see LightManager.setSpotLightCone
  */
 var Light.outerConeAngle: Float
-    get() = Filament.lightManager.getOuterConeAngle(instance)
-    set(value) = Filament.lightManager.setSpotLightCone(instance, innerConeAngle, value)
+    get() = lightManager.getOuterConeAngle(instance)
+    set(value) = lightManager.setSpotLightCone(instance, innerConeAngle, value)
 
 // TODO: We need a clone on the Filament side in order to copy all values
 fun Light.clone() = LightManager.Builder(type)
@@ -145,5 +148,5 @@ fun Light.clone() = LightManager.Builder(type)
  * Destroys a Light and frees all its associated resources.
  */
 fun Light.destroy() {
-    Filament.lightManager.destroy(this)
+    lightManager.destroy(this)
 }

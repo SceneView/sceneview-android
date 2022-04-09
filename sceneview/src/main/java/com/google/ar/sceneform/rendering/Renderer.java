@@ -42,19 +42,12 @@ import io.github.sceneview.scene.SceneKt;
  */
 public class Renderer implements UiHelper.RendererCallback {
 
-    private static final Float4 DEFAULT_CLEAR_COLOR = new Float4(0.0f, 0.0f, 0.0f, 1.0f);
-
     // Limit resolution to 1080p for the minor edge. This is enough for Filament.
     private static final int MAXIMUM_RESOLUTION = 1080;
     private final SurfaceView surfaceView;
-    private final ViewAttachmentManager viewAttachmentManager;
     private final ArrayList<RenderableInstance> renderableInstances = new ArrayList<>();
     private final ArrayList<LightInstance> lightInstances = new ArrayList<>();
     private final double[] cameraProjectionMatrix = new double[16];
-    private final List<Mirror> mirrors = new ArrayList<>();
-    public Environment environment = null;
-    @Entity
-    public Integer mainLight = null;
     @Nullable
     private CameraProvider cameraProvider;
     private Surface surface;
@@ -65,14 +58,6 @@ public class Renderer implements UiHelper.RendererCallback {
     private com.google.android.filament.Renderer renderer;
     private Camera camera;
     private Scene scene;
-    private boolean recreateSwapChain;
-
-    private UiHelper filamentHelper;
-
-    @Nullable
-    private Runnable onFrameRenderDebugCallback = null;
-    @Nullable
-    private PreRenderCallback preRenderCallback;
 
     /**
      * @hide
@@ -86,7 +71,6 @@ public class Renderer implements UiHelper.RendererCallback {
 
         this.surfaceView = view;
         this.cameraProvider = cameraProvider;
-        viewAttachmentManager = new ViewAttachmentManager(getContext(), view);
         initialize();
     }
 
@@ -105,36 +89,6 @@ public class Renderer implements UiHelper.RendererCallback {
     public void destroyAllResources() {
         ResourceManager.getInstance().destroyAllResources();
         EngineInstance.destroyEngine();
-    }
-
-    /**
-     * Starts mirroring to the specified {@link Surface}.
-     *
-     * @hide
-     */
-    public void startMirroring(Surface surface, int left, int bottom, int width, int height) {
-        Mirror mirror = new Mirror();
-        mirror.surface = surface;
-        mirror.viewport = new Viewport(left, bottom, width, height);
-        mirror.swapChain = null;
-        synchronized (mirrors) {
-            mirrors.add(mirror);
-        }
-    }
-
-    /**
-     * Stops mirroring to the specified {@link Surface}.
-     *
-     * @hide
-     */
-    public void stopMirroring(Surface surface) {
-        synchronized (mirrors) {
-            for (Mirror mirror : mirrors) {
-                if (mirror.surface == surface) {
-                    mirror.surface = null;
-                }
-            }
-        }
     }
 
     /**
@@ -159,92 +113,6 @@ public class Renderer implements UiHelper.RendererCallback {
         return surfaceView;
     }
 
-    /**
-     * @hide
-     */
-    public void setClearColor(Float4 color) {
-        com.google.android.filament.Renderer.ClearOptions options = new com.google.android.filament.Renderer.ClearOptions();
-        options.clear = true;
-        if (color.getA() > 0) {
-            options.clearColor[0] = color.getR();
-            options.clearColor[1] = color.getG();
-            options.clearColor[2] = color.getB();
-            options.clearColor[3] = color.getA();
-        }
-        renderer.setClearOptions(options);
-    }
-
-    /**
-     * @hide
-     */
-    public void setDefaultClearColor() {
-        setClearColor(DEFAULT_CLEAR_COLOR);
-    }
-
-    /**
-     * Checks whether winding is inverted for front face rendering.
-     *
-     * @hide Used internally by ViewRenderable
-     */
-
-    public boolean isFrontFaceWindingInverted() {
-        return view.isFrontFaceWindingInverted();
-    }
-
-    /**
-     * Inverts winding for front face rendering.
-     *
-     * @hide Used internally by ArSceneView
-     */
-
-    public void setFrontFaceWindingInverted(Boolean inverted) {
-        view.setFrontFaceWindingInverted(inverted);
-    }
-
-    /**
-     * @hide
-     */
-    public void onPause() {
-        viewAttachmentManager.onPause();
-    }
-
-    /**
-     * @hide
-     */
-    public void onResume() {
-        viewAttachmentManager.onResume();
-    }
-
-    /**
-     * Sets a callback to happen after each frame is rendered. This can be used to log performance
-     * metrics for a given frame.
-     */
-    public void setFrameRenderDebugCallback(Runnable onFrameRenderDebugCallback) {
-        this.onFrameRenderDebugCallback = onFrameRenderDebugCallback;
-    }
-
-    private Viewport getLetterboxViewport(Viewport srcViewport, Viewport destViewport) {
-        boolean letterBoxSides =
-                (destViewport.width / (float) destViewport.height)
-                        > (srcViewport.width / (float) srcViewport.height);
-        float scale =
-                letterBoxSides
-                        ? (destViewport.height / (float) srcViewport.height)
-                        : (destViewport.width / (float) srcViewport.width);
-        int width = (int) (srcViewport.width * scale);
-        int height = (int) (srcViewport.height * scale);
-        int left = (destViewport.width - width) / 2;
-        int bottom = (destViewport.height - height) / 2;
-        return new Viewport(left, bottom, width, height);
-    }
-
-    /**
-     * @hide
-     */
-    public void setPreRenderCallback(@Nullable PreRenderCallback preRenderCallback) {
-        this.preRenderCallback = preRenderCallback;
-    }
-
     private void doRecreationOfSwapChain() {
         synchronized (this) {
             if (recreateSwapChain) {
@@ -258,48 +126,11 @@ public class Renderer implements UiHelper.RendererCallback {
         }
     }
 
-    private void updateMirrorConfig() {
-        synchronized (mirrors) {
-            Iterator<Mirror> mirrorIterator = mirrors.iterator();
-            while (mirrorIterator.hasNext()) {
-                Mirror mirror = mirrorIterator.next();
-                if (mirror.surface == null) {
-                    if (mirror.swapChain != null) {
-                        final IEngine engine = EngineInstance.getEngine();
-                        engine.destroySwapChain(Preconditions.checkNotNull(mirror.swapChain));
-                    }
-                    mirrorIterator.remove();
-                } else if (mirror.swapChain == null) {
-                    final IEngine engine = EngineInstance.getEngine();
-                    mirror.swapChain = engine.createSwapChain(Preconditions.checkNotNull(mirror.surface));
-                }
-            }
-        }
-    }
-
-    private void renderToMirror(com.google.android.filament.View currentView) {
-        synchronized (mirrors) {
-            for (Mirror mirror : mirrors) {
-                if (mirror.swapChain != null) {
-                    renderer.copyFrame(
-                            mirror.swapChain,
-                            getLetterboxViewport(currentView.getViewport(), mirror.viewport),
-                            currentView.getViewport(),
-                            com.google.android.filament.Renderer.MIRROR_FRAME_FLAG_COMMIT
-                                    | com.google.android.filament.Renderer
-                                    .MIRROR_FRAME_FLAG_SET_PRESENTATION_TIME
-                                    | com.google.android.filament.Renderer.MIRROR_FRAME_FLAG_CLEAR);
-                }
-            }
-        }
-    }
-
     /**
      * @hide
      */
     public boolean render(long frameTimeNanos) {
         doRecreationOfSwapChain();
-        updateMirrorConfig();
 
         @Nullable SwapChain swapChainLocal = swapChain;
         if (swapChainLocal == null)
@@ -344,9 +175,6 @@ public class Renderer implements UiHelper.RendererCallback {
 
                 renderToMirror(currentView);
 
-                if (onFrameRenderDebugCallback != null) {
-                    onFrameRenderDebugCallback.run();
-                }
                 renderer.endFrame();
 
                 reclaimReleasedResources();
@@ -383,95 +211,6 @@ public class Renderer implements UiHelper.RendererCallback {
         return camera;
     }
 
-
-    /**
-     * ### Get the lighting environment and the skybox of the scene
-     */
-    public Environment getEnvironment() {
-        return environment;
-    }
-
-    /**
-     * ### Defines the lighting environment and the skybox of the scene
-     */
-    public void setEnvironment(Environment environment) {
-        this.environment = environment;
-        SceneKt.setEnvironment(scene, environment);
-    }
-
-    /**
-     * ### Get the main directional light of the scene
-     * <p>
-     * Usually the Sun.
-     */
-    public @Entity
-    Integer getMainLight() {
-        return mainLight;
-    }
-
-    /**
-     * ### Defines the main directional light of the scene
-     * <p>
-     * Usually the Sun.
-     */
-    public void setMainLight(@Entity Integer light) {
-        if (mainLight != null) {
-            removeLight(mainLight);
-        }
-        this.mainLight = light;
-        if (light != null) {
-            addLight(light);
-        }
-    }
-
-    /**
-     * Sets the environment light used for reflections and indirect light.
-     *
-     * @param indirectLight the IndirectLight to use when rendering the Scene or null to unset.
-     */
-    public void setIndirectLight(IndirectLight indirectLight) {
-        scene.setIndirectLight(indirectLight);
-    }
-
-    /**
-     * Sets the Skybox. The Skybox is drawn last and covers all pixels not touched by geometry.
-     *
-     * @param skybox – the Skybox to use to fill untouched pixels, or null to unset the Skybox.
-     */
-    public void setSkybox(Skybox skybox) {
-        scene.setSkybox(skybox);
-    }
-
-    public void setDesiredSize(int width, int height) {
-        int minor = Math.min(width, height);
-        int major = Math.max(width, height);
-        if (minor > MAXIMUM_RESOLUTION) {
-            major = (major * MAXIMUM_RESOLUTION) / minor;
-            minor = MAXIMUM_RESOLUTION;
-        }
-        if (width < height) {
-            int t = minor;
-            minor = major;
-            major = t;
-        }
-
-        filamentHelper.setDesiredSize(major, minor);
-    }
-
-    /**
-     * @hide
-     */
-    public int getDesiredWidth() {
-        return filamentHelper.getDesiredWidth();
-    }
-
-    /**
-     * @hide
-     */
-    public int getDesiredHeight() {
-        return filamentHelper.getDesiredHeight();
-    }
-
     /**
      * @hide UiHelper.RendererCallback implementation
      */
@@ -481,122 +220,6 @@ public class Renderer implements UiHelper.RendererCallback {
             this.surface = surface;
             recreateSwapChain = true;
         }
-    }
-
-    /**
-     * @hide UiHelper.RendererCallback implementation
-     */
-    @Override
-    public void onDetachedFromSurface() {
-        @Nullable SwapChain swapChainLocal = swapChain;
-        if (swapChainLocal != null) {
-            final IEngine engine = EngineInstance.getEngine();
-            engine.destroySwapChain(swapChainLocal);
-            // Required to ensure we don't return before Filament is done executing the
-            // destroySwapChain command, otherwise Android might destroy the Surface
-            // too early
-            engine.flushAndWait();
-            swapChain = null;
-        }
-    }
-
-    /**
-     * @hide Only used for scuba testing for now.
-     */
-    public void setDynamicResolutionEnabled(boolean isEnabled) {
-        // Enable dynamic resolution. By default it will scale down to 25% of the screen area
-        // (i.e.: 50% on each axis, e.g.: reducing a 1080p image down to 720p).
-        // This can be changed in the options below.
-        // TODO: This functionality should probably be exposed to the developer eventually.
-        DynamicResolutionOptions options = new DynamicResolutionOptions();
-        options.enabled = isEnabled;
-        view.setDynamicResolutionOptions(options);
-    }
-
-    /**
-     * @hide Only used for scuba testing for now.
-     */
-    @VisibleForTesting
-    public void setAntiAliasing(com.google.android.filament.View.AntiAliasing antiAliasing) {
-        view.setAntiAliasing(antiAliasing);
-    }
-
-    /**
-     * @hide Only used for scuba testing for now.
-     */
-    @VisibleForTesting
-    public void setDithering(com.google.android.filament.View.Dithering dithering) {
-        view.setDithering(dithering);
-    }
-
-    /**
-     * @hide Used internally by ArSceneView.
-     */
-
-    public void setPostProcessingEnabled(boolean enablePostProcessing) {
-        return;
-    }
-
-
-    /**
-     * @hide Used internally by ArSceneView
-     */
-
-    public void setRenderQuality(com.google.android.filament.View.RenderQuality renderQuality) {
-        return;
-    }
-
-
-    /**
-     * Sets a high performance configuration for the filament view. Disables MSAA, disables
-     * post-process, disables dynamic resolution, sets quality to 'low'.
-     *
-     * @hide Used internally by ArSceneView
-     */
-
-    public void enablePerformanceMode() {
-        return;
-    }
-
-    /**
-     * @hide UiHelper.RendererCallback implementation
-     */
-    @Override
-    public void onResized(int width, int height) {
-        view.setViewport(new Viewport(0, 0, width, height));
-        emptyView.setViewport(new Viewport(0, 0, width, height));
-    }
-
-    public void addEntity(@Entity int entity) {
-        scene.addEntity(entity);
-    }
-
-    public void removeEntity(@Entity int entity) {
-        scene.removeEntity(entity);
-    }
-
-    public void addLight(@Entity int entity) {
-        addEntity(entity);
-    }
-
-    public void removeLight(@Entity int entity) {
-        removeEntity(entity);
-    }
-
-    /**
-     * @hide
-     */
-    void addLight(LightInstance instance) {
-        addEntity(instance.getEntity());
-        lightInstances.add(instance);
-    }
-
-    /**
-     * @hide
-     */
-    void removeLight(LightInstance instance) {
-        removeEntity(instance.getEntity());
-        lightInstances.remove(instance);
     }
 
 
@@ -643,12 +266,7 @@ public class Renderer implements UiHelper.RendererCallback {
         renderer = engine.createRenderer();
         scene = engine.createScene();
         view = engine.createView();
-        // Change the ToneMapper to FILMIC to avoid some over saturated
-        // colors, for example material orange 500.
-        view.setColorGrading(new ColorGrading.Builder()
-                .toneMapping(ColorGrading.ToneMapping.FILMIC)
-                .build(engine.getFilamentEngine())
-        );
+
         emptyView = engine.createView();
         camera = engine.createCamera();
 
@@ -656,7 +274,6 @@ public class Renderer implements UiHelper.RendererCallback {
         view.setCamera(camera);
         view.setScene(scene);
 
-        setDynamicResolutionEnabled(true);
 
         emptyView.setCamera(engine.createCamera());
         emptyView.setScene(engine.createScene());

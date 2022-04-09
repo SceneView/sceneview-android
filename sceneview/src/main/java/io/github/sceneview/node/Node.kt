@@ -4,6 +4,9 @@ import android.view.MotionEvent
 import android.view.ViewConfiguration
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.google.android.filament.EntityInstance
+import com.google.android.filament.Scene
+import com.google.android.filament.TransformManager
 import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
@@ -47,27 +50,19 @@ private const val defaultTouchSlop = 8
  */
 open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
-    companion object {
-        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = -4.0f)
-        val DEFAULT_QUATERNION get() = Quaternion()
-        val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
-        val DEFAULT_SCALE get() = Scale(1.0f)
-
-        const val DEFAULT_ROTATION_DOT_THRESHOLD = 0.95f
-    }
-
     /**
      * ### The scene that this node is part of, null if it isn't part of any scene
      *
      * A node is part of a scene if its highest level ancestor is a [SceneView]
      */
     protected open val sceneView: SceneView? get() = parent as? SceneView ?: parentNode?.sceneView
+    protected open val scene: Scene? get() = sceneView?.scene
 
     // TODO : Remove when every dependent is kotlined
     fun getSceneViewInternal() = sceneView
     protected open val lifecycle: SceneLifecycle? get() = sceneView?.lifecycle
     protected val lifecycleScope get() = sceneView?.lifecycleScope
-    protected val renderer: Renderer? get() = sceneView?.renderer
+    protected val renderer: Renderer? get() = sceneView?.rendererOld
     private val collisionSystem: CollisionSystem? get() = sceneView?.collisionSystem
 
     val isAttached get() = sceneView != null
@@ -113,7 +108,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     /**
      * TODO: Doc
      */
-    var quaternion: Quaternion = DEFAULT_QUATERNION
+    open var quaternion: Quaternion = DEFAULT_QUATERNION
 
     /**
      * ### The node orientation in Euler Angles Degrees per axis.
@@ -157,10 +152,12 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     open var transform: Transform
         get() = translation(position) * rotation(quaternion) * scale(scale)
         set(value) {
-            position = Position(value.position)
-            quaternion = rotation(value).toQuaternion()
-            scale = Scale(value.scale)
+            position = Position(translation(value).position)
+            quaternion = Quaternion(rotation(value).toQuaternion())
+            scale = Scale(scale(value).scale)
         }
+
+    var smoothTransform: Transform? = null
 
     /**
      * ## The smooth position, rotation and scale speed
@@ -184,8 +181,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     var smoothRotationThreshold = DEFAULT_ROTATION_DOT_THRESHOLD
 
-    private var smoothPosition: Position? = null
-    private var smoothQuaternion: Quaternion? = null
+//    private var smoothPosition: Position? = null
+//    private var smoothQuaternion: Quaternion? = null
 
     open val worldTransform: Mat4
         get() = (parentNode?.let { parent ->
@@ -403,24 +400,34 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     override fun onFrame(frameTime: FrameTime) {
         // Smooth value compare
         val lerpFactor = clamp((frameTime.intervalSeconds * smoothSpeed).toFloat(), 0.0f, 1.0f)
-        smoothPosition?.takeIf { it != position }?.let { desiredPosition ->
-            position = lerp(position, desiredPosition, lerpFactor).takeIf {
-                distance(position, it) > 0.00001f
-            } ?: desiredPosition
+        smoothTransform?.let { translation(it) }?.position?.takeIf { it != position }
+            ?.let { desiredPosition ->
+                position = lerp(position, desiredPosition, lerpFactor).takeIf {
+                    distance(position, it) > 0.00001f
+                } ?: desiredPosition
+            }
+        smoothTransform?.let { rotation(it).toQuaternion() }?.takeIf { it != quaternion }
+            ?.let { desiredQuaternion ->
+                quaternion = slerp(quaternion, normalize(desiredQuaternion), lerpFactor).takeIf {
+                    angle(quaternion, desiredQuaternion) > 0.00001f
+                } ?: desiredQuaternion
+            }
+        smoothTransform?.let { scale(it) }?.scale?.takeIf { it != scale }?.let { desiredScale ->
+            scale = lerp(scale, desiredScale, lerpFactor).takeIf {
+                distance(scale, it) > 0.00001f
+            } ?: desiredScale
+        }
 
-            if (position == desiredPosition) {
-                smoothPosition = null
-            }
+        if (smoothTransform == transform) {
+            smoothTransform = null
         }
-        smoothQuaternion?.takeIf { it != quaternion }?.let { desiredQuaternion ->
-            quaternion = slerp(quaternion, normalize(desiredQuaternion), lerpFactor).takeIf {
-                angle(quaternion, desiredQuaternion) > 0.00001f
-            } ?: desiredQuaternion
-            if (quaternion == desiredQuaternion) {
-                smoothQuaternion = null
-            }
-        }
+        updateTransform(worldTransform)
         onFrame.forEach { it(frameTime, this) }
+    }
+
+    open fun updateTransform(worldTransform: Transform) {
+        // TODO : Kotlin Collider for more comprehension
+        collider?.markWorldShapeDirty()
     }
 
     /**
@@ -430,8 +437,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * called for all of it's descendants.
      */
     open fun onTransformChanged() {
-        // TODO : Kotlin Collider for more comprehension
-        collider?.markWorldShapeDirty()
         children.forEach { it.onTransformChanged() }
         onTransformChanged.forEach { it(this) }
     }
@@ -498,43 +503,127 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * @see rotation
      * @see quaternion
      * @see scale
-     * @see speed
+     * @see smoothSpeed
      */
     fun smooth(
         position: Position = this.position,
         quaternion: Quaternion = this.quaternion,
-        rotation: Rotation = this.rotation,
-        speed: Float = this.smoothSpeed
-    ) {
-        this.smoothSpeed = speed
-        if (position != this.position) {
-            smoothPosition = position
-        }
-        if (quaternion != this.quaternion) {
-            smoothQuaternion = quaternion
-        } else if (rotation != this.rotation) {
-            smoothQuaternion = rotation.toQuaternion()
-        }
+        scale: Scale = this.scale,
+        speed: Float = smoothSpeed
+    ) = smooth(
+        transform = translation(position) * rotation(quaternion) * scale(scale),
+        speed = speed
+    )
+
+    /**
+     * ### Rotates the node based on its [worldPosition] eye position looking at a target Position
+     *
+     * Rotates the node to face a point in world space.
+     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
+     * direction.
+     *
+     * The eye and target points are assumed to be distinct and the vector between them is assumes
+     * to be collinear with the up vector.
+     *
+     * @param target The view target position = The position to look at in world space
+     */
+    fun lookAt(target: Position) {
+        quaternion =
+            lookAt(eye = worldPosition, target = target, up = Direction(y = 1.0f)).toQuaternion()
     }
 
-    // TODO
-//
-//    /**
-//     * ### Rotates the node to face a point in world space
-//     *
-//     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
-//     * direction.
-//     *
-//     * @param position The position to look at in world space
-//     * @param up The up direction will determine the orientation of the node around the direction
-//     */
-//    fun lookAt(position: Position, up: Direction = Direction(y=1.0f), smooth: Boolean = false) {
-//        if(smooth) {
-//            smooth(quaternion = rotation(lookAt(this.worldPosition, position, up)).toQuaternion())
-//        } else {
-//            transform(rotation = rotation(lookAt(this.worldPosition, position, up)).toQuaternion())
-//        }
-//    }
+    /**
+     * ## Smooth change node orientation at a specified speed
+     *
+     * @see lookAt
+     * @see smoothSpeed
+     */
+    fun smoothLookAt(target: Position, speed: Float = smoothSpeed) {
+        smooth(
+            quaternion = lookAt(
+                eye = worldPosition,
+                target = target,
+                up = Direction(y = 1.0f)
+            ).toQuaternion(),
+            speed = speed
+        )
+    }
+
+    /**
+     * ### Rotates the node based on its [worldPosition] eye position looking at a target Node
+     *
+     * Rotates the node to face a Node in world space.
+     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
+     * direction.
+     *
+     * The eye and target Node are assumed to be distinct and the vector between them is assumes
+     * to be collinear with the up vector.
+     *
+     * @param target The view target Node = The Node position to look at in world space
+     */
+    fun lookAt(target: Node) = lookAt(target = target.worldPosition)
+
+    /**
+     * ## Smooth change node orientation at a specified speed
+     *
+     * @see lookAt
+     * @see smoothSpeed
+     */
+    fun smoothLookAt(target: Node, speed: Float = smoothSpeed) =
+        smoothLookAt(target = target.worldPosition, speed = speed)
+
+    /**
+     * ### Rotates the node based on its [worldPosition] eye position looking at a direction
+     *
+     * Rotates the node to follow a direction in world space.
+     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
+     * direction.
+     *
+     * The eye and target direction are assumed to be distinct and the vector between them is
+     * assumes to be collinear with the up vector.
+     *
+     * @param direction The view target direction = The direction to look at in world space
+     */
+    fun lookTowards(direction: Direction) {
+        quaternion = lookTowards(
+            eye = worldPosition,
+            forward = direction,
+            up = Direction(y = 1.0f)
+        ).toQuaternion()
+    }
+
+    /**
+     * ## Smooth change node orientation at a specified speed
+     *
+     * @see lookAt
+     * @see smoothSpeed
+     */
+    fun smoothLookTowards(direction: Direction, speed: Float = smoothSpeed) {
+        smooth(
+            quaternion = lookTowards(
+                eye = worldPosition,
+                forward = direction,
+                up = Direction(y = 1.0f)
+            ).toQuaternion(), speed = speed
+        )
+    }
+
+    /**
+     * ## Smooth move, rotate and scale at a specified speed
+     *
+     * @see position
+     * @see rotation
+     * @see quaternion
+     * @see scale
+     * @see speed
+     */
+    fun smooth(
+        transform: Transform,
+        speed: Float = this.smoothSpeed
+    ) {
+        smoothSpeed = speed
+        smoothTransform = transform
+    }
 
     /**
      * ### Checks whether the given node parent is an ancestor of this node recursively
@@ -559,8 +648,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * ### The node world-space rotation
      *
      * The world rotation of this node (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local rotation with its parent's world
-     * rotation.
+     * This is the composition of this component's local rotation with its parent's world rotation.
      *
      * @see worldTransform
      */
@@ -748,32 +836,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         this.parent = null
     }
 
-    // TODO : Use kotlin math
-
-//    /**
-//     * ### Sets the direction that the node is looking at in world-space
-//     *
-//     * After calling this, [forward] will match the look direction passed in.
-//     * The up direction will determine the orientation of the node around the direction.
-//     * The look direction and up direction cannot be coincident (parallel) or the orientation will
-//     * be invalid.
-//     *
-//     * @param lookDirection a vector representing the desired look direction in world-space
-//     * @param upDirection   a vector representing a valid up vector to use, such as Vector3.up()
-//     */
-//    fun setLookDirection(lookDirection: Vector3, upDirection: Vector3) {
-//        val cameraPosition: Vector3 = getScene().getCamera().getWorldPosition()
-//        val cardPosition: Vector3 = getWorldPosition()
-//        sceneView.renderer.camera.lookAt()
-//        val direction = Vector3.subtract(cameraPosition, cardPosition)
-//        val lookRotation =
-//            com.google.ar.sceneform.math.Quaternion.lookRotation(direction, Vector3.up())
-//        setWorldRotation(lookRotation)
-//
-//
-//        orientation = Quaternion.lookRotation(lookDirection, upDirection)
-//    }
-
     /**
      * ### Performs the given action when the node is attached to the scene.
      *
@@ -802,4 +864,19 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         // The screen-space position that was being touched when ACTION_DOWN occurred.
         val downPosition: Vector3
     )
+
+    companion object {
+        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = -4.0f)
+        val DEFAULT_QUATERNION get() = Quaternion()
+        val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
+        val DEFAULT_SCALE get() = Scale(1.0f)
+
+        const val DEFAULT_ROTATION_DOT_THRESHOLD = 0.95f
+    }
 }
+
+fun TransformManager.getTransform(@EntityInstance i: Int): Transform =
+    getTransform(i, null as FloatArray?).toTransform()
+
+fun TransformManager.setTransform(@EntityInstance i: Int, transform: Transform) =
+    setTransform(i, transform.toFloatArray())

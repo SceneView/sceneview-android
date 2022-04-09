@@ -15,7 +15,9 @@ import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
+import io.github.sceneview.scene.addLight
 import io.github.sceneview.scene.exposureFactor
+import io.github.sceneview.scene.setEnvironment
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
 
@@ -152,7 +154,7 @@ open class ArSceneView @JvmOverloads constructor(
 
     var currentFrame: ArFrame? = null
 
-    override val renderer: Renderer by lazy {
+    override val rendererOld: Renderer by lazy {
         ArRenderer(this, camera).apply {
             enablePerformanceMode()
         }
@@ -161,7 +163,7 @@ open class ArSceneView @JvmOverloads constructor(
     /**
      * ### The [CameraStream] used to control if the occlusion should be enabled or disabled
      */
-    val cameraStream = CameraStream(cameraTextureId, renderer)
+    val cameraStream = CameraStream(cameraTextureId, rendererOld)
 
     /**
      * ### [PlaneRenderer] used to control plane visualization.
@@ -176,21 +178,15 @@ open class ArSceneView @JvmOverloads constructor(
      */
     var estimatedLights: EnvironmentLightsEstimate? = null
         internal set(value) {
-            //TODO: Move to Renderer when kotlined it
-            val environment = value?.environment ?: environment
-            if (renderer.getEnvironment() != environment) {
-                if (field?.environment != environment) {
-                    field?.environment?.destroy()
-                }
-                renderer.setEnvironment(environment)
+            field?.environment?.takeIf { it != environment }?.let {
+                it.destroy()
             }
-            val mainLight = value?.mainLight ?: mainLight
-            if (renderer.getMainLight() != mainLight) {
-                if (field?.mainLight != mainLight) {
-                    field?.mainLight?.destroy()
-                }
-                renderer.setMainLight(mainLight)
+            scene.setEnvironment(value?.environment ?: environment)
+            (field?.mainLight ?: mainLight)?.let { scene.removeEntity(it) }
+            field?.mainLight?.takeIf { it != mainLight }?.let {
+                it.destroy()
             }
+            (value?.mainLight ?: mainLight)?.let { scene.addLight(it) }
             field = value
         }
 
@@ -263,7 +259,8 @@ open class ArSceneView @JvmOverloads constructor(
 
         // Feature config, therefore facing direction, can only be configured once per session.
         if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
-            renderer.isFrontFaceWindingInverted = true
+            // Inverts winding for front face rendering
+            view.isFrontFaceWindingInverted = true
         }
 
         onArSessionCreated?.invoke(session)
@@ -356,7 +353,7 @@ open class ArSceneView @JvmOverloads constructor(
                     estimatedLights,
                     environment,
                     mainLight,
-                    renderer.camera.exposureFactor
+                    rendererOld.camera.exposureFactor
                 )
             } else null
 

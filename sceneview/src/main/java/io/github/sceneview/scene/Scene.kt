@@ -4,6 +4,9 @@ import com.google.android.filament.Scene
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
 import io.github.sceneview.environment.Environment
+import io.github.sceneview.light.Light
+import io.github.sceneview.model.Model
+import io.github.sceneview.model.allEntities
 
 /**
  *
@@ -33,4 +36,20 @@ fun Scene.setEnvironment(environment: Environment?) {
     if (skybox != environment?.skybox) {
         skybox = environment?.skybox
     }
+}
+
+fun Scene.addModel(model: Model) {
+    addEntities(model.allEntities)
+}
+
+fun Scene.removeModel(model: Model) {
+    removeEntities(model.allEntities)
+}
+
+fun Scene.addLight(light: Light) {
+    addEntity(light)
+}
+
+fun Scene.removeLight(light: Light) {
+    removeEntity(light)
 }

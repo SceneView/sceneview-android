@@ -44,7 +44,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 specularFilter = false
             )
 
-            modelNode.loadModel(
+            modelNode.loadModelOld(
                 context = requireContext(),
                 glbFileLocation = "https://sceneview.github.io/assets/models/MaterialSuite.glb",
                 autoAnimate = true,

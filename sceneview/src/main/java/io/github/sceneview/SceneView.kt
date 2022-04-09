@@ -13,15 +13,16 @@ import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.*
-import com.google.android.filament.Colors
-import com.google.android.filament.Entity
-import com.google.android.filament.LightManager
+import com.google.android.filament.*
+import com.google.android.filament.Renderer.ClearOptions
 import com.google.android.filament.View
+import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
+import com.google.ar.sceneform.Camera
 import com.google.ar.sceneform.collision.CollisionSystem
-import com.google.ar.sceneform.rendering.EngineInstance
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
 import com.google.ar.sceneform.ux.FootprintSelectionVisualizer
@@ -35,6 +36,7 @@ import io.github.sceneview.light.*
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
+import io.github.sceneview.scene.*
 import io.github.sceneview.utils.*
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
@@ -60,15 +62,50 @@ open class SceneView @JvmOverloads constructor(
     Choreographer.FrameCallback,
     NodeParent {
 
-    companion object {
-        val defaultMainLight: Light by lazy {
-            LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
-                val (r, g, b) = Colors.cct(6_500.0f)
-                color(r, g, b)
-                intensity(100_000.0f)
-                direction(0.28f, -0.6f, -0.76f)
-                castShadows(true)
-            }.build()
+    val engine: Engine get() = Filament.engine
+    val renderer: com.google.android.filament.Renderer = engine.createRenderer()
+    val scene: Scene = engine.createScene()
+    val view: View = engine.createView().apply {
+        scene = this@SceneView.scene
+        camera = this@SceneView.camera
+        engine.createCamera()
+
+        // On mobile, better use lower quality color buffer
+        renderQuality = renderQuality.apply {
+            hdrColorBuffer = View.QualityLevel.MEDIUM
+        }
+        // Dynamic resolution often helps a lot
+        dynamicResolutionOptions = dynamicResolutionOptions.apply {
+            enabled = true
+            quality = View.QualityLevel.MEDIUM
+        }
+        // MSAA is needed with dynamic resolution MEDIUM
+        multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
+            enabled = true
+        }
+        // FXAA is pretty cheap and helps a lot
+        antiAliasing = View.AntiAliasing.FXAA
+        // Ambient occlusion is the cheapest effect that adds a lot of quality
+        ambientOcclusionOptions = ambientOcclusionOptions.apply {
+            enabled = true
+        }
+        // bloom is pretty expensive but adds a fair amount of realism
+        bloomOptions = bloomOptions.apply {
+            enabled = true
+        }
+        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example material
+        // orange 500.
+        colorGrading = ColorGrading.Builder()
+            .toneMapping(ColorGrading.ToneMapping.FILMIC)
+            .build(engine)
+    }
+    private var swapChain: SwapChain? = null
+    private val uiHelper by lazy {
+        UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
+            renderCallback = SurfaceCallback()
+            // NOTE: To choose a specific rendering resolution, add the following line:
+            // setDesiredSize(1280, 720)
+            attachTo(this@SceneView)
         }
     }
 
@@ -86,8 +123,6 @@ open class SceneView @JvmOverloads constructor(
         lifecycle.currentState = event.targetState
     }
 
-    override var _children = listOf<Node>()
-
     // TODO : Move to the Render when Kotlined it
     var currentFrameTime: FrameTime = FrameTime(0)
 
@@ -103,7 +138,12 @@ open class SceneView @JvmOverloads constructor(
     /**
      * ### The renderer used for this view
      */
-    override val renderer by lazy { Renderer(this, camera) }
+    override val rendererOld by lazy { Renderer(this, camera) }
+
+    val viewAttachmentManager by lazy { ViewAttachmentManager(this, lifecycle) }
+    val surfaceCopier by lazy { SurfaceCopier(this, lifecycle) }
+
+    override var _children = listOf<Node>()
 
     // TODO: Remove this nightmare class quick and replace it with the new Filament Pick system
     private val nodesTouchEventDispatcher by lazy { TouchEventSystem() }
@@ -146,8 +186,8 @@ open class SceneView @JvmOverloads constructor(
      */
     var environment: Environment? = null
         set(value) {
-            renderer.setEnvironment(value)
             field = value
+            scene.setEnvironment(environment)
             updateBackground()
         }
 
@@ -159,8 +199,9 @@ open class SceneView @JvmOverloads constructor(
     @Entity
     var mainLight: Light? = null
         set(value) {
+            field?.let { scene.removeLight(it) }
             field = value
-            renderer.setMainLight(value)
+            value?.let { scene.addLight(it) }
         }
 
     var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
@@ -207,10 +248,10 @@ open class SceneView @JvmOverloads constructor(
 
     init {
         try {
-            // TODO : Remove it here when moved Filament to lifecycle aware
-            EngineInstance.getEngine()
+            Filament.retain()
 
             mainLight = defaultMainLight
+            //Load the environment synchronously
             environment = KTXLoader.createEnvironment(context.fileBufferLocal(defaultIbl))
 
             lifecycleScope.launchWhenCreated {
@@ -250,7 +291,7 @@ open class SceneView @JvmOverloads constructor(
     override fun onResume(owner: LifecycleOwner) {
         super.onResume(owner)
 
-        renderer.onResume()
+        rendererOld.onResume()
 
         // Start the drawing when the renderer is resumed.  Remove and re-add the callback
         // to avoid getting called twice.
@@ -263,27 +304,29 @@ open class SceneView @JvmOverloads constructor(
 
         Choreographer.getInstance().removeFrameCallback(this)
 
-        renderer.onPause()
+        rendererOld.onPause()
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
         super.onDestroy(owner)
 
-        renderer.destroyAllResources()
+        uiHelper.detach()
+
+        rendererOld.destroyAllResources()
+        camera.destroy()
+
         camera.destroy()
         environment?.destroy()
         environment = null
         mainLight?.destroy()
         mainLight = null
+
+        Filament.release()
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        //TODO move to lifecycle when Rendere is kotlined
-        val width = right - left
-        val height = bottom - top
-        renderer.setDesiredSize(width, height)
         lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onSurfaceChanged(width, height)
+            onSurfaceChanged(right - left, bottom - top)
         }
     }
 
@@ -306,7 +349,7 @@ open class SceneView @JvmOverloads constructor(
     }
 
     open fun doFrame(frameTime: FrameTime) {
-        if (renderer.render(frameTime.nanoseconds)) {
+        if (rendererOld.render(frameTime.nanoseconds)) {
             lifecycle.dispatchEvent<SceneLifecycleObserver> {
                 onFrame(frameTime)
             }
@@ -346,7 +389,12 @@ open class SceneView @JvmOverloads constructor(
         set(value) {
             if (field != value) {
                 field = value
-                renderer.setClearColor(backgroundColor)
+                renderer.clearOptions = ClearOptions().apply {
+                    clear = true
+                    if (value != null && value.a > 0.0f) {
+                        clearColor = value.toFloatArray()
+                    }
+                }
             }
         }
 
@@ -359,55 +407,45 @@ open class SceneView @JvmOverloads constructor(
                 field = value
                 setZOrderOnTop(value)
                 holder.setFormat(if (value) PixelFormat.TRANSLUCENT else PixelFormat.OPAQUE)
-                renderer.filamentView.blendMode =
-                    if (value) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
+                view.blendMode = if (value) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
             }
         }
 
-    // TODO: See if we still need it
-//    /**
-//     * Set the background to a given [Drawable], or remove the background.
-//     * If the background is a [ColorDrawable], then the background color of the [SceneView] is set
-//     * to [ColorDrawable.getColor] (the alpha of the color is ignored).
-//     * Otherwise, default to the behavior of [SurfaceView.setBackground].
-//     */
-//    override fun setBackground(background: Drawable?) {
-//        if (background is ColorDrawable) {
-//            backgroundColor = Color(background.color)
-//            renderer.setClearColor(backgroundColor)
-//        } else {
-//            super.setBackground(background)
-//            backgroundColor = null
-//            renderer.setDefaultClearColor()
-//        }
-//    }
-
     /**
-     * To capture the contents of this view, designate a [Surface] onto which this SceneView
-     * should be mirrored. Use [android.media.MediaRecorder.getSurface], [ ][android.media.MediaCodec.createInputSurface] or [ ][android.media.MediaCodec.createPersistentInputSurface] to obtain the input surface for
-     * recording. This will incur a rendering performance cost and should only be set when capturing
-     * this view. To stop the additional rendering, call stopMirroringToSurface.
+     * ### Starts copying the currently rendered [SceneView] to the indicated [Surface]
      *
-     * @param surface the Surface onto which the rendered scene should be mirrored.
-     * @param left    the left edge of the rectangle into which the view should be mirrored on surface.
-     * @param bottom  the bottom edge of the rectangle into which the view should be mirrored on
-     * surface.
-     * @param width   the width of the rectangle into which the SceneView should be mirrored on surface.
-     * @param height  the height of the rectangle into which the SceneView should be mirrored on
-     * surface.
+     * To capture the contents of this view, designate a [Surface] onto which this [SceneView]
+     * should be mirrored.
+     * This will incur a rendering performance cost and should only be set when capturing this view.
+     * To stop the additional rendering, call [stopCopying].
+     *
+     * @param dstSurface the [Surface] onto which the rendered scene should be copied.
+     * Use [android.media.MediaRecorder.getSurface],
+     * [android.media.MediaCodec.createInputSurface] or
+     * [android.media.MediaCodec.createPersistentInputSurface] to obtain the input surface for
+     * recording.
+     * @param srcViewport the source rectangle to be copied.
+     * @param dstViewport the destination rectangle in which to draw the view.
+     *
+     * Use [SurfaceCopier.getLetterboxViewport] to ensure the destination scaling.
+     * @param flags one or more <code>CopyFrameFlag</code> behavior configuration flags
      */
-    fun startMirroringToSurface(surface: Surface, left: Int, bottom: Int, width: Int, height: Int) =
-        renderer.startMirroring(surface, left, bottom, width, height)
+    fun startCopyingToSurface(
+        dstSurface: Surface,
+        srcViewport: Viewport = view.viewport,
+        dstViewport: Viewport = srcViewport,
+        flags: Int = SurfaceCopier.DEFAULT_COPY_FLAGS
+    ) = surfaceCopier.startCopying(dstSurface, srcViewport, dstViewport, flags)
 
     /**
+     * ### Stops copying to the specified [Surface].
+     *
      * When capturing is complete, call this method to stop mirroring the SceneView to the specified
      * [Surface]. If this is not called, the additional performance cost will remain.
      *
-     *
-     * The application is responsible for calling [Surface.release] on the Surface when
-     * done.
+     * The application is responsible for calling [Surface.release] on the Surface when done.
      */
-    fun stopMirroringToSurface(surface: Surface) = renderer.stopMirroring(surface)
+    fun stopCopyingToSurface(surface: Surface) = surfaceCopier.stopCopying(surface)
 
     /**
      * ### Invoked when the scene is touched.
@@ -439,6 +477,39 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
+    inner class SurfaceCallback : UiHelper.RendererCallback {
+        val displayHelper by lazy { DisplayHelper(context) }
+
+        override fun onNativeWindowChanged(surface: Surface) {
+            swapChain?.let { engine.destroySwapChain(it) }
+            swapChain = engine.createSwapChain(surface)
+            displayHelper.attach(renderer, display)
+        }
+
+        override fun onDetachedFromSurface() {
+            displayHelper.detach()
+            swapChain?.let {
+                engine.destroySwapChain(it)
+                engine.flushAndWait()
+                swapChain = null
+            }
+        }
+
+        override fun onResized(width: Int, height: Int) {
+            view.viewport = Viewport(0, 0, width, height)
+            //TODO:
+//            cameraManipulator.setViewport(width, height)
+//            updateCameraProjection()
+//            private fun updateCameraProjection() {
+//                val width = view.viewport.width
+//                val height = view.viewport.height
+//                val aspect = width.toDouble() / height.toDouble()
+//                camera.setLensProjection(cameraFocalLength.toDouble(), aspect, kNearPlane, kFarPlane)
+//            }
+        }
+    }
+
+
     inner class SurfaceGestureDetector : GestureDetector(context, OnGestureListener()) {
         lateinit var pickHitResult: PickHitResult
 
@@ -459,6 +530,18 @@ open class SceneView @JvmOverloads constructor(
             return true
         }
     }
+
+    companion object {
+        val defaultMainLight: Light by lazy {
+            LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
+                val (r, g, b) = Colors.cct(6_500.0f)
+                color(r, g, b)
+                intensity(100_000.0f)
+                direction(0.28f, -0.6f, -0.76f)
+                castShadows(true)
+            }.build()
+        }
+    }
 }
 
 /**
@@ -466,13 +549,13 @@ open class SceneView @JvmOverloads constructor(
  */
 interface SceneLifecycleOwner : LifecycleOwner {
     val activity: ComponentActivity
-    val renderer: Renderer
+    val rendererOld: Renderer
 }
 
 open class SceneLifecycle(context: Context, open val owner: SceneLifecycleOwner) :
     DefaultLifecycle(context, owner) {
     val activity get() = owner.activity
-    val renderer get() = owner.renderer
+    val renderer get() = owner.rendererOld
 }
 
 interface SceneLifecycleObserver : DefaultLifecycleObserver {

@@ -3,6 +3,7 @@ package io.github.sceneview.node
 import android.content.Context
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
+import com.google.android.filament.gltfio.Animator
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
@@ -13,6 +14,9 @@ import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Transform
 import io.github.sceneview.model.GLBLoader
+import io.github.sceneview.model.Model
+import io.github.sceneview.scene.addModel
+import io.github.sceneview.scene.removeModel
 import io.github.sceneview.utils.FrameTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -106,7 +110,7 @@ open class ModelNode : Node {
      * Else, it will be loaded when SceneView is attached because it needs a
      * [LifecycleCoroutineScope] and [Context] to load
      *
-     * @see loadModel
+     * @see loadModelOld
      */
     var modelFileLocation: String? = null
         set(value) {
@@ -134,7 +138,7 @@ open class ModelNode : Node {
      * The renderable is usually a 3D model.
      * If null, this node's current renderable will be removed.
      */
-    var modelInstance: RenderableInstance? = null
+    var modelInstanceOld: RenderableInstance? = null
         set(value) {
             if (field != value) {
                 field?.renderer = null
@@ -145,13 +149,33 @@ open class ModelNode : Node {
             }
         }
 
-    val model: Renderable?
-        get() = modelInstance?.renderable
+    val modelOld: Renderable?
+        get() = modelInstanceOld?.renderable
+
+    val shouldBeRendered = false
+    var animator: Animator? = null
+        private set
+
+    var model: Model? = null
+        set(value) {
+            if (field != value) {
+                field?.let { scene?.removeModel(it) }
+                field = value
+                animator = value?.animator
+                doOnAttachedToScene { sceneView->
+                    if(shouldBeRendered) {
+                        sceneView.scene.addModel(value)
+                    }
+                }
+                sceneEntities = field?.let { it.entities + it.lightEntities } ?: intArrayOf()
+                onModelChanged()
+            }
+        }
 
     override var isRendered: Boolean
         get() = super.isRendered
         set(value) {
-            modelInstance?.renderer = if (value) renderer else null
+            modelInstanceOld?.renderer = if (value) renderer else null
             super.isRendered = value
         }
 
@@ -176,14 +200,14 @@ open class ModelNode : Node {
      * TODO : Doc
      */
     constructor(modelInstance: RenderableInstance) : this() {
-        this.modelInstance = modelInstance
+        this.modelInstanceOld = modelInstance
     }
 
     override fun onFrame(frameTime: FrameTime) {
         if (isRendered) {
             // TODO : Remove the renderable.id thing when Renderable is kotlined
             // Update state when the renderable has changed.
-            model?.let { model ->
+            modelOld?.let { model ->
                 if (model.id.checkChanged(renderableId)) {
                     onModelChanged()
                 }
@@ -211,14 +235,14 @@ open class ModelNode : Node {
         // that the renderable has changed.
         onTransformChanged()
 
-        collisionShape = model?.collisionShape
+        collisionShape = modelOld?.collisionShape
         // TODO : Clean when Renderable is kotlined
-        renderableId = model?.id?.get() ?: ChangeId.EMPTY_ID
+        renderableId = modelOld?.id?.get() ?: ChangeId.EMPTY_ID
     }
 
     fun doOnModelLoaded(action: (modelInstance: RenderableInstance) -> Unit) {
-        if (modelInstance != null) {
-            action(modelInstance!!)
+        if (modelInstanceOld != null) {
+            action(modelInstanceOld!!)
         } else {
             onModelLoaded += object : OnModelLoaded {
                 override fun invoke(modelInstance: RenderableInstance) {
@@ -246,7 +270,7 @@ open class ModelNode : Node {
      * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      */
-    suspend fun loadModel(
+    suspend fun loadModelOld(
         context: Context,
         glbFileLocation: String,
         autoAnimate: Boolean = true,
@@ -299,7 +323,7 @@ open class ModelNode : Node {
     ) {
         if (coroutineScope != null) {
             coroutineScope.launchWhenCreated {
-                loadModel(context, glbFileLocation, autoAnimate, autoScale, centerOrigin, onError)
+                loadModelOld(context, glbFileLocation, autoAnimate, autoScale, centerOrigin, onError)
                     ?.let { onLoaded?.invoke(it) }
             }
         } else {
@@ -331,8 +355,8 @@ open class ModelNode : Node {
         autoScale: Boolean = false,
         centerOrigin: Position? = null,
     ): RenderableInstance? {
-        modelInstance = renderable?.createInstance(this)
-        modelInstance?.let { modelInstance ->
+        modelInstanceOld = renderable?.createInstance(this)
+        modelInstanceOld?.let { modelInstance ->
             if (autoAnimate && modelInstance.animationCount > 0) {
                 modelInstance.animate(true)?.start()
             }
@@ -341,7 +365,7 @@ open class ModelNode : Node {
             }
             centerOrigin?.let { centerModel(it) }
         }
-        return modelInstance
+        return modelInstanceOld
     }
 
     /**
@@ -379,13 +403,13 @@ open class ModelNode : Node {
     /** ### Detach and destroy the node */
     override fun destroy() {
         super.destroy()
-        modelInstance?.destroy()
+        modelInstanceOld?.destroy()
     }
 
     override fun clone() = copy(ModelNode())
 
     open fun copy(toNode: ModelNode = ModelNode()): ModelNode = toNode.apply {
         super.copy(toNode)
-        setModel(this@ModelNode.model)
+        setModel(this@ModelNode.modelOld)
     }
 }

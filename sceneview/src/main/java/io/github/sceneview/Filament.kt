@@ -1,5 +1,6 @@
 package io.github.sceneview
 
+import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.Filament
 import com.google.android.filament.gltfio.AssetLoader
@@ -16,29 +17,45 @@ object Filament {
         Filament.init()
     }
 
-    @JvmStatic
-    val engine = EngineInstance.getEngine().filamentEngine
+    private var _engine: Engine? = null
 
-    @JvmStatic
-    val entityManager
-        get() = EntityManager.get()
+    val engine: Engine get() = _engine ?: Engine.create().also { _engine = it }
 
-    val uberShaderLoader by lazy { UbershaderLoader(engine) }
-
-    @JvmStatic
-    val assetLoader by lazy {
-        AssetLoader(engine, uberShaderLoader, entityManager)
-    }
-
+    val entityManager get() = EntityManager.get()
     val transformManager get() = engine.transformManager
+    val renderableManager get() = engine.renderableManager
+    val lightManager get() = engine.lightManager
 
     val resourceLoader by lazy { ResourceLoader(engine, true, false, false) }
+    val assetLoader by lazy { AssetLoader(engine, materialProvider, entityManager) }
 
-    val lightManager get() = engine.lightManager
+    val materialProvider by lazy { UbershaderLoader(engine) }
 
     val iblPrefilter by lazy { IBLPrefilter(engine) }
 
+    var retainers = 0
+
+    fun retain() {
+        retainers++
+    }
+
+    fun release() {
+        retainers--
+        if (retainers == 0) {
+            destroy()
+        }
+    }
+
     fun destroy() {
-        //TODO : Add every Filament destroys
+        resourceLoader.asyncCancelLoad()
+        resourceLoader.evictResourceData()
+
+        assetLoader.destroy()
+        materialProvider.destroyMaterials()
+        materialProvider.destroy()
+        resourceLoader.destroy()
+
+        _engine?.destroy()
+        _engine = null
     }
 }

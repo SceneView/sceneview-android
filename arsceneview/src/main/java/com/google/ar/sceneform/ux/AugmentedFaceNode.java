@@ -192,7 +192,7 @@ public class AugmentedFaceNode extends ArNode {
 
     public RenderableInstance setFaceRegionsRenderable(ModelRenderable renderable) {
         faceRegionNode.setModel(renderable);
-        RenderableInstance renderableInstance = faceRegionNode.getModelInstance();
+        RenderableInstance renderableInstance = faceRegionNode.getModelInstanceOld();
         updateSubmeshes();
         extractBonesFromRenderable();
         return renderableInstance;
@@ -205,7 +205,7 @@ public class AugmentedFaceNode extends ArNode {
 
         for (RegionType type : RegionType.values()) {
             String boneName = boneNameForRegion(type);
-            int entity = faceRegionNode.getModelInstance().getFilamentAsset().getFirstEntityByName(boneName);
+            int entity = faceRegionNode.getModelInstanceOld().getFilamentAsset().getFirstEntityByName(boneName);
             if (entity == 0) {
                 Log.w(TAG, "Face mesh model is missing bone " + boneName + ". Tracking might not be accurate");
                 continue;
@@ -216,7 +216,7 @@ public class AugmentedFaceNode extends ArNode {
 
     @Nullable
     public ModelRenderable getFaceRegionsRenderable() {
-        Renderable renderable = faceRegionNode.getModel();
+        Renderable renderable = faceRegionNode.getModelOld();
         if (renderable != null && !(renderable instanceof ModelRenderable)) {
             throw new IllegalStateException("Face Regions Renderable must be a ModelRenderable.");
         }
@@ -314,8 +314,8 @@ public class AugmentedFaceNode extends ArNode {
 //            Matrix.multiplyMV(position, 0, matrix, 0, new float[] { 0, 0, 0, 1 }, 0);
 //            Log.d(TAG, type + " " + Arrays.toString(position));
         }
-        if (faceRegionNode != null && faceRegionNode.getModelInstance() != null) {
-            faceRegionNode.getModelInstance().getFilamentAsset().getAnimator().updateBoneMatrices();
+        if (faceRegionNode != null && faceRegionNode.getModelInstanceOld() != null) {
+            faceRegionNode.getModelInstanceOld().getFilamentAsset().getAnimator().updateBoneMatrices();
         }
     }
 
