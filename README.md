@@ -16,7 +16,7 @@ This is a Sceneform replacement in Kotlin
 - Lifecycle-aware components = Better memory management and performance.
 - Resources are loaded using coroutines launched in the `LifecycleCoroutineScope` of the `SceneView`/`ArSceneView`. This means that loading is started when the view is created and cancelled when it is destroyed.
 - Multiple instances are now possible.
-- Much easier to use. For example, the local and world `position`, `rotation` and `scale` of the `Node` are now directly accessible without creating ~`Vector3`~ objects (`position.x = 1f`, `rotation.xy = Float2(90f, 180f)`, `scale = Scale(0.5f)`, etc.).
+- Much easier to use. For example, the local and world `position`, `rotation` and `scale` of the `Node` are now directly accessible without creating ~`Vector3`~ objects (`position.x = 1f`, `rotation = Rotation(90f, 180f, 0f)`, `scale = Scale(0.5f)`, etc.).
 
 ## Dependency
 
@@ -25,7 +25,7 @@ This is a Sceneform replacement in Kotlin
 ```gradle
 dependencies {
     // 3D only
-    implementation 'io.github.sceneview:sceneview:0.2.1'
+    implementation 'io.github.sceneview:sceneview:0.3.0'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
@@ -34,7 +34,7 @@ dependencies {
 ```gradle
 dependencies {
     // 3D and ARCore
-    implementation 'io.github.sceneview:arsceneview:0.2.1'
+    implementation 'io.github.sceneview:arsceneview:0.3.0'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)

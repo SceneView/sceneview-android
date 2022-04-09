@@ -120,6 +120,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * The default rotation is the zero vector, specifying no rotation.
      * Rotation is applied relative to the node's origin property.
      *
+     * Note that modifying the individual components of the returned rotation doesn't have any effect.
+     *
      * ------- +y ----- -z
      *
      * ---------|----/----
@@ -160,6 +162,75 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     var smoothTransform: Transform? = null
 
     /**
+     * ### The node world-space position
+     *
+     * The world position of this node (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local position with its parent's world
+     * position.
+     *
+     * @see worldTransform
+     */
+    open var worldPosition: Position
+        get() = worldTransform.position
+        set(value) {
+            position = (worldToParent * Float4(value, 1f)).xyz
+        }
+
+    /**
+     * ### The node world-space quaternion
+     *
+     * The world quaternion of this node (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local quaternion with its parent's world
+     * quaternion.
+     *
+     * @see worldTransform
+     */
+    open var worldQuaternion: Quaternion
+        get() = worldTransform.toQuaternion()
+        set(value) {
+            quaternion = worldToParent.toQuaternion() * value
+        }
+
+    /**
+     * ### The node world-space rotation
+     *
+     * The world rotation of this node (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local rotation with its parent's world
+     * rotation.
+     *
+     * @see worldTransform
+     */
+    open var worldRotation: Rotation
+        get() = worldTransform.rotation
+        set(value) {
+            quaternion = worldToParent.toQuaternion() * Quaternion.fromEuler(value)
+        }
+
+    /**
+     * ### The node world-space scale
+     *
+     * The world scale of this node (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local scale with its parent's world
+     * scale.
+     *
+     * @see worldTransform
+     */
+    open var worldScale: Scale
+        get() = worldTransform.scale
+        set(value) {
+            scale = (worldToParent * scale(value)).scale
+        }
+
+    open val worldTransform: Mat4
+        get() = parentNode?.let { it.worldTransform * transform } ?: transform
+
+    /**
+     * ### The transform from the world coordinate system to the coordinate system of the parent node
+     */
+    private val worldToParent: Transform
+        get() = parentNode?.let { inverse(it.worldTransform) } ?: Transform()
+
+    /**
      * ## The smooth position, rotation and scale speed
      *
      * Expressed in units per seconds.
@@ -183,11 +254,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
 //    private var smoothPosition: Position? = null
 //    private var smoothQuaternion: Quaternion? = null
-
-    open val worldTransform: Mat4
-        get() = (parentNode?.let { parent ->
-            parent.worldTransform * transform
-        } ?: transform)
 
     /**
      * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
@@ -632,38 +698,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     fun isDescendantOf(ancestor: NodeParent): Boolean =
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
-
-    /**
-     * ### The node world-space position
-     *
-     * The world position of this node (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local position with its parent's world
-     * position.
-     *
-     * @see worldTransform
-     */
-    open val worldPosition: Position get() = worldTransform.position
-
-    /**
-     * ### The node world-space rotation
-     *
-     * The world rotation of this node (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local rotation with its parent's world rotation.
-     *
-     * @see worldTransform
-     */
-    open val worldRotation: Rotation get() = worldTransform.rotation
-
-    /**
-     * ### The node world-space scale
-     *
-     * The world scale of this node (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local scale with its parent's world
-     * scale.
-     *
-     * @see worldTransform
-     */
-    open val worldScale: Scale get() = worldTransform.scale
 
     // TODO : Remove this to full Kotlin Math
     override fun getTransformationMatrix(): Matrix {

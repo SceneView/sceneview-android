@@ -12,7 +12,10 @@ import com.google.ar.sceneform.ArCamera
 import com.google.ar.sceneform.rendering.*
 import io.github.sceneview.*
 import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.ar.interaction.ArNodeManipulator
+import io.github.sceneview.ar.interaction.ArSceneGestureDetector
 import io.github.sceneview.ar.scene.PlaneRenderer
+import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.addLight
@@ -193,6 +196,16 @@ open class ArSceneView @JvmOverloads constructor(
     val instructions = Instructions(this, lifecycle)
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
+
+    override val gestureListener = DefaultArSceneGestureListener()
+
+    override val gestureDetector: ArSceneGestureDetector by lazy {
+        ArSceneGestureDetector(
+            this,
+            nodeManipulator = ArNodeManipulator(this),
+            listener = gestureListener
+        )
+    }
 
     /**
      * ### Invoked when an ARCore error occurred
@@ -401,16 +414,13 @@ open class ArSceneView @JvmOverloads constructor(
     }
 
     override fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
-        if (!super.onTouch(selectedNode, motionEvent) &&
-            selectedNode == null
-        ) {
-            // TODO : Should be handled by the nodesTouchEventDispatcher
-            nodeGestureRecognizer.selectNode(null)
-            arSession?.let { session ->
-                session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
-                    onTouchAr(hitResult, motionEvent)
-                    return true
-                }
+        // TODO : Should be handled by the nodesTouchEventDispatcher
+        //nodeGestureRecognizer.onNodeTap(null)
+
+        arSession?.let { session ->
+            session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
+                onTouchAr(hitResult, motionEvent)
+                return true
             }
         }
         return false
@@ -427,6 +437,12 @@ open class ArSceneView @JvmOverloads constructor(
      */
     protected open fun onTouchAr(hitResult: HitResult, motionEvent: MotionEvent) {
         onTouchAr?.invoke(hitResult, motionEvent)
+    }
+
+    open inner class DefaultArSceneGestureListener : SceneView.DefaultSceneGestureListener() {
+        override fun onSingleTapUp(e: MotionEvent): Boolean {
+            return onTouch(null, e)
+        }
     }
 }
 
