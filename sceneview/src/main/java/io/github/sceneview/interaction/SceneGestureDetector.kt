@@ -4,7 +4,11 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import com.google.android.filament.utils.Manipulator
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.SceneView
+import io.github.sceneview.math.Transform
+import io.github.sceneview.math.toFloat3
 import io.github.sceneview.node.Node
 
 typealias FilamentGestureDetector = com.google.android.filament.utils.GestureDetector
@@ -15,13 +19,28 @@ typealias FilamentGestureDetector = com.google.android.filament.utils.GestureDet
  * Camera supports one-touch orbit, two-touch pan, and pinch-to-zoom.
  */
 open class SceneGestureDetector(
-    sceneView: SceneView,
+    val sceneView: SceneView,
     listener: OnSceneGestureListener? = null,
-    val cameraManipulator: Manipulator? = Manipulator.Builder()
+    cameraManipulator: Manipulator? = Manipulator.Builder()
         .targetPosition(Node.DEFAULT_POSITION.x, Node.DEFAULT_POSITION.y, Node.DEFAULT_POSITION.z)
         .viewport(sceneView.width, sceneView.height)
+        .zoomSpeed(0.05f)
         .build(Manipulator.Mode.ORBIT)
 ) {
+    val camera get() = sceneView.camera
+
+    var cameraManipulator = cameraManipulator
+        get() = field?.takeIf { it.transform == camera.worldTransform } ?:
+        // TODO: Ask Filament to add a startPosition and startRotation in order to handle
+        //  previous possible programmatic camera transforms.
+        //  Better would be that we don't have to create a new Manipulator and just update
+        //  the it when the camera is programmaticly updated so it don't come back to
+        //  initial position.
+        //  Return field for now will use the default node position target
+        //  or maybe just don't let the user enable manipulator until the camera position
+        //  is not anymore at its default targetPosition
+        field
+
     var gestureDetector = listener?.let { listener ->
         GestureDetector(sceneView.context, listener).apply {
             setContextClickListener(listener)
@@ -31,17 +50,25 @@ open class SceneGestureDetector(
     open var moveGestureDetector = listener?.let { MoveGestureDetector(sceneView.context, it) }
     open var rotateGestureDetector = listener?.let { RotateGestureDetector(sceneView.context, it) }
     open var scaleGestureDetector = listener?.let { ScaleGestureDetector(sceneView.context, it) }
-    open var filamentGestureDetector = cameraManipulator?.let { FilamentGestureDetector(sceneView, it) }
+    open var filamentGestureDetector: FilamentGestureDetector? = null
+        get() = field ?: cameraManipulator?.let { FilamentGestureDetector(sceneView, it) }.also {
+            field = it
+        }
 
-    private val gestureDetectors : List<*> by lazy { listOfNotNull(
-        gestureDetector,
-        moveGestureDetector,
-        scaleGestureDetector,
-        rotateGestureDetector,
-        filamentGestureDetector
-    ) }
+    private val gestureDetectors: List<*> by lazy {
+        listOfNotNull(
+            gestureDetector,
+            moveGestureDetector,
+            scaleGestureDetector,
+            rotateGestureDetector,
+            filamentGestureDetector
+        )
+    }
+
+    var lastTouchEvent: MotionEvent? = null
 
     fun onTouchEvent(event: MotionEvent) {
+        lastTouchEvent = event
         gestureDetectors.forEach {
             when (it) {
                 is GestureDetector -> it.onTouchEvent(event)
@@ -53,7 +80,7 @@ open class SceneGestureDetector(
         }
     }
 
-    open fun onTouchNode(selectedNode: Node) : Boolean {
+    open fun onTouchNode(selectedNode: Node): Boolean {
         return false
     }
 
@@ -143,3 +170,10 @@ open class SceneGestureDetector(
         }
     }
 }
+
+val Manipulator.transform: Transform
+    get() = Array(3) { FloatArray(3) }.apply {
+        getLookAt(this[0], this[1], this[2])
+    }.let { (eye, target, _) ->
+        return lookAt(eye = eye.toFloat3(), target = target.toFloat3(), up = Float3(y = 1.0f))
+    }
