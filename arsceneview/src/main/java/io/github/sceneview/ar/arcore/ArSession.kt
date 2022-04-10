@@ -22,7 +22,7 @@ class ArSession(
         val defaultPlaneFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
         val defaultDepthEnabled = true
         val defaultInstantPlacementEnabled = true
-        val defaultLightEstimationMode = LightEstimationMode.REALISTIC
+        val defaultLightEstimationMode = LightEstimationMode.ENVIRONMENTAL_HDR
 
         val defaultFeatures = setOf<Feature>()
 
@@ -223,16 +223,14 @@ class ArSession(
      * positioned specular highlights, and to cast shadows in a direction consistent with other
      * visible real objects.
      *
-     * LightEstimationConfig.SPECTACULAR vs LightEstimationConfig.REALISTIC mostly differs on the
-     * reflections parts and you will mainly only see differences if your model has more metallic
-     * than roughness material values.
      *
      * Adjust the based reference/factored lighting intensities and other values with:
      * - [io.github.sceneview.ar.ArSceneView.mainLight]
      * - [io.github.sceneview.environment.Environment.indirectLight]
      *
-     * @see LightEstimationMode.REALISTIC
-     * @see LightEstimationMode.SPECTACULAR
+     * @see LightEstimationMode.ENVIRONMENTAL_HDR
+     * @see LightEstimationMode.ENVIRONMENTAL_HDR_NO_REFLECTIONS
+     * @see LightEstimationMode.ENVIRONMENTAL_HDR_FAKE_REFLECTIONS
      * @see LightEstimationMode.AMBIENT_INTENSITY
      * @see LightEstimationMode.DISABLED
      */
