@@ -24,27 +24,23 @@ import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.EngineInstance
-import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderer
 import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.interaction.SceneGestureDetector
+import io.github.sceneview.interaction.SelectedNodeVisualizer
 import io.github.sceneview.light.*
 import io.github.sceneview.math.toFloat3
-import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
-import io.github.sceneview.scene.MarkerSelectedNodeVisualizer
-import io.github.sceneview.scene.SelectedNodeVisualizer
 import io.github.sceneview.utils.*
 import kotlin.math.roundToInt
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
 const val defaultSkybox = "sceneview/environments/indoor_studio/indoor_studio_skybox.ktx"
-const val defaultNodeSelector = "sceneview/models/node_selector.glb"
 
 /**
  * ### A SurfaceView that manages rendering and interactions with the 3D scene.
@@ -95,10 +91,21 @@ open class SceneView @JvmOverloads constructor(
     open val camera: Camera by lazy { Camera(this) }
     val collisionSystem = CollisionSystem()
 
+    var _renderer: Renderer? = null
+
     /**
      * ### The renderer used for this view
      */
-    override val renderer by lazy { Renderer(this, camera) }
+    override val renderer: Renderer
+        get() = _renderer ?: Renderer(this, camera)
+            .also { renderer ->
+                _renderer = renderer
+                renderer.mainLight = mainLight
+                renderer.environment = environment
+                backgroundColor?.let { renderer.setClearColor(backgroundColor) }
+                renderer.filamentView.blendMode =
+                    if (isTransparent) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
+            }
 
     /**
      * ### The transformation system
@@ -120,14 +127,9 @@ open class SceneView @JvmOverloads constructor(
         )
     }
 
-    open val selectedNodeVisualizer: SelectedNodeVisualizer by lazy { MarkerSelectedNodeVisualizer() }
-
-    var nodeSelectorModel: ModelRenderable?
-        get() = (selectedNodeVisualizer as? MarkerSelectedNodeVisualizer)?.markerRenderable
-        set(value) {
-            (selectedNodeVisualizer as? MarkerSelectedNodeVisualizer)?.markerRenderable =
-                value
-        }
+    open val selectedNodeVisualizer: SelectedNodeVisualizer by lazy {
+        SelectedNodeVisualizer(context, lifecycle)
+    }
 
     /**
      * ### Defines the lighting environment and the skybox of the scene
@@ -149,8 +151,8 @@ open class SceneView @JvmOverloads constructor(
      */
     var environment: Environment? = null
         set(value) {
-            renderer.setEnvironment(value)
             field = value
+            _renderer?.setEnvironment(value)
             updateBackground()
         }
 
@@ -163,7 +165,7 @@ open class SceneView @JvmOverloads constructor(
     var mainLight: Light? = null
         set(value) {
             field = value
-            renderer.setMainLight(value)
+            _renderer?.setMainLight(value)
         }
 
     var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
@@ -213,16 +215,14 @@ open class SceneView @JvmOverloads constructor(
             // TODO : Remove it here when moved Filament to lifecycle aware
             EngineInstance.getEngine()
 
-            mainLight = defaultMainLight
+            mainLight = LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
+                val (r, g, b) = Colors.cct(6_500.0f)
+                color(r, g, b)
+                intensity(100_000.0f)
+                direction(0.28f, -0.6f, -0.76f)
+                castShadows(true)
+            }.build()
             environment = KTXLoader.createEnvironment(context.fileBufferLocal(defaultIbl))
-
-            lifecycleScope.launchWhenCreated {
-                nodeSelectorModel = GLBLoader.loadModel(context, defaultNodeSelector)?.apply {
-                    collisionShape = null
-                    BuildConfig.VERSION_NAME
-                }
-            }
-            updateBackground()
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
             // Filament is kotlined
@@ -352,11 +352,11 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    var backgroundColor: Color? = null
+    open var backgroundColor: Color? = null
         set(value) {
             if (field != value) {
                 field = value
-                renderer.setClearColor(backgroundColor)
+                _renderer?.setClearColor(backgroundColor)
             }
         }
 
@@ -369,7 +369,7 @@ open class SceneView @JvmOverloads constructor(
                 field = value
                 setZOrderOnTop(value)
                 holder.setFormat(if (value) PixelFormat.TRANSLUCENT else PixelFormat.OPAQUE)
-                renderer.filamentView.blendMode =
+                _renderer?.filamentView?.blendMode =
                     if (value) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
             }
         }
@@ -448,18 +448,6 @@ open class SceneView @JvmOverloads constructor(
                 it.onClick(this)
                 true
             }
-        }
-    }
-
-    companion object {
-        val defaultMainLight: Light by lazy {
-            LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
-                val (r, g, b) = Colors.cct(6_500.0f)
-                color(r, g, b)
-                intensity(100_000.0f)
-                direction(0.28f, -0.6f, -0.76f)
-                castShadows(true)
-            }.build()
         }
     }
 
