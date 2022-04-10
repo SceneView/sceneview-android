@@ -11,12 +11,12 @@ class ArSceneGestureDetector(
     sceneView: ArSceneView,
     listener: OnSceneGestureListener? = null,
     val nodeManipulator: ArNodeManipulator? = ArNodeManipulator(sceneView)
-) :
-    SceneGestureDetector(sceneView, listener) {
+) : SceneGestureDetector(sceneView = sceneView, listener = listener, cameraManipulator = null) {
+
     private val moveListener = object : MoveGestureDetector.OnMoveGestureListener {
         override fun onMoveBegin(detector: MoveGestureDetector): Boolean {
             val listenerResult = listener?.onMoveBegin(detector) ?: false
-            if (nodeManipulator?.positionIsEditable == true) return listenerResult
+            if (nodeManipulator?.selectedNode?.positionEditable == true) return listenerResult
             return listOfNotNull(nodeManipulator?.beginTransform(), listenerResult).any()
         }
 
