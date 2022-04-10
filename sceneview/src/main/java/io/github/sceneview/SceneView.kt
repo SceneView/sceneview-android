@@ -25,6 +25,7 @@ import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.EngineInstance
 import com.google.ar.sceneform.rendering.Renderer
+import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
@@ -313,12 +314,14 @@ open class SceneView @JvmOverloads constructor(
             lifecycle.dispatchEvent<SceneLifecycleObserver> {
                 onFrame(frameTime)
             }
-            gestureDetector.cameraManipulator?.let {
-                val eye = FloatArray(3)
-                val target = FloatArray(3)
-                val up = FloatArray(3)
-                it.getLookAt(eye, target, up)
-                camera.transform = lookAt(eye.toFloat3(), target.toFloat3())
+            //TODO: The link between the Camera and gesture onFrame should not be here
+            gestureDetector.takeIf { it.lastTouchEvent != null }?.cameraManipulator?.let { manipulator ->
+                manipulator.update(frameTime.intervalSeconds.toFloat())
+                val (eye, target, up) = Array(3) { FloatArray(3) }.apply {
+                    manipulator.getLookAt(this[0], this[1], this[2])
+                }
+                camera.transform =
+                    lookAt(eye = eye.toFloat3(), target = target.toFloat3(), up = Float3(y = 1.0f))
             }
             onFrame?.invoke(frameTime)
         }
