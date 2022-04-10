@@ -55,6 +55,12 @@ import java.nio.ByteOrder
  * environment will reflect blue hues. Calculating the HDR cubemap requires a small amount of
  * additional CPU computation.
  *
+ * @param defaultEnvironmentReflections ### Use the [SceneView.environment] [Environment.indirectLight]
+ *
+ * If [environmentalHdrReflections] is false, use or not the [SceneView.environment] default
+ * reflections. In case of false, and [environmentalHdrReflections] no reflections will come on your
+ * reflective objects.
+ *
  * @param environmentalHdrSphericalHarmonics ### Ambient spherical harmonics
  *
  * In addition to the light energy in the main directional light, ARCore provides spherical
@@ -84,8 +90,9 @@ import java.nio.ByteOrder
 data class LightEstimationMode @JvmOverloads constructor(
     val sessionConfigMode: Config.LightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
     val environmentalHdrReflections: Boolean = true,
+    val defaultEnvironmentReflections: Boolean = false,
     val environmentalHdrSphericalHarmonics: Boolean = true,
-    val environmentalHdrSpecularFilter: Boolean = true,
+    val environmentalHdrSpecularFilter: Boolean = false,
     val environmentalHdrMainLightDirection: Boolean = true,
     val environmentalHdrMainLightIntensity: Boolean = true
 ) {
@@ -94,33 +101,47 @@ data class LightEstimationMode @JvmOverloads constructor(
         /**
          * ### Use this mode if you want your objects to be more like if they where real.
          *
-         * Target a more realistic [IndirectLight] such as it makes objects in your scene getting
-         * little reflections like if they were in real world.
+         * Specular highlights are the shiny bits of surfaces that reflect a light source directly.
+         * More highlights on an object change relative to the position of a viewer in a scene.
+         * With this mode, the reflections will come from ARCore.
          *
-         * The [environmentalHdrSpecularFilter] will be true.
+         * The [environmentalHdrReflections] will be true.
          *
          * The reflected environment will the one given by ARCore
          */
-        val REALISTIC
+        val ENVIRONMENTAL_HDR
             get() = LightEstimationMode(
                 sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
-                environmentalHdrSpecularFilter = true
             )
 
         /**
          * ### Use this mode if you want your objects to be more spectacular.
          *
-         * Specular highlights are the shiny bits of surfaces that reflect a light source directly.
-         * More highlights on an object change relative to the position of a viewer in a scene.
+         * The [environmentalHdrReflections] will be false and the SceneView default static
+         * environment will be rendered on reflective objects
          *
-         * The [environmentalHdrSpecularFilter] will be true.
-         *
-         * The reflected environment will the one given by ARCore
+         * The reflected environment will the one given by SceneView
          */
-        val SPECTACULAR
+        val ENVIRONMENTAL_HDR_FAKE_REFLECTIONS
             get() = LightEstimationMode(
                 sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
-                environmentalHdrSpecularFilter = false
+                environmentalHdrReflections = false,
+                defaultEnvironmentReflections = true
+            )
+
+        /**
+         * ### Use this mode if you don't want to have any reflections on your objects
+         *
+         * The [environmentalHdrReflections] will be false and the SceneView default static
+         * environment will also not be used ([defaultEnvironmentReflections] is false)
+         *
+         * No reflected environment = No reflections will come on your reflective objects
+         */
+        val ENVIRONMENTAL_HDR_NO_REFLECTIONS
+            get() = LightEstimationMode(
+                sessionConfigMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR,
+                environmentalHdrReflections = false,
+                defaultEnvironmentReflections = false
             )
 
         /**
@@ -243,21 +264,22 @@ fun ArFrame.environmentLightsEstimate(
         when (config.sessionConfigMode) {
             Config.LightEstimationMode.AMBIENT_INTENSITY ->
                 lightEstimate.ambientIntensityEnvironmentLights(
-                    previousEstimate,
-                    baseEnvironment,
-                    baseLight
+                    previousEstimate = previousEstimate,
+                    baseEnvironment = baseEnvironment,
+                    baseLight = baseLight
                 )
             Config.LightEstimationMode.ENVIRONMENTAL_HDR ->
                 lightEstimate.environmentalHdrEnvironmentLights(
-                    previousEstimate,
-                    baseEnvironment,
-                    baseLight,
-                    cameraExposureFactor,
-                    config.environmentalHdrReflections,
-                    config.environmentalHdrSphericalHarmonics,
-                    config.environmentalHdrSpecularFilter,
-                    config.environmentalHdrMainLightDirection,
-                    config.environmentalHdrMainLightIntensity
+                    previousEstimate = previousEstimate,
+                    baseEnvironment = baseEnvironment,
+                    baseLight = baseLight,
+                    cameraExposureFactor = cameraExposureFactor,
+                    withReflections = config.environmentalHdrReflections,
+                    withDefaultReflections = config.defaultEnvironmentReflections,
+                    withSphericalHarmonics = config.environmentalHdrSphericalHarmonics,
+                    withSpecularFilter = config.environmentalHdrSpecularFilter,
+                    withDirection = config.environmentalHdrMainLightDirection,
+                    withIntensity = config.environmentalHdrMainLightIntensity
                 )
             else -> null
         }
@@ -383,6 +405,7 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
     baseLight: Light?,
     cameraExposureFactor: Float,
     withReflections: Boolean,
+    withDefaultReflections: Boolean,
     withSphericalHarmonics: Boolean,
     withSpecularFilter: Boolean,
     withDirection: Boolean = true,
@@ -415,73 +438,64 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
     val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
 
     val environment = HDREnvironment(
-        cubemap = if (withReflections) {
-            acquireEnvironmentalHdrCubeMap()?.let { arImages ->
-                val width = arImages[0].width
-                val height = arImages[0].height
-                val faceOffsets = IntArray(arImages.size)
-                val buffer = Texture.PixelBufferDescriptor(
-                    ByteBuffer.allocateDirect(
-                        width * height *
-                                arImages.size *
-                                // RGB Bytes per pixel
-                                6 * 2
-                    ).apply {
-                        // Use the device hardware's native byte order
-                        order(ByteOrder.nativeOrder())
+        cubemap = when {
+            withReflections -> {
+                acquireEnvironmentalHdrCubeMap()?.let { arImages ->
+                    val width = arImages[0].width
+                    val height = arImages[0].height
+                    val faceOffsets = IntArray(arImages.size)
+                    val buffer = Texture.PixelBufferDescriptor(
+                        ByteBuffer.allocateDirect(
+                            width * height *
+                                    arImages.size *
+                                    // RGB Bytes per pixel
+                                    6 * 2
+                        ).apply {
+                            // Use the device hardware's native byte order
+                            order(ByteOrder.nativeOrder())
 
-                        val rgbaBytes = ByteArray(8) // ARGB Bytes per pixel
-                        arImages.forEachIndexed { index, image ->
-                            faceOffsets[index] = position()
-                            image.planes[0].buffer.let { imageBuffer ->
-                                while (imageBuffer.hasRemaining()) {
-                                    // Only take the RGB channels
-                                    put(rgbaBytes.apply {
-                                        imageBuffer.get(this)
-                                    } // Skip the Alpha channel
-                                        .sliceArray(0..5))
+                            val rgbaBytes = ByteArray(8) // ARGB Bytes per pixel
+                            arImages.forEachIndexed { index, image ->
+                                faceOffsets[index] = position()
+                                image.planes[0].buffer.let { imageBuffer ->
+                                    while (imageBuffer.hasRemaining()) {
+                                        // Only take the RGB channels
+                                        put(rgbaBytes.apply {
+                                            imageBuffer.get(this)
+                                        } // Skip the Alpha channel
+                                            .sliceArray(0..5))
+                                    }
                                 }
+                                image.close()
                             }
-                            image.close()
-                        }
-                        flip()
-                    },
-                    Texture.Format.RGB,
-                    Texture.Type.HALF
-                )
+                            flip()
+                        },
+                        Texture.Format.RGB,
+                        Texture.Type.HALF
+                    )
 
-                // Reuse the previous texture instead of creating a new one for performance and
-                // memory reasons
-                val texture = (previousEstimate?.environment as? HDREnvironment)?.cubemap?.takeIf {
-                    it.getWidth(0) == width && it.getHeight(0) == height
-                } ?: Texture.Builder()
-                    .width(width)
-                    .height(height)
-                    .levels(0xff)
-                    .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
-                    .format(Texture.InternalFormat.R11F_G11F_B10F)
-                    .build(Filament.engine)
-                texture.apply {
-                    // TODO : Remove generatePrefilterMipmap and uncomment specularFilter =
-                    //  withReflections &&  withSpecularFilter when Filament move async
-                    //  For now, the execution of Filament.iblPrefilter.specularFilter(it) is making
-                    //  the rendering too laggy
-                    //  https://github.com/google/filament/discussions/4665
-                    if (withSpecularFilter) {
-                        generatePrefilterMipmap(
-                            Filament.engine,
-                            buffer,
-                            faceOffsets,
-                            Texture.PrefilterOptions().apply {
-                                mirror = false
-                            })
-                    } else {
+                    // Reuse the previous texture instead of creating a new one for performance and
+                    // memory reasons
+                    val texture = (previousEstimate?.environment as? HDREnvironment)?.cubemap?.takeIf {
+                        it.getWidth(0) == width && it.getHeight(0) == height
+                    } ?: Texture.Builder()
+                        .width(width)
+                        .height(height)
+                        .levels(0xff)
+                        .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
+                        .format(Texture.InternalFormat.R11F_G11F_B10F)
+                        .build(Filament.engine)
+                    texture.apply {
                         setImage(Filament.engine, 0, buffer, faceOffsets)
                     }
                 }
             }
-        } else {
-            baseEnvironment?.indirectLight?.reflectionsTexture
+            withDefaultReflections -> {
+                baseEnvironment?.indirectLight?.reflectionsTexture
+            }
+            else -> {
+                null
+            }
         },
         indirectLightIrradiance = if (withSphericalHarmonics) {
             environmentalHdrAmbientSphericalHarmonics?.mapIndexed { index, sphericalHarmonic ->
@@ -493,13 +507,7 @@ fun LightEstimate.environmentalHdrEnvironmentLights(
         } else {
             baseEnvironment?.sphericalHarmonics
         },
-        // TODO : Remove generatePrefilterMipmap and uncomment specularFilter = withReflections &&
-        //  withSpecularFilter when Filament move async
-        //  For now, the execution of Filament.iblPrefilter.specularFilter(it) is making
-        //  the rendering too laggy
-        //  https://github.com/google/filament/discussions/4665
-//        specularFilter = withReflections && withSpecularFilter,
-        indirectLightSpecularFilter = false,
+        indirectLightSpecularFilter = withReflections && withSpecularFilter,
         indirectLightIntensity = baseEnvironment?.indirectLight?.intensity?.let { it * colorIntensity },
         createSkybox = false
     ).apply {

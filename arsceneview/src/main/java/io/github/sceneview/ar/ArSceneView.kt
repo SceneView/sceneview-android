@@ -15,7 +15,6 @@ import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.interaction.ArNodeManipulator
 import io.github.sceneview.ar.interaction.ArSceneGestureDetector
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
 import io.github.sceneview.scene.exposureFactor
@@ -121,8 +120,9 @@ open class ArSceneView @JvmOverloads constructor(
      * - [io.github.sceneview.ar.ArSceneView.mainLight]
      * - [io.github.sceneview.ar.ArSceneView.environment][io.github.sceneview.environment.Environment.indirectLight]
      *
-     * @see LightEstimationMode.REALISTIC
-     * @see LightEstimationMode.SPECTACULAR
+     * @see LightEstimationMode.ENVIRONMENTAL_HDR
+     * @see LightEstimationMode.ENVIRONMENTAL_HDR_NO_REFLECTIONS
+     * @see LightEstimationMode.ENVIRONMENTAL_HDR_FAKE_REFLECTIONS
      * @see LightEstimationMode.AMBIENT_INTENSITY
      * @see LightEstimationMode.DISABLED
      */
