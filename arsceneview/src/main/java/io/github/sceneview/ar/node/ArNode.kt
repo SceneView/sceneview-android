@@ -2,6 +2,7 @@ package io.github.sceneview.ar.node
 
 import com.google.ar.core.*
 import com.google.ar.core.Anchor.CloudAnchorState
+import com.google.ar.core.Config.PlaneFindingMode
 import com.google.ar.sceneform.math.Vector3
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.*
@@ -133,9 +134,14 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
         if (cloudAnchorTaskInProgress) {
             // Call the listener when the task completes successfully or with an error
-            if (cloudAnchorState != CloudAnchorState.NONE && cloudAnchorState != CloudAnchorState.TASK_IN_PROGRESS) {
+            if (cloudAnchorState != CloudAnchorState.NONE &&
+                cloudAnchorState != CloudAnchorState.TASK_IN_PROGRESS
+            ) {
                 cloudAnchorTaskInProgress = false
-                onCloudAnchorTaskCompleted?.invoke(anchor, cloudAnchorState == CloudAnchorState.SUCCESS)
+                onCloudAnchorTaskCompleted?.invoke(
+                    anchor,
+                    cloudAnchorState == CloudAnchorState.SUCCESS
+                )
                 onCloudAnchorTaskCompleted = null
             }
         }
@@ -154,6 +160,32 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     open fun onAnchorChanged(anchor: Anchor?) {
         onAnchorChanged?.invoke(this, anchor)
     }
+
+
+    /**
+     * ### Performs a ray cast to retrieve the ARCore info at this camera point
+     *
+     * @param frame the [ArFrame] from where we take the [HitResult]
+     * By default the latest session frame if any exist
+     * @param xPx x view coordinate in pixels
+     * By default the [cameraPosition.x][placementPosition] of this Node is used
+     * @property yPx y view coordinate in pixels
+     * By default the [cameraPosition.y][placementPosition] of this Node is used
+     *
+     * @return the hitResult or null if no info is retrieved
+     *
+     * @see ArFrame.hitTest
+     */
+    fun hitTest(
+        frame: ArFrame? = arSession?.currentFrame,
+        xPx: Float,
+        yPx: Float,
+        approximateDistanceMeters: Float = placementMode.instantPlacementDistance,
+        plane: Boolean = placementMode.planeEnabled,
+        depth: Boolean = placementMode.depthEnabled,
+        instantPlacement: Boolean = placementMode.instantPlacementEnabled
+    ): HitResult? =
+        frame?.hitTest(xPx, yPx, approximateDistanceMeters, plane, depth, instantPlacement)
 
     /**
      * ### Creates a new anchor at actual node worldPosition and worldRotation (hit location)
@@ -205,7 +237,10 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * @param ttlDays The lifetime of the anchor in days. See [Session.hostCloudAnchorWithTtl] for more details.
      * @param onTaskCompleted Called when the task completes successfully or with an error.
      */
-    fun hostCloudAnchor(ttlDays: Int = 1, onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit) {
+    fun hostCloudAnchor(
+        ttlDays: Int = 1,
+        onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit
+    ) {
         if (cloudAnchorTaskInProgress) throw IllegalStateException("The task is already in progress")
 
         if (anchor == null) throw IllegalStateException("The anchor shouldn't be null")
@@ -223,7 +258,10 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * @param cloudAnchorId The Cloud Anchor ID of the Cloud Anchor.
      * @param onTaskCompleted Called when the task completes successfully or with an error.
      */
-    fun resolveCloudAnchor(cloudAnchorId: String, onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit) {
+    fun resolveCloudAnchor(
+        cloudAnchorId: String,
+        onTaskCompleted: (anchor: Anchor, success: Boolean) -> Unit
+    ) {
         if (cloudAnchorTaskInProgress) throw IllegalStateException("The task is already in progress")
 
         anchor = arSession?.resolveCloudAnchor(cloudAnchorId)
@@ -341,13 +379,114 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     fun copy(toNode: ArNode = ArNode()) = toNode.apply {
         super.copy(toNode)
-
         placementMode = this@ArNode.placementMode
     }
 
     companion object {
         val DEFAULT_PLACEMENT_MODE = PlacementMode.BEST_AVAILABLE
     }
+}
+
+
+/**
+ * # How an object is placed on the real world
+ *
+ * @param instantPlacementFallback Fallback to instantly place nodes at a fixed orientation and an
+ * approximate distance when the base placement type is not available yet or at all.
+ */
+enum class PlacementMode(
+    var instantPlacementDistance: Float = 2.0f,
+    var instantPlacementFallback: Boolean = false
+) {
+    /**
+     * ### Disable every AR placement
+     * @see PlaneFindingMode.DISABLED
+     */
+    DISABLED,
+
+    /**
+     * ### Place and orientate nodes only on horizontal planes
+     * @see PlaneFindingMode.HORIZONTAL
+     */
+    PLANE_HORIZONTAL,
+
+    /**
+     * ### Place and orientate nodes only on vertical planes
+     * @see PlaneFindingMode.VERTICAL
+     */
+    PLANE_VERTICAL,
+
+    /**
+     * ### Place and orientate nodes on both horizontal and vertical planes
+     * @see PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+     */
+    PLANE_HORIZONTAL_AND_VERTICAL,
+
+    /**
+     * ### Place and orientate nodes on every detected depth surfaces
+     *
+     * Not all devices support this mode. In case on non depth enabled device the placement mode
+     * will automatically fallback to [PLANE_HORIZONTAL_AND_VERTICAL].
+     * @see Config.DepthMode.AUTOMATIC
+     */
+    DEPTH,
+
+    /**
+     * ### Instantly place only nodes at a fixed orientation and an approximate distance
+     *
+     * No AR orientation will be provided = fixed +Y pointing upward, against gravity
+     *
+     * This mode is currently intended to be used with hit tests against horizontal surfaces.
+     * Hit tests may also be performed against surfaces with any orientation, however:
+     * - The resulting Instant Placement point will always have a pose with +Y pointing upward,
+     * against gravity.
+     * - No guarantees are made with respect to orientation of +X and +Z. Specifically, a hit
+     * test against a vertical surface, such as a wall, will not result in a pose that's in any
+     * way aligned to the plane of the wall, other than +Y being up, against gravity.
+     * - The [InstantPlacementPoint]'s tracking method may never become
+     * [InstantPlacementPoint.TrackingMethod.FULL_TRACKING] } or may take a long time to reach
+     * this state. The tracking method remains
+     * [InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE] until a
+     * (tiny) horizontal plane is fitted at the point of the hit test.
+     */
+    INSTANT,
+
+    /**
+     * ### Place nodes on every detected surfaces
+     *
+     * The node will be placed instantly and then adjusted to fit the best accurate, precise,
+     * available placement.
+     */
+    BEST_AVAILABLE(instantPlacementFallback = true);
+
+    val planeEnabled: Boolean
+        get() = when (planeFindingMode) {
+            PlaneFindingMode.HORIZONTAL,
+            PlaneFindingMode.VERTICAL,
+            PlaneFindingMode.HORIZONTAL_AND_VERTICAL -> true
+            else -> false
+        }
+
+    val planeFindingMode: PlaneFindingMode
+        get() = when (this) {
+            PLANE_HORIZONTAL -> PlaneFindingMode.HORIZONTAL
+            PLANE_VERTICAL -> PlaneFindingMode.VERTICAL
+            PLANE_HORIZONTAL_AND_VERTICAL,
+            BEST_AVAILABLE -> PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+            else -> PlaneFindingMode.DISABLED
+        }
+
+    val depthEnabled: Boolean
+        get() = when (this) {
+            DEPTH, BEST_AVAILABLE -> true
+            else -> false
+        }
+
+    val instantPlacementEnabled: Boolean
+        get() = when {
+            this == INSTANT || instantPlacementFallback -> true
+            else -> false
+        }
 }
 
 enum class EditableTransform {

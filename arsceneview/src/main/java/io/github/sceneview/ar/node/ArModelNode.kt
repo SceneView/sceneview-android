@@ -1,8 +1,6 @@
 package io.github.sceneview.ar.node
 
 import com.google.ar.core.Anchor
-import com.google.ar.core.Config
-import com.google.ar.core.Config.PlaneFindingMode
 import com.google.ar.core.HitResult
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycleObserver
@@ -10,6 +8,7 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.math.Position
+import kotlin.math.abs
 
 /**
  * ### AR positioned 3D model node
@@ -188,14 +187,19 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
      */
     fun hitTest(
         frame: ArFrame? = arSession?.currentFrame,
-        xPx: Float = (arSession?.displayWidth ?: 0) / 2.0f * (1.0f + placementPosition.x),
-        yPx: Float = (arSession?.displayHeight ?: 0) / 2.0f * (1.0f - placementPosition.y),
-        approximateDistanceMeters: Float = kotlin.math.abs(placementPosition.z),
+        approximateDistanceMeters: Float = abs(placementPosition.z),
         plane: Boolean = placementMode.planeEnabled,
         depth: Boolean = placementMode.depthEnabled,
         instantPlacement: Boolean = placementMode.instantPlacementEnabled
-    ): HitResult? =
-        frame?.hitTest(xPx, yPx, approximateDistanceMeters, plane, depth, instantPlacement)
+    ): HitResult? = super.hitTest(
+        frame = frame,
+        xPx = (arSession?.displayWidth ?: 0) / 2.0f * (1.0f + placementPosition.x),
+        yPx = (arSession?.displayHeight ?: 0) / 2.0f * (1.0f - placementPosition.y),
+        approximateDistanceMeters = approximateDistanceMeters,
+        plane = plane,
+        depth = depth,
+        instantPlacement = instantPlacement
+    )
 
     override fun createAnchor(): Anchor? {
         return (hitTest()?.takeIf { it.isTracking }
@@ -213,108 +217,10 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
         super.copy(toNode)
 
         placementPosition = this@ArModelNode.placementPosition
-        placementMode = this@ArModelNode.placementMode
     }
 
     companion object {
-        val DEFAULT_PLACEMENT_POSITION = Position(0.0f, 0.0f, -2.0f)
+        val DEFAULT_PLACEMENT_POSITION =
+            Position(0.0f, 0.0f, -DEFAULT_PLACEMENT_MODE.instantPlacementDistance)
     }
-}
-
-/**
- * # How an object is placed on the real world
- *
- * @param instantPlacementFallback Fallback to instantly place nodes at a fixed orientation and an
- * approximate distance when the base placement type is not available yet or at all.
- */
-enum class PlacementMode(var instantPlacementFallback: Boolean = false) {
-    /**
-     * ### Disable every AR placement
-     * @see PlaneFindingMode.DISABLED
-     */
-    DISABLED,
-
-    /**
-     * ### Place and orientate nodes only on horizontal planes
-     * @see PlaneFindingMode.HORIZONTAL
-     */
-    PLANE_HORIZONTAL,
-
-    /**
-     * ### Place and orientate nodes only on vertical planes
-     * @see PlaneFindingMode.VERTICAL
-     */
-    PLANE_VERTICAL,
-
-    /**
-     * ### Place and orientate nodes on both horizontal and vertical planes
-     * @see PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-     */
-    PLANE_HORIZONTAL_AND_VERTICAL,
-
-    /**
-     * ### Place and orientate nodes on every detected depth surfaces
-     *
-     * Not all devices support this mode. In case on non depth enabled device the placement mode
-     * will automatically fallback to [PLANE_HORIZONTAL_AND_VERTICAL].
-     * @see Config.DepthMode.AUTOMATIC
-     */
-    DEPTH,
-
-    /**
-     * ### Instantly place only nodes at a fixed orientation and an approximate distance
-     *
-     * No AR orientation will be provided = fixed +Y pointing upward, against gravity
-     *
-     * This mode is currently intended to be used with hit tests against horizontal surfaces.
-     * Hit tests may also be performed against surfaces with any orientation, however:
-     * - The resulting Instant Placement point will always have a pose with +Y pointing upward,
-     * against gravity.
-     * - No guarantees are made with respect to orientation of +X and +Z. Specifically, a hit
-     * test against a vertical surface, such as a wall, will not result in a pose that's in any
-     * way aligned to the plane of the wall, other than +Y being up, against gravity.
-     * - The [InstantPlacementPoint]'s tracking method may never become
-     * [InstantPlacementPoint.TrackingMethod.FULL_TRACKING] } or may take a long time to reach
-     * this state. The tracking method remains
-     * [InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE] until a
-     * (tiny) horizontal plane is fitted at the point of the hit test.
-     */
-    INSTANT,
-
-    /**
-     * ### Place nodes on every detected surfaces
-     *
-     * The node will be placed instantly and then adjusted to fit the best accurate, precise,
-     * available placement.
-     */
-    BEST_AVAILABLE(instantPlacementFallback = true);
-
-    val planeEnabled: Boolean
-        get() = when (planeFindingMode) {
-            PlaneFindingMode.HORIZONTAL,
-            PlaneFindingMode.VERTICAL,
-            PlaneFindingMode.HORIZONTAL_AND_VERTICAL -> true
-            else -> false
-        }
-
-    val planeFindingMode: PlaneFindingMode
-        get() = when (this) {
-            PLANE_HORIZONTAL -> PlaneFindingMode.HORIZONTAL
-            PLANE_VERTICAL -> PlaneFindingMode.VERTICAL
-            PLANE_HORIZONTAL_AND_VERTICAL,
-            BEST_AVAILABLE -> PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-            else -> PlaneFindingMode.DISABLED
-        }
-
-    val depthEnabled: Boolean
-        get() = when (this) {
-            DEPTH, BEST_AVAILABLE -> true
-            else -> false
-        }
-
-    val instantPlacementEnabled: Boolean
-        get() = when {
-            this == INSTANT || instantPlacementFallback -> true
-            else -> false
-        }
 }
