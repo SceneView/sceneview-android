@@ -24,7 +24,6 @@ jobs:
       - name: Deploy to GitHub pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           external_repository: SceneView/sceneview.github.io
           publish_branch: main
