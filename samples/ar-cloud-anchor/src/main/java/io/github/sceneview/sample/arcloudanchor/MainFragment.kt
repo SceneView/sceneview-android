@@ -15,7 +15,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
-import com.google.ar.core.Config
 import com.google.ar.core.Session
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
@@ -47,7 +46,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         val topGuideline = view.findViewById<Guideline>(R.id.topGuideline)
         topGuideline.doOnApplyWindowInsets { systemBarsInsets ->
             // Add the action bar margin
-            val actionBarHeight = (requireActivity() as AppCompatActivity).supportActionBar?.height ?: 0
+            val actionBarHeight =
+                (requireActivity() as AppCompatActivity).supportActionBar?.height ?: 0
             topGuideline.setGuidelineBegin(systemBarsInsets.top + actionBarHeight)
         }
         val bottomGuideline = view.findViewById<Guideline>(R.id.bottomGuideline)
@@ -58,9 +58,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         sceneView = view.findViewById(R.id.sceneView)
         sceneView.apply {
-            configureSession { _, config ->
-                config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
-            }
+            cloudAnchorEnabled = true
             // Move the instructions up to avoid an overlap with the buttons
             instructions.searchPlaneInfoNode.position.y = -0.5f
         }
@@ -106,7 +104,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     private fun actionButtonClicked() {
         when (mode) {
-            Mode.HOME -> { }
+            Mode.HOME -> {}
             Mode.HOST -> {
                 val frame = sceneView.currentFrame ?: return
 
@@ -210,5 +208,4 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     companion object {
         private const val TAG = "MainFragment"
     }
-
 }

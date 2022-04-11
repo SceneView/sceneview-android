@@ -13,27 +13,8 @@ import io.github.sceneview.utils.FrameTime
 class ArSession(
     val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
-    features: Set<Feature> = defaultFeatures,
-    config: (Config) -> Unit = defaultConfig
+    features: Set<Feature> = setOf()
 ) : Session(lifecycle.context, features), ArSceneLifecycleObserver {
-
-    companion object {
-        val defaultFocusMode = Config.FocusMode.AUTO
-        val defaultPlaneFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-        val defaultDepthEnabled = true
-        val defaultInstantPlacementEnabled = true
-        val defaultLightEstimationMode = LightEstimationMode.ENVIRONMENTAL_HDR
-
-        val defaultFeatures = setOf<Feature>()
-
-        val defaultConfig = { config: Config ->
-            config.focusMode = defaultFocusMode
-            config.planeFindingMode = defaultPlaneFindingMode
-            config.depthEnabled = defaultDepthEnabled
-            config.instantPlacementEnabled = defaultInstantPlacementEnabled
-            config.lightEstimationMode = defaultLightEstimationMode.sessionConfigMode
-        }
-    }
 
     private var hasSetTextureNames = false
 
@@ -78,8 +59,6 @@ class ArSession(
 
     init {
         lifecycle.addObserver(this)
-
-        configure(config)
     }
 
     override fun onResume(owner: LifecycleOwner) {
@@ -151,21 +130,6 @@ class ArSession(
         }
     }
 
-// TODO: See if it really has a performance impact
-//    /**
-//     * ### Gets the current config
-//     *
-//     * More specifically, returns a copy of the config most recently set by [configure].
-//     *
-//     * Note: if the session was not explicitly configured, a default configuration is returned
-//     * (same as [com.gorisse.thomas.sceneview.ARCore.defaultSessionConfig].
-//     */
-//    override fun getConfig(): Config {
-//        return _config ?: super.getConfig().also {
-//            _config = it
-//        }
-//    }
-
     /**
      * ### Define the session config used by ARCore
      *
@@ -180,7 +144,7 @@ class ArSession(
      * @param config the apply block for the new config
      */
     fun configure(config: (Config) -> Unit) {
-        val sessionConfig = this.config.apply {
+        super.configure(this.config.apply {
             config(this)
 
             if (depthEnabled && !isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
@@ -194,91 +158,85 @@ class ArSession(
                 lightEstimationMode = Config.LightEstimationMode.DISABLED
             }
             hasAugmentedImageDatabase = (augmentedImageDatabase?.numImages ?: 0) > 0
-        }
-        super.configure(sessionConfig)
+        })
         lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
-            onArSessionConfigChanged(this@ArSession, sessionConfig)
+            onArSessionConfigChanged(this@ArSession, this@ArSession.config)
         }
     }
-
-    /**
-     * ### ARCore light estimation configuration
-     *
-     * ARCore estimate lighting to provide directional light, ambient spherical harmonics,
-     * and reflection cubemap estimation
-     *
-     * Light bounces off of surfaces differently depending on whether the surface has specular
-     * (highly reflective) or diffuse (not reflective) properties.
-     * For example, a metallic ball will be highly specular and reflect its environment, while
-     * another ball painted a dull matte gray will be diffuse. Most real-world objects have a
-     * combination of these properties — think of a scuffed-up bowling ball or a well-used credit
-     * card.
-     *
-     * Reflective surfaces also pick up colors from the ambient environment. The coloring of an
-     * object can be directly affected by the coloring of its environment. For example, a white ball
-     * in a blue room will take on a bluish hue.
-     *
-     * The main directional light API calculates the direction and intensity of the scene's
-     * main light source. This information allows virtual objects in your scene to show reasonably
-     * positioned specular highlights, and to cast shadows in a direction consistent with other
-     * visible real objects.
-     *
-     *
-     * Adjust the based reference/factored lighting intensities and other values with:
-     * - [io.github.sceneview.ar.ArSceneView.mainLight]
-     * - [io.github.sceneview.environment.Environment.indirectLight]
-     *
-     * @see LightEstimationMode.ENVIRONMENTAL_HDR
-     * @see LightEstimationMode.ENVIRONMENTAL_HDR_NO_REFLECTIONS
-     * @see LightEstimationMode.ENVIRONMENTAL_HDR_FAKE_REFLECTIONS
-     * @see LightEstimationMode.AMBIENT_INTENSITY
-     * @see LightEstimationMode.DISABLED
-     */
-    var lightEstimationMode = defaultLightEstimationMode
-        set(value) {
-            configure { config ->
-                config.lightEstimationMode = value.sessionConfigMode
-            }
-            field = value
-        }
 
     var focusMode: Config.FocusMode
         get() = config.focusMode
         set(value) {
-            configure {
-                it.focusMode = value
+            if (focusMode != value) {
+                configure {
+                    it.focusMode = value
+                }
             }
         }
 
     var planeFindingEnabled: Boolean
         get() = config.planeFindingEnabled
         set(value) {
-            configure {
-                it.planeFindingEnabled = value
+            if (planeFindingEnabled != value) {
+                configure {
+                    it.planeFindingEnabled = value
+                }
             }
         }
 
     var planeFindingMode: Config.PlaneFindingMode
         get() = config.planeFindingMode
         set(value) {
-            configure {
-                it.planeFindingMode = value
+            if (planeFindingMode != value) {
+                configure {
+                    it.planeFindingMode = value
+                }
             }
         }
 
     var depthEnabled: Boolean
         get() = config.depthEnabled
         set(value) {
-            configure {
-                it.depthEnabled = value
+            if (depthEnabled != value) {
+                configure {
+                    it.depthEnabled = value
+                }
             }
         }
 
     var instantPlacementEnabled: Boolean
         get() = config.instantPlacementEnabled
         set(value) {
-            configure {
-                it.instantPlacementEnabled = value
+            if (instantPlacementEnabled != value) {
+                configure {
+                    it.instantPlacementEnabled = value
+                }
+            }
+        }
+
+    var cloudAnchorEnabled: Boolean
+        get() = config.cloudAnchorEnabled
+        set(value) {
+            if (cloudAnchorEnabled != value) {
+                configure {
+                    it.cloudAnchorEnabled = value
+                }
+            }
+        }
+
+    /**
+     * ### The behavior of the lighting estimation subsystem
+     *
+     * These modes consist of separate APIs that allow for granular and realistic lighting
+     * estimation for directional lighting, shadows, specular highlights, and reflections.
+     */
+    var lightEstimationMode: Config.LightEstimationMode
+        get() = config.lightEstimationMode
+        set(value) {
+            if (lightEstimationMode != value) {
+                configure {
+                    it.lightEstimationMode = value
+                }
             }
         }
 
@@ -376,10 +334,6 @@ var Config.depthEnabled
         }
     }
 
-
-/**
- * //TODO: Doc
- */
 var Config.rawDepthEnabled
     get() = depthMode == Config.DepthMode.RAW_DEPTH_ONLY
     set(value) {
@@ -390,9 +344,6 @@ var Config.rawDepthEnabled
         }
     }
 
-/**
- * TODO : Doc
- */
 var Config.instantPlacementEnabled
     get() = instantPlacementMode != Config.InstantPlacementMode.DISABLED
     set(value) {
@@ -400,5 +351,15 @@ var Config.instantPlacementEnabled
             Config.InstantPlacementMode.LOCAL_Y_UP
         } else {
             Config.InstantPlacementMode.DISABLED
+        }
+    }
+
+var Config.cloudAnchorEnabled
+    get() = cloudAnchorMode != Config.CloudAnchorMode.DISABLED
+    set(value) {
+        cloudAnchorMode = if (value) {
+            Config.CloudAnchorMode.ENABLED
+        } else {
+            Config.CloudAnchorMode.DISABLED
         }
     }
