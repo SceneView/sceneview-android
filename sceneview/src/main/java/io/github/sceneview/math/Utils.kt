@@ -42,3 +42,8 @@ fun Mat4.toColumnsFloatArray() = floatArrayOf(
 )
 
 fun lerp(a: Float3, b: Float3, t: Float) = mix(a, b, t)
+
+/**
+ * If rendering in linear space, first convert the values to linear space by rising to the power 2.2
+ */
+fun FloatArray.toLinearSpace() = map { pow(it, 2.2f) }.toFloatArray()
