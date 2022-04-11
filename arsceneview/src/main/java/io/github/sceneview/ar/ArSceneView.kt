@@ -258,7 +258,8 @@ open class ArSceneView @JvmOverloads constructor(
         super.onArSessionCreated(session)
 
         session.configure { config ->
-            config.focusMode = focusMode
+            // FocusMode must be changed after the session resume to work
+//            config.focusMode = focusMode
             config.planeFindingMode = planeFindingMode
             config.depthEnabled = depthEnabled
             config.instantPlacementEnabled = instantPlacementEnabled
@@ -282,6 +283,11 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun onArSessionResumed(session: ArSession) {
         super.onArSessionResumed(session)
+
+        session.configure { config ->
+            // FocusMode must be changed after the session resume to work
+            config.focusMode = focusMode
+        }
 
         onArSessionResumed?.invoke(session)
     }
