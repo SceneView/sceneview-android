@@ -42,8 +42,7 @@ const val defaultApproximateDistanceMeters = 2.0f
 class ARCore(
     val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
-    val features: () -> Set<Session.Feature> = { ArSession.defaultFeatures },
-    val config: Config.() -> Unit = ArSession.defaultConfig
+    val features: () -> Set<Session.Feature> = { setOf() }
 ) : ArSceneLifecycleObserver {
 
     /**
@@ -118,7 +117,7 @@ class ARCore(
     }
 
     override fun onResume(owner: LifecycleOwner) {
-        if (this.session == null) {
+        if (session == null) {
             // Camera Permission
             if (checkCameraPermission && !cameraPermissionRequested &&
                 !checkCameraPermission(lifecycle.activity, cameraPermissionLauncher)
@@ -146,7 +145,7 @@ class ARCore(
                     } else {
                         // Create a session if Google Play Services for AR is installed and up to
                         // date.
-                        session = createSession(cameraTextureId, lifecycle, features(), config)
+                        session = createSession(cameraTextureId, lifecycle, features())
                         session?.let {
                             lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
                                 onArSessionCreated(it)
@@ -231,6 +230,6 @@ class ARCore(
         config: Config.() -> Unit = {}
     ): ArSession {
         // Create a session if Google Play Services for AR is installed and up to date.
-        return ArSession(cameraTextureId, lifecycle, features, config)
+        return ArSession(cameraTextureId, lifecycle, features)
     }
 }

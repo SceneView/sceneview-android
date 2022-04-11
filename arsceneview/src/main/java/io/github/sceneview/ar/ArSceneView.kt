@@ -15,9 +15,7 @@ import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.interaction.ArNodeManipulator
 import io.github.sceneview.ar.interaction.ArSceneGestureDetector
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.light.destroy
 import io.github.sceneview.node.Node
-import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
 
@@ -36,17 +34,35 @@ open class ArSceneView @JvmOverloads constructor(
     defStyleRes
 ), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
 
+    override val sceneLifecycle: ArSceneLifecycle by lazy { ArSceneLifecycle(context, this) }
+
+    val cameraTextureId = GLHelper.createCameraTexture()
+
+    //TODO : Move it to Lifecycle and NodeParent when Kotlined
+    override val camera by lazy { ArCamera(this) }
+
+    /**
+     * ### Fundamental session features
+     *
+     * Must be set before session creation = before the [onResume] call
+     */
+    var arSessionFeatures = { setOf<Session.Feature>() }
+
+    override val arCore = ARCore(
+        cameraTextureId = cameraTextureId,
+        lifecycle = lifecycle,
+        features = arSessionFeatures
+    )
+
     /**
      * ### Sets the desired focus mode
      *
      * See [Config.FocusMode] for available options.
      */
-    var focusMode: Config.FocusMode
-        get() = arSession?.focusMode ?: ArSession.defaultFocusMode
+    var focusMode: Config.FocusMode = Config.FocusMode.AUTO
         set(value) {
-            configureSession { _, config ->
-                config.focusMode = value
-            }
+            field = value
+            arSession?.focusMode = value
         }
 
     /**
@@ -55,12 +71,10 @@ open class ArSceneView @JvmOverloads constructor(
      * See the [Config.PlaneFindingMode] enum
      * for available options.
      */
-    var planeFindingMode: Config.PlaneFindingMode
-        get() = arSession?.planeFindingMode ?: ArSession.defaultPlaneFindingMode
+    var planeFindingMode: Config.PlaneFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
         set(value) {
-            configureSession { _, config ->
-                config.planeFindingMode = value
-            }
+            field = value
+            arSession?.planeFindingMode = value
         }
 
     /**
@@ -69,25 +83,41 @@ open class ArSceneView @JvmOverloads constructor(
      * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether the
      * current device and the selected camera support a particular depth mode.
      */
-    var depthEnabled: Boolean
-        get() = arSession?.depthEnabled ?: ArSession.defaultDepthEnabled
+    var depthEnabled: Boolean = true
         set(value) {
-            configureSession { _, config ->
-                config.depthEnabled = value
-            }
+            field = value
+            arSession?.depthEnabled = value
         }
 
     /**
      * ### Enable or disable the [Config.InstantPlacementMode.LOCAL_Y_UP]
-     *
-     * // TODO : Doc
      */
-    var instantPlacementEnabled: Boolean
-        get() = arSession?.instantPlacementEnabled ?: ArSession.defaultInstantPlacementEnabled
+    var instantPlacementEnabled: Boolean = true
         set(value) {
-            configureSession { _, config ->
-                config.instantPlacementEnabled = value
-            }
+            field = value
+            arSession?.instantPlacementEnabled = value
+        }
+
+    /**
+     * ### Cloud anchor mode
+     */
+    var cloudAnchorEnabled: Boolean = false
+        set(value) {
+            field = value
+            arSession?.cloudAnchorEnabled = value
+        }
+
+    /**
+     * ### The behavior of the lighting estimation subsystem
+     *
+     * These modes consist of separate APIs that allow for granular and realistic lighting
+     * estimation for directional lighting, shadows, specular highlights, and reflections.
+     */
+    var sessionLightEstimationMode: Config.LightEstimationMode =
+        Config.LightEstimationMode.ENVIRONMENTAL_HDR
+        set(value) {
+            field = value
+            arSession?.lightEstimationMode = value
         }
 
     /**
@@ -112,14 +142,6 @@ open class ArSceneView @JvmOverloads constructor(
      * positioned specular highlights, and to cast shadows in a direction consistent with other
      * visible real objects.
      *
-     * LightEstimationConfig.SPECTACULAR vs LightEstimationConfig.REALISTIC mostly differs on the
-     * reflections parts and you will mainly only see differences if your model has more metallic
-     * than roughness material values.
-     *
-     * Adjust the based reference/factored lighting intensities and other values with:
-     * - [io.github.sceneview.ar.ArSceneView.mainLight]
-     * - [io.github.sceneview.ar.ArSceneView.environment][io.github.sceneview.environment.Environment.indirectLight]
-     *
      * @see LightEstimationMode.ENVIRONMENTAL_HDR
      * @see LightEstimationMode.ENVIRONMENTAL_HDR_NO_REFLECTIONS
      * @see LightEstimationMode.ENVIRONMENTAL_HDR_FAKE_REFLECTIONS
@@ -127,31 +149,10 @@ open class ArSceneView @JvmOverloads constructor(
      * @see LightEstimationMode.DISABLED
      */
     var lightEstimationMode: LightEstimationMode
-        get() = arSession?.lightEstimationMode ?: ArSession.defaultLightEstimationMode
+        get() = lightEstimation.mode
         set(value) {
-            configureSession { session, _ ->
-                session.lightEstimationMode = value
-            }
+            lightEstimation.mode = value
         }
-
-    override val sceneLifecycle: ArSceneLifecycle by lazy { ArSceneLifecycle(context, this) }
-
-    val cameraTextureId = GLHelper.createCameraTexture()
-
-    //TODO : Move it to Lifecycle and NodeParent when Kotlined
-    override val camera by lazy { ArCamera(this) }
-
-    /**
-     * ### Fundamental session features
-     *
-     * Must be set before session creation = before the [onResume] call
-     */
-    var arSessionFeatures = { ArSession.defaultFeatures }
-    override val arCore = ARCore(
-        cameraTextureId = cameraTextureId,
-        lifecycle = lifecycle,
-        features = arSessionFeatures
-    )
 
     var currentFrame: ArFrame? = null
 
@@ -177,25 +178,7 @@ open class ArSceneView @JvmOverloads constructor(
      * - Environment handles a reflections, indirect lighting and skybox.
      * - ARCore will estimate the direction, the intensity and the color of the light
      */
-    var estimatedLights: EnvironmentLightsEstimate? = null
-        internal set(value) {
-            //TODO: Move to Renderer when kotlined it
-            val environment = value?.environment ?: environment
-            if (renderer.getEnvironment() != environment) {
-                if (field?.environment != environment) {
-                    field?.environment?.destroy()
-                }
-                renderer.setEnvironment(environment)
-            }
-            val mainLight = value?.mainLight ?: mainLight
-            if (renderer.getMainLight() != mainLight) {
-                if (field?.mainLight != mainLight) {
-                    field?.mainLight?.destroy()
-                }
-                renderer.setMainLight(mainLight)
-            }
-            field = value
-        }
+    val lightEstimation = LightEstimation(this, lifecycle)
 
     val instructions = Instructions(this, lifecycle)
 
@@ -273,6 +256,15 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
+
+        session.configure { config ->
+            config.focusMode = focusMode
+            config.planeFindingMode = planeFindingMode
+            config.depthEnabled = depthEnabled
+            config.instantPlacementEnabled = instantPlacementEnabled
+            config.cloudAnchorEnabled = cloudAnchorEnabled
+            config.lightEstimationMode = sessionLightEstimationMode
+        }
 
         // Feature config, therefore facing direction, can only be configured once per session.
         if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
@@ -361,18 +353,6 @@ open class ArSceneView @JvmOverloads constructor(
         // to use in any calculations during the frame.
         this.camera.updateTrackedPose(arFrame.camera)
 
-        // Update the light estimate.
-        estimatedLights =
-            if (session.config.lightEstimationMode != Config.LightEstimationMode.DISABLED) {
-                arFrame.environmentLightsEstimate(
-                    session.lightEstimationMode,
-                    estimatedLights,
-                    environment,
-                    mainLight,
-                    renderer.camera.exposureFactor
-                )
-            } else null
-
         if (onAugmentedImageUpdate != null) {
             arFrame.updatedAugmentedImages.forEach(onAugmentedImageUpdate)
         }
@@ -386,11 +366,6 @@ open class ArSceneView @JvmOverloads constructor(
             onArFrame(arFrame)
         }
         onArFrame?.invoke(arFrame)
-    }
-
-    override fun onDestroy(owner: LifecycleOwner) {
-        estimatedLights?.destroy()
-        estimatedLights = null
     }
 
     override fun getLifecycle(): ArSceneLifecycle = sceneLifecycle

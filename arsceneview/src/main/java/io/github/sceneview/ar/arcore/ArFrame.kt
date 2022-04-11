@@ -249,6 +249,10 @@ data class ArFrame(
         get() = updatedAugmentedFaces.any {
             it.trackingState == TrackingState.TRACKING
         }
+
+    val fps: Double = time.fps
+
+    fun fps(arFrame: ArFrame?): Double = time.fps(arFrame?.time)
 }
 
 /**
