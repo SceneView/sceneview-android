@@ -15,6 +15,7 @@ import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.interaction.ArNodeManipulator
 import io.github.sceneview.ar.interaction.ArSceneGestureDetector
 import io.github.sceneview.ar.scene.PlaneRenderer
+import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.node.Node
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
@@ -184,7 +185,8 @@ open class ArSceneView @JvmOverloads constructor(
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
-    override val gestureListener = DefaultArSceneGestureListener()
+    override var gestureListener: SceneGestureDetector.OnSceneGestureListener =
+        DefaultArSceneGestureListener(this)
 
     override val gestureDetector: ArSceneGestureDetector by lazy {
         ArSceneGestureDetector(
@@ -423,9 +425,10 @@ open class ArSceneView @JvmOverloads constructor(
         onTouchAr?.invoke(hitResult, motionEvent)
     }
 
-    open inner class DefaultArSceneGestureListener : SceneView.DefaultSceneGestureListener() {
+    open class DefaultArSceneGestureListener(sceneView: SceneView) :
+        SceneView.DefaultSceneGestureListener(sceneView) {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
-            return onTouch(null, e)
+            return sceneView.onTouch(null, e)
         }
     }
 }

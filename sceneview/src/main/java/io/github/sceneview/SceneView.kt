@@ -118,8 +118,8 @@ open class SceneView @JvmOverloads constructor(
     //    TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
     //}
 
-    open val gestureListener: SceneGestureDetector.OnSceneGestureListener =
-        DefaultSceneGestureListener()
+    open var gestureListener: SceneGestureDetector.OnSceneGestureListener =
+        DefaultSceneGestureListener(this)
 
     open val gestureDetector: SceneGestureDetector by lazy {
         SceneGestureDetector(
@@ -454,15 +454,15 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    open inner class DefaultSceneGestureListener : SceneGestureDetector.OnSceneGestureListener {
+    open class DefaultSceneGestureListener(val sceneView: SceneView) : SceneGestureDetector.OnSceneGestureListener {
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            renderer.filamentView.pick(
+            sceneView.renderer.filamentView.pick(
                 e.x.roundToInt(),
                 e.y.roundToInt(),
-                pickingHandler
+                sceneView.pickingHandler
             ) { pickResult ->
                 val pickedEntity = pickResult.renderable
-                val selectedNode = allChildren
+                val selectedNode = sceneView.allChildren
                     .mapNotNull { it as? ModelNode }
                     .firstOrNull { modelNode ->
                         modelNode.modelInstance?.let { modelInstance ->
@@ -472,7 +472,7 @@ open class SceneView @JvmOverloads constructor(
                                     )
                         } ?: false
                     }
-                selectedNode?.let { onPickNode(it) }
+                selectedNode?.let { sceneView.onPickNode(it) }
             }
             return true
         }
