@@ -225,19 +225,20 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
         lifecycle.addObserver(this)
     }
 
+    var cubeMapBuffer: ByteBuffer? = null
+    var cubeMapTexture: Texture? = null
+
     override fun onArFrame(arFrame: ArFrame) {
         super.onArFrame(arFrame)
 
-        if (arFrame.fps(lastArFrame) > arFrame.fps * precision) {
-            return
-        }
         arFrame.takeIf {
+            it.precision(lastArFrame) <= precision
             arFrame.fps(lastArFrame) <= arFrame.fps * precision
         }?.frame?.lightEstimate?.takeIf {
             it.state == LightEstimate.State.VALID && it.timestamp != timestamp
         }?.let { lightEstimate ->
-            timestamp = lightEstimate.timestamp
             lastArFrame = arFrame
+            timestamp = lightEstimate.timestamp
             when (arFrame.session.lightEstimationMode) {
                 Config.LightEstimationMode.AMBIENT_INTENSITY -> {
                     val (colorIntensities, pixelIntensity) = FloatArray(4).apply {
@@ -340,84 +341,88 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
                         cubemap = when {
                             environmentalHdrReflections -> {
                                 lightEstimate.acquireEnvironmentalHdrCubeMap()?.let { arImages ->
-                                    val width = arImages[0].width
-                                    val height = arImages[0].height
+                                    val (width, height) = arImages[0].width to arImages[0].height
                                     val faceOffsets = IntArray(arImages.size)
-                                    val buffer = ByteBuffer.allocateDirect(
-                                        width * height *
-                                                arImages.size *
-                                                // RGB Bytes per pixel
-                                                6 * 2
-                                    ).apply {
+                                    // RGB Bytes per pixel : 6 * 2
+                                    val bufferSize = width * height * arImages.size * 6 * 2
+                                    val buffer = cubeMapBuffer?.takeIf {
+                                        it.capacity() == bufferSize
+                                    }?.apply {
+                                        clear()
+                                    } ?: ByteBuffer.allocateDirect(bufferSize).apply {
                                         // Use the device hardware's native byte order
                                         order(ByteOrder.nativeOrder())
-
-                                        val rgbaBytes = ByteArray(8) // ARGB Bytes per pixel
-                                        arImages.forEachIndexed { index, image ->
-                                            faceOffsets[index] = position()
-                                            image.planes[0].buffer.let { imageBuffer ->
-                                                while (imageBuffer.hasRemaining()) {
-                                                    // Only take the RGB channels
-                                                    put(rgbaBytes.apply {
-                                                        imageBuffer.get(this)
-                                                    } // Skip the Alpha channel
-                                                        .sliceArray(0..5))
-                                                }
-                                            }
-                                            image.close()
-                                        }
-                                        flip()
+                                        cubeMapBuffer = this
                                     }
-                                    val pixelBuffer = Texture.PixelBufferDescriptor(
-                                        buffer,
-                                        Texture.Format.RGB,
-                                        Texture.Type.HALF
-                                    )
+                                    val rgbaBytes = ByteArray(8) // ARGB Bytes per pixel
+                                    arImages.forEachIndexed { index, image ->
+                                        faceOffsets[index] = buffer.position()
+                                        image.planes[0].buffer.let { imageBuffer ->
+                                            while (imageBuffer.hasRemaining()) {
+                                                // Only take the RGB channels
+                                                buffer.put(rgbaBytes.apply {
+                                                    imageBuffer.get(this)
+                                                } // Skip the Alpha channel
+                                                    .sliceArray(0..5))
+                                            }
+                                            imageBuffer.clear()
+                                        }
+                                        image.close()
+                                    }
+                                    buffer.flip()
 
-                                    // Reuse the previous texture instead of creating a new one for performance and
-                                    // memory reasons
-                                    ((environment as? HDREnvironment)?.cubemap?.takeIf {
-                                        it.getWidth(0) == width && it.getHeight(0) == height
+                                    // Reuse the previous texture instead of creating a new one for
+                                    // performance and memory reasons
+                                    val texture = cubeMapTexture?.takeIf {
+                                        it.getWidth(0) == width &&
+                                                it.getHeight(0) == height
                                     } ?: Texture.Builder()
                                         .width(width)
                                         .height(height)
                                         .levels(0xff)
                                         .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
                                         .format(Texture.InternalFormat.R11F_G11F_B10F)
-                                        .build())
-                                        .apply {
-                                            setImage(Filament.engine, 0, pixelBuffer, faceOffsets)
-                                            buffer.clear()
+                                        .build()
+                                        .also {
+                                            cubeMapTexture = it
                                         }
+                                    texture.apply {
+                                        setImage(
+                                            Filament.engine, 0,
+                                            Texture.PixelBufferDescriptor(
+                                                buffer,
+                                                Texture.Format.RGB,
+                                                Texture.Type.HALF
+                                            ),
+                                            faceOffsets
+                                        )
+                                        buffer.clear()
+                                    }
                                 }
                             }
                             defaultEnvironmentReflections -> {
                                 sceneView.environment?.indirectLight?.reflectionsTexture
                             }
-                            else -> {
-                                null
-                            }
+                            else -> null
                         },
                         indirectLightIrradiance = if (environmentalHdrSphericalHarmonics) {
-                            lightEstimate.environmentalHdrAmbientSphericalHarmonics?.mapIndexed { index, sphericalHarmonic ->
-                                sphericalHarmonic *
-                                        // Convert Environmental HDR's spherical harmonics to Filament
-                                        // irradiance spherical harmonics.
-                                        SPHERICAL_HARMONICS_IRRADIANCE_FACTORS[index / 3]
-                            }?.toFloatArray()
+                            lightEstimate.environmentalHdrAmbientSphericalHarmonics
+                                ?.mapIndexed { index, sphericalHarmonic ->
+                                    // Convert Environmental HDR's spherical harmonics to Filament
+                                    // irradiance spherical harmonics.
+                                    sphericalHarmonic * SPHERICAL_HARMONICS_IRRADIANCE_FACTORS[index / 3]
+                                }?.toFloatArray()
                         } else {
                             sceneView.environment?.sphericalHarmonics
                         },
                         indirectLightSpecularFilter = environmentalHdrReflections &&
                                 environmentalHdrSpecularFilter,
-                        indirectLightIntensity = sceneView.environment?.indirectLight?.intensity?.let {
-                            it * colorIntensity
+                        indirectLightIntensity = sceneView.environment?.indirectLight?.let {
+                            it.intensity * colorIntensity
                         },
-                        createSkybox = false
-                    ).apply {
-                        // Prevent destroying the reused cubemap
+                        createSkybox = false,
                         sharedCubemap = true
-                    }
+                    )
 
                     mainLight = sceneView.mainLight?.let { baseLight ->
                         (mainLight ?: baseLight.clone()).apply {
@@ -538,7 +543,7 @@ enum class LightEstimationMode(val precision: Float = 1.0f) {
      *
      * The reflected environment will the one given by ARCore
      */
-    ENVIRONMENTAL_HDR(precision = 0.3f),
+    ENVIRONMENTAL_HDR(precision = 0.5f),
 
     /**
      * ### Use this mode if you want your objects to be more spectacular.

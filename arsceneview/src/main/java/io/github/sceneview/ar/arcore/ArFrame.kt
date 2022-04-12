@@ -253,6 +253,8 @@ data class ArFrame(
     val fps: Double = time.fps
 
     fun fps(arFrame: ArFrame?): Double = time.fps(arFrame?.time)
+
+    fun precision(arFrame: ArFrame?): Double = fps(arFrame) / fps
 }
 
 /**
