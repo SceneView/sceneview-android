@@ -31,6 +31,9 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      */
     var smoothPose = true
 
+    var anchorUpdatePrecision = 0.05f
+    var lastAnchorUpdateFrame: ArFrame? = null
+
     /**
      * TODO : Doc
      */
@@ -129,7 +132,10 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
         // Update the anchor position if any
         if (anchor.trackingState == TrackingState.TRACKING) {
-            pose = anchor.pose
+            if (arFrame.precision(lastAnchorUpdateFrame) <= anchorUpdatePrecision) {
+                lastAnchorUpdateFrame = arFrame
+                pose = anchor.pose
+            }
         }
 
         if (cloudAnchorTaskInProgress) {
@@ -395,7 +401,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
  * approximate distance when the base placement type is not available yet or at all.
  */
 enum class PlacementMode(
-    var instantPlacementDistance: Float = 2.0f,
+    var instantPlacementDistance: Float = 4.0f,
     var instantPlacementFallback: Boolean = false
 ) {
     /**
