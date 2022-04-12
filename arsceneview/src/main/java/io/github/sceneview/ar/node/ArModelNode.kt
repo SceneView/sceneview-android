@@ -103,16 +103,10 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
 
     override var editableTransforms = setOf(EditableTransform.ROTATION, EditableTransform.SCALE)
 
-    /**
-     * ### The maximum number of hit tests that can occur per second
-     *
-     * Increase this value for more precision or reduce it for higher performance and lower
-     * energy consumption
-     */
-    var maxHitsPerSecond: Int? = null
+    var poseUpdatePrecision = 1.0f
 
     var lastArFrame: ArFrame? = null
-    var lastHitFrame: ArFrame? = null
+    var lastPoseUpdateFrame: ArFrame? = null
     var lastHitResult: HitResult? = null
 
     /**
@@ -146,16 +140,13 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     override fun onArFrame(arFrame: ArFrame) {
         super<ArNode>.onArFrame(arFrame)
 
-        if (maxHitsPerSecond == null ||
-            ((lastHitFrame?.let { arFrame.time.fps(it.time.nanoseconds) }
-                ?: 0.0) <= maxHitsPerSecond!!)
-        ) {
-            if (!isAnchored) {
-                if (!autoAnchor || !anchor()) {
+        if (!isAnchored) {
+            if (!autoAnchor || !anchor()) {
+                if (arFrame.precision(lastPoseUpdateFrame) <= poseUpdatePrecision) {
+                    lastPoseUpdateFrame = arFrame
                     onArFrameHitResult(hitTest(arFrame))
                 }
             }
-            lastHitFrame = arFrame
         }
         lastArFrame = arFrame
     }
