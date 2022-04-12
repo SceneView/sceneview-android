@@ -16,7 +16,8 @@ open class HDREnvironment(
     indirectLightIrradiance: FloatArray? = null,
     indirectLightIntensity: Float? = null,
     indirectLightSpecularFilter: Boolean = defaultSpecularFilter,
-    createSkybox: Boolean = defaultCreateSkybox
+    createSkybox: Boolean = defaultCreateSkybox,
+    val sharedCubemap: Boolean = false
 ) : Environment(
     indirectLight = IndirectLight.Builder().apply {
         cubemap?.let {
@@ -44,7 +45,6 @@ open class HDREnvironment(
 ) {
     var cubemap: Texture? = cubemap
         internal set
-    var sharedCubemap = false
     var indirectLightIntensity: Float? = indirectLightIntensity
         private set
 
