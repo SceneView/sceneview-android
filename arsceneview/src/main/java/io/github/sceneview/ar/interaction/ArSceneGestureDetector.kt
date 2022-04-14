@@ -16,8 +16,8 @@ class ArSceneGestureDetector(
     private val moveListener = object : MoveGestureDetector.OnMoveGestureListener {
         override fun onMoveBegin(detector: MoveGestureDetector): Boolean {
             val listenerResult = listener?.onMoveBegin(detector) ?: false
-            if (nodeManipulator?.selectedNode?.positionEditable == true) return listenerResult
-            return listOfNotNull(nodeManipulator?.beginTransform(), listenerResult).any()
+            if (nodeManipulator?.selectedNode?.positionEditable != true) return listenerResult
+            return listOfNotNull(nodeManipulator.beginTransform(), listenerResult).any()
         }
 
         override fun onMove(detector: MoveGestureDetector): Boolean {
