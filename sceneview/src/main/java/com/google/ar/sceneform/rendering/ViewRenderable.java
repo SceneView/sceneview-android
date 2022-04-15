@@ -3,14 +3,16 @@ package com.google.ar.sceneform.rendering;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.ar.sceneform.Camera;
 import com.google.ar.sceneform.collision.Box;
@@ -24,8 +26,6 @@ import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.resources.ResourceRegistry;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.Preconditions;
-import io.github.sceneview.SceneView;
-import io.github.sceneview.node.Node;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -34,7 +34,9 @@ import java.util.Arrays;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 
+import io.github.sceneview.SceneView;
 import io.github.sceneview.node.ModelNode;
+import io.github.sceneview.node.Node;
 
 /**
  * Renders a 2D Android view in 3D space by attaching it to a {@link Node}
@@ -126,10 +128,9 @@ public class ViewRenderable extends Renderable {
     horizontalAlignment = builder.horizontalAlignment;
     verticalAlignment = builder.verticalAlignment;
     RenderViewToExternalTexture renderView =
-        new RenderViewToExternalTexture(view.getContext(), view);
+        new RenderViewToExternalTexture(lifecycle, view.getContext(), view);
     renderView.addOnViewSizeChangedListener(onViewSizeChangedListener);
     viewRenderableData = new ViewRenderableInternalData(renderView);
-    viewRenderableData.retain();
 
     // Empty collision box. Will be modified to fit the size of the view after the view is measured.
     // If the size of the view changes, the collision shape will change too.
@@ -144,7 +145,6 @@ public class ViewRenderable extends Renderable {
     horizontalAlignment = other.horizontalAlignment;
     verticalAlignment = other.verticalAlignment;
     viewRenderableData = Preconditions.checkNotNull(other.viewRenderableData);
-    viewRenderableData.retain();
     viewRenderableData.getRenderView().addOnViewSizeChangedListener(onViewSizeChangedListener);
   }
 
@@ -531,7 +531,6 @@ public class ViewRenderable extends Renderable {
     ViewRenderableInternalData viewRenderableData = this.viewRenderableData;
     if (viewRenderableData != null) {
       viewRenderableData.getRenderView().removeOnViewSizeChangedListener(onViewSizeChangedListener);
-      viewRenderableData.release();
       this.viewRenderableData = null;
     }
   }
@@ -602,7 +601,7 @@ public class ViewRenderable extends Renderable {
 
     @Override
     @SuppressWarnings("AndroidApiChecker") // java.util.concurrent.CompletableFuture
-    public CompletableFuture<ViewRenderable> build() {
+    public CompletableFuture<ViewRenderable> build(Lifecycle lifecycle) {
       if (!hasSource() && context != null) {
         // For ViewRenderables, the registryId must come from the View, not the RCB source.
         // If the source is a View, use that as the registryId. If the view is null, then the source
@@ -611,7 +610,7 @@ public class ViewRenderable extends Renderable {
 
         CompletableFuture<Void> setSourceFuture = Material.builder()
                 .setSource(context, Uri.parse("sceneview/materials/view_renderable.filamat"))
-                .build()
+                .build(lifecycle)
                 .thenAccept(
                         material -> {
 
@@ -649,14 +648,14 @@ public class ViewRenderable extends Renderable {
                                   RenderableDefinition.builder()
                                           .setVertices(vertices)
                                           .setSubmeshes(Arrays.asList(submesh))
-                                          .build()
+                                          .build(lifecycle)
                           );
                         }
                 );
-        return setSourceFuture.thenCompose((Void) -> super.build());
+        return setSourceFuture.thenCompose((Void) -> super.build(lifecycle));
       }
 
-      return super.build();
+      return super.build(lifecycle);
     }
 
     @Override

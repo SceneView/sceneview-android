@@ -1,6 +1,5 @@
 package io.github.sceneview.ar
 
-import androidx.lifecycle.coroutineScope
 import com.google.ar.core.Config
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.ArFrame
@@ -23,7 +22,7 @@ class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
     val searchPlaneInfoNode by lazy {
         SearchPlaneInfoNode(
             lifecycle.context,
-            lifecycle.coroutineScope
+            lifecycle
         )
     }
     var searchPlaneInfoEnabled = true
@@ -34,7 +33,7 @@ class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
     val tapArPlaneInfoNode by lazy {
         TapArPlaneInfoNode(
             lifecycle.context,
-            lifecycle.coroutineScope
+            lifecycle
         )
     }
     var tapArPlaneInfoEnabled = true
@@ -45,7 +44,7 @@ class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
     val augmentedImageInfoNode by lazy {
         AugmentedImageInfoNode(
             lifecycle.context,
-            lifecycle.coroutineScope
+            lifecycle
         )
     }
     var augmentedImageInfoEnabled = true

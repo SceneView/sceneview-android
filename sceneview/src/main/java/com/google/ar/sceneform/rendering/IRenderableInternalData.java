@@ -90,10 +90,4 @@ interface IRenderableInternalData {
 
 
   void buildInstanceData(RenderableInstance instance, @Entity int renderedEntity);
-  /**
-   * Removes any memory used by the object.
-   *
-   * @hide
-   */
-  void dispose();
 }

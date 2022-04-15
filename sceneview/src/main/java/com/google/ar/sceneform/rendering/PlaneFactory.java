@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
 
 public class PlaneFactory {
     private static final int COORDS_PER_TRIANGLE = 3;
@@ -23,7 +24,7 @@ public class PlaneFactory {
      */
     @SuppressWarnings("AndroidApiChecker")
     // CompletableFuture requires api level 24
-    public static ModelRenderable makePlane(Vector3 size, Vector3 center, Material material) {
+    public static ModelRenderable makePlane(Lifecycle lifecycle, Vector3 size, Vector3 center, Material material) {
         AndroidPreconditions.checkMinAndroidApiLevel();
 
         Vector3 extents = size.scaled(0.5f);
@@ -70,11 +71,11 @@ public class PlaneFactory {
         RenderableDefinition renderableDefinition = RenderableDefinition.builder()
                 .setVertices(vertices)
                 .setSubmeshes(Arrays.asList(submesh))
-                .build();
+                .build(lifecycle);
 
         CompletableFuture<ModelRenderable> future = ModelRenderable.builder()
                 .setSource(renderableDefinition)
-                .build();
+                .build(lifecycle);
 
         @Nullable ModelRenderable result;
         try {

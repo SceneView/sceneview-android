@@ -12,6 +12,7 @@ import androidx.annotation.VisibleForTesting;
 
 import com.google.android.filament.Camera;
 import com.google.android.filament.ColorGrading;
+import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.IndirectLight;
 import com.google.android.filament.Scene;
@@ -29,9 +30,13 @@ import java.util.Iterator;
 import java.util.List;
 
 import dev.romainguy.kotlin.math.Float4;
+import io.github.sceneview.Filament;
+import io.github.sceneview.FilamentKt;
 import io.github.sceneview.environment.Environment;
 import io.github.sceneview.scene.CameraKt;
+import io.github.sceneview.scene.RendererKt;
 import io.github.sceneview.scene.SceneKt;
+import io.github.sceneview.scene.ViewKt;
 
 /**
  * A rendering context.
@@ -88,23 +93,6 @@ public class Renderer implements UiHelper.RendererCallback {
         this.cameraProvider = cameraProvider;
         viewAttachmentManager = new ViewAttachmentManager(getContext(), view);
         initialize();
-    }
-
-    /**
-     * Releases rendering resources ready for garbage collection
-     *
-     * @return Count of resources currently in use
-     */
-    public long reclaimReleasedResources() {
-        return ResourceManager.getInstance().reclaimReleasedResources();
-    }
-
-    /**
-     * Immediately releases all rendering resources, even if in use.
-     */
-    public void destroyAllResources() {
-        ResourceManager.getInstance().destroyAllResources();
-        EngineInstance.destroyEngine();
     }
 
     /**
@@ -248,11 +236,10 @@ public class Renderer implements UiHelper.RendererCallback {
     private void doRecreationOfSwapChain() {
         synchronized (this) {
             if (recreateSwapChain) {
-                final IEngine engine = EngineInstance.getEngine();
                 if (swapChain != null) {
-                    engine.destroySwapChain(swapChain);
+                    Filament.getEngine().destroySwapChain(swapChain);
                 }
-                swapChain = engine.createSwapChain(surface);
+                swapChain = Filament.getEngine().createSwapChain(surface);
                 recreateSwapChain = false;
             }
         }
@@ -265,13 +252,13 @@ public class Renderer implements UiHelper.RendererCallback {
                 Mirror mirror = mirrorIterator.next();
                 if (mirror.surface == null) {
                     if (mirror.swapChain != null) {
-                        final IEngine engine = EngineInstance.getEngine();
-                        engine.destroySwapChain(Preconditions.checkNotNull(mirror.swapChain));
+                        Filament.getEngine().destroySwapChain(
+                                Preconditions.checkNotNull(mirror.swapChain));
                     }
                     mirrorIterator.remove();
                 } else if (mirror.swapChain == null) {
-                    final IEngine engine = EngineInstance.getEngine();
-                    mirror.swapChain = engine.createSwapChain(Preconditions.checkNotNull(mirror.surface));
+                    mirror.swapChain = Filament.getEngine().createSwapChain(
+                            Preconditions.checkNotNull(mirror.surface));
                 }
             }
         }
@@ -308,8 +295,7 @@ public class Renderer implements UiHelper.RendererCallback {
         // Render the scene, unless the renderer wants to skip the frame.
         // This means you are sending frames too quickly to the GPU
         if ((filamentHelper.isReadyToRender() &&
-                renderer.beginFrame(swapChainLocal, frameTimeNanos)) ||
-                EngineInstance.isHeadlessMode()) {
+                renderer.beginFrame(swapChainLocal, frameTimeNanos))) {
 
             updateInstances();
             updateLights();
@@ -348,8 +334,6 @@ public class Renderer implements UiHelper.RendererCallback {
                     onFrameRenderDebugCallback.run();
                 }
                 renderer.endFrame();
-
-                reclaimReleasedResources();
             }
             return true;
         } else {
@@ -360,16 +344,14 @@ public class Renderer implements UiHelper.RendererCallback {
     /**
      * @hide
      */
-    public void dispose() {
+    public void destroy() {
         filamentHelper.detach(); // call this before destroying the Engine (it could call back)
 
-        final IEngine engine = EngineInstance.getEngine();
-        engine.destroyRenderer(renderer);
-        engine.destroyView(view);
-        engine.destroyView(emptyView);
+        RendererKt.destroy(renderer);
+        ViewKt.destroy(view);
+        ViewKt.destroy(emptyView);
         CameraKt.destroy(camera);
-
-        reclaimReleasedResources();
+        SceneKt.destroy(scene);
     }
 
     public Context getContext() {
@@ -490,12 +472,11 @@ public class Renderer implements UiHelper.RendererCallback {
     public void onDetachedFromSurface() {
         @Nullable SwapChain swapChainLocal = swapChain;
         if (swapChainLocal != null) {
-            final IEngine engine = EngineInstance.getEngine();
-            engine.destroySwapChain(swapChainLocal);
+            Filament.getEngine().destroySwapChain(swapChainLocal);
             // Required to ensure we don't return before Filament is done executing the
             // destroySwapChain command, otherwise Android might destroy the Surface
             // too early
-            engine.flushAndWait();
+            Filament.getEngine().flushAndWait();
             swapChain = null;
         }
     }
@@ -638,19 +619,16 @@ public class Renderer implements UiHelper.RendererCallback {
         filamentHelper.setRenderCallback(this);
         filamentHelper.attachTo(surfaceView);
 
-        IEngine engine = EngineInstance.getEngine();
-
+        Engine engine = Filament.getEngine();
         renderer = engine.createRenderer();
         scene = engine.createScene();
         view = engine.createView();
         // Change the ToneMapper to FILMIC to avoid some over saturated
         // colors, for example material orange 500.
-        view.setColorGrading(new ColorGrading.Builder()
-                .toneMapping(ColorGrading.ToneMapping.FILMIC)
-                .build(engine.getFilamentEngine())
-        );
+        view.setColorGrading(ViewKt.build(new ColorGrading.Builder()
+                .toneMapping(ColorGrading.ToneMapping.FILMIC)));
         emptyView = engine.createView();
-        camera = engine.createCamera();
+        camera = FilamentKt.createCamera(engine);
 
         setDefaultClearColor();
         view.setCamera(camera);
@@ -658,13 +636,12 @@ public class Renderer implements UiHelper.RendererCallback {
 
         setDynamicResolutionEnabled(true);
 
-        emptyView.setCamera(engine.createCamera());
-        emptyView.setScene(engine.createScene());
+        emptyView.setCamera(FilamentKt.createCamera(engine));
+        emptyView.setScene(Filament.getEngine().createScene());
     }
 
     private void updateInstances() {
-        final IEngine engine = EngineInstance.getEngine();
-        final TransformManager transformManager = engine.getTransformManager();
+        final TransformManager transformManager = Filament.getTransformManager();
         transformManager.openLocalTransformTransaction();
 
         for (RenderableInstance renderableInstance : renderableInstances) {

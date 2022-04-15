@@ -22,6 +22,23 @@ object ResourceLoader {
     @JvmStatic
     var fuelManager: FuelManager = FuelManager()
 
+    suspend fun <R> useFileBuffer(
+        context: Context,
+        fileLocation: String,
+        block: suspend (ByteBuffer?) -> R
+    ): R {
+        val buffer = fileBuffer(context, fileLocation)
+        return block(buffer).also { buffer?.clear() }
+    }
+
+    suspend fun <R> useFileBufferNotNull(
+        context: Context,
+        fileLocation: String,
+        block: suspend (ByteBuffer) -> R
+    ): R? = useFileBuffer(context, fileLocation) { buffer ->
+        buffer?.let { block(it) }
+    }
+
     /**
      * ### Load a file content buffer from different sources
      *
@@ -42,10 +59,27 @@ object ResourceLoader {
                     ByteBuffer.wrap(fuelManager.get(fileLocation).awaitByteArray())
                 }
                 else -> {
-                    fileBufferLocal(context, fileLocation)
+                    localFileBuffer(context, fileLocation)
                 }
             }
         }
+    }
+
+    fun <R> useLocalFileBufferNotNull(
+        context: Context,
+        fileLocation: String,
+        block: (ByteBuffer) -> R
+    ): R? = useLocalFileBuffer(context, fileLocation) { buffer ->
+        buffer?.let { block(it) }
+    }
+
+    fun <R> useLocalFileBuffer(
+        context: Context,
+        fileLocation: String,
+        block: (ByteBuffer?) -> R
+    ): R {
+        val buffer = localFileBuffer(context, fileLocation)
+        return block(buffer).also { buffer?.clear() }
     }
 
     /**
@@ -60,7 +94,7 @@ object ResourceLoader {
      * @see okHttpClient
      */
     @JvmStatic
-    fun fileBufferLocal(context: Context, fileLocation: String): ByteBuffer? {
+    fun localFileBuffer(context: Context, fileLocation: String): ByteBuffer? {
         val uri = Uri.parse(fileLocation)
         return when (uri.scheme) {
             ContentResolver.SCHEME_FILE -> if (uri.firstPathSegment == ASSET_FILE_PATH_ROOT) {
@@ -89,6 +123,7 @@ object ResourceLoader {
         get() = pathSegments.firstOrNull()
 }
 
+
 /**
  * ### Load a file content buffer from different sources
  *
@@ -97,14 +132,29 @@ object ResourceLoader {
 suspend fun Context.fileBuffer(fileLocation: String): ByteBuffer? =
     ResourceLoader.fileBuffer(this, fileLocation)
 
+suspend fun <R> Context.useFileBuffer(fileLocation: String, block: suspend (ByteBuffer?) -> R): R =
+    ResourceLoader.useFileBuffer(this, fileLocation, block)
+
+suspend fun <R> Context.useFileBufferNotNull(
+    fileLocation: String,
+    block: suspend (ByteBuffer) -> R
+): R? = ResourceLoader.useFileBufferNotNull(this, fileLocation, block)
 
 /**
  * ### Load a file content buffer from different local sources
  *
  * @see ResourceLoader.fileBuffer
  */
-fun Context.fileBufferLocal(fileLocation: String): ByteBuffer? =
-    ResourceLoader.fileBufferLocal(this, fileLocation)
+fun Context.localFileBuffer(fileLocation: String): ByteBuffer? =
+    ResourceLoader.localFileBuffer(this, fileLocation)
+
+fun <R> Context.useLocalFileBuffer(fileLocation: String, block: (ByteBuffer?) -> R): R =
+    ResourceLoader.useLocalFileBuffer(this, fileLocation, block)
+
+fun <R> Context.useLocalFileBufferNotNull(
+    fileLocation: String,
+    block: (ByteBuffer) -> R
+): R? = ResourceLoader.useLocalFileBufferNotNull(this, fileLocation, block)
 
 /**
  * ### Retrieve a android resource uri from a res id

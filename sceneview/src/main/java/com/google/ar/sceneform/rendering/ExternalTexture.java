@@ -4,11 +4,14 @@ import android.graphics.SurfaceTexture;
 import android.view.Surface;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.Stream;
 import com.google.android.filament.Texture;
-import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.Preconditions;
+
+import io.github.sceneview.texture.StreamKt;
+import io.github.sceneview.texture.TextureKt;
 
 /**
  * Creates an Android {@link SurfaceTexture} and {@link Surface} that can be displayed by Sceneform.
@@ -37,7 +40,7 @@ public class ExternalTexture {
      * Creates an ExternalTexture with a new Android {@link SurfaceTexture} and {@link Surface}.
      */
     @SuppressWarnings("initialization")
-    public ExternalTexture() {
+    public ExternalTexture(Lifecycle lifecycle) {
         SurfaceTexture surfaceTexture = new SurfaceTexture(0);
         surfaceTexture.detachFromGLContext();
         this.surfaceTexture = surfaceTexture;
@@ -46,18 +49,16 @@ public class ExternalTexture {
         surface = new Surface(surfaceTexture);
 
         // Create the filament stream.
-        Stream stream =
-                new Stream.Builder()
-                        .stream(surfaceTexture).build(EngineInstance.getEngine().getFilamentEngine());
+        Stream stream = StreamKt.build(new Stream.Builder().stream(surfaceTexture));
 
-        initialize(stream);
+        initialize(lifecycle, stream);
     }
 
     /**
      * Creates an ExternalTexture from an OpenGL ES textureId without a SurfaceTexture. For internal
      * use only.
      */
-    public ExternalTexture(int textureId, int width, int height) {
+    public ExternalTexture(Lifecycle lifecycle, int textureId, int width, int height) {
        /* this.surface = null;
 
         this.filamentTexture = new Texture
@@ -90,40 +91,30 @@ public class ExternalTexture {
         surface = null;
 
         // Create the filament stream.
-        Stream stream =
-                new Stream.Builder()
-                        .stream(textureId)
-                        .width(width)
-                        .height(height)
-                        .build(EngineInstance.getEngine().getFilamentEngine());
+        Stream stream = StreamKt.build(new Stream.Builder()
+                .stream(textureId)
+                .width(width)
+                .height(height));
 
-        initialize(stream);
+        initialize(lifecycle, stream);
     }
 
-
     @SuppressWarnings("initialization")
-    private void initialize(Stream filamentStream) {
+    private void initialize(Lifecycle lifecycle, Stream filamentStream) {
         if (filamentTexture != null) {
             throw new AssertionError("Stream was initialized twice");
         }
 
         // Create the filament stream.
-        IEngine engine = EngineInstance.getEngine();
         this.filamentStream = filamentStream;
 
         // Create the filament texture.
-        filamentTexture =
-                new Texture.Builder()
+        filamentTexture = TextureKt.build(new Texture.Builder()
                         .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
                         .format(Texture.InternalFormat.RGB8)
-                        .build(engine.getFilamentEngine());
+                , lifecycle);
 
-        filamentTexture.setExternalStream(
-                engine.getFilamentEngine(),
-                filamentStream);
-        ResourceManager.getInstance()
-                .getExternalTextureCleanupRegistry()
-                .register(this, new CleanupCallback(filamentTexture, filamentStream));
+        TextureKt.setExternalStream(filamentTexture, filamentStream);
     }
 
     /**
@@ -148,35 +139,13 @@ public class ExternalTexture {
         return Preconditions.checkNotNull(filamentStream);
     }
 
-    /**
-     * Cleanup filament objects after garbage collection
-     */
-    private static final class CleanupCallback implements Runnable {
-        @Nullable
-        private final Texture filamentTexture;
-        @Nullable
-        private final Stream filamentStream;
-
-        CleanupCallback(Texture filamentTexture, Stream filamentStream) {
-            this.filamentTexture = filamentTexture;
-            this.filamentStream = filamentStream;
+    public void destroy() {
+        if (filamentTexture != null) {
+            TextureKt.destroy(filamentTexture);
         }
 
-        @Override
-        public void run() {
-            AndroidPreconditions.checkUiThread();
-
-            IEngine engine = EngineInstance.getEngine();
-            if (engine == null || !engine.isValid()) {
-                return;
-            }
-            if (filamentTexture != null) {
-                engine.destroyTexture(filamentTexture);
-            }
-
-            if (filamentStream != null) {
-                engine.destroyStream(filamentStream);
-            }
+        if (filamentStream != null) {
+            StreamKt.destroy(filamentStream);
         }
     }
 }

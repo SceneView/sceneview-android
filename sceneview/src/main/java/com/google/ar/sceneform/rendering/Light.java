@@ -1,11 +1,15 @@
 package com.google.ar.sceneform.rendering;
 
 import android.os.Build;
+
 import androidx.annotation.RequiresApi;
+import androidx.lifecycle.Lifecycle;
+
 import com.google.android.filament.Colors;
 import com.google.ar.sceneform.common.TransformProvider;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
+
 import java.util.ArrayList;
 
 /** Light property store. */
@@ -184,8 +188,8 @@ public class Light {
   }
 
   /** @hide this functionality is not part of the end-user API */
-  public LightInstance createInstance(TransformProvider transformProvider) {
-    LightInstance instance = new LightInstance(this, transformProvider);
+  public LightInstance createInstance(Lifecycle lifecycle, TransformProvider transformProvider) {
+    LightInstance instance = new LightInstance(lifecycle, this, transformProvider);
     if (instance == null) {
       throw new AssertionError("Failed to create light instance, result is null.");
     }

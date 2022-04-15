@@ -1,8 +1,9 @@
 package io.github.sceneview.node
 
 import android.content.Context
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleCoroutineScope
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.coroutineScope
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
@@ -114,7 +115,7 @@ open class ModelNode : Node {
                 field = value
                 if (value != null) {
                     doOnAttachedToScene { sceneView: SceneView ->
-                        loadModelAsync(sceneView.context, value, sceneView.lifecycleScope)
+                        loadModelAsync(sceneView.context, sceneView.lifecycle, value)
                     }
                 } else {
                     setModel(null)
@@ -248,6 +249,7 @@ open class ModelNode : Node {
      */
     suspend fun loadModel(
         context: Context,
+        lifecycle: Lifecycle,
         glbFileLocation: String,
         autoAnimate: Boolean = true,
         autoScale: Boolean = false,
@@ -255,7 +257,7 @@ open class ModelNode : Node {
         onError: ((error: Exception) -> Unit)? = null
     ): RenderableInstance? {
         return try {
-            val model = GLBLoader.loadModel(context, glbFileLocation)
+            val model = GLBLoader.loadModel(context, lifecycle, glbFileLocation)
             withContext(Dispatchers.Main) {
                 setModel(model, autoAnimate, autoScale, centerOrigin)?.also {
                     onModelLoaded(it)
@@ -289,23 +291,30 @@ open class ModelNode : Node {
      */
     fun loadModelAsync(
         context: Context,
+        lifecycle: Lifecycle? = null,
         glbFileLocation: String,
-        coroutineScope: LifecycleCoroutineScope? = null,
         autoAnimate: Boolean = true,
         autoScale: Boolean = false,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null
     ) {
-        if (coroutineScope != null) {
-            coroutineScope.launchWhenCreated {
-                loadModel(context, glbFileLocation, autoAnimate, autoScale, centerOrigin, onError)
-                    ?.let { onLoaded?.invoke(it) }
+        if (lifecycle != null) {
+            lifecycle.coroutineScope.launchWhenCreated {
+                loadModel(
+                    context,
+                    lifecycle,
+                    glbFileLocation,
+                    autoAnimate,
+                    autoScale,
+                    centerOrigin,
+                    onError
+                )?.let { onLoaded?.invoke(it) }
             }
         } else {
             doOnAttachedToScene { sceneView ->
                 loadModelAsync(
-                    context, glbFileLocation, sceneView.lifecycleScope, autoAnimate, autoScale,
+                    context, sceneView.lifecycle, glbFileLocation, autoAnimate, autoScale,
                     centerOrigin, onError, onLoaded
                 )
             }
@@ -378,8 +387,8 @@ open class ModelNode : Node {
 
     /** ### Detach and destroy the node */
     override fun destroy() {
-        super.destroy()
         modelInstance?.destroy()
+        super.destroy()
     }
 
     override fun clone() = copy(ModelNode())

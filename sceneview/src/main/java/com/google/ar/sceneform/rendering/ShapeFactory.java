@@ -1,12 +1,16 @@
 package com.google.ar.sceneform.rendering;
 
 import android.os.Build;
+
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.lifecycle.Lifecycle;
+
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.RenderableDefinition.Submesh;
 import com.google.ar.sceneform.rendering.Vertex.UvCoordinate;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -28,7 +32,7 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeCube(Vector3 size, Vector3 center, Material material) {
+  public static ModelRenderable makeCube(Lifecycle lifecycle, Vector3 size, Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
     Vector3 extents = size.scaled(0.5f);
@@ -113,10 +117,10 @@ public final class ShapeFactory {
         RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build();
+            .build(lifecycle);
 
     CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build();
+        ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle);
 
     @Nullable ModelRenderable result;
     try {
@@ -142,7 +146,7 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeSphere(float radius, Vector3 center, Material material) {
+  public static ModelRenderable makeSphere(Lifecycle lifecycle, float radius, Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
     final int stacks = 24;
@@ -217,10 +221,10 @@ public final class ShapeFactory {
         RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build();
+            .build(lifecycle);
 
     CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build();
+        ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle);
 
     @Nullable ModelRenderable result;
     try {
@@ -247,8 +251,8 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeCylinder(
-      float radius, float height, Vector3 center, Material material) {
+  public static ModelRenderable makeCylinder(Lifecycle lifecycle,float radius, float height,
+                                             Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
     final int numberOfSides = 24;
@@ -374,10 +378,10 @@ public final class ShapeFactory {
         RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build();
+            .build(lifecycle);
 
     CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build();
+        ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle);
 
     @Nullable ModelRenderable result;
     try {

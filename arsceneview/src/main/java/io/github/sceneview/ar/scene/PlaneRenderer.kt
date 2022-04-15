@@ -3,7 +3,10 @@ package io.github.sceneview.ar.scene
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.MaterialInstance
-import com.google.ar.core.*
+import com.google.ar.core.Frame
+import com.google.ar.core.HitResult
+import com.google.ar.core.Plane
+import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.DeadlineExceededException
 import com.google.ar.sceneform.rendering.Material
 import com.google.ar.sceneform.rendering.MaterialInternalDataImpl
@@ -11,12 +14,15 @@ import com.google.ar.sceneform.rendering.PlaneVisualizer
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.arcore.*
-import io.github.sceneview.material.*
+import io.github.sceneview.ar.arcore.ArFrame
+import io.github.sceneview.ar.arcore.position
+import io.github.sceneview.ar.arcore.zDirection
+import io.github.sceneview.material.MaterialLoader
+import io.github.sceneview.material.setParameter
+import io.github.sceneview.material.setTexture
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
 import io.github.sceneview.utils.Color
-import java.util.*
 
 /**
  * Control rendering of ARCore planes.
@@ -143,15 +149,13 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
-
         destroy()
+
+        super.onDestroy(owner)
     }
 
     fun destroy() {
-        visualizers.forEach { (_, planeVisualizer) -> planeVisualizer.release() }
-        planeMaterial?.destroy()
-        shadowMaterial?.destroy()
+        visualizers.forEach { (_, planeVisualizer) -> planeVisualizer.destroy() }
     }
 
     /**
@@ -175,7 +179,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
         // Find the plane visualizer if it already exists.
         // If not, create a new plane visualizer for this plane.
         val planeVisualizer = visualizers[plane]
-            ?: PlaneVisualizer(plane, renderer).apply {
+            ?: PlaneVisualizer(lifecycle, plane, renderer).apply {
                 if (planeMaterial != null) {
                     setPlaneMaterial(planeMaterial)
                 }
@@ -202,7 +206,7 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
             // If this plane was subsumed by another plane or it has permanently stopped tracking,
             // remove it.
             if (plane.subsumedBy != null || plane.trackingState == TrackingState.STOPPED) {
-                planeVisualizer.release()
+                planeVisualizer.destroy()
                 true
             } else {
                 false
@@ -213,10 +217,11 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     private suspend fun loadShadowMaterial() {
         val material = MaterialLoader.loadMaterial(
             renderer.context,
+            lifecycle,
             "sceneview/materials/plane_renderer_shadow.filamat"
         )?.material ?: throw AssertionError("Can't load the plane renderer shadow material")
 
-        shadowMaterial = Material(MaterialInternalDataImpl(material), false)
+        shadowMaterial = Material(lifecycle, MaterialInternalDataImpl(material))
 
         shadowMaterialInstance = shadowMaterial?.filamentMaterialInstance
 
@@ -226,16 +231,18 @@ class PlaneRenderer(val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver 
     private suspend fun loadPlaneMaterial() {
         val texture = TextureLoader.loadTexture(
             renderer.context,
+            lifecycle,
             "sceneview/textures/plane_renderer.png",
             TextureType.COLOR
         ) ?: throw AssertionError("Can't load the plane renderer texture")
 
         val material = MaterialLoader.loadMaterial(
             renderer.context,
+            lifecycle,
             "sceneview/materials/plane_renderer.filamat"
         )?.material ?: throw AssertionError("Can't load the plane renderer material")
 
-        planeMaterial = Material(MaterialInternalDataImpl(material), false)
+        planeMaterial = Material(lifecycle, MaterialInternalDataImpl(material))
 
         materialInstance = planeMaterial?.filamentMaterialInstance
 

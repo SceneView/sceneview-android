@@ -6,6 +6,7 @@ import android.os.Build;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.MaterialInstance;
 import com.google.ar.sceneform.math.Vector3;
@@ -21,6 +22,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import io.github.sceneview.material.MaterialKt;
+
 /**
  * Represents a reference to a material.
  */
@@ -29,6 +32,8 @@ public class Material {
     private static final String TAG = Material.class.getSimpleName();
 
     private final MaterialParameters materialParameters = new MaterialParameters();
+
+    protected Lifecycle lifecycle;
 
     @Nullable
     private final MaterialInternalData materialData;
@@ -42,7 +47,7 @@ public class Material {
      * instances.
      */
     public Material makeCopy() {
-        return new Material(this, true);
+        return new Material(this);
     }
 
     public void setBoolean(String name, boolean x) {
@@ -165,7 +170,7 @@ public class Material {
 
     /**
      * <pre>
-     *     Sets a {@link DepthTexture} to a parameter of the type 'sampler2d' on this material.
+     *     Sets a {@link Texture} to a parameter of the type 'sampler2d' on this material.
      * </pre>
      *
      * @param name         the name of the parameter in the material
@@ -225,22 +230,17 @@ public class Material {
     }
 
     @SuppressWarnings("initialization")
-    public Material(MaterialInternalData materialData, boolean cleanupResource) {
+    public Material(Lifecycle lifecycle, MaterialInternalData materialData) {
+        this.lifecycle = lifecycle;
         this.materialData = materialData;
-        materialData.retain();
         if (materialData instanceof MaterialInternalDataImpl) {
             // Do the legacy thing.
             internalMaterialInstance =
-                    new InternalMaterialInstance(materialData.getFilamentMaterial().createInstance());
+                    new InternalMaterialInstance(MaterialKt.createInstance(
+                            materialData.getFilamentMaterial(), lifecycle));
         } else {
             // Do the glTF thing.
             internalMaterialInstance = new InternalGltfMaterialInstance();
-        }
-
-        if(cleanupResource) {
-            ResourceManager.getInstance()
-                    .getMaterialCleanupRegistry()
-                    .register(this, new CleanupCallback(internalMaterialInstance, materialData));
         }
     }
 
@@ -252,20 +252,9 @@ public class Material {
     }
 
     @SuppressWarnings("initialization")
-    private Material(Material other, boolean cleanupResource) {
-        this(other.materialData, cleanupResource);
+    private Material(Material other) {
+        this(other.lifecycle, other.materialData);
         copyMaterialParameters(other.materialParameters);
-    }
-
-
-    public void destroy() {
-        if (internalMaterialInstance != null) {
-            internalMaterialInstance.dispose();
-        }
-
-        if (materialData != null) {
-            materialData.release();
-        }
     }
 
     /**
@@ -275,6 +264,7 @@ public class Material {
      * new materials, so there is no need to expose a builder.
      */
     public static final class Builder {
+        Lifecycle lifecycle;
         /**
          * The {@link Material} will be constructed from the contents of this buffer
          */
@@ -292,8 +282,6 @@ public class Material {
 
         @Nullable
         private Object registryId;
-
-        private boolean cleanupResource = true;
 
         /**
          * Constructor for asynchronous building. The sourceBuffer will be read later.
@@ -370,7 +358,6 @@ public class Material {
             return this;
         }
 
-
         /**
          * Allows a {@link Material} to be reused. If registryId is non-null it will be saved in a
          * registry and the registry will be checked for this id before construction.
@@ -383,17 +370,12 @@ public class Material {
             return this;
         }
 
-        public Builder setCleanupResource(boolean cleanupResource) {
-            this.cleanupResource = cleanupResource;
-            return this;
-        }
-
         /**
          * Creates a new {@link Material} based on the parameters set previously. A source must be
          * specified.
          */
         @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"})
-        public CompletableFuture<Material> build() {
+        public CompletableFuture<Material> build(Lifecycle lifecycle) {
             try {
                 checkPreconditions();
             } catch (Throwable failedPrecondition) {
@@ -403,6 +385,8 @@ public class Material {
                         TAG, result, "Unable to load Material registryId='" + registryId + "'");
                 return result;
             }
+
+            this.lifecycle = lifecycle;
 
             // For static-analysis check.
             Object registryId = this.registryId;
@@ -418,7 +402,7 @@ public class Material {
             if (sourceBuffer != null) {
                 MaterialInternalDataImpl materialData =
                         new MaterialInternalDataImpl(createFilamentMaterial(sourceBuffer));
-                Material material = new Material(materialData, this.cleanupResource);
+                Material material = new Material(lifecycle, materialData);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -433,7 +417,7 @@ public class Material {
             } else if (existingMaterial != null) {
                 MaterialInternalDataGltfImpl materialData =
                         new MaterialInternalDataGltfImpl(existingMaterial);
-                Material material = new Material(materialData, cleanupResource);
+                Material material = new Material(lifecycle, materialData);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -479,8 +463,7 @@ public class Material {
                                     byteBuffer -> {
                                         MaterialInternalDataImpl materialData =
                                                 new MaterialInternalDataImpl(createFilamentMaterial(byteBuffer));
-                                        Material material = new Material(materialData, cleanupResource);
-                                        return material;
+                                        return new Material(lifecycle, materialData);
                                     },
                                     ThreadPools.getMainExecutor());
 
@@ -506,9 +489,8 @@ public class Material {
 
         private com.google.android.filament.Material createFilamentMaterial(ByteBuffer sourceBuffer) {
             try {
-                return new com.google.android.filament.Material.Builder()
-                        .payload(sourceBuffer, sourceBuffer.limit())
-                        .build(EngineInstance.getEngine().getFilamentEngine());
+                return MaterialKt.build(new com.google.android.filament.Material.Builder()
+                        .payload(sourceBuffer, sourceBuffer.limit()), lifecycle);
             } catch (Exception e) {
                 throw new IllegalArgumentException("Unable to create material from source byte buffer.", e);
             }
@@ -520,8 +502,6 @@ public class Material {
         MaterialInstance getInstance();
 
         boolean isValidInstance();
-
-        void dispose();
     }
 
     // Represents a filament material instance created in Sceneform.
@@ -540,14 +520,6 @@ public class Material {
         @Override
         public boolean isValidInstance() {
             return instance != null;
-        }
-
-        @Override
-        public void dispose() {
-            IEngine engine = EngineInstance.getEngine();
-            if (engine != null && engine.isValid()) {
-                engine.destroyMaterialInstance(instance);
-            }
         }
     }
 
@@ -570,40 +542,6 @@ public class Material {
         @Override
         public boolean isValidInstance() {
             return instance != null;
-        }
-
-        @Override
-        public void dispose() {
-            // Material is tracked natively.
-        }
-    }
-
-    /**
-     * Cleanup filament objects after garbage collection
-     */
-    private static final class CleanupCallback implements Runnable {
-        @Nullable
-        private final MaterialInternalData materialInternalData;
-        @Nullable
-        private final IMaterialInstance materialInstance;
-
-        CleanupCallback(
-                @Nullable IMaterialInstance materialInstance,
-                @Nullable MaterialInternalData materialInternalData) {
-            this.materialInstance = materialInstance;
-            this.materialInternalData = materialInternalData;
-        }
-
-        @Override
-        public void run() {
-            AndroidPreconditions.checkUiThread();
-            if (materialInstance != null) {
-                materialInstance.dispose();
-            }
-
-            if (materialInternalData != null) {
-                materialInternalData.release();
-            }
         }
     }
 }

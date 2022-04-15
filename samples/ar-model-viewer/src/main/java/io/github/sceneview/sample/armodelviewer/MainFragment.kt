@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.*
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
@@ -49,7 +48,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             loadModelAsync(
                 context = requireContext(),
                 glbFileLocation = "models/spiderbot.glb",
-                coroutineScope = lifecycleScope,
+                lifecycle = lifecycle,
                 autoAnimate = true,
                 autoScale = false,
                 // Place the model origin at the bottom center

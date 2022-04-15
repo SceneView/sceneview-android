@@ -1,13 +1,16 @@
 package io.github.sceneview.environment
 
 import android.content.Context
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.coroutineScope
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
+import com.google.android.filament.Texture
 import com.google.android.filament.utils.HDRLoader
 import io.github.sceneview.Filament
 import io.github.sceneview.texture.use
 import io.github.sceneview.utils.fileBuffer
+import io.github.sceneview.utils.useFileBufferNotNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.Buffer
@@ -25,19 +28,13 @@ import java.nio.Buffer
 @JvmOverloads
 suspend fun HDRLoader.loadEnvironment(
     context: Context,
+    lifecycle: Lifecycle,
     hdrFileLocation: String,
     specularFilter: Boolean = defaultSpecularFilter,
     createSkybox: Boolean = defaultCreateSkybox
-): HDREnvironment? {
-    return try {
-        context.fileBuffer(hdrFileLocation)?.let { buffer ->
-            withContext(Dispatchers.Main) {
-                createEnvironment(buffer, specularFilter, createSkybox)
-            }
-        }
-    } finally {
-        // TODO: See why the finally is called before the onDestroy()
-//        environment?.destroy()
+): HDREnvironment? = context.useFileBufferNotNull(hdrFileLocation) { buffer ->
+    withContext(Dispatchers.Main) {
+        createEnvironment(lifecycle, buffer, specularFilter, createSkybox)
     }
 }
 
@@ -53,15 +50,16 @@ suspend fun HDRLoader.loadEnvironment(
  */
 fun HDRLoader.loadEnvironmentAsync(
     context: Context,
+    lifecycle: Lifecycle,
     hdrFileLocation: String,
     specularFilter: Boolean = defaultSpecularFilter,
     createSkybox: Boolean = defaultCreateSkybox,
-    coroutineScope: LifecycleCoroutineScope,
     result: (HDREnvironment?) -> Unit
-) = coroutineScope.launchWhenCreated {
+) = lifecycle.coroutineScope.launchWhenCreated {
     result(
         HDRLoader.loadEnvironment(
             context = context,
+            lifecycle = lifecycle,
             hdrFileLocation = hdrFileLocation,
             specularFilter = specularFilter,
             createSkybox = createSkybox
@@ -84,6 +82,7 @@ fun HDRLoader.loadEnvironmentAsync(
  */
 @JvmOverloads
 fun HDRLoader.createEnvironment(
+    lifecycle: Lifecycle,
     hdrBuffer: Buffer,
     specularFilter: Boolean = defaultSpecularFilter,
     createSkybox: Boolean = defaultCreateSkybox
@@ -91,8 +90,24 @@ fun HDRLoader.createEnvironment(
     Filament.iblPrefilter.equirectangularToCubemap(hdrTexture)
 }?.let { cubemap ->
     HDREnvironment(
+        lifecycle = lifecycle,
         cubemap = cubemap,
         indirectLightSpecularFilter = specularFilter,
         createSkybox = createSkybox
     )
 }
+
+
+/**
+ * ### Consumes the content of an HDR file and produces a [Texture] object.
+ *
+ * @param buffer The content of the HDR File.
+ * @param options Loader options.
+ * @return The resulting Filament texture, or null on failure.
+ */
+fun HDRLoader.createTexture(
+    lifecycle: Lifecycle,
+    buffer: Buffer,
+    options: HDRLoader.Options = HDRLoader.Options()
+): Texture? = createTexture(Filament.engine, buffer, options)
+    .also { lifecycle }

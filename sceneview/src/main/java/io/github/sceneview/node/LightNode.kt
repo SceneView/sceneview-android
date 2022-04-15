@@ -1,5 +1,6 @@
 package io.github.sceneview.node
 
+import androidx.lifecycle.Lifecycle
 import com.google.ar.sceneform.rendering.Light
 import com.google.ar.sceneform.rendering.LightInstance
 import io.github.sceneview.math.Position
@@ -62,8 +63,8 @@ open class LightNode : Node {
     /**
      * TODO : Doc
      */
-    constructor(light: Light) : this() {
-        setLight(light)
+    constructor(lifecycle: Lifecycle, light: Light) : this() {
+        setLight(lifecycle, light)
     }
 
     /**
@@ -76,8 +77,9 @@ open class LightNode : Node {
     open fun onLightChanged() {
     }
 
-    fun setLight(light: Light?): LightInstance? =
-        light?.createInstance(this)?.also {
+    // TODO: Lifecycle should be removed when LightInstance is kotlined
+    fun setLight(lifecycle: Lifecycle, light: Light?): LightInstance? =
+        light?.createInstance(lifecycle, this)?.also {
             lightInstance = it
         }
 
@@ -91,6 +93,7 @@ open class LightNode : Node {
 
     fun copy(toNode: LightNode = LightNode()): LightNode = toNode.apply {
         super.copy(toNode)
-        setLight(this@LightNode.light)
+        // TODO: Should not use the instance
+        lightInstance = this@LightNode.lightInstance
     }
 }

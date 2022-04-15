@@ -3,7 +3,9 @@ package com.google.ar.sceneform.rendering;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
+
 import androidx.annotation.RequiresApi;
+import androidx.lifecycle.Lifecycle;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -12,8 +14,9 @@ import java.util.concurrent.CompletableFuture;
 
 public final class MaterialFactory {
   /**
-   * Name of material parameter for controlling the color of {@link #makeOpaqueWithColor(Context,
-   * Color)} and {@link #makeTransparentWithColor(Context, Color)} materials.
+   * Name of material parameter for controlling the color of
+   * {@link #makeOpaqueWithColor(Context, Lifecycle, Color)} and
+   * {@link #makeTransparentWithColor(Context, Lifecycle, Color)} materials.
    *
    * @see Material#setFloat3(String, Color)
    * @see Material#setFloat4(String, Color)
@@ -22,8 +25,8 @@ public final class MaterialFactory {
 
   /**
    * Name of material parameter for controlling the texture of {@link
-   * #makeOpaqueWithTexture(Context, Texture)} and {@link #makeTransparentWithTexture(Context,
-   * Texture)} materials.
+   * #makeOpaqueWithTexture(Context, Lifecycle, Texture)} and
+   * {@link #makeTransparentWithTexture(Context, Lifecycle, Texture)} materials.
    *
    * @see Material#setTexture(String, Texture)
    */
@@ -79,12 +82,12 @@ public final class MaterialFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static CompletableFuture<Material> makeOpaqueWithColor(Context context, Color color) {
+  public static CompletableFuture<Material> makeOpaqueWithColor(Context context, Lifecycle lifecycle, Color color) {
     CompletableFuture<Material> materialFuture =
         Material.builder()
             .setSource(
                 context, Uri.parse("sceneview/materials/opaque_colored.filamat"))
-            .build();
+            .build(lifecycle);
 
     return materialFuture.thenApply(
         material -> {
@@ -109,12 +112,12 @@ public final class MaterialFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static CompletableFuture<Material> makeTransparentWithColor(Context context, Color color) {
+  public static CompletableFuture<Material> makeTransparentWithColor(Context context, Lifecycle lifecycle, Color color) {
     CompletableFuture<Material> materialFuture =
         Material.builder()
             .setSource(
                 context, Uri.parse("sceneview/materials/transparent_colored.filamat"))
-            .build();
+            .build(lifecycle);
 
     return materialFuture.thenApply(
         material -> {
@@ -140,12 +143,12 @@ public final class MaterialFactory {
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
   public static CompletableFuture<Material> makeOpaqueWithTexture(
-      Context context, Texture texture) {
+      Context context, Lifecycle lifecycle, Texture texture) {
     CompletableFuture<Material> materialFuture =
         Material.builder()
             .setSource(
                 context, Uri.parse("sceneview/materials/opaque_textured.filamat"))
-            .build();
+            .build(lifecycle);
 
     return materialFuture.thenApply(
         material -> {
@@ -171,12 +174,12 @@ public final class MaterialFactory {
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
   public static CompletableFuture<Material> makeTransparentWithTexture(
-      Context context, Texture texture) {
+      Context context, Lifecycle lifecycle, Texture texture) {
     CompletableFuture<Material> materialFuture =
         Material.builder()
             .setSource(
                 context, Uri.parse("sceneview/materials/transparent_textured.filamat"))
-            .build();
+            .build(lifecycle);
 
     return materialFuture.thenApply(
         material -> {

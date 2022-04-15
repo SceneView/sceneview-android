@@ -2,7 +2,8 @@ package io.github.sceneview.model
 
 import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.coroutineScope
 import com.google.ar.sceneform.rendering.ModelRenderable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
@@ -21,9 +22,10 @@ object GLBLoader {
      */
     suspend fun loadModel(
         context: Context,
+        lifecycle: Lifecycle,
         glbFileLocation: String
     ): ModelRenderable? = withContext(Dispatchers.Main) {
-        createModel(context, glbFileLocation).await()
+        createModel(context, lifecycle, glbFileLocation).await()
     }
 
     /**
@@ -38,20 +40,20 @@ object GLBLoader {
      */
     fun loadModelAsync(
         context: Context,
+        lifecycle: Lifecycle,
         glbFileLocation: String,
-        coroutineScope: LifecycleCoroutineScope,
         result: (ModelRenderable?) -> Unit
-    ) = coroutineScope.launchWhenCreated {
+    ) = lifecycle.coroutineScope.launchWhenCreated {
         result(
-            loadModel(context, glbFileLocation)
+            loadModel(context, lifecycle, glbFileLocation)
         )
     }
 
-    fun createModel(context: Context, glbFileLocation: String) =
+    fun createModel(context: Context, lifecycle: Lifecycle, glbFileLocation: String) =
         ModelRenderable.builder()
             .setSource(context, Uri.parse(glbFileLocation))
             .setIsFilamentGltf(true)
-            .build()
+            .build(lifecycle)
             .exceptionally {
                 throw it
             }

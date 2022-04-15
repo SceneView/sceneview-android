@@ -4,6 +4,8 @@ import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
+import io.github.sceneview.light.destroy
+import io.github.sceneview.scene.destroy
 import java.io.Closeable
 
 /**
@@ -59,6 +61,9 @@ open class Environment(
 
     /**
      * ### Destroys the EnvironmentLights and frees all its associated resources.
+     *
+     * You shouldn't have to call it if you used lifecycle, since each entity is destroyed
+     * at the onDestroy()
      */
     open fun destroy() {
         indirectLight?.destroy()

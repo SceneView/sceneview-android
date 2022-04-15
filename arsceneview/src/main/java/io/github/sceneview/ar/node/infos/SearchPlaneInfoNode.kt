@@ -7,7 +7,7 @@ import android.os.Build
 import android.view.View
 import android.view.animation.LinearInterpolator
 import android.widget.TextView
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.Lifecycle
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.ArSceneLifecycleObserver
@@ -16,7 +16,7 @@ import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.math.Position
 import io.github.sceneview.node.ViewNode
 
-open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCoroutineScope) :
+open class SearchPlaneInfoNode(context: Context, lifecycle: Lifecycle) :
     ViewNode(), ArSceneLifecycleObserver {
 
     var textView: TextView? = null
@@ -37,7 +37,7 @@ open class SearchPlaneInfoNode(context: Context, coroutineScope: LifecycleCorout
     init {
         isFocusable = false
         position = Position(x = 0.0f, y = -0.75f, z = -2.0f)
-        loadView(context, R.layout.sceneview_view_info_search_plane, coroutineScope)
+        loadView(context, lifecycle, R.layout.sceneview_view_info_search_plane)
     }
 
     override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {

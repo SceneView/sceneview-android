@@ -2,28 +2,27 @@ package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import android.util.Log;
+
 import com.google.android.filament.Box;
 import com.google.android.filament.Entity;
 import com.google.android.filament.EntityInstance;
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.RenderableManager;
 import com.google.android.filament.VertexBuffer;
-
-
 import com.google.ar.sceneform.math.Vector3;
-import com.google.ar.sceneform.utilities.AndroidPreconditions;
+
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import io.github.sceneview.Filament;
+import io.github.sceneview.FilamentKt;
+
 
 /**
- * Represents the data used by a {@link Renderable} for rendering. All filament resources and
- * materials contained here will be disposed when the {@link RenderableInternalData#dispose()}
- * function is called.
+ * Represents the data used by a {@link Renderable} for rendering
  */
 class RenderableInternalData implements IRenderableInternalData {
   private static final String TAG = RenderableInternalData.class.getSimpleName();
@@ -201,7 +200,7 @@ class RenderableInternalData implements IRenderableInternalData {
     Renderable renderable = instance.getRenderable();
     IRenderableInternalData renderableData = renderable.getRenderableData();
     ArrayList<Material> materialBindings = renderable.getMaterialBindings();
-    RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+    RenderableManager renderableManager = Filament.getRenderableManager();
     @EntityInstance int renderableInstance = renderableManager.getInstance(renderedEntity);
 
     // Determine if a new filament Renderable needs to be created.
@@ -222,7 +221,7 @@ class RenderableInternalData implements IRenderableInternalData {
 
       setupSkeleton(builder);
 
-      builder.build(EngineInstance.getEngine().getFilamentEngine(), renderedEntity);
+      FilamentKt.build(builder, renderedEntity);
 
       renderableInstance = renderableManager.getInstance(renderedEntity);
       if (renderableInstance == 0) {
@@ -277,59 +276,5 @@ class RenderableInternalData implements IRenderableInternalData {
   @Override
   public List<String> getAnimationNames() {
     return Collections.emptyList();
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /** @hide */
-  @Override
-  protected void finalize() throws Throwable {
-    try {
-      ThreadPools.getMainExecutor().execute(() -> dispose());
-    } catch (Exception e) {
-      Log.e(TAG, "Error while Finalizing Renderable Internal Data.", e);
-    } finally {
-      super.finalize();
-    }
-  }
-
-  /**
-   * Removes any memory used by the object.
-   *
-   * @hide
-   */
-  @Override
-  public void dispose() {
-    AndroidPreconditions.checkUiThread();
-
-    IEngine engine = EngineInstance.getEngine();
-    if (engine == null || !engine.isValid()) {
-      return;
-    }
-
-    if (vertexBuffer != null) {
-      engine.destroyVertexBuffer(vertexBuffer);
-      vertexBuffer = null;
-    }
-
-    if (indexBuffer != null) {
-      engine.destroyIndexBuffer(indexBuffer);
-      indexBuffer = null;
-    }
   }
 }

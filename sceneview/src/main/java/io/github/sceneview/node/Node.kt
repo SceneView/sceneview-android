@@ -346,7 +346,11 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
                 field?.takeIf { this in it.children }?.removeChild(this)
                 // Find the old parent SceneView
                 ((field as? SceneView) ?: (field as? Node)?.sceneView)?.let { sceneView ->
-                    sceneView.lifecycle.removeObserver(this)
+                    // Make sure to listen to at least one lifecycle in case of no more parent in
+                    // order to unsure destroy
+                    if (value != null) {
+                        sceneView.lifecycle.removeObserver(this)
+                    }
                     onDetachFromScene(sceneView)
                 }
                 field = value
@@ -515,8 +519,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
         destroy()
+        super.onDestroy(owner)
     }
 
     internal fun updateVisibility() {

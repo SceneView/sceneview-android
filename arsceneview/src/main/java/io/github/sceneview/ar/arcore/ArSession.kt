@@ -93,6 +93,7 @@ class ArSession(
      */
     override fun onDestroy(owner: LifecycleOwner) {
         close()
+        super.onDestroy(owner)
     }
 
     override fun onSurfaceChanged(width: Int, height: Int) {

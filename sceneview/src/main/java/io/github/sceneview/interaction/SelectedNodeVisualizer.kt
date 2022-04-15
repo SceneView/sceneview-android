@@ -16,9 +16,9 @@
 package io.github.sceneview.interaction
 
 import android.content.Context
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.coroutineScope
-import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
@@ -30,7 +30,7 @@ const val defaultNodeSelector = "sceneview/models/node_selector.glb"
  */
 class SelectedNodeVisualizer(
     context: Context,
-    val lifecycle: SceneLifecycle,
+    val lifecycle: Lifecycle,
     nodeSelectorModel: String = defaultNodeSelector
 ) : SceneLifecycleObserver {
 
@@ -40,7 +40,7 @@ class SelectedNodeVisualizer(
         lifecycle.addObserver(this)
 
         lifecycle.coroutineScope.launchWhenCreated {
-            selectorNode.loadModel(context = context, nodeSelectorModel)
+            selectorNode.loadModel(context = context, lifecycle, nodeSelectorModel)
             selectorNode.collisionShape = null
         }
     }
