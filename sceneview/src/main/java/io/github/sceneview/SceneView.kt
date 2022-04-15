@@ -23,7 +23,6 @@ import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.Renderer
-import com.google.ar.sceneform.rendering.ResourceManager
 import com.gorisse.thomas.lifecycle.getActivity
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.lookAt
@@ -71,8 +70,7 @@ open class SceneView @JvmOverloads constructor(
             context.getActivity()!!
         }
 
-    open val sceneLifecycle: SceneLifecycle by lazy { SceneLifecycle(context, this) }
-    override fun getLifecycle() = sceneLifecycle
+    protected var sceneLifecycle: SceneLifecycle? = null
 
     private val parentLifecycleObserver = LifecycleEventObserver { _, event ->
         lifecycle.currentState = event.targetState
@@ -232,6 +230,11 @@ open class SceneView @JvmOverloads constructor(
             onOpenGLNotSupported(exception)
         }
     }
+
+    override fun getLifecycle() =
+        sceneLifecycle ?: SceneLifecycle(context, this).also {
+            sceneLifecycle = it
+        }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
