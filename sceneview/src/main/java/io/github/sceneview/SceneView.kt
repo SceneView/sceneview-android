@@ -281,14 +281,13 @@ open class SceneView @JvmOverloads constructor(
     }
 
     open fun destroy() {
-
         camera.destroy()
         environment?.destroy()
         environment = null
         mainLight?.destroy()
         mainLight = null
 
-        ResourceManager.getInstance().destroyAllResources()
+//        ResourceManager.getInstance().destroyAllResources()
 
         Filament.release()
     }

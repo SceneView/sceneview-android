@@ -20,13 +20,16 @@ object Filament {
     }
 
     private var eglContext: EGLContext? = null
+
     private var _engine: Engine? = null
 
     @JvmStatic
     val engine: Engine
         get() = _engine ?: GLHelper.makeContext().let { eglContext ->
             this.eglContext = eglContext
-            Engine.create(eglContext).also { _engine = it }
+            Engine.create(eglContext).also { engine ->
+                _engine = engine
+            }
         }
 
     @JvmStatic
@@ -45,17 +48,38 @@ object Filament {
     val lightManager
         get() = engine.lightManager
 
-    @JvmStatic
-    val resourceLoader by lazy { ResourceLoader(engine, true, true, false) }
+    private var _resourceLoader: ResourceLoader? = null
 
     @JvmStatic
-    val assetLoader by lazy { AssetLoader(engine, materialProvider, entityManager) }
+    val resourceLoader: ResourceLoader
+        get() = _resourceLoader ?: ResourceLoader(
+            engine,
+            true,
+            true,
+            false
+        ).also { _resourceLoader = it }
+
+    private var _materialProvider: UbershaderLoader? = null
 
     @JvmStatic
-    val materialProvider by lazy { UbershaderLoader(engine) }
+    val materialProvider
+        get() = _materialProvider ?: UbershaderLoader(engine).also { _materialProvider = it }
+
+    private var _assetLoader: AssetLoader? = null
 
     @JvmStatic
-    val iblPrefilter by lazy { IBLPrefilter(engine) }
+    val assetLoader: AssetLoader
+        get() = _assetLoader ?: AssetLoader(
+            engine,
+            materialProvider,
+            entityManager
+        ).also { _assetLoader = it }
+
+    private var _iblPrefilter: IBLPrefilter? = null
+
+    @JvmStatic
+    val iblPrefilter: IBLPrefilter
+        get() = _iblPrefilter ?: IBLPrefilter(engine).also { _iblPrefilter = it }
 
     var retainers = 0
 
@@ -71,23 +95,31 @@ object Filament {
     }
 
     fun destroy() {
-        // We still got some errors due to this nightmare Renderable
+        // We still got some errors on this destroy due to this nightmare Renderable
         // Should be solved with RIP Renderable
-//        resourceLoader.asyncCancelLoad()
-//        resourceLoader.evictResourceData()
+//        _assetLoader?.destroy()
+        _assetLoader = null
 
-//        assetLoader.destroy()
-        // Despite all the effort, not destroyed Material still exist.
-        // Uncomment this after RIP Renderable push
-//        materialProvider.destroyMaterials()
-//        materialProvider.destroy()
-//        resourceLoader.destroy()
+        _resourceLoader?.apply {
+            asyncCancelLoad()
+            evictResourceData()
+            destroy()
+        }
+        _resourceLoader = null
 
-//        _engine?.destroy()
-//        _engine = null
+        // We still got some errors on this destroy due to this nightmare Renderable
+        // Should be solved with RIP Renderable
+//        _materialProvider?.destroyMaterials()
+        _materialProvider?.destroy()
+        _materialProvider = null
 
-//        GLHelper.destroyContext(eglContext)
-//        eglContext = null
+        _iblPrefilter = null
+
+        _engine?.destroy()
+        _engine = null
+
+        GLHelper.destroyContext(eglContext)
+        eglContext = null
     }
 }
 
