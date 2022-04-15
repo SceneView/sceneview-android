@@ -2,11 +2,13 @@ package com.google.ar.sceneform.rendering;
 
 import android.content.Context;
 import android.net.Uri;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.google.android.filament.gltfio.ResourceLoader;
+
 import com.google.ar.sceneform.utilities.Preconditions;
 import com.google.ar.sceneform.utilities.SceneformBufferUtils;
+
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -32,8 +34,6 @@ public class LoadRenderableFromFilamentGltfTask<T extends Renderable> {
     } else {
       throw new IllegalStateException("Expected task type " + TAG);
     }
-    this.renderableData.resourceLoader =
-        new ResourceLoader(EngineInstance.getEngine().getFilamentEngine());
     this.renderableData.urlResolver =
         missingPath -> getUriFromMissingResource(sourceUri, missingPath, urlResolver);
     this.renderableData.context = context.getApplicationContext();
