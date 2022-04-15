@@ -37,12 +37,8 @@ open class ArSceneView @JvmOverloads constructor(
 
     override val sceneLifecycle: ArSceneLifecycle by lazy { ArSceneLifecycle(context, this) }
 
-    val cameraTextureId by lazy {
-        GLHelper.createCameraTexture()
-    }
-
     //TODO : Move it to Lifecycle and NodeParent when Kotlined
-    override val camera by lazy { ArCamera(this) }
+    override val camera = ArCamera(this)
 
     /**
      * ### Fundamental session features
@@ -51,13 +47,10 @@ open class ArSceneView @JvmOverloads constructor(
      */
     var arSessionFeatures = { setOf<Session.Feature>() }
 
-    override val arCore by lazy {
-        ARCore(
-            cameraTextureId = cameraTextureId,
-            lifecycle = lifecycle,
-            features = arSessionFeatures
-        )
-    }
+    override val arCore = ARCore(
+        lifecycle = lifecycle,
+        features = arSessionFeatures
+    )
 
     /**
      * ### Sets the desired focus mode
@@ -161,16 +154,14 @@ open class ArSceneView @JvmOverloads constructor(
 
     var currentFrame: ArFrame? = null
 
-    override val renderer: Renderer by lazy {
-        ArRenderer(this, camera).apply {
-            enablePerformanceMode()
-        }
+    override val renderer: Renderer = ArRenderer(this, camera).apply {
+        enablePerformanceMode()
     }
 
     /**
      * ### The [CameraStream] used to control if the occlusion should be enabled or disabled
      */
-    val cameraStream by lazy { CameraStream(lifecycle, cameraTextureId, renderer) }
+    val cameraStream = CameraStream(lifecycle, arCore.cameraTextureId, renderer)
 
     /**
      * ### [PlaneRenderer] used to control plane visualization.
