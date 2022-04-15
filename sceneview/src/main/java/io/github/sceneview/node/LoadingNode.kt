@@ -3,7 +3,7 @@ package io.github.sceneview.node
 import android.content.Context
 import android.view.View
 import android.widget.TextView
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.Lifecycle
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.R
@@ -20,7 +20,7 @@ import io.github.sceneview.math.Scale
  */
 open class LoadingNode(
     context: Context,
-    coroutineScope: LifecycleCoroutineScope,
+    lifecycle: Lifecycle,
     position: Position = DEFAULT_POSITION,
     rotation: Rotation = DEFAULT_ROTATION,
     scale: Scale = DEFAULT_SCALE
@@ -31,7 +31,7 @@ open class LoadingNode(
 
     init {
         isFocusable = false
-        loadView(context, R.layout.sceneview_loading_node, coroutineScope)
+        loadView(context, lifecycle, R.layout.sceneview_loading_node)
     }
 
     override fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {

@@ -6,6 +6,7 @@ import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
@@ -36,6 +37,7 @@ public class VideoNode extends ModelNode {
     private static final String MATERIAL_PARAMETER_VIDEO_TEXTURE = "videoTexture";
     private static final String MATERIAL_PARAMETER_CHROMA_KEY_COLOR = "keyColor";
 
+    protected Lifecycle lifecycle;
     private final MediaPlayer player;
     private final ExternalTexture texture;
     private final Color chromaKeyColor;
@@ -50,8 +52,8 @@ public class VideoNode extends ModelNode {
      * @param player   The video media player to render on the plane node
      * @param listener Loading listener
      */
-    public VideoNode(Context context, MediaPlayer player, @Nullable Listener listener) {
-        this(context, player, null, null, listener);
+    public VideoNode(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Listener listener) {
+        this(context, lifecycle, player, null, null, listener);
     }
 
     /**
@@ -63,9 +65,9 @@ public class VideoNode extends ModelNode {
      * @param chromaKeyColor Chroma Key color to made the video transparent from
      * @param listener       Loading listener
      */
-    public VideoNode(Context context, MediaPlayer player, @Nullable Color chromaKeyColor,
+    public VideoNode(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Color chromaKeyColor,
                      @Nullable Listener listener) {
-        this(context, player, chromaKeyColor, null, listener);
+        this(context, lifecycle, player, chromaKeyColor, null, listener);
     }
 
     /**
@@ -79,10 +81,12 @@ public class VideoNode extends ModelNode {
      *                       Null for default Plane shape renderable.
      * @param listener       Loading listener
      */
-    public VideoNode(Context context, MediaPlayer player, @Nullable Color chromaKeyColor,
+    //TODO: Remove the lifecycle param when kotlined
+    public VideoNode(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Color chromaKeyColor,
                      @Nullable ExternalTexture texture, @Nullable Listener listener) {
+        this.lifecycle = lifecycle;
         this.player = player;
-        this.texture = texture != null ? texture : new ExternalTexture();
+        this.texture = texture != null ? texture : new ExternalTexture(lifecycle);
         this.chromaKeyColor = chromaKeyColor;
         this.listener = listener;
         init(context);
@@ -98,7 +102,7 @@ public class VideoNode extends ModelNode {
         }
         Material.builder()
                 .setSource(context, Uri.parse(materialLocation))
-                .build()
+                .build(lifecycle)
                 .thenAccept(material -> {
                     material.setExternalTexture(MATERIAL_PARAMETER_VIDEO_TEXTURE, texture);
                     if (chromaKeyColor != null) {
@@ -139,7 +143,7 @@ public class VideoNode extends ModelNode {
     }
 
     public Renderable makePlane(float width, float height, Material material) {
-        return PlaneFactory.makePlane(
+        return PlaneFactory.makePlane(lifecycle,
                 new Vector3(width, height, 0.0f),
                 new Vector3(0.0f, height / 2.0f, 0.0f),
                 material
@@ -231,21 +235,21 @@ public class VideoNode extends ModelNode {
 
     public static class Horizontal extends VideoNode {
 
-        public Horizontal(Context context, MediaPlayer player, @Nullable Listener listener) {
-            super(context, player, listener);
+        public Horizontal(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Listener listener) {
+            super(context, lifecycle, player, listener);
         }
 
-        public Horizontal(Context context, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable Listener listener) {
-            super(context, player, chromaKeyColor, listener);
+        public Horizontal(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable Listener listener) {
+            super(context, lifecycle, player, chromaKeyColor, listener);
         }
 
-        public Horizontal(Context context, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable ExternalTexture texture, @Nullable Listener listener) {
-            super(context, player, chromaKeyColor, texture, listener);
+        public Horizontal(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable ExternalTexture texture, @Nullable Listener listener) {
+            super(context, lifecycle, player, chromaKeyColor, texture, listener);
         }
 
         @Override
         public Renderable makePlane(float width, float height, Material material) {
-            return PlaneFactory.makePlane(
+            return PlaneFactory.makePlane(lifecycle,
                     new Vector3(width, 0.0f, height),
                     new Vector3(0.0f, 0.0f, 0.0f),
                     material
@@ -255,21 +259,21 @@ public class VideoNode extends ModelNode {
 
     public static class Vertical extends VideoNode {
 
-        public Vertical(Context context, MediaPlayer player, @Nullable Listener listener) {
-            super(context, player, listener);
+        public Vertical(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Listener listener) {
+            super(context, lifecycle, player, listener);
         }
 
-        public Vertical(Context context, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable Listener listener) {
-            super(context, player, chromaKeyColor, listener);
+        public Vertical(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable Listener listener) {
+            super(context, lifecycle, player, chromaKeyColor, listener);
         }
 
-        public Vertical(Context context, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable ExternalTexture texture, @Nullable Listener listener) {
-            super(context, player, chromaKeyColor, texture, listener);
+        public Vertical(Context context, Lifecycle lifecycle, MediaPlayer player, @Nullable Color chromaKeyColor, @Nullable ExternalTexture texture, @Nullable Listener listener) {
+            super(context, lifecycle, player, chromaKeyColor, texture, listener);
         }
 
         @Override
         public Renderable makePlane(float width, float height, Material material) {
-            return PlaneFactory.makePlane(
+            return PlaneFactory.makePlane(lifecycle,
                     new Vector3(width, height, 0.0f),
                     new Vector3(0.0f, height / 2.0f, 0.0f),
                     material

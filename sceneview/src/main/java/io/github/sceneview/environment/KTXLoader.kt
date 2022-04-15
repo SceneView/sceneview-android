@@ -1,11 +1,15 @@
 package io.github.sceneview.environment
 
 import android.content.Context
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.coroutineScope
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.utils.KTXLoader
+import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
+import io.github.sceneview.light.destroy
+import io.github.sceneview.scene.destroy
 import io.github.sceneview.utils.fileBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,23 +26,22 @@ import java.nio.Buffer
  * @param skyboxKtxFileLocation the skybox file location
  * [Documentation][fileBuffer]
  *
- * @return [Documentation][KTXLoader.createEnvironment]
+ * @return [KTXLoader.createEnvironment]
  */
 @JvmOverloads
 suspend fun KTXLoader.loadEnvironment(
     context: Context,
+    lifecycle: Lifecycle,
     iblKtxFileLocation: String,
     skyboxKtxFileLocation: String? = null
-): Environment? {
-    return try {
-        val ibl = context.fileBuffer(iblKtxFileLocation)
-        val skybox = skyboxKtxFileLocation?.let { context.fileBuffer(it) }
-        withContext(Dispatchers.Main) {
-            createEnvironment(ibl, skybox)
+): Environment {
+    val iblBuffer = context.fileBuffer(iblKtxFileLocation)
+    val skyboxBuffer = skyboxKtxFileLocation?.let { context.fileBuffer(it) }
+    return withContext(Dispatchers.Main) {
+        createEnvironment(lifecycle, iblBuffer, skyboxBuffer).also {
+            iblBuffer?.clear()
+            skyboxBuffer?.clear()
         }
-    } finally {
-        // TODO: See why the finally is called before the onDestroy()
-//        environment?.destroy()
     }
 }
 
@@ -49,18 +52,16 @@ suspend fun KTXLoader.loadEnvironment(
  *
  * Kotlin developers should use [KTXLoader.loadEnvironment]
  *
- * [Documentation][KTXLoader.loadEnvironment]
- *
  */
 @JvmOverloads
 fun KTXLoader.loadEnvironmentAsync(
     context: Context,
+    lifecycle: Lifecycle,
     iblKtxFileLocation: String,
     skyboxKtxFileLocation: String? = null,
-    coroutineScope: LifecycleCoroutineScope,
     result: (Environment?) -> Unit
-) = coroutineScope.launchWhenCreated {
-    result(loadEnvironment(context, iblKtxFileLocation, skyboxKtxFileLocation))
+) = lifecycle.coroutineScope.launchWhenCreated {
+    result(loadEnvironment(context, lifecycle, iblKtxFileLocation, skyboxKtxFileLocation))
 }
 
 /**
@@ -86,9 +87,50 @@ fun KTXLoader.loadEnvironmentAsync(
  */
 @JvmOverloads
 fun KTXLoader.createEnvironment(
+    lifecycle: Lifecycle,
     iblKtxBuffer: Buffer?,
     skyboxKtxBuffer: Buffer? = null
 ) = KTXEnvironment(
-    indirectLight = iblKtxBuffer?.let { createIndirectLight(Filament.engine, it) },
+    indirectLight = iblKtxBuffer?.let { createIndirectLight(lifecycle, it) },
     sphericalHarmonics = iblKtxBuffer?.rewind()?.let { getSphericalHarmonics(it) },
-    skybox = skyboxKtxBuffer?.let { createSkybox(Filament.engine, it) })
+    skybox = skyboxKtxBuffer?.let { createSkybox(lifecycle, it) }
+)
+
+/**
+ * ### Consumes the content of a KTX file and produces an [IndirectLight] object.
+ *
+ * @param buffer The content of the KTX File.
+ * @param options Loader options.
+ * @return The resulting Filament texture, or null on failure.
+ */
+fun KTXLoader.createIndirectLight(
+    lifecycle: Lifecycle,
+    buffer: Buffer,
+    options: KTXLoader.Options = KTXLoader.Options()
+) = createIndirectLight(Filament.engine, buffer, options)
+    .also { indirectLight ->
+        lifecycle.observe(onDestroy = {
+            // Prevent double destroy in case of manually destroyed
+            runCatching { indirectLight.destroy() }
+        })
+    }
+
+
+/**
+ * ### Consumes the content of a KTX file and produces a [Skybox] object.
+ *
+ * @param buffer The content of the KTX File.
+ * @param options Loader options.
+ * @return The resulting Filament texture, or null on failure.
+ */
+fun KTXLoader.createSkybox(
+    lifecycle: Lifecycle,
+    buffer: Buffer,
+    options: KTXLoader.Options = KTXLoader.Options()
+) = createSkybox(Filament.engine, buffer, options)
+    .also { skybox ->
+        lifecycle.observe(onDestroy = {
+            // Prevent double destroy in case of manually destroyed
+            runCatching { skybox.destroy() }
+        })
+    }

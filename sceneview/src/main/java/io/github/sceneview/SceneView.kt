@@ -2,7 +2,6 @@ package io.github.sceneview
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.ContextWrapper
 import android.graphics.Color.BLACK
 import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
@@ -23,8 +22,9 @@ import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.collision.CollisionSystem
-import com.google.ar.sceneform.rendering.EngineInstance
 import com.google.ar.sceneform.rendering.Renderer
+import com.google.ar.sceneform.rendering.ResourceManager
+import com.gorisse.thomas.lifecycle.getActivity
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.environment.Environment
@@ -213,8 +213,7 @@ open class SceneView @JvmOverloads constructor(
 
     init {
         try {
-            // TODO : Remove it here when moved Filament to lifecycle aware
-            EngineInstance.getEngine()
+            Filament.retain()
 
             mainLight = LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
                 val (r, g, b) = Colors.cct(6_500.0f)
@@ -222,8 +221,11 @@ open class SceneView @JvmOverloads constructor(
                 intensity(100_000.0f)
                 direction(0.28f, -0.6f, -0.76f)
                 castShadows(true)
-            }.build()
-            environment = KTXLoader.createEnvironment(context.fileBufferLocal(defaultIbl))
+            }.build(lifecycle)
+            // TODO : See if we really can't load it async
+            environment = context.useLocalFileBufferNotNull(defaultIbl) {
+                KTXLoader.createEnvironment(lifecycle, it)
+            }
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
             // Filament is kotlined
@@ -236,18 +238,20 @@ open class SceneView @JvmOverloads constructor(
 
         lifecycle.addObserver(this)
 
-        findViewTreeLifecycleOwner()?.let { parentLifecycleOwner ->
-            parentLifecycleOwner.lifecycle.addObserver(parentLifecycleObserver)
-            lifecycle.currentState = parentLifecycleOwner.lifecycle.currentState
+        findViewTreeLifecycleOwner()?.lifecycle?.let { viewTreeLifecycle ->
+            viewTreeLifecycle.addObserver(parentLifecycleObserver)
+            if (lifecycle.currentState != viewTreeLifecycle.currentState) {
+                lifecycle.currentState = viewTreeLifecycle.currentState
+            }
         }
     }
 
-    fun Context.getActivity(): ComponentActivity? = this as? ComponentActivity
-        ?: (this as? ContextWrapper)?.baseContext?.getActivity()
-
     override fun onDetachedFromWindow() {
         findViewTreeLifecycleOwner()?.lifecycle?.removeObserver(parentLifecycleObserver)
-        lifecycle.currentState = Lifecycle.State.DESTROYED
+        if (lifecycle.currentState != Lifecycle.State.DESTROYED) {
+            lifecycle.currentState = Lifecycle.State.DESTROYED
+        }
+        onDestroy()
         super.onDetachedFromWindow()
     }
 
@@ -270,15 +274,23 @@ open class SceneView @JvmOverloads constructor(
         renderer.onPause()
     }
 
-    override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
+    // We don't use the lifecycle call back because we want to be sure to destroy the Filament
+    // engine only after all lifecycle observers has been notified
+    open fun onDestroy() {
+        destroy()
+    }
+
+    open fun destroy() {
 
         camera.destroy()
         environment?.destroy()
         environment = null
         mainLight?.destroy()
         mainLight = null
-        renderer.destroyAllResources()
+
+        ResourceManager.getInstance().destroyAllResources()
+
+        Filament.release()
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -454,7 +466,8 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    open class DefaultSceneGestureListener(val sceneView: SceneView) : SceneGestureDetector.OnSceneGestureListener {
+    open class DefaultSceneGestureListener(val sceneView: SceneView) :
+        SceneGestureDetector.OnSceneGestureListener {
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
             sceneView.renderer.filamentView.pick(
                 e.x.roundToInt(),

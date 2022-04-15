@@ -5,13 +5,15 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
 
-import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.EntityInstance;
-import com.google.android.filament.EntityManager;
 import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.RenderableManager;
 import com.google.android.filament.TransformManager;
@@ -24,7 +26,6 @@ import com.google.ar.sceneform.collision.Box;
 import com.google.ar.sceneform.common.TransformProvider;
 import com.google.ar.sceneform.math.Matrix;
 import com.google.ar.sceneform.math.Vector3;
-import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.ChangeId;
 import com.google.ar.sceneform.utilities.LoadHelper;
 import com.google.ar.sceneform.utilities.Preconditions;
@@ -36,6 +37,9 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
+
+import io.github.sceneview.Filament;
+import io.github.sceneview.model.ModelKt;
 
 /**
  * Controls how a {@link Renderable} is displayed. There can be multiple RenderableInstances
@@ -99,14 +103,21 @@ public class RenderableInstance implements AnimatableModel {
     private Matrix cachedRelativeTransformInverse;
 
     @SuppressWarnings("initialization") // Suppress @UnderInitialization warning.
-    public RenderableInstance(TransformProvider transformProvider, Renderable renderable) {
+    public RenderableInstance(Lifecycle lifecycle, TransformProvider transformProvider, Renderable renderable) {
         Preconditions.checkNotNull(transformProvider, "Parameter \"transformProvider\" was null.");
         Preconditions.checkNotNull(renderable, "Parameter \"renderable\" was null.");
+        lifecycle.addObserver(new DefaultLifecycleObserver() {
+            @Override
+            public void onDestroy(@NonNull LifecycleOwner owner) {
+                DefaultLifecycleObserver.super.onDestroy(owner);
+                destroy();
+            }
+        });
         this.transformProvider = transformProvider;
         this.renderable = renderable;
         this.materialBindings = new ArrayList<>(renderable.getMaterialBindings());
         this.materialNames = new ArrayList<>(renderable.getMaterialNames());
-        entity = createFilamentEntity(EngineInstance.getEngine());
+        entity = createFilamentEntity();
 
         // SFB's can be imported with re-centering or scaling; rather than perform those operations to
         // the vertices (and bones, &c) at import time, we keep vertex data in the same unit as the
@@ -114,31 +125,20 @@ public class RenderableInstance implements AnimatableModel {
         // back null, the relative transform is identity and the child entity path can be skipped.
         @Nullable Matrix relativeTransform = getRelativeTransform();
         if (relativeTransform != null) {
-            childEntity =
-                    createFilamentChildEntity(EngineInstance.getEngine(), entity, relativeTransform);
+            childEntity = createFilamentChildEntity(entity, relativeTransform);
         }
 
         createGltfModelInstance();
 
-        createFilamentAssetModelInstance();
-
-        ResourceManager.getInstance()
-                .getRenderableInstanceCleanupRegistry()
-                .register(this, new CleanupCallback(entity, childEntity));
+        createFilamentAssetModelInstance(lifecycle);
     }
 
-    void createFilamentAssetModelInstance() {
+    void createFilamentAssetModelInstance(Lifecycle lifecycle) {
         if (renderable.getRenderableData() instanceof RenderableInternalFilamentAssetData) {
             RenderableInternalFilamentAssetData renderableData =
                     (RenderableInternalFilamentAssetData) renderable.getRenderableData();
 
-            Engine engine = EngineInstance.getEngine().getFilamentEngine();
-
-            AssetLoader loader =
-                    new AssetLoader(
-                            engine,
-                            RenderableInternalFilamentAssetData.getUberShaderLoader(),
-                            EntityManager.get());
+            AssetLoader loader = Filament.getAssetLoader();
 
             FilamentAsset createdAsset = renderableData.isGltfBinary ? loader.createAssetFromBinary(renderableData.gltfByteBuffer)
                     : loader.createAssetFromJson(renderableData.gltfByteBuffer);
@@ -166,7 +166,7 @@ public class RenderableInstance implements AnimatableModel {
                 Uri dataUri = urlResolver.apply(uri);
                 try {
                     Callable<InputStream> callable = LoadHelper.fromUri(renderableData.context, dataUri);
-                    renderableData.resourceLoader.addResourceData(
+                    Filament.getResourceLoader().addResourceData(
                             uri, ByteBuffer.wrap(SceneformBufferUtils.inputStreamCallableToByteArray(callable)));
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to download data uri " + dataUri, e);
@@ -174,12 +174,12 @@ public class RenderableInstance implements AnimatableModel {
             }
 
             if(renderable.asyncLoadEnabled) {
-                renderableData.resourceLoader.asyncBeginLoad(createdAsset);
+                Filament.getResourceLoader().asyncBeginLoad(createdAsset);
             } else {
-                renderableData.resourceLoader.loadResources(createdAsset);
+                Filament.getResourceLoader().loadResources(createdAsset);
             }
 
-            RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+            RenderableManager renderableManager = Filament.getRenderableManager();
 
             this.materialBindings.clear();
             this.materialNames.clear();
@@ -192,12 +192,12 @@ public class RenderableInstance implements AnimatableModel {
                 materialNames.add(materialInstance.getName());
 
                 MaterialInternalDataGltfImpl materialData = new MaterialInternalDataGltfImpl(materialInstance.getMaterial());
-                Material material = new Material(materialData, true);
+                Material material = new Material(lifecycle, materialData);
                 material.updateGltfMaterialInstance(materialInstance);
                 materialBindings.add(material);
             }
 
-            TransformManager transformManager = EngineInstance.getEngine().getTransformManager();
+            TransformManager transformManager = Filament.getTransformManager();
 
             @EntityInstance int rootInstance = transformManager.getInstance(createdAsset.getRoot());
             @EntityInstance
@@ -287,7 +287,7 @@ public class RenderableInstance implements AnimatableModel {
      */
     public void setRenderPriority(@IntRange(from = Renderable.RENDER_PRIORITY_FIRST, to = Renderable.RENDER_PRIORITY_LAST) int renderPriority) {
         this.renderPriority = Math.min(Renderable.RENDER_PRIORITY_LAST, Math.max(Renderable.RENDER_PRIORITY_FIRST, renderPriority));
-        RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+        RenderableManager renderableManager = Filament.getRenderableManager();
         int[] entities = getFilamentAsset().getEntities();
         for (int i = 0; i < entities.length; i++) {
             @EntityInstance int renderableInstance = renderableManager.getInstance(entities[i]);
@@ -319,7 +319,7 @@ public class RenderableInstance implements AnimatableModel {
      * true by default
      */
     public void setCulling(boolean isCulling) {
-        RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+        RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(getEntity());
         if (renderableInstance != 0 && renderableManager.hasComponent(renderableInstance)) {
             renderableManager.setCulling(renderableInstance, isShadowCaster);
@@ -345,7 +345,7 @@ public class RenderableInstance implements AnimatableModel {
      */
     public void setShadowCaster(boolean isShadowCaster) {
         this.isShadowCaster = isShadowCaster;
-        RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+        RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(getEntity());
         if (renderableInstance != 0) {
             renderableManager.setCastShadows(renderableInstance, isShadowCaster);
@@ -372,7 +372,7 @@ public class RenderableInstance implements AnimatableModel {
      */
     public void setShadowReceiver(boolean isShadowReceiver) {
         this.isShadowReceiver = isShadowReceiver;
-        RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+        RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(getEntity());
         if (renderableInstance != 0) {
             renderableManager.setReceiveShadows(renderableInstance, isShadowReceiver);
@@ -454,7 +454,7 @@ public class RenderableInstance implements AnimatableModel {
         int[] entities = getFilamentAsset().getEntities();
         Preconditions.checkElementIndex(entityIndex, entities.length, "No entity found at the given index");
         materialBindings.set(entityIndex, material);
-        RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+        RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(entities[entityIndex]);
         if (renderableInstance != 0) {
             renderableManager.setMaterialInstanceAt(renderableInstance, primitiveIndex,
@@ -582,10 +582,22 @@ public class RenderableInstance implements AnimatableModel {
     public void destroy() {
         setRenderer(null);
 
+        if(filamentAsset != null) {
+            ModelKt.destroy(filamentAsset);
+            filamentAsset = null;
+        }
         if (renderable.getRenderableData() instanceof RenderableInternalFilamentAssetData) {
-            RenderableInternalFilamentAssetData renderableData =
-                    (RenderableInternalFilamentAssetData) renderable.getRenderableData();
-            renderableData.resourceLoader.evictResourceData();
+//            Filament.getResourceLoader().evictResourceData();
+        }
+
+        RenderableManager renderableManager = Filament.getRenderableManager();
+        if (childEntity != 0) {
+            renderableManager.destroy(childEntity);
+            childEntity = 0;
+        }
+        if (entity != 0) {
+            renderableManager.destroy(entity);
+            entity = 0;
         }
     }
 
@@ -671,61 +683,24 @@ public class RenderableInstance implements AnimatableModel {
     }
 
     void setBlendOrderAt(int index, int blendOrder) {
-        RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+        RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(getRenderedEntity());
         renderableManager.setBlendOrderAt(renderableInstance, index, blendOrder);
     }
 
     @Entity
-    private static int createFilamentEntity(IEngine engine) {
-        EntityManager entityManager = EntityManager.get();
-        @Entity int entity = entityManager.create();
-        TransformManager transformManager = engine.getTransformManager();
-        transformManager.create(entity);
+    private static int createFilamentEntity() {
+        @Entity int entity = Filament.getEntityManager().create();
+        Filament.getTransformManager().create(entity);
         return entity;
     }
 
     @Entity
-    private static int createFilamentChildEntity(
-            IEngine engine, @Entity int entity, Matrix relativeTransform) {
-        EntityManager entityManager = EntityManager.get();
-        @Entity int childEntity = entityManager.create();
-        TransformManager transformManager = engine.getTransformManager();
-        transformManager.create(
-                childEntity, transformManager.getInstance(entity), relativeTransform.data);
+    private static int createFilamentChildEntity(@Entity int entity, Matrix relativeTransform) {
+        @Entity int childEntity = Filament.getEntityManager().create();
+        Filament.getTransformManager().create(childEntity,
+                Filament.getTransformManager().getInstance(entity),
+                relativeTransform.data);
         return childEntity;
-    }
-
-    /**
-     * Releases resources held by a {@link RenderableInstance}
-     */
-    private static final class CleanupCallback implements Runnable {
-        private final int childEntity;
-        private final int entity;
-
-        CleanupCallback(int childEntity, int entity) {
-            this.childEntity = childEntity;
-            this.entity = entity;
-        }
-
-        @Override
-        public void run() {
-            AndroidPreconditions.checkUiThread();
-
-            IEngine engine = EngineInstance.getEngine();
-
-            if (engine == null || !engine.isValid()) {
-                return;
-            }
-
-            RenderableManager renderableManager = engine.getRenderableManager();
-
-            if (childEntity != 0) {
-                renderableManager.destroy(childEntity);
-            }
-            if (entity != 0) {
-                renderableManager.destroy(entity);
-            }
-        }
     }
 }

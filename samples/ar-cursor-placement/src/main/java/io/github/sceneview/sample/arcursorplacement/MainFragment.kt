@@ -5,7 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
 import io.github.sceneview.ar.ArSceneView
@@ -59,7 +58,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
         }
 
-        cursorNode = CursorNode(context = requireContext(), coroutineScope = lifecycleScope).apply {
+        cursorNode = CursorNode(context = requireContext(), lifecycle = lifecycle).apply {
             onTrackingChanged = { _, isTracking, _ ->
                 if (!isLoading) {
                     actionButton.isGone = !isTracking
@@ -71,7 +70,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         isLoading = true
         modelNode = ArModelNode()
         modelNode.loadModelAsync(context = requireContext(),
-            coroutineScope = lifecycleScope,
+            lifecycle = lifecycle,
             glbFileLocation = "models/spiderbot.glb",
             onLoaded = {
                 actionButton.text = getString(R.string.move_object)

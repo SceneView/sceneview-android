@@ -167,6 +167,7 @@ class ARCore(
      */
     override fun onDestroy(owner: LifecycleOwner) {
         session = null
+        super.onDestroy(owner)
     }
 
     fun onException(exception: Exception) {

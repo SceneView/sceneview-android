@@ -1,6 +1,7 @@
 package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.ar.core.Plane;
 import com.google.ar.core.TrackingState;
@@ -20,6 +21,7 @@ import java.util.concurrent.ExecutionException;
 public class PlaneVisualizer implements TransformProvider {
     private static final String TAG = PlaneVisualizer.class.getSimpleName();
 
+    private final Lifecycle lifecycle;
     private final Plane plane;
     private final Renderer renderer;
 
@@ -72,11 +74,12 @@ public class PlaneVisualizer implements TransformProvider {
         }
     }
 
-    public PlaneVisualizer(Plane plane, Renderer renderer) {
+    public PlaneVisualizer(Lifecycle lifecycle, Plane plane, Renderer renderer) {
+        this.lifecycle = lifecycle;
         this.plane = plane;
         this.renderer = renderer;
 
-        renderableDefinition = RenderableDefinition.builder().setVertices(vertices).build();
+        renderableDefinition = RenderableDefinition.builder().setVertices(vertices).build(lifecycle);
     }
 
     Plane getPlane() {
@@ -161,7 +164,7 @@ public class PlaneVisualizer implements TransformProvider {
 
         if (planeRenderable == null) {
             try {
-                planeRenderable = ModelRenderable.builder().setSource(renderableDefinition).build().get();
+                planeRenderable = ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle).get();
                 planeRenderable.setShadowCaster(false);
                 // Creating a Renderable is immediate when using RenderableDefinition.
             } catch (InterruptedException | ExecutionException ex) {
@@ -182,7 +185,7 @@ public class PlaneVisualizer implements TransformProvider {
         }
     }
 
-    public void release() {
+    public void destroy() {
         removePlaneFromScene();
 
         planeRenderable = null;

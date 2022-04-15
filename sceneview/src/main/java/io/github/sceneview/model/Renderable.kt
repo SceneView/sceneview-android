@@ -1,6 +1,7 @@
 package io.github.sceneview.model
 
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.coroutineScope
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
 import com.google.ar.sceneform.rendering.Renderable
@@ -28,11 +29,9 @@ import kotlinx.coroutines.future.await
  * @see [KTXLoader.loadEnvironment]
  * @see [HDRLoader.loadEnvironment]
  */
-suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.build(
-    coroutineScope: LifecycleCoroutineScope
-) {
-    coroutineScope.launchWhenCreated {
-        await()
+suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.build(lifecycle: Lifecycle) {
+    lifecycle.coroutineScope.launchWhenCreated {
+        await(lifecycle)
     }
 }
 
@@ -54,8 +53,9 @@ suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T,
  * @see [KTXLoader.loadEnvironment]
  * @see [HDRLoader.loadEnvironment]
  */
-suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.await() =
-    build().await()
+suspend fun <T : Renderable, B : Renderable.Builder<T, B>>
+        Renderable.Builder<T, B>.await(lifecycle: Lifecycle) =
+    build(lifecycle).await()
 
 /**
  * ### Deferred renderable loading is a non-blocking cancellable future.
@@ -64,5 +64,6 @@ suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T,
  *
  * @see [Deferred]
  */
-fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.asDeferred() =
-    build().asDeferred()
+fun <T : Renderable, B : Renderable.Builder<T, B>>
+        Renderable.Builder<T, B>.asDeferred(lifecycle: Lifecycle) =
+    build(lifecycle).asDeferred()

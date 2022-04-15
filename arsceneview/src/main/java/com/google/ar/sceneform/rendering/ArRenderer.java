@@ -18,23 +18,4 @@ public class ArRenderer extends Renderer {
     public ArRenderer(SurfaceView view, CameraProvider cameraProvider) {
         super(view, cameraProvider);
     }
-
-    /**
-     * Releases rendering resources ready for garbage collection
-     *
-     * @return Count of resources currently in use
-     */
-    @Override
-    public long reclaimReleasedResources() {
-        return super.reclaimReleasedResources() + ArResourceManager.getInstance().reclaimReleasedResources();
-    }
-
-    /**
-     * Immediately releases all rendering resources, even if in use.
-     */
-    @Override
-    public void destroyAllResources() {
-        ArResourceManager.getInstance().destroyAllResources();
-        super.destroyAllResources();
-    }
 }

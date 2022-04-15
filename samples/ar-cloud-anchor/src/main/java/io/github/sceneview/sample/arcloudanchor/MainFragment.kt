@@ -12,7 +12,6 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
 import com.google.ar.core.Session
@@ -92,8 +91,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             isVisible = false
             loadModelAsync(
                 context = requireContext(),
+                lifecycle = lifecycle,
                 glbFileLocation = "models/spiderbot.glb",
-                coroutineScope = lifecycleScope,
                 autoAnimate = false,
                 autoScale = false,
             ) {
@@ -113,7 +112,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 }
 
                 if (sceneView.arSession?.estimateFeatureMapQualityForHosting(frame.camera.pose) == Session.FeatureMapQuality.INSUFFICIENT) {
-                    Toast.makeText(context, R.string.insufficient_visual_data, Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, R.string.insufficient_visual_data, Toast.LENGTH_LONG)
+                        .show()
                     return
                 }
 
@@ -123,7 +123,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                         selectMode(Mode.RESET)
                     } else {
                         Toast.makeText(context, R.string.error_occurred, Toast.LENGTH_LONG).show()
-                        Log.d(TAG, "Unable to host the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}")
+                        Log.d(
+                            TAG,
+                            "Unable to host the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}"
+                        )
                         selectMode(Mode.HOST)
                     }
                 }
@@ -140,7 +143,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                         selectMode(Mode.RESET)
                     } else {
                         Toast.makeText(context, R.string.error_occurred, Toast.LENGTH_LONG).show()
-                        Log.d(TAG, "Unable to resolve the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}")
+                        Log.d(
+                            TAG,
+                            "Unable to resolve the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}"
+                        )
                         selectMode(Mode.RESOLVE)
                     }
                 }

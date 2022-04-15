@@ -1,17 +1,21 @@
 package io.github.sceneview.environment
 
+import androidx.lifecycle.Lifecycle
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.Texture
 import com.google.android.filament.utils.IBLPrefilterContext
 import io.github.sceneview.Filament
+import io.github.sceneview.light.build
+import io.github.sceneview.scene.build
 import io.github.sceneview.texture.destroy
 
 const val defaultSpecularFilter = true
 const val defaultCreateSkybox = true
 
 open class HDREnvironment(
+    lifecycle: Lifecycle,
     cubemap: Texture? = null,
     indirectLightIrradiance: FloatArray? = null,
     indirectLightIntensity: Float? = null,
@@ -20,12 +24,17 @@ open class HDREnvironment(
     val sharedCubemap: Boolean = false
 ) : Environment(
     indirectLight = IndirectLight.Builder().apply {
-        cubemap?.let {
+        cubemap?.let { cubemap ->
             reflections(
                 if (indirectLightSpecularFilter) {
-                    Filament.iblPrefilter.specularFilter(it)
+                    // TODO: Find a better way to destroy cubemap
+                    Filament.iblPrefilter.specularFilter(cubemap).also {
+                        if (!createSkybox) {
+                            cubemap.destroy()
+                        }
+                    }
                 } else {
-                    it
+                    cubemap
                 }
             )
         }
@@ -35,12 +44,12 @@ open class HDREnvironment(
         indirectLightIntensity?.let {
             intensity(it)
         }
-    }.build(),
+    }.build(lifecycle),
     sphericalHarmonics = indirectLightIrradiance,
     skybox = cubemap?.takeIf { createSkybox }?.let {
         Skybox.Builder().apply {
             environment(it)
-        }.build()
+        }.build(lifecycle)
     }
 ) {
     var cubemap: Texture? = cubemap

@@ -13,7 +13,6 @@ import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.HDREnvironment
-import io.github.sceneview.environment.build
 import io.github.sceneview.light.*
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.toLinearSpace
@@ -196,8 +195,8 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
     var environment: Environment? = null
         set(value) {
             val environment = value ?: sceneView.environment
+            field?.takeIf { it != environment }?.destroy()
             if (renderer.getEnvironment() != value) {
-                field?.takeIf { it != environment }?.destroy()
                 renderer.setEnvironment(environment)
             }
             field = value
@@ -214,8 +213,8 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
     var mainLight: Light? = null
         set(value) {
             val mainLight = value ?: mainLight
+            field?.takeIf { it != mainLight }?.destroy()
             if (renderer.getMainLight() != mainLight) {
-                field?.takeIf { it != mainLight }?.destroy()
                 renderer.setMainLight(mainLight)
             }
             field = value
@@ -233,7 +232,6 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
 
         arFrame.takeIf {
             it.precision(lastArFrame) <= precision
-            arFrame.fps(lastArFrame) <= arFrame.fps * precision
         }?.frame?.lightEstimate?.takeIf {
             it.state == LightEstimate.State.VALID && it.timestamp != timestamp
         }?.let { lightEstimate ->
@@ -293,11 +291,11 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
                             sceneView.environment?.indirectLight?.intensity?.let { baseIntensity ->
                                 intensity(baseIntensity * pixelIntensity)
                             }
-                        }.build(),
+                        }.build(lifecycle),
                         sphericalHarmonics = sceneView.environment?.sphericalHarmonics
                     )
                     mainLight = sceneView.mainLight?.let { baseLight ->
-                        (mainLight ?: baseLight.clone()).apply {
+                        (mainLight ?: baseLight.clone(lifecycle)).apply {
                             max(colorIntensities).takeIf { it > 0 }?.let { maxIntensity ->
                                 // Normalize value if max = green:
                                 // colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
@@ -338,6 +336,7 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
                     val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
 
                     environment = HDREnvironment(
+                        lifecycle = lifecycle,
                         cubemap = when {
                             environmentalHdrReflections -> {
                                 lightEstimate.acquireEnvironmentalHdrCubeMap()?.let { arImages ->
@@ -382,7 +381,7 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
                                         .levels(0xff)
                                         .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
                                         .format(Texture.InternalFormat.R11F_G11F_B10F)
-                                        .build()
+                                        .build(lifecycle)
                                         .also {
                                             cubeMapTexture = it
                                         }
@@ -425,7 +424,7 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
                     )
 
                     mainLight = sceneView.mainLight?.let { baseLight ->
-                        (mainLight ?: baseLight.clone()).apply {
+                        (mainLight ?: baseLight.clone(lifecycle)).apply {
                             if (environmentalHdrMainLightDirection) {
                                 lightEstimate.environmentalHdrMainLightDirection.let { (x, y, z) ->
                                     direction = Direction(-x, -y, -z)
@@ -450,7 +449,6 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
-        environment?.takeIf { it != sceneView.environment }?.destroy()
         mainLight?.takeIf { it != sceneView.mainLight }?.destroy()
         super.onDestroy(owner)
     }

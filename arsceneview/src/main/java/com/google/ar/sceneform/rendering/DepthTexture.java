@@ -5,13 +5,15 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.Texture;
-import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.BufferHelper;
 import com.google.ar.sceneform.utilities.Preconditions;
 
 import java.nio.ByteBuffer;
+
+import io.github.sceneview.texture.TextureKt;
 
 /**
  * <pre>
@@ -21,7 +23,9 @@ import java.nio.ByteBuffer;
  * </pre>
  */
 public class DepthTexture {
-    @Nullable private final Texture filamentTexture;
+
+    @Nullable
+    private final Texture filamentTexture;
     private final Handler handler = new Handler(Looper.myLooper());
 
     /**
@@ -30,25 +34,23 @@ public class DepthTexture {
      *      later used to feed in data from a DepthImage.
      * </pre>
      *
-     * @param width int
+     * @param width  int
      * @param height int
      */
-    public DepthTexture(int width, int height) {
-        filamentTexture = new Texture.Builder()
-                .width(width)
-                .height(height)
-                .sampler(Texture.Sampler.SAMPLER_2D)
-                .format(Texture.InternalFormat.RG8)
-                .levels(1)
-                .build(EngineInstance.getEngine().getFilamentEngine());
-
-        ArResourceManager.getInstance()
-                .getDepthTextureCleanupRegistry()
-                .register(this, new CleanupCallback(filamentTexture));
+    public DepthTexture(Lifecycle lifecycle, int width, int height) {
+        filamentTexture = TextureKt.build(new Texture.Builder()
+                        .width(width)
+                        .height(height)
+                        .sampler(Texture.Sampler.SAMPLER_2D)
+                        .format(Texture.InternalFormat.RG8)
+                        .levels(1)
+                , lifecycle);
     }
+
     public Texture getFilamentTexture() {
         return Preconditions.checkNotNull(filamentTexture);
     }
+
     /**
      * <pre>
      *     This is the most important function of this class.
@@ -67,8 +69,6 @@ public class DepthTexture {
             return;
         }
 
-        IEngine engine = EngineInstance.getEngine();
-
         Image.Plane plane = depthImage.getPlanes()[0];
 
         ByteBuffer buffer = plane.getBuffer();
@@ -85,35 +85,12 @@ public class DepthTexture {
                 handler,
                 null
         );
-
-        filamentTexture.setImage(
-                engine.getFilamentEngine(),
-                0,
-                pixelBufferDescriptor
-        );
+        TextureKt.setImage(filamentTexture, 0, pixelBufferDescriptor);
     }
 
-    /**
-     * Cleanup filament objects after garbage collection
-     */
-    private static final class CleanupCallback implements Runnable {
-        @Nullable private final Texture filamentTexture;
-
-        CleanupCallback(@Nullable Texture filamentTexture) {
-            this.filamentTexture = filamentTexture;
-        }
-
-        @Override
-        public void run() {
-            AndroidPreconditions.checkUiThread();
-
-            IEngine engine = EngineInstance.getEngine();
-            if (engine == null || !engine.isValid()) {
-                return;
-            }
-            if (filamentTexture != null) {
-                engine.destroyTexture(filamentTexture);
-            }
+    public void destroy() {
+        if (filamentTexture != null) {
+            TextureKt.destroy(filamentTexture);
         }
     }
 }

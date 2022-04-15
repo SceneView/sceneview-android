@@ -5,13 +5,18 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Picture;
 import android.graphics.PorterDuff;
-import androidx.annotation.Nullable;
 import android.view.Surface;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
 
 import com.google.ar.sceneform.utilities.Preconditions;
+
 import java.util.ArrayList;
 
 /**
@@ -48,11 +53,19 @@ class RenderViewToExternalTexture extends FrameLayout {
   private final ArrayList<OnViewSizeChangedListener> onViewSizeChangedListeners = new ArrayList<>();
 
   @SuppressWarnings("initialization") // Suppress @UnderInitialization warning.
-  RenderViewToExternalTexture(Context context, View view) {
+  RenderViewToExternalTexture(Lifecycle lifecycle, Context context, View view) {
     super(context);
     Preconditions.checkNotNull(view, "Parameter \"view\" was null.");
 
-    externalTexture = new ExternalTexture();
+    lifecycle.addObserver(new DefaultLifecycleObserver() {
+      @Override
+      public void onDestroy(@NonNull LifecycleOwner owner) {
+        DefaultLifecycleObserver.super.onDestroy(owner);
+        destroy();
+      }
+    });
+
+    externalTexture = new ExternalTexture(lifecycle);
 
     this.view = view;
     addView(view);
@@ -153,10 +166,7 @@ class RenderViewToExternalTexture extends FrameLayout {
     }
   }
 
-  void releaseResources() {
+  void destroy() {
     detachView();
-
-    // Let Surface and SurfaceTexture be released
-    // automatically by their finalizers.
   }
 }

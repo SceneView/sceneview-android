@@ -40,12 +40,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         lifecycleScope.launchWhenCreated {
             sceneView.environment = HDRLoader.loadEnvironment(
                 context = requireContext(),
+                lifecycle = lifecycle,
                 hdrFileLocation = "environments/studio_small_09_2k.hdr",
                 specularFilter = false
             )
 
             modelNode.loadModel(
                 context = requireContext(),
+                lifecycle = lifecycle,
                 glbFileLocation = "https://sceneview.github.io/assets/models/MaterialSuite.glb",
                 autoAnimate = true,
                 autoScale = true,

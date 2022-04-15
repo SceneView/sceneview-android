@@ -1,7 +1,7 @@
 package io.github.sceneview.ar.node
 
 import android.content.Context
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.Lifecycle
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
 import com.google.ar.sceneform.rendering.Renderable
@@ -17,7 +17,7 @@ const val clickDuration = 250L
 
 open class CursorNode(
     context: Context,
-    coroutineScope: LifecycleCoroutineScope? = null,
+    lifecycle: Lifecycle? = null,
     glbFileLocation: String = "sceneview/models/cursor.glb"
 ) : ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE) {
 
@@ -59,7 +59,7 @@ open class CursorNode(
 
     init {
         isFocusable = false
-        loadModelAsync(context, glbFileLocation, coroutineScope)
+        loadModelAsync(context, lifecycle, glbFileLocation)
     }
 
     override fun onArFrameHitResult(hitResult: HitResult?) {

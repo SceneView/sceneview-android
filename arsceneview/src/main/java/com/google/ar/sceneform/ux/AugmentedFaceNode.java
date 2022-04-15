@@ -22,6 +22,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.TransformManager;
 import com.google.ar.core.AugmentedFace;
@@ -29,7 +30,6 @@ import com.google.ar.core.AugmentedFace.RegionType;
 import com.google.ar.core.Pose;
 import com.google.ar.core.TrackingState;
 import com.google.ar.sceneform.math.Vector3;
-import com.google.ar.sceneform.rendering.EngineInstance;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.ModelRenderable;
 import com.google.ar.sceneform.rendering.Renderable;
@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
+import io.github.sceneview.Filament;
 import io.github.sceneview.SceneView;
 import io.github.sceneview.ar.arcore.PoseKt;
 import io.github.sceneview.ar.node.ArNode;
@@ -77,6 +78,8 @@ public class AugmentedFaceNode extends ArNode {
     // The augmented face to render visual effects for.
     @Nullable
     private AugmentedFace augmentedFace;
+
+    private Lifecycle lifecycle;
 
     // Fields for nodes.
     private final ModelNode faceMeshNode;
@@ -117,12 +120,14 @@ public class AugmentedFaceNode extends ArNode {
      * Create an AugmentedFaceNode with no AugmentedFace.
      */
     @SuppressWarnings({"initialization"})
-    public AugmentedFaceNode() {
+    public AugmentedFaceNode(Lifecycle lifecycle) {
+        this.lifecycle = lifecycle;
+
         faceMeshNode = new ModelNode();
         faceMeshNode.setParent(this);
 
         faceMeshDefinition =
-                RenderableDefinition.builder().setVertices(vertices).setSubmeshes(submeshes).build();
+                RenderableDefinition.builder().setVertices(vertices).setSubmeshes(submeshes).build(lifecycle);
 
         faceRegionNode = new ModelNode();
         faceRegionNode.setParent(this);
@@ -132,8 +137,8 @@ public class AugmentedFaceNode extends ArNode {
      * Create an AugmentedFaceNode with the given AugmentedFace.
      */
     @SuppressWarnings({"initialization"})
-    public AugmentedFaceNode(AugmentedFace augmentedFace) {
-        this();
+    public AugmentedFaceNode(Lifecycle lifecycle, AugmentedFace augmentedFace) {
+        this(lifecycle);
 
         this.augmentedFace = augmentedFace;
     }
@@ -234,7 +239,7 @@ public class AugmentedFaceNode extends ArNode {
         // Face mesh material
         Material.builder()
                 .setSource(context, Uri.parse("sceneview/materials/face_mesh.filamat"))
-                .build()
+                .build(lifecycle)
                 .handle((material, throwable) -> {
                     if (throwable != null) {
                         Log.e(TAG, "Unable to load face mesh material.", throwable);
@@ -248,7 +253,7 @@ public class AugmentedFaceNode extends ArNode {
         // Face mesh occluder material
         Material.builder()
                 .setSource(context, Uri.parse("sceneview/materials/face_mesh_occluder.filamat"))
-                .build()
+                .build(lifecycle)
                 .handle((material, throwable) -> {
                     if (throwable != null) {
                         Log.e(TAG, "Unable to load face mesh occluder material.", throwable);
@@ -290,7 +295,7 @@ public class AugmentedFaceNode extends ArNode {
             return;
         }
 
-        TransformManager tfm = EngineInstance.getEngine().getTransformManager();
+        TransformManager tfm = Filament.getTransformManager();
 
         Matrix.invertM(inverseRootNodeMatrix, 0, getTransformationMatrix().data, 0);
 
@@ -336,7 +341,7 @@ public class AugmentedFaceNode extends ArNode {
         if (faceMeshRenderable == null) {
             try {
                 faceMeshRenderable =
-                        ModelRenderable.builder().setSource(checkNotNull(faceMeshDefinition)).build().get();
+                        ModelRenderable.builder().setSource(checkNotNull(faceMeshDefinition)).build(lifecycle).get();
                 faceMeshRenderable.setRenderPriority(FACE_MESH_RENDER_PRIORITY);
             } catch (InterruptedException | ExecutionException ex) {
                 Log.e(TAG, "Failed to build faceMeshRenderable from definition", ex);

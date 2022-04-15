@@ -1,11 +1,11 @@
 package io.github.sceneview.material
 
 import android.content.Context
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
-import io.github.sceneview.Filament
-import io.github.sceneview.utils.fileBuffer
+import io.github.sceneview.utils.useFileBufferNotNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.Buffer
@@ -25,18 +25,11 @@ object MaterialLoader {
      */
     suspend fun loadMaterial(
         context: Context,
+        lifecycle: Lifecycle,
         filamatFileLocation: String
-    ): MaterialInstance? {
-        return try {
-            context.fileBuffer(filamatFileLocation)
-                ?.let { buffer ->
-                    withContext(Dispatchers.Main) {
-                        createMaterial(buffer)
-                    }
-                }
-        } finally {
-            // TODO: See why the finally is called before the onDestroy()
-//        material?.destroy()
+    ): MaterialInstance? = context.useFileBufferNotNull(filamatFileLocation) { buffer ->
+        withContext(Dispatchers.Main) {
+            createMaterial(lifecycle, buffer)
         }
     }
 
@@ -53,11 +46,12 @@ object MaterialLoader {
      */
     fun loadMaterialAsync(
         context: Context,
+        lifecycle: Lifecycle,
         filamatFileLocation: String,
         coroutineScope: LifecycleCoroutineScope,
         result: (MaterialInstance?) -> Unit
     ) = coroutineScope.launchWhenCreated {
-        result(loadMaterial(context, filamatFileLocation))
+        result(loadMaterial(context, lifecycle, filamatFileLocation))
     }
 
     /**
@@ -68,9 +62,10 @@ object MaterialLoader {
      * @param filamatBuffer The content of the Filamat File
      * @return the newly created object
      */
-    fun createMaterial(filamatBuffer: Buffer): MaterialInstance {
-        return Material.Builder().payload(filamatBuffer, filamatBuffer.remaining())
-            .build(Filament.engine)
+    fun createMaterial(lifecycle: Lifecycle, filamatBuffer: Buffer): MaterialInstance {
+        return Material.Builder()
+            .payload(filamatBuffer, filamatBuffer.remaining())
+            .build(lifecycle)
             .defaultInstance
     }
 }

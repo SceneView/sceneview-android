@@ -314,13 +314,13 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     }
 
     override fun destroy() {
-        super.destroy()
-
         anchor?.detach()
         anchor = null
 
         cloudAnchorTaskInProgress = false
         onCloudAnchorTaskCompleted = null
+
+        super.destroy()
     }
 
     //TODO : Move all those functions

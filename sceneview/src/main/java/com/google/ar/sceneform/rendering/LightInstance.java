@@ -1,14 +1,19 @@
 package com.google.ar.sceneform.rendering;
 
-import androidx.annotation.Nullable;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
+
 import com.google.android.filament.Entity;
-import com.google.android.filament.EntityManager;
 import com.google.android.filament.LightManager;
 import com.google.ar.sceneform.common.TransformProvider;
 import com.google.ar.sceneform.math.Matrix;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
+
+import io.github.sceneview.Filament;
+import io.github.sceneview.light.LightKt;
 
 /**
  * Wraps a Filament Light.
@@ -25,7 +30,7 @@ public class LightInstance {
     }
   }
 
-  private @Entity final int entity;
+  private @Entity int entity;
   private final Light light;
   @Nullable private Renderer renderer;
 
@@ -37,7 +42,7 @@ public class LightInstance {
 
   private LightInstanceChangeListener changeListener = new LightInstanceChangeListener();
 
-  LightInstance(Light light, TransformProvider transformProvider) {
+  LightInstance(Lifecycle lifecycle, Light light, TransformProvider transformProvider) {
     this.light = light;
     this.transformProvider = transformProvider;
     this.localPosition = light.getLocalPosition();
@@ -47,30 +52,27 @@ public class LightInstance {
     // Add a listener so the light instance knows when the light changes.
     light.addChangedListener(changeListener);
 
-    entity = EntityManager.get().create();
-    IEngine engine = EngineInstance.getEngine();
-
     // Filament will crash if you call functions on the builder that are not appropriate for the
     // light type.
     if (light.getType() == Light.Type.POINT) {
-      new LightManager.Builder(LightManager.Type.POINT)
+      entity = LightKt.build(new LightManager.Builder(LightManager.Type.POINT)
           .position(
               light.getLocalPosition().x, light.getLocalPosition().y, light.getLocalPosition().z)
           .color(light.getColor().r, light.getColor().g, light.getColor().b)
           .intensity(light.getIntensity())
           .falloff(light.getFalloffRadius())
           .castShadows(light.isShadowCastingEnabled())
-          .build(engine.getFilamentEngine(), entity);
+              , lifecycle);
     } else if (light.getType() == Light.Type.DIRECTIONAL) {
-      new LightManager.Builder(LightManager.Type.DIRECTIONAL)
+      entity = LightKt.build(new LightManager.Builder(LightManager.Type.DIRECTIONAL)
           .direction(
               light.getLocalDirection().x, light.getLocalDirection().y, light.getLocalDirection().z)
           .color(light.getColor().r, light.getColor().g, light.getColor().b)
           .intensity(light.getIntensity())
           .castShadows(light.isShadowCastingEnabled())
-          .build(engine.getFilamentEngine(), entity);
+              , lifecycle);
     } else if (light.getType() == Light.Type.SPOTLIGHT) {
-      new LightManager.Builder(LightManager.Type.SPOT)
+      entity = LightKt.build(new LightManager.Builder(LightManager.Type.SPOT)
           .position(
               light.getLocalPosition().x, light.getLocalPosition().y, light.getLocalPosition().z)
           .direction(
@@ -81,9 +83,9 @@ public class LightInstance {
               Math.min(light.getInnerConeAngle(), light.getOuterConeAngle()),
               light.getOuterConeAngle())
           .castShadows(light.isShadowCastingEnabled())
-          .build(engine.getFilamentEngine(), entity);
+              , lifecycle);
     } else if (light.getType() == Light.Type.FOCUSED_SPOTLIGHT) {
-      new LightManager.Builder(LightManager.Type.FOCUSED_SPOT)
+      entity = LightKt.build(new LightManager.Builder(LightManager.Type.FOCUSED_SPOT)
           .position(
               light.getLocalPosition().x, light.getLocalPosition().y, light.getLocalPosition().z)
           .direction(
@@ -94,7 +96,7 @@ public class LightInstance {
               Math.min(light.getInnerConeAngle(), light.getOuterConeAngle()),
               light.getOuterConeAngle())
           .castShadows(light.isShadowCastingEnabled())
-          .build(engine.getFilamentEngine(), entity);
+              , lifecycle);
     } else {
       throw new UnsupportedOperationException("Unsupported light type.");
     }
@@ -109,8 +111,7 @@ public class LightInstance {
       return;
     }
 
-    IEngine engine = EngineInstance.getEngine();
-    LightManager lightManager = engine.getLightManager();
+    LightManager lightManager = Filament.getLightManager();
 
     final int instance = lightManager.getInstance(entity);
     final Matrix transform = transformProvider.getTransformationMatrix();
@@ -159,14 +160,8 @@ public class LightInstance {
       changeListener = null;
     }
 
-    IEngine engine = EngineInstance.getEngine();
-    if (engine != null && engine.isValid()) {
-      LightManager lightManager = engine.getLightManager();
-      lightManager.destroy(entity);
-
-      EntityManager entityManager = EntityManager.get();
-      entityManager.destroy(entity);
-    }
+    Filament.getLightManager().destroy(entity);
+    Filament.getEntityManager().destroy(entity);
   }
 
   /** @hide */
@@ -192,8 +187,7 @@ public class LightInstance {
     }
     dirty = false;
 
-    IEngine engine = EngineInstance.getEngine();
-    LightManager lightManager = engine.getLightManager();
+    LightManager lightManager = Filament.getLightManager();
     final int instance = lightManager.getInstance(entity);
 
     localPosition = light.getLocalPosition();

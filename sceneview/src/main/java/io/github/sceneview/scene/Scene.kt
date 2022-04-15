@@ -3,7 +3,10 @@ package io.github.sceneview.scene
 import com.google.android.filament.Scene
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
+import io.github.sceneview.Filament
 import io.github.sceneview.environment.Environment
+
+fun Scene.destroy() = Filament.engine.destroyScene(this)
 
 /**
  *

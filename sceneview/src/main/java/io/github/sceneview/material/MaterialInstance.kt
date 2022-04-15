@@ -10,12 +10,11 @@ import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.TextureSamplerExternal
 import io.github.sceneview.utils.Color
 
-fun MaterialInstance.newInstance(): MaterialInstance = material.createInstance()
-
 fun MaterialInstance.destroy() {
-    if (material.defaultInstance == this) {
-        material.destroy()
-    }
+    // TODO: Shall we
+//    if (material.defaultInstance == this) {
+//        material.destroy()
+//    }
     Filament.engine.destroyMaterialInstance(this)
 }
 

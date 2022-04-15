@@ -8,8 +8,6 @@ import androidx.annotation.Nullable;
 
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.VertexBuffer;
-import com.google.android.filament.gltfio.ResourceLoader;
-import com.google.android.filament.gltfio.UbershaderLoader;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.RenderableInternalData.MeshData;
 
@@ -27,16 +25,7 @@ public class RenderableInternalFilamentAssetData implements IRenderableInternalD
   Context context;
   Buffer gltfByteBuffer;
   boolean isGltfBinary;
-  ResourceLoader resourceLoader;
   @Nullable Function<String, Uri> urlResolver;
-  static UbershaderLoader ubershaderLoader;
-
-  static UbershaderLoader getUberShaderLoader() {
-    if(ubershaderLoader == null) {
-      ubershaderLoader = new UbershaderLoader(EngineInstance.getEngine().getFilamentEngine());
-    }
-    return ubershaderLoader;
-  }
 
   @Override
   public void setCenterAabb(Vector3 center) {
@@ -217,7 +206,4 @@ public class RenderableInternalFilamentAssetData implements IRenderableInternalD
   @Override
   public void buildInstanceData(RenderableInstance instance, int renderedEntity) {
   }
-
-  @Override
-  public void dispose() {}
 }

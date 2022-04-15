@@ -3,8 +3,8 @@ package io.github.sceneview.node
 import android.content.Context
 import android.view.MotionEvent
 import android.view.View
-import androidx.lifecycle.LifecycleCoroutineScope
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.coroutineScope
 import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
@@ -136,17 +136,17 @@ open class ViewNode : Node {
      */
     fun loadView(
         context: Context,
+        lifecycle: Lifecycle? = null,
         layoutResId: Int,
-        coroutineScope: LifecycleCoroutineScope? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance, view: View) -> Unit)? = null
     ) {
-        if (coroutineScope != null) {
-            coroutineScope.launchWhenCreated {
+        if (lifecycle != null) {
+            lifecycle.coroutineScope.launchWhenCreated {
                 try {
                     val renderable = ViewRenderable.builder()
                         .setView(context, layoutResId)
-                        .await()
+                        .await(lifecycle)
                     val view = renderable.view
                     val instance = setRenderable(renderable)
                     onLoaded?.invoke(instance!!, view)
@@ -158,7 +158,7 @@ open class ViewNode : Node {
             }
         } else {
             doOnAttachedToScene { scene ->
-                loadView(context, layoutResId, scene.lifecycleScope, onError, onLoaded)
+                loadView(context, scene.lifecycle, layoutResId, onError, onLoaded)
             }
         }
     }
@@ -195,8 +195,9 @@ open class ViewNode : Node {
 
     /** ### Detach and destroy the node */
     override fun destroy() {
-        super.destroy()
         renderableInstance?.destroy()
+
+        super.destroy()
     }
 
     override fun clone() = copy(ViewNode())
