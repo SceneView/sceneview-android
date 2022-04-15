@@ -34,8 +34,9 @@ open class ArNodeManipulator(
 
     open fun beginTransform(): Boolean =
         selectedNode?.takeIf {
-            currentGestureTransform == EditableTransform.POSITION && it.positionEditable
+            currentGestureTransform == null && it.positionEditable
         }?.let { node ->
+            currentGestureTransform = EditableTransform.POSITION
             node.detachAnchor()
         } != null
 
