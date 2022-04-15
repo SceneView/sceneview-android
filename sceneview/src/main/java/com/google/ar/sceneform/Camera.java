@@ -9,7 +9,6 @@ import com.google.ar.sceneform.math.MathHelper;
 import com.google.ar.sceneform.math.Matrix;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.CameraProvider;
-import com.google.ar.sceneform.rendering.EngineInstance;
 import com.google.ar.sceneform.utilities.Preconditions;
 
 import dev.romainguy.kotlin.math.Float3;
@@ -294,7 +293,7 @@ public class Camera extends Node implements CameraProvider {
 
     private int getViewWidth() {
         SceneView scene = getSceneView();
-        if (scene == null || EngineInstance.isHeadlessMode()) {
+        if (scene == null) {
             return FALLBACK_VIEW_WIDTH;
         }
 
@@ -303,7 +302,7 @@ public class Camera extends Node implements CameraProvider {
 
     private int getViewHeight() {
         SceneView scene = getSceneView();
-        if (scene == null || EngineInstance.isHeadlessMode()) {
+        if (scene == null) {
             return FALLBACK_VIEW_HEIGHT;
         }
 

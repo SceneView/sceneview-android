@@ -1,44 +1,95 @@
 package io.github.sceneview
 
-import com.google.android.filament.EntityManager
-import com.google.android.filament.Filament
+import android.opengl.EGLContext
+import com.google.android.filament.*
 import com.google.android.filament.gltfio.AssetLoader
+import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.gltfio.ResourceLoader
 import com.google.android.filament.gltfio.UbershaderLoader
-import com.google.ar.sceneform.rendering.EngineInstance
+import com.google.android.filament.utils.Utils
+import com.google.ar.sceneform.rendering.GLHelper
 import io.github.sceneview.environment.IBLPrefilter
-import io.github.sceneview.material.MaterialLoader
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
 object Filament {
 
     init {
-        Filament.init()
+        Gltfio.init()
+        com.google.android.filament.Filament.init()
+        Utils.init()
     }
 
+    private var eglContext: EGLContext? = null
+    private var _engine: Engine? = null
+
     @JvmStatic
-    val engine = EngineInstance.getEngine().filamentEngine
+    val engine: Engine
+        get() = _engine ?: GLHelper.makeContext().let { eglContext ->
+            this.eglContext = eglContext
+            Engine.create(eglContext).also { _engine = it }
+        }
 
     @JvmStatic
     val entityManager
         get() = EntityManager.get()
 
-    val uberShaderLoader by lazy { UbershaderLoader(engine) }
+    @JvmStatic
+    val transformManager
+        get() = engine.transformManager
 
     @JvmStatic
-    val assetLoader by lazy {
-        AssetLoader(engine, uberShaderLoader, entityManager)
-    }
+    val renderableManager
+        get() = engine.renderableManager
 
-    val transformManager get() = engine.transformManager
+    @JvmStatic
+    val lightManager
+        get() = engine.lightManager
 
-    val resourceLoader by lazy { ResourceLoader(engine, true, false, false) }
+    @JvmStatic
+    val resourceLoader by lazy { ResourceLoader(engine, true, true, false) }
 
-    val lightManager get() = engine.lightManager
+    @JvmStatic
+    val assetLoader by lazy { AssetLoader(engine, materialProvider, entityManager) }
 
+    @JvmStatic
+    val materialProvider by lazy { UbershaderLoader(engine) }
+
+    @JvmStatic
     val iblPrefilter by lazy { IBLPrefilter(engine) }
 
+    var retainers = 0
+
+    fun retain() {
+        retainers++
+    }
+
+    fun release() {
+        retainers--
+        if (retainers == 0) {
+            destroy()
+        }
+    }
+
     fun destroy() {
-        //TODO : Add every Filament destroys
+        // We still got some errors due to this nightmare Renderable
+        // Should be solved with RIP Renderable
+//        resourceLoader.asyncCancelLoad()
+//        resourceLoader.evictResourceData()
+
+//        assetLoader.destroy()
+        // Despite all the effort, not destroyed Material still exist.
+        // Uncomment this after RIP Renderable push
+//        materialProvider.destroyMaterials()
+//        materialProvider.destroy()
+//        resourceLoader.destroy()
+
+//        _engine?.destroy()
+//        _engine = null
+
+//        GLHelper.destroyContext(eglContext)
+//        eglContext = null
     }
 }
+
+fun Engine.createCamera() = createCamera(entityManager.create())
+fun RenderableManager.Builder.build(entity: Int) = build(Filament.engine, entity)

@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.EntityManager;
 import com.google.android.filament.IndexBuffer;
@@ -21,7 +22,6 @@ import com.google.ar.core.CameraIntrinsics;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Session;
-import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.Preconditions;
 
 import java.nio.ByteBuffer;
@@ -29,6 +29,11 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.util.concurrent.CompletableFuture;
+
+import io.github.sceneview.Filament;
+import io.github.sceneview.FilamentKt;
+import io.github.sceneview.mesh.IndexBufferKt;
+import io.github.sceneview.mesh.VertexBufferKt;
 
 /**
  * Displays the Camera stream using Filament.
@@ -62,13 +67,13 @@ public class CameraStream {
     private static final int FLOAT_SIZE_IN_BYTES = Float.SIZE / 8;
     private static final int UNINITIALIZED_FILAMENT_RENDERABLE = -1;
 
+    private Lifecycle lifecycle;
     private final Scene scene;
     private final int cameraTextureId;
     private final IndexBuffer cameraIndexBuffer;
     private final VertexBuffer cameraVertexBuffer;
     private final FloatBuffer cameraUvCoords;
     private final FloatBuffer transformedCameraUvCoords;
-    private final IEngine engine;
     public int cameraStreamRenderable = UNINITIALIZED_FILAMENT_RENDERABLE;
 
     /**
@@ -95,11 +100,10 @@ public class CameraStream {
     private boolean isTextureInitialized = false;
 
     @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored", "initialization"})
-    public CameraStream(int cameraTextureId, Renderer renderer) {
+    public CameraStream(Lifecycle lifecycle, int cameraTextureId, Renderer renderer) {
+        this.lifecycle = lifecycle;
         scene = renderer.getFilamentScene();
         this.cameraTextureId = cameraTextureId;
-
-        engine = EngineInstance.getEngine();
 
         // INDEXBUFFER
         // create screen quad geometry to camera stream to
@@ -110,9 +114,7 @@ public class CameraStream {
         cameraIndexBuffer = createIndexBuffer(indexCount);
 
         indexBufferData.rewind();
-        Preconditions.checkNotNull(cameraIndexBuffer)
-                .setBuffer(engine.getFilamentEngine(), indexBufferData);
-
+        IndexBufferKt.setBuffer(Preconditions.checkNotNull(cameraIndexBuffer), indexBufferData);
 
         // Note: ARCore expects the UV buffers to be direct or will assert in transformDisplayUvCoords.
         cameraUvCoords = createCameraUVBuffer();
@@ -126,12 +128,11 @@ public class CameraStream {
         cameraVertexBuffer = createVertexBuffer();
 
         vertexBufferData.rewind();
-        Preconditions.checkNotNull(cameraVertexBuffer)
-                .setBufferAt(engine.getFilamentEngine(), POSITION_BUFFER_INDEX, vertexBufferData);
+
+        VertexBufferKt.setBufferAt(cameraVertexBuffer, POSITION_BUFFER_INDEX, vertexBufferData);
 
         adjustCameraUvsForOpenGL();
-        cameraVertexBuffer.setBufferAt(
-                engine.getFilamentEngine(), UV_BUFFER_INDEX, transformedCameraUvCoords);
+        VertexBufferKt.setBufferAt(cameraVertexBuffer, UV_BUFFER_INDEX, transformedCameraUvCoords);
 
         setupStandardCameraMaterial(renderer);
         setupOcclusionCameraMaterial(renderer);
@@ -149,29 +150,29 @@ public class CameraStream {
     }
 
     private IndexBuffer createIndexBuffer(int indexCount) {
-        return new IndexBuffer.Builder()
-                .indexCount(indexCount)
-                .bufferType(IndexType.USHORT)
-                .build(engine.getFilamentEngine());
+        return IndexBufferKt.build(new IndexBuffer.Builder()
+                        .indexCount(indexCount)
+                        .bufferType(IndexType.USHORT)
+                , lifecycle);
     }
 
     private VertexBuffer createVertexBuffer() {
-        return new Builder()
-                .vertexCount(VERTEX_COUNT)
-                .bufferCount(2)
-                .attribute(
-                        VertexAttribute.POSITION,
-                        POSITION_BUFFER_INDEX,
-                        VertexBuffer.AttributeType.FLOAT3,
-                        0,
-                        (CAMERA_VERTICES.length / VERTEX_COUNT) * FLOAT_SIZE_IN_BYTES)
-                .attribute(
-                        VertexAttribute.UV0,
-                        UV_BUFFER_INDEX,
-                        VertexBuffer.AttributeType.FLOAT2,
-                        0,
-                        (CAMERA_UVS.length / VERTEX_COUNT) * FLOAT_SIZE_IN_BYTES)
-                .build(engine.getFilamentEngine());
+        return VertexBufferKt.build(new Builder()
+                        .vertexCount(VERTEX_COUNT)
+                        .bufferCount(2)
+                        .attribute(
+                                VertexAttribute.POSITION,
+                                POSITION_BUFFER_INDEX,
+                                VertexBuffer.AttributeType.FLOAT3,
+                                0,
+                                (CAMERA_VERTICES.length / VERTEX_COUNT) * FLOAT_SIZE_IN_BYTES)
+                        .attribute(
+                                VertexAttribute.UV0,
+                                UV_BUFFER_INDEX,
+                                VertexBuffer.AttributeType.FLOAT2,
+                                0,
+                                (CAMERA_UVS.length / VERTEX_COUNT) * FLOAT_SIZE_IN_BYTES)
+                , lifecycle);
     }
 
     void setupStandardCameraMaterial(Renderer renderer) {
@@ -180,7 +181,7 @@ public class CameraStream {
                         .setSource(
                                 renderer.getContext(),
                                 Uri.parse("sceneview/materials/camera_stream_flat.filamat"))
-                        .build();
+                        .build(lifecycle);
 
         materialFuture
                 .thenAccept(
@@ -212,7 +213,7 @@ public class CameraStream {
                         .setSource(
                                 renderer.getContext(),
                                 Uri.parse("sceneview/materials/camera_stream_depth.filamat"))
-                        .build();
+                        .build(lifecycle);
         materialFuture
                 .thenAccept(
                         material -> {
@@ -282,7 +283,7 @@ public class CameraStream {
         if (cameraStreamRenderable == UNINITIALIZED_FILAMENT_RENDERABLE) {
             initializeFilamentRenderable(material);
         } else {
-            RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+            RenderableManager renderableManager = Filament.getRenderableManager();
             int renderableInstance = renderableManager.getInstance(cameraStreamRenderable);
             renderableManager.setMaterialInstanceAt(
                     renderableInstance, 0, material.getFilamentMaterialInstance());
@@ -295,27 +296,19 @@ public class CameraStream {
         cameraStreamRenderable = EntityManager.get().create();
 
         // create the quad renderable (leave off the aabb)
-        RenderableManager.Builder builder = new RenderableManager.Builder(1);
-        builder
+        RenderableManager.Builder builder = new RenderableManager.Builder(1)
                 .castShadows(false)
                 .receiveShadows(false)
                 .culling(false)
                 // Always draw the camera feed last to avoid overdraw
                 .priority(renderablePriority)
-                .geometry(
-                        0, RenderableManager.PrimitiveType.TRIANGLES, cameraVertexBuffer, cameraIndexBuffer)
-                .material(0, Preconditions.checkNotNull(material).getFilamentMaterialInstance())
-                .build(EngineInstance.getEngine().getFilamentEngine(), cameraStreamRenderable);
+                .geometry(0, RenderableManager.PrimitiveType.TRIANGLES,
+                        cameraVertexBuffer, cameraIndexBuffer)
+                .material(0, Preconditions.checkNotNull(material).getFilamentMaterialInstance());
+        FilamentKt.build(builder, cameraStreamRenderable);
 
         // add to the scene
         scene.addEntity(cameraStreamRenderable);
-
-        ArResourceManager.getInstance()
-                .getCameraStreamCleanupRegistry()
-                .register(
-                        this,
-                        new CleanupCallback(
-                                scene, cameraStreamRenderable, cameraIndexBuffer, cameraVertexBuffer));
     }
 
 
@@ -354,7 +347,7 @@ public class CameraStream {
             CameraIntrinsics intrinsics = arCamera.getTextureIntrinsics();
             int[] dimensions = intrinsics.getImageDimensions();
 
-            cameraTexture = new ExternalTexture(
+            cameraTexture = new ExternalTexture(lifecycle,
                     cameraTextureId,
                     dimensions[0],
                     dimensions[1]);
@@ -387,7 +380,7 @@ public class CameraStream {
     public void recalculateOcclusion(Image depthImage) {
         if (occlusionCameraMaterial != null &&
                 depthTexture == null) {
-            depthTexture = new DepthTexture(
+            depthTexture = new DepthTexture(lifecycle,
                     depthImage.getWidth(),
                     depthImage.getHeight());
 
@@ -412,8 +405,7 @@ public class CameraStream {
         VertexBuffer cameraVertexBuffer = this.cameraVertexBuffer;
         frame.transformDisplayUvCoords(cameraUvCoords, transformedCameraUvCoords);
         adjustCameraUvsForOpenGL();
-        cameraVertexBuffer.setBufferAt(
-                engine.getFilamentEngine(), UV_BUFFER_INDEX, transformedCameraUvCoords);
+        VertexBufferKt.setBufferAt(cameraVertexBuffer, UV_BUFFER_INDEX, transformedCameraUvCoords);
     }
 
 
@@ -432,7 +424,7 @@ public class CameraStream {
     public void setRenderPriority(int priority) {
         renderablePriority = priority;
         if (cameraStreamRenderable != UNINITIALIZED_FILAMENT_RENDERABLE) {
-            RenderableManager renderableManager = EngineInstance.getEngine().getRenderableManager();
+            RenderableManager renderableManager = Filament.getRenderableManager();
             int renderableInstance = renderableManager.getInstance(cameraStreamRenderable);
             renderableManager.setPriority(renderableInstance, renderablePriority);
         }
@@ -536,6 +528,11 @@ public class CameraStream {
         this.depthOcclusionMode = depthOcclusionMode;
     }
 
+    public void destroy() {
+//        if (cameraStreamRenderable != UNINITIALIZED_FILAMENT_RENDERABLE) {
+//            scene.removeEntity(cameraStreamRenderable);
+//        }
+    }
 
     /**
      * The DepthMode Enum is used to reflect the {@link Session} configuration
@@ -589,43 +586,5 @@ public class CameraStream {
          * </pre>
          */
         DEPTH_OCCLUSION_DISABLED
-    }
-
-    /**
-     * Cleanup filament objects after garbage collection
-     */
-    private static final class CleanupCallback implements Runnable {
-        private final Scene scene;
-        private final int cameraStreamRenderable;
-        private final IndexBuffer cameraIndexBuffer;
-        private final VertexBuffer cameraVertexBuffer;
-
-        CleanupCallback(
-                Scene scene,
-                int cameraStreamRenderable,
-                IndexBuffer cameraIndexBuffer,
-                VertexBuffer cameraVertexBuffer) {
-            this.scene = scene;
-            this.cameraStreamRenderable = cameraStreamRenderable;
-            this.cameraIndexBuffer = cameraIndexBuffer;
-            this.cameraVertexBuffer = cameraVertexBuffer;
-        }
-
-        @Override
-        public void run() {
-            AndroidPreconditions.checkUiThread();
-
-            IEngine engine = EngineInstance.getEngine();
-            if (engine == null && !engine.isValid()) {
-                return;
-            }
-
-            if (cameraStreamRenderable != UNINITIALIZED_FILAMENT_RENDERABLE) {
-                scene.removeEntity(cameraStreamRenderable);
-            }
-
-            engine.destroyIndexBuffer(cameraIndexBuffer);
-            engine.destroyVertexBuffer(cameraVertexBuffer);
-        }
     }
 }
