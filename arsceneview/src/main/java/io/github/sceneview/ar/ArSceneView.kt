@@ -35,8 +35,6 @@ open class ArSceneView @JvmOverloads constructor(
     defStyleRes
 ), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
 
-    override val sceneLifecycle: ArSceneLifecycle by lazy { ArSceneLifecycle(context, this) }
-
     //TODO : Move it to Lifecycle and NodeParent when Kotlined
     override val camera = ArCamera(this)
 
@@ -251,6 +249,11 @@ open class ArSceneView @JvmOverloads constructor(
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
 
+    override fun getLifecycle() =
+        (sceneLifecycle ?: ArSceneLifecycle(context, this).also {
+            sceneLifecycle = it
+        }) as ArSceneLifecycle
+
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
 
@@ -370,8 +373,6 @@ open class ArSceneView @JvmOverloads constructor(
         }
         onArFrame?.invoke(arFrame)
     }
-
-    override fun getLifecycle(): ArSceneLifecycle = sceneLifecycle
 
     /**
      * ### Define the session config used by ARCore
