@@ -283,11 +283,19 @@ open class SceneView @JvmOverloads constructor(
         destroy()
     }
 
+    /**
+     * ### Force destroy
+     *
+     * You don't have to call this method because everything is already lifecycle aware.
+     * Meaning that they are already self destroyed when they receive the `onDestroy()` callback.
+     */
     open fun destroy() {
-        camera.destroy()
-        environment?.destroy()
+        // Use runCatching because they should normally already been destroyed by the lifecycle and
+        // Filament will throw an Exception when destroying them twice.
+        runCatching { camera.destroy() }
+        runCatching { environment?.destroy() }
         environment = null
-        mainLight?.destroy()
+        runCatching { mainLight?.destroy() }
         mainLight = null
 
 //        ResourceManager.getInstance().destroyAllResources()

@@ -25,7 +25,7 @@ import io.github.sceneview.texture.TextureKt;
 public class DepthTexture {
 
     @Nullable
-    private final Texture filamentTexture;
+    private Texture filamentTexture;
     private final Handler handler = new Handler(Looper.myLooper());
 
     /**
@@ -92,5 +92,6 @@ public class DepthTexture {
         if (filamentTexture != null) {
             TextureKt.destroy(filamentTexture);
         }
+        filamentTexture = null;
     }
 }

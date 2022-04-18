@@ -7,9 +7,9 @@ import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
 
 fun <R> Texture.use(block: (Texture) -> R): R = block(this).also { destroy() }
-fun Texture.Builder.build(lifecycle: Lifecycle): Texture = build(Filament.engine)
+fun Texture.Builder.build(lifecycle: Lifecycle? = null): Texture = build(Filament.engine)
     .also { texture ->
-        lifecycle.observe(onDestroy = {
+        lifecycle?.observe(onDestroy = {
             // Prevent double destroy in case of manually destroyed
             runCatching { texture.destroy() }
         })
@@ -22,4 +22,6 @@ fun Texture.setImage(level: Int, buffer: Texture.PixelBufferDescriptor) =
 /**
  * Destroys a Texture and frees all its associated resources.
  */
-fun Texture.destroy() = Filament.engine.destroyTexture(this)
+fun Texture.destroy() {
+    Filament.engine.destroyTexture(this)
+}

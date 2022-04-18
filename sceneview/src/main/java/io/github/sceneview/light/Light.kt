@@ -90,7 +90,6 @@ var Light.falloff: Float
     get() = Filament.lightManager.getFalloff(instance)
     set(value) = Filament.lightManager.setFalloff(instance, value)
 
-
 /**
  * @see LightManager.getSunHaloFalloff
  * @see LightManager.setSunHaloFalloff

@@ -209,7 +209,8 @@ public class RenderableDefinition {
               new IndexBuffer.Builder()
                       .indexCount(numIndices)
                       .bufferType(IndexType.UINT),
-              lifecycle);
+              // IndexBuffer destroy manually handled (not lifecycle aware)
+              null);
       data.setIndexBuffer(indexBuffer);
     }
 
@@ -452,7 +453,8 @@ public class RenderableDefinition {
           COLOR_SIZE * BYTES_PER_FLOAT);
     }
 
-    return VertexBufferKt.build(builder, lifecycle);
+    // VertexBufferKt destroy manually handled (not lifecycle aware)
+    return VertexBufferKt.build(builder, null);
   }
 
   private static void addVector3ToBuffer(Vector3 vector3, FloatBuffer buffer) {
