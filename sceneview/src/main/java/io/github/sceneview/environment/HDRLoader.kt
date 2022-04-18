@@ -7,7 +7,9 @@ import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.Texture
 import com.google.android.filament.utils.HDRLoader
+import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
+import io.github.sceneview.texture.destroy
 import io.github.sceneview.texture.use
 import io.github.sceneview.utils.fileBuffer
 import io.github.sceneview.utils.useFileBufferNotNull
@@ -86,17 +88,18 @@ fun HDRLoader.createEnvironment(
     hdrBuffer: Buffer,
     specularFilter: Boolean = defaultSpecularFilter,
     createSkybox: Boolean = defaultCreateSkybox
-) = createTexture(Filament.engine, hdrBuffer)?.use { hdrTexture ->
-    Filament.iblPrefilter.equirectangularToCubemap(hdrTexture)
-}?.let { cubemap ->
-    HDREnvironment(
-        lifecycle = lifecycle,
-        cubemap = cubemap,
-        indirectLightSpecularFilter = specularFilter,
-        createSkybox = createSkybox
-    )
-}
-
+) = // Since we directly destroy the texture we call the `use` function and so don't pass lifecycle
+    // to createTexture because it can be destroyed immediately.
+    createTexture(hdrBuffer)?.use { hdrTexture ->
+        Filament.iblPrefilter.equirectangularToCubemap(hdrTexture)
+    }?.let { cubemap ->
+        HDREnvironment(
+            lifecycle = lifecycle,
+            cubemap = cubemap,
+            indirectLightSpecularFilter = specularFilter,
+            createSkybox = createSkybox
+        )
+    }
 
 /**
  * ### Consumes the content of an HDR file and produces a [Texture] object.
@@ -106,8 +109,12 @@ fun HDRLoader.createEnvironment(
  * @return The resulting Filament texture, or null on failure.
  */
 fun HDRLoader.createTexture(
-    lifecycle: Lifecycle,
     buffer: Buffer,
-    options: HDRLoader.Options = HDRLoader.Options()
-): Texture? = createTexture(Filament.engine, buffer, options)
-    .also { lifecycle }
+    options: HDRLoader.Options = HDRLoader.Options(),
+    lifecycle: Lifecycle? = null
+): Texture? = createTexture(Filament.engine, buffer, options).also { texture ->
+    lifecycle?.observe(onDestroy = {
+        // Prevent double destroy in case of manually destroyed
+        runCatching { texture?.destroy() }
+    })
+}

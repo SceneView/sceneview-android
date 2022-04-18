@@ -49,9 +49,13 @@ public class ExternalTexture {
         surface = new Surface(surfaceTexture);
 
         // Create the filament stream.
-        Stream stream = StreamKt.build(new Stream.Builder().stream(surfaceTexture));
+        //TODO : We actually have an issue with stream being destroyed from elsewhere maybe material
+        // Fix it whith kotlining here
+        Stream stream = StreamKt.build(new Stream.Builder().stream(surfaceTexture), null);
 
-        initialize(lifecycle, stream);
+        //TODO : We actually have an issue with stream being destroyed from elsewhere maybe material
+        // Fix it whith kotlining here
+        initialize(null, stream);
     }
 
     /**
@@ -92,9 +96,10 @@ public class ExternalTexture {
 
         // Create the filament stream.
         Stream stream = StreamKt.build(new Stream.Builder()
-                .stream(textureId)
-                .width(width)
-                .height(height));
+                        .stream(textureId)
+                        .width(width)
+                        .height(height)
+                , lifecycle);
 
         initialize(lifecycle, stream);
     }
@@ -143,9 +148,11 @@ public class ExternalTexture {
         if (filamentTexture != null) {
             TextureKt.destroy(filamentTexture);
         }
+        filamentTexture = null;
 
         if (filamentStream != null) {
             StreamKt.destroy(filamentStream);
         }
+        filamentStream = null;
     }
 }

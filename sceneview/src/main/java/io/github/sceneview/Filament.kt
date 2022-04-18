@@ -1,7 +1,9 @@
 package io.github.sceneview
 
 import android.opengl.EGLContext
-import com.google.android.filament.*
+import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.gltfio.ResourceLoader
@@ -95,8 +97,8 @@ object Filament {
     }
 
     fun destroy() {
-        // We still got some errors on this destroy due to this nightmare Renderable
-        // Should be solved with RIP Renderable
+        // TODO: We still got some errors on this destroy due to this nightmare Renderable
+        //  Should be solved with RIP Renderable
 //        _assetLoader?.destroy()
         _assetLoader = null
 
@@ -107,12 +109,12 @@ object Filament {
         }
         _resourceLoader = null
 
-        // We still got some errors on this destroy due to this nightmare Renderable
-        // Should be solved with RIP Renderable
-//        _materialProvider?.destroyMaterials()
+        // TODO: Materials should be destroyed by their own
+        _materialProvider?.destroyMaterials()
         _materialProvider?.destroy()
         _materialProvider = null
 
+        _iblPrefilter?.destroy()
         _iblPrefilter = null
 
         _engine?.destroy()

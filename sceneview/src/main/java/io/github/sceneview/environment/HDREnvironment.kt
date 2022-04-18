@@ -64,7 +64,9 @@ open class HDREnvironment(
         super.destroy()
 
         if (!sharedCubemap) {
-            cubemap?.destroy()
+            // Use runCatching because it could already be destroyed at Environment creation time
+            // in case of no Skybox needed.
+            runCatching { cubemap?.destroy() }
             cubemap = null
         }
 
@@ -134,4 +136,10 @@ class IBLPrefilter(engine: Engine) {
      * @return the reflections texture
      */
     fun specularFilter(skybox: Texture) = specularFilter.run(skybox)
+
+    fun destroy() {
+        specularFilter.destroy()
+        equirectangularToCubemap.destroy()
+        context.destroy()
+    }
 }
