@@ -55,15 +55,14 @@ open class SceneGestureDetector(
             field = it
         }
 
-    private val gestureDetectors: List<*> by lazy {
-        listOfNotNull(
+    private val gestureDetectors: List<*>
+        get() = listOfNotNull(
             gestureDetector,
             moveGestureDetector,
             scaleGestureDetector,
             rotateGestureDetector,
             filamentGestureDetector
         )
-    }
 
     var lastTouchEvent: MotionEvent? = null
 
