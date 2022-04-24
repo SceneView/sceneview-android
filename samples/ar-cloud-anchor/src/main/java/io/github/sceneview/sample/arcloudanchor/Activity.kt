@@ -14,8 +14,10 @@ class Activity : AppCompatActivity(R.layout.activity) {
         super.onCreate(savedInstanceState)
 
         setFullScreen(
-            fullScreen = true, hideSystemBars = false,
-            fitsSystemWindows = false, rootView = findViewById(R.id.rootView)
+            findViewById(R.id.rootView),
+            fullScreen = true,
+            hideSystemBars = false,
+            fitsSystemWindows = false
         )
 
         setSupportActionBar(findViewById<Toolbar>(R.id.toolbar)?.apply {

@@ -27,10 +27,10 @@ fun Fragment.setFullScreen(
     fitsSystemWindows: Boolean = true
 ) {
     requireActivity().setFullScreen(
-        fullScreen = fullScreen,
-        rootView = this.requireView(),
-        hideSystemBars = hideSystemBars,
-        fitsSystemWindows = fitsSystemWindows
+        this.requireView(),
+        fullScreen,
+        hideSystemBars,
+        fitsSystemWindows
     )
 }
 
@@ -41,19 +41,19 @@ fun View.setFullScreen(
 ) {
     doOnActivityAttach { activity ->
         activity.setFullScreen(
-            fullScreen = fullScreen,
-            rootView = this,
-            hideSystemBars = hideSystemBars,
-            fitsSystemWindows = fitsSystemWindows
+            this,
+            fullScreen,
+            hideSystemBars,
+            fitsSystemWindows
         )
     }
 }
 
 fun Activity.setFullScreen(
+    rootView: View,
     fullScreen: Boolean = true,
     hideSystemBars: Boolean = true,
-    fitsSystemWindows: Boolean = true,
-    rootView: View
+    fitsSystemWindows: Boolean = true
 ) {
     rootView.viewTreeObserver?.addOnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) {
