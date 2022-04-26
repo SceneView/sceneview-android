@@ -57,6 +57,8 @@ allprojects {
     plugins.withId("com.vanniktech.maven.publish") {
         mavenPublish {
             sonatypeHost = "S01"
+            // Disable signing as it's getting in the way of using jitpack
+            releaseSigningEnabled = false
         }
     }
 }
