@@ -30,6 +30,7 @@ import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.interaction.SceneGestureDetector
+import io.github.sceneview.interaction.SceneNodeGestureDetector
 import io.github.sceneview.interaction.SelectedNodeVisualizer
 import io.github.sceneview.light.*
 import io.github.sceneview.math.toFloat3
@@ -119,8 +120,14 @@ open class SceneView @JvmOverloads constructor(
     open var gestureListener: SceneGestureDetector.OnSceneGestureListener =
         DefaultSceneGestureListener(this)
 
+//    open val gestureDetector: SceneGestureDetector by lazy {
+//        SceneGestureDetector(
+//            this,
+//            listener = gestureListener
+//        )
+//    }
     open val gestureDetector: SceneGestureDetector by lazy {
-        SceneGestureDetector(
+        SceneNodeGestureDetector(
             this,
             listener = gestureListener
         )

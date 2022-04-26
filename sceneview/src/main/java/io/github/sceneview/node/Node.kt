@@ -840,3 +840,12 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         val downPosition: Vector3
     )
 }
+
+enum class EditableTransform {
+    POSITION, ROTATION, SCALE;
+
+    companion object {
+        val ALL = setOf(POSITION, ROTATION, SCALE)
+        val NONE = setOf<EditableTransform>()
+    }
+}

@@ -37,6 +37,12 @@ class MoveGestureDetector(
     var lastDistanceX: Float? = null
     var lastDistanceY: Float? = null
 
+    var prevX: Float? = null
+    var prevY: Float? = null
+
+    var deltaX: Float? = 0f
+    var deltaY: Float? = 0f
+
     var firstMotionEvent: MotionEvent? = null
         private set
     var currentMotionEvent: MotionEvent? = null
@@ -51,8 +57,16 @@ class MoveGestureDetector(
 
         val firstEvent = firstMotionEvent ?: return
         val lastEvent = currentMotionEvent ?: return
+
         lastDistanceX = lastEvent.x - firstEvent.x
         lastDistanceY = lastEvent.y - firstEvent.y
+
+        deltaX = lastEvent.x - (prevX ?: 0f)
+        deltaY = lastEvent.y - (prevY ?: 0f)
+
+        // Save current event location to calculate delta in next update
+        prevX = lastEvent.x
+        prevY = lastEvent.y
     }
 
     private fun reset() {
