@@ -163,6 +163,8 @@ open class ViewNode : Node {
         }
     }
 
+    // TODO: Add a method for setting the View from code and support setting the view sizer and alignment
+
     open fun setRenderable(renderable: ViewRenderable?): RenderableInstance? {
         renderableInstance = renderable?.createInstance(this)
         return renderableInstance
