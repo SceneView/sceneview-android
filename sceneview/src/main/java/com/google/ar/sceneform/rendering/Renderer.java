@@ -65,7 +65,9 @@ public class Renderer implements UiHelper.RendererCallback {
     private Surface surface;
     @Nullable
     private SwapChain swapChain;
+    @Nullable
     private com.google.android.filament.View view;
+    @Nullable
     private com.google.android.filament.View emptyView;
     private com.google.android.filament.Renderer renderer;
     private Camera camera;
@@ -93,6 +95,15 @@ public class Renderer implements UiHelper.RendererCallback {
         this.cameraProvider = cameraProvider;
         viewAttachmentManager = new ViewAttachmentManager(getContext(), view);
         initialize();
+    }
+
+    @Nullable
+    public CameraProvider getCameraProvider() {
+        return cameraProvider;
+    }
+
+    public void setCameraProvider(@Nullable CameraProvider cameraProvider) {
+        this.cameraProvider = cameraProvider;
     }
 
     /**
@@ -527,25 +538,17 @@ public class Renderer implements UiHelper.RendererCallback {
         return;
     }
 
-
-    /**
-     * Sets a high performance configuration for the filament view. Disables MSAA, disables
-     * post-process, disables dynamic resolution, sets quality to 'low'.
-     *
-     * @hide Used internally by ArSceneView
-     */
-
-    public void enablePerformanceMode() {
-        return;
-    }
-
     /**
      * @hide UiHelper.RendererCallback implementation
      */
     @Override
     public void onResized(int width, int height) {
-        view.setViewport(new Viewport(0, 0, width, height));
-        emptyView.setViewport(new Viewport(0, 0, width, height));
+        if(view != null) {
+            view.setViewport(new Viewport(0, 0, width, height));
+        }
+        if(emptyView != null) {
+            emptyView.setViewport(new Viewport(0, 0, width, height));
+        }
     }
 
     public void addEntity(@Entity int entity) {

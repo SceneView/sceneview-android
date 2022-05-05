@@ -2,7 +2,7 @@ package io.github.sceneview.material
 
 import android.content.Context
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.coroutineScope
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.utils.useFileBufferNotNull
@@ -40,7 +40,7 @@ object MaterialLoader {
      *
      * For Java compatibility usage.
      *
-     * Kotlin developers should use [HDRLoader.loadEnvironment]
+     * Kotlin developers should use [loadMaterial]
      *
      * [See][loadMaterial]
      */
@@ -48,9 +48,8 @@ object MaterialLoader {
         context: Context,
         lifecycle: Lifecycle,
         filamatFileLocation: String,
-        coroutineScope: LifecycleCoroutineScope,
         result: (MaterialInstance?) -> Unit
-    ) = coroutineScope.launchWhenCreated {
+    ) = lifecycle.coroutineScope.launchWhenCreated {
         result(loadMaterial(context, lifecycle, filamatFileLocation))
     }
 

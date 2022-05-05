@@ -18,7 +18,7 @@ typealias LightInstance = Int
 /**
  * @see LightManager.getInstance
  */
-val Light.instance @EntityInstance get() : LightInstance = Filament.lightManager.getInstance(this)
+val Light.instance: LightInstance @EntityInstance get() = Filament.lightManager.getInstance(this)
 
 fun LightManager.Builder.build(lifecycle: Lifecycle): Light =
     Filament.entityManager.create().apply {

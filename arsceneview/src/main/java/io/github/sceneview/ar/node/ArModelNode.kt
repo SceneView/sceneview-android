@@ -3,7 +3,6 @@ package io.github.sceneview.ar.node
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
 import dev.romainguy.kotlin.math.Float3
-import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
@@ -22,7 +21,7 @@ import kotlin.math.abs
  * - [createAnchor] in order to extract a fixed/anchored copy of the actual node.
  * This node will continue following the [com.google.ar.core.Camera]
  */
-open class ArModelNode : ArNode, ArSceneLifecycleObserver {
+open class ArModelNode : ArNode {
 
     /**
      * ### The node camera/screen position
@@ -138,7 +137,7 @@ open class ArModelNode : ArNode, ArSceneLifecycleObserver {
     constructor(hitResult: HitResult) : super(hitResult.createAnchor())
 
     override fun onArFrame(arFrame: ArFrame) {
-        super<ArNode>.onArFrame(arFrame)
+        super.onArFrame(arFrame)
 
         if (!isAnchored) {
             if (!autoAnchor || !anchor()) {

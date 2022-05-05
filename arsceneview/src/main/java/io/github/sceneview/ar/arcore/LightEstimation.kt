@@ -178,7 +178,7 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
      * In order to keep the "standard" Filament behavior we scale AR Core values.
      * Infos: https://github.com/ThomasGorisse/SceneformMaintained/pull/156#issuecomment-911873565
      */
-    var cameraExposureFactor = renderer.camera.exposureFactor
+    val cameraExposureFactor get() = renderer.camera.exposureFactor
 
     var lastArFrame: ArFrame? = null
     var timestamp: Long? = null
