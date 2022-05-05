@@ -1,7 +1,6 @@
 package io.github.sceneview.ar
 
 import com.google.ar.core.Config
-import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.ArSession
 import io.github.sceneview.ar.node.ArNode
@@ -10,8 +9,10 @@ import io.github.sceneview.ar.node.infos.SearchPlaneInfoNode
 import io.github.sceneview.ar.node.infos.TapArPlaneInfoNode
 import io.github.sceneview.node.Node
 
-class Instructions(val sceneView: SceneView, val lifecycle: ArSceneLifecycle) :
+class Instructions(val lifecycle: ArSceneLifecycle) :
     ArSceneLifecycleObserver {
+
+    val sceneView get() = lifecycle.sceneView
 
     var enabled = true
         set(value) {

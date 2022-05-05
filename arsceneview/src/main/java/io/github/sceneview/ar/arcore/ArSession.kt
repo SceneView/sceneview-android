@@ -148,7 +148,7 @@ class ArSession(
         super.configure(this.config.apply {
             config(this)
 
-            if (depthEnabled && !isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+            if (depthMode != Config.DepthMode.DISABLED && !isDepthModeSupported(depthMode)) {
                 depthMode = Config.DepthMode.DISABLED
             }
 
@@ -195,12 +195,12 @@ class ArSession(
             }
         }
 
-    var depthEnabled: Boolean
-        get() = config.depthEnabled
+    var depthMode: Config.DepthMode
+        get() = config.depthMode
         set(value) {
-            if (depthEnabled != value) {
+            if (depthMode != value) {
                 configure {
-                    it.depthEnabled = value
+                    it.depthMode = value
                 }
             }
         }
@@ -316,32 +316,6 @@ var Config.planeFindingEnabled
             Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
         } else {
             Config.PlaneFindingMode.DISABLED
-        }
-    }
-
-/**
- * ### Enable or disable the [Config.DepthMode.AUTOMATIC]
- *
- * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether the
- * current device and the selected camera support a particular depth mode.
- */
-var Config.depthEnabled
-    get() = depthMode == Config.DepthMode.AUTOMATIC
-    set(value) {
-        depthMode = if (value) {
-            Config.DepthMode.AUTOMATIC
-        } else {
-            Config.DepthMode.DISABLED
-        }
-    }
-
-var Config.rawDepthEnabled
-    get() = depthMode == Config.DepthMode.RAW_DEPTH_ONLY
-    set(value) {
-        depthMode = if (value) {
-            Config.DepthMode.RAW_DEPTH_ONLY
-        } else {
-            Config.DepthMode.DISABLED
         }
     }
 

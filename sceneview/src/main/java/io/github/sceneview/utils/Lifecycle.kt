@@ -1,11 +1,10 @@
 package io.github.sceneview.utils
 
-import android.content.Context
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 
-open class DefaultLifecycle(val context: Context, owner: LifecycleOwner) :
+open class DefaultLifecycle(owner: LifecycleOwner) :
     LifecycleRegistry(owner) {
 
     val observers = mutableListOf<LifecycleObserver>()

@@ -103,8 +103,6 @@ class ARCore(
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)
 
-
-
         // Must be called before on resume
         cameraPermissionLauncher = lifecycle.activity.activityResultRegistry.register(
             "sceneview_camera_permission",
@@ -231,8 +229,7 @@ class ARCore(
     fun createSession(
         cameraTextureId: Int,
         lifecycle: ArSceneLifecycle,
-        features: Set<Session.Feature> = setOf(),
-        config: Config.() -> Unit = {}
+        features: Set<Session.Feature> = setOf()
     ): ArSession {
         // Create a session if Google Play Services for AR is installed and up to date.
         return ArSession(cameraTextureId, lifecycle, features)

@@ -1,10 +1,12 @@
 package io.github.sceneview.material
 
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.MaterialInstance.FloatElement
 import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
+import dev.romainguy.kotlin.math.Mat4
 import io.github.sceneview.Filament
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.TextureSamplerExternal
@@ -20,6 +22,9 @@ fun MaterialInstance.destroy() {
 
 fun MaterialInstance.setParameter(name: String, value: Float4) =
     setParameter(name, value.x, value.y, value.z, value.w)
+
+fun MaterialInstance.setParameter(name: String, value: Mat4) =
+    setParameter(name, FloatElement.FLOAT4, value.toFloatArray(), 0, 4)
 
 fun MaterialInstance.setParameter(name: String, value: Float3) =
     setParameter(name, value.x, value.y, value.z)
