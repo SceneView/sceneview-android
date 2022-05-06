@@ -70,6 +70,11 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     protected val renderer: Renderer? get() = sceneView?.renderer
     private val collisionSystem: CollisionSystem? get() = sceneView?.collisionSystem
 
+    /**
+     * ### Define your own custom name
+     */
+    var name: String? = null
+
     val isAttached get() = sceneView != null
 
     /**
