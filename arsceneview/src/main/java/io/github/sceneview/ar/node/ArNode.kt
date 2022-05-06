@@ -31,7 +31,13 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      */
     var smoothPose = true
 
-    var anchorUpdatePrecision = 0.05f
+    /**
+     * ### Interval of the anchor pose update in seconds
+     *
+     * Try to retrieve more accurate anchor position and rotation during time.
+     * Only used when the [ArNode] is anchored
+     */
+    var anchorUpdateInterval = 2.0f
     var lastAnchorUpdateFrame: ArFrame? = null
 
     /**
@@ -132,7 +138,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
         // Update the anchor position if any
         if (anchor.trackingState == TrackingState.TRACKING) {
-            if (arFrame.precision(lastAnchorUpdateFrame) <= anchorUpdatePrecision) {
+            if (arFrame.intervalSeconds(lastAnchorUpdateFrame) >= anchorUpdateInterval) {
                 lastAnchorUpdateFrame = arFrame
                 pose = anchor.pose
             }
