@@ -16,7 +16,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.*
 import com.google.ar.core.ArCoreApk.Availability
-import com.google.ar.sceneform.rendering.GLHelper
 import io.github.sceneview.ar.arcore.*
 
 /**
@@ -44,8 +43,6 @@ class ARCore(
     val lifecycle: ArSceneLifecycle,
     val features: () -> Set<Session.Feature> = { setOf() }
 ) : ArSceneLifecycleObserver {
-
-    val cameraTextureId by lazy { GLHelper.createCameraTexture() }
 
     /**
      * ### Enable/Disable the auto camera permission check
@@ -147,7 +144,7 @@ class ARCore(
                     } else {
                         // Create a session if Google Play Services for AR is installed and up to
                         // date.
-                        session = createSession(cameraTextureId!!, lifecycle, features())
+                        session = createSession(lifecycle, features())
                         session?.let {
                             lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
                                 onArSessionCreated(it)
@@ -227,11 +224,10 @@ class ARCore(
     }
 
     fun createSession(
-        cameraTextureId: Int,
         lifecycle: ArSceneLifecycle,
         features: Set<Session.Feature> = setOf()
     ): ArSession {
         // Create a session if Google Play Services for AR is installed and up to date.
-        return ArSession(cameraTextureId, lifecycle, features)
+        return ArSession(lifecycle, features)
     }
 }
