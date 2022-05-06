@@ -11,6 +11,7 @@ import io.github.sceneview.Filament
 import io.github.sceneview.light.destroy
 import io.github.sceneview.scene.destroy
 import io.github.sceneview.utils.fileBuffer
+import io.github.sceneview.utils.localFileBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.Buffer
@@ -62,6 +63,27 @@ fun KTXLoader.loadEnvironmentAsync(
     result: (Environment?) -> Unit
 ) = lifecycle.coroutineScope.launchWhenCreated {
     result(loadEnvironment(context, lifecycle, iblKtxFileLocation, skyboxKtxFileLocation))
+}
+
+
+/**
+ * ### Utility for producing environment resources from precompiled cmgen generated KTX files
+ * locally
+ *
+ * @see KTXLoader.loadEnvironment
+ */
+fun KTXLoader.loadEnvironmentSync(
+    context: Context,
+    lifecycle: Lifecycle,
+    iblKtxFileLocation: String,
+    skyboxKtxFileLocation: String? = null
+): Environment {
+    val iblBuffer = context.localFileBuffer(iblKtxFileLocation)
+    val skyboxBuffer = skyboxKtxFileLocation?.let { context.localFileBuffer(it) }
+    return createEnvironment(lifecycle, iblBuffer, skyboxBuffer).also {
+        iblBuffer?.clear()
+        skyboxBuffer?.clear()
+    }
 }
 
 /**
