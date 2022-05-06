@@ -1,8 +1,11 @@
 package io.github.sceneview.ar.interaction
 
-import dev.romainguy.kotlin.math.*
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.Quaternion
+import dev.romainguy.kotlin.math.clamp
+import dev.romainguy.kotlin.math.degrees
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.interaction.SelectedNodeVisualizer
@@ -40,7 +43,7 @@ open class ArNodeManipulator(
             node.detachAnchor()
         } != null
 
-    open fun continueTransform(x: Float, y: Float) : Boolean =
+    open fun continueTransform(x: Float, y: Float): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
@@ -51,7 +54,7 @@ open class ArNodeManipulator(
             }
         } != null
 
-    open fun endTransform() : Boolean =
+    open fun endTransform(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
@@ -59,31 +62,44 @@ open class ArNodeManipulator(
             currentGestureTransform = null
         } != null
 
-    open fun beginRotate(): Boolean =
-        (currentGestureTransform == null && selectedNode?.rotationEditable == true).also {
-            currentGestureTransform = EditableTransform.ROTATION
-        }
+    // The first delta is always way off as it contains all delta until threshold to
+    // recognize rotate gesture is met
+    private var skipFirstRotate = false
 
-    open fun rotate(deltaRadians: Float) : Boolean =
-        selectedNode?.takeIf {
+    open fun beginRotate(): Boolean {
+        return (currentGestureTransform == null && selectedNode?.rotationEditable == true).also { beginRotate ->
+            if (beginRotate) {
+                currentGestureTransform = EditableTransform.ROTATION
+                skipFirstRotate = true
+            }
+        }
+    }
+
+    open fun rotate(deltaRadians: Float): Boolean {
+        return selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.ROTATION && it.rotationEditable
         }?.let { node ->
-            // TODO: Fix a round rotation behavior
-            val rotationDelta = Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(deltaRadians))
+            if (skipFirstRotate) {
+                skipFirstRotate = false
+                return true
+            }
+            val rotationDelta = Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians))
             node.modelQuaternion = node.modelQuaternion * rotationDelta
         } != null
+    }
 
-    open fun endRotate(): Boolean =
-        (currentGestureTransform == EditableTransform.ROTATION &&
-            selectedNode?.rotationEditable == true)
-        .also { currentGestureTransform = null }
+    open fun endRotate(): Boolean {
+        return (currentGestureTransform == EditableTransform.ROTATION &&
+                selectedNode?.rotationEditable == true)
+            .also { if (it) currentGestureTransform = null }
+    }
 
     open fun beginScale(): Boolean =
-        (currentGestureTransform == null && selectedNode?.scaleEditable == true).also {
-            currentGestureTransform = EditableTransform.SCALE
+        (currentGestureTransform == null && selectedNode?.scaleEditable == true).also { beginScale ->
+            if (beginScale) currentGestureTransform = EditableTransform.SCALE
         }
 
-    open fun scale(factor: Float) : Boolean =
+    open fun scale(factor: Float): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.SCALE && it.scaleEditable
         }?.let { node ->
@@ -93,7 +109,7 @@ open class ArNodeManipulator(
     open fun endScale(): Boolean =
         (currentGestureTransform == EditableTransform.SCALE &&
                 selectedNode?.scaleEditable == true)
-            .also { currentGestureTransform = null }
+            .also { if (it) currentGestureTransform = null }
 }
 
 internal val ArNode.positionEditable: Boolean
