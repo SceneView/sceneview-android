@@ -6,12 +6,11 @@ import android.view.MotionEvent
 import androidx.lifecycle.*
 import com.google.ar.core.*
 import com.google.ar.core.CameraConfig.FacingDirection
-import com.google.ar.core.exceptions.DeadlineExceededException
-import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.sceneform.ArCamera
 import com.google.ar.sceneform.rendering.*
 import io.github.sceneview.*
 import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.ar.camera.ArCameraStream
 import io.github.sceneview.ar.interaction.ArNodeManipulator
 import io.github.sceneview.ar.interaction.ArSceneGestureDetector
 import io.github.sceneview.ar.scene.PlaneRenderer
@@ -50,16 +49,21 @@ open class ArSceneView @JvmOverloads constructor(
         features = arSessionFeatures
     )
 
+    private var _focusMode = Config.FocusMode.AUTO
+
     /**
      * ### Sets the desired focus mode
      *
      * See [Config.FocusMode] for available options.
      */
-    var focusMode: Config.FocusMode = Config.FocusMode.AUTO
+    var focusMode: Config.FocusMode
+        get() = arSession?.focusMode ?: _focusMode
         set(value) {
-            field = value
+            _focusMode = value
             arSession?.focusMode = value
         }
+
+    private var _planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
 
     /**
      * ### Sets the desired plane finding mode
@@ -67,41 +71,87 @@ open class ArSceneView @JvmOverloads constructor(
      * See the [Config.PlaneFindingMode] enum
      * for available options.
      */
-    var planeFindingMode: Config.PlaneFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+    var planeFindingMode: Config.PlaneFindingMode
+        get() = arSession?.planeFindingMode ?: _planeFindingMode
         set(value) {
-            field = value
+            _planeFindingMode = value
             arSession?.planeFindingMode = value
+        }
+
+    /**
+     * ### Enable the depth occlusion material
+     *
+     * This will process the incoming DepthImage to occlude virtual objects behind real world
+     * objects.
+     *
+     * If the [Session] is not configured properly the standard camera material is used.
+     * Valid [Session] configuration for the DepthMode are [Config.DepthMode.AUTOMATIC] and
+     * [Config.DepthMode.RAW_DEPTH_ONLY]
+     *
+     * Disable this value to apply the standard camera material to the CameraStream.
+     */
+    var isDepthOcclusionEnabled
+        get() = arCameraStream.isDepthOcclusionEnabled
+        set(value) {
+            arCameraStream.isDepthOcclusionEnabled = value
         }
 
     /**
      * ### Enable or disable the [Config.DepthMode.AUTOMATIC]
      *
-     * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether the
-     * current device and the selected camera support a particular depth mode.
+     * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether
+     * the current device and the selected camera support a particular depth mode.
      */
-    var depthEnabled: Boolean = true
+    var depthEnabled: Boolean
+        get() = depthMode != Config.DepthMode.DISABLED
         set(value) {
-            field = value
-            arSession?.depthEnabled = value
+            depthMode = if (value) {
+                Config.DepthMode.AUTOMATIC
+            } else {
+                Config.DepthMode.DISABLED
+            }
         }
+
+    private var _depthMode = Config.DepthMode.DISABLED
+
+    /**
+     * ### Sets the desired [Config.DepthMode]
+     *
+     * Not all devices support all modes. Use [Session.isDepthModeSupported] to determine whether
+     * the current device and the selected camera support a particular depth mode.
+     */
+    var depthMode: Config.DepthMode
+        get() = arSession?.depthMode ?: _depthMode
+        set(value) {
+            _depthMode = value
+            arSession?.depthMode = value
+        }
+
+    private var _instantPlacementEnabled = true
 
     /**
      * ### Enable or disable the [Config.InstantPlacementMode.LOCAL_Y_UP]
      */
-    var instantPlacementEnabled: Boolean = true
+    var instantPlacementEnabled: Boolean
+        get() = arSession?.instantPlacementEnabled ?: _instantPlacementEnabled
         set(value) {
-            field = value
+            _instantPlacementEnabled = value
             arSession?.instantPlacementEnabled = value
         }
+
+    private var _cloudAnchorEnabled = false
 
     /**
      * ### Cloud anchor mode
      */
-    var cloudAnchorEnabled: Boolean = false
+    var cloudAnchorEnabled: Boolean
+        get() = arSession?.cloudAnchorEnabled ?: _cloudAnchorEnabled
         set(value) {
-            field = value
+            _cloudAnchorEnabled = value
             arSession?.cloudAnchorEnabled = value
         }
+
+    private var _sessionLightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
 
     /**
      * ### The behavior of the lighting estimation subsystem
@@ -109,10 +159,10 @@ open class ArSceneView @JvmOverloads constructor(
      * These modes consist of separate APIs that allow for granular and realistic lighting
      * estimation for directional lighting, shadows, specular highlights, and reflections.
      */
-    var sessionLightEstimationMode: Config.LightEstimationMode =
-        Config.LightEstimationMode.ENVIRONMENTAL_HDR
+    var sessionLightEstimationMode: Config.LightEstimationMode
+        get() = arSession?.lightEstimationMode ?: _sessionLightEstimationMode
         set(value) {
-            field = value
+            _sessionLightEstimationMode = value
             arSession?.lightEstimationMode = value
         }
 
@@ -152,14 +202,12 @@ open class ArSceneView @JvmOverloads constructor(
 
     var currentFrame: ArFrame? = null
 
-    override val renderer: Renderer = ArRenderer(this, camera).apply {
-        enablePerformanceMode()
-    }
+    override val renderer: Renderer = ArRenderer(this, camera)
 
     /**
-     * ### The [CameraStream] used to control if the occlusion should be enabled or disabled
+     * ### The [ArCameraStream] used to control if the occlusion should be enabled or disabled
      */
-    val cameraStream = CameraStream(lifecycle, arCore.cameraTextureId, renderer)
+    val arCameraStream = ArCameraStream(lifecycle)
 
     /**
      * ### [PlaneRenderer] used to control plane visualization.
@@ -172,9 +220,9 @@ open class ArSceneView @JvmOverloads constructor(
      * - Environment handles a reflections, indirect lighting and skybox.
      * - ARCore will estimate the direction, the intensity and the color of the light
      */
-    val lightEstimation = LightEstimation(this, lifecycle)
+    val lightEstimation = LightEstimation(lifecycle)
 
-    val instructions = Instructions(this, lifecycle)
+    val instructions = Instructions(lifecycle)
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
@@ -250,7 +298,7 @@ open class ArSceneView @JvmOverloads constructor(
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
 
     override fun getLifecycle() =
-        (sceneLifecycle ?: ArSceneLifecycle(context, this).also {
+        (sceneLifecycle ?: ArSceneLifecycle(this).also {
             sceneLifecycle = it
         }) as ArSceneLifecycle
 
@@ -260,17 +308,19 @@ open class ArSceneView @JvmOverloads constructor(
         session.configure { config ->
             // FocusMode must be changed after the session resume to work
 //            config.focusMode = focusMode
-            config.planeFindingMode = planeFindingMode
-            config.depthEnabled = depthEnabled
-            config.instantPlacementEnabled = instantPlacementEnabled
-            config.cloudAnchorEnabled = cloudAnchorEnabled
-            config.lightEstimationMode = sessionLightEstimationMode
+            config.planeFindingMode = _planeFindingMode
+            config.depthMode = _depthMode
+            config.instantPlacementEnabled = _instantPlacementEnabled
+            config.cloudAnchorEnabled = _cloudAnchorEnabled
+            config.lightEstimationMode = _sessionLightEstimationMode
         }
 
         // Feature config, therefore facing direction, can only be configured once per session.
         if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
             renderer.isFrontFaceWindingInverted = true
         }
+
+        arCameraStream?.let { addEntity(it.renderable) }
 
         onArSessionCreated?.invoke(session)
     }
@@ -286,7 +336,7 @@ open class ArSceneView @JvmOverloads constructor(
 
         session.configure { config ->
             // FocusMode must be changed after the session resume to work
-            config.focusMode = focusMode
+            config.focusMode = _focusMode
         }
 
         onArSessionResumed?.invoke(session)
@@ -294,10 +344,6 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun onArSessionConfigChanged(session: ArSession, config: Config) {
         super.onArSessionConfigChanged(session, config)
-
-        // Set the correct Texture configuration on the camera stream
-        //TODO: Move CameraStream to lifecycle aware
-        cameraStream.checkIfDepthIsEnabled(session, config)
 
         onArSessionConfigChanged?.invoke(session, config)
     }
@@ -329,30 +375,6 @@ open class ArSceneView @JvmOverloads constructor(
             // You will say thanks when still have battery after a long day debugging an AR app.
             // ...and it's better for your users
             activity.setKeepScreenOn(arFrame.camera.isTracking)
-        }
-
-        cameraStream.apply {
-            // Setup Camera Stream if needed.
-            if (!isTextureInitialized) {
-                initializeTexture(arFrame.camera)
-            }
-            // Recalculate camera Uvs if necessary.
-            if (currentFrame == null || frame.hasDisplayGeometryChanged()) {
-                recalculateCameraUvs(frame)
-            }
-            if (depthOcclusionMode == CameraStream.DepthOcclusionMode.DEPTH_OCCLUSION_ENABLED) {
-                try {
-                    when (depthMode) {
-                        CameraStream.DepthMode.DEPTH -> frame.acquireDepthImage()
-                        CameraStream.DepthMode.RAW_DEPTH -> frame.acquireRawDepthImage()
-                        else -> null
-                    }?.use { depthImage ->
-                        recalculateOcclusion(depthImage)
-                    }
-                } catch (ignored: NotYetAvailableException) {
-                } catch (ignored: DeadlineExceededException) {
-                }
-            }
         }
 
         // At the start of the frame, update the tracked pose of the camera
@@ -438,11 +460,11 @@ interface ArSceneLifecycleOwner : SceneLifecycleOwner {
     val arSessionConfig get() = arSession?.config
 }
 
-class ArSceneLifecycle(context: Context, override val owner: ArSceneLifecycleOwner) :
-    SceneLifecycle(context, owner) {
-    val arCore get() = owner.arCore
-    val arSession get() = owner.arSession
-    val arSessionConfig get() = owner.arSessionConfig
+class ArSceneLifecycle(sceneView: ArSceneView) : SceneLifecycle(sceneView) {
+    override val sceneView get() = super.sceneView as ArSceneView
+    val context get() = sceneView.context
+    val arCore get() = sceneView.arCore
+    val arSession get() = sceneView.arSession
 
     /**
      * ### Performs the given action when ARCore session is created
