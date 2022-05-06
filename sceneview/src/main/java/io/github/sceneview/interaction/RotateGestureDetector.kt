@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.view.MotionEvent
 import io.github.sceneview.interaction.RotateGestureDetector.OnRotateGestureListener
+import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -190,8 +191,6 @@ class RotateGestureDetector(
     var timeDelta: Long? = null
         private set
 
-    var tentativeFirstRotateEvent: MotionEvent? = null
-
     /**
      * ### Accepts MotionEvents and dispatches events to a [OnRotateGestureListener] when
      * appropriate
@@ -210,16 +209,16 @@ class RotateGestureDetector(
             when (actionCode) {
                 MotionEvent.ACTION_MOVE -> {
                     if (event.pointerCount != 2) return false
-                    if (tentativeFirstRotateEvent == null) {
-                        tentativeFirstRotateEvent = MotionEvent.obtain(event)
+                    if (previousEvent == null) {
+                        previousEvent = MotionEvent.obtain(event)
                         return false
                     }
-                    previousEvent = tentativeFirstRotateEvent
                     update(event)
-                    if (currentAngle > 0.1) {
+                    if (currentAngle.absoluteValue > 0.1) {
                         listener.onRotateBegin(this)
-                        tentativeFirstRotateEvent = null
                         isGestureInProgress = true
+                    } else {
+                        return false
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> reset()
@@ -308,7 +307,6 @@ class RotateGestureDetector(
         currentEvent?.recycle()
         currentEvent = null
         isGestureInProgress = false
-        tentativeFirstRotateEvent = null
     }
 
     companion object {
