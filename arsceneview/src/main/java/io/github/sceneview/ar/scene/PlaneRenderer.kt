@@ -12,8 +12,8 @@ import com.google.ar.sceneform.rendering.Material
 import com.google.ar.sceneform.rendering.MaterialInternalDataImpl
 import com.google.ar.sceneform.rendering.PlaneVisualizer
 import dev.romainguy.kotlin.math.Float3
+import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.zDirection
@@ -30,10 +30,10 @@ import io.github.sceneview.utils.Color
  *
  * Used to visualize detected planes and to control whether Renderables cast shadows on them.
  */
-class PlaneRenderer(val sceneView: ArSceneView) : ArSceneLifecycleObserver {
+class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver {
 
+    private val sceneView get() = lifecycle.sceneView
     private val renderer get() = sceneView.renderer
-    private val lifecycle get() = sceneView.lifecycle
 
     private val visualizers: MutableMap<Plane, PlaneVisualizer> = HashMap()
 

@@ -9,10 +9,9 @@ import io.github.sceneview.ar.node.infos.SearchPlaneInfoNode
 import io.github.sceneview.ar.node.infos.TapArPlaneInfoNode
 import io.github.sceneview.node.Node
 
-class Instructions(val lifecycle: ArSceneLifecycle) :
-    ArSceneLifecycleObserver {
+class Instructions(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver {
 
-    val sceneView get() = lifecycle.sceneView
+    private val sceneView get() = lifecycle.sceneView
 
     var enabled = true
         set(value) {
