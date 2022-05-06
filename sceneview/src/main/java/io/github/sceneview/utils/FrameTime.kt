@@ -31,6 +31,8 @@ data class FrameTime(val nanoseconds: Long, val lastNanoseconds: Long? = null) {
         DurationUnit.SECONDS
     )
 
+    fun intervalSeconds(frameTime: FrameTime?): Double = intervalSeconds(frameTime?.lastNanoseconds)
+
     fun fps(lastNanoseconds: Long?): Double = 1.0 / intervalSeconds(lastNanoseconds)
 
     fun fps(frameTime: FrameTime?): Double = fps(frameTime?.nanoseconds)

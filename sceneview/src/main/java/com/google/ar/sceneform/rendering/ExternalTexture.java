@@ -54,7 +54,7 @@ public class ExternalTexture {
         Stream stream = StreamKt.build(new Stream.Builder().stream(surfaceTexture), null);
 
         //TODO : We actually have an issue with stream being destroyed from elsewhere maybe material
-        // Fix it whith kotlining here
+        // Fix it when kotlining here
         initialize(null, stream);
     }
 

@@ -40,15 +40,6 @@ fun MaterialInstance.setExternalTexture(
     texture: Texture
 ) = setTexture(name, texture, TextureSamplerExternal())
 
-//fun MaterialInstance.setExternalStreamTexture(
-//    name: String,
-//    stream: Stream
-//) = setTexture(
-//    name,
-//    Texture.Builder().sampler(Texture.Sampler.SAMPLER_EXTERNAL).format(Texture.InternalFormat.RGB8)
-//        .build(), TextureSamplerExternal()
-//)
-
 // **********
 // Base Color
 // **********
