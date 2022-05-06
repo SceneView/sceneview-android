@@ -6,11 +6,9 @@ import com.google.android.filament.Texture
 import com.google.ar.core.Config
 import com.google.ar.core.LightEstimate
 import dev.romainguy.kotlin.math.max
-import io.github.sceneview.Filament
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.HDREnvironment
 import io.github.sceneview.light.*
@@ -18,6 +16,7 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.toLinearSpace
 import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.texture.build
+import io.github.sceneview.texture.setImage
 import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.colorOf
 import java.nio.ByteBuffer
@@ -38,10 +37,10 @@ import java.nio.ByteOrder
  * virtual objects to light them under the same conditions as the scene they're placed in,
  * keeping users grounded and engaged.
  */
-class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycle) :
-    ArSceneLifecycleObserver {
+class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver {
 
-    val renderer get() = sceneView.renderer
+    private val sceneView get() = lifecycle.sceneView
+    private val renderer get() = sceneView.renderer
 
     /**
      * ### ARCore light estimation configuration
@@ -353,20 +352,19 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
                                         order(ByteOrder.nativeOrder())
                                         cubeMapBuffer = this
                                     }
-                                    val rgbaBytes = ByteArray(8) // ARGB Bytes per pixel
+                                    val rgbBytes = ByteArray(6) // RGB Bytes per pixel
                                     arImages.forEachIndexed { index, image ->
                                         faceOffsets[index] = buffer.position()
                                         image.planes[0].buffer.let { imageBuffer ->
                                             while (imageBuffer.hasRemaining()) {
                                                 // Only take the RGB channels
-                                                buffer.put(rgbaBytes.apply {
-                                                    imageBuffer.get(this)
-                                                } // Skip the Alpha channel
-                                                    .sliceArray(0..5))
+                                                imageBuffer.get(rgbBytes)
+                                                buffer.put(rgbBytes)
+                                                // Skip the Alpha channel
+                                                imageBuffer.position(imageBuffer.position() + 2)
                                             }
                                             imageBuffer.clear()
                                         }
-                                        image.close()
                                     }
                                     buffer.flip()
 
@@ -385,18 +383,20 @@ class LightEstimation(val sceneView: ArSceneView, val lifecycle: ArSceneLifecycl
                                         .also {
                                             cubeMapTexture = it
                                         }
-                                    texture.apply {
-                                        setImage(
-                                            Filament.engine, 0,
-                                            Texture.PixelBufferDescriptor(
-                                                buffer,
-                                                Texture.Format.RGB,
-                                                Texture.Type.HALF
-                                            ),
-                                            faceOffsets
-                                        )
-                                        buffer.clear()
-                                    }
+                                    texture.setImage(
+                                        0,
+                                        Texture.PixelBufferDescriptor(
+                                            buffer,
+                                            Texture.Format.RGB,
+                                            Texture.Type.HALF,
+                                            1, 0, 0, 0, null
+                                        ) {
+                                            arImages.forEach { it.close() }
+                                            buffer.clear()
+                                        },
+                                        faceOffsets
+                                    )
+                                    texture
                                 }
                             }
                             defaultEnvironmentReflections -> {
