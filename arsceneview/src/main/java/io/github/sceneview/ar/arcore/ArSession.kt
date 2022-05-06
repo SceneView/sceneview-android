@@ -11,12 +11,9 @@ import io.github.sceneview.ar.defaultApproximateDistanceMeters
 import io.github.sceneview.utils.FrameTime
 
 class ArSession(
-    val cameraTextureId: Int,
     val lifecycle: ArSceneLifecycle,
     features: Set<Feature> = setOf()
 ) : Session(lifecycle.context, features), ArSceneLifecycleObserver {
-
-    private var hasSetTextureNames = false
 
     val display: Display by lazy {
         (lifecycle.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
@@ -105,13 +102,6 @@ class ArSession(
     }
 
     fun update(frameTime: FrameTime): ArFrame? {
-        // Texture names should only be set once on a GL thread unless they change.
-        // This is done during updateFrame rather than init since the session is
-        // not guaranteed to have been initialized during the execution of init.
-        if (!hasSetTextureNames) {
-            setCameraTextureName(cameraTextureId)
-            hasSetTextureNames = true
-        }
         // Check if no frame or same timestamp, no drawing.
         return super.update()?.takeIf {
             it.timestamp != (currentFrame?.frame?.timestamp ?: 0) && it.camera != null
@@ -194,6 +184,8 @@ class ArSession(
                 }
             }
         }
+
+    val depthEnabled get() = depthMode != Config.DepthMode.DISABLED
 
     var depthMode: Config.DepthMode
         get() = config.depthMode
