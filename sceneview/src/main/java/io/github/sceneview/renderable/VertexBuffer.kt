@@ -1,4 +1,4 @@
-package io.github.sceneview.mesh
+package io.github.sceneview.renderable
 
 import androidx.lifecycle.Lifecycle
 import com.google.android.filament.VertexBuffer
