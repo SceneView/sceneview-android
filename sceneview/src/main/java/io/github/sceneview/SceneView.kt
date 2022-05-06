@@ -27,8 +27,8 @@ import com.gorisse.thomas.lifecycle.getActivity
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.environment.Environment
-import io.github.sceneview.environment.createEnvironment
 import io.github.sceneview.environment.loadEnvironment
+import io.github.sceneview.environment.loadEnvironmentSync
 import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.interaction.SelectedNodeVisualizer
 import io.github.sceneview.light.*
@@ -95,7 +95,7 @@ open class SceneView @JvmOverloads constructor(
     /**
      * ### The renderer used for this view
      */
-    override val renderer: Renderer
+    open val renderer: Renderer
         get() = _renderer ?: Renderer(this, camera)
             .also { renderer ->
                 _renderer = renderer
@@ -221,9 +221,8 @@ open class SceneView @JvmOverloads constructor(
                 castShadows(true)
             }.build(lifecycle)
             // TODO : See if we really can't load it async
-            environment = context.useLocalFileBufferNotNull(defaultIbl) {
-                KTXLoader.createEnvironment(lifecycle, it)
-            }
+            environment = KTXLoader.loadEnvironmentSync(context, lifecycle,
+                iblKtxFileLocation = defaultIbl)
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
             // Filament is kotlined
@@ -232,7 +231,7 @@ open class SceneView @JvmOverloads constructor(
     }
 
     override fun getLifecycle() =
-        sceneLifecycle ?: SceneLifecycle(context, this).also {
+        sceneLifecycle ?: SceneLifecycle(this).also {
             sceneLifecycle = it
         }
 
@@ -467,6 +466,14 @@ open class SceneView @JvmOverloads constructor(
         return onTouch?.invoke(selectedNode, motionEvent) ?: false
     }
 
+    fun addEntity(@Entity entity: Int) {
+        renderer.filamentScene.addEntity(entity)
+    }
+
+    fun removeEntity(@Entity entity: Int) {
+        renderer.filamentScene.removeEntity(entity)
+    }
+
     override fun setOnClickListener(listener: OnClickListener?) {
         onTouch = listener?.let {
             { _, _ ->
@@ -507,13 +514,10 @@ open class SceneView @JvmOverloads constructor(
  */
 interface SceneLifecycleOwner : LifecycleOwner {
     val activity: ComponentActivity
-    val renderer: Renderer
 }
 
-open class SceneLifecycle(context: Context, open val owner: SceneLifecycleOwner) :
-    DefaultLifecycle(context, owner) {
-    val activity get() = owner.activity
-    val renderer get() = owner.renderer
+open class SceneLifecycle(open val sceneView: SceneView) : DefaultLifecycle(sceneView) {
+    val activity get() = sceneView.activity
 }
 
 interface SceneLifecycleObserver : DefaultLifecycleObserver {
