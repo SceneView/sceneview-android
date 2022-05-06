@@ -10,6 +10,8 @@ import kotlinx.coroutines.*
 import java.io.File
 import java.io.InputStream
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
 
 object ResourceLoader {
 
@@ -197,4 +199,21 @@ inline fun <T : AutoCloseable?, R> Array<T>.use(block: (Array<T>) -> R): R {
             }
         }
     }
+}
+
+fun ByteBuffer.clone() = ByteBuffer.allocate(this@clone.capacity()).apply {
+    order(ByteOrder.nativeOrder())
+    // Copy from the beginning
+    this@clone.rewind()
+    put(this@clone)
+    this@clone.rewind()
+    flip()
+}
+
+fun FloatBuffer.clone() = FloatBuffer.allocate(this@clone.capacity()).apply {
+    // Copy from the beginning
+    this@clone.rewind()
+    put(this@clone)
+    this@clone.rewind()
+    flip()
 }
