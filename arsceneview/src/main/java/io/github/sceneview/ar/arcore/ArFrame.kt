@@ -250,6 +250,8 @@ data class ArFrame(
             it.trackingState == TrackingState.TRACKING
         }
 
+    fun intervalSeconds(arFrame: ArFrame?): Double = time.intervalSeconds(arFrame?.time)
+
     val fps: Double = time.fps
 
     fun fps(arFrame: ArFrame?): Double = time.fps(arFrame?.time)
