@@ -58,6 +58,31 @@ dependencies {
     android:layout_height="match_parent" />
 ```
 
+## ARCore Geospatial API
+
+- Configure session
+```kotlin
+arSceneView.configureSession { session, config ->
+    // Enable Geospatial Mode.
+    config.geospatialMode = Config.GeospatialMode.ENABLED
+}
+```
+- Create an Anchor
+```kotlin
+val earth = arSceneView.session?.earth ?: return
+if (earth.trackingState == TrackingState.TRACKING) {
+    // Place the earth anchor at the same altitude as that of the camera to make it easier to view.
+    val altitude = earth.cameraGeospatialPose.altitudeMeters - 1
+    // The rotation quaternion of the anchor in the East-Up-South (EUS) coordinate system.
+    val qx = 0f
+    val qy = 0f
+    val qz = 0f
+    val qw = 1f
+    earthAnchor = earth.createAnchor(latLng.latitude, latLng.longitude, altitude, qx, qy, qz, qw)
+}
+```
+
+
 ## Camera Permission and ARCore install/update/unavailable
 
 `ArSceneView` automatically handles the camera permission prompt and the ARCore requirements checks.
