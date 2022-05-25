@@ -11,7 +11,7 @@ import io.github.sceneview.math.Transform
 import io.github.sceneview.math.toFloat3
 import io.github.sceneview.node.Node
 
-typealias FilamentGestureDetector = com.google.android.filament.utils.GestureDetector
+typealias FilamentGestureDetector = io.github.sceneview.interaction.GestureDetector
 
 /**
  * ### Responds to Android touch events with listeners and/or camera manipulator
