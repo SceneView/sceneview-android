@@ -67,7 +67,7 @@ class GestureDetector(
     private val kZoomConfidenceDistance = 10
     private val kZoomSpeed = 1f / 10f
 
-    var panSupported: Boolean = true
+    var isPanEnabled: Boolean = true
 
     fun onTouchEvent(event: MotionEvent) {
         val touch = TouchPair(event, view.height)
@@ -147,7 +147,7 @@ class GestureDetector(
     }
 
     private fun isPanGesture(): Boolean {
-        if (!panSupported || tentativePanEvents.size <= kGestureConfidenceCount) {
+        if (!isPanEnabled || tentativePanEvents.size <= kGestureConfidenceCount) {
             return false
         }
         val oldest = tentativePanEvents.first().midpoint
