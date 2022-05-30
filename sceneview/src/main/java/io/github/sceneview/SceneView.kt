@@ -486,11 +486,11 @@ open class SceneView @JvmOverloads constructor(
     open class DefaultSceneGestureListener(val sceneView: SceneView) :
         SceneGestureDetector.OnSceneGestureListener {
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            sceneView.renderer.filamentView.pick(
-                e.x.roundToInt(),
-                e.y.roundToInt(),
-                sceneView.pickingHandler
-            ) { pickResult ->
+            // Invert the y coordinate since its origin is at the bottom
+            val x = e.x.roundToInt()
+            val y = sceneView.height - 1 - e.y.roundToInt()
+
+            sceneView.renderer.filamentView.pick(x, y, sceneView.pickingHandler) { pickResult ->
                 val pickedEntity = pickResult.renderable
                 val selectedNode = sceneView.allChildren
                     .mapNotNull { it as? ModelNode }
