@@ -487,8 +487,8 @@ open class SceneView @JvmOverloads constructor(
         SceneGestureDetector.OnSceneGestureListener {
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
             // Invert the y coordinate since its origin is at the bottom
-            val x = e.x.roundToInt()
-            val y = sceneView.height - 1 - e.y.roundToInt()
+            val x = e.x.toInt()
+            val y = sceneView.height - 1 - e.y.toInt()
 
             sceneView.renderer.filamentView.pick(x, y, sceneView.pickingHandler) { pickResult ->
                 val pickedEntity = pickResult.renderable
