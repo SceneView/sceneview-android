@@ -170,6 +170,7 @@ open class ViewNode : Node {
         return renderableInstance
     }
 
+    // TODO: Replace this method with the new system based on Filament picking
     /**
      * ### Calls onTouchEvent if the node is active
      *
@@ -183,7 +184,7 @@ open class ViewNode : Node {
      * @param motionEvent   The motion event.
      * @return true if the event was handled, false otherwise.
      */
-    override fun dispatchTouchEvent(
+    /*override fun dispatchTouchEvent(
         pickHitResult: PickHitResult,
         motionEvent: MotionEvent
     ): Boolean {
@@ -193,7 +194,7 @@ open class ViewNode : Node {
             }
         }
         return super.dispatchTouchEvent(pickHitResult, motionEvent)
-    }
+    }*/
 
     /** ### Detach and destroy the node */
     override fun destroy() {

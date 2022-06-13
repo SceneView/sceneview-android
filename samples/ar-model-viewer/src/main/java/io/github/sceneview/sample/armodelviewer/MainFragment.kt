@@ -61,9 +61,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
             editableTransforms = EditableTransform.ALL
         }
-        sceneView.addChild(modelNode)
-        // Quick workaround until the Node Pick is fixed
-        sceneView.gestureDetector.onTouchNode(modelNode)
+        sceneView.apply {
+            addChild(modelNode)
+            gestureDetector.selectedNode = modelNode
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {

@@ -2,6 +2,7 @@ package io.github.sceneview.ar.interaction
 
 import android.view.ScaleGestureDetector
 import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.interaction.MoveGestureDetector
 import io.github.sceneview.interaction.RotateGestureDetector
 import io.github.sceneview.interaction.SceneGestureDetector
@@ -12,6 +13,12 @@ class ArSceneGestureDetector(
     listener: OnSceneGestureListener? = null,
     val nodeManipulator: ArNodeManipulator? = ArNodeManipulator(sceneView)
 ) : SceneGestureDetector(sceneView = sceneView, listener = listener, cameraManipulator = null) {
+
+    var selectedNode: ArNode?
+        get() = nodeManipulator?.selectedNode
+        set(value) {
+            nodeManipulator?.selectedNode = value
+        }
 
     private val moveListener = object : MoveGestureDetector.OnMoveGestureListener {
         override fun onMoveBegin(detector: MoveGestureDetector): Boolean {
@@ -60,6 +67,7 @@ class ArSceneGestureDetector(
             nodeManipulator?.endRotate()
         }
     }
+
     private val scaleListener = object : ScaleGestureDetector.OnScaleGestureListener {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
             return listOfNotNull(
@@ -87,9 +95,4 @@ class ArSceneGestureDetector(
         RotateGestureDetector(sceneView.context, rotateListener)
     override var scaleGestureDetector: ScaleGestureDetector? =
         ScaleGestureDetector(sceneView.context, scaleListener)
-
-    override fun onTouchNode(selectedNode: Node): Boolean {
-        nodeManipulator?.onNodeTouch(selectedNode)
-        return nodeManipulator != null
-    }
 }

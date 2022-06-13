@@ -79,10 +79,6 @@ open class SceneGestureDetector(
         }
     }
 
-    open fun onTouchNode(selectedNode: Node): Boolean {
-        return false
-    }
-
     interface OnSceneGestureListener :
         GestureDetector.OnGestureListener,
         GestureDetector.OnDoubleTapListener,
