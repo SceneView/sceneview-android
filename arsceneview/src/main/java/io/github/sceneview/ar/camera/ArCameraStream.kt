@@ -251,9 +251,7 @@ class ArCameraStream(
             cameraTextures?.forEach { it.destroy() }
             cameraTextures = textures
         }
-        cameraTexture = cameraTexture?.let {
-            cameraTextures.getOrNull(cameraTextures.indexOf(it) + 1)
-        } ?: cameraTextures.first()
+        cameraTexture = cameraTextures.getOrNull(cameraTextureIds.indexOf(frame.cameraTextureName))
 
         // Recalculate camera Uvs if necessary.
         if (transformedUvCoordinates == null || frame.hasDisplayGeometryChanged()) {
