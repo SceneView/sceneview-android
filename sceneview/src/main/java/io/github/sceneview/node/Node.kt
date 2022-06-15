@@ -604,6 +604,24 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     fun isDescendantOf(ancestor: NodeParent): Boolean =
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
 
+    /**
+     * ### Finds the first enclosing node with the given type
+     *
+     * The node can be:
+     * - This node.
+     * - One of the parent nodes.
+     * - `null` if no node is found.
+     */
+    inline fun <reified T: Node> firstEnclosingNode(): T? {
+        var currentNode: Node? = this
+
+        while (currentNode != null && currentNode !is T) {
+            currentNode = currentNode.parentNode
+        }
+
+        return currentNode as? T
+    }
+
     // TODO : Remove this to full Kotlin Math
     override fun getTransformationMatrix(): Matrix {
         return Matrix(worldTransform.toColumnsFloatArray())

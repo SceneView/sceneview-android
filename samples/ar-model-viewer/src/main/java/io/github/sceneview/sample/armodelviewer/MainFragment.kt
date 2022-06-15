@@ -63,6 +63,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
         sceneView.apply {
             addChild(modelNode)
+            // Select the model node by default (the model node is also selected on tap)
             gestureDetector.selectedNode = modelNode
         }
     }

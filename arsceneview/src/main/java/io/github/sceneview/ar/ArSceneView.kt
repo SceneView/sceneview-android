@@ -239,6 +239,13 @@ open class ArSceneView @JvmOverloads constructor(
     }
 
     /**
+     * ### Whether it is possible to deselect nodes
+     *
+     * An `ArNode` can be deselected if no `ArNode`s are picked on tap.
+     */
+    var allowDeselectingNodes = true
+
+    /**
      * ### Invoked when an ARCore error occurred
      *
      * Registers a callback to be invoked when the ARCore Session cannot be initialized because
@@ -419,7 +426,13 @@ open class ArSceneView @JvmOverloads constructor(
     override fun onTap(node: Node?, renderable: Renderable, motionEvent: MotionEvent) {
         super.onTap(node, renderable, motionEvent)
 
-        gestureDetector.selectedNode = node as? ArNode
+        val selectedNode = node?.firstEnclosingNode<ArNode>()
+
+        if (selectedNode != null) {
+            gestureDetector.selectedNode = selectedNode
+        } else if (allowDeselectingNodes) {
+            gestureDetector.selectedNode = null
+        }
 
         if (node == null) {
             arSession?.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
