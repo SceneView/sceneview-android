@@ -1,10 +1,8 @@
 package io.github.sceneview.node
 
 import android.view.MotionEvent
-import android.view.ViewConfiguration
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
 import com.google.ar.sceneform.collision.CollisionSystem
@@ -403,9 +401,9 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     /**
      * ### Invoked when the node is tapped
      *
-     * Only nodes with renderables can be tapped since Filament picking is used to find a touched
-     * node. The ID of the Filament renderable can be used to determine what part of a model is
-     * tapped.
+     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
+     * used to find a touched node. The ID of the Filament renderable can be used to determine what
+     * part of a model is tapped.
      *
      * - `renderable` - The ID of the Filament renderable that was tapped.
      * - `motionEvent` - The motion event that caused the tap.
@@ -474,13 +472,15 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     /**
      * ### Invoked when the node is tapped
      *
-     * Calls the `onTap` listener if it is available.
+     * Calls the `onTap` listener if it is available and passes the tap to the parent node.
      *
      * @param renderable The ID of the Filament renderable that was tapped.
      * @param motionEvent The motion event that caused the tap.
      */
     open fun onTap(renderable: Renderable, motionEvent: MotionEvent) {
         onTap?.invoke(renderable, motionEvent)
+
+        parentNode?.onTap(renderable, motionEvent)
     }
 
     /**

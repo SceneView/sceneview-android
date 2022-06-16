@@ -185,9 +185,9 @@ open class SceneView @JvmOverloads constructor(
     /**
      * ### Invoked when the `SceneView` is tapped
      *
-     * Only nodes with renderables can be tapped since Filament picking is used to find a touched
-     * node. The ID of the Filament renderable can be used to determine what part of a model is
-     * tapped.
+     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
+     * used to find a touched node. The ID of the Filament renderable can be used to determine what
+     * part of a model is tapped.
      *
      * - `node` - The node that was tapped or `null`.
      * - `renderable` - The ID of the Filament renderable that was tapped.
