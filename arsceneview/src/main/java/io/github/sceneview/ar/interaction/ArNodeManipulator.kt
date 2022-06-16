@@ -1,5 +1,6 @@
 package io.github.sceneview.ar.interaction
 
+import com.google.ar.core.HitResult
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.clamp
@@ -18,6 +19,7 @@ open class ArNodeManipulator(
     var maxZoomScale = 10.0f
 
     private var currentGestureTransform: EditableTransform? = null
+    private var lastHitResult: HitResult? = null
 
     var selectedNode: ArNode? = null
         set(value) {
@@ -45,6 +47,7 @@ open class ArNodeManipulator(
         }?.let { node ->
             node.hitTest(xPx = x, yPx = y)?.takeIf { it.isTracking }?.let { hitResult ->
                 hitResult.hitPose?.let { hitPose ->
+                    lastHitResult = hitResult
                     node.pose = hitPose
                 }
             }
@@ -54,8 +57,13 @@ open class ArNodeManipulator(
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
-            node.anchor()
+            lastHitResult?.takeIf { it.isTracking }?.let {
+                node.anchor = it.createAnchor()
+                node.anchor
+            }
+
             currentGestureTransform = null
+            lastHitResult = null
         } != null
 
     // The first delta is always way off as it contains all delta until threshold to
@@ -79,14 +87,15 @@ open class ArNodeManipulator(
                 skipFirstRotate = false
                 return true
             }
-            val rotationDelta = Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians))
+            val rotationDelta =
+                Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians))
             node.modelQuaternion = node.modelQuaternion * rotationDelta
         } != null
     }
 
     open fun endRotate(): Boolean {
         return (currentGestureTransform == EditableTransform.ROTATION &&
-                selectedNode?.rotationEditable == true)
+            selectedNode?.rotationEditable == true)
             .also { if (it) currentGestureTransform = null }
     }
 
@@ -104,7 +113,7 @@ open class ArNodeManipulator(
 
     open fun endScale(): Boolean =
         (currentGestureTransform == EditableTransform.SCALE &&
-                selectedNode?.scaleEditable == true)
+            selectedNode?.scaleEditable == true)
             .also { if (it) currentGestureTransform = null }
 }
 
