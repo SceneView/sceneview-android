@@ -103,16 +103,18 @@ public class RenderableInstance implements AnimatableModel {
     private Matrix cachedRelativeTransformInverse;
 
     @SuppressWarnings("initialization") // Suppress @UnderInitialization warning.
-    public RenderableInstance(Lifecycle lifecycle, TransformProvider transformProvider, Renderable renderable) {
+    public RenderableInstance(@Nullable Lifecycle lifecycle, TransformProvider transformProvider, Renderable renderable) {
         Preconditions.checkNotNull(transformProvider, "Parameter \"transformProvider\" was null.");
         Preconditions.checkNotNull(renderable, "Parameter \"renderable\" was null.");
-        lifecycle.addObserver(new DefaultLifecycleObserver() {
-            @Override
-            public void onDestroy(@NonNull LifecycleOwner owner) {
-                DefaultLifecycleObserver.super.onDestroy(owner);
-                destroy();
-            }
-        });
+        if(lifecycle != null) {
+            lifecycle.addObserver(new DefaultLifecycleObserver() {
+                @Override
+                public void onDestroy(@NonNull LifecycleOwner owner) {
+                    DefaultLifecycleObserver.super.onDestroy(owner);
+                    destroy();
+                }
+            });
+        }
         this.transformProvider = transformProvider;
         this.renderable = renderable;
         this.materialBindings = new ArrayList<>(renderable.getMaterialBindings());
@@ -133,7 +135,7 @@ public class RenderableInstance implements AnimatableModel {
         createFilamentAssetModelInstance(lifecycle);
     }
 
-    void createFilamentAssetModelInstance(Lifecycle lifecycle) {
+    void createFilamentAssetModelInstance(@Nullable Lifecycle lifecycle) {
         if (renderable.getRenderableData() instanceof RenderableInternalFilamentAssetData) {
             RenderableInternalFilamentAssetData renderableData =
                     (RenderableInternalFilamentAssetData) renderable.getRenderableData();
@@ -190,11 +192,7 @@ public class RenderableInstance implements AnimatableModel {
                 }
                 MaterialInstance materialInstance = renderableManager.getMaterialInstanceAt(renderableInstance, 0);
                 materialNames.add(materialInstance.getName());
-
-                MaterialInternalDataGltfImpl materialData = new MaterialInternalDataGltfImpl(materialInstance.getMaterial());
-                Material material = new Material(lifecycle, materialData);
-                material.updateGltfMaterialInstance(materialInstance);
-                materialBindings.add(material);
+                materialBindings.add(new Material(lifecycle, materialInstance));
             }
 
             TransformManager transformManager = Filament.getTransformManager();
@@ -435,15 +433,29 @@ public class RenderableInstance implements AnimatableModel {
      * Sets the material bound to the first index.
      */
     public void setMaterial(Material material) {
-        setMaterial(0, material);
+        setMaterial(material.getFilamentMaterialInstance());
+    }
+
+    /**
+     * Sets the material bound to the first index.
+     */
+    public void setMaterial(MaterialInstance materialInstance) {
+        setMaterial(0, materialInstance);
     }
 
     /**
      * Sets the material bound to the specified index.
      */
     public void setMaterial(@IntRange(from = 0) int primitiveIndex, Material material) {
+        setMaterial(primitiveIndex, material.getFilamentMaterialInstance());
+    }
+
+    /**
+     * Sets the material bound to the specified index.
+     */
+    public void setMaterial(@IntRange(from = 0) int primitiveIndex, MaterialInstance materialInstance) {
         for (int i = 0; i < getFilamentAsset().getEntities().length; i++) {
-            setMaterial(i, primitiveIndex, material);
+            setMaterial(i, primitiveIndex, materialInstance);
         }
     }
 
@@ -451,14 +463,20 @@ public class RenderableInstance implements AnimatableModel {
      * Sets the material bound to the specified index and entityIndex
      */
     public void setMaterial(int entityIndex, @IntRange(from = 0) int primitiveIndex, Material material) {
+        setMaterial(entityIndex, primitiveIndex, material.getFilamentMaterialInstance());
+    }
+
+    /**
+     * Sets the material bound to the specified index and entityIndex
+     */
+    public void setMaterial(int entityIndex, @IntRange(from = 0) int primitiveIndex, MaterialInstance materialInstance) {
         int[] entities = getFilamentAsset().getEntities();
         Preconditions.checkElementIndex(entityIndex, entities.length, "No entity found at the given index");
-        materialBindings.set(entityIndex, material);
+        materialBindings.set(entityIndex, new Material(null, materialInstance));
         RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(entities[entityIndex]);
         if (renderableInstance != 0) {
-            renderableManager.setMaterialInstanceAt(renderableInstance, primitiveIndex,
-                    material.getFilamentMaterialInstance());
+            renderableManager.setMaterialInstanceAt(renderableInstance, primitiveIndex, materialInstance);
         }
     }
 
