@@ -51,7 +51,7 @@ class ArCameraStream(
      * ### Flat camera material
      */
     var standardMaterial: MaterialInstance
-        get() = _standardMaterial ?: MaterialLoader.loadMaterialSync(
+        get() = _standardMaterial ?: MaterialLoader.createMaterial(
             context = sceneView.context,
             lifecycle = lifecycle,
             filamatFileLocation = standardMaterialLocation
@@ -69,7 +69,7 @@ class ArCameraStream(
      * ### Depth occlusion material
      */
     var depthOcclusionMaterial: MaterialInstance
-        get() = _depthOcclusionMaterial ?: MaterialLoader.loadMaterialSync(
+        get() = _depthOcclusionMaterial ?: MaterialLoader.createMaterial(
             context = sceneView.context,
             lifecycle = lifecycle,
             filamatFileLocation = depthOcclusionMaterialLocation
