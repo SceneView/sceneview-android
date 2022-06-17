@@ -23,6 +23,8 @@ group = GROUP
 version = VERSION_NAME
 
 android {
+    namespace 'io.github.sceneview'
+
     compileSdk 31
     compileSdkVersion 31
 
