@@ -34,7 +34,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         sceneView.camera.position = Position(x = 4.0f, y = -1.0f)
         sceneView.camera.rotation = Rotation(x = 0.0f, y = 80.0f)
 
-        val modelNode = ModelNode()
+        val modelNode = ModelNode(position = Position(z = -4.0f))
         sceneView.addChild(modelNode)
 
         lifecycleScope.launchWhenCreated {
