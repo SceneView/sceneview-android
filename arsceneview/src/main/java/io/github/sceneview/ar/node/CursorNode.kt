@@ -13,13 +13,13 @@ import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.delay
 
-const val clickDuration = 250L
-
 open class CursorNode(
     context: Context,
     lifecycle: Lifecycle? = null,
     glbFileLocation: String = "sceneview/models/cursor.glb"
 ) : ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE) {
+
+    var clickDuration = 250L
 
     override var isTracking: Boolean = false
         set(value) {
