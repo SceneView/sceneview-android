@@ -56,7 +56,9 @@ import io.github.sceneview.Filament;
 @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
 public abstract class Renderable {
 
+    @Nullable
     protected Lifecycle lifecycle;
+
     // Data that can be shared between Renderables with makeCopy()
     private final IRenderableInternalData renderableData;
 
@@ -364,6 +366,7 @@ public abstract class Renderable {
     @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
     public abstract static class Builder<T extends Renderable, B extends Builder<T, B>> {
 
+        @Nullable
         protected Lifecycle lifecycle = null;
         /**
          * @hide
@@ -487,7 +490,7 @@ public abstract class Renderable {
          *
          * @return the constructed {@link Renderable}
          */
-        public CompletableFuture<T> build(Lifecycle lifecycle) {
+        public CompletableFuture<T> build(@Nullable Lifecycle lifecycle) {
             this.lifecycle = lifecycle;
             try {
                 checkPreconditions();

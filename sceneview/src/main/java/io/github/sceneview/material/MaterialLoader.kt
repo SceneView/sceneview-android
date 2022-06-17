@@ -55,13 +55,13 @@ object MaterialLoader {
     }
 
     /**
-     * ### Load a Material object from an filamat file locally
+     * ### Load a Material object outside of a coroutine scope from a local filamat file.
      *
      * @see MaterialLoader.loadMaterial
      */
-    fun loadMaterialSync(
+    fun createMaterial(
         context: Context,
-        lifecycle: Lifecycle,
+        lifecycle: Lifecycle? = null,
         filamatFileLocation: String
     ): MaterialInstance? = context.useLocalFileBufferNotNull(filamatFileLocation) { buffer ->
         createMaterial(lifecycle, buffer)
@@ -75,7 +75,7 @@ object MaterialLoader {
      * @param filamatBuffer The content of the Filamat File
      * @return the newly created object
      */
-    fun createMaterial(lifecycle: Lifecycle, filamatBuffer: Buffer): MaterialInstance {
+    fun createMaterial(lifecycle: Lifecycle? = null, filamatBuffer: Buffer): MaterialInstance {
         return Material.Builder()
             .payload(filamatBuffer, filamatBuffer.remaining())
             .build(lifecycle)

@@ -6,17 +6,17 @@ import com.google.android.filament.MaterialInstance
 import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
 
-fun Material.Builder.build(lifecycle: Lifecycle): Material = build(Filament.engine)
+fun Material.Builder.build(lifecycle: Lifecycle? = null): Material = build(Filament.engine)
     .also { material ->
-        lifecycle.observe(onDestroy = {
+        lifecycle?.observe(onDestroy = {
             // Prevent double destroy in case of manually destroyed
             runCatching { material.destroy() }
         })
     }
 
-fun Material.createInstance(lifecycle: Lifecycle): MaterialInstance =
+fun Material.createInstance(lifecycle: Lifecycle? = null): MaterialInstance =
     createInstance().also { materialInstance ->
-        lifecycle.observe(onDestroy = {
+        lifecycle?.observe(onDestroy = {
             // Prevent double destroy in case of manually destroyed
             runCatching { materialInstance.destroy() }
         })

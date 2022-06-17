@@ -53,17 +53,19 @@ class RenderViewToExternalTexture extends FrameLayout {
   private final ArrayList<OnViewSizeChangedListener> onViewSizeChangedListeners = new ArrayList<>();
 
   @SuppressWarnings("initialization") // Suppress @UnderInitialization warning.
-  RenderViewToExternalTexture(Lifecycle lifecycle, Context context, View view) {
+  RenderViewToExternalTexture(Context context, View view, @Nullable Lifecycle lifecycle) {
     super(context);
     Preconditions.checkNotNull(view, "Parameter \"view\" was null.");
 
-    lifecycle.addObserver(new DefaultLifecycleObserver() {
-      @Override
-      public void onDestroy(@NonNull LifecycleOwner owner) {
-        DefaultLifecycleObserver.super.onDestroy(owner);
-        destroy();
-      }
-    });
+    if(lifecycle != null) {
+      lifecycle.addObserver(new DefaultLifecycleObserver() {
+        @Override
+        public void onDestroy(@NonNull LifecycleOwner owner) {
+          DefaultLifecycleObserver.super.onDestroy(owner);
+          destroy();
+        }
+      });
+    }
 
     externalTexture = new ExternalTexture(lifecycle);
 

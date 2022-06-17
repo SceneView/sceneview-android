@@ -128,7 +128,7 @@ public class ViewRenderable extends Renderable {
     horizontalAlignment = builder.horizontalAlignment;
     verticalAlignment = builder.verticalAlignment;
     RenderViewToExternalTexture renderView =
-        new RenderViewToExternalTexture(lifecycle, view.getContext(), view);
+        new RenderViewToExternalTexture(view.getContext(), view, lifecycle);
     renderView.addOnViewSizeChangedListener(onViewSizeChangedListener);
     viewRenderableData = new ViewRenderableInternalData(renderView);
 
