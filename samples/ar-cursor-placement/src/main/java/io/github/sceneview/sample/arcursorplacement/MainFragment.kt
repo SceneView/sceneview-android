@@ -68,11 +68,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         sceneView.addChild(cursorNode)
 
         isLoading = true
-        modelNode = ArModelNode()
-        modelNode.loadModelAsync(context = requireContext(),
+        modelNode = ArModelNode(
+            context = requireContext(),
             lifecycle = lifecycle,
-            glbFileLocation = "models/spiderbot.glb",
-            onLoaded = {
+            modelFileLocation = "models/spiderbot.glb",
+            onLoaded = { modelInstance ->
                 actionButton.text = getString(R.string.move_object)
                 actionButton.setIconResource(R.drawable.ic_target)
                 isLoading = false

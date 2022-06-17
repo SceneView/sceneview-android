@@ -44,18 +44,18 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         isLoading = true
-        modelNode = ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE).apply {
-            loadModelAsync(
-                context = requireContext(),
-                lifecycle = lifecycle,
-                glbFileLocation = "models/spiderbot.glb",
-                autoAnimate = true,
-                autoScale = false,
-                // Place the model origin at the bottom center
-                centerOrigin = Position(y = -1.0f)
-            ) {
-                isLoading = false
-            }
+        modelNode = ArModelNode(
+            context = requireContext(),
+            lifecycle = lifecycle,
+            modelFileLocation = "models/spiderbot.glb",
+            autoAnimate = true,
+            autoScale = false,
+            // Place the model origin at the bottom center
+            centerOrigin = Position(y = -1.0f)
+        ) {
+            isLoading = false
+        }.apply {
+            placementMode = PlacementMode.BEST_AVAILABLE
             onPoseChanged = { node, _ ->
                 actionButton.isGone = !node.isTracking
             }

@@ -94,35 +94,6 @@ open class ModelNode : Node {
     override val worldTransform: Mat4
         get() = super.worldTransform * modelTransform
 
-    /**
-     * ### Loads a monolithic binary glTF and add it to the Node
-     *
-     * The glb file location:
-     * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
-     *
-     * The load is done instantly if the node is already attached to the SceneView.
-     * Else, it will be loaded when SceneView is attached because it needs a
-     * [LifecycleCoroutineScope] and [Context] to load
-     *
-     * @see loadModel
-     */
-    var modelFileLocation: String? = null
-        set(value) {
-            if (field != value) {
-                field = value
-                if (value != null) {
-                    doOnAttachedToScene { sceneView: SceneView ->
-                        loadModelAsync(sceneView.context, sceneView.lifecycle, value)
-                    }
-                } else {
-                    setModel(null)
-                }
-            }
-        }
-
     // Rendering fields.
     private var renderableId: Int = ChangeId.EMPTY_ID
 
@@ -172,6 +143,54 @@ open class ModelNode : Node {
         rotation: Rotation = DEFAULT_ROTATION,
         scale: Scale = DEFAULT_SCALE
     ) : super(position, rotation, scale)
+
+    /**
+     * ### Create the Node and load a monolithic binary glTF and add it to the Node
+     *
+     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
+     * it (and its resources) when the lifecycle goes to destroy state.
+     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
+     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
+     * [SceneView] is.
+     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
+     * the node is never attached to a [SceneView]
+     * @param modelFileLocation the glb file location:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param autoScale Scale the model to fit a unit cube
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     *
+     * @see loadModel
+     */
+    constructor(
+        context: Context,
+        lifecycle: Lifecycle? = null,
+        modelFileLocation: String,
+        autoAnimate: Boolean = true,
+        autoScale: Boolean = false,
+        centerOrigin: Position? = null,
+        onError: ((error: Exception) -> Unit)? = null,
+        onLoaded: ((instance: RenderableInstance) -> Unit)? = null
+    ) : this() {
+        loadModelAsync(
+            context,
+            lifecycle,
+            modelFileLocation,
+            autoAnimate,
+            autoScale,
+            centerOrigin,
+            onError,
+            onLoaded
+        )
+    }
 
     /**
      * TODO : Doc
@@ -233,6 +252,13 @@ open class ModelNode : Node {
     /**
      * ### Loads a monolithic binary glTF and add it to the Node
      *
+     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
+     * it (and its resources) when the lifecycle goes to destroy state.
+     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
+     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
+     * [SceneView] is.
+     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
+     * the node is never attached to a [SceneView]
      * @param glbFileLocation the glb file location:
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
@@ -273,6 +299,13 @@ open class ModelNode : Node {
     /**
      * ### Loads a monolithic binary glTF and add it to the Node
      *
+     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
+     * it (and its resources) when the lifecycle goes to destroy state.
+     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
+     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
+     * [SceneView] is.
+     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
+     * the node is never attached to a [SceneView]
      * @param glbFileLocation the glb file location:
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
@@ -298,7 +331,7 @@ open class ModelNode : Node {
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null
-    ) {
+    ): ModelNode {
         if (lifecycle != null) {
             lifecycle.coroutineScope.launchWhenCreated {
                 loadModel(
@@ -319,6 +352,7 @@ open class ModelNode : Node {
                 )
             }
         }
+        return this
     }
 
     /**
