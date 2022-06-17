@@ -22,16 +22,16 @@ internal class ArModelView @JvmOverloads constructor(
 
     val modelNode = ArModelNode()
 
-    /**
-     * TODO: Doc
-     *
-     * @see io.github.sceneview.ar.node.ArModelNode.modelFileLocation
-     */
-    var model: String?
-        get() = modelNode.modelFileLocation
-        set(value) {
-            modelNode.modelFileLocation = value
-        }
+//    /**
+//     * TODO: Doc
+//     *
+//     * @see io.github.sceneview.ar.node.ArModelNode.modelFileLocation
+//     */
+//    var model: String?
+//        get() = modelNode.modelFileLocation
+//        set(value) {
+//            modelNode.modelFileLocation = value
+//        }
 
     /**
      * TODO: Doc
@@ -68,9 +68,9 @@ internal class ArModelView @JvmOverloads constructor(
     init {
         context.obtainStyledAttributes(attrs, R.styleable.ArModelView, defStyleAttr, defStyleRes)
             .use { typedArray ->
-                if (typedArray.hasValue(R.styleable.ArModelView_model)) {
-                    model = typedArray.getString(R.styleable.ArModelView_model)
-                }
+//                if (typedArray.hasValue(R.styleable.ArModelView_model)) {
+//                    typedArray.getString(R.styleable.ArModelView_model)
+//                }
                 if (typedArray.hasValue(R.styleable.ArModelView_placementMode)) {
                     placementMode = PlacementMode.values()[typedArray.getInt(
                         R.styleable.ArModelView_placementMode,

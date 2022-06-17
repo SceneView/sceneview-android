@@ -1,12 +1,17 @@
 package io.github.sceneview.ar.node
 
+import android.content.Context
+import androidx.lifecycle.Lifecycle
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
+import com.google.ar.sceneform.rendering.RenderableInstance
 import dev.romainguy.kotlin.math.Float3
+import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.math.Position
+import io.github.sceneview.node.Node
 import kotlin.math.abs
 
 /**
@@ -135,6 +140,54 @@ open class ArModelNode : ArNode {
      * TODO : Doc
      */
     constructor(hitResult: HitResult) : super(hitResult.createAnchor())
+
+    /**
+     * ### Create the Node and load a monolithic binary glTF and add it to the Node
+     *
+     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
+     * it (and its resources) when the lifecycle goes to destroy state.
+     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
+     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
+     * [SceneView] is.
+     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
+     * the node is never attached to a [SceneView]
+     * @param modelFileLocation the glb file location:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param autoScale Scale the model to fit a unit cube
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     *
+     * @see loadModel
+     */
+    constructor(
+        context: Context,
+        lifecycle: Lifecycle? = null,
+        modelFileLocation: String,
+        autoAnimate: Boolean = true,
+        autoScale: Boolean = false,
+        centerOrigin: Position? = null,
+        onError: ((error: Exception) -> Unit)? = null,
+        onLoaded: ((instance: RenderableInstance) -> Unit)? = null
+    ) : this() {
+        loadModelAsync(
+            context,
+            lifecycle,
+            modelFileLocation,
+            autoAnimate,
+            autoScale,
+            centerOrigin,
+            onError,
+            onLoaded
+        )
+    }
 
     override fun onArFrame(arFrame: ArFrame) {
         super.onArFrame(arFrame)
