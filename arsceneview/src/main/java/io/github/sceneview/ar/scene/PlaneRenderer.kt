@@ -9,7 +9,6 @@ import com.google.ar.core.Plane
 import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.DeadlineExceededException
 import com.google.ar.sceneform.rendering.Material
-import com.google.ar.sceneform.rendering.MaterialInternalDataImpl
 import com.google.ar.sceneform.rendering.PlaneVisualizer
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycle
@@ -216,15 +215,12 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
     }
 
     private suspend fun loadShadowMaterial() {
-        val material = MaterialLoader.loadMaterial(
+        shadowMaterialInstance = MaterialLoader.loadMaterial(
             sceneView.context,
             lifecycle,
             "sceneview/materials/plane_renderer_shadow.filamat"
-        )?.material ?: throw AssertionError("Can't load the plane renderer shadow material")
-
-        shadowMaterial = Material(lifecycle, MaterialInternalDataImpl(material))
-
-        shadowMaterialInstance = shadowMaterial?.filamentMaterialInstance
+        ) ?: throw AssertionError("Can't load the plane renderer shadow material")
+        shadowMaterial = Material(lifecycle, shadowMaterialInstance)
 
         visualizers.values.forEach { it.setShadowMaterial(shadowMaterial) }
     }
@@ -237,17 +233,11 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             TextureType.COLOR
         ) ?: throw AssertionError("Can't load the plane renderer texture")
 
-        val material = MaterialLoader.loadMaterial(
+        materialInstance = MaterialLoader.loadMaterial(
             sceneView.context,
             lifecycle,
             "sceneview/materials/plane_renderer.filamat"
-        )?.material ?: throw AssertionError("Can't load the plane renderer material")
-
-        planeMaterial = Material(lifecycle, MaterialInternalDataImpl(material))
-
-        materialInstance = planeMaterial?.filamentMaterialInstance
-
-        materialInstance?.apply {
+        )?.apply {
             setTexture(MATERIAL_TEXTURE, texture)
 
             val widthToHeightRatio = texture.getWidth(0).toFloat() / texture.getHeight(0).toFloat()
@@ -257,8 +247,9 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             setParameter(MATERIAL_UV_SCALE, scaleX, scaleY)
             setParameter(MATERIAL_COLOR, Color(1.0f, 1.0f, 1.0f))
             setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
-        }
+        } ?: throw AssertionError("Can't load the plane renderer material")
 
+        planeMaterial = Material(lifecycle, materialInstance)
         for (planeVisualizer in visualizers.values) {
             planeVisualizer.setPlaneMaterial(planeMaterial)
         }

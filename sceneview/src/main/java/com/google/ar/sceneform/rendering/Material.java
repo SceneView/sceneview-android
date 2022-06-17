@@ -33,11 +33,12 @@ public class Material {
 
     private final MaterialParameters materialParameters = new MaterialParameters();
 
+    @Nullable
     protected Lifecycle lifecycle;
 
     @Nullable
-    private final MaterialInternalData materialData;
-    public final IMaterialInstance internalMaterialInstance;
+    private final com.google.android.filament.Material filamentMaterial;
+    public final MaterialInstance filamentMaterialInstance;
 
     /**
      * Creates a new instance of this Material.
@@ -52,114 +53,82 @@ public class Material {
 
     public void setBoolean(String name, boolean x) {
         materialParameters.setBoolean(name, x);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setBoolean2(String name, boolean x, boolean y) {
         materialParameters.setBoolean2(name, x, y);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setBoolean3(String name, boolean x, boolean y, boolean z) {
         materialParameters.setBoolean3(name, x, y, z);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setBoolean4(String name, boolean x, boolean y, boolean z, boolean w) {
         materialParameters.setBoolean4(name, x, y, z, w);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setFloat(String name, float x) {
         materialParameters.setFloat(name, x);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setFloat2(String name, float x, float y) {
         materialParameters.setFloat2(name, x, y);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setFloat3(String name, float x, float y, float z) {
         materialParameters.setFloat3(name, x, y, z);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setFloat3(String name, Vector3 value) {
         materialParameters.setFloat3(name, value);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setFloat3(String name, Color color) {
         materialParameters.setFloat3(name, color.r, color.g, color.b);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setFloat4(String name, float x, float y, float z, float w) {
         materialParameters.setFloat4(name, x, y, z, w);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setFloat4(String name, Color color) {
         materialParameters.setFloat4(name, color.r, color.g, color.b, color.a);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setInt(String name, int x) {
         materialParameters.setInt(name, x);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setInt2(String name, int x, int y) {
         materialParameters.setInt2(name, x, y);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setInt3(String name, int x, int y, int z) {
         materialParameters.setInt3(name, x, y, z);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setInt4(String name, int x, int y, int z, int w) {
         materialParameters.setInt4(name, x, y, z, w);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setTexture(String name, Texture texture) {
         materialParameters.setTexture(name, texture);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     public void setBaseColorTexture(Texture texture) {
@@ -178,9 +147,7 @@ public class Material {
      */
     public void setDepthTexture(String name, com.google.android.filament.Texture depthTexture) {
         materialParameters.setDepthTexture(name, depthTexture);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyParameterTo(internalMaterialInstance.getInstance(), name);
-        }
+        materialParameters.applyParameterTo(filamentMaterialInstance, name);
     }
 
     /**
@@ -191,9 +158,7 @@ public class Material {
      */
     public void setExternalTexture(String name, ExternalTexture externalTexture) {
         materialParameters.setExternalTexture(name, externalTexture);
-        if (internalMaterialInstance.isValidInstance()) {
-            materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.applyTo(filamentMaterialInstance);
     }
 
     @Nullable
@@ -214,46 +179,44 @@ public class Material {
     }
 
     void copyMaterialParameters(MaterialParameters materialParameters) {
-        this.materialParameters.copyFrom(materialParameters);
-        if (internalMaterialInstance.isValidInstance()) {
-            this.materialParameters.applyTo(internalMaterialInstance.getInstance());
-        }
+        materialParameters.copyFrom(materialParameters);
+        materialParameters.applyTo(filamentMaterialInstance);
+    }
+
+    public com.google.android.filament.Material getFilamentMaterial() {
+        return filamentMaterial != null ? filamentMaterial : filamentMaterialInstance.getMaterial();
     }
 
     public MaterialInstance getFilamentMaterialInstance() {
         // Filament Material Instance is only set to null when it is disposed or destroyed, so any
         // usage after that point is an internal error.
-        if (!internalMaterialInstance.isValidInstance()) {
+        if (filamentMaterialInstance == null) {
             throw new AssertionError("Filament Material Instance is null.");
         }
-        return internalMaterialInstance.getInstance();
+        return filamentMaterialInstance;
+    }
+
+    public Material(@Nullable Lifecycle lifecycle, com.google.android.filament.Material filamentMaterial) {
+        this(lifecycle, filamentMaterial, false);
     }
 
     @SuppressWarnings("initialization")
-    public Material(Lifecycle lifecycle, MaterialInternalData materialData) {
+    public Material(@Nullable Lifecycle lifecycle, com.google.android.filament.Material filamentMaterial, boolean useDefaultInstance) {
         this.lifecycle = lifecycle;
-        this.materialData = materialData;
-        if (materialData instanceof MaterialInternalDataImpl) {
-            // Do the legacy thing.
-            internalMaterialInstance =
-                    new InternalMaterialInstance(MaterialKt.createInstance(
-                            materialData.getFilamentMaterial(), lifecycle));
-        } else {
-            // Do the glTF thing.
-            internalMaterialInstance = new InternalGltfMaterialInstance();
-        }
+        this.filamentMaterial = filamentMaterial;
+        this.filamentMaterialInstance = useDefaultInstance ? filamentMaterial.getDefaultInstance() : filamentMaterial.createInstance();
     }
 
-    void updateGltfMaterialInstance(MaterialInstance instance) {
-        if (internalMaterialInstance instanceof InternalGltfMaterialInstance) {
-            ((InternalGltfMaterialInstance) internalMaterialInstance).setMaterialInstance(instance);
-            materialParameters.applyTo(instance);
-        }
+    @SuppressWarnings("initialization")
+    public Material(@Nullable Lifecycle lifecycle, com.google.android.filament.MaterialInstance materialInstance) {
+        this.lifecycle = lifecycle;
+        this.filamentMaterial = materialInstance.getMaterial();
+        this.filamentMaterialInstance = materialInstance;
     }
 
     @SuppressWarnings("initialization")
     private Material(Material other) {
-        this(other.lifecycle, other.materialData);
+        this(other.lifecycle, other.filamentMaterial);
         copyMaterialParameters(other.materialParameters);
     }
 
@@ -400,9 +363,8 @@ public class Material {
             }
 
             if (sourceBuffer != null) {
-                MaterialInternalDataImpl materialData =
-                        new MaterialInternalDataImpl(createFilamentMaterial(sourceBuffer));
-                Material material = new Material(lifecycle, materialData);
+                com.google.android.filament.Material filamentMaterial = createFilamentMaterial(sourceBuffer);
+                Material material = new Material(lifecycle, filamentMaterial);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -415,9 +377,7 @@ public class Material {
                         TAG, result, "Unable to load Material registryId='" + registryId + "'");
                 return result;
             } else if (existingMaterial != null) {
-                MaterialInternalDataGltfImpl materialData =
-                        new MaterialInternalDataGltfImpl(existingMaterial);
-                Material material = new Material(lifecycle, materialData);
+                Material material = new Material(lifecycle, existingMaterial);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -443,27 +403,25 @@ public class Material {
 
             CompletableFuture<Material> result =
                     CompletableFuture.supplyAsync(
-                            () -> {
-                                @Nullable ByteBuffer byteBuffer;
-                                // Open and read the material file.
-                                try (InputStream inputStream = inputStreamCallable.call()) {
-                                    byteBuffer = SceneformBufferUtils.readStream(inputStream);
-                                } catch (Exception e) {
-                                    throw new CompletionException(e);
-                                }
+                                    () -> {
+                                        @Nullable ByteBuffer byteBuffer;
+                                        // Open and read the material file.
+                                        try (InputStream inputStream = inputStreamCallable.call()) {
+                                            byteBuffer = SceneformBufferUtils.readStream(inputStream);
+                                        } catch (Exception e) {
+                                            throw new CompletionException(e);
+                                        }
 
-                                if (byteBuffer == null) {
-                                    throw new IllegalStateException("Unable to read data from input stream.");
-                                }
+                                        if (byteBuffer == null) {
+                                            throw new IllegalStateException("Unable to read data from input stream.");
+                                        }
 
-                                return byteBuffer;
-                            },
-                            ThreadPools.getThreadPoolExecutor())
+                                        return byteBuffer;
+                                    },
+                                    ThreadPools.getThreadPoolExecutor())
                             .thenApplyAsync(
                                     byteBuffer -> {
-                                        MaterialInternalDataImpl materialData =
-                                                new MaterialInternalDataImpl(createFilamentMaterial(byteBuffer));
-                                        return new Material(lifecycle, materialData);
+                                        return new Material(lifecycle, createFilamentMaterial(byteBuffer));
                                     },
                                     ThreadPools.getMainExecutor());
 
@@ -494,54 +452,6 @@ public class Material {
             } catch (Exception e) {
                 throw new IllegalArgumentException("Unable to create material from source byte buffer.", e);
             }
-        }
-    }
-
-    // Material.java's internal representation of a material instance.
-    interface IMaterialInstance {
-        MaterialInstance getInstance();
-
-        boolean isValidInstance();
-    }
-
-    // Represents a filament material instance created in Sceneform.
-    static class InternalMaterialInstance implements IMaterialInstance {
-        final MaterialInstance instance;
-
-        public InternalMaterialInstance(MaterialInstance instance) {
-            this.instance = instance;
-        }
-
-        @Override
-        public MaterialInstance getInstance() {
-            return instance;
-        }
-
-        @Override
-        public boolean isValidInstance() {
-            return instance != null;
-        }
-    }
-
-    // A filament material instance created and managed in the native loader.
-    static class InternalGltfMaterialInstance implements IMaterialInstance {
-        MaterialInstance instance;
-
-        public InternalGltfMaterialInstance() {
-        }
-
-        void setMaterialInstance(MaterialInstance instance) {
-            this.instance = instance;
-        }
-
-        @Override
-        public MaterialInstance getInstance() {
-            return Preconditions.checkNotNull(instance);
-        }
-
-        @Override
-        public boolean isValidInstance() {
-            return instance != null;
         }
     }
 }
