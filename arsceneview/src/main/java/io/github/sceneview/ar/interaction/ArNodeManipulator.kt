@@ -57,13 +57,11 @@ open class ArNodeManipulator(
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
-            lastHitResult?.takeIf { it.isTracking }?.let {
-                node.anchor = it.createAnchor()
-                node.anchor
-            }
-
             currentGestureTransform = null
-            lastHitResult = null
+            lastHitResult?.takeIf { it.isTracking }?.apply {
+                lastHitResult = null
+                node.anchor = createAnchor()
+            } ?: node.anchor()
         } != null
 
     // The first delta is always way off as it contains all delta until threshold to
