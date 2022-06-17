@@ -3,7 +3,6 @@ package io.github.sceneview.ar
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
-import androidx.lifecycle.*
 import com.google.ar.core.*
 import com.google.ar.core.CameraConfig.FacingDirection
 import com.google.ar.sceneform.ArCamera
@@ -13,9 +12,11 @@ import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.camera.ArCameraStream
 import io.github.sceneview.ar.interaction.ArNodeManipulator
 import io.github.sceneview.ar.interaction.ArSceneGestureDetector
+import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.node.Node
+import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
 
@@ -238,6 +239,13 @@ open class ArSceneView @JvmOverloads constructor(
     }
 
     /**
+     * ### Whether it is possible to deselect nodes
+     *
+     * An `ArNode` can be deselected if no `ArNode`s are picked on tap.
+     */
+    var allowDeselectingNodes = true
+
+    /**
      * ### Invoked when an ARCore error occurred
      *
      * Registers a callback to be invoked when the ARCore Session cannot be initialized because
@@ -260,21 +268,19 @@ open class ArSceneView @JvmOverloads constructor(
     var onArFrame: ((arFrame: ArFrame) -> Unit)? = null
 
     /**
-     * ### Invoked when an ARCore plane is tapped
+     * ### Invoked when an ARCore trackable is tapped
      *
-     * Registers a callback to be invoked when an ARCore [Trackable] is tapped.
-     * Depending on the session config you defined, the [HitResult.getTrackable] can be:
-     * - a [Plane] if [ArSession.planeFindingEnabled]
-     * - an [InstantPlacementPoint] if [ArSession.instantPlacementEnabled]
-     * - a [DepthPoint] if [ArSession.depthEnabled]
+     * Depending on the session configuration the [HitResult.getTrackable] can be:
+     * - A [Plane] if [ArSession.planeFindingEnabled].
+     * - An [InstantPlacementPoint] if [ArSession.instantPlacementEnabled].
+     * - A [DepthPoint] and [Point] if [ArSession.depthEnabled].
      *
-     * The callback will only be invoked if no [com.google.ar.sceneform.Node] was tapped.
+     * The listener is only invoked if no node is tapped.
      *
-     * - hitResult: The ARCore hit result that occurred when tapping the plane
-     * - motionEvent: the motion event that triggered the tap
+     * - `hitResult` - The ARCore hit result for the trackable that was tapped.
+     * - `motionEvent` - The motion event that caused the tap.
      */
-    var onTouchAr: ((hitResult: HitResult, motionEvent: MotionEvent) -> Unit)? =
-        null
+    var onTapAr: ((hitResult: HitResult, motionEvent: MotionEvent) -> Unit)? = null
 
     /**
      * ### Invoked when an ARCore AugmentedImage TrackingState/TrackingMethod is updated
@@ -421,38 +427,38 @@ open class ArSceneView @JvmOverloads constructor(
         }
     }
 
-    override fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
-        // TODO : Should be handled by the nodesTouchEventDispatcher
-        //nodeGestureRecognizer.onNodeTap(null)
+    override fun onTap(node: Node?, renderable: Renderable, motionEvent: MotionEvent) {
+        super.onTap(node, renderable, motionEvent)
 
-        arSession?.let { session ->
-            session.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
-                onTouchAr(hitResult, motionEvent)
-                return true
+        val selectedNode = node?.firstEnclosingNode<ArNode>()
+
+        if (selectedNode != null) {
+            gestureDetector.selectedNode = selectedNode
+        } else if (allowDeselectingNodes) {
+            gestureDetector.selectedNode = null
+        }
+
+        if (node == null) {
+            arSession?.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
+                onTapAr(hitResult, motionEvent)
             }
         }
-        return false
     }
 
     /**
-     * ### Invoked when an ARCore [Trackable] is tapped
+     * ### Invoked when an ARCore trackable is tapped
      *
-     * The callback will only be invoked if **no** [com.google.ar.sceneform.Node] was tapped.
+     * Calls the `onTapAr` listener if it is available.
      *
-     * - hitResult: The ARCore hit result that occurred when tapping the plane
-     * - plane: The ARCore Plane that was tapped
-     * - motionEvent: the motion event that triggered the tap
+     * @param hitResult The ARCore hit result for the trackable that was tapped.
+     * @param motionEvent The motion event that caused the tap.
      */
-    protected open fun onTouchAr(hitResult: HitResult, motionEvent: MotionEvent) {
-        onTouchAr?.invoke(hitResult, motionEvent)
+    open fun onTapAr(hitResult: HitResult, motionEvent: MotionEvent) {
+        onTapAr?.invoke(hitResult, motionEvent)
     }
 
     open class DefaultArSceneGestureListener(sceneView: SceneView) :
-        SceneView.DefaultSceneGestureListener(sceneView) {
-        override fun onSingleTapUp(e: MotionEvent): Boolean {
-            return sceneView.onTouch(null, e)
-        }
-    }
+        SceneView.DefaultSceneGestureListener(sceneView)
 }
 
 /**

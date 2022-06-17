@@ -31,10 +31,6 @@ open class ArNodeManipulator(
     open val selectedNodeVisualizer: SelectedNodeVisualizer
         get() = sceneView.selectedNodeVisualizer
 
-    open fun onNodeTouch(node: Node) {
-        selectedNode = node as? ArNode
-    }
-
     open fun beginTransform(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == null && it.positionEditable

@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.util.Log
 import android.view.*
 import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
@@ -36,8 +37,8 @@ import io.github.sceneview.math.toFloat3
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
+import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.*
-import kotlin.math.roundToInt
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
 const val defaultSkybox = "sceneview/environments/indoor_studio/indoor_studio_skybox.ktx"
@@ -107,18 +108,18 @@ open class SceneView @JvmOverloads constructor(
             }
 
     /**
-     * ### The transformation system
+     * ### The gesture listener
      *
-     * Used by [TransformableNode] for detecting gestures and coordinating which node is selected.
-     * Can be overridden to create a custom transformation system.
+     * Handles all supported gestures.
      */
-    //val nodeGestureRecognizer by lazy {
-    //    TransformableManager(resources.displayMetrics, FootprintSelectionVisualizer())
-    //}
-
     open var gestureListener: SceneGestureDetector.OnSceneGestureListener =
         DefaultSceneGestureListener(this)
 
+    /**
+     * ### The gesture detector
+     *
+     * Provides a unified place for processing touch events and recognizing gestures.
+     */
     open val gestureDetector: SceneGestureDetector by lazy {
         SceneGestureDetector(
             this,
@@ -182,32 +183,17 @@ open class SceneView @JvmOverloads constructor(
     var onFrame: ((frameTime: FrameTime) -> Unit)? = null
 
     /**
-     * ### Register a callback to be invoked when the scene is touched.
+     * ### Invoked when the `SceneView` is tapped
      *
-     * You should not use this callback in you have anything on your scene.
-     * Node selection, gestures recognizer and surface gesture recognizer won't be updated if you
-     * return true.
+     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
+     * used to find a touched node. The ID of the Filament renderable can be used to determine what
+     * part of a model is tapped.
      *
-     * **Have a look at [onTouch] or other gestures listeners**
-     *
-     * Called even if the touch is not over a node, in which case [PickHitResult.getNode]
-     * will be null.
-     *
-     * - `pickHitResult` - represents the node that was touched if any
-     * - `motionEvent` - the motion event
-     * - `return` true if the listener has consumed the event
+     * - `node` - The node that was tapped or `null`.
+     * - `renderable` - The ID of the Filament renderable that was tapped.
+     * - `motionEvent` - The motion event that caused the tap.
      */
-    var onTouchEvent: ((selectedNode: Node?, motionEvent: MotionEvent) -> Boolean)? = null
-
-    /**
-     * ### Register a callback to be invoked on the surface singleTap
-     *
-     * Called even if the touch is not over a selectable node, in which case `node` will be null.
-     *
-     * - `selectedNode` - The node that was hit by the hit test. Null when there is no hit
-     * - `motionEvent` - The original [MotionEvent]
-     */
-    var onTouch: ((selectedNode: Node?, motionEvent: MotionEvent) -> Boolean)? = null
+    var onTap: ((node: Node?, renderable: Renderable, motionEvent: MotionEvent) -> Unit)? = null
 
     init {
         try {
@@ -358,6 +344,21 @@ open class SceneView @JvmOverloads constructor(
         return false
     }
 
+    /**
+     * ### Invoked when the `SceneView` is tapped
+     *
+     * Calls the `onTap` listener if it is available.
+     *
+     * @param node The node that was tapped or `null`.
+     * @param renderable The ID of the Filament renderable that was tapped.
+     * @param motionEvent The motion event that caused the tap.
+     */
+    open fun onTap(node: Node?, renderable: Renderable, motionEvent: MotionEvent) {
+        onTap?.invoke(node, renderable, motionEvent)
+
+        node?.onTap(renderable, motionEvent)
+    }
+
     override fun setBackgroundDrawable(background: Drawable?) {
         super.setBackgroundDrawable(background)
 
@@ -443,29 +444,6 @@ open class SceneView @JvmOverloads constructor(
      */
     fun stopMirroringToSurface(surface: Surface) = renderer.stopMirroring(surface)
 
-    /**
-     * ### Invoked when the scene is touched.
-     *
-     * Called even if the touch is not over a node, in which case [PickHitResult.getNode]
-     * will be null.
-     *
-     * @param pickHitResult represents the node that was touched
-     * @param motionEvent   the motion event
-     */
-    open fun onSceneTouch(motionEvent: MotionEvent) {
-        if (onTouchEvent?.invoke(null, motionEvent) != true) {
-            gestureDetector.onTouchEvent(motionEvent)
-        }
-    }
-
-    open fun onPickNode(selectedNode: ModelNode) {
-        gestureDetector.onTouchNode(selectedNode)
-    }
-
-    open fun onTouch(selectedNode: Node?, motionEvent: MotionEvent): Boolean {
-        return onTouch?.invoke(selectedNode, motionEvent) ?: false
-    }
-
     fun addEntity(@Entity entity: Int) {
         renderer.filamentScene.addEntity(entity)
     }
@@ -474,35 +452,47 @@ open class SceneView @JvmOverloads constructor(
         renderer.filamentScene.removeEntity(entity)
     }
 
-    override fun setOnClickListener(listener: OnClickListener?) {
-        onTouch = listener?.let {
-            { _, _ ->
-                it.onClick(this)
-                true
-            }
+    /**
+     * ### Picks a node at given coordinates
+     *
+     * Filament picking works with a small delay, therefore, a callback is used.
+     * If no node is picked, the callback is invoked with a `null` value instead of a node.
+     *
+     * @param x The x coordinate within the `SceneView`.
+     * @param y The y coordinate within the `SceneView`.
+     * @param onPickingCompleted Called when picking completes.
+     */
+    fun pickNode(x: Int, y: Int, onPickingCompleted: (node: ModelNode?, renderable: Renderable) -> Unit) {
+        // Invert the y coordinate since its origin is at the bottom
+        val invertedY = height - 1 - y
+
+        val start = System.currentTimeMillis()
+
+        renderer.filamentView.pick(x, invertedY, pickingHandler) { pickResult ->
+            val end = System.currentTimeMillis()
+
+            Log.d("Test", "Picking took ${end - start} ms")
+
+            val pickedRenderable = pickResult.renderable
+            val pickedNode = allChildren
+                .mapNotNull { it as? ModelNode }
+                .firstOrNull { modelNode ->
+                    modelNode.modelInstance?.let { modelInstance ->
+                        modelInstance.entity == pickedRenderable ||
+                                modelInstance.childEntities.contains(
+                                    pickedRenderable
+                                )
+                    } ?: false
+                }
+            onPickingCompleted.invoke(pickedNode, pickedRenderable)
         }
     }
 
     open class DefaultSceneGestureListener(val sceneView: SceneView) :
         SceneGestureDetector.OnSceneGestureListener {
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            // Invert the y coordinate since its origin is at the bottom
-            val x = e.x.toInt()
-            val y = sceneView.height - 1 - e.y.toInt()
-
-            sceneView.renderer.filamentView.pick(x, y, sceneView.pickingHandler) { pickResult ->
-                val pickedEntity = pickResult.renderable
-                val selectedNode = sceneView.allChildren
-                    .mapNotNull { it as? ModelNode }
-                    .firstOrNull { modelNode ->
-                        modelNode.modelInstance?.let { modelInstance ->
-                            modelInstance.entity == pickedEntity ||
-                                    modelInstance.childEntities.contains(
-                                        pickedEntity
-                                    )
-                        } ?: false
-                    }
-                selectedNode?.let { sceneView.onPickNode(it) }
+            sceneView.pickNode(e.x.toInt(), e.y.toInt()) { node, renderable  ->
+                sceneView.onTap(node, renderable, e)
             }
             return true
         }
