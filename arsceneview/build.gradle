@@ -5,6 +5,8 @@ plugins {
 }
 
 android {
+    namespace 'io.github.sceneview.ar'
+
     compileSdk 31
 
     defaultConfig {
