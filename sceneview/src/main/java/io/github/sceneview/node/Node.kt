@@ -48,7 +48,7 @@ private const val defaultTouchSlop = 8
 open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     companion object {
-        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = -4.0f)
+        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = 0.0f)
         val DEFAULT_QUATERNION get() = Quaternion()
         val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
         val DEFAULT_SCALE get() = Scale(1.0f)
@@ -299,7 +299,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - The node's [collisionShape] will be checked in calls to Scene.hitTest.
      * - The node's [onTouchEvent] function will be called when the node is touched.
      */
-    internal val shouldBeRendered: Boolean
+    open val shouldBeRendered: Boolean
         get() = isVisible && isAttached
                 && parentNode?.shouldBeRendered != false
 
@@ -528,7 +528,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         super.onDestroy(owner)
     }
 
-    internal fun updateVisibility() {
+    fun updateVisibility() {
         isRendered = shouldBeRendered
         children.forEach { it.updateVisibility() }
     }
