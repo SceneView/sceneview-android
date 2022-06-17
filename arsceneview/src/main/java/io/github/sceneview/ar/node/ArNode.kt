@@ -43,7 +43,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     /**
      * TODO : Doc
      */
-    var pose: Pose? = null
+    open var pose: Pose? = null
         set(value) {
             val position = value?.position
             val quaternion = value?.quaternion
@@ -56,7 +56,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
                         transform(position = position, quaternion = quaternion)
                     }
                 }
-                onTrackingChanged(isTracking, value)
+                onPoseChanged(value)
             }
         }
 
@@ -88,10 +88,14 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     var cloudAnchorTaskInProgress = false
         private set
 
+    @Deprecated("Replaced by onPoseChanged", replaceWith = ReplaceWith("onPoseChanged"), DeprecationLevel.ERROR)
+    /** ## Deprecated: Use [onPoseChanged] and [isTracking] */
+    var onTrackingChanged: ((node: ArNode, isTracking: Boolean, pose: Pose?) -> Unit)? = null
+
     /**
      * TODO : Doc
      */
-    var onTrackingChanged: ((node: ArNode, isTracking: Boolean, pose: Pose?) -> Unit)? = null
+    var onPoseChanged: ((node: ArNode, pose: Pose?) -> Unit)? = null
 
     /**
      * TODO : Doc
@@ -129,6 +133,13 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     /**
      * TODO : Doc
      */
+    constructor(placementMode: PlacementMode) : this() {
+        this.placementMode = placementMode
+    }
+
+    /**
+     * TODO : Doc
+     */
     constructor(anchor: Anchor) : this() {
         this.anchor = anchor
     }
@@ -162,8 +173,8 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     /**
      * TODO : Doc
      */
-    open fun onTrackingChanged(isTracking: Boolean, pose: Pose?) {
-        onTrackingChanged?.invoke(this, isTracking, pose)
+    open fun onPoseChanged(pose: Pose?) {
+        onPoseChanged?.invoke(this, pose)
     }
 
     /**
@@ -172,7 +183,6 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     open fun onAnchorChanged(anchor: Anchor?) {
         onAnchorChanged?.invoke(this, anchor)
     }
-
 
     /**
      * ### Performs a ray cast to retrieve the ARCore info at this camera point

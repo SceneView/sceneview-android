@@ -59,9 +59,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         cursorNode = CursorNode(context = requireContext(), lifecycle = lifecycle).apply {
-            onTrackingChanged = { _, isTracking, _ ->
+            onPoseChanged = { node, _ ->
                 if (!isLoading) {
-                    actionButton.isGone = !isTracking
+                    actionButton.isGone = !node.isTracking
                 }
             }
         }
