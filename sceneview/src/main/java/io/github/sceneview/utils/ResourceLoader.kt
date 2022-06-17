@@ -161,7 +161,7 @@ fun <R> Context.useLocalFileBufferNotNull(
 /**
  * ### Retrieve a android resource uri from a res id
  */
-fun Context.getResourceUri(@IdRes resId: Int): String {
+fun Context.getResourceUri(resId: Int): String {
     return "${ContentResolver.SCHEME_ANDROID_RESOURCE}://$packageName/$resId"
 }
 
