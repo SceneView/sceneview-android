@@ -285,7 +285,7 @@ open class ArSceneView @JvmOverloads constructor(
      * @see AugmentedImage.getTrackingState
      * @see AugmentedImage.getTrackingMethod
      */
-    var onAugmentedImageUpdate: ((augmentedImage: AugmentedImage) -> Unit)? = null
+    var onAugmentedImageUpdate = mutableListOf<(augmentedImage: AugmentedImage) -> Unit>()
 
     /**
      * ### Invoked when an ARCore AugmentedFace TrackingState is updated
@@ -381,8 +381,12 @@ open class ArSceneView @JvmOverloads constructor(
         // to use in any calculations during the frame.
         this.camera.updateTrackedPose(arFrame.camera)
 
-        if (onAugmentedImageUpdate != null) {
-            arFrame.updatedAugmentedImages.forEach(onAugmentedImageUpdate)
+        if(onAugmentedImageUpdate.isNotEmpty()) {
+            arFrame.updatedAugmentedImages.forEach { augmentedImage ->
+                onAugmentedImageUpdate.forEach {
+                    it(augmentedImage)
+                }
+            }
         }
 
         if (onAugmentedFaceUpdate != null) {
