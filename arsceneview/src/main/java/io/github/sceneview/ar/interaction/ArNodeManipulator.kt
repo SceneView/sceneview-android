@@ -33,7 +33,7 @@ open class ArNodeManipulator(
     open val selectedNodeVisualizer: SelectedNodeVisualizer
         get() = sceneView.selectedNodeVisualizer
 
-    open fun beginTransform(): Boolean =
+    open fun beginTranslate(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == null && it.positionEditable
         }?.let { node ->
@@ -41,7 +41,7 @@ open class ArNodeManipulator(
             node.detachAnchor()
         } != null
 
-    open fun continueTransform(x: Float, y: Float): Boolean =
+    open fun continueTranslate(x: Float, y: Float): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
@@ -53,7 +53,7 @@ open class ArNodeManipulator(
             }
         } != null
 
-    open fun endTransform(): Boolean =
+    open fun endTranslate(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
