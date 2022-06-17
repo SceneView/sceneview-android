@@ -1,10 +1,8 @@
 package io.github.sceneview.node
 
 import android.view.MotionEvent
-import android.view.ViewConfiguration
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
 import com.google.ar.sceneform.collision.CollisionSystem
@@ -18,6 +16,7 @@ import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.*
+import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.FrameTime
 
 // This is the default from the ViewConfiguration class.
@@ -400,44 +399,16 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     val onTransformChanged = mutableListOf<(node: Node) -> Unit>()
 
     /**
-     * ### Registers a callback to be invoked when a touch event is dispatched to this node
+     * ### Invoked when the node is tapped
      *
-     * The way that touch events are propagated mirrors the way touches are propagated to Android
-     * Views. This is only called when the node is active.
+     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
+     * used to find a touched node. The ID of the Filament renderable can be used to determine what
+     * part of a model is tapped.
      *
-     * When an ACTION_DOWN event occurs, that represents the start of a gesture. ACTION_UP or
-     * ACTION_CANCEL represents when a gesture ends. When a gesture starts, the following is done:
-     *
-     * - Dispatch touch events to the node that was touched as detected by hitTest.
-     * - If the node doesn't consume the event, recurse upwards through the node's parents and
-     * dispatch the touch event until one of the node's consumes the event.
-     * - If no nodes consume the event, the gesture is ignored and subsequent events that are part
-     * of the gesture will not be passed to any nodes.
-     * - If one of the node's consumes the event, then that node will consume all future touch
-     * events for the gesture.
-     *
-     * When a touch event is dispatched to a node, the event is first passed to the node's.
-     * If the [onTouchEvent] doesn't handle the event, it is passed to [.onTouchEvent].
-     *
-     * - `pickHitResult` - Represents the node that was touched and information about where it was
-     * touched
-     * - `motionEvent` - The MotionEvent object containing full information about the event
-     * - `return` true if the listener has consumed the event, false otherwise
+     * - `renderable` - The ID of the Filament renderable that was tapped.
+     * - `motionEvent` - The motion event that caused the tap.
      */
-    var onTouchEvent: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Boolean)? = null
-
-    /**
-     * ### Registers a callback to be invoked when this node is tapped.
-     *
-     * If there is a callback registered, then touch events will not bubble to this node's parent.
-     * If the Node.onTouchEvent is overridden and super.onTouchEvent is not called, then the tap
-     * will not occur.
-     *
-     * - `pickHitResult` - represents the node that was tapped and information about where it was
-     * touched
-     * - `motionEvent - The [MotionEvent.ACTION_UP] MotionEvent that caused the tap
-     */
-    var onTouched: ((pickHitResult: PickHitResult, motionEvent: MotionEvent) -> Unit)? = null
+    var onTap: ((renderable: Renderable, motionEvent: MotionEvent) -> Unit)? = null
 
     /**
      * ### Construct a [Node] with it Position, Rotation and Scale
@@ -496,6 +467,20 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
             }
         }
         onFrame.forEach { it(frameTime, this) }
+    }
+
+    /**
+     * ### Invoked when the node is tapped
+     *
+     * Calls the `onTap` listener if it is available and passes the tap to the parent node.
+     *
+     * @param renderable The ID of the Filament renderable that was tapped.
+     * @param motionEvent The motion event that caused the tap.
+     */
+    open fun onTap(renderable: Renderable, motionEvent: MotionEvent) {
+        onTap?.invoke(renderable, motionEvent)
+
+        parentNode?.onTap(renderable, motionEvent)
     }
 
     /**
@@ -619,6 +604,24 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     fun isDescendantOf(ancestor: NodeParent): Boolean =
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
 
+    /**
+     * ### Finds the first enclosing node with the given type
+     *
+     * The node can be:
+     * - This node.
+     * - One of the parent nodes.
+     * - `null` if no node is found.
+     */
+    inline fun <reified T: Node> firstEnclosingNode(): T? {
+        var currentNode: Node? = this
+
+        while (currentNode != null && currentNode !is T) {
+            currentNode = currentNode.parentNode
+        }
+
+        return currentNode as? T
+    }
+
     // TODO : Remove this to full Kotlin Math
     override fun getTransformationMatrix(): Matrix {
         return Matrix(worldTransform.toColumnsFloatArray())
@@ -664,117 +667,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
                 collider = null
             }
         }
-
-    /**
-     * ### Handles when this node is touched
-     *
-     * Override to perform any logic that should occur when this node is touched. The way that
-     * touch events are propagated mirrors the way touches are propagated to Android Views. This is
-     * only called when the node is active.
-     *
-     * When an ACTION_DOWN event occurs, that represents the start of a gesture. ACTION_UP or
-     * ACTION_CANCEL represents when a gesture ends. When a gesture starts, the following is done:
-     *
-     * - Dispatch touch events to the node that was touched as detected by hitTest.
-     * - If the node doesn't consume the event, recurse upwards through the node's parents and
-     * dispatch the touch event until one of the node's consumes the event.
-     * - If no nodes consume the event, the gesture is ignored and subsequent events that are part
-     * of the gesture will not be passed to any nodes.
-     * - If one of the node's consumes the event, then that node will consume all future touch
-     * events for the gesture.
-     *
-     * When a touch event is dispatched to a node, the event is first passed to the node's.
-     * If the [onTouchEvent] doesn't handle the event, it is passed to [onTouchEvent].
-     *
-     * @param pickHitResult Represents the node that was touched, and information about where it was
-     * touched. On ACTION_DOWN events, [PickHitResult.getNode] will always be this node or
-     * one of its children. On other events, the touch may have moved causing the
-     * [PickHitResult.getNode] to change (or possibly be null).
-     * @param motionEvent   The motion event.
-     *
-     * @return true if the event was handled, false otherwise.
-     */
-    fun onTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent): Boolean {
-        // TODO : Cleanup
-        var handled = false
-
-        // Reset tap tracking data if a new gesture has started or if the Node has become inactive.
-        val actionMasked = motionEvent.actionMasked
-        if (actionMasked == MotionEvent.ACTION_DOWN || !isRendered) {
-            touchTrackingData = null
-        }
-        when (actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                // Only start tacking the tap gesture if there is a tap listener set.
-                // This allows the event to bubble up to the node's parent when there is no listener.
-                if (onTouched != null) {
-                    pickHitResult.node?.let { hitNode ->
-                        val downPosition = Vector3(motionEvent.x, motionEvent.y, 0.0f)
-                        touchTrackingData = TapTrackingData(hitNode, downPosition)
-                        handled = true
-                    }
-                }
-            }
-            MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP -> {
-                // Assign to local variable for static analysis.
-                touchTrackingData?.let { touchTrackingData ->
-                    // Determine how much the touch has moved.
-                    val touchSlop = sceneView?.let { sceneView ->
-                        ViewConfiguration.get(sceneView.context).scaledTouchSlop
-                    } ?: defaultTouchSlop
-
-                    val upPosition = Vector3(motionEvent.x, motionEvent.y, 0.0f)
-                    val touchDelta =
-                        Vector3.subtract(touchTrackingData.downPosition, upPosition).length()
-
-                    // Determine if this node or a child node is still being touched.
-                    val hitNode = pickHitResult.node
-                    val isHitValid = hitNode === touchTrackingData.downNode
-
-                    // Determine if this is a valid tap.
-                    val isValidTouch = isHitValid || touchDelta < touchSlop
-                    if (isValidTouch) {
-                        handled = true
-                        // If this is an ACTION_UP event, it's time to call the listener.
-                        if (actionMasked == MotionEvent.ACTION_UP && onTouched != null) {
-                            onTouched!!.invoke(pickHitResult, motionEvent)
-                            this.touchTrackingData = null
-                        }
-                    } else {
-                        this.touchTrackingData = null
-                    }
-                }
-            }
-            else -> {
-            }
-        }
-        return handled
-    }
-
-    /**
-     * ### Calls onTouchEvent if the node is active
-     *
-     * Used by TouchEventSystem to dispatch touch events.
-     *
-     * @param pickHitResult Represents the node that was touched, and information about where it was
-     * touched. On ACTION_DOWN events, [PickHitResult.getNode] will always be this node or
-     * one of its children. On other events, the touch may have moved causing the
-     * [PickHitResult.getNode] to change (or possibly be null).
-     *
-     * @param motionEvent   The motion event.
-     * @return true if the event was handled, false otherwise.
-     */
-    open fun dispatchTouchEvent(pickHitResult: PickHitResult, motionEvent: MotionEvent): Boolean {
-        return if (isRendered) {
-            if (onTouchEvent?.invoke(pickHitResult, motionEvent) == true) {
-                true
-            } else {
-                onTouchEvent(pickHitResult, motionEvent)
-            }
-        } else {
-            false
-        }
-    }
 
     open fun clone() = copy(Node())
 

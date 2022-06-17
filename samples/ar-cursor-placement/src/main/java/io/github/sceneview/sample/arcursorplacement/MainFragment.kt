@@ -53,7 +53,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 modelNode.scaleModel(units = 1.0f)
                 sceneView.addChild(modelNode)
             }
-            onTouchAr = { hitResult, _ ->
+            onTapAr = { hitResult, _ ->
                 anchorOrMove(hitResult.createAnchor())
             }
         }
