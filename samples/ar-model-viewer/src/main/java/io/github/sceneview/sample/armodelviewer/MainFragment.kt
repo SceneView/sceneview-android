@@ -47,8 +47,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         modelNode = ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE).apply {
             loadModelAsync(
                 context = requireContext(),
-                glbFileLocation = "models/spiderbot.glb",
                 lifecycle = lifecycle,
+                glbFileLocation = "models/spiderbot.glb",
                 autoAnimate = true,
                 autoScale = false,
                 // Place the model origin at the bottom center
@@ -56,8 +56,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             ) {
                 isLoading = false
             }
-            onTrackingChanged = { _, isTracking, _ ->
-                actionButton.isGone = !isTracking
+            onPoseChanged = { node, _ ->
+                actionButton.isGone = !node.isTracking
             }
             editableTransforms = EditableTransform.ALL
         }
