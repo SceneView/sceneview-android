@@ -105,6 +105,8 @@ open class ArModelNode : ArNode {
             }
         }
 
+    var updateUnanchoredPose = true
+
     override var editableTransforms = setOf(EditableTransform.ROTATION, EditableTransform.SCALE)
 
     var poseUpdatePrecision = 1.0f
@@ -196,7 +198,9 @@ open class ArModelNode : ArNode {
             if (!autoAnchor || !anchor()) {
                 if (arFrame.precision(lastPoseUpdateFrame) <= poseUpdatePrecision) {
                     lastPoseUpdateFrame = arFrame
-                    onArFrameHitResult(hitTest(arFrame))
+                    if (updateUnanchoredPose) {
+                        onArFrameHitResult(hitTest(arFrame))
+                    }
                 }
             }
         }

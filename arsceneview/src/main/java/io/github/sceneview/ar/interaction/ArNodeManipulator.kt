@@ -7,6 +7,7 @@ import dev.romainguy.kotlin.math.clamp
 import dev.romainguy.kotlin.math.degrees
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.isTracking
+import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.interaction.SelectedNodeVisualizer
@@ -33,11 +34,21 @@ open class ArNodeManipulator(
     open val selectedNodeVisualizer: SelectedNodeVisualizer
         get() = sceneView.selectedNodeVisualizer
 
+    open fun onNodeTouch(node: Node) {
+        selectedNode = node as? ArNode
+    }
+
+    private var savedUnanchoredUpdateState : Boolean = false
+
     open fun beginTranslate(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == null && it.positionEditable
         }?.let { node ->
             currentGestureTransform = EditableTransform.POSITION
+            (node as? ArModelNode)?.let { arModelNode ->
+                savedUnanchoredUpdateState = arModelNode.updateUnanchoredPose
+                arModelNode.updateUnanchoredPose = false
+            }
             node.detachAnchor()
         } != null
 
@@ -58,6 +69,7 @@ open class ArNodeManipulator(
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
             currentGestureTransform = null
+            (node as? ArModelNode)?.updateUnanchoredPose = savedUnanchoredUpdateState
             lastHitResult?.takeIf { it.isTracking }?.apply {
                 lastHitResult = null
                 node.anchor = createAnchor()
