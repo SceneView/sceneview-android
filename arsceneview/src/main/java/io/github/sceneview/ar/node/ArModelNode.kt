@@ -105,6 +105,12 @@ open class ArModelNode : ArNode {
             }
         }
 
+    /**
+     * Controls if an unanchored node should be moved together with the camera.
+     * - `true` An unanchored node is moved as the camera moves (cursor placement)
+     * - `false` The pose of an unanchored node is not updated. This is used e.g. while moving a
+     *  node using gestures.
+     */
     var updateUnanchoredPose = true
 
     override var editableTransforms = setOf(EditableTransform.ROTATION, EditableTransform.SCALE)
@@ -196,11 +202,9 @@ open class ArModelNode : ArNode {
 
         if (!isAnchored) {
             if (!autoAnchor || !anchor()) {
-                if (arFrame.precision(lastPoseUpdateFrame) <= poseUpdatePrecision) {
+                if (updateUnanchoredPose && arFrame.precision(lastPoseUpdateFrame) <= poseUpdatePrecision) {
                     lastPoseUpdateFrame = arFrame
-                    if (updateUnanchoredPose) {
-                        onArFrameHitResult(hitTest(arFrame))
-                    }
+                    onArFrameHitResult(hitTest(arFrame))
                 }
             }
         }
