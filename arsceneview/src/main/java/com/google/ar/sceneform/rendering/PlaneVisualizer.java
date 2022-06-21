@@ -188,6 +188,9 @@ public class PlaneVisualizer implements TransformProvider {
     public void destroy() {
         removePlaneFromScene();
 
+        if(planeRenderableInstance != null) {
+            planeRenderableInstance.destroy();
+        }
         planeRenderable = null;
     }
 
