@@ -404,6 +404,14 @@ public class RenderableInstance implements AnimatableModel {
         return getMaterial(0);
     }
 
+
+    /**
+     * Returns the material bound to the first submesh.
+     */
+    public MaterialInstance getMaterialInstance() {
+        return getMaterialInstance(0);
+    }
+
     /**
      * Returns the number of materials.
      */
@@ -422,6 +430,13 @@ public class RenderableInstance implements AnimatableModel {
     }
 
     /**
+     * Returns the material bound to the specified index.
+     */
+    public MaterialInstance getMaterialInstance(int index) {
+        return getMaterial(index).filamentMaterialInstance;
+    }
+
+    /**
      * Returns the material bound to the specified name.
      */
     public Material getMaterial(String name) {
@@ -433,33 +448,41 @@ public class RenderableInstance implements AnimatableModel {
         return null;
     }
 
+
     /**
-     * Sets the material bound to the first index.
+     * Returns the material bound to the specified name.
      */
-    public void setMaterial(Material material) {
-        setMaterial(material.getFilamentMaterialInstance());
+    public MaterialInstance getMaterialInstance(String name) {
+        return getMaterial(name).filamentMaterialInstance;
     }
 
     /**
      * Sets the material bound to the first index.
      */
-    public void setMaterial(MaterialInstance materialInstance) {
-        setMaterial(0, materialInstance);
+    public void setMaterial(Material material) {
+        setMaterialInstance(material.getFilamentMaterialInstance());
+    }
+
+    /**
+     * Sets the material bound to the first index.
+     */
+    public void setMaterialInstance(MaterialInstance materialInstance) {
+        setMaterialInstance(0, materialInstance);
     }
 
     /**
      * Sets the material bound to the specified index.
      */
     public void setMaterial(@IntRange(from = 0) int primitiveIndex, Material material) {
-        setMaterial(primitiveIndex, material.getFilamentMaterialInstance());
+        setMaterialInstance(primitiveIndex, material.getFilamentMaterialInstance());
     }
 
     /**
      * Sets the material bound to the specified index.
      */
-    public void setMaterial(@IntRange(from = 0) int primitiveIndex, MaterialInstance materialInstance) {
+    public void setMaterialInstance(@IntRange(from = 0) int primitiveIndex, MaterialInstance materialInstance) {
         for (int i = 0; i < getFilamentAsset().getEntities().length; i++) {
-            setMaterial(i, primitiveIndex, materialInstance);
+            setMaterialInstance(i, primitiveIndex, materialInstance);
         }
     }
 
@@ -467,13 +490,13 @@ public class RenderableInstance implements AnimatableModel {
      * Sets the material bound to the specified index and entityIndex
      */
     public void setMaterial(int entityIndex, @IntRange(from = 0) int primitiveIndex, Material material) {
-        setMaterial(entityIndex, primitiveIndex, material.getFilamentMaterialInstance());
+        setMaterialInstance(entityIndex, primitiveIndex, material.getFilamentMaterialInstance());
     }
 
     /**
      * Sets the material bound to the specified index and entityIndex
      */
-    public void setMaterial(int entityIndex, @IntRange(from = 0) int primitiveIndex, MaterialInstance materialInstance) {
+    public void setMaterialInstance(int entityIndex, @IntRange(from = 0) int primitiveIndex, MaterialInstance materialInstance) {
         int[] entities = getFilamentAsset().getEntities();
         Preconditions.checkElementIndex(entityIndex, entities.length, "No entity found at the given index");
         materialBindings.set(entityIndex, new Material(null, materialInstance));
