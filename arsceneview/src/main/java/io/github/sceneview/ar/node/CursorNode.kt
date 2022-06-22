@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.Lifecycle
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
-import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.material.setEmissiveColor
@@ -16,8 +15,22 @@ import kotlinx.coroutines.delay
 open class CursorNode(
     context: Context,
     lifecycle: Lifecycle? = null,
-    glbFileLocation: String = "sceneview/models/cursor.glb"
-) : ArModelNode(placementMode = PlacementMode.BEST_AVAILABLE) {
+    modelFileLocation: String = "sceneview/models/cursor.glb",
+    autoAnimate: Boolean = true,
+    autoScale: Boolean = false,
+    centerOrigin: Position? = null,
+    onError: ((error: Exception) -> Unit)? = null,
+    onLoaded: ((instance: RenderableInstance) -> Unit)? = null
+) : ArModelNode(
+    context,
+    lifecycle,
+    modelFileLocation,
+    autoAnimate,
+    autoScale,
+    centerOrigin,
+    onError,
+    onLoaded
+) {
 
     var clickDuration = 250L
 
@@ -25,14 +38,14 @@ open class CursorNode(
         set(value) {
             if (field != value) {
                 field = value
-                applyColor()
+                updateState()
             }
         }
     var isClicked = false
         set(value) {
             if (field != value) {
                 field = value
-                applyColor()
+                updateState()
                 if (value) {
                     lifecycleScope?.launchWhenCreated {
                         delay(clickDuration)
@@ -44,42 +57,36 @@ open class CursorNode(
     var colorTracking: Color = colorOf(rgb = 1.0f)
         set(value) {
             field = value
-            applyColor()
+            updateState()
         }
     var colorNotTracking: Color = colorOf(r = 1.0f)
         set(value) {
             field = value
-            applyColor()
+            updateState()
         }
     var colorClicked: Color = colorOf(rgb = 0.1f)
         set(value) {
             field = value
-            applyColor()
+            updateState()
         }
 
     init {
         isFocusable = false
-        loadModelAsync(context, lifecycle, glbFileLocation)
     }
 
-    override fun onArFrameHitResult(hitResult: HitResult?) {
-        super.onArFrameHitResult(hitResult)
+    override fun onHitResult(hitResult: HitResult?) {
+        super.onHitResult(hitResult)
 
         isTracking = hitResult?.isTracking ?: false
     }
 
-    override fun setModel(
-        renderable: Renderable?,
-        autoAnimate: Boolean,
-        autoScale: Boolean,
-        centerOrigin: Position?
-    ): RenderableInstance? {
-        return super.setModel(renderable, autoAnimate, autoScale, centerOrigin).also {
-            applyColor()
-        }
+    override fun onModelChanged(modelInstance: RenderableInstance?) {
+        super.onModelChanged(modelInstance)
+
+        updateState()
     }
 
-    open fun applyColor() {
+    open fun updateState() {
         modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
             when {
                 isClicked -> colorClicked
@@ -90,7 +97,7 @@ open class CursorNode(
     }
 
     override fun createAnchor(): Anchor? {
-        return (lastHitResult?.takeIf { it.isTracking }?.let { super.createAnchor(it) }
+        return (hitResult?.takeIf { it.isTracking }?.let { super.createAnchor(it) }
             ?: super.createAnchor())
             .also {
                 isClicked = it != null
