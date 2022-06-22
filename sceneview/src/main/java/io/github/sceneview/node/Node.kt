@@ -272,7 +272,23 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     var smoothRotationThreshold = DEFAULT_ROTATION_DOT_THRESHOLD
 
     private var smoothPosition: Position? = null
+    set(value) {
+        if(field != value) {
+            field = value
+            if (value == null && smoothQuaternion == null) {
+                onSmoothEnd()
+            }
+        }
+    }
     private var smoothQuaternion: Quaternion? = null
+        set(value) {
+            if(field != value) {
+                field = value
+                if (value == null && smoothPosition == null) {
+                    onSmoothEnd()
+                }
+            }
+        }
 
     /**
      * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
@@ -410,6 +426,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     val onTransformChanged = mutableListOf<(node: Node) -> Unit>()
 
+    var onSmoothEnd: ((node: Node) -> Unit)? = null
+
     /**
      * ### Invoked when the node is tapped
      *
@@ -461,23 +479,29 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     override fun onFrame(frameTime: FrameTime) {
         // Smooth value compare
         val lerpFactor = clamp((frameTime.intervalSeconds * smoothSpeed).toFloat(), 0.0f, 1.0f)
-        smoothPosition?.takeIf { it != _position }?.let { desiredPosition ->
-            _position = lerp(_position, desiredPosition, lerpFactor).takeIf {
+        val smoothPosition = this.smoothPosition?.takeIf { it != _position }
+        if(smoothPosition != null) {
+            _position = lerp(_position, smoothPosition, lerpFactor).takeIf {
                 distance(_position, it) > 0.00001f
-            } ?: desiredPosition
-            if (_position == desiredPosition) {
-                smoothPosition = null
+            } ?: smoothPosition
+            if (_position == smoothPosition) {
+                this.smoothPosition = null
             }
         }
-        smoothQuaternion?.takeIf { it != _quaternion }?.let { desiredQuaternion ->
-            _quaternion = slerp(_quaternion, normalize(desiredQuaternion), lerpFactor).takeIf {
-                angle(_quaternion, desiredQuaternion) > 0.00001f
-            } ?: desiredQuaternion
-            if (_quaternion == desiredQuaternion) {
-                smoothQuaternion = null
+        val smoothQuaternion = this.smoothQuaternion?.takeIf { it != _quaternion }
+        if(smoothQuaternion != null) {
+            _quaternion = slerp(_quaternion, normalize(smoothQuaternion), lerpFactor).takeIf {
+                angle(_quaternion, smoothQuaternion) > 0.00001f
+            } ?: smoothQuaternion
+            if (_quaternion == smoothQuaternion) {
+                this.smoothQuaternion = null
             }
         }
         onFrame.forEach { it(frameTime, this) }
+    }
+
+    open fun onSmoothEnd() {
+        onSmoothEnd?.invoke(this)
     }
 
     /**
