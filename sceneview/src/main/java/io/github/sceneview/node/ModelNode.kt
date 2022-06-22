@@ -2,7 +2,6 @@ package io.github.sceneview.node
 
 import android.content.Context
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.coroutineScope
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
@@ -113,7 +112,7 @@ open class ModelNode : Node {
                 field?.destroy()
                 field = value
                 value?.renderer = if (shouldBeRendered) renderer else null
-                onModelChanged()
+                onModelChanged(value)
             }
         }
 
@@ -128,6 +127,7 @@ open class ModelNode : Node {
         }
 
     var onModelLoaded = mutableListOf<OnModelLoaded>()
+    var onModelChanged = mutableListOf<(modelInstance: RenderableInstance?) -> Unit>()
     var onModelError: ((exception: Exception) -> Unit)? = null
 
     /**
@@ -154,32 +154,43 @@ open class ModelNode : Node {
      * [SceneView] is.
      * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
      * the node is never attached to a [SceneView]
-     * @param modelFileLocation the glb file location:
+     * @param modelFileLocation the model glb file location:
+     * ```
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
      * - A File path *Uri.fromFile(myModelFile).path*
      * - An http or https url *https://mydomain.com/mymodel.glb*
+     * ```
      * @param autoAnimate Plays the animations automatically if the model has one
      * @param autoScale Scale the model to fit a unit cube
-     * @param centerOrigin Center the model origin to this unit cube position
+     * @param centerOrigin Center point model origin of the model origin.
+     * In unit (-1.0, 1.0) cube position (percent from model size)
+     * ```
      * - `null` = Keep the original model center point
      * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
      * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
      * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
+     * ```
+     * @param onError Thrown exception during model loading
+     * @param onLoaded When the resource renderable (RenderableInstance) is available (stop loading
+     * display, change material, texture,...
      *
      * @see loadModel
      */
     constructor(
         context: Context,
         lifecycle: Lifecycle? = null,
+        position: Position = DEFAULT_POSITION,
+        rotation: Rotation = DEFAULT_ROTATION,
+        scale: Scale = DEFAULT_SCALE,
         modelFileLocation: String,
         autoAnimate: Boolean = true,
         autoScale: Boolean = false,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null
-    ) : this() {
+    ) : this(position, rotation, scale) {
         loadModelAsync(
             context,
             lifecycle,
@@ -205,7 +216,7 @@ open class ModelNode : Node {
             // Update state when the renderable has changed.
             model?.let { model ->
                 if (model.id.checkChanged(renderableId)) {
-                    onModelChanged()
+                    onModelChanged(modelInstance)
                 }
             }
         }
@@ -216,17 +227,13 @@ open class ModelNode : Node {
         onModelLoaded.forEach { it(modelInstance) }
     }
 
-    open fun onModelError(exception: Exception) {
-        onModelError?.invoke(exception)
-    }
-
     /**
      * ### The transformation of the [Node] has changed
      *
      * If node A's position is changed, then that will trigger [onTransformChanged] to be
      * called for all of it's descendants.
      */
-    open fun onModelChanged() {
+    open fun onModelChanged(modelInstance: RenderableInstance?) {
         // Refresh the collider to ensure it is using the correct collision shape now
         // that the renderable has changed.
         onTransformChanged()
@@ -234,6 +241,12 @@ open class ModelNode : Node {
         collisionShape = model?.collisionShape
         // TODO : Clean when Renderable is kotlined
         renderableId = model?.id?.get() ?: ChangeId.EMPTY_ID
+
+        onModelChanged.forEach { it(modelInstance) }
+    }
+
+    open fun onModelError(exception: Exception) {
+        onModelError?.invoke(exception)
     }
 
     fun doOnModelLoaded(action: (modelInstance: RenderableInstance) -> Unit) {
@@ -374,16 +387,15 @@ open class ModelNode : Node {
         autoScale: Boolean = false,
         centerOrigin: Position? = null,
     ): RenderableInstance? {
-        modelInstance = renderable?.createInstance(this)
-        modelInstance?.let { modelInstance ->
-            if (autoAnimate && modelInstance.animationCount > 0) {
-                modelInstance.animate(true)?.start()
+        modelInstance = renderable?.createInstance(this)?.apply {
+            if (autoAnimate && animationCount > 0) {
+                animate(true)?.start()
             }
-            if (autoScale) {
-                scaleModel()
-            }
-            centerOrigin?.let { centerModel(it) }
         }
+        if (autoScale) {
+            scaleModel()
+        }
+        centerOrigin?.let { centerModel(it) }
         return modelInstance
     }
 
