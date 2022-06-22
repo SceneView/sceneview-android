@@ -348,14 +348,16 @@ public class RenderableInstance implements AnimatableModel {
         if (renderableInstance != 0) {
             renderableManager.setCastShadows(renderableInstance, isShadowCaster);
         }
-        //TODO : Verify if we don't need to apply the parameter to child entities
-//        int[] entities = getFilamentAsset().getEntities();
-//        for (int i = 0; i < entities.length; i++) {
-//            renderableInstance = renderableManager.getInstance(entities[i]);
-//            if (renderableInstance != 0) {
-//                renderableManager.setCastShadows(renderableInstance, isShadowCaster);
-//            }
-//        }
+
+        final FilamentAsset asset = getFilamentAsset();
+        if (asset == null) return;
+        int[] entities = asset.getEntities();
+        for (int i = 0; i < entities.length; i++) {
+            renderableInstance = renderableManager.getInstance(entities[i]);
+            if (renderableInstance != 0) {
+                renderableManager.setCastShadows(renderableInstance, isShadowCaster);
+            }
+        }
     }
 
     /**
@@ -375,14 +377,16 @@ public class RenderableInstance implements AnimatableModel {
         if (renderableInstance != 0) {
             renderableManager.setReceiveShadows(renderableInstance, isShadowReceiver);
         }
-        //TODO : Verify if we don't need to apply the parameter to child entities
-//        int[] entities = getFilamentAsset().getEntities();
-//        for (int i = 0; i < entities.length; i++) {
-//            @EntityInstance int renderableInstance = renderableManager.getInstance(entities[i]);
-//            if (renderableInstance != 0) {
-//                renderableManager.setReceiveShadows(renderableInstance, isShadowReceiver);
-//            }
-//        }
+
+        final FilamentAsset asset = getFilamentAsset();
+        if (asset == null) return;
+        int[] entities = asset.getEntities();
+        for (int i = 0; i < entities.length; i++) {
+            renderableInstance = renderableManager.getInstance(entities[i]);
+            if (renderableInstance != 0) {
+                renderableManager.setReceiveShadows(renderableInstance, isShadowReceiver);
+            }
+        }
     }
 
     ArrayList<Material> getMaterialBindings() {
