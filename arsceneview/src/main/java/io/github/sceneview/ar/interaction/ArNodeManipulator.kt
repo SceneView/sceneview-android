@@ -1,11 +1,13 @@
 package io.github.sceneview.ar.interaction
 
+import com.google.ar.core.HitResult
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.clamp
 import dev.romainguy.kotlin.math.degrees
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.isTracking
+import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.interaction.SelectedNodeVisualizer
@@ -18,6 +20,7 @@ open class ArNodeManipulator(
     var maxZoomScale = 10.0f
 
     private var currentGestureTransform: EditableTransform? = null
+    private var lastHitResult: HitResult? = null
 
     var selectedNode: ArNode? = null
         set(value) {
@@ -31,31 +34,46 @@ open class ArNodeManipulator(
     open val selectedNodeVisualizer: SelectedNodeVisualizer
         get() = sceneView.selectedNodeVisualizer
 
-    open fun beginTransform(): Boolean =
+    open fun onNodeTouch(node: Node) {
+        selectedNode = node as? ArNode
+    }
+
+    private var savedUnanchoredUpdateState : Boolean = false
+
+    open fun beginTranslate(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == null && it.positionEditable
         }?.let { node ->
             currentGestureTransform = EditableTransform.POSITION
+            (node as? ArModelNode)?.let { arModelNode ->
+                savedUnanchoredUpdateState = arModelNode.updateUnanchoredPose
+                arModelNode.updateUnanchoredPose = false
+            }
             node.detachAnchor()
         } != null
 
-    open fun continueTransform(x: Float, y: Float): Boolean =
+    open fun continueTranslate(x: Float, y: Float): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
             node.hitTest(xPx = x, yPx = y)?.takeIf { it.isTracking }?.let { hitResult ->
                 hitResult.hitPose?.let { hitPose ->
+                    lastHitResult = hitResult
                     node.pose = hitPose
                 }
             }
         } != null
 
-    open fun endTransform(): Boolean =
+    open fun endTranslate(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
-            node.anchor()
             currentGestureTransform = null
+            (node as? ArModelNode)?.updateUnanchoredPose = savedUnanchoredUpdateState
+            lastHitResult?.takeIf { it.isTracking }?.apply {
+                lastHitResult = null
+                node.anchor = createAnchor()
+            } ?: node.anchor()
         } != null
 
     // The first delta is always way off as it contains all delta until threshold to
@@ -79,14 +97,15 @@ open class ArNodeManipulator(
                 skipFirstRotate = false
                 return true
             }
-            val rotationDelta = Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians))
+            val rotationDelta =
+                Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians))
             node.modelQuaternion = node.modelQuaternion * rotationDelta
         } != null
     }
 
     open fun endRotate(): Boolean {
         return (currentGestureTransform == EditableTransform.ROTATION &&
-                selectedNode?.rotationEditable == true)
+            selectedNode?.rotationEditable == true)
             .also { if (it) currentGestureTransform = null }
     }
 
@@ -104,7 +123,7 @@ open class ArNodeManipulator(
 
     open fun endScale(): Boolean =
         (currentGestureTransform == EditableTransform.SCALE &&
-                selectedNode?.scaleEditable == true)
+            selectedNode?.scaleEditable == true)
             .also { if (it) currentGestureTransform = null }
 }
 

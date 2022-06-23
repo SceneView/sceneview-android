@@ -82,6 +82,8 @@ open class ArModelNode : ArNode {
     /**
      * ### Make the node follow the camera/screen matching real world positions
      *
+     * Controls if an unanchored node should be moved together with the camera.
+     *
      * The node [position] is updated with the realtime ARCore [pose] at the corresponding
      * [hitPosition] until it is anchored ([isAnchored]) or until this this value is set to false.
      *
@@ -104,6 +106,10 @@ open class ArModelNode : ArNode {
      *
      * Disable it if you manage the positioning by yourself or other AR methods (Augmented Images,
      * Augmented Faces,...)
+     *
+     - - `true` An unanchored node is moved as the camera moves (cursor placement)
+     * - `false` The pose of an unanchored node is not updated. This is used e.g. while moving a
+     *  node using gestures.
      *
      * @see hitPosition
      */
@@ -251,8 +257,8 @@ open class ArModelNode : ArNode {
                 // Add condition in here if a new feature needs hit result
                 arFrame.fps(hitTestFrame) <= maxHitTestPerSecond
             ) {
-                hitResult = hitTest(arFrame)
                 hitTestFrame = arFrame
+                hitResult = hitTest(arFrame)
             }
         }
         this.arFrame = arFrame
