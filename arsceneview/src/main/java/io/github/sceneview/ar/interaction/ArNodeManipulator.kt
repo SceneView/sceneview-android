@@ -38,7 +38,7 @@ open class ArNodeManipulator(
         selectedNode = node as? ArNode
     }
 
-    private var savedUnanchoredUpdateState : Boolean = false
+    private var savedFollowHitPositionState : Boolean = false
 
     open fun beginTranslate(): Boolean =
         selectedNode?.takeIf {
@@ -46,8 +46,8 @@ open class ArNodeManipulator(
         }?.let { node ->
             currentGestureTransform = EditableTransform.POSITION
             (node as? ArModelNode)?.let { arModelNode ->
-                savedUnanchoredUpdateState = arModelNode.updateUnanchoredPose
-                arModelNode.updateUnanchoredPose = false
+                savedFollowHitPositionState = arModelNode.followHitPosition
+                arModelNode.followHitPosition = false
             }
             node.detachAnchor()
         } != null
@@ -69,7 +69,7 @@ open class ArNodeManipulator(
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
         }?.let { node ->
             currentGestureTransform = null
-            (node as? ArModelNode)?.updateUnanchoredPose = savedUnanchoredUpdateState
+            (node as? ArModelNode)?.followHitPosition = savedFollowHitPositionState
             lastHitResult?.takeIf { it.isTracking }?.apply {
                 lastHitResult = null
                 node.anchor = createAnchor()
