@@ -250,7 +250,7 @@ open class ArModelNode : ArNode {
         super.onArFrame(arFrame)
 
         if (!isAnchored) {
-            // Try to find an anchor if none ha been founded
+            // Try to find an anchor if none has been found
             if (instantAnchor) {
                 anchor()
             } else if (followHitPosition &&
