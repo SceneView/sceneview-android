@@ -6,7 +6,7 @@ import androidx.lifecycle.coroutineScope
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.utils.useFileBufferNotNull
-import io.github.sceneview.utils.useLocalFileBufferNotNull
+import io.github.sceneview.utils.useLocalFileBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.Buffer
@@ -62,9 +62,9 @@ object MaterialLoader {
     fun createMaterial(
         context: Context,
         lifecycle: Lifecycle? = null,
-        filamatFileLocation: String
-    ): MaterialInstance? = context.useLocalFileBufferNotNull(filamatFileLocation) { buffer ->
-        createMaterial(lifecycle, buffer)
+        filamatFileLocation: String,
+    ): MaterialInstance = context.useLocalFileBuffer(filamatFileLocation) { buffer ->
+        createMaterial(lifecycle, buffer!!)
     }
 
     /**
@@ -75,10 +75,11 @@ object MaterialLoader {
      * @param filamatBuffer The content of the Filamat File
      * @return the newly created object
      */
-    fun createMaterial(lifecycle: Lifecycle? = null, filamatBuffer: Buffer): MaterialInstance {
-        return Material.Builder()
-            .payload(filamatBuffer, filamatBuffer.remaining())
-            .build(lifecycle)
-            .defaultInstance
-    }
+    fun createMaterial(
+        lifecycle: Lifecycle? = null,
+        filamatBuffer: Buffer
+    ): MaterialInstance = Material.Builder()
+        .payload(filamatBuffer, filamatBuffer.remaining())
+        .build(lifecycle)
+        .defaultInstance
 }

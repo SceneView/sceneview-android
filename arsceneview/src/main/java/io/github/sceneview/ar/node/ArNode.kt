@@ -29,19 +29,46 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      *
      * Use [smoothSpeed] to adjust the position and rotation change smoothness level
      */
-    var smoothPose = true
+    var isSmoothPoseEnable = true
 
     /**
-     * ### Interval of the anchor pose update in seconds
+     * ### Adjust the anchor pose update interval in seconds
      *
-     * Try to retrieve more accurate anchor position and rotation during time.
-     * Only used when the [ArNode] is anchored
+     * ARCore may update the [anchor] pose because of environment detection evolving during time.
+     * You can choose to retrieve more accurate anchor position and rotation or let it as it was
+     * when it was anchored.
+     * Only used when the [ArNode] is anchored.
+     * `null` means never update the pose
      */
-    var anchorUpdateInterval = 2.0f
-    var lastAnchorUpdateFrame: ArFrame? = null
+    var anchorPoseUpdateInterval: Double? = null
+    var anchorUpdateFrame: ArFrame? = null
+        private set
 
     /**
-     * TODO : Doc
+     * ### The position of the intersection between a ray and detected real-world geometry.
+     *
+     * The position is the location in space where the ray intersected the geometry.
+     * The orientation is a best effort to face the user's device, and its exact definition differs
+     * depending on the Trackable that was hit.
+     *
+     * - [Plane]: X+ is perpendicular to the cast ray and parallel to the plane, Y+ points along the
+     * plane normal (up, for [Plane.Type.HORIZONTAL_UPWARD_FACING] planes), and Z+ is parallel to
+     * the plane, pointing roughly toward the user's device.
+     *
+     * - [Point]: Attempt to estimate the normal of the surface centered around the hit test.
+     * Surface normal estimation is most likely to succeed on textured surfaces and with camera
+     * motion. If [Point.getOrientationMode] returns
+     * [Point.OrientationMode.ESTIMATED_SURFACE_NORMAL], then X+ is perpendicular to the cast ray
+     * and parallel to the physical surface centered around the hit test, Y+ points along the
+     * estimated surface normal, and Z+ points roughly toward the user's device.
+     * If [Point.getOrientationMode] returns [Point.OrientationMode.INITIALIZED_TO_IDENTITY], then
+     * X+ is perpendicular to the cast ray and points right from the perspective of the user's
+     * device, Y+ points up, and Z+ points roughly toward the user's device.
+     *
+     * - If you wish to retain the location of this pose beyond the duration of a single frame,
+     * create an [Anchor] using [createAnchor] to save the pose in a physically consistent way.
+     *
+     * @see createAnchor
      */
     open var pose: Pose? = null
         set(value) {
@@ -50,7 +77,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
             if (position != field?.position || quaternion != field?.quaternion) {
                 field = value
                 if (position != null && quaternion != null) {
-                    if (smoothPose) {
+                    if (isSmoothPoseEnable) {
                         smooth(position = position, quaternion = quaternion)
                     } else {
                         transform(position = position, quaternion = quaternion)
@@ -88,18 +115,16 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     var cloudAnchorTaskInProgress = false
         private set
 
-    @Deprecated("Replaced by onPoseChanged", replaceWith = ReplaceWith("onPoseChanged"), DeprecationLevel.ERROR)
     /** ## Deprecated: Use [onPoseChanged] and [isTracking] */
+    @Deprecated(
+        "Replaced by onPoseChanged",
+        replaceWith = ReplaceWith("onPoseChanged"),
+        DeprecationLevel.ERROR
+    )
     var onTrackingChanged: ((node: ArNode, isTracking: Boolean, pose: Pose?) -> Unit)? = null
 
-    /**
-     * TODO : Doc
-     */
     var onPoseChanged: ((node: ArNode, pose: Pose?) -> Unit)? = null
 
-    /**
-     * TODO : Doc
-     */
     var onAnchorChanged: ((node: Node, anchor: Anchor?) -> Unit)? = null
 
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
@@ -149,9 +174,11 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
         // Update the anchor position if any
         if (anchor.trackingState == TrackingState.TRACKING) {
-            if (arFrame.intervalSeconds(lastAnchorUpdateFrame) >= anchorUpdateInterval) {
-                lastAnchorUpdateFrame = arFrame
+            if (anchorPoseUpdateInterval != null
+                && arFrame.intervalSeconds(anchorUpdateFrame) >= anchorPoseUpdateInterval!!
+            ) {
                 pose = anchor.pose
+                anchorUpdateFrame = arFrame
             }
         }
 
@@ -406,9 +433,9 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     companion object {
         val DEFAULT_PLACEMENT_MODE = PlacementMode.BEST_AVAILABLE
+        val DEFAULT_PLACEMENT_DISTANCE = 2.0f
     }
 }
-
 
 /**
  * # How an object is placed on the real world
@@ -417,7 +444,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
  * approximate distance when the base placement type is not available yet or at all.
  */
 enum class PlacementMode(
-    var instantPlacementDistance: Float = 4.0f,
+    var instantPlacementDistance: Float = ArNode.DEFAULT_PLACEMENT_DISTANCE,
     var instantPlacementFallback: Boolean = false
 ) {
     /**

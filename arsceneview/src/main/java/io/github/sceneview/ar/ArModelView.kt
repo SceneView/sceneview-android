@@ -47,12 +47,12 @@ internal class ArModelView @JvmOverloads constructor(
     /**
      * TODO: Doc
      *
-     * @see ArModelNode.autoAnchor
+     * @see ArModelNode.instantAnchor
      */
-    var autoAnchor: Boolean
-        get() = modelNode.autoAnchor
+    var instantAnchor: Boolean
+        get() = modelNode.instantAnchor
         set(value) {
-            modelNode.autoAnchor = value
+            modelNode.instantAnchor = value
         }
 
     /**
@@ -77,9 +77,9 @@ internal class ArModelView @JvmOverloads constructor(
                         placementMode.ordinal
                     )]
                 }
-                if (typedArray.hasValue(R.styleable.ArModelView_autoAnchor)) {
-                    autoAnchor =
-                        typedArray.getBoolean(R.styleable.ArModelView_autoAnchor, autoAnchor)
+                if (typedArray.hasValue(R.styleable.ArModelView_instantAnchor)) {
+                    instantAnchor =
+                        typedArray.getBoolean(R.styleable.ArModelView_instantAnchor, instantAnchor)
                 }
                 if (typedArray.hasValue(R.styleable.ArModelView_isPlaneVisible)) {
                     isPlaneVisible = typedArray.getBoolean(

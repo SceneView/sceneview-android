@@ -67,6 +67,16 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
     // Distance from the camera to last plane hit, default value is 4 meters (standing height).
     private var planeHitDistance = 4.0f
 
+    var arFrame: ArFrame? = null
+
+    /**
+     * ### Adjust the max screen [ArFrame.hitTest] number per seconds
+     *
+     * Decrease if you don't need a very precise position update and want to reduce frame
+     * consumption.
+     * Increase for a more accurate positioning update.
+     */
+    var maxHitTestPerSecond: Int = 10
 
     /**
      * ### Enable/disable the plane renderer.
@@ -116,34 +126,37 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
 
     override fun onArFrame(arFrame: ArFrame) {
         if (isEnabled) {
-            try {
-                val session = arFrame.session
+            if (arFrame.fps(this.arFrame) < maxHitTestPerSecond) {
+                this.arFrame = arFrame
+                try {
+                    val session = arFrame.session
 
-                // Do a hitTest on the current frame. The result is used to calculate a focusPoint
-                // and to render the top most plane Trackable if planeRendererMode is set to
-                // RENDER_TOP_MOST
-                val hitResult = arFrame.hitTest(
-                    xPx = session.displayWidth / 2.0f,
-                    yPx = session.displayHeight / 2.0f,
-                    plane = true,
-                    depth = false,
-                    instantPlacement = false
-                )
+                    // Do a hitTest on the current frame. The result is used to calculate a focusPoint
+                    // and to render the top most plane Trackable if planeRendererMode is set to
+                    // RENDER_TOP_MOST
+                    val hitResult = arFrame.hitTest(
+                        xPx = session.displayWidth / 2.0f,
+                        yPx = session.displayHeight / 2.0f,
+                        plane = true,
+                        depth = false,
+                        instantPlacement = false
+                    )
 
-                // Calculate the focusPoint. It is used to determine the position of
-                // the visualized grid.
-                val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-                materialInstance?.setParameter(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
+                    // Calculate the focusPoint. It is used to determine the position of
+                    // the visualized grid.
+                    val focusPoint = getFocusPoint(arFrame.frame, hitResult)
+                    materialInstance?.setParameter(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
 
-                if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
-                    renderAll(arFrame.updatedPlanes)
-                } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST && hitResult != null) {
-                    renderPlane(hitResult.trackable as Plane)
+                    if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
+                        renderAll(arFrame.updatedPlanes)
+                    } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST && hitResult != null) {
+                        renderPlane(hitResult.trackable as Plane)
+                    }
+
+                    // Check for not tracking Plane-Trackables and remove them.
+                    cleanupOldPlaneVisualizer()
+                } catch (exception: DeadlineExceededException) {
                 }
-
-                // Check for not tracking Plane-Trackables and remove them.
-                cleanupOldPlaneVisualizer()
-            } catch (exception: DeadlineExceededException) {
             }
         }
     }

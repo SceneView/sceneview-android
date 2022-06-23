@@ -87,7 +87,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         isLoading = true
         cloudAnchorNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
             parent = sceneView
-            smoothPose = false
+            isSmoothPoseEnable = false
             isVisible = false
             loadModelAsync(
                 context = requireContext(),

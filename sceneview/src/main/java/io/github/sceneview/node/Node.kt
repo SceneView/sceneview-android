@@ -76,6 +76,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     val isAttached get() = sceneView != null
 
+    internal var _position: Position = DEFAULT_POSITION
+
     /**
      * ### The node position
      *
@@ -112,12 +114,22 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      *
      * +z ---- -y --------
      */
-    var position: Position = DEFAULT_POSITION
+    var position: Position get() = _position
+    set(value) {
+        _position = value
+        smoothPosition = null
+    }
+
+    internal var _quaternion: Quaternion = DEFAULT_QUATERNION
 
     /**
      * TODO: Doc
      */
-    var quaternion: Quaternion = DEFAULT_QUATERNION
+    var quaternion: Quaternion get() = _quaternion
+        set(value) {
+            _quaternion = value
+            smoothQuaternion = null
+        }
 
     /**
      * ### The node orientation in Euler Angles Degrees per axis.
@@ -260,7 +272,23 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     var smoothRotationThreshold = DEFAULT_ROTATION_DOT_THRESHOLD
 
     private var smoothPosition: Position? = null
+    set(value) {
+        if(field != value) {
+            field = value
+            if (value == null && smoothQuaternion == null) {
+                onSmoothEnd()
+            }
+        }
+    }
     private var smoothQuaternion: Quaternion? = null
+        set(value) {
+            if(field != value) {
+                field = value
+                if (value == null && smoothPosition == null) {
+                    onSmoothEnd()
+                }
+            }
+        }
 
     /**
      * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
@@ -398,6 +426,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     val onTransformChanged = mutableListOf<(node: Node) -> Unit>()
 
+    var onSmoothEnd: ((node: Node) -> Unit)? = null
+
     /**
      * ### Invoked when the node is tapped
      *
@@ -449,24 +479,29 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     override fun onFrame(frameTime: FrameTime) {
         // Smooth value compare
         val lerpFactor = clamp((frameTime.intervalSeconds * smoothSpeed).toFloat(), 0.0f, 1.0f)
-        smoothPosition?.takeIf { it != position }?.let { desiredPosition ->
-            position = lerp(position, desiredPosition, lerpFactor).takeIf {
-                distance(position, it) > 0.00001f
-            } ?: desiredPosition
-
-            if (position == desiredPosition) {
-                smoothPosition = null
+        val smoothPosition = this.smoothPosition?.takeIf { it != _position }
+        if(smoothPosition != null) {
+            _position = lerp(_position, smoothPosition, lerpFactor).takeIf {
+                distance(_position, it) > 0.00001f
+            } ?: smoothPosition
+            if (_position == smoothPosition) {
+                this.smoothPosition = null
             }
         }
-        smoothQuaternion?.takeIf { it != quaternion }?.let { desiredQuaternion ->
-            quaternion = slerp(quaternion, normalize(desiredQuaternion), lerpFactor).takeIf {
-                angle(quaternion, desiredQuaternion) > 0.00001f
-            } ?: desiredQuaternion
-            if (quaternion == desiredQuaternion) {
-                smoothQuaternion = null
+        val smoothQuaternion = this.smoothQuaternion?.takeIf { it != _quaternion }
+        if(smoothQuaternion != null) {
+            _quaternion = slerp(_quaternion, normalize(smoothQuaternion), lerpFactor).takeIf {
+                angle(_quaternion, smoothQuaternion) > 0.00001f
+            } ?: smoothQuaternion
+            if (_quaternion == smoothQuaternion) {
+                this.smoothQuaternion = null
             }
         }
         onFrame.forEach { it(frameTime, this) }
+    }
+
+    open fun onSmoothEnd() {
+        onSmoothEnd?.invoke(this)
     }
 
     /**
@@ -564,6 +599,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         position: Position = this.position,
         quaternion: Quaternion = this.quaternion,
         rotation: Rotation = this.rotation,
+        scale: Scale = this.scale,
         speed: Float = this.smoothSpeed
     ) {
         this.smoothSpeed = speed
@@ -575,6 +611,20 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         } else if (rotation != this.rotation) {
             smoothQuaternion = rotation.toQuaternion()
         }
+        if(scale != this.scale) {
+            // TODO: smooth scale
+            this.scale = scale
+        }
+    }
+
+
+    /**
+     * ## Smooth move, rotate and scale at a specified speed
+     *
+     * @see transform
+     */
+    fun smooth(transform: Transform, speed: Float = this.smoothSpeed) {
+        smooth(position = transform.position, quaternion = transform.toQuaternion(), speed = speed)
     }
 
     // TODO
