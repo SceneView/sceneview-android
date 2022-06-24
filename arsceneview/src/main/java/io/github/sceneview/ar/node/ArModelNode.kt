@@ -30,11 +30,12 @@ open class ArModelNode : ArNode {
     /**
      * ### The node camera/screen/view position where the hit will be made to find an AR position
      *
-     * The Node will try to find the real world position/orientation of this screen coordinate and
-     * and place himself accordingly.
+     * Until it is anchored, the Node will try to find the real world position/orientation of
+     * the screen coordinate and constantly place/orientate himself accordingly if
+     * [followHitPosition] is `true`
      *
      * The Z value is only used when no surface is actually detected or when [followHitPosition] and
-     * [instantAnchor] is set to false or when instant placement is enabled:
+     * [instantAnchor] is set to `false` or when instant placement is enabled:
      * - In case of instant placement disabled, the z position (distance from the camera) will be
      * estimated by the AR surface distance at the (x,y) so this value is not used.
      * - In case of instant placement enabled, this value is used as an approximateDistanceMeters
@@ -118,14 +119,12 @@ open class ArModelNode : ArNode {
     /**
      * ### Anchor the node as soon as an AR position/rotation is found/available
      *
-     * - `true` The node will be anchored in the real world at the first suitable place available.
+     * If `true`, the node will be anchored in the real world at the first suitable place available.
      * Depending on your need, you can change the [placementMode] to adjust between a quick
      * ([PlacementMode.INSTANT]), more accurate ([PlacementMode.DEPTH]), only on planes/walls
      * ([PlacementMode.PLANE_HORIZONTAL], [PlacementMode.PLANE_VERTICAL],
      * [PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL]) or auto refining accuracy
      * ([PlacementMode.BEST_AVAILABLE]) placement.
-     * - `false` The node will follow its AR [pose] and update it constantly to follow the
-     * camera [hitPosition] on the real world.
      */
     var instantAnchor = false
         set(value) {

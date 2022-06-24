@@ -149,48 +149,47 @@ open class ModelNode : Node {
      *
      * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
      * it (and its resources) when the lifecycle goes to destroy state.
+     * Passing null means the model loading will be done when the Node is added to the SceneView and
+     * the destroy will be done when the SceneView is detached.
      * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
      * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
      * [SceneView] is.
      * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
      * the node is never attached to a [SceneView]
-     * @param modelFileLocation the model glb file location:
+     * @param modelFileLocation the model glb/gltf file location:
      * ```
      * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - An Android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
      * - A File path *Uri.fromFile(myModelFile).path*
      * - An http or https url *https://mydomain.com/mymodel.glb*
      * ```
      * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube
-     * @param centerOrigin Center point model origin of the model origin.
-     * In unit (-1.0, 1.0) cube position (percent from model size)
-     * ```
-     * - `null` = Keep the original model center point
+     * @param autoScale Scale the model to fit a unit cube so it will better fit your SceneView
+     * @param centerOrigin Center point origin position within the model:
+     * Float cube position values between -1.0 and 1.0 corresponding to percents from
+     * model sizes.
+     * - `null` = Keep the origin point where it was at the model export time
      * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top
      * - ...
      * ```
-     * @param onError Thrown exception during model loading
-     * @param onLoaded When the resource renderable (RenderableInstance) is available (stop loading
-     * display, change material, texture,...
+     * @param onError An exception has been thrown during model loading
+     * @param onLoaded Called when the model loading finished so you can change its properties
+     * (material, texture,...)
      *
      * @see loadModel
      */
     constructor(
         context: Context,
         lifecycle: Lifecycle? = null,
-        position: Position = DEFAULT_POSITION,
-        rotation: Rotation = DEFAULT_ROTATION,
-        scale: Scale = DEFAULT_SCALE,
         modelFileLocation: String,
         autoAnimate: Boolean = true,
         autoScale: Boolean = false,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null
-    ) : this(position, rotation, scale) {
+    ) : this() {
         loadModelAsync(
             context,
             lifecycle,
