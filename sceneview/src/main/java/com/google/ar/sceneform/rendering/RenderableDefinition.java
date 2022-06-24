@@ -5,6 +5,7 @@ import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.IndexBuffer.Builder.IndexType;
+import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.VertexBuffer;
 import com.google.android.filament.VertexBuffer.VertexAttribute;
 import com.google.ar.sceneform.math.MathHelper;
@@ -41,7 +42,7 @@ public class RenderableDefinition {
      */
     public static class Submesh {
         private List<Integer> triangleIndices;
-        private Material material;
+        private MaterialInstance material;
         @Nullable
         private String name;
 
@@ -53,11 +54,11 @@ public class RenderableDefinition {
             return triangleIndices;
         }
 
-        public void setMaterial(Material material) {
+        public void setMaterial(MaterialInstance material) {
             this.material = material;
         }
 
-        public Material getMaterial() {
+        public MaterialInstance getMaterial() {
             return material;
         }
 
@@ -87,7 +88,7 @@ public class RenderableDefinition {
             @Nullable
             private List<Integer> triangleIndices;
             @Nullable
-            private Material material;
+            private MaterialInstance material;
             @Nullable
             private String name;
 
@@ -101,7 +102,7 @@ public class RenderableDefinition {
                 return this;
             }
 
-            public Builder setMaterial(Material material) {
+            public Builder setMaterial(MaterialInstance material) {
                 this.material = material;
                 return this;
             }
@@ -141,7 +142,7 @@ public class RenderableDefinition {
     void applyDefinitionToData(
             // TODO: Split into RenderableInternalSfbData & RenderableInternalDefinitionData
             IRenderableInternalData data,
-            ArrayList<Material> materialBindings,
+            ArrayList<MaterialInstance> materialBindings,
             ArrayList<String> materialNames) {
         AndroidPreconditions.checkUiThread();
 

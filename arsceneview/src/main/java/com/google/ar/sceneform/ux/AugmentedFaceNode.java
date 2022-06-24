@@ -458,7 +458,7 @@ public class AugmentedFaceNode extends ArNode {
         Submesh occluderSubmesh =
                 Submesh.builder()
                         .setTriangleIndices(triangleIndices)
-                        .setMaterial(faceMeshOccluderMaterial)
+                        .setMaterial(faceMeshOccluderMaterial.filamentMaterialInstance)
                         .build();
         submeshes.add(occluderSubmesh);
 
@@ -470,7 +470,7 @@ public class AugmentedFaceNode extends ArNode {
             Submesh faceTextureSubmesh =
                     Submesh.builder()
                             .setTriangleIndices(triangleIndices)
-                            .setMaterial(faceMeshMaterial)
+                            .setMaterial(faceMeshMaterial.filamentMaterialInstance)
                             .build();
             submeshes.add(faceTextureSubmesh);
         }

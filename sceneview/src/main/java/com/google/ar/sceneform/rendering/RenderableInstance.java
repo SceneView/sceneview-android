@@ -94,7 +94,7 @@ public class RenderableInstance implements AnimatableModel {
     private boolean isShadowCaster = true;
     private boolean isShadowReceiver = true;
 
-    private ArrayList<Material> materialBindings;
+    private ArrayList<MaterialInstance> materialBindings;
     private ArrayList<String> materialNames;
 
     @Nullable
@@ -192,7 +192,7 @@ public class RenderableInstance implements AnimatableModel {
                 }
                 MaterialInstance materialInstance = renderableManager.getMaterialInstanceAt(renderableInstance, 0);
                 materialNames.add(materialInstance.getName());
-                materialBindings.add(new Material(lifecycle, materialInstance));
+                materialBindings.add(materialInstance);
             }
 
             TransformManager transformManager = Filament.getTransformManager();
@@ -389,21 +389,13 @@ public class RenderableInstance implements AnimatableModel {
         }
     }
 
-    ArrayList<Material> getMaterialBindings() {
+    ArrayList<MaterialInstance> getMaterialBindings() {
         return materialBindings;
     }
 
     ArrayList<String> getMaterialNames() {
         return materialNames;
     }
-
-    /**
-     * Returns the material bound to the first submesh.
-     */
-    public Material getMaterial() {
-        return getMaterial(0);
-    }
-
 
     /**
      * Returns the material bound to the first submesh.
@@ -422,7 +414,7 @@ public class RenderableInstance implements AnimatableModel {
     /**
      * Returns the material bound to the specified index.
      */
-    public Material getMaterial(int index) {
+    public MaterialInstance getMaterialInstance(int index) {
         if (index < materialBindings.size()) {
             return materialBindings.get(index);
         }
@@ -430,37 +422,15 @@ public class RenderableInstance implements AnimatableModel {
     }
 
     /**
-     * Returns the material bound to the specified index.
-     */
-    public MaterialInstance getMaterialInstance(int index) {
-        return getMaterial(index).filamentMaterialInstance;
-    }
-
-    /**
      * Returns the material bound to the specified name.
      */
-    public Material getMaterial(String name) {
+    public MaterialInstance getMaterialInstance(String name) {
         for(int i=0;i<materialBindings.size();i++) {
             if(TextUtils.equals(materialNames.get(i), name)) {
                 return materialBindings.get(i);
             }
         }
         return null;
-    }
-
-
-    /**
-     * Returns the material bound to the specified name.
-     */
-    public MaterialInstance getMaterialInstance(String name) {
-        return getMaterial(name).filamentMaterialInstance;
-    }
-
-    /**
-     * Sets the material bound to the first index.
-     */
-    public void setMaterial(Material material) {
-        setMaterialInstance(material.getFilamentMaterialInstance());
     }
 
     /**
@@ -499,7 +469,7 @@ public class RenderableInstance implements AnimatableModel {
     public void setMaterialInstance(int entityIndex, @IntRange(from = 0) int primitiveIndex, MaterialInstance materialInstance) {
         int[] entities = getFilamentAsset().getEntities();
         Preconditions.checkElementIndex(entityIndex, entities.length, "No entity found at the given index");
-        materialBindings.set(entityIndex, new Material(null, materialInstance));
+        materialBindings.set(entityIndex, materialInstance);
         RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(entities[entityIndex]);
         if (renderableInstance != 0) {

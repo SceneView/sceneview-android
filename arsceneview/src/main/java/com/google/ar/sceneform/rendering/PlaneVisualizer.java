@@ -89,9 +89,9 @@ public class PlaneVisualizer implements TransformProvider {
     public void setShadowMaterial(Material material) {
         if (shadowSubmesh == null) {
             shadowSubmesh =
-                    Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material).build();
+                    Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
         } else {
-            shadowSubmesh.setMaterial(material);
+            shadowSubmesh.setMaterial(material.filamentMaterialInstance);
         }
 
         if (planeRenderable != null) {
@@ -102,9 +102,9 @@ public class PlaneVisualizer implements TransformProvider {
     public void setPlaneMaterial(Material material) {
         if (planeSubmesh == null) {
             planeSubmesh =
-                    Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material).build();
+                    Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
         } else {
-            planeSubmesh.setMaterial(material);
+            planeSubmesh.setMaterial(material.filamentMaterialInstance);
         }
 
         if (planeRenderable != null) {
