@@ -21,7 +21,7 @@ This is a Sceneform replacement in Kotlin
 ## Dependency
 
 *app/build.gradle*
-- 3D only
+- 3D
 ```gradle
 dependencies {
     // 3D only
@@ -30,7 +30,7 @@ dependencies {
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
-- 3D and ARCore
+- 3D + AR
 ```gradle
 dependencies {
     // 3D and ARCore
@@ -41,7 +41,7 @@ dependencies {
 
 ## Usage
 
-### 3D only - Filament
+### 3D - Filament
 
 ```xml
 <io.github.sceneview.SceneView
@@ -52,7 +52,7 @@ dependencies {
 
 [![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
 
-### AR - Filament and ARCore
+### AR - Filament + ARCore
 
 ```xml
 <io.github.sceneview.ar.ArSceneView
@@ -61,7 +61,7 @@ dependencies {
     android:layout_height="match_parent" />
 ```
 
-## Model Viewer (3D only)
+## 3D Model Viewer
 
 [![](https://yt-embed.herokuapp.com/embed?v=GDCy_bUdggg)](https://www.youtube.com/watch?v=GDCy_bUdggg)
 
@@ -86,7 +86,7 @@ Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
 - `scale` The node scale on each axis  
 Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
 
-## AR Model Viewer (3D + ARCore)
+## AR Model Viewer (3D + AR)
 
 [![](https://yt-embed.herokuapp.com/embed?v=HVqAvGJROWk)](https://www.youtube.com/watch?v=HVqAvGJROWk)
 
@@ -194,7 +194,7 @@ Float cube position values between -1.0 and 1.0 corresponding to percents from  
 
 ```kotlin
 
-cloudAnchorEnabled = true
+sceneView.cloudAnchorEnabled = true
 
 // Host/Record a Cloud Anchor
 node.onAnchorChanged = { node: ArNode, anchor: Anchor? ->
