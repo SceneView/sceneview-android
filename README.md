@@ -228,7 +228,9 @@ If the AR `Session` is not configured properly the standard camera material is u
 Valid `Session.Config` for the Depth occlusion are `Config.DepthMode.AUTOMATIC` and `Config.DepthMode.RAW_DEPTH_ONLY`  
 Disable this value to apply the standard camera material to the CameraStream.
 
-## ARCore Geospatial API
+## AR Geospatial API
+
+[![](https://yt-embed.herokuapp.com/embed?v=QZYg9WU5wSA)](https://www.youtube.com/watch?v=QZYg9WU5wSA)
 
 - Configure session
 ```kotlin
