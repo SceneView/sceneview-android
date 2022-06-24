@@ -50,7 +50,7 @@ dependencies {
     android:layout_height="match_parent" />
 ```
 
-[![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
 
 ### AR
 
@@ -63,7 +63,7 @@ dependencies {
 
 ## 3D Model Viewer
 
-[![](https://yt-embed.herokuapp.com/embed?v=GDCy_bUdggg)](https://www.youtube.com/watch?v=GDCy_bUdggg)
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=GDCy_bUdggg)](https://www.youtube.com/watch?v=GDCy_bUdggg)
 
 ```kotlin
 sceneView.addChild(
@@ -88,7 +88,7 @@ Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
 
 ## AR Model Viewer
 
-[![](https://yt-embed.herokuapp.com/embed?v=HVqAvGJROWk)](https://www.youtube.com/watch?v=HVqAvGJROWk)
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=HVqAvGJROWk)](https://www.youtube.com/watch?v=HVqAvGJROWk)
 
 ```kotlin
 sceneView.addChild(
@@ -121,7 +121,7 @@ If `true`, the node will be anchored in the real world at the first suitable pla
 
 ## AR Placement Mode
 
-[![](https://yt-embed.herokuapp.com/embed?v=rxzLfTCsm_o)](https://www.youtube.com/watch?v=rxzLfTCsm_o)
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=rxzLfTCsm_o)](https://www.youtube.com/watch?v=rxzLfTCsm_o)
 
 Choose how an object is placed within the real world
 - `DISABLED` Disable every AR placement preview and handle it by yourself (`onTap`, `onAugmentedFace`, `onAugmentedImage`
@@ -192,7 +192,7 @@ Float cube position values between -1.0 and 1.0 corresponding to percents from  
 
 ## AR Cloud Anchors
 
-[![](https://yt-embed.herokuapp.com/embed?v=iptk8jsWyw4)](https://www.youtube.com/watch?v=iptk8jsWyw4)
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=iptk8jsWyw4)](https://www.youtube.com/watch?v=iptk8jsWyw4)
 
 ```kotlin
 
@@ -220,7 +220,7 @@ node.resolveCloudAnchor(cloudAnchorId) { anchor: Anchor, success: Boolean ->
 
 ## AR Depth/Objects Occlusion
 
-[![](https://yt-embed.herokuapp.com/embed?v=bzyoR3ugGFA)](https://www.youtube.com/watch?v=bzyoR3ugGFA)
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=bzyoR3ugGFA)](https://www.youtube.com/watch?v=bzyoR3ugGFA)
 
 ```kotlin
 sceneView.isDepthOcclusionEnabled = true
@@ -232,7 +232,7 @@ Disable this value to apply the standard camera material to the CameraStream.
 
 ## AR Geospatial API
 
-[![](https://yt-embed.herokuapp.com/embed?v=QZYg9WU5wSA)](https://www.youtube.com/watch?v=QZYg9WU5wSA)
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=QZYg9WU5wSA)](https://www.youtube.com/watch?v=QZYg9WU5wSA)
 
 - Configure session
 ```kotlin
