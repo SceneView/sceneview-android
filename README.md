@@ -180,6 +180,18 @@ Float cube position values between -1.0 and 1.0 corresponding to percents from  
     - ...
 - `onError` An exception has been thrown during model loading
 
+## AR Depth/Objects Occlusion
+
+[![](https://yt-embed.herokuapp.com/embed?v=bzyoR3ugGFA)](https://www.youtube.com/watch?v=bzyoR3ugGFA)
+
+```kotlin
+sceneView.isDepthOcclusionEnabled = true
+```
+This will process the incoming ARCore `DepthImage` to occlude virtual objects behind real world objects.  
+If the AR `Session` is not configured properly the standard camera material is used.  
+Valid `Session.Config` for the Depth occlusion are `Config.DepthMode.AUTOMATIC` and `Config.DepthMode.RAW_DEPTH_ONLY`  
+Disable this value to apply the standard camera material to the CameraStream.
+
 ## ARCore Geospatial API
 
 - Configure session
