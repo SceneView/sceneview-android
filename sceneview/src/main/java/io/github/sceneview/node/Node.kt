@@ -79,11 +79,10 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     internal var _position: Position = DEFAULT_POSITION
 
     /**
-     * ### The node position
+     * ### The node position to locate it within the coordinate system of its parent
      *
-     * The node's position locates it within the coordinate system of its parent.
-     * The default position is the zero vector, indicating that the node is placed at the origin of
-     * the parent node's coordinate system.
+     * Default is `Position(x = 0.0f, y = 0.0f, z = 0.0f)`, indicating that the node is placed at
+     * the origin of the parent node's coordinate system.
      *
      * **Horizontal (X):**
      * - left: x < 0.0f
@@ -132,14 +131,12 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         }
 
     /**
-     * ### The node orientation in Euler Angles Degrees per axis.
-     *
-     * `[0..360]`
+     * ### The node orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`
      *
      * The three-component rotation vector specifies the direction of the rotation axis in degrees.
-     *
-     * The default rotation is the zero vector, specifying no rotation.
      * Rotation is applied relative to the node's origin property.
+     *
+     * Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
      *
      * Note that modifying the individual components of the returned rotation doesn't have any effect.
      *
@@ -165,10 +162,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
 
     /**
      * ### The node scale on each axis.
-     *
-     * - reduce size: scale < 1.0f
-     * - same size: scale = 1.0f
-     * - increase size: scale > 1.0f
+     * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
      */
     var scale: Scale = DEFAULT_SCALE
 
