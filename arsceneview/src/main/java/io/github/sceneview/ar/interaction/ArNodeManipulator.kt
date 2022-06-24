@@ -34,20 +34,16 @@ open class ArNodeManipulator(
     open val selectedNodeVisualizer: SelectedNodeVisualizer
         get() = sceneView.selectedNodeVisualizer
 
-    open fun onNodeTouch(node: Node) {
-        selectedNode = node as? ArNode
-    }
-
-    private var savedUnanchoredUpdateState : Boolean = false
+    private var savedFollowHitPositionState : Boolean = false
 
     open fun beginTranslate(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == null && it.positionEditable
-        }?.let { node ->
+        }?.also { node ->
             currentGestureTransform = EditableTransform.POSITION
             (node as? ArModelNode)?.let { arModelNode ->
-                savedUnanchoredUpdateState = arModelNode.updateUnanchoredPose
-                arModelNode.updateUnanchoredPose = false
+                savedFollowHitPositionState = arModelNode.followHitPosition
+                arModelNode.followHitPosition = false
             }
             node.detachAnchor()
         } != null
@@ -55,7 +51,7 @@ open class ArNodeManipulator(
     open fun continueTranslate(x: Float, y: Float): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
-        }?.let { node ->
+        }?.also { node ->
             node.hitTest(xPx = x, yPx = y)?.takeIf { it.isTracking }?.let { hitResult ->
                 hitResult.hitPose?.let { hitPose ->
                     lastHitResult = hitResult
@@ -67,13 +63,13 @@ open class ArNodeManipulator(
     open fun endTranslate(): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.POSITION && it.positionEditable
-        }?.let { node ->
+        }?.also { node ->
             currentGestureTransform = null
-            (node as? ArModelNode)?.updateUnanchoredPose = savedUnanchoredUpdateState
             lastHitResult?.takeIf { it.isTracking }?.apply {
                 lastHitResult = null
                 node.anchor = createAnchor()
             } ?: node.anchor()
+            (node as? ArModelNode)?.followHitPosition = savedFollowHitPositionState
         } != null
 
     // The first delta is always way off as it contains all delta until threshold to
@@ -92,7 +88,7 @@ open class ArNodeManipulator(
     open fun rotate(deltaRadians: Float): Boolean {
         return selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.ROTATION && it.rotationEditable
-        }?.let { node ->
+        }?.also { node ->
             if (skipFirstRotate) {
                 skipFirstRotate = false
                 return true
@@ -117,7 +113,7 @@ open class ArNodeManipulator(
     open fun scale(factor: Float): Boolean =
         selectedNode?.takeIf {
             currentGestureTransform == EditableTransform.SCALE && it.scaleEditable
-        }?.let { node ->
+        }?.also { node ->
             node.modelScale = clamp(node.modelScale * factor, minZoomScale, maxZoomScale)
         } != null
 

@@ -480,7 +480,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         // Smooth value compare
         val lerpFactor = clamp((frameTime.intervalSeconds * smoothSpeed).toFloat(), 0.0f, 1.0f)
         val smoothPosition = this.smoothPosition?.takeIf { it != _position }
-        if(smoothPosition != null) {
+        if (smoothPosition != null) {
             _position = lerp(_position, smoothPosition, lerpFactor).takeIf {
                 distance(_position, it) > 0.00001f
             } ?: smoothPosition
@@ -489,7 +489,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
             }
         }
         val smoothQuaternion = this.smoothQuaternion?.takeIf { it != _quaternion }
-        if(smoothQuaternion != null) {
+        if (smoothQuaternion != null) {
             _quaternion = slerp(_quaternion, normalize(smoothQuaternion), lerpFactor).takeIf {
                 angle(_quaternion, smoothQuaternion) > 0.00001f
             } ?: smoothQuaternion
@@ -611,7 +611,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         } else if (rotation != this.rotation) {
             smoothQuaternion = rotation.toQuaternion()
         }
-        if(scale != this.scale) {
+        if (scale != this.scale) {
             // TODO: smooth scale
             this.scale = scale
         }

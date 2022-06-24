@@ -1,6 +1,5 @@
 package io.github.sceneview.utils
 
-import kotlin.math.abs
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.DurationUnit
@@ -26,13 +25,13 @@ data class FrameTime(val nanoseconds: Long, val lastNanoseconds: Long? = null) {
      * ### The duration between this frame and the last frame
      */
     fun interval(lastNanoseconds: Long?): Duration =
-        abs((lastNanoseconds ?: 0) - nanoseconds).nanoseconds
+        (nanoseconds - (lastNanoseconds ?: 0)).nanoseconds
 
     fun intervalSeconds(lastNanoseconds: Long?): Double = interval(lastNanoseconds).toDouble(
         DurationUnit.SECONDS
     )
 
-    fun intervalSeconds(frameTime: FrameTime?): Double = intervalSeconds(frameTime?.nanoseconds)
+    fun intervalSeconds(frameTime: FrameTime?): Double = intervalSeconds(frameTime?.lastNanoseconds)
 
     fun fps(lastNanoseconds: Long?): Double = 1.0 / intervalSeconds(lastNanoseconds)
 

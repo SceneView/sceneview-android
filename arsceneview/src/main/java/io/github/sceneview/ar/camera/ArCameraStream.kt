@@ -55,10 +55,10 @@ class ArCameraStream(
             context = sceneView.context,
             lifecycle = lifecycle,
             filamatFileLocation = standardMaterialLocation
-        )?.apply {
+        ).apply {
             setParameter("uvTransform", Transform())
             _standardMaterial = this
-        }!!
+        }
         set(value) {
             _standardMaterial = value
         }
@@ -73,10 +73,10 @@ class ArCameraStream(
             context = sceneView.context,
             lifecycle = lifecycle,
             filamatFileLocation = depthOcclusionMaterialLocation
-        )?.apply {
+        ).apply {
             setParameter("uvTransform", Transform())
             _depthOcclusionMaterial = this
-        }!!
+        }
         set(value) {
             _depthOcclusionMaterial = value
         }

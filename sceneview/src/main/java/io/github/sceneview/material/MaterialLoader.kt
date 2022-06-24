@@ -9,6 +9,7 @@ import io.github.sceneview.utils.useFileBufferNotNull
 import io.github.sceneview.utils.useLocalFileBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.nio.Buffer
 
 object MaterialLoader {
@@ -64,7 +65,9 @@ object MaterialLoader {
         lifecycle: Lifecycle? = null,
         filamatFileLocation: String,
     ): MaterialInstance = context.useLocalFileBuffer(filamatFileLocation) { buffer ->
-        createMaterial(lifecycle, buffer!!)
+        if (buffer == null) throw IOException("Unable to load the material. Check whether the material exists")
+
+        createMaterial(lifecycle, buffer)
     }
 
     /**
