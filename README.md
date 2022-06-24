@@ -41,7 +41,6 @@ dependencies {
 
 ## Usage
 
-*res/layout/main_fragment.xml*
 - 3D only
 ```xml
 <io.github.sceneview.SceneView
@@ -57,6 +56,129 @@ dependencies {
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 ```
+
+## Model Viewer (3D only)
+
+```kotlin
+sceneView.addChild(
+    ModelNode(
+        position = Position(x = 0.0f, y = 0.0f, z = -4.0f),
+        rotation = Rotation(y = 90.0f),
+        scale = Scale(0.5f)
+    )
+)
+```
+
+#### Parameters
+
+- `position` The node position to locate it within the coordinate system of its parent  
+Default is `Position(x = 0.0f, y = 0.0f, z = 0.0f)`, indicating that the node is placed at the origin of the parent node's coordinate system.  
+![image](https://user-images.githubusercontent.com/6597529/175493300-c1ff1647-8ab1-4c71-b938-4b04acf2c702.png)
+- `rotation` The node orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`
+The three-component rotation vector specifies the direction of the rotation axis in degrees. Rotation is applied relative to the node's origin property.  
+Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
+- `scale` The node scale on each axis  
+Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
+
+## AR Model Viewer (3D + ARCore)
+
+```kotlin
+sceneView.addChild(
+    ArModelNode(
+        placementMode = PlacementMode.BEST_AVAILABLE,
+        hitPosition = Position(0.0f, 0.0f, -2.0f),
+        followHitPosition = true,
+        instantAnchor = false
+    )
+)
+```
+
+#### Parameters
+
+- `placementMode` Define the [AR Placement Mode](#ar-placement-mode) depending on your need  
+You can change it to adjust between a quick (`PlacementMode.INSTANT`), more accurate (`PlacementMode.DEPTH`), only on planes/walls (`PlacementMode.PLANE_HORIZONTAL`, `PlacementMode.PLANE_VERTICAL`, `PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL`) or with auto refining accuracy placement (`PlacementMode.BEST_AVAILABLE`).  
+The `hitTest`, `pose` and `anchor` will be influenced by this choice.  
+- `hitPosition` The node camera/screen/view position where the hit will be made to find an AR position  
+Until it is anchored, the `Node` will try to find the real world position/orientation of the screen coordinate and constantly place/orientate himself accordingly `followHitPosition` is `true`.  
+The Z value is only used when no surface is actually detected or when `followHitPosition` and `instantAnchor` is set to `false` or when instant placement is enabled:
+- `followHitPosition` Make the node follow the camera/screen matching real world positions  
+Controls if an unanchored node should be moved together with the camera.  
+The node `position` is updated with the realtime ARCore `pose` at the corresponding `hitPosition` until it is anchored (`isAnchored`) or until this this value is set to `false`.
+    - While there is no AR tracking information available, the node is following the camera moves so it stays at this camera/screen relative position but without adjusting its position and orientation to the real world
+    - Then ARCore will try to find the real world position of the node at the [hitPosition] by looking at its [hitTest] on each `onArFrame`.
+    - In case of instant placement disabled, the z position (distance from the camera) will be estimated by the AR surface distance at the `(x,y)`.
+    - The node rotation will be also adjusted in case of [PlacementMode.DEPTH] or depending on the detected planes orientations in case of `PlacementMode.PLANE_HORIZONTAL`, `PlacementMode.PLANE_VERTICAL`, `PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL`
+- `instantAnchor` Anchor the node as soon as an AR position/rotation is found/available  
+If `true`, the node will be anchored in the real world at the first suitable place available
+
+## AR Placement Mode
+
+Choose how an object is placed within the real world
+- `DISABLED` Disable every AR placement preview and handle it by yourself (`onTap`, `onAugmentedFace`, `onAugmentedImage`
+- `PLANE_HORIZONTAL` Place and orientate nodes only on horizontal planes
+- `PLANE_VERTICAL` Place and orientate nodes only on vertical planes
+- `PLANE_HORIZONTAL_AND_VERTICAL` Place and orientate nodes on both horizontal and vertical planes
+- `DEPTH` Place and orientate nodes on every detected depth surfaces. Not all devices support this mode. In case on non depth enabled device the placement mode will automatically fallback to `PLANE_HORIZONTAL_AND_VERTICAL`.
+- `INSTANT` Instantly place only nodes at a fixed orientation and an approximate distance. No AR orientation will be provided = fixed +Y pointing upward, against gravity. This mode is currently intended to be used with hit tests against horizontal surfaces.
+- `BEST_AVAILABLE` Place nodes on every detected surfaces. The node will be placed instantly and then adjusted to fit the best accurate, precise, available placement.
+
+#### Parameters
+
+- `instantPlacementDistance` Distance in meters at which to create an InstantPlacementPoint. This is only used while the tracking method for the returned point is InstantPlacementPoint.  
+Default: `2.0f` (2 meters)
+- `instantPlacementFallback` Fallback to instantly place nodes at a fixed orientation and an approximate distance when the base placement type is not available yet or at all.
+
+## Load a glb/glTF Model
+
+### Asynchronously
+
+```kotlin
+modelNode.loadModelAsync(
+    context = context,
+    lifecycle = lifecycle,
+    glbFileLocation = "models/mymodel.glb",
+    autoAnimate = true,
+    autoScale = false,
+    centerOrigin = null,
+    onError = { exception -> },
+    onLoaded = { modelInstance -> }
+)
+```
+
+### Within a Coroutine Scope
+
+```kotlin
+lifecycleScope.launchWhenCreated {
+    val modelInstance = modelNode.loadModel(
+        context = context,
+        glbFileLocation = "https://sceneview.github.io/assets/models/MaterialSuite.glb",
+        autoAnimate = true,
+        autoScale = true,
+        centerOrigin = Position(x = 0.0f, y = 0.0f, z = 0.0f),
+        onError = { exception -> }
+    )
+}
+```
+
+#### Parameters
+
+- `lifecycle` Provide your lifecycle in order to load your model instantly and to destroy it (and its resources) when the lifecycle goes to destroy state  
+Passing null means the model loading will be done when the Node is added to the SceneView and the destroy will be done when the SceneView is detached.
+- `modelFileLocation` The model glb/gltf file location
+    - A relative asset file location (models/mymodel.glb)
+    - An Android resource from the res folder (context.getResourceUri(R.raw.mymodel)
+    - A File path (Uri.fromFile(myModelFile).path)
+    - An http or https url (https://mydomain.com/mymodel.glb)
+- `autoAnimate` Plays the animations automatically if the model has one
+- `autoScale` Scale the model to fit a unit cube so it will better fit your SceneView
+- `centerOrigin` Center point origin position within the model  
+Float cube position values between -1.0 and 1.0 corresponding to percents from  model sizes.  
+    - `null` = Keep the origin point where it was at the model export time 
+    - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+    - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom
+    - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top
+    - ...
+- `onError` An exception has been thrown during model loading
 
 ## ARCore Geospatial API
 
@@ -81,7 +203,6 @@ if (earth.trackingState == TrackingState.TRACKING) {
     earthAnchor = earth.createAnchor(latLng.latitude, latLng.longitude, altitude, qx, qy, qz, qw)
 }
 ```
-
 
 ## Camera Permission and ARCore install/update/unavailable
 
