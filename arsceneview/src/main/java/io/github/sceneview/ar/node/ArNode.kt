@@ -11,7 +11,6 @@ import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.node.ModelNode
-import io.github.sceneview.node.Node
 
 open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
@@ -125,7 +124,7 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     var onPoseChanged: ((node: ArNode, pose: Pose?) -> Unit)? = null
 
-    var onAnchorChanged: ((node: Node, anchor: Anchor?) -> Unit)? = null
+    var onAnchorChanged: ((node: ArNode, anchor: Anchor?) -> Unit)? = null
 
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
@@ -263,7 +262,6 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
         anchor = createAnchor()
         return anchor != null
     }
-
 
     /**
      * ### Anchor this node to make it fixed at the actual position and orientation is the world
@@ -440,6 +438,8 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 /**
  * # How an object is placed on the real world
  *
+ * @param instantPlacementDistance Distance in meters at which to create an InstantPlacementPoint.
+ * This is only used while the tracking method for the returned point is InstantPlacementPoint.
  * @param instantPlacementFallback Fallback to instantly place nodes at a fixed orientation and an
  * approximate distance when the base placement type is not available yet or at all.
  */
