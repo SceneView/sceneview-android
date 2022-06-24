@@ -43,14 +43,14 @@ dependencies {
 
 ### 3D only - Filament
 
-[![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
-
 ```xml
 <io.github.sceneview.SceneView
     android:id="@+id/sceneView"
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 ```
+
+[![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
 
 ### AR - Filament and ARCore
 
@@ -63,7 +63,7 @@ dependencies {
 
 ## Model Viewer (3D only)
 
-[![](https://yt-embed.herokuapp.com/embed?v=0tA1e4IhMmk)](https://www.youtube.com/watch?v=0tA1e4IhMmk)
+[![](https://yt-embed.herokuapp.com/embed?v=GDCy_bUdggg)](https://www.youtube.com/watch?v=GDCy_bUdggg)
 
 ```kotlin
 sceneView.addChild(
@@ -187,6 +187,34 @@ Float cube position values between -1.0 and 1.0 corresponding to percents from  
     - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top
     - ...
 - `onError` An exception has been thrown during model loading
+
+## AR Cloud Anchors
+
+[![](https://yt-embed.herokuapp.com/embed?v=iptk8jsWyw4)](https://www.youtube.com/watch?v=iptk8jsWyw4)
+
+```kotlin
+
+cloudAnchorEnabled = true
+
+// Host/Record a Cloud Anchor
+node.onAnchorChanged = { node: ArNode, anchor: Anchor? ->
+    if(anchor != null) {
+        node.hostCloudAnchor { anchor: Anchor, success: Boolean ->
+            if (success) {
+                // Save the hosted Cloud Anchor Id
+                val cloudAnchorId = anchor.cloudAnchorId
+            }
+        }
+    }
+}
+
+// Resolve/Restore the Cloud Anchor
+node.resolveCloudAnchor(cloudAnchorId) { anchor: Anchor, success: Boolean ->
+    if (success) {
+        node.isVisible = true
+    }
+}
+```
 
 ## AR Depth/Objects Occlusion
 
