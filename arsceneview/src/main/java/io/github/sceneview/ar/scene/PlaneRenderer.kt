@@ -239,7 +239,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
     }
 
     private suspend fun loadPlaneMaterial() {
-        val texture = TextureLoader.loadTexture(
+        val texture = TextureLoader.loadImageTexture(
             sceneView.context,
             lifecycle,
             "sceneview/textures/plane_renderer.png",
