@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.Lifecycle;
 
+import com.google.android.filament.MaterialInstance;
 import com.google.ar.sceneform.collision.Box;
 import com.google.ar.sceneform.collision.CollisionShape;
 import com.google.ar.sceneform.common.TransformProvider;
@@ -65,7 +66,7 @@ public abstract class Renderable {
     protected boolean asyncLoadEnabled;
 
     // Data that is unique per-Renderable.
-    private final ArrayList<Material> materialBindings = new ArrayList<>();
+    private final ArrayList<MaterialInstance> materialBindings = new ArrayList<>();
     private final ArrayList<String> materialNames = new ArrayList<>();
     private int renderPriority = RENDER_PRIORITY_DEFAULT;
     private boolean isShadowCaster = true;
@@ -120,8 +121,8 @@ public abstract class Renderable {
         // Copy materials.
         Preconditions.checkState(other.materialNames.size() == other.materialBindings.size());
         for (int i = 0; i < other.materialBindings.size(); i++) {
-            Material otherMaterial = other.materialBindings.get(i);
-            materialBindings.add(otherMaterial.makeCopy());
+            MaterialInstance otherMaterial = other.materialBindings.get(i);
+            materialBindings.add(otherMaterial.getMaterial().createInstance());
             materialNames.add(other.materialNames.get(i));
         }
 
@@ -159,14 +160,14 @@ public abstract class Renderable {
     /**
      * Returns the material bound to the first submesh.
      */
-    public Material getMaterial() {
+    public MaterialInstance getMaterial() {
         return getMaterial(0);
     }
 
     /**
      * Returns the material bound to the specified submesh.
      */
-    public Material getMaterial(int submeshIndex) {
+    public MaterialInstance getMaterial(int submeshIndex) {
         if (submeshIndex < materialBindings.size()) {
             return materialBindings.get(submeshIndex);
         }
@@ -177,14 +178,14 @@ public abstract class Renderable {
     /**
      * Sets the material bound to the first submesh.
      */
-    public void setMaterial(Material material) {
+    public void setMaterial(MaterialInstance material) {
         setMaterial(0, material);
     }
 
     /**
      * Sets the material bound to the specified submesh.
      */
-    public void setMaterial(int submeshIndex, Material material) {
+    public void setMaterial(int submeshIndex, MaterialInstance material) {
         if (submeshIndex < materialBindings.size()) {
             materialBindings.set(submeshIndex, material);
             changeId.update();
@@ -306,7 +307,7 @@ public abstract class Renderable {
         return renderableData;
     }
 
-    ArrayList<Material> getMaterialBindings() {
+    ArrayList<MaterialInstance> getMaterialBindings() {
         return materialBindings;
     }
 

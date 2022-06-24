@@ -87,7 +87,7 @@ open class CursorNode(
     }
 
     open fun updateState() {
-        modelInstance?.material?.filamentMaterialInstance?.setEmissiveColor(
+        modelInstance?.materialInstance?.setEmissiveColor(
             when {
                 isClicked -> colorClicked
                 isTracking -> colorTracking

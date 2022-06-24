@@ -146,7 +146,7 @@ public class VideoNode extends ModelNode {
     return PlaneFactory.makePlane(
             new Vector3(width, height, 0.0f),
             new Vector3(0.0f, height / 2.0f, 0.0f),
-            material,
+            material.filamentMaterialInstance,
             lifecycle
     );
   }
@@ -253,7 +253,7 @@ public class VideoNode extends ModelNode {
       return PlaneFactory.makePlane(
               new Vector3(width, 0.0f, height),
               new Vector3(0.0f, 0.0f, 0.0f),
-              material,
+              material.filamentMaterialInstance,
               lifecycle
       );
     }
@@ -278,7 +278,7 @@ public class VideoNode extends ModelNode {
       return PlaneFactory.makePlane(
               new Vector3(width, height, 0.0f),
               new Vector3(0.0f, height / 2.0f, 0.0f),
-              material,
+              material.filamentMaterialInstance,
               lifecycle
       );
     }

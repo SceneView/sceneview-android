@@ -34,7 +34,9 @@ import java.util.Arrays;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 
+import dev.romainguy.kotlin.math.Float2;
 import io.github.sceneview.SceneView;
+import io.github.sceneview.material.MaterialInstanceKt;
 import io.github.sceneview.node.ModelNode;
 import io.github.sceneview.node.Node;
 
@@ -246,7 +248,7 @@ public class ViewRenderable extends Renderable {
     ViewRenderableInternalData data = Preconditions.checkNotNull(viewRenderableData);
     RenderViewToExternalTexture renderViewToExternalTexture = data.getRenderView();
 
-    getMaterial().setBoolean("viewTextureReady", renderViewToExternalTexture.isViewTextureReady());
+    getMaterial().setParameter("viewTextureReady", renderViewToExternalTexture.isViewTextureReady());
 
     if (!renderViewToExternalTexture.isAttachedToWindow()
         || !renderViewToExternalTexture.isLaidOut()) {
@@ -262,15 +264,14 @@ public class ViewRenderable extends Renderable {
     }
 
     if (!isInitialized) {
-      getMaterial()
-          .setExternalTexture("viewTexture", renderViewToExternalTexture.getExternalTexture());
+      MaterialInstanceKt.setExternalTexture(getMaterial(), "viewTexture", renderViewToExternalTexture.getExternalTexture().getFilamentTexture());
       updateSuggestedCollisionShape();
 
       isInitialized = true;
     }
 
     if (renderer != null && renderer.isFrontFaceWindingInverted()) {
-      getMaterial().setFloat2("offsetUv", 1, 0);
+      MaterialInstanceKt.setParameter(getMaterial(), "offsetUv", new Float2(1.0f, 0.0f));
     }
 
     super.prepareForDraw();
@@ -613,7 +614,6 @@ public class ViewRenderable extends Renderable {
                 .build(lifecycle)
                 .thenAccept(
                         material -> {
-
                           ArrayList<Vertex> vertices = new ArrayList<>();
                           vertices.add(Vertex.builder()
                                   .setPosition(new Vector3(-0.5f, 0.0f, 0.0f))
@@ -643,7 +643,7 @@ public class ViewRenderable extends Renderable {
                           triangleIndices.add(3);
                           triangleIndices.add(2);
                           RenderableDefinition.Submesh submesh =
-                                  RenderableDefinition.Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material).build();
+                                  RenderableDefinition.Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
                           setSource(
                                   RenderableDefinition.builder()
                                           .setVertices(vertices)

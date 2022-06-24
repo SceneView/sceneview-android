@@ -4,6 +4,7 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.MaterialInstance.FloatElement
 import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
+import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Mat4
@@ -19,6 +20,9 @@ fun MaterialInstance.destroy() {
 //    }
     Filament.engine.destroyMaterialInstance(this)
 }
+
+fun MaterialInstance.setParameter(name: String, value: Float2) =
+    setParameter(name, value.x, value.y)
 
 fun MaterialInstance.setParameter(name: String, value: Float4) =
     setParameter(name, value.x, value.y, value.z, value.w)

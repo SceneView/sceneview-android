@@ -7,6 +7,7 @@ import com.google.android.filament.Box;
 import com.google.android.filament.Entity;
 import com.google.android.filament.EntityInstance;
 import com.google.android.filament.IndexBuffer;
+import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.RenderableManager;
 import com.google.android.filament.VertexBuffer;
 import com.google.ar.sceneform.math.Vector3;
@@ -199,7 +200,7 @@ class RenderableInternalData implements IRenderableInternalData {
   public void buildInstanceData(RenderableInstance instance, @Entity int renderedEntity) {
     Renderable renderable = instance.getRenderable();
     IRenderableInternalData renderableData = renderable.getRenderableData();
-    ArrayList<Material> materialBindings = renderable.getMaterialBindings();
+    ArrayList<MaterialInstance> materialBindings = renderable.getMaterialBindings();
     RenderableManager renderableManager = Filament.getRenderableManager();
     @EntityInstance int renderableInstance = renderableManager.getInstance(renderedEntity);
 
@@ -263,9 +264,8 @@ class RenderableInternalData implements IRenderableInternalData {
               meshData.indexEnd - meshData.indexStart);
 
       // Update the material instances assigned to the filament renderable.
-      Material material = materialBindings.get(mesh);
-      renderableManager.setMaterialInstanceAt(
-              renderableInstance, mesh, material.getFilamentMaterialInstance());
+      MaterialInstance material = materialBindings.get(mesh);
+      renderableManager.setMaterialInstanceAt(renderableInstance, mesh, material);
     }
   }
 

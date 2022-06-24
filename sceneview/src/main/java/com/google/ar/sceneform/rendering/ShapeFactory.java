@@ -111,7 +111,7 @@ public final class ShapeFactory {
     }
 
     Submesh submesh =
-        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material).build();
+        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
 
     RenderableDefinition renderableDefinition =
         RenderableDefinition.builder()
@@ -216,7 +216,7 @@ public final class ShapeFactory {
     }
 
     Submesh submesh =
-        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material).build();
+        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
     RenderableDefinition renderableDefinition =
         RenderableDefinition.builder()
             .setVertices(vertices)
@@ -372,7 +372,7 @@ public final class ShapeFactory {
     }
 
     Submesh submesh =
-        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material).build();
+        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
 
     RenderableDefinition renderableDefinition =
         RenderableDefinition.builder()

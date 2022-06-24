@@ -1,5 +1,6 @@
 package com.google.ar.sceneform.rendering;
 
+import com.google.android.filament.MaterialInstance;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 
@@ -24,7 +25,7 @@ public class PlaneFactory {
      */
     @SuppressWarnings("AndroidApiChecker")
     // CompletableFuture requires api level 24
-    public static ModelRenderable makePlane(Vector3 size, Vector3 center, Material material, @Nullable Lifecycle lifecycle) {
+    public static ModelRenderable makePlane(Vector3 size, Vector3 center, MaterialInstance material, @Nullable Lifecycle lifecycle) {
         AndroidPreconditions.checkMinAndroidApiLevel();
 
         Vector3 extents = size.scaled(0.5f);
