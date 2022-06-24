@@ -25,7 +25,7 @@ This is a Sceneform replacement in Kotlin
 ```gradle
 dependencies {
     // 3D only
-    implementation 'io.github.sceneview:sceneview:0.6.0'
+    implementation 'io.github.sceneview:sceneview:0.7.0'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
@@ -34,7 +34,7 @@ dependencies {
 ```gradle
 dependencies {
     // 3D and ARCore
-    implementation 'io.github.sceneview:arsceneview:0.6.0'
+    implementation 'io.github.sceneview:arsceneview:0.7.0'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)

@@ -11,8 +11,6 @@ include ':sceneview'
 include ':arsceneview'
 
 // Samples
-//include ':sample-ar-augmented-image'
-//project(':sample-ar-augmented-image').projectDir = new File('samples/ar-augmented-image')
 include ':sample-ar-cloud-anchor'
 project(':sample-ar-cloud-anchor').projectDir = new File('samples/ar-cloud-anchor')
 include ':sample-ar-cursor-placement'
