@@ -21,7 +21,7 @@ This is a Sceneform replacement in Kotlin
 ## Dependency
 
 *app/build.gradle*
-- 3D
+- 3D (Filament included)
 ```gradle
 dependencies {
     // 3D only
@@ -30,7 +30,7 @@ dependencies {
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
-- 3D + AR
+- AR (Filament + ARCore included)
 ```gradle
 dependencies {
     // 3D and ARCore
@@ -41,7 +41,7 @@ dependencies {
 
 ## Usage
 
-### 3D - Filament
+### 3D
 
 ```xml
 <io.github.sceneview.SceneView
@@ -52,7 +52,7 @@ dependencies {
 
 [![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
 
-### AR - Filament + ARCore
+### AR
 
 ```xml
 <io.github.sceneview.ar.ArSceneView
@@ -86,7 +86,7 @@ Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
 - `scale` The node scale on each axis  
 Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
 
-## AR Model Viewer (3D + AR)
+## AR Model Viewer
 
 [![](https://yt-embed.herokuapp.com/embed?v=HVqAvGJROWk)](https://www.youtube.com/watch?v=HVqAvGJROWk)
 
@@ -120,6 +120,8 @@ The node `position` is updated with the realtime ARCore `pose` at the correspond
 If `true`, the node will be anchored in the real world at the first suitable place available
 
 ## AR Placement Mode
+
+[![](https://yt-embed.herokuapp.com/embed?v=rxzLfTCsm_o)](https://www.youtube.com/watch?v=rxzLfTCsm_o)
 
 Choose how an object is placed within the real world
 - `DISABLED` Disable every AR placement preview and handle it by yourself (`onTap`, `onAugmentedFace`, `onAugmentedImage`
