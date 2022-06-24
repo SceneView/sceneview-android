@@ -41,15 +41,19 @@ dependencies {
 
 ## Usage
 
-- 3D only
+### 3D only - Filament
+
+[![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
+
 ```xml
 <io.github.sceneview.SceneView
     android:id="@+id/sceneView"
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 ```
-[![](https://yt-embed.herokuapp.com/embed?v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
-- 3D and ARCore
+
+### AR - Filament and ARCore
+
 ```xml
 <io.github.sceneview.ar.ArSceneView
     android:id="@+id/sceneView"
@@ -58,6 +62,8 @@ dependencies {
 ```
 
 ## Model Viewer (3D only)
+
+[![](https://yt-embed.herokuapp.com/embed?v=0tA1e4IhMmk)](https://www.youtube.com/watch?v=0tA1e4IhMmk)
 
 ```kotlin
 sceneView.addChild(
@@ -81,6 +87,8 @@ Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
 Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
 
 ## AR Model Viewer (3D + ARCore)
+
+[![](https://yt-embed.herokuapp.com/embed?v=HVqAvGJROWk)](https://www.youtube.com/watch?v=HVqAvGJROWk)
 
 ```kotlin
 sceneView.addChild(
