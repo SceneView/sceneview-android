@@ -160,11 +160,17 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
             quaternion = Quaternion.fromEuler(value)
         }
 
+    internal var _scale: Scale = DEFAULT_SCALE
+
     /**
      * ### The node scale on each axis.
      * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
      */
-    var scale: Scale = DEFAULT_SCALE
+    var scale: Scale get() = _scale
+        set(value) {
+            _scale = value
+            smoothScale = null
+        }
 
     open var transform: Transform
         get() = translation(position) * rotation(quaternion) * scale(scale)
@@ -283,6 +289,24 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
                 }
             }
         }
+    private var smoothScale: Scale? = null
+        set(value) {
+            if(field != value) {
+                field = value
+                if (value == null && smoothPosition == null) {
+                    onSmoothEnd()
+                }
+            }
+        }
+
+    open var smoothTransform: Transform
+        get() = translation(smoothPosition?:position) * rotation(smoothQuaternion?:quaternion) * scale(smoothScale?:scale)
+        set(value) {
+            smooth()
+            position = Position(value.position)
+            quaternion = rotation(value).toQuaternion()
+            scale = Scale(value.scale)
+        }
 
     /**
      * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
@@ -318,7 +342,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - The node's [onFrame] function will be called every frame.
      * - The node's [Renderable] will be rendered.
      * - The node's [collisionShape] will be checked in calls to Scene.hitTest.
-     * - The node's [onTouchEvent] function will be called when the node is touched.
+     * - The node's [onTap] function will be called when the node is touched.
      */
     open val shouldBeRendered: Boolean
         get() = isVisible && isAttached
@@ -491,6 +515,15 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
                 this.smoothQuaternion = null
             }
         }
+        val smoothScale = this.smoothScale?.takeIf { it != _scale }
+        if (smoothScale != null) {
+            _scale = lerp(_scale, smoothScale, lerpFactor).takeIf {
+                distance(_scale, it) > 0.00001f
+            } ?: smoothScale
+            if (_scale == smoothScale) {
+                this.smoothScale = null
+            }
+        }
         onFrame.forEach { it(frameTime, this) }
     }
 
@@ -606,11 +639,9 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
             smoothQuaternion = rotation.toQuaternion()
         }
         if (scale != this.scale) {
-            // TODO: smooth scale
-            this.scale = scale
+            smoothScale = scale
         }
     }
-
 
     /**
      * ## Smooth move, rotate and scale at a specified speed
@@ -618,7 +649,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * @see transform
      */
     fun smooth(transform: Transform, speed: Float = this.smoothSpeed) {
-        smooth(position = transform.position, quaternion = transform.toQuaternion(), speed = speed)
+        smooth(position = Position(transform.position), quaternion = rotation(transform).toQuaternion(), scale = Scale(transform.scale), speed = speed)
     }
 
     // TODO
