@@ -165,7 +165,7 @@ open class SceneView @JvmOverloads constructor(
     var mainLight: Light? = null
         set(value) {
             field = value
-            _renderer?.setMainLight(value)
+            _renderer?.mainLight = value
         }
 
     var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
