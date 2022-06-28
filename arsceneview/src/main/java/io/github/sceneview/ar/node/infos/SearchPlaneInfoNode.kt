@@ -1,11 +1,8 @@
 package io.github.sceneview.ar.node.infos
 
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
 import android.content.Context
 import android.os.Build
 import android.view.View
-import android.view.animation.LinearInterpolator
 import android.widget.TextView
 import androidx.lifecycle.Lifecycle
 import com.google.ar.core.TrackingFailureReason
@@ -21,19 +18,6 @@ open class SearchPlaneInfoNode(context: Context, lifecycle: Lifecycle) :
 
     var textView: TextView? = null
 
-    // TODO: Move to Quaternion
-    private val animator by lazy {
-        ObjectAnimator.ofPropertyValuesHolder(
-            this.rotation,
-            PropertyValuesHolder.ofFloat("x", 0.0f, 15.0f, -15.0f, 0.0f),
-            PropertyValuesHolder.ofFloat("y", 0.0f, 15.0f, -15.0f, 0.0f)
-        ).apply {
-            interpolator = LinearInterpolator()
-            duration = 2500
-            repeatCount = ObjectAnimator.INFINITE
-        }
-    }
-
     init {
         isFocusable = false
         position = Position(x = 0.0f, y = -0.75f, z = -2.0f)
@@ -48,16 +32,6 @@ open class SearchPlaneInfoNode(context: Context, lifecycle: Lifecycle) :
             isShadowCaster = false
             isShadowReceiver = false
             renderPriority = 0
-        }
-    }
-
-    override fun onRenderingChanged(isRendering: Boolean) {
-        super.onRenderingChanged(isRendering)
-
-        if (isRendering) {
-            animator.start()
-        } else {
-            animator.pause()
         }
     }
 
