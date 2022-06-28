@@ -57,9 +57,9 @@ public class Renderer implements UiHelper.RendererCallback {
     private final ArrayList<LightInstance> lightInstances = new ArrayList<>();
     private final double[] cameraProjectionMatrix = new double[16];
     private final List<Mirror> mirrors = new ArrayList<>();
-    public Environment environment = null;
+    private Environment environment = null;
     @Entity
-    public Integer mainLight = null;
+    private Integer mainLight = null;
     @Nullable
     private CameraProvider cameraProvider;
     private Surface surface;
