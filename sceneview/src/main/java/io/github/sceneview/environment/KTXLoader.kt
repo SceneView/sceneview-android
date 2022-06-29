@@ -5,7 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
-import com.google.android.filament.utils.KTXLoader
+import com.google.android.filament.utils.KTX1Loader as KTXLoader
 import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
 import io.github.sceneview.light.destroy
