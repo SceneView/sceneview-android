@@ -44,7 +44,7 @@ public class Camera extends Node implements CameraProvider {
     protected final Matrix viewMatrix = new Matrix();
     protected final Matrix projectionMatrix = new Matrix();
 
-    private static final Float3 DEFAULT_POSITION = new Float3(0.0f, 0.0f, 0.0f);
+    private static final Float3 DEFAULT_POSITION = new Float3(0.0f, 0.0f, 1.0f);
     private static final Quaternion DEFAULT_QUATERNION = new Quaternion();
 
     public static final float DEFAULT_NEAR_PLANE = 0.01f;
