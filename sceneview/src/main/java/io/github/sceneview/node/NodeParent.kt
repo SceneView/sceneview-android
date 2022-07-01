@@ -23,7 +23,7 @@ interface NodeParent {
         set(value) {
             val oldChildren = _children
             _children = value
-            _children.filter { it !in value }.forEach { oldChild ->
+            oldChildren.filter { it !in value }.forEach { oldChild ->
                 oldChild.parent = null
                 onChildRemoved(oldChild)
             }
