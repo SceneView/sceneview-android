@@ -6,7 +6,10 @@ import androidx.lifecycle.coroutineScope
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
-import dev.romainguy.kotlin.math.*
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.Quaternion
+import dev.romainguy.kotlin.math.max
+import dev.romainguy.kotlin.math.quaternion
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.*
 import io.github.sceneview.model.GLBLoader
@@ -79,12 +82,17 @@ open class ModelNode : Node {
      */
     open var modelScale = DEFAULT_MODEL_SCALE
 
-    open var modelTransform: Transform
-        get() = translation(modelPosition) * rotation(modelQuaternion) * scale(modelScale)
+    open var modelTransform: Transform = Transform(modelPosition, modelQuaternion, modelScale)
+        get() = field.takeIf {
+            it.position == modelPosition && it.quaternion == modelQuaternion && it.scale == modelScale
+        } ?: Transform(modelPosition, modelQuaternion, modelScale)
         set(value) {
-            modelPosition = Position(value.position)
-            modelQuaternion = rotation(value).toQuaternion()
-            modelScale = Scale(value.scale)
+            if (field != value) {
+                field = value
+                modelPosition = value.position
+                modelQuaternion = value.quaternion
+                modelScale = value.scale
+            }
         }
 
     override val worldTransform: Transform
