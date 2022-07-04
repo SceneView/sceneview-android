@@ -19,7 +19,6 @@
 package dev.romainguy.kotlin.math
 
 import kotlin.math.*
-
 enum class QuaternionComponent {
     X, Y, Z, W
 }
@@ -30,10 +29,10 @@ enum class QuaternionComponent {
  * Default: Identity
  */
 data class Quaternion(
-    var x: Float = 0.0f,
-    var y: Float = 0.0f,
-    var z: Float = 0.0f,
-    var w: Float = 1.0f) {
+        var x: Float = 0.0f,
+        var y: Float = 0.0f,
+        var z: Float = 0.0f,
+        var w: Float = 1.0f) {
 
     constructor(v: Float3, w: Float = 1.0f) : this(v.x, v.y, v.z, w)
     constructor(v: Float4) : this(v.x, v.y, v.z, v.w)
@@ -81,7 +80,12 @@ data class Quaternion(
          * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around its Z
          * axis, then its Y axis and finally its X axis.
          */
-        fun fromEuler(yaw: Float = 0.0f, pitch: Float = 0.0f, roll: Float = 0.0f, order: RotationsOrder = RotationsOrder.ZYX): Quaternion {
+        fun fromEuler(
+            yaw: Float = 0.0f,
+            pitch: Float = 0.0f,
+            roll: Float = 0.0f,
+            order: RotationsOrder = RotationsOrder.ZYX
+        ): Quaternion {
             val c1 = cos(yaw * 0.5f)
             val s1 = sin(yaw * 0.5f)
             val c2 = cos(pitch * 0.5f)
@@ -90,39 +94,39 @@ data class Quaternion(
             val s3 = sin(roll * 0.5f)
             return when (order) {
                 RotationsOrder.XZY -> Quaternion(
-                    s1 * c2 * c3 - c1 * s2 * s3,
-                    c1 * c2 * s3 - s1 * s2 * c3,
-                    s1 * c2 * s3 + c1 * s2 * c3,
-                    s1 * s2 * s3 + c1 * c2 * c3)
+                        s1 * c2 * c3 - c1 * s2 * s3,
+                        c1 * c2 * s3 - s1 * s2 * c3,
+                        s1 * c2 * s3 + c1 * s2 * c3,
+                        s1 * s2 * s3 + c1 * c2 * c3)
                 RotationsOrder.XYZ -> Quaternion(
-                    s1 * c2 * c3 + s2 * s3 * c1,
-                    s2 * c1 * c3 - s1 * s3 * c2,
-                    s1 * s2 * c3 + s3 * c1 * c2,
-                    c1 * c2 * c3 - s1 * s2 * s3
+                        s1 * c2 * c3 + s2 * s3 * c1,
+                        s2 * c1 * c3 - s1 * s3 * c2,
+                        s1 * s2 * c3 + s3 * c1 * c2,
+                        c1 * c2 * c3 - s1 * s2 * s3
                 )
                 RotationsOrder.YXZ -> Quaternion(
-                    s1 * c2 * s3 + c1 * s2 * c3,
-                    s1 * c2 * c3 - c1 * s2 * s3,
-                    c1 * c2 * s3 - s1 * s2 * c3,
-                    s1 * s2 * s3 + c1 * c2 * c3
+                        s1 * c2 * s3 + c1 * s2 * c3,
+                        s1 * c2 * c3 - c1 * s2 * s3,
+                        c1 * c2 * s3 - s1 * s2 * c3,
+                        s1 * s2 * s3 + c1 * c2 * c3
                 )
                 RotationsOrder.YZX -> Quaternion(
-                    s1 * s2 * c3 + c1 * c2 * s3,
-                    s1 * c2 * c3 + c1 * s2 * s3,
-                    c1 * s2 * c3 - s1 * c2 * s3,
-                    c1 * c2 * c3 - s1 * s2 * s3
+                        s1 * s2 * c3 + c1 * c2 * s3,
+                        s1 * c2 * c3 + c1 * s2 * s3,
+                        c1 * s2 * c3 - s1 * c2 * s3,
+                        c1 * c2 * c3 - s1 * s2 * s3
                 )
                 RotationsOrder.ZYX -> Quaternion(
-                    c1 * c2 * s3 - s1 * s2 * c3,
-                    s1 * c2 * s3 + c1 * s2 * c3,
-                    s1 * c2 * c3 - c1 * s2 * s3,
-                    s1 * s2 * s3 + c1 * c2 * c3
+                        c1 * c2 * s3 - s1 * s2 * c3,
+                        s1 * c2 * s3 + c1 * s2 * c3,
+                        s1 * c2 * c3 - c1 * s2 * s3,
+                        s1 * s2 * s3 + c1 * c2 * c3
                 )
                 RotationsOrder.ZXY -> Quaternion(
-                    c1 * s2 * c3 - s1 * c2 * s3,
-                    s1 * s2 * c3 + c1 * c2 * s3,
-                    s1 * c2 * c3 + c1 * s2 * s3,
-                    c1 * c2 * c3 - s1 * s2 * s3
+                        c1 * s2 * c3 - s1 * c2 * s3,
+                        s1 * s2 * c3 + c1 * c2 * s3,
+                        s1 * c2 * c3 + c1 * s2 * s3,
+                        c1 * c2 * c3 - s1 * s2 * s3
                 )
             }
         }
@@ -167,17 +171,17 @@ data class Quaternion(
     }
 
     operator fun get(
-        index1: QuaternionComponent,
-        index2: QuaternionComponent,
-        index3: QuaternionComponent): Float3 {
+            index1: QuaternionComponent,
+            index2: QuaternionComponent,
+            index3: QuaternionComponent): Float3 {
         return Float3(get(index1), get(index2), get(index3))
     }
 
     operator fun get(
-        index1: QuaternionComponent,
-        index2: QuaternionComponent,
-        index3: QuaternionComponent,
-        index4: QuaternionComponent): Quaternion {
+            index1: QuaternionComponent,
+            index2: QuaternionComponent,
+            index3: QuaternionComponent,
+            index4: QuaternionComponent): Quaternion {
         return Quaternion(get(index1), get(index2), get(index3), get(index4))
     }
 
@@ -238,15 +242,15 @@ data class Quaternion(
     }
 
     operator fun set(
-        index1: QuaternionComponent, index2: QuaternionComponent, index3: QuaternionComponent, v: Float) {
+            index1: QuaternionComponent, index2: QuaternionComponent, index3: QuaternionComponent, v: Float) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
     }
 
     operator fun set(
-        index1: QuaternionComponent, index2: QuaternionComponent,
-        index3: QuaternionComponent, index4: QuaternionComponent, v: Float) {
+            index1: QuaternionComponent, index2: QuaternionComponent,
+            index3: QuaternionComponent, index4: QuaternionComponent, v: Float) {
         set(index1, v)
         set(index2, v)
         set(index3, v)
@@ -265,10 +269,10 @@ data class Quaternion(
     inline operator fun plus(q: Quaternion) = Quaternion(x + q.x, y + q.y, z + q.z, w + q.w)
     inline operator fun minus(q: Quaternion) = Quaternion(x - q.x, y - q.y, z - q.z, w - q.w)
     inline operator fun times(q: Quaternion) = Quaternion(
-        w * q.x + x * q.w + y * q.z - z * q.y,
-        w * q.y - x * q.z + y * q.w + z * q.x,
-        w * q.z + x * q.y - y * q.x + z * q.w,
-        w * q.w - x * q.x - y * q.y - z * q.z)
+            w * q.x + x * q.w + y * q.z - z * q.y,
+            w * q.y - x * q.z + y * q.w + z * q.x,
+            w * q.z + x * q.y - y * q.x + z * q.w,
+            w * q.w - x * q.x - y * q.y - z * q.z)
 
     inline fun transform(block: (Float) -> Float): Quaternion {
         x = block(x)
@@ -289,6 +293,36 @@ inline operator fun Float.plus(q: Quaternion) = Quaternion(this + q.x, this + q.
 inline operator fun Float.minus(q: Quaternion) = Quaternion(this - q.x, this - q.y, this - q.z, this - q.w)
 inline operator fun Float.times(q: Quaternion) = Quaternion(this * q.x, this * q.y, this * q.z, this * q.w)
 inline operator fun Float.div(q: Quaternion) = Quaternion(this / q.x, this / q.y, this / q.z, this / q.w)
+
+inline fun compare(a: Quaternion, b: Float, eps: Float? = null) = compare(normalize(a).xyzw, b, eps)
+inline fun compare(a: Quaternion, b: Quaternion, eps: Float? = null) = compare(normalize(a).xyzw, normalize(b).xyzw, eps)
+inline fun lessThan(a: Quaternion, b: Float, eps: Float? = null) = lessThan(normalize(a).xyzw, b, eps)
+inline fun lessThan(a: Quaternion, b: Quaternion, eps: Float? = null) = lessThan(normalize(a).xyzw, normalize(b).xyzw, eps)
+inline fun lessThanEqual(a: Quaternion, b: Float, eps: Float? = null) = lessThanEqual(normalize(a).xyzw, b, eps)
+inline fun lessThanEqual(a: Quaternion, b: Quaternion, eps: Float? = null) = lessThanEqual(normalize(a).xyzw, normalize(b).xyzw, eps)
+inline fun greaterThan(a: Quaternion, b: Float, eps: Float? = null) = greaterThan(normalize(a).xyzw, b, eps)
+inline fun greaterThan(a: Quaternion, b: Quaternion, eps: Float? = null) = greaterThan(normalize(a).xyzw, normalize(b).xyzw, eps)
+inline fun greaterThanEqual(a: Quaternion, b: Float, eps: Float? = null) = greaterThanEqual(normalize(a).xyzw, b, eps)
+inline fun greaterThanEqual(a: Quaternion, b: Quaternion, eps: Float? = null) = greaterThanEqual(normalize(a).xyzw, normalize(b).xyzw, eps)
+inline fun equal(a: Quaternion, b: Float, eps: Float? = null) = equal(normalize(a).xyzw, b, eps)
+inline fun equal(a: Quaternion, b: Quaternion, eps: Float? = null) = equal(normalize(a).xyzw, normalize(b).xyzw, eps)
+inline fun notEqual(a: Quaternion, b: Float, eps: Float? = null) = notEqual(normalize(a).xyzw, b, eps)
+inline fun notEqual(a: Quaternion, b: Quaternion, eps: Float? = null) = notEqual(normalize(a).xyzw, normalize(b).xyzw, eps)
+inline fun equals(a: Quaternion, b: Float, eps: Float? = null) = equals(normalize(a).xyzw, b, eps)
+inline fun equals(a: Quaternion, b: Quaternion, eps: Float? = null) = equals(normalize(a).xyzw, normalize(b).xyzw, eps)
+
+inline infix fun Quaternion.lt(b: Float) = normalize(this).xyzw.lt(b)
+inline infix fun Quaternion.lt(b: Float4) = normalize(this).xyzw.lt(normalize(b).xyzw)
+inline infix fun Quaternion.lte(b: Float) = normalize(this).xyzw.lte(b)
+inline infix fun Quaternion.lte(b: Float4) = normalize(this).xyzw.lte(normalize(b).xyzw)
+inline infix fun Quaternion.gt(b: Float) = normalize(this).xyzw.gt(b)
+inline infix fun Quaternion.gt(b: Float4) = normalize(this).xyzw.gt(normalize(b).xyzw)
+inline infix fun Quaternion.gte(b: Float) = normalize(this).xyzw.gte(b)
+inline infix fun Quaternion.gte(b: Float4) = normalize(this).xyzw.gte(normalize(b).xyzw)
+inline infix fun Quaternion.eq(b: Float) = normalize(this).xyzw.eq(b)
+inline infix fun Quaternion.eq(b: Float4) = normalize(this).xyzw.eq(normalize(b).xyzw)
+inline infix fun Quaternion.neq(b: Float) = normalize(this).xyzw.neq(b)
+inline infix fun Quaternion.neq(b: Float4) = normalize(this).xyzw.neq(normalize(b).xyzw)
 
 inline fun abs(q: Quaternion) = Quaternion(abs(q.x), abs(q.y), abs(q.z), abs(q.w))
 inline fun length(q: Quaternion) = sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
