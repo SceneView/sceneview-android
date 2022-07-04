@@ -8,10 +8,7 @@ import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
-import io.github.sceneview.math.Position
-import io.github.sceneview.math.Rotation
-import io.github.sceneview.math.Scale
-import io.github.sceneview.math.Transform
+import io.github.sceneview.math.*
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.utils.FrameTime
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +87,7 @@ open class ModelNode : Node {
             modelScale = Scale(value.scale)
         }
 
-    override val worldTransform: Mat4
+    override val worldTransform: Transform
         get() = super.worldTransform * modelTransform
 
     // Rendering fields.
@@ -164,7 +161,8 @@ open class ModelNode : Node {
      * - An http or https url *https://mydomain.com/mymodel.glb*
      * ```
      * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube so it will better fit your SceneView
+     * @param scaleUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
      * @param centerOrigin Center point origin position within the model:
      * Float cube position values between -1.0 and 1.0 corresponding to percents from
      * model sizes.
@@ -185,7 +183,7 @@ open class ModelNode : Node {
         lifecycle: Lifecycle? = null,
         modelFileLocation: String,
         autoAnimate: Boolean = true,
-        autoScale: Boolean = false,
+        scaleUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null
@@ -195,7 +193,7 @@ open class ModelNode : Node {
             lifecycle,
             modelFileLocation,
             autoAnimate,
-            autoScale,
+            scaleUnits,
             centerOrigin,
             onError,
             onLoaded
@@ -277,7 +275,8 @@ open class ModelNode : Node {
      * - A File path *Uri.fromFile(myModelFile).path*
      * - An http or https url *https://mydomain.com/mymodel.glb*
      * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
      * @param centerOrigin Center the model origin to this unit cube position
      * - `null` = Keep the original model center point
      * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
@@ -290,14 +289,14 @@ open class ModelNode : Node {
         lifecycle: Lifecycle,
         glbFileLocation: String,
         autoAnimate: Boolean = true,
-        autoScale: Boolean = false,
+        scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null
     ): RenderableInstance? {
         return try {
             val model = GLBLoader.loadModel(context, lifecycle, glbFileLocation)
             withContext(Dispatchers.Main) {
-                setModel(model, autoAnimate, autoScale, centerOrigin)?.also {
+                setModel(model, autoAnimate, scaleToUnits, centerOrigin)?.also {
                     onModelLoaded(it)
                 }
             }
@@ -323,10 +322,9 @@ open class ModelNode : Node {
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
      * - A File path *Uri.fromFile(myModelFile).path*
      * - An http or https url *https://mydomain.com/mymodel.glb*
-     * @param coroutineScope your Activity or Fragment coroutine scope if you want to preload the
-     * 3D model before the node is attached to the [SceneView]
      * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
      * @param centerOrigin Center the model origin to this unit cube position
      * - `null` = Keep the original model center point
      * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
@@ -339,7 +337,7 @@ open class ModelNode : Node {
         lifecycle: Lifecycle? = null,
         glbFileLocation: String,
         autoAnimate: Boolean = true,
-        autoScale: Boolean = false,
+        scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null
@@ -351,7 +349,7 @@ open class ModelNode : Node {
                     lifecycle,
                     glbFileLocation,
                     autoAnimate,
-                    autoScale,
+                    scaleToUnits,
                     centerOrigin,
                     onError
                 )?.let { onLoaded?.invoke(it) }
@@ -359,7 +357,7 @@ open class ModelNode : Node {
         } else {
             doOnAttachedToScene { sceneView ->
                 loadModelAsync(
-                    context, sceneView.lifecycle, glbFileLocation, autoAnimate, autoScale,
+                    context, sceneView.lifecycle, glbFileLocation, autoAnimate, scaleToUnits,
                     centerOrigin, onError, onLoaded
                 )
             }
@@ -371,7 +369,8 @@ open class ModelNode : Node {
      * ### Set the node model
      *
      * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
      * @param centerOrigin Center the model origin to this unit cube position
      * - `null` = Keep the original model center point
      * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
@@ -383,7 +382,7 @@ open class ModelNode : Node {
     open fun setModel(
         renderable: Renderable?,
         autoAnimate: Boolean = true,
-        autoScale: Boolean = false,
+        scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
     ): RenderableInstance? {
         modelInstance = renderable?.createInstance(this)?.apply {
@@ -391,9 +390,7 @@ open class ModelNode : Node {
                 animate(true)?.start()
             }
         }
-        if (autoScale) {
-            scaleModel()
-        }
+        scaleToUnits?.let { scaleModel(it) }
         centerOrigin?.let { centerModel(it) }
         return modelInstance
     }
@@ -407,7 +404,7 @@ open class ModelNode : Node {
         doOnModelLoaded { modelInstance ->
             modelInstance.filamentAsset?.let { asset ->
                 val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
-                modelScale = Scale(units / max(halfExtent))
+                modelScale = Scale(units / (max(halfExtent) * 2.0f))
             }
         }
     }

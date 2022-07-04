@@ -213,7 +213,8 @@ open class ArModelNode : ArNode {
      * - A File path *Uri.fromFile(myModelFile).path*
      * - An http or https url *https://mydomain.com/mymodel.glb*
      * @param autoAnimate Plays the animations automatically if the model has one
-     * @param autoScale Scale the model to fit a unit cube
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
      * @param centerOrigin Center the model origin to this unit cube position
      * - `null` = Keep the original model center point
      * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
@@ -228,7 +229,7 @@ open class ArModelNode : ArNode {
         lifecycle: Lifecycle? = null,
         modelFileLocation: String,
         autoAnimate: Boolean = true,
-        autoScale: Boolean = false,
+        scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((instance: RenderableInstance) -> Unit)? = null
@@ -238,7 +239,7 @@ open class ArModelNode : ArNode {
             lifecycle,
             modelFileLocation,
             autoAnimate,
-            autoScale,
+            scaleToUnits,
             centerOrigin,
             onError,
             onLoaded

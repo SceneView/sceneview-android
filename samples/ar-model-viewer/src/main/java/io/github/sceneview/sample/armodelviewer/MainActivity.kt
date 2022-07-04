@@ -65,7 +65,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             lifecycle = lifecycle,
             modelFileLocation = "models/spiderbot.glb",
             autoAnimate = true,
-            autoScale = false,
             // Place the model origin at the bottom center
             centerOrigin = Position(y = -1.0f)
         ) {

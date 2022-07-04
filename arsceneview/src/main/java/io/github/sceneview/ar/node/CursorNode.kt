@@ -17,7 +17,7 @@ open class CursorNode(
     lifecycle: Lifecycle? = null,
     modelFileLocation: String = "sceneview/models/cursor.glb",
     autoAnimate: Boolean = true,
-    autoScale: Boolean = false,
+    scaleToUnits: Float? = null,
     centerOrigin: Position? = null,
     onError: ((error: Exception) -> Unit)? = null,
     onLoaded: ((instance: RenderableInstance) -> Unit)? = null
@@ -26,7 +26,7 @@ open class CursorNode(
     lifecycle,
     modelFileLocation,
     autoAnimate,
-    autoScale,
+    scaleToUnits,
     centerOrigin,
     onError,
     onLoaded
