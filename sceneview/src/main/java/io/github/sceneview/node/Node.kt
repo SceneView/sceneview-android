@@ -7,7 +7,6 @@ import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.common.TransformProvider
-import com.google.ar.sceneform.math.MathHelper.clamp
 import com.google.ar.sceneform.math.Matrix
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
@@ -51,8 +50,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         val DEFAULT_QUATERNION get() = Quaternion()
         val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
         val DEFAULT_SCALE get() = Scale(1.0f)
-
-        const val DEFAULT_ROTATION_DOT_THRESHOLD = 0.95f
     }
 
     /**
@@ -75,8 +72,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     var name: String? = null
 
     val isAttached get() = sceneView != null
-
-    internal var _position: Position = DEFAULT_POSITION
 
     /**
      * ### The node position to locate it within the coordinate system of its parent
@@ -113,22 +108,12 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      *
      * +z ---- -y --------
      */
-    var position: Position get() = _position
-    set(value) {
-        _position = value
-        smoothPosition = null
-    }
-
-    internal var _quaternion: Quaternion = DEFAULT_QUATERNION
+    var position: Position = DEFAULT_POSITION
 
     /**
      * TODO: Doc
      */
-    var quaternion: Quaternion get() = _quaternion
-        set(value) {
-            _quaternion = value
-            smoothQuaternion = null
-        }
+    var quaternion: Quaternion = DEFAULT_QUATERNION
 
     /**
      * ### The node orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`
@@ -160,24 +145,23 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
             quaternion = Quaternion.fromEuler(value)
         }
 
-    internal var _scale: Scale = DEFAULT_SCALE
-
     /**
      * ### The node scale on each axis.
      * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
      */
-    var scale: Scale get() = _scale
-        set(value) {
-            _scale = value
-            smoothScale = null
-        }
+    var scale: Scale = DEFAULT_SCALE
 
-    open var transform: Transform
-        get() = translation(position) * rotation(quaternion) * scale(scale)
+    open var transform: Transform = Transform(position, quaternion, scale)
+        get() = field.takeIf {
+            it.position == position && it.quaternion == quaternion && it.scale == scale
+        } ?: Transform(position, quaternion, scale)
         set(value) {
-            position = Position(value.position)
-            quaternion = rotation(value).toQuaternion()
-            scale = Scale(value.scale)
+            if (field != value) {
+                field = value
+                position = value.position
+                quaternion = value.quaternion
+                scale = value.scale
+            }
         }
 
     /**
@@ -252,61 +236,13 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     /**
      * ## The smooth position, rotation and scale speed
      *
-     * Expressed in units per seconds.
-     * On an AR context, 1 unit = 1 meter. So, for position, this value defines the meters per
-     * seconds for a node move.
      * This value is used by [smooth]
      */
     var smoothSpeed = 5.0f
 
-    /**
-     * ## The smooth rotation minimum change limit
-     *
-     * This is used to avoid very near rotations smooth modifications. It prevents the rotation to
-     * appear too quick if the ranges are too close and uses linearly interpolation for upper dot
-     * products.
-     *
-     * Expressed in quaternion dot product
-     * This value is used by [smooth]
-     */
-    var smoothRotationThreshold = DEFAULT_ROTATION_DOT_THRESHOLD
+    var smoothTransform: Transform = Transform(transform)
 
-    private var smoothPosition: Position? = null
-    set(value) {
-        if(field != value) {
-            field = value
-            if (value == null && smoothQuaternion == null) {
-                onSmoothEnd()
-            }
-        }
-    }
-    private var smoothQuaternion: Quaternion? = null
-        set(value) {
-            if(field != value) {
-                field = value
-                if (value == null && smoothPosition == null) {
-                    onSmoothEnd()
-                }
-            }
-        }
-    private var smoothScale: Scale? = null
-        set(value) {
-            if(field != value) {
-                field = value
-                if (value == null && smoothPosition == null) {
-                    onSmoothEnd()
-                }
-            }
-        }
-
-    open var smoothTransform: Transform
-        get() = translation(smoothPosition?:position) * rotation(smoothQuaternion?:quaternion) * scale(smoothScale?:scale)
-        set(value) {
-            smooth()
-            position = Position(value.position)
-            quaternion = rotation(value).toQuaternion()
-            scale = Scale(value.scale)
-        }
+    private var lastFrameTransform: Transform? = null
 
     /**
      * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
@@ -444,8 +380,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     val onTransformChanged = mutableListOf<(node: Node) -> Unit>()
 
-    var onSmoothEnd: ((node: Node) -> Unit)? = null
-
     /**
      * ### Invoked when the node is tapped
      *
@@ -495,40 +429,22 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     }
 
     override fun onFrame(frameTime: FrameTime) {
-        // Smooth value compare
-        val lerpFactor = clamp((frameTime.intervalSeconds * smoothSpeed).toFloat(), 0.0f, 1.0f)
-        val smoothPosition = this.smoothPosition?.takeIf { it != _position }
-        if (smoothPosition != null) {
-            _position = lerp(_position, smoothPosition, lerpFactor).takeIf {
-                distance(_position, it) > 0.00001f
-            } ?: smoothPosition
-            if (_position == smoothPosition) {
-                this.smoothPosition = null
+        if (smoothTransform != transform) {
+            if (transform != lastFrameTransform) {
+                // Stop smooth if any of the position/rotation/scale has changed meanwhile
+                smoothTransform = transform
+            } else {
+                // Smooth the transform
+                transform = slerp(
+                    start = transform,
+                    end = smoothTransform,
+                    deltaSeconds = frameTime.intervalSeconds,
+                    speed = smoothSpeed
+                )
             }
         }
-        val smoothQuaternion = this.smoothQuaternion?.takeIf { it != _quaternion }
-        if (smoothQuaternion != null) {
-            _quaternion = slerp(_quaternion, normalize(smoothQuaternion), lerpFactor).takeIf {
-                angle(_quaternion, smoothQuaternion) > 0.00001f
-            } ?: smoothQuaternion
-            if (_quaternion == smoothQuaternion) {
-                this.smoothQuaternion = null
-            }
-        }
-        val smoothScale = this.smoothScale?.takeIf { it != _scale }
-        if (smoothScale != null) {
-            _scale = lerp(_scale, smoothScale, lerpFactor).takeIf {
-                distance(_scale, it) > 0.00001f
-            } ?: smoothScale
-            if (_scale == smoothScale) {
-                this.smoothScale = null
-            }
-        }
+        lastFrameTransform = transform
         onFrame.forEach { it(frameTime, this) }
-    }
-
-    open fun onSmoothEnd() {
-        onSmoothEnd?.invoke(this)
     }
 
     /**
@@ -617,7 +533,6 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * ## Smooth move, rotate and scale at a specified speed
      *
      * @see position
-     * @see rotation
      * @see quaternion
      * @see scale
      * @see speed
@@ -625,23 +540,9 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     fun smooth(
         position: Position = this.position,
         quaternion: Quaternion = this.quaternion,
-        rotation: Rotation = this.rotation,
         scale: Scale = this.scale,
         speed: Float = this.smoothSpeed
-    ) {
-        this.smoothSpeed = speed
-        if (position != this.position) {
-            smoothPosition = position
-        }
-        if (quaternion != this.quaternion) {
-            smoothQuaternion = quaternion
-        } else if (rotation != this.rotation) {
-            smoothQuaternion = rotation.toQuaternion()
-        }
-        if (scale != this.scale) {
-            smoothScale = scale
-        }
-    }
+    ) = smooth(Transform(position, quaternion, scale), speed)
 
     /**
      * ## Smooth move, rotate and scale at a specified speed
@@ -649,7 +550,8 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * @see transform
      */
     fun smooth(transform: Transform, speed: Float = this.smoothSpeed) {
-        smooth(position = Position(transform.position), quaternion = rotation(transform).toQuaternion(), scale = Scale(transform.scale), speed = speed)
+        smoothSpeed = speed
+        smoothTransform = transform
     }
 
     // TODO
@@ -687,7 +589,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - One of the parent nodes.
      * - `null` if no node is found.
      */
-    inline fun <reified T: Node> firstEnclosingNode(): T? {
+    inline fun <reified T : Node> firstEnclosingNode(): T? {
         var currentNode: Node? = this
 
         while (currentNode != null && currentNode !is T) {
