@@ -16,7 +16,7 @@ import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.PlaneFactory;
 import com.google.ar.sceneform.rendering.Renderable;
 
-import io.github.sceneview.math.UtilsKt;
+import io.github.sceneview.math.MathUtilsKt;
 import io.github.sceneview.node.ModelNode;
 import io.github.sceneview.utils.FrameTime;
 
@@ -156,11 +156,11 @@ public class VideoNode extends ModelNode {
     super.onFrame(frameTime);
 
     if (rotateAlwaysToCamera && getSceneView() != null) {
-      Vector3 cameraPosition = UtilsKt.toVector3(getSceneView().getCamera().getWorldPosition());
-      Vector3 cardPosition = UtilsKt.toVector3(getWorldPosition());
+      Vector3 cameraPosition = MathUtilsKt.toVector3(getSceneView().getCamera().getWorldPosition());
+      Vector3 cardPosition = MathUtilsKt.toVector3(getWorldPosition());
       Vector3 direction = Vector3.subtract(cameraPosition, cardPosition);
       Quaternion lookRotation = Quaternion.lookRotation(direction, Vector3.up());
-      setQuaternion(UtilsKt.toNewQuaternion(lookRotation));
+      setQuaternion(MathUtilsKt.toNewQuaternion(lookRotation));
     }
   }
 
