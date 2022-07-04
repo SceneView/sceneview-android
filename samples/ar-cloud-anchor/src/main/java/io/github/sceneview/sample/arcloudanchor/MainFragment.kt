@@ -92,9 +92,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             loadModelAsync(
                 context = requireContext(),
                 lifecycle = lifecycle,
-                glbFileLocation = "models/spiderbot.glb",
-                autoAnimate = false,
-                autoScale = false,
+                glbFileLocation = "models/spiderbot.glb"
             ) {
                 isLoading = false
             }
