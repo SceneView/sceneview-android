@@ -71,19 +71,21 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      */
     open var pose: Pose? = null
         set(value) {
-            val position = value?.position
-            val quaternion = value?.quaternion
-            if (position != field?.position || quaternion != field?.quaternion) {
-                field = value
-                if (position != null && quaternion != null) {
+            field = value
+            if (value?.transform != field?.transform) {
+                val position = value?.takeIf { placementMode.enablePositioning }?.position
+                    ?: this.position
+                val quaternion = value?.takeIf { placementMode.enableRotation }?.quaternion
+                    ?: this.quaternion
+                if (position != this.position || quaternion != this.quaternion) {
                     if (isSmoothPoseEnable) {
                         smooth(position = position, quaternion = quaternion)
                     } else {
                         transform(position = position, quaternion = quaternion)
                     }
                 }
-                onPoseChanged(value)
             }
+            onPoseChanged(value)
         }
 
     /**
@@ -442,10 +444,19 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
  * This is only used while the tracking method for the returned point is InstantPlacementPoint.
  * @param instantPlacementFallback Fallback to instantly place nodes at a fixed orientation and an
  * approximate distance when the base placement type is not available yet or at all.
+ * @param enablePositioning Should the [ArNode.position] be updated with the ARCore detected [Pose].
+ * Use this parameter if you want to keep a static position and let it like it was initially
+ * defined without being influenced by the ARCore [Trackable] retrieved value.
+ * @param enableRotation Should the [ArNode.rotation] be updated with the ARCore detected [Pose].
+ * Use this parameter if you want to keep a static rotation and let it like it was initially
+ * defined without being influenced by the ARCore [Trackable] retrieved value.
  */
+
 enum class PlacementMode(
     var instantPlacementDistance: Float = ArNode.DEFAULT_PLACEMENT_DISTANCE,
-    var instantPlacementFallback: Boolean = false
+    var instantPlacementFallback: Boolean = false,
+    var enablePositioning: Boolean = true,
+    var enableRotation: Boolean = true
 ) {
     /**
      * ### Disable every AR placement
