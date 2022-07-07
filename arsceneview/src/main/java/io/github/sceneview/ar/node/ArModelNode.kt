@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.Lifecycle
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
+import com.google.ar.core.Pose
 import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneView
@@ -161,12 +162,6 @@ open class ArModelNode : ArNode {
     var hitResult: HitResult? = null
         private set(value) {
             field = value
-            if (followHitPosition &&
-                // Keep the last position when no tracking result
-                value?.isTracking == true
-            ) {
-                pose = value.hitPose
-            }
             onHitResult(value)
         }
 
@@ -264,12 +259,27 @@ open class ArModelNode : ArNode {
         this.arFrame = arFrame
     }
 
+    override fun onPoseChanged(pose: Pose?) {
+        super.onPoseChanged(pose)
+
+        if(pose == null) {
+            transform(hitPosition, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
+        }
+    }
+
     /**
      * TODO : Doc
      */
     open fun onHitResult(hitResult: HitResult?) {
+        if (followHitPosition
+            // Keep the last position when no tracking result
+//            && hitResult?.isTracking == true
+        ) {
+            pose = hitResult?.hitPose
+        }
         onHitResult?.invoke(this, hitResult)
     }
+
 
     /**
      * ### Performs a ray cast to retrieve the ARCore info at this camera point

@@ -10,6 +10,7 @@ import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.interaction.NodeMotionEvent
 import io.github.sceneview.node.ModelNode
 
 open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
@@ -72,19 +73,6 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     open var pose: Pose? = null
         set(value) {
             field = value
-            if (value?.transform != field?.transform) {
-                val position = value?.takeIf { placementMode.enablePositioning }?.position
-                    ?: this.position
-                val quaternion = value?.takeIf { placementMode.enableRotation }?.quaternion
-                    ?: this.quaternion
-                if (position != this.position || quaternion != this.quaternion) {
-                    if (isSmoothPoseEnable) {
-                        smooth(position = position, quaternion = quaternion)
-                    } else {
-                        transform(position = position, quaternion = quaternion)
-                    }
-                }
-            }
             onPoseChanged(value)
         }
 
@@ -130,10 +118,6 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
-    open val isEditable: Boolean
-        get() = editableTransforms.isNotEmpty()
-    open var editableTransforms: Set<EditableTransform> = EditableTransform.ALL
-
     /**
      * ### How/where does the node is positioned in the real world
      *
@@ -155,6 +139,10 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
                 }
             }
         }
+
+    override var isPositionEditable: Boolean = true
+    override var isRotationEditable: Boolean = true
+    override var isScaleEditable: Boolean = true
 
     /**
      * TODO : Doc
@@ -202,6 +190,19 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * TODO : Doc
      */
     open fun onPoseChanged(pose: Pose?) {
+        if (pose != null) {
+            if (this.pose?.transform != pose?.transform) {
+                val position = pose.takeIf { placementMode.enablePositioning }?.position
+                    ?: this.position
+                val quaternion = pose.takeIf { placementMode.enableRotation }?.quaternion
+                    ?: this.quaternion
+                if (position != this.position || quaternion != this.quaternion) {
+                    transform(position, quaternion, smooth = isSmoothPoseEnable)
+                }
+            }
+        } else {
+            transform(DEFAULT_POSITION, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
+        }
         onPoseChanged?.invoke(this, pose)
     }
 
