@@ -2,6 +2,7 @@ package io.github.sceneview.interaction
 
 import android.content.Context
 import android.view.MotionEvent
+import dev.romainguy.kotlin.math.degrees
 import io.github.sceneview.interaction.RotateGestureDetector.OnRotateListener
 import kotlin.math.absoluteValue
 import kotlin.math.atan2
@@ -16,18 +17,227 @@ import kotlin.math.sqrt
  * This class should only be used with [MotionEvent]s reported via touch.
  *
  * To use this class:
- * - Create an instance of the [RotateGestureDetector] for your [android.view.View]
+ * - Create an instance of the [RotateGestureDetector] for your [android.view.View].
  * - In the [android.view.View.onTouchEvent] method ensure you call [onTouchEvent].
  * The methods defined in your callback will be executed when the events occur.
  *
  * @param context the application's context
  * @param listener the listener invoked for all the callbacks, this must not be null
- * @param handler the handler to use for running deferred listener events
  */
 open class RotateGestureDetector(
     private val context: Context,
     private val listener: OnRotateListener
 ) {
+
+    private var previousEvent: MotionEvent? = null
+    private var currentEvent: MotionEvent? = null
+
+    private var previousFingerDiffX = 0f
+    private var previousFingerDiffY = 0f
+    private var currentFingerDiffX = 0f
+    private var currentFingerDiffY = 0f
+
+    private var previousPressure = 0f
+    private var currentPressure = 0f
+
+    /**
+     * ### `true` if a rotate gesture is in progress.
+     */
+    var isGestureInProgress: Boolean = false
+        private set
+
+    /**
+     * ### The X coordinate of the current gesture's focal point in pixels
+     *
+     * If a gesture is in progress, the focal point is between each of the pointers forming the
+     * gesture.
+     * If a gesture is ending, the focal point is the location of the remaining pointer on the
+     * screen.
+     */
+    var focusX = 0f
+        private set
+
+    /**
+     * ### The Y coordinate of the current gesture's focal point in pixels
+     *
+     * If a gesture is in progress, the focal point is between each of the pointers forming the
+     * gesture.
+     * If a gesture is ending, the focal point is the location of the remaining pointer on the
+     * screen.
+     */
+    var focusY = 0f
+        private set
+
+    /**
+     * ### The current distance in pixels between the two pointers forming the gesture in progress
+     */
+    var currentSpan = 0f
+        private set
+
+    /**
+     * ### The previous distance in pixels between the two pointers forming the gesture in progress
+     */
+    var previousSpan = 0f
+        private set
+
+    /**
+     * ### The average angle in radians between each of the pointers forming the gesture in progress
+     * through the focal point
+     */
+    var currentAngle = 0f
+        private set(value) {
+            lastAngle = field
+            field = value
+        }
+
+    /**
+     * ### The previous average angle in radians between each of the pointers forming the gesture in
+     * progress through the focal point.
+     */
+    var previousAngle = 0f
+        private set
+
+    var lastAngle = 0.0f
+
+    /**
+     * ### The rotation factor in degrees from the previous rotation event to the current event
+     *
+     * This value is defined as ([currentAngle] / [previousAngle]).
+     */
+    var rotation = 0f
+        private set
+
+    /**
+     * ### The initial rotation threshold in degrees for detecting a gesture
+     *
+     * This value is selected to avoid conflicts with the [android.view.ScaleGestureDetector]
+     */
+    var rotationThreshold = 2f
+
+    /**
+     * ### The time difference in milliseconds between the previous accepted GestureDetector event
+     * and the current GestureDetector event
+     */
+    var timeDelta = 0L
+        private set
+
+    /**
+     * ### Accepts MotionEvents and dispatches events to a [OnRotateListener] when
+     * appropriate
+     *
+     * Applications should pass a complete and consistent event stream to this method.
+     * A complete and consistent event stream involves all MotionEvents from the initial
+     * ACTION_DOWN to the final ACTION_UP or ACTION_CANCEL.
+     *
+     * @param event The event to process
+     * @return `true` if the event was processed and the detector wants to receive the rest of the
+     * MotionEvents in this event stream.
+     */
+    fun onTouchEvent(event: MotionEvent): Boolean {
+        val actionCode = event.action and MotionEvent.ACTION_MASK
+        if (!isGestureInProgress) {
+            when (actionCode) {
+                MotionEvent.ACTION_MOVE -> {
+                    if (event.pointerCount != 2) return false
+                    if (previousEvent == null) {
+                        previousEvent = MotionEvent.obtain(event)
+                        return false
+                    }
+                    update(event)
+                    if (rotation.absoluteValue > rotationThreshold) {
+                        listener.onRotateBegin(this, event)
+                        isGestureInProgress = true
+                    } else {
+                        return false
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> reset()
+            }
+        } else {
+            when (actionCode) {
+                MotionEvent.ACTION_POINTER_UP -> {
+                    // Gesture ended
+                    update(event)
+                    // Set focus point to the remaining finger
+                    val id = if (event.actionIndex == 0) 1 else 0
+                    focusX = event.getX(id)
+                    focusY = event.getY(id)
+
+                    lastAngle = 0f
+                    listener.onRotateEnd(this, event)
+                    reset()
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    lastAngle = 0f
+                    listener.onRotateEnd(this, event)
+                    reset()
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (event.pointerCount > 2) {
+                        lastAngle = 0f
+                        listener.onRotateEnd(this, event)
+                        reset()
+                        return false
+                    }
+
+                    update(event)
+                    // Only accept the event if our relative pressure is within
+                    // a certain limit. This can help filter shaky data as a
+                    // finger is lifted.
+                    if (currentPressure / previousPressure > PRESSURE_THRESHOLD) {
+                        val updatePrevious = listener.onRotate(this, event)
+                        if (updatePrevious) {
+                            previousEvent?.recycle()
+                            previousEvent = MotionEvent.obtain(event)
+                        }
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    private fun update(event: MotionEvent) {
+        val previousEvent = previousEvent ?: return
+
+        // Reset mCurrEvent
+        currentEvent?.recycle()
+        currentEvent = MotionEvent.obtain(event)
+
+        // Previous
+        previousFingerDiffX = previousEvent.getX(1) - previousEvent.getX(0)
+        previousFingerDiffY = previousEvent.getY(1) - previousEvent.getY(0)
+
+        // Current
+        currentFingerDiffX = event.getX(1) - event.getX(0)
+        currentFingerDiffY = event.getY(1) - event.getY(0)
+
+        focusX = event.getX(0) + currentFingerDiffX * 0.5f
+        focusY = event.getY(0) + currentFingerDiffY * 0.5f
+
+        currentSpan =
+            sqrt(currentFingerDiffX * currentFingerDiffX + currentFingerDiffY * currentFingerDiffY)
+        previousSpan =
+            sqrt(previousFingerDiffX * previousFingerDiffX + currentFingerDiffY * currentFingerDiffY)
+
+        previousAngle = atan2(previousFingerDiffY, currentFingerDiffX)
+        currentAngle = atan2(currentFingerDiffY, currentFingerDiffX)
+        rotation = degrees(currentAngle - previousAngle)
+
+        // Pressure
+        currentPressure = event.getPressure(event.actionIndex)
+        previousPressure = previousEvent.getPressure(previousEvent.actionIndex)
+        // Delta time
+        timeDelta = event.eventTime - previousEvent.eventTime
+    }
+
+    fun reset() {
+        previousEvent?.recycle()
+        previousEvent = null
+        currentEvent?.recycle()
+        currentEvent = null
+        isGestureInProgress = false
+    }
 
     /**
      * ### The listener for receiving notifications when gestures occur
@@ -94,215 +304,6 @@ open class RotateGestureDetector(
         override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) = false
         override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) = true
         override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {}
-    }
-
-    protected var previousEvent: MotionEvent? = null
-    protected var currentEvent: MotionEvent? = null
-
-    var currentPressure: Float? = null
-    var previousPressure: Float? = null
-
-    /**
-     * ### `true` if a rotate gesture is in progress.
-     */
-    var isGestureInProgress: Boolean = false
-        private set
-
-    /**
-     * ### The X coordinate of the current gesture's focal point in pixels
-     *
-     * If a gesture is in progress, the focal point is between each of the pointers forming the
-     * gesture.
-     * If a gesture is ending, the focal point is the location of the  remaining pointer on the
-     * screen.
-     * If [isGestureInProgress] would return false, the result of this function is null.
-     */
-    var focusX: Float? = null
-        private set
-
-    /**
-     * ### The Y coordinate of the current gesture's focal point in pixels
-     *
-     * If a gesture is in progress, the focal point is between each of the pointers forming the
-     * gesture.
-     * If a gesture is ending, the focal point is the location of the  remaining pointer on the
-     * screen.
-     * If [isGestureInProgress] would return false, the result of this function is null.
-     */
-    var focusY: Float? = null
-        private set
-
-    private var previousFingerDiffX: Float? = null
-    private var previousFingerDiffY: Float? = null
-    private var currentFingerDiffX: Float? = null
-    private var currentFingerDiffY: Float? = null
-
-    /**
-     * ### The current distance in pixels between the two pointers forming the gesture in progress
-     */
-    var currentSpan: Float? = null
-        private set
-
-    /**
-     * ### The previous distance in pixels between the two pointers forming the gesture in progress
-     */
-    var previousSpan: Float? = null
-        private set
-
-    /**
-     * ### The average angle in radians between each of the pointers forming the gesture in progress
-     * through the focal point
-     */
-    var currentAngle = 0.0f
-        private set(value) {
-            lastAngle = field
-            field = value
-        }
-
-    /**
-     * ### The previous average angle in radians between each of the pointers forming the gesture in
-     * progress through the focal point.
-     */
-    var previousAngle = 0.0f
-        private set
-
-    var lastAngle = 0.0f
-
-    /**
-     * ### The rotation factor in degrees from the previous rotation event to the current event
-     *
-     * This value is defined as ([currentAngle] / [previousAngle]).
-     */
-    var rotation: Float? = null
-        private set
-
-
-    /**
-     * ### The time difference in milliseconds between the previous accepted GestureDetector event
-     * and the current GestureDetector event
-     */
-    var timeDelta: Long? = null
-        private set
-
-    /**
-     * ### Accepts MotionEvents and dispatches events to a [OnRotateListener] when
-     * appropriate
-     *
-     * Applications should pass a complete and consistent event stream to this method.
-     * A complete and consistent event stream involves all MotionEvents from the initial
-     * ACTION_DOWN to the final ACTION_UP or ACTION_CANCEL.
-     *
-     * @param event The event to process
-     * @return true if the event was processed and the detector wants to receive the rest of the
-     * MotionEvents in this event stream.
-     */
-    fun onTouchEvent(event: MotionEvent): Boolean {
-        val actionCode = event.action and MotionEvent.ACTION_MASK
-        if (!isGestureInProgress) {
-            when (actionCode) {
-                MotionEvent.ACTION_MOVE -> {
-                    if (event.pointerCount != 2) return false
-                    if (previousEvent == null) {
-                        previousEvent = MotionEvent.obtain(event)
-                        return false
-                    }
-                    update(event)
-                    if (currentAngle.absoluteValue > 0.1) {
-                        listener.onRotateBegin(this, event)
-                        isGestureInProgress = true
-                    } else {
-                        return false
-                    }
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> reset()
-            }
-        } else {
-            when (actionCode) {
-                MotionEvent.ACTION_POINTER_UP -> {
-                    // Gesture ended
-                    update(event)
-                    // Set focus point to the remaining finger
-                    // Set focus point to the remaining finger
-                    val id = if ((event.action and MotionEvent.ACTION_POINTER_INDEX_MASK
-                                shr MotionEvent.ACTION_POINTER_INDEX_SHIFT) == 0
-                    ) 1 else 0
-                    focusX = event.getX(id)
-                    focusY = event.getY(id)
-
-                    lastAngle = 0f
-                    listener.onRotateEnd(this, event)
-                    reset()
-                }
-                MotionEvent.ACTION_CANCEL -> {
-                    lastAngle = 0f
-                    listener.onRotateEnd(this, event)
-                    reset()
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    if (event.pointerCount > 2) {
-                        lastAngle = 0f
-                        listener.onRotateEnd(this, event)
-                        reset()
-                        return false
-                    }
-
-                    update(event)
-                    // Only accept the event if our relative pressure is within
-                    // a certain limit. This can help filter shaky data as a
-                    // finger is lifted.
-                    if (currentPressure!! / previousPressure!! > PRESSURE_THRESHOLD) {
-                        val updatePrevious = listener.onRotate(this, event)
-                        if (updatePrevious) {
-                            previousEvent?.recycle()
-                            previousEvent = MotionEvent.obtain(event)
-                        }
-                    }
-                }
-            }
-        }
-        return true
-    }
-
-    private fun update(event: MotionEvent) {
-        val previousEvent = previousEvent ?: return
-
-        // Reset mCurrEvent
-        currentEvent?.recycle()
-        currentEvent = MotionEvent.obtain(event)
-
-        // Previous
-        previousFingerDiffX = previousEvent.getX(1) - previousEvent.getX(0)
-        previousFingerDiffY = previousEvent.getY(1) - previousEvent.getY(0)
-
-        // Current
-        currentFingerDiffX = event.getX(1) - event.getX(0)
-        currentFingerDiffY = event.getY(1) - event.getY(0)
-
-        focusX = event.getX(0) + currentFingerDiffX!! * 0.5f
-        focusY = event.getY(0) + currentFingerDiffY!! * 0.5f
-
-        currentSpan =
-            sqrt(currentFingerDiffX!! * currentFingerDiffX!! + currentFingerDiffY!! * currentFingerDiffY!!)
-        previousSpan =
-            sqrt(previousFingerDiffX!! * previousFingerDiffX!! + currentFingerDiffY!! * currentFingerDiffY!!)
-
-        previousAngle = atan2(previousFingerDiffY!!, currentFingerDiffX!!)
-        currentAngle = atan2(currentFingerDiffY!!, currentFingerDiffX!!)
-        rotation = ((currentAngle - previousAngle) * 180.0f / Math.PI).toFloat()
-
-        // Pressure
-        currentPressure = event.getPressure(event.actionIndex)
-        previousPressure = previousEvent.getPressure(previousEvent.actionIndex);
-        // Delta time
-        timeDelta = event.eventTime - previousEvent.eventTime
-    }
-
-    fun reset() {
-        previousEvent?.recycle()
-        previousEvent = null
-        currentEvent?.recycle()
-        currentEvent = null
-        isGestureInProgress = false
     }
 
     companion object {
