@@ -41,6 +41,9 @@ fun com.google.ar.sceneform.math.Quaternion.toNewQuaternion() = Quaternion(x, y,
 fun Transform(position: Position, quaternion: Quaternion, scale: Scale) =
     translation(position) * rotation(quaternion) * scale(scale)
 
+fun Transform(position: Position, rotation: Rotation, scale: Scale) =
+    translation(position) * rotation(rotation.toQuaternion()) * scale(scale)
+
 val Mat4.quaternion: Quaternion
     get() = rotation(this).toQuaternion()
 
@@ -51,8 +54,13 @@ fun Mat4.toColumnsFloatArray() = floatArrayOf(
     w.x, w.y, w.z, w.w
 )
 
-fun lerp(start: Float3, end: Float3, deltaSeconds: Float, eps: Float = DEFAULT_EPSILON): Float3 {
-    return if (!equals(start, end, eps)) {
+fun lerp(
+    start: Float3,
+    end: Float3,
+    deltaSeconds: Float,
+    epsilon: Float = DEFAULT_EPSILON
+): Float3 {
+    return if (!equals(start, end, epsilon)) {
         return mix(start, end, deltaSeconds)
     } else end
 }
@@ -61,22 +69,22 @@ fun lerp(
     start: Quaternion,
     end: Quaternion,
     deltaSeconds: Float,
-    eps: Float = DEFAULT_EPSILON
+    epsilon: Float = DEFAULT_EPSILON
 ): Quaternion {
-    return if (!equals(start, end, eps)) {
+    return if (!equals(start, end, epsilon)) {
         return dev.romainguy.kotlin.math.lerp(start, end, deltaSeconds)
     } else end
 }
 
 fun slerp(
     start: Quaternion,
-    b: Quaternion,
+    end: Quaternion,
     deltaSeconds: Float,
-    eps: Float = DEFAULT_EPSILON
+    epsilon: Float = DEFAULT_EPSILON
 ): Quaternion {
-    return if (!equals(start, b, eps)) {
-        return dev.romainguy.kotlin.math.slerp(start, b, deltaSeconds)
-    } else b
+    return if (!equals(start, end, epsilon)) {
+        return dev.romainguy.kotlin.math.slerp(start, end, deltaSeconds)
+    } else end
 }
 
 /**
@@ -111,3 +119,7 @@ fun slerp(
  * If rendering in linear space, first convert the values to linear space by rising to the power 2.2
  */
 fun FloatArray.toLinearSpace() = map { pow(it, 2.2f) }.toFloatArray()
+
+fun lookAt(eye: Position, target: Position): Mat4 {
+    return lookAt(eye, target - eye, Direction(y = 1.0f))
+}
