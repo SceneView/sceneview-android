@@ -27,14 +27,14 @@ fun SceneView.pickHitTest(motionEvent: MotionEvent, focusableOnly: Boolean): Pic
  * containing the node closest to the ray origin that intersects with the ray.
  *
  * @param ray                 the ray to use for the test
- * @param focusableOnly Filter the PickHitResult on only selectable nodes
+ * @param selectableOnly Filter the PickHitResult on only selectable nodes
  * @return the result includes the first node that was hit by the ray (may be null), and
  * information about where the ray hit the node in world-space
  * @see Camera.screenPointToRay
  */
-fun SceneView.pickHitTest(ray: Ray, focusableOnly: Boolean) = PickHitResult()
+fun SceneView.pickHitTest(ray: Ray, selectableOnly: Boolean) = PickHitResult()
     .apply {
-        collisionSystem.raycast(ray, this, focusableOnly)?.let {
+        collisionSystem.raycast(ray, this, selectableOnly)?.let {
             node = it.transformProvider as? Node
         }
     }

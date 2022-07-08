@@ -212,15 +212,15 @@ var Node.localScale
     }
 
 
-/** ## Deprecated: Use [Node.isFocusable] */
+/** ## Deprecated: Use [Node.isSelectable] */
 @Deprecated(
-    "Use isFocusable",
-    replaceWith = ReplaceWith(expression = "isFocusable")
+    "Use isSelectable",
+    replaceWith = ReplaceWith(expression = "isSelectable")
 )
-var Node.isSelectable
-    get() = isFocusable
+var Node.isFocusable
+    get() = isSelectable
     set(value) {
-        isFocusable = value
+        isSelectable = value
     }
 
 /** ## Deprecated: Use [Node.onFrameUpdate] */

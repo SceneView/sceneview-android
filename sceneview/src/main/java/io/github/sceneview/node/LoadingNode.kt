@@ -30,7 +30,7 @@ open class LoadingNode(
     var textView: TextView? = null
 
     init {
-        isFocusable = false
+        isSelectable = false
         loadView(context, lifecycle, R.layout.sceneview_loading_node)
     }
 

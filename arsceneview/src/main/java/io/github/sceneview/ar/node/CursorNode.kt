@@ -71,7 +71,7 @@ open class CursorNode(
         }
 
     init {
-        isFocusable = false
+        isSelectable = false
     }
 
     override fun onHitResult(hitResult: HitResult?) {

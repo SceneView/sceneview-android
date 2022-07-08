@@ -13,7 +13,7 @@ open class AugmentedImageInfoNode(context: Context, lifecycle: Lifecycle) :
     ViewNode() {
 
     init {
-        isFocusable = false
+        isSelectable = false
         position = Position(x = 0.0f, y = 0.0f, z = -2.0f)
         loadView(context, lifecycle, R.layout.sceneview_view_info_augmented_image) { _, _ ->
             renderable?.horizontalAlignment = ViewRenderable.HorizontalAlignment.CENTER
