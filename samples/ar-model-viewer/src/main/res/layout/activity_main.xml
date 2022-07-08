@@ -16,19 +16,34 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/actionButton"
+        android:id="@+id/newModelButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
         android:backgroundTint="@color/translucent"
         android:gravity="center_vertical|left"
-        android:text="@string/place_object"
+        android:text="@string/new_object"
         android:textColor="@android:color/white"
-        android:visibility="gone"
-        app:icon="@drawable/ic_anchor"
+        app:icon="@drawable/ic_add"
         app:iconGravity="textStart"
         app:iconTint="@android:color/white"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/placeModelButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/translucent"
+        android:gravity="center_vertical|left"
+        android:text="@string/place_object"
+        android:textColor="@android:color/white"
+        app:icon="@drawable/ic_anchor"
+        app:iconGravity="textStart"
+        app:iconTint="@android:color/white"
+        app:layout_constraintBottom_toTopOf="@id/newModelButton"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent" />
 
