@@ -209,6 +209,7 @@ node.onAnchorChanged = { node: ArNode, anchor: Anchor? ->
         }
     }
 }
+[Sources](https://github.com/Gebort/FESTU.Navigator)
 
 // Resolve/Restore the Cloud Anchor
 node.resolveCloudAnchor(cloudAnchorId) { anchor: Anchor, success: Boolean ->
