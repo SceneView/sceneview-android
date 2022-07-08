@@ -1,18 +1,16 @@
 package io.github.sceneview.interaction
 
 import android.content.Context
-import android.os.Handler
 import android.view.MotionEvent
-import io.github.sceneview.interaction.RotateGestureDetector.OnRotateGestureListener
+import io.github.sceneview.interaction.RotateGestureDetector.OnRotateListener
 import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
-
 /**
  * ### Detects rotation transformation gestures using the supplied [MotionEvent]s
  *
- * The [OnRotateGestureListener] callback will notify users when a particular gesture event has
+ * The [OnRotateListener] callback will notify users when a particular gesture event has
  * occurred.
  *
  * This class should only be used with [MotionEvent]s reported via touch.
@@ -26,25 +24,22 @@ import kotlin.math.sqrt
  * @param listener the listener invoked for all the callbacks, this must not be null
  * @param handler the handler to use for running deferred listener events
  */
-class RotateGestureDetector(
-    val context: Context,
-    var listener: OnRotateGestureListener,
-    var handler: Handler? = null
+open class RotateGestureDetector(
+    private val context: Context,
+    private val listener: OnRotateListener
 ) {
 
     /**
      * ### The listener for receiving notifications when gestures occur
      *
-     * If you want to listen for all the different gestures then implement this interface.
-     * If you only want to listen for a subset it might be easier to extend
-     * [SimpleOnRotateGestureListener].
+     * If you want to listen for the different gestures then implement this interface.
      *
      * An application will receive events in the following order:
      * - One [onRotateBegin]
      * - Zero or more [onRotate]
      * - One [onRotateEnd]
      */
-    interface OnRotateGestureListener {
+    interface OnRotateListener {
         /**
          * ### Responds to rotating events for a gesture in progress
          *
@@ -57,7 +52,7 @@ class RotateGestureDetector(
          * event is handled. This can be useful if an application, for example, only wants to update
          * rotation factors if the change is greater than 0.01.
          */
-        fun onRotate(detector: RotateGestureDetector): Boolean
+        fun onRotate(detector: RotateGestureDetector, e: MotionEvent): Boolean
 
         /**
          * ### Responds to the beginning of a scaling gesture
@@ -70,7 +65,7 @@ class RotateGestureDetector(
          * For example, if a gesture is beginning with a focal point outside of a region where it
          * makes sense, onRotateBegin() may return false to ignore the rest of the gesture.
          */
-        fun onRotateBegin(detector: RotateGestureDetector): Boolean
+        fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent): Boolean
 
         /**
          * ### Responds to the end of a scale gesture
@@ -83,29 +78,22 @@ class RotateGestureDetector(
          * @param detector The detector reporting the event - use this to retrieve extended info
          * about event state.
          */
-        fun onRotateEnd(detector: RotateGestureDetector)
+        fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent)
     }
 
     /**
      * ### A convenience class to extend when you only want to listen for a subset of
-     * rotation-related events.
+     * rotation-related events
      *
-     * This implements all methods in [OnRotateGestureListener] but does nothing.
-     * [OnRotateGestureListener.onRotate] returns `false` so that a subclass can retrieve the
-     * accumulated rotation factor in an overridden [OnRotateGestureListener.onRotateEnd].
-     * [OnRotateGestureListener.onRotateBegin] returns `true`.
+     * This implements all methods in [OnRotateListener] but does nothing.
+     * [OnRotateListener.onRotate] returns `false` so that a subclass can retrieve the accumulated
+     * rotation factor in an overridden [OnRotateListener.onRotateEnd].
+     * [OnRotateListener.onRotateBegin] returns `true`.
      */
-    open class SimpleOnRotateGestureListener : OnRotateGestureListener {
-        override fun onRotate(detector: RotateGestureDetector): Boolean {
-            return false
-        }
-
-        override fun onRotateBegin(detector: RotateGestureDetector): Boolean {
-            return true
-        }
-
-        override fun onRotateEnd(detector: RotateGestureDetector) {
-        }
+    interface SimpleOnRotateListener : OnRotateListener {
+        override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) = false
+        override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) = true
+        override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {}
     }
 
     protected var previousEvent: MotionEvent? = null
@@ -166,7 +154,10 @@ class RotateGestureDetector(
      * through the focal point
      */
     var currentAngle = 0.0f
-        private set
+        private set(value) {
+            lastAngle = field
+            field = value
+        }
 
     /**
      * ### The previous average angle in radians between each of the pointers forming the gesture in
@@ -174,6 +165,8 @@ class RotateGestureDetector(
      */
     var previousAngle = 0.0f
         private set
+
+    var lastAngle = 0.0f
 
     /**
      * ### The rotation factor in degrees from the previous rotation event to the current event
@@ -192,7 +185,7 @@ class RotateGestureDetector(
         private set
 
     /**
-     * ### Accepts MotionEvents and dispatches events to a [OnRotateGestureListener] when
+     * ### Accepts MotionEvents and dispatches events to a [OnRotateListener] when
      * appropriate
      *
      * Applications should pass a complete and consistent event stream to this method.
@@ -203,7 +196,7 @@ class RotateGestureDetector(
      * @return true if the event was processed and the detector wants to receive the rest of the
      * MotionEvents in this event stream.
      */
-    open fun onTouchEvent(event: MotionEvent): Boolean {
+    fun onTouchEvent(event: MotionEvent): Boolean {
         val actionCode = event.action and MotionEvent.ACTION_MASK
         if (!isGestureInProgress) {
             when (actionCode) {
@@ -215,7 +208,7 @@ class RotateGestureDetector(
                     }
                     update(event)
                     if (currentAngle.absoluteValue > 0.1) {
-                        listener.onRotateBegin(this)
+                        listener.onRotateBegin(this, event)
                         isGestureInProgress = true
                     } else {
                         return false
@@ -236,16 +229,19 @@ class RotateGestureDetector(
                     focusX = event.getX(id)
                     focusY = event.getY(id)
 
-                    listener.onRotateEnd(this)
+                    lastAngle = 0f
+                    listener.onRotateEnd(this, event)
                     reset()
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    listener.onRotateEnd(this)
+                    lastAngle = 0f
+                    listener.onRotateEnd(this, event)
                     reset()
                 }
                 MotionEvent.ACTION_MOVE -> {
                     if (event.pointerCount > 2) {
-                        listener.onRotateEnd(this)
+                        lastAngle = 0f
+                        listener.onRotateEnd(this, event)
                         reset()
                         return false
                     }
@@ -255,7 +251,7 @@ class RotateGestureDetector(
                     // a certain limit. This can help filter shaky data as a
                     // finger is lifted.
                     if (currentPressure!! / previousPressure!! > PRESSURE_THRESHOLD) {
-                        val updatePrevious = listener.onRotate(this)
+                        val updatePrevious = listener.onRotate(this, event)
                         if (updatePrevious) {
                             previousEvent?.recycle()
                             previousEvent = MotionEvent.obtain(event)

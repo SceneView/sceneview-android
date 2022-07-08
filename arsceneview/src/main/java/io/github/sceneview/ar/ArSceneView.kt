@@ -6,15 +6,15 @@ import android.view.MotionEvent
 import com.google.ar.core.*
 import com.google.ar.core.CameraConfig.FacingDirection
 import com.google.ar.sceneform.ArCamera
-import com.google.ar.sceneform.rendering.*
-import io.github.sceneview.*
+import com.google.ar.sceneform.rendering.ArRenderer
+import com.google.ar.sceneform.rendering.Renderer
+import io.github.sceneview.SceneLifecycle
+import io.github.sceneview.SceneLifecycleObserver
+import io.github.sceneview.SceneLifecycleOwner
+import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.camera.ArCameraStream
-import io.github.sceneview.ar.interaction.ArNodeManipulator
-import io.github.sceneview.ar.interaction.ArSceneGestureDetector
-import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.interaction.SceneGestureDetector
 import io.github.sceneview.node.Node
 import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.FrameTime
@@ -227,24 +227,6 @@ open class ArSceneView @JvmOverloads constructor(
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
-    override var gestureListener: SceneGestureDetector.OnSceneGestureListener =
-        DefaultArSceneGestureListener(this)
-
-    override val gestureDetector: ArSceneGestureDetector by lazy {
-        ArSceneGestureDetector(
-            this,
-            nodeManipulator = ArNodeManipulator(this),
-            listener = gestureListener
-        )
-    }
-
-    /**
-     * ### Whether it is possible to deselect nodes
-     *
-     * An `ArNode` can be deselected if no `ArNode`s are picked on tap.
-     */
-    var allowDeselectingNodes = true
-
     /**
      * ### Invoked when an ARCore error occurred
      *
@@ -374,8 +356,6 @@ open class ArSceneView @JvmOverloads constructor(
      * The listener will be called in the order in which they were added.
      */
     protected open fun doArFrame(arFrame: ArFrame) {
-        // TODO : Move to dedicated Lifecycle aware classes when Kotlined them
-        val (session, _, frame) = arFrame
         if (arFrame.camera.isTracking != currentFrame?.camera?.isTracking) {
             // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
             // You will say thanks when still have battery after a long day debugging an AR app.
@@ -385,9 +365,10 @@ open class ArSceneView @JvmOverloads constructor(
 
         // At the start of the frame, update the tracked pose of the camera
         // to use in any calculations during the frame.
+        // TODO : Move to dedicated Lifecycle aware classes when Kotlined them
         this.camera.updateTrackedPose(arFrame.camera)
 
-        if(onAugmentedImageUpdate.isNotEmpty()) {
+        if (onAugmentedImageUpdate.isNotEmpty()) {
             arFrame.updatedAugmentedImages.forEach { augmentedImage ->
                 onAugmentedImageUpdate.forEach {
                     it(augmentedImage)
@@ -427,16 +408,8 @@ open class ArSceneView @JvmOverloads constructor(
         }
     }
 
-    override fun onTap(node: Node?, renderable: Renderable, motionEvent: MotionEvent) {
-        super.onTap(node, renderable, motionEvent)
-
-        val selectedNode = node?.firstEnclosingNode<ArNode>()
-
-        if (selectedNode != null) {
-            gestureDetector.selectedNode = selectedNode
-        } else if (allowDeselectingNodes) {
-            gestureDetector.selectedNode = null
-        }
+    override fun onTap(motionEvent: MotionEvent, node: Node?, renderable: Renderable?) {
+        super.onTap(motionEvent, node, renderable)
 
         if (node == null) {
             arSession?.currentFrame?.hitTest(motionEvent)?.let { hitResult ->
@@ -456,9 +429,6 @@ open class ArSceneView @JvmOverloads constructor(
     open fun onTapAr(hitResult: HitResult, motionEvent: MotionEvent) {
         onTapAr?.invoke(hitResult, motionEvent)
     }
-
-    open class DefaultArSceneGestureListener(sceneView: SceneView) :
-        SceneView.DefaultSceneGestureListener(sceneView)
 }
 
 /**
