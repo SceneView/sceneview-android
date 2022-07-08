@@ -9,7 +9,6 @@ import com.google.ar.sceneform.rendering.RenderableInstance
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.math.Position
 import io.github.sceneview.node.Node
 import kotlin.math.abs
@@ -109,7 +108,7 @@ open class ArModelNode : ArNode {
      * Disable it if you manage the positioning by yourself or other AR methods (Augmented Images,
      * Augmented Faces,...)
      *
-     - - `true` An unanchored node is moved as the camera moves (cursor placement)
+    - - `true` An unanchored node is moved as the camera moves (cursor placement)
      * - `false` The pose of an unanchored node is not updated. This is used e.g. while moving a
      *  node using gestures.
      *
@@ -152,36 +151,25 @@ open class ArModelNode : ArNode {
      */
     var maxHitTestPerSecond: Int = 10
 
-    override var editableTransforms = setOf(EditableTransform.ROTATION, EditableTransform.SCALE)
-
     var arFrame: ArFrame? = null
         private set
     var hitTestFrame: ArFrame? = null
         private set
 
-    var hitResult: HitResult? = null
-        private set(value) {
-            field = value
-            onHitResult(value)
-        }
-
-    var onHitResult: ((node: ArNode, hitResult: HitResult?) -> Unit)? = null
-
     /**
-     * ### Construct a new placement ArModelNode
+     * ### Create an AR positioned 3D model node
      *
-     * @param placementMode See [ArModelNode.placementMode]
-     * @param hitPosition See [ArModelNode.hitPosition]
-     * @param followHitPosition See [ArModelNode.followHitPosition]
-     * @param instantAnchor See [ArModelNode.instantAnchor]
+     * @param placementMode See [placementMode]
+     * @param hitPosition See [hitPosition]
+     * @param followHitPosition See [followHitPosition]
+     * @param instantAnchor See [instantAnchor]
      */
     constructor(
-        placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE,
+        placementMode: PlacementMode = ArNode.DEFAULT_PLACEMENT_MODE,
         hitPosition: Position = DEFAULT_HIT_POSITION,
         followHitPosition: Boolean = true,
         instantAnchor: Boolean = false
-    ) : super() {
-        this.placementMode = placementMode
+    ) : super(placementMode) {
         this.hitPosition = hitPosition
         this.followHitPosition = followHitPosition
         this.instantAnchor = instantAnchor
@@ -190,7 +178,9 @@ open class ArModelNode : ArNode {
     /**
      * TODO : Doc
      */
-    constructor(hitResult: HitResult) : super(hitResult.createAnchor())
+    constructor(hitResult: HitResult) : this() {
+        this.anchor = hitResult.createAnchor()
+    }
 
     /**
      * ### Create the Node and load a monolithic binary glTF and add it to the Node
@@ -248,7 +238,10 @@ open class ArModelNode : ArNode {
             // Try to find an anchor if none has been found
             if (instantAnchor) {
                 anchor()
-            } else if (followHitPosition &&
+            } else if (
+                followHitPosition &&
+                // Disable hit placement when a gesture is being made
+                currentEditedTransform == null &&
                 // Add condition in here if a new feature needs hit result
                 arFrame.fps(hitTestFrame) <= maxHitTestPerSecond
             ) {
@@ -262,24 +255,11 @@ open class ArModelNode : ArNode {
     override fun onPoseChanged(pose: Pose?) {
         super.onPoseChanged(pose)
 
-        if(pose == null) {
-            transform(hitPosition, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
+        if (pose == null) {
+            // Should we move back the node to the default position or keep it as it is
+//            transform(hitPosition, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
         }
     }
-
-    /**
-     * TODO : Doc
-     */
-    open fun onHitResult(hitResult: HitResult?) {
-        if (followHitPosition
-            // Keep the last position when no tracking result
-//            && hitResult?.isTracking == true
-        ) {
-            pose = hitResult?.hitPose
-        }
-        onHitResult?.invoke(this, hitResult)
-    }
-
 
     /**
      * ### Performs a ray cast to retrieve the ARCore info at this camera point
@@ -312,14 +292,12 @@ open class ArModelNode : ArNode {
     )
 
     override fun createAnchor(): Anchor? {
-        return (hitTest()?.takeIf { it.isTracking }
-        // Fallback to last hit result
-            ?: hitResult?.takeIf { it.isTracking })
-            ?.let { createAnchor(it) }
-    }
-
-    fun createAnchor(hitResult: HitResult): Anchor? {
-        return hitResult.takeIf { it.isTracking }?.createAnchor()
+        return hitTest()?.takeIf {
+            // Try to anchor if hit result is not tracking?
+//                it.isTracking
+            true
+        }?.let { createAnchor(it) }
+            ?: super.createAnchor()
     }
 
     override fun clone() = copy(ArModelNode())

@@ -14,9 +14,11 @@ import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
+import io.github.sceneview.interaction.*
 import io.github.sceneview.math.*
 import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.FrameTime
+import kotlin.reflect.KProperty
 
 // This is the default from the ViewConfiguration class.
 private const val defaultTouchSlop = 8
@@ -42,8 +44,17 @@ private const val defaultTouchSlop = 8
  * ----/----|---------
  *
  * +z ---- -y --------
+ *
+ * @param position See [Node.position]
+ * @param rotation See [Node.rotation]
+ * @param scale See [Node.scale]
  */
-open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
+open class Node(
+    position: Position = DEFAULT_POSITION,
+    quaternion: Quaternion = DEFAULT_QUATERNION,
+    scale: Scale = DEFAULT_SCALE
+) : NodeParent, TransformProvider, SceneLifecycleObserver,
+    GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
     companion object {
         val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = 0.0f)
@@ -108,12 +119,12 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      *
      * +z ---- -y --------
      */
-    var position: Position = DEFAULT_POSITION
+    var position: Position = position
 
     /**
      * TODO: Doc
      */
-    var quaternion: Quaternion = DEFAULT_QUATERNION
+    var quaternion: Quaternion = quaternion
 
     /**
      * ### The node orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`
@@ -245,12 +256,13 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     private var lastFrameTransform: Transform? = null
 
     /**
-     * ### The node can be focused within the [com.google.ar.sceneform.collision.CollisionSystem]
-     * when a touch event happened
+     * ### The node can be selected when a touch event happened
      *
-     * true if the node can be selected
+     * If a not selectable child [Node] is touched, we check the parent hierarchy to find the
+     * closest selectable parent. In this case, the first selectable parent will be the one to have
+     * its [isSelected] value to `true`.
      */
-    var isFocusable = true
+    open var isSelectable = false
 
     /**
      * ### The visible state of this node.
@@ -265,6 +277,26 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
                 updateVisibility()
             }
         }
+
+    open var isPositionEditable = false
+    open var isRotationEditable = false
+    open var isScaleEditable = false
+    open var isEditable: Boolean
+        get() = isPositionEditable || isRotationEditable || isScaleEditable
+        set(value) {
+            isPositionEditable = value
+            isRotationEditable = value
+            isScaleEditable = value
+        }
+
+    var minEditableScale = 0.1f
+    var maxEditableScale = 10.0f
+
+    var currentEditedTransform: KProperty<*>? = null
+
+    // The first delta is always way off as it contains all delta until threshold to
+    // recognize rotate gesture is met
+    private var skipFirstRotateEdit = false
 
     /**
      * ### The active status
@@ -390,7 +422,7 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - `renderable` - The ID of the Filament renderable that was tapped.
      * - `motionEvent` - The motion event that caused the tap.
      */
-    var onTap: ((renderable: Renderable, motionEvent: MotionEvent) -> Unit)? = null
+    var onTap: ((motionEvent: MotionEvent, renderable: Renderable?) -> Unit)? = null
 
     /**
      * ### Construct a [Node] with it Position, Rotation and Scale
@@ -402,15 +434,17 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     @JvmOverloads
     constructor(
         position: Position = DEFAULT_POSITION,
-        rotation: Rotation = DEFAULT_ROTATION,
+        rotation: Rotation,
         scale: Scale = DEFAULT_SCALE
-    ) : super() {
-        this.position = position
+    ) : this(position = position, scale = scale) {
         this.rotation = rotation
-        this.scale = scale
     }
 
     open fun onAttachToScene(sceneView: SceneView) {
+        if (selectionVisualizer == null) {
+            selectionVisualizer = sceneView.selectionNode?.invoke()
+        }
+        selectionVisualizer?.parent = if (isSelected) this else null
         onAttachedToScene.toList().forEach { it(sceneView) }
     }
 
@@ -447,6 +481,10 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
         onFrame.forEach { it(frameTime, this) }
     }
 
+    override fun onSingleTapConfirmed(e: NodeMotionEvent) {
+        onTap(e.motionEvent, e.renderable)
+    }
+
     /**
      * ### Invoked when the node is tapped
      *
@@ -455,10 +493,71 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * @param renderable The ID of the Filament renderable that was tapped.
      * @param motionEvent The motion event that caused the tap.
      */
-    open fun onTap(renderable: Renderable, motionEvent: MotionEvent) {
-        onTap?.invoke(renderable, motionEvent)
+    open fun onTap(motionEvent: MotionEvent, renderable: Renderable?) {
+        onTap?.invoke(motionEvent, renderable)
+        parentNode?.onTap(motionEvent, renderable)
+    }
 
-        parentNode?.onTap(renderable, motionEvent)
+    override fun onMoveBegin(detector: MoveGestureDetector, e: NodeMotionEvent) {
+        // Not implemented for 3D only
+    }
+
+    override fun onMove(detector: MoveGestureDetector, e: NodeMotionEvent) {
+        // Not implemented for 3D only
+    }
+
+    override fun onMoveEnd(detector: MoveGestureDetector, e: NodeMotionEvent) {
+        // Not implemented for 3D only
+    }
+
+    override fun onRotateBegin(detector: RotateGestureDetector, e: NodeMotionEvent) {
+        if (isRotationEditable && currentEditedTransform == null) {
+            currentEditedTransform = ::quaternion
+            skipFirstRotateEdit = true
+        }
+    }
+
+    override fun onRotate(detector: RotateGestureDetector, e: NodeMotionEvent) {
+        if (isRotationEditable && currentEditedTransform == ::quaternion) {
+            if (skipFirstRotateEdit) {
+                skipFirstRotateEdit = false
+                return
+            }
+            val deltaRadians = detector.currentAngle - detector.lastAngle
+            onRotate(e, Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians)))
+        }
+    }
+
+    open fun onRotate(e: NodeMotionEvent, rotationDelta: Quaternion) {
+        quaternion *= rotationDelta
+    }
+
+    override fun onRotateEnd(detector: RotateGestureDetector, e: NodeMotionEvent) {
+        if (isRotationEditable && currentEditedTransform == ::quaternion) {
+            currentEditedTransform = null
+        }
+    }
+
+    override fun onScaleBegin(detector: ScaleGestureDetector, e: NodeMotionEvent) {
+        if (isScaleEditable && currentEditedTransform == null) {
+            currentEditedTransform = ::scale
+        }
+    }
+
+    override fun onScale(detector: ScaleGestureDetector, e: NodeMotionEvent) {
+        if (isScaleEditable && (currentEditedTransform == ::scale)) {
+            onScale(e, detector.scaleFactor)
+        }
+    }
+
+    open fun onScale(e: NodeMotionEvent, scaleFactor: Float) {
+        scale = clamp(scale * scaleFactor, minEditableScale, maxEditableScale)
+    }
+
+    override fun onScaleEnd(detector: ScaleGestureDetector, e: NodeMotionEvent) {
+        if (isScaleEditable && currentEditedTransform == ::scale) {
+            currentEditedTransform = null
+        }
     }
 
     /**
@@ -503,8 +602,31 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      * - same size: scale = 1.0f
      * - increase size: scale > 1.0f
      */
-    fun scale(scale: Float) {
+    fun setScale(scale: Float) {
         this.scale.xyz = Scale(scale)
+    }
+
+    /**
+     * ## Change the node transform
+     *
+     * @see position
+     * @see quaternion
+     * @see scale
+     */
+    fun transform(
+        position: Position = this.position,
+        quaternion: Quaternion = this.quaternion,
+        scale: Scale = this.scale,
+        smooth: Boolean = false,
+        smoothSpeed: Float = this.smoothSpeed
+    ) {
+        if (smooth) {
+            smooth(position, quaternion, scale, smoothSpeed)
+        } else {
+            this.position = position
+            this.quaternion = quaternion
+            this.scale = scale
+        }
     }
 
     /**
@@ -516,18 +638,11 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     fun transform(
         position: Position = this.position,
-        quaternion: Quaternion = this.quaternion,
         rotation: Rotation = this.rotation,
-        scale: Scale = this.scale
-    ) {
-        this.position = position
-        if (quaternion != this.quaternion) {
-            this.quaternion = quaternion
-        } else if (rotation != this.rotation) {
-            this.rotation = rotation
-        }
-        this.scale = scale
-    }
+        scale: Scale = this.scale,
+        smooth: Boolean = false,
+        smoothSpeed: Float = this.smoothSpeed
+    ) = transform(position, rotation.toQuaternion(), scale, smooth, smoothSpeed)
 
     /**
      * ## Smooth move, rotate and scale at a specified speed
@@ -547,11 +662,30 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
     /**
      * ## Smooth move, rotate and scale at a specified speed
      *
+     * @see position
+     * @see quaternion
+     * @see scale
+     * @see speed
+     */
+    fun smooth(
+        position: Position = this.position,
+        rotation: Rotation = this.rotation,
+        scale: Scale = this.scale,
+        speed: Float = this.smoothSpeed
+    ) = smooth(Transform(position, rotation, scale), speed)
+
+    /**
+     * ## Smooth move, rotate and scale at a specified speed
+     *
      * @see transform
      */
     fun smooth(transform: Transform, speed: Float = this.smoothSpeed) {
         smoothSpeed = speed
-        smoothTransform = transform
+        if (!equals(this.transform, transform, DEFAULT_EPSILON)) {
+            this.smoothTransform = transform
+        } else {
+            this.transform = transform
+        }
     }
 
     // TODO
@@ -580,6 +714,25 @@ open class Node : NodeParent, TransformProvider, SceneLifecycleObserver {
      */
     fun isDescendantOf(ancestor: NodeParent): Boolean =
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
+
+    open var selectionVisualizer: Node? = null
+        get() = field ?: sceneView?.selectionNode?.invoke()?.also {
+            it.parent = if (isSelected) this else null
+            field = it
+        }
+        set(value) {
+            field?.let { it.parent = null }
+            field = value
+            value?.let { it.parent = if (isSelected) this else null }
+        }
+
+    var isSelected = false
+        set(value) {
+            if (field != value) {
+                field = value
+                selectionVisualizer?.parent = if (value) this else null
+            }
+        }
 
     /**
      * ### Finds the first enclosing node with the given type

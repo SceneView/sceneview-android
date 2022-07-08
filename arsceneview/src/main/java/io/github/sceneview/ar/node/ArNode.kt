@@ -10,10 +10,14 @@ import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.interaction.MoveGestureDetector
 import io.github.sceneview.interaction.NodeMotionEvent
 import io.github.sceneview.node.ModelNode
 
-open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
+/**
+ * ### Construct a new placement AR Node
+ */
+open class ArNode : ModelNode, ArSceneLifecycleObserver {
 
     override val sceneView: ArSceneView? get() = super.sceneView as? ArSceneView
     override val lifecycle: ArSceneLifecycle? get() = sceneView?.lifecycle
@@ -44,6 +48,12 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     var anchorUpdateFrame: ArFrame? = null
         private set
 
+    open var hitResult: HitResult? = null
+        set(value) {
+            field = value
+            onHitResult(value)
+        }
+
     /**
      * ### The position of the intersection between a ray and detected real-world geometry.
      *
@@ -72,8 +82,10 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      */
     open var pose: Pose? = null
         set(value) {
-            field = value
-            onPoseChanged(value)
+            if (field?.transform != value?.transform) {
+                field = value
+                onPoseChanged(value)
+            }
         }
 
     /**
@@ -88,7 +100,6 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
         set(value) {
             field?.detach()
             field = value
-            pose = value?.pose
             onAnchorChanged(value)
         }
 
@@ -111,6 +122,8 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
         DeprecationLevel.ERROR
     )
     var onTrackingChanged: ((node: ArNode, isTracking: Boolean, pose: Pose?) -> Unit)? = null
+
+    var onHitResult: ((node: ArNode, hitResult: HitResult?) -> Unit)? = null
 
     var onPoseChanged: ((node: ArNode, pose: Pose?) -> Unit)? = null
 
@@ -140,20 +153,16 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
             }
         }
 
+    override var isSelectable = true
+
     override var isPositionEditable: Boolean = true
     override var isRotationEditable: Boolean = true
     override var isScaleEditable: Boolean = true
 
-    /**
-     * TODO : Doc
-     */
-    constructor(placementMode: PlacementMode) : this() {
+    constructor(placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE) {
         this.placementMode = placementMode
     }
 
-    /**
-     * TODO : Doc
-     */
     constructor(anchor: Anchor) : this() {
         this.anchor = anchor
     }
@@ -189,19 +198,30 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
     /**
      * TODO : Doc
      */
+    open fun onHitResult(hitResult: HitResult?) {
+        // Keep the last pose when not tracking result?
+//        if (hitResult?.isTracking == true) {
+        pose = hitResult?.hitPose
+//        }
+        onHitResult?.invoke(this, hitResult)
+    }
+
+    /**
+     * TODO : Doc
+     */
     open fun onPoseChanged(pose: Pose?) {
         if (pose != null) {
-            if (this.pose?.transform != pose?.transform) {
-                val position = pose.takeIf { placementMode.enablePositioning }?.position
-                    ?: this.position
-                val quaternion = pose.takeIf { placementMode.enableRotation }?.quaternion
-                    ?: this.quaternion
-                if (position != this.position || quaternion != this.quaternion) {
-                    transform(position, quaternion, smooth = isSmoothPoseEnable)
-                }
+            val position = pose.takeIf { !placementMode.keepPosition }?.position
+                ?: this.position
+            val quaternion = pose.takeIf { !placementMode.keepRotation }?.quaternion
+                ?: this.quaternion
+            if (position != this.position || quaternion != this.quaternion) {
+                transform(position, quaternion, smooth = isSmoothPoseEnable)
             }
         } else {
-            transform(DEFAULT_POSITION, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
+            // Should we move back the node the default position or move it to the default
+            // transform?
+//            transform(DEFAULT_POSITION, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
         }
         onPoseChanged?.invoke(this, pose)
     }
@@ -210,7 +230,35 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * TODO : Doc
      */
     open fun onAnchorChanged(anchor: Anchor?) {
+        pose = anchor?.pose
+
         onAnchorChanged?.invoke(this, anchor)
+    }
+
+    override fun onMoveBegin(detector: MoveGestureDetector, e: NodeMotionEvent) {
+        super.onMoveBegin(detector, e)
+
+        if (isPositionEditable && currentEditedTransform == null) {
+            currentEditedTransform = ::position
+            detachAnchor()
+        }
+    }
+
+    override fun onMove(detector: MoveGestureDetector, e: NodeMotionEvent) {
+        super.onMove(detector, e)
+
+        if (isPositionEditable && currentEditedTransform == ::position) {
+            hitResult = hitTest(xPx = e.motionEvent.x, yPx = e.motionEvent.y)
+        }
+    }
+
+    override fun onMoveEnd(detector: MoveGestureDetector, e: NodeMotionEvent) {
+        super.onMoveEnd(detector, e)
+
+        if (isPositionEditable && currentEditedTransform == ::position) {
+            anchor()
+            currentEditedTransform = null
+        }
     }
 
     /**
@@ -250,7 +298,17 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
      * Anchors incur ongoing processing overhead within ARCore. To release unneeded anchors use
      * [Anchor.detach]
      */
-    open fun createAnchor(): Anchor? = null
+    open fun createAnchor(): Anchor? {
+        return hitResult?.let { createAnchor(it) }
+    }
+
+    fun createAnchor(hitResult: HitResult): Anchor? {
+        return hitResult.takeIf {
+            // Try to anchor if hit result is not tracking?
+//            it.isTracking
+            true
+        }?.createAnchor()
+    }
 
     /**
      * ### Anchor this node to make it fixed at the actual position and orientation is the world
@@ -445,10 +503,10 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
  * This is only used while the tracking method for the returned point is InstantPlacementPoint.
  * @param instantPlacementFallback Fallback to instantly place nodes at a fixed orientation and an
  * approximate distance when the base placement type is not available yet or at all.
- * @param enablePositioning Should the [ArNode.position] be updated with the ARCore detected [Pose].
+ * @param keepPosition Should the [ArNode.position] be updated with the ARCore detected [Pose].
  * Use this parameter if you want to keep a static position and let it like it was initially
  * defined without being influenced by the ARCore [Trackable] retrieved value.
- * @param enableRotation Should the [ArNode.rotation] be updated with the ARCore detected [Pose].
+ * @param keepRotation Should the [ArNode.rotation] be updated with the ARCore detected [Pose].
  * Use this parameter if you want to keep a static rotation and let it like it was initially
  * defined without being influenced by the ARCore [Trackable] retrieved value.
  */
@@ -456,8 +514,8 @@ open class ArNode() : ModelNode(), ArSceneLifecycleObserver {
 enum class PlacementMode(
     var instantPlacementDistance: Float = ArNode.DEFAULT_PLACEMENT_DISTANCE,
     var instantPlacementFallback: Boolean = false,
-    var enablePositioning: Boolean = true,
-    var enableRotation: Boolean = true
+    var keepPosition: Boolean = false,
+    var keepRotation: Boolean = false
 ) {
     /**
      * ### Disable every AR placement
@@ -548,13 +606,4 @@ enum class PlacementMode(
             this == INSTANT || instantPlacementFallback -> true
             else -> false
         }
-}
-
-enum class EditableTransform {
-    POSITION, ROTATION, SCALE;
-
-    companion object {
-        val ALL = setOf(POSITION, ROTATION, SCALE)
-        val NONE = setOf<EditableTransform>()
-    }
 }

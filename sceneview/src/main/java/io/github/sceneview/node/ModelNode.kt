@@ -6,11 +6,9 @@ import androidx.lifecycle.coroutineScope
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
-import dev.romainguy.kotlin.math.Float3
-import dev.romainguy.kotlin.math.Quaternion
-import dev.romainguy.kotlin.math.max
-import dev.romainguy.kotlin.math.quaternion
+import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
+import io.github.sceneview.interaction.NodeMotionEvent
 import io.github.sceneview.math.*
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.utils.FrameTime
@@ -252,6 +250,14 @@ open class ModelNode : Node {
 
     open fun onModelError(exception: Exception) {
         onModelError?.invoke(exception)
+    }
+
+    override fun onRotate(e: NodeMotionEvent, rotationDelta: Quaternion) {
+        modelQuaternion *= rotationDelta
+    }
+
+    override fun onScale(e: NodeMotionEvent, scaleFactor: Float) {
+        modelScale = clamp(modelScale * scaleFactor, minEditableScale, maxEditableScale)
     }
 
     fun doOnModelLoaded(action: (modelInstance: RenderableInstance) -> Unit) {
