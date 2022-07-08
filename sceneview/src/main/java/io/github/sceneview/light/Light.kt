@@ -20,11 +20,11 @@ typealias LightInstance = Int
  */
 val Light.instance: LightInstance @EntityInstance get() = Filament.lightManager.getInstance(this)
 
-fun LightManager.Builder.build(lifecycle: Lifecycle): Light =
+fun LightManager.Builder.build(lifecycle: Lifecycle? = null): Light =
     Filament.entityManager.create().apply {
         build(Filament.engine, this)
     }.also { light ->
-        lifecycle.observe(onDestroy = {
+        lifecycle?.observe(onDestroy = {
             // Prevent double destroy in case of manually destroyed
             runCatching { light.destroy() }
         })
@@ -148,5 +148,7 @@ fun Light.clone(lifecycle: Lifecycle) = LightManager.Builder(type)
  * Destroys a Light and frees all its associated resources.
  */
 fun Light.destroy() {
-    Filament.lightManager.destroy(this)
+    Filament.engine.destroyEntity(this)
+    Filament.engine.entityManager.destroy(this)
+//    Filament.lightManager.destroy(this)
 }

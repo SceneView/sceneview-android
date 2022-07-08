@@ -50,6 +50,7 @@ import io.github.sceneview.Filament;
 import io.github.sceneview.SceneView;
 import io.github.sceneview.ar.arcore.PoseKt;
 import io.github.sceneview.ar.node.ArNode;
+import io.github.sceneview.ar.node.PlacementMode;
 import io.github.sceneview.node.ModelNode;
 import io.github.sceneview.utils.FrameTime;
 
@@ -121,6 +122,8 @@ public class AugmentedFaceNode extends ArNode {
      */
     @SuppressWarnings({"initialization"})
     public AugmentedFaceNode(Lifecycle lifecycle) {
+        super(PlacementMode.DISABLED);
+
         this.lifecycle = lifecycle;
 
         faceMeshNode = new ModelNode();
