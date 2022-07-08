@@ -8,10 +8,10 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.EditableTransform
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.math.Position
 import io.github.sceneview.utils.doOnApplyWindowInsets
@@ -21,9 +21,50 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     lateinit var sceneView: ArSceneView
     lateinit var loadingView: View
-    lateinit var actionButton: ExtendedFloatingActionButton
+    lateinit var placeModelButton: ExtendedFloatingActionButton
+    lateinit var newModelButton: ExtendedFloatingActionButton
 
-    lateinit var modelNode: ArModelNode
+    data class Model(
+        val fileLocation: String,
+        val scaleUnits: Float? = null,
+        val placementMode: PlacementMode = PlacementMode.BEST_AVAILABLE
+    )
+
+    val models = listOf(
+        Model("models/spiderbot.glb"),
+        Model(
+            "https://storage.googleapis.com/ar-answers-in-search-models/static/Tiger/model.glb",
+            placementMode = PlacementMode.BEST_AVAILABLE.apply {
+                keepRotation = true
+            },
+            // Display the Tiger with a size of 3 m long
+            scaleUnits = 2.5f
+        ),
+        Model(
+            "https://sceneview.github.io/assets/models/DamagedHelmet.glb",
+            placementMode = PlacementMode.INSTANT,
+            scaleUnits = 0.5f
+        ),
+        Model(
+            "https://storage.googleapis.com/ar-answers-in-search-models/static/GiantPanda/model.glb",
+            placementMode = PlacementMode.PLANE_HORIZONTAL,
+            // Display the Tiger with a size of 1.5 m height
+            scaleUnits = 1.5f
+        ),
+        Model(
+            "https://sceneview.github.io/assets/models/Spoons.glb",
+            placementMode = PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL,
+            // Keep original model size
+            scaleUnits = null
+        ),
+        Model(
+            "https://sceneview.github.io/assets/models/Halloween.glb",
+            placementMode = PlacementMode.PLANE_HORIZONTAL,
+            scaleUnits = 2.5f
+        ),
+    )
+    var modelIndex = 0
+    var modelNode: ArModelNode? = null
 
     var isLoading = false
         set(value) {
@@ -49,38 +90,20 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         })
         sceneView = findViewById(R.id.sceneView)
         loadingView = findViewById(R.id.loadingView)
-        actionButton = findViewById<ExtendedFloatingActionButton>(R.id.actionButton).apply {
+        newModelButton = findViewById<ExtendedFloatingActionButton>(R.id.newModelButton).apply {
             // Add system bar margins
             val bottomMargin = (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
             doOnApplyWindowInsets { systemBarsInsets ->
                 (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
                     systemBarsInsets.bottom + bottomMargin
             }
-            setOnClickListener { actionButtonClicked() }
+            setOnClickListener { newModelNode() }
+        }
+        placeModelButton = findViewById<ExtendedFloatingActionButton>(R.id.placeModelButton).apply {
+            setOnClickListener { placeModelNode() }
         }
 
-        isLoading = true
-        modelNode = ArModelNode(
-            context = this,
-            lifecycle = lifecycle,
-            modelFileLocation = "models/spiderbot.glb",
-            autoAnimate = true,
-            // Place the model origin at the bottom center
-            centerOrigin = Position(y = -1.0f)
-        ) {
-            isLoading = false
-        }.apply {
-            placementMode = PlacementMode.BEST_AVAILABLE
-            onPoseChanged = { node, _ ->
-                actionButton.isGone = !node.isTracking
-            }
-            editableTransforms = EditableTransform.ALL
-        }
-        sceneView.apply {
-            addChild(modelNode)
-            // Select the model node by default (the model node is also selected on tap)
-            gestureDetector.selectedNode = modelNode
-        }
+        newModelNode()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -90,8 +113,8 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         item.isChecked = !item.isChecked
-        modelNode.detachAnchor()
-        modelNode.placementMode = when (item.itemId) {
+        modelNode?.detachAnchor()
+        modelNode?.placementMode = when (item.itemId) {
             R.id.menuPlanePlacement -> PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL
             R.id.menuInstantPlacement -> PlacementMode.INSTANT
             R.id.menuDepthPlacement -> PlacementMode.DEPTH
@@ -101,16 +124,39 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return super.onOptionsItemSelected(item)
     }
 
-    fun actionButtonClicked() {
-        if (!modelNode.isAnchored && modelNode.anchor()) {
-            actionButton.text = getString(R.string.move_object)
-            actionButton.setIconResource(R.drawable.ic_target)
-            sceneView.planeRenderer.isVisible = false
-        } else {
-            modelNode.anchor = null
-            actionButton.text = getString(R.string.place_object)
-            actionButton.setIconResource(R.drawable.ic_anchor)
-            sceneView.planeRenderer.isVisible = true
+    fun placeModelNode() {
+        modelNode?.anchor()
+        placeModelButton.isVisible = false
+        sceneView.planeRenderer.isVisible = false
+    }
+
+    fun newModelNode() {
+        isLoading = true
+        modelNode?.takeIf { !it.isAnchored }?.let {
+            sceneView.removeChild(it)
+            it.destroy()
         }
+        val model = models[modelIndex]
+        modelIndex = (modelIndex + 1) % models.size
+        modelNode = ArModelNode(model.placementMode).apply {
+            loadModelAsync(
+                context = this@MainActivity,
+                lifecycle = lifecycle,
+                glbFileLocation = model.fileLocation,
+                autoAnimate = true,
+                scaleToUnits = model.scaleUnits,
+                // Place the model origin at the bottom center
+                centerOrigin = Position(y = -1.0f)
+            ) {
+                sceneView.planeRenderer.isVisible = true
+                isLoading = false
+            }
+            onPoseChanged = { node, _ ->
+                placeModelButton.isGone = node.isAnchored || !node.isTracking
+            }
+        }
+        sceneView.addChild(modelNode!!)
+        // Select the model node by default (the model node is also selected on tap)
+        sceneView.selectedNode = modelNode
     }
 }
