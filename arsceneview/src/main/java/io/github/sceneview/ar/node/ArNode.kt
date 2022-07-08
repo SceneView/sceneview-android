@@ -318,10 +318,12 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
      * anchor's pose will be updated to maintain this relationship. Note that the relative offset
      * between the pose of multiple anchors attached to a trackable may adjust slightly over time as
      * ARCore updates its model of the world.
+     *
+     * @return the created anchor or `null`if the node could not be anchored
      */
-    open fun anchor(): Boolean {
+    open fun anchor(): Anchor? {
         anchor = createAnchor()
-        return anchor != null
+        return anchor
     }
 
     /**
