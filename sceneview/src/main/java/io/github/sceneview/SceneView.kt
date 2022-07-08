@@ -10,7 +10,10 @@ import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
-import android.view.*
+import android.view.Choreographer
+import android.view.MotionEvent
+import android.view.Surface
+import android.view.SurfaceView
 import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
@@ -21,25 +24,31 @@ import com.google.android.filament.LightManager
 import com.google.android.filament.View
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.KTXLoader
-import com.google.ar.sceneform.*
+import com.google.android.filament.utils.Manipulator
+import com.google.ar.sceneform.Camera
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.Renderer
 import com.google.ar.sceneform.rendering.ResourceManager
 import com.gorisse.thomas.lifecycle.getActivity
-import dev.romainguy.kotlin.math.Float3
-import dev.romainguy.kotlin.math.lookAt
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.environment.loadEnvironmentSync
-import io.github.sceneview.interaction.SceneGestureDetector
-import io.github.sceneview.interaction.SelectedNodeVisualizer
-import io.github.sceneview.light.*
-import io.github.sceneview.math.toFloat3
+import io.github.sceneview.interaction.CameraGestureDetector
+import io.github.sceneview.interaction.GestureDetector
+import io.github.sceneview.interaction.NodeMotionEvent
+import io.github.sceneview.interaction.transform
+import io.github.sceneview.light.Light
+import io.github.sceneview.light.build
+import io.github.sceneview.light.destroy
+import io.github.sceneview.math.Position
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
 import io.github.sceneview.renderable.Renderable
-import io.github.sceneview.utils.*
+import io.github.sceneview.utils.Color
+import io.github.sceneview.utils.DefaultLifecycle
+import io.github.sceneview.utils.FrameTime
+import io.github.sceneview.utils.colorOf
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
 const val defaultSkybox = "sceneview/environments/indoor_studio/indoor_studio_skybox.ktx"
@@ -61,7 +70,8 @@ open class SceneView @JvmOverloads constructor(
     SceneLifecycleOwner,
     DefaultLifecycleObserver,
     Choreographer.FrameCallback,
-    NodeParent {
+    NodeParent,
+    GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
     private val pickingHandler by lazy { Handler(Looper.getMainLooper()) }
 
@@ -108,28 +118,34 @@ open class SceneView @JvmOverloads constructor(
                     if (isTransparent) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
             }
 
-    /**
-     * ### The gesture listener
-     *
-     * Handles all supported gestures.
-     */
-    open var gestureListener: SceneGestureDetector.OnSceneGestureListener =
-        DefaultSceneGestureListener(this)
+    enum class SelectionMode {
+        NONE, SINGLE, MULTIPLE;
 
-    /**
-     * ### The gesture detector
-     *
-     * Provides a unified place for processing touch events and recognizing gestures.
-     */
-    open val gestureDetector: SceneGestureDetector by lazy {
-        SceneGestureDetector(
-            this,
-            listener = gestureListener
-        )
+        /**
+         * ### Whether it is possible to deselect nodes
+         *
+         * An `ArNode` can be deselected if no `ArNode`s are picked on tap.
+         */
+        var allowDeselection = true
     }
 
-    open val selectedNodeVisualizer: SelectedNodeVisualizer by lazy {
-        SelectedNodeVisualizer(context, lifecycle)
+    var selectionMode = SelectionMode.SINGLE
+
+    var selectedNodes: List<Node>
+        get() = allChildren.filter { it.isSelected }
+        set(value) = allChildren.forEach { it.isSelected = value.contains(it) }
+
+    var selectedNode: Node?
+        get() = selectedNodes.firstOrNull()
+        set(value) {
+            selectedNodes = listOfNotNull(value)
+        }
+
+    open val selectionNode: (() -> Node)? = {
+        ModelNode(context, lifecycle, "sceneview/models/node_selector.glb").apply {
+            isSelectable = false
+            collisionShape = null
+        }
     }
 
     /**
@@ -169,6 +185,68 @@ open class SceneView @JvmOverloads constructor(
             _renderer?.mainLight = value
         }
 
+    var lastTouchEvent: MotionEvent? = null
+
+    private val gestureDetector by lazy { GestureDetector(context, ::pickNode, this) }
+
+    private val cameraGestureDetector: CameraGestureDetector? by lazy {
+        CameraGestureDetector(this, object : CameraGestureDetector.OnCameraGestureListener {
+            override fun onScroll(x: Int, y: Int, scrollDelta: Float) {
+                cameraManipulator?.scroll(x, y, scrollDelta)
+            }
+
+            override fun onGrabBegin(x: Int, y: Int, strafe: Boolean) {
+                cameraManipulator?.grabBegin(x, y, strafe)
+            }
+
+            override fun onGrabUpdate(x: Int, y: Int) {
+                cameraManipulator?.grabUpdate(x, y)
+            }
+
+            override fun onGrabEnd() {
+                cameraManipulator?.grabEnd()
+            }
+        })
+    }
+
+    val cameraTargetPosition: Position? = null
+        get() = field
+            ?: allChildren.firstOrNull { it is ModelNode }?.worldPosition
+
+    open var cameraManipulatorBuilder: (() -> Manipulator)? = {
+        Manipulator.Builder()
+            .apply {
+                camera.worldPosition.let {
+                    orbitHomePosition(it.x, it.y, it.z)
+                }
+                cameraTargetPosition?.let {
+                    targetPosition(it.x, it.y, it.z)
+                }
+            }
+            .viewport(width, height)
+            .zoomSpeed(0.05f)
+            .build(Manipulator.Mode.ORBIT)
+    }
+        set(value) {
+            field = value
+            cameraManipulator = value?.invoke()
+        }
+
+    // TODO: Ask Filament to add a startPosition and startRotation in order to handle previous
+    //  possible programmatic camera transforms.
+    //  Better would be that we don't have to create a new Manipulator and just update  it when
+    //  the camera is programmatically updated so it don't come back to  initial position.
+    //  Return field for now will use the default node position target or maybe just don't let the
+    //  user enable manipulator until the camera position is not anymore at its default
+    //  targetPosition
+    private var cameraManipulator: Manipulator? = null
+        get() = field?.takeIf {
+            //TODO find a way to solve that
+//            it.transform == camera.transform
+            true
+        } ?: cameraManipulatorBuilder?.invoke().also { field = it }
+
+
     var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
 
     /**
@@ -194,22 +272,26 @@ open class SceneView @JvmOverloads constructor(
      * - `renderable` - The ID of the Filament renderable that was tapped.
      * - `motionEvent` - The motion event that caused the tap.
      */
-    var onTap: ((node: Node?, renderable: Renderable, motionEvent: MotionEvent) -> Unit)? = null
+    var onTap: ((motionEvent: MotionEvent, node: Node?, renderable: Renderable?) -> Unit)? = null
 
     init {
         try {
             Filament.retain()
 
-            mainLight = LightManager.Builder(LightManager.Type.DIRECTIONAL).apply {
-                val (r, g, b) = Colors.cct(6_500.0f)
-                color(r, g, b)
-                intensity(100_000.0f)
-                direction(0.28f, -0.6f, -0.76f)
-                castShadows(true)
-            }.build(lifecycle)
+            val (r, g, b) = Colors.cct(6_500.0f)
+            mainLight = LightManager.Builder(LightManager.Type.DIRECTIONAL)
+                .color(r, g, b)
+                .intensity(100_000.0f)
+                .direction(0.0f, -1.0f, 0.0f)
+//                .direction(0.28f, -0.6f, -0.76f)
+                .castShadows(true)
+                .build(lifecycle)
+
             // TODO : See if we really can't load it async
-            environment = KTXLoader.loadEnvironmentSync(context, lifecycle,
-                iblKtxFileLocation = defaultIbl)
+            environment = KTXLoader.loadEnvironmentSync(
+                context, lifecycle,
+                iblKtxFileLocation = defaultIbl
+            )
         } catch (exception: Exception) {
             // TODO: This is actually a none sens to call listener on init. Move the try/catch when
             // Filament is kotlined
@@ -319,17 +401,16 @@ open class SceneView @JvmOverloads constructor(
 
     open fun doFrame(frameTime: FrameTime) {
         if (renderer.render(frameTime.nanoseconds)) {
+            // Only update the camera manipulator if a touch has been made
+            if (lastTouchEvent != null) {
+                cameraManipulator?.let { manipulator ->
+                    manipulator.update(frameTime.intervalSeconds.toFloat())
+                    camera.transform = manipulator.transform
+                }
+            }
+
             lifecycle.dispatchEvent<SceneLifecycleObserver> {
                 onFrame(frameTime)
-            }
-            //TODO: The link between the Camera and gesture onFrame should not be here
-            gestureDetector.takeIf { it.lastTouchEvent != null }?.cameraManipulator?.let { manipulator ->
-                manipulator.update(frameTime.intervalSeconds.toFloat())
-                val (eye, target, up) = Array(3) { FloatArray(3) }.apply {
-                    manipulator.getLookAt(this[0], this[1], this[2])
-                }
-                camera.transform =
-                    lookAt(eye = eye.toFloat3(), target = target.toFloat3(), up = Float3(y = 1.0f))
             }
             onFrame?.invoke(frameTime)
         }
@@ -339,10 +420,16 @@ open class SceneView @JvmOverloads constructor(
     override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
         // This makes sure that the view's onTouchListener is called.
         if (!super.onTouchEvent(motionEvent)) {
+            lastTouchEvent = motionEvent
             gestureDetector.onTouchEvent(motionEvent)
+            cameraGestureDetector?.onTouchEvent(motionEvent)
             return true
         }
         return false
+    }
+
+    override fun onSingleTapConfirmed(e: NodeMotionEvent) {
+        onTap(e.motionEvent, e.node, e.renderable)
     }
 
     /**
@@ -354,10 +441,30 @@ open class SceneView @JvmOverloads constructor(
      * @param renderable The ID of the Filament renderable that was tapped.
      * @param motionEvent The motion event that caused the tap.
      */
-    open fun onTap(node: Node?, renderable: Renderable, motionEvent: MotionEvent) {
-        onTap?.invoke(node, renderable, motionEvent)
+    open fun onTap(motionEvent: MotionEvent, node: Node?, renderable: Renderable?) {
+        if (node != null) {
+            when (selectionMode) {
+                SelectionMode.SINGLE ->
+                    if (node.isSelectable && !node.isSelected) {
+                        selectedNode = node
+                    } else if (selectionMode.allowDeselection) {
+                        selectedNode = null
+                    }
+                SelectionMode.MULTIPLE -> selectedNodes =
+                    if (node.isSelectable && !node.isSelected) {
+                        selectedNodes + node
+                    } else {
+                        selectedNodes - node
+                    }
+                else -> if (selectionMode.allowDeselection) {
+                    selectedNode = null
+                }
+            }
+        } else if (selectionMode.allowDeselection) {
+            selectedNode = null
+        }
 
-        node?.onTap(renderable, motionEvent)
+        onTap?.invoke(motionEvent, node, renderable)
     }
 
     override fun setBackgroundDrawable(background: Drawable?) {
@@ -399,24 +506,6 @@ open class SceneView @JvmOverloads constructor(
                     if (value) View.BlendMode.TRANSLUCENT else View.BlendMode.OPAQUE
             }
         }
-
-    // TODO: See if we still need it
-//    /**
-//     * Set the background to a given [Drawable], or remove the background.
-//     * If the background is a [ColorDrawable], then the background color of the [SceneView] is set
-//     * to [ColorDrawable.getColor] (the alpha of the color is ignored).
-//     * Otherwise, default to the behavior of [SurfaceView.setBackground].
-//     */
-//    override fun setBackground(background: Drawable?) {
-//        if (background is ColorDrawable) {
-//            backgroundColor = Color(background.color)
-//            renderer.setClearColor(backgroundColor)
-//        } else {
-//            super.setBackground(background)
-//            backgroundColor = null
-//            renderer.setDefaultClearColor()
-//        }
-//    }
 
     /**
      * To capture the contents of this view, designate a [Surface] onto which this SceneView
@@ -463,7 +552,11 @@ open class SceneView @JvmOverloads constructor(
      * @param y The y coordinate within the `SceneView`.
      * @param onPickingCompleted Called when picking completes.
      */
-    fun pickNode(x: Int, y: Int, onPickingCompleted: (node: ModelNode?, renderable: Renderable) -> Unit) {
+    fun pickNode(
+        x: Int,
+        y: Int,
+        onPickingCompleted: (node: ModelNode?, renderable: Renderable) -> Unit
+    ) {
         // Invert the y coordinate since its origin is at the bottom
         val invertedY = height - 1 - y
 
@@ -489,14 +582,11 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    open class DefaultSceneGestureListener(val sceneView: SceneView) :
-        SceneGestureDetector.OnSceneGestureListener {
-        override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            sceneView.pickNode(e.x.toInt(), e.y.toInt()) { node, renderable  ->
-                sceneView.onTap(node, renderable, e)
-            }
-            return true
-        }
+    fun pickNode(
+        e: MotionEvent,
+        onPickingCompleted: (e: NodeMotionEvent) -> Unit
+    ) = pickNode(e.x.toInt(), e.y.toInt()) { node, renderable ->
+        onPickingCompleted(NodeMotionEvent(e, node, renderable))
     }
 }
 
