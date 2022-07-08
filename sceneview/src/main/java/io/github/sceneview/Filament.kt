@@ -11,6 +11,7 @@ import com.google.android.filament.gltfio.UbershaderLoader
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.GLHelper
 import io.github.sceneview.environment.IBLPrefilter
+import java.lang.ref.WeakReference
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
 object Filament {
@@ -21,18 +22,19 @@ object Filament {
         Utils.init()
     }
 
-    private var eglContext: EGLContext? = null
+    private var eglContext: WeakReference<EGLContext>? = null
 
-    private var _engine: Engine? = null
+    private var _engine: WeakReference<Engine>? = null
 
     @JvmStatic
     val engine: Engine
-        get() = _engine ?: GLHelper.makeContext().let { eglContext ->
-            this.eglContext = eglContext
-            Engine.create(eglContext).also { engine ->
-                _engine = engine
+        get() = _engine?.get() ?: (eglContext?.get() ?: GLHelper.makeContext())
+            .let { eglContext ->
+                this.eglContext = WeakReference(eglContext)
+                Engine.create(eglContext).also { engine ->
+                    _engine = WeakReference(engine)
+                }
             }
-        }
 
     @JvmStatic
     val entityManager
@@ -117,10 +119,14 @@ object Filament {
         _iblPrefilter?.destroy()
         _iblPrefilter = null
 
-        _engine?.destroy()
+        _engine?.get()?.destroy()
+        _engine?.clear()
         _engine = null
 
-        GLHelper.destroyContext(eglContext)
+        eglContext?.get()?.let {
+            GLHelper.destroyContext(it)
+        }
+        eglContext?.clear()
         eglContext = null
     }
 }
