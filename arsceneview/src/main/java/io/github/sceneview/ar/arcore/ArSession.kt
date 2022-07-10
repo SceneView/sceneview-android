@@ -342,7 +342,7 @@ var Config.cloudAnchorEnabled
     }
 
 var Config.geospatialEnabled
-    get() = geospatialMode != Config.GeospatialMode.ENABLED
+    get() = geospatialMode != Config.GeospatialMode.DISABLED
     set(value) {
         geospatialMode = if (value) {
             Config.GeospatialMode.ENABLED
