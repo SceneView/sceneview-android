@@ -152,6 +152,18 @@ open class ArSceneView @JvmOverloads constructor(
             arSession?.cloudAnchorEnabled = value
         }
 
+    private var _geospatialEnabled = false
+
+    /**
+     * ### Geospatial mode
+     */
+    var geospatialEnabled: Boolean
+        get() = arSession?.geospatialEnabled ?: _geospatialEnabled
+        set(value) {
+            _geospatialEnabled = value
+            arSession?.geospatialEnabled = value
+        }
+
     private var _sessionLightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
 
     /**
@@ -295,12 +307,13 @@ open class ArSceneView @JvmOverloads constructor(
 
         session.configure { config ->
             // FocusMode must be changed after the session resume to work
-//            config.focusMode = focusMode
+            // config.focusMode = focusMode
             config.planeFindingMode = _planeFindingMode
             config.depthMode = _depthMode
             config.instantPlacementEnabled = _instantPlacementEnabled
             config.cloudAnchorEnabled = _cloudAnchorEnabled
             config.lightEstimationMode = _sessionLightEstimationMode
+            config.geospatialEnabled = _geospatialEnabled
         }
 
         // Feature config, therefore facing direction, can only be configured once per session.
