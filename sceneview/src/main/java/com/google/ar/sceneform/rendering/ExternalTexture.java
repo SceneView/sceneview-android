@@ -58,52 +58,6 @@ public class ExternalTexture {
         initialize(null, stream);
     }
 
-    /**
-     * Creates an ExternalTexture from an OpenGL ES textureId without a SurfaceTexture. For internal
-     * use only.
-     */
-    public ExternalTexture(Lifecycle lifecycle, int textureId, int width, int height) {
-       /* this.surface = null;
-
-        this.filamentTexture = new Texture
-                .Builder()
-                .importTexture(textureId)
-                .width(width)
-                .height(height)
-                .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                .format(Texture.InternalFormat.RGB8)
-                .build(EngineInstance.getEngine().getFilamentEngine());
-
-        SurfaceTexture surfaceTexture = new SurfaceTexture(0);
-        surfaceTexture.detachFromGLContext();
-        this.surfaceTexture = surfaceTexture;
-
-        filamentStream = new Stream.Builder()
-                .stream(surfaceTexture)
-                .build(EngineInstance.getEngine().getFilamentEngine());
-
-        filamentTexture.setExternalStream(
-                EngineInstance.getEngine().getFilamentEngine(),
-                filamentStream);
-
-        ResourceManager.getInstance()
-                .getExternalTextureCleanupRegistry()
-                .register(this, new CleanupCallback(filamentTexture, filamentStream));*/
-
-        // Explicitly set the surface and surfaceTexture to null, since they are unused in this case.
-        surfaceTexture = null;
-        surface = null;
-
-        // Create the filament stream.
-        Stream stream = StreamKt.build(new Stream.Builder()
-                        .stream(textureId)
-                        .width(width)
-                        .height(height)
-                , lifecycle);
-
-        initialize(lifecycle, stream);
-    }
-
     @SuppressWarnings("initialization")
     private void initialize(Lifecycle lifecycle, Stream filamentStream) {
         if (filamentTexture != null) {

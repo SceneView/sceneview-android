@@ -3,10 +3,10 @@ package io.github.sceneview.environment
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.KTXLoader
 import io.github.sceneview.light.destroy
 import io.github.sceneview.scene.destroy
 import java.io.Closeable
+import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 /**
  * Default Filament indirect light intensity for default camera exposure

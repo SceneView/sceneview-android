@@ -2,7 +2,7 @@ package io.github.sceneview.scene
 
 import com.google.android.filament.Scene
 import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.KTXLoader
+import com.google.android.filament.utils.KTX1Loader as KTXLoader
 import io.github.sceneview.Filament
 import io.github.sceneview.environment.Environment
 
