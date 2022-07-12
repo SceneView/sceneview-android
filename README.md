@@ -249,7 +249,7 @@ val earth = arSceneView.session?.earth ?: return
 if (earth.trackingState == TrackingState.TRACKING) {
     // Place the earth anchor at the same altitude as that of the camera to make it easier to view.
     val altitude = earth.cameraGeospatialPose.altitudeMeters - 1
-    val rotation = Rotation(0F, 0F, 0F)
+    val rotation = Rotation(0f, 0f, 0f)
     // Put the anchor somewhere around the user.
     val latitude = earth.cameraGeospatialPose.latitude + 0.0004
     val longitude = earth.cameraGeospatialPose.longitude + 0.0004
