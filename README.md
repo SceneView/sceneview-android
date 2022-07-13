@@ -235,12 +235,13 @@ Disable this value to apply the standard camera material to the CameraStream.
 
 [![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=QZYg9WU5wSA)](https://www.youtube.com/watch?v=QZYg9WU5wSA)
 
-- Configure session
+Follow the [official developer guide](https://developers.google.com/ar/develop/java/geospatial/developer-guide)
+to enable Geospatial in your application. For configuring the ARCore session, you just need to enable
+Geospatial via ArSceneView.
+
+- Enable Geospatial via ArSceneView
 ```kotlin
-arSceneView.configureSession { session, config ->
-    // Enable Geospatial Mode.
-    config.geospatialMode = Config.GeospatialMode.ENABLED
-}
+arSceneView.geospatialEnabled = true
 ```
 - Create an Anchor
 ```kotlin
@@ -248,13 +249,14 @@ val earth = arSceneView.session?.earth ?: return
 if (earth.trackingState == TrackingState.TRACKING) {
     // Place the earth anchor at the same altitude as that of the camera to make it easier to view.
     val altitude = earth.cameraGeospatialPose.altitudeMeters - 1
-    // The rotation quaternion of the anchor in the East-Up-South (EUS) coordinate system.
-    val qx = 0f
-    val qy = 0f
-    val qz = 0f
-    val qw = 1f
-    earthAnchor = earth.createAnchor(latLng.latitude, latLng.longitude, altitude, qx, qy, qz, qw)
+    val rotation = Rotation(0f, 0f, 0f)
+    // Put the anchor somewhere around the user.
+    val latitude = earth.cameraGeospatialPose.latitude + 0.0004
+    val longitude = earth.cameraGeospatialPose.longitude + 0.0004
+    earthAnchor = earth.createAnchor(latitude, longitude, altitude, rotation)
 }
+// Attach the anchor to the arModelNode.
+arModelNode.anchor = earthAnchor
 ```
 
 ## Camera Permission and ARCore install/update/unavailable
