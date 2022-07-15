@@ -160,7 +160,7 @@ open class Node(
      * ### The node scale on each axis.
      * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
      */
-    var scale: Scale = DEFAULT_SCALE
+    var scale: Scale = scale
 
     open var transform: Transform = Transform(position, quaternion, scale)
         get() = field.takeIf {
