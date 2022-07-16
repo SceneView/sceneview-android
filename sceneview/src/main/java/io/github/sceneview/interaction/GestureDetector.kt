@@ -293,25 +293,23 @@ open class GestureDetector(
         })
 
     val scaleGestureDetector = ScaleGestureDetector(context,
-        object : ScaleGestureDetector.SimpleOnScaleListener {
+        object : ScaleGestureDetector.OnScaleListener {
             var scaleBeginEvent: NodeMotionEvent? = null
 
-            override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) =
-                super.onScaleBegin(detector, e).also {
-                    pickNode(e) { ne ->
-                        scaleBeginEvent = ne
-                        ne.node?.onScaleBegin(detector, ne)
-                        listener.onScaleBegin(detector, ne)
-                    }
+            override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) {
+                pickNode(e) { ne ->
+                    scaleBeginEvent = ne
+                    ne.node?.onScaleBegin(detector, ne)
+                    listener.onScaleBegin(detector, ne)
                 }
+            }
 
-            override fun onScale(detector: ScaleGestureDetector, e: MotionEvent) =
-                super.onScale(detector, e).also {
-                    scaleBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
-                        ne.node?.onScale(detector, ne)
-                        listener.onScale(detector, ne)
-                    }
+            override fun onScale(detector: ScaleGestureDetector, e: MotionEvent) {
+                scaleBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                    ne.node?.onScale(detector, ne)
+                    listener.onScale(detector, ne)
                 }
+            }
 
             override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {
                 scaleBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
