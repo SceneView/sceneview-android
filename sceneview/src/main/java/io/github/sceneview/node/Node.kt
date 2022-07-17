@@ -713,6 +713,19 @@ open class Node(
     }
 
     /**
+     * ### Rotates the node to face another node
+     *
+     * @param targetNode The target node to look at
+     * @param upDirection The up direction will determine the orientation of the node around the direction
+     * @param smooth Whether the rotation should happen smoothly
+     */
+    fun lookAt(
+        targetNode: Node,
+        upDirection: Direction = Direction(y = 1.0f),
+        smooth: Boolean = false
+    ) = lookAt(targetNode.worldPosition, upDirection, smooth)
+
+    /**
      * ### Rotates the node to face a direction in world-space
      *
      * The look direction and up direction cannot be coincident (parallel) or the orientation will
