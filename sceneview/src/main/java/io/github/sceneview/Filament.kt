@@ -7,7 +7,7 @@ import com.google.android.filament.RenderableManager
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.gltfio.ResourceLoader
-import com.google.android.filament.gltfio.UbershaderLoader
+import com.google.android.filament.gltfio.UbershaderProvider
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.GLHelper
 import io.github.sceneview.environment.IBLPrefilter
@@ -63,11 +63,11 @@ object Filament {
             false
         ).also { _resourceLoader = it }
 
-    private var _materialProvider: UbershaderLoader? = null
+    private var _materialProvider: UbershaderProvider? = null
 
     @JvmStatic
     val materialProvider
-        get() = _materialProvider ?: UbershaderLoader(engine).also { _materialProvider = it }
+        get() = _materialProvider ?: UbershaderProvider(engine).also { _materialProvider = it }
 
     private var _assetLoader: AssetLoader? = null
 
