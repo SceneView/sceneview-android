@@ -103,6 +103,10 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             setOnClickListener { placeModelNode() }
         }
 
+        // If you are experiencing any performance issues,
+        // you can try using the optimized performance configuration
+        // Performance.configuration = Performance.Optimized()
+
         newModelNode()
     }
 

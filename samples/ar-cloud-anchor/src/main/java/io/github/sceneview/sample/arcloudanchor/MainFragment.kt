@@ -84,6 +84,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             selectMode(Mode.RESOLVE)
         }
 
+        // If you are experiencing any performance issues,
+        // you can try using the optimized performance configuration
+        // Performance.configuration = Performance.Optimized()
+
         isLoading = true
         cloudAnchorNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
             parent = sceneView

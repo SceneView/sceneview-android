@@ -8,6 +8,7 @@ import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
+import io.github.sceneview.ar.performance.Performance
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.Position
@@ -187,7 +188,7 @@ open class ArModelNode : ArNode {
      * consumption.
      * Increase for a more accurate positioning update.
      */
-    var maxHitTestPerSecond: Int = 10
+    var maxHitTestPerSecond = Performance.configuration.maxHitTestsPerSecond
 
     var arFrame: ArFrame? = null
         private set

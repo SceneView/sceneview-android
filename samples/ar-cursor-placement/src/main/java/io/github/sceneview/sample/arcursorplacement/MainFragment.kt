@@ -42,6 +42,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             setOnClickListener { cursorNode.createAnchor()?.let { anchorOrMove(it) } }
         }
 
+        // If you are experiencing any performance issues,
+        // you can try using the optimized performance configuration
+        // Performance.configuration = Performance.Optimized()
+
         sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
             planeRenderer.isVisible = false
             // Handle a fallback in case of non AR usage. The exception contains the failure reason
