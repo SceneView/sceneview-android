@@ -732,10 +732,10 @@ open class Node(
      * be invalid.
      *
      * @param lookDirection The desired look direction in world-space
-     * @param upDirection The up direction will determine the orientation of the node around the direction
+     * @param upDirection The up direction will determine the orientation of the node around the look direction
      * @param smooth Whether the rotation should happen smoothly
      */
-    fun lookAtDirection(
+    fun lookTowards(
         lookDirection: Direction,
         upDirection: Direction = Direction(y = 1.0f),
         smooth: Boolean = false
