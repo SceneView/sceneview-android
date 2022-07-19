@@ -701,8 +701,8 @@ open class Node(
         smooth: Boolean = false
     ) {
         val newQuaternion = lookAt(
-            worldPosition,
             targetPosition,
+            worldPosition,
             upDirection
         ).toQuaternion()
         if (smooth) {
@@ -742,7 +742,7 @@ open class Node(
     ) {
         val newQuaternion = lookTowards(
             worldPosition,
-            lookDirection,
+            -lookDirection,
             upDirection
         ).toQuaternion()
         if (smooth) {
