@@ -10,6 +10,7 @@ import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.ar.performance.Performance
 import io.github.sceneview.interaction.MoveGestureDetector
 import io.github.sceneview.interaction.NodeMotionEvent
 import io.github.sceneview.node.ModelNode
@@ -44,7 +45,7 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
      * Only used when the [ArNode] is anchored.
      * `null` means never update the pose
      */
-    var anchorPoseUpdateInterval: Double? = null
+    var anchorPoseUpdateInterval = Performance.configuration.anchorPoseUpdateInterval
     var anchorUpdateFrame: ArFrame? = null
         private set
 
