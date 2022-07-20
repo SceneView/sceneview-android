@@ -688,24 +688,69 @@ open class Node(
         }
     }
 
-    // TODO
-//
-//    /**
-//     * ### Rotates the node to face a point in world space
-//     *
-//     * World-space up (0, 1, 0) will be used to determine the orientation of the node around the
-//     * direction.
-//     *
-//     * @param position The position to look at in world space
-//     * @param up The up direction will determine the orientation of the node around the direction
-//     */
-//    fun lookAt(position: Position, up: Direction = Direction(y=1.0f), smooth: Boolean = false) {
-//        if(smooth) {
-//            smooth(quaternion = rotation(lookAt(this.worldPosition, position, up)).toQuaternion())
-//        } else {
-//            transform(rotation = rotation(lookAt(this.worldPosition, position, up)).toQuaternion())
-//        }
-//    }
+    /**
+     * ### Rotates the node to face a point in world-space
+     *
+     * @param targetPosition The target position to look at in world space
+     * @param upDirection The up direction will determine the orientation of the node around the direction
+     * @param smooth Whether the rotation should happen smoothly
+     */
+    fun lookAt(
+        targetPosition: Position,
+        upDirection: Direction = Direction(y = 1.0f),
+        smooth: Boolean = false
+    ) {
+        val newQuaternion = lookAt(
+            targetPosition,
+            worldPosition,
+            upDirection
+        ).toQuaternion()
+        if (smooth) {
+            smooth(quaternion = newQuaternion)
+        } else {
+            transform(quaternion = newQuaternion)
+        }
+    }
+
+    /**
+     * ### Rotates the node to face another node
+     *
+     * @param targetNode The target node to look at
+     * @param upDirection The up direction will determine the orientation of the node around the direction
+     * @param smooth Whether the rotation should happen smoothly
+     */
+    fun lookAt(
+        targetNode: Node,
+        upDirection: Direction = Direction(y = 1.0f),
+        smooth: Boolean = false
+    ) = lookAt(targetNode.worldPosition, upDirection, smooth)
+
+    /**
+     * ### Rotates the node to face a direction in world-space
+     *
+     * The look direction and up direction cannot be coincident (parallel) or the orientation will
+     * be invalid.
+     *
+     * @param lookDirection The desired look direction in world-space
+     * @param upDirection The up direction will determine the orientation of the node around the look direction
+     * @param smooth Whether the rotation should happen smoothly
+     */
+    fun lookTowards(
+        lookDirection: Direction,
+        upDirection: Direction = Direction(y = 1.0f),
+        smooth: Boolean = false
+    ) {
+        val newQuaternion = lookTowards(
+            worldPosition,
+            -lookDirection,
+            upDirection
+        ).toQuaternion()
+        if (smooth) {
+            smooth(quaternion = newQuaternion)
+        } else {
+            transform(quaternion = newQuaternion)
+        }
+    }
 
     /**
      * ### Checks whether the given node parent is an ancestor of this node recursively
@@ -811,32 +856,6 @@ open class Node(
     open fun destroy() {
         this.parent = null
     }
-
-    // TODO : Use kotlin math
-
-//    /**
-//     * ### Sets the direction that the node is looking at in world-space
-//     *
-//     * After calling this, [forward] will match the look direction passed in.
-//     * The up direction will determine the orientation of the node around the direction.
-//     * The look direction and up direction cannot be coincident (parallel) or the orientation will
-//     * be invalid.
-//     *
-//     * @param lookDirection a vector representing the desired look direction in world-space
-//     * @param upDirection   a vector representing a valid up vector to use, such as Vector3.up()
-//     */
-//    fun setLookDirection(lookDirection: Vector3, upDirection: Vector3) {
-//        val cameraPosition: Vector3 = getScene().getCamera().getWorldPosition()
-//        val cardPosition: Vector3 = getWorldPosition()
-//        sceneView.renderer.camera.lookAt()
-//        val direction = Vector3.subtract(cameraPosition, cardPosition)
-//        val lookRotation =
-//            com.google.ar.sceneform.math.Quaternion.lookRotation(direction, Vector3.up())
-//        setWorldRotation(lookRotation)
-//
-//
-//        orientation = Quaternion.lookRotation(lookDirection, upDirection)
-//    }
 
     /**
      * ### Performs the given action when the node is attached to the scene.
