@@ -3,6 +3,9 @@ package io.github.sceneview.node
 import androidx.lifecycle.Lifecycle
 import com.google.ar.sceneform.rendering.Light
 import com.google.ar.sceneform.rendering.LightInstance
+import dev.romainguy.kotlin.math.lookAt
+import dev.romainguy.kotlin.math.lookTowards
+import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
@@ -82,6 +85,40 @@ open class LightNode : Node {
         light?.createInstance(lifecycle, this)?.also {
             lightInstance = it
         }
+
+    override fun lookAt(
+        targetPosition: Position,
+        upDirection: Direction,
+        smooth: Boolean
+    ) {
+        val newQuaternion = lookAt(
+            worldPosition,
+            targetPosition,
+            upDirection
+        ).toQuaternion()
+        if (smooth) {
+            smooth(quaternion = newQuaternion)
+        } else {
+            transform(quaternion = newQuaternion)
+        }
+    }
+
+    override fun lookTowards(
+        lookDirection: Direction,
+        upDirection: Direction,
+        smooth: Boolean
+    ) {
+        val newQuaternion = lookTowards(
+            worldPosition,
+            lookDirection,
+            upDirection
+        ).toQuaternion()
+        if (smooth) {
+            smooth(quaternion = newQuaternion)
+        } else {
+            transform(quaternion = newQuaternion)
+        }
+    }
 
     /** ### Detach and destroy the node */
     override fun destroy() {
