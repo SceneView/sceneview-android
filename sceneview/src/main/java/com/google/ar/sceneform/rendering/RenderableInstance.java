@@ -39,6 +39,7 @@ import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 import io.github.sceneview.Filament;
+import io.github.sceneview.SceneView;
 import io.github.sceneview.model.ModelKt;
 
 /**
@@ -73,7 +74,7 @@ public class RenderableInstance implements AnimatableModel {
     private final TransformProvider transformProvider;
     private final Renderable renderable;
     @Nullable
-    Renderer renderer;
+    SceneView sceneView;
     @Entity
     int entity = 0;
     @Entity
@@ -554,40 +555,40 @@ public class RenderableInstance implements AnimatableModel {
         }
     }
 
-    public Renderer getRenderer() {
-        return renderer;
+    public SceneView getSceneView() {
+        return sceneView;
     }
 
-    public void setRenderer(Renderer renderer) {
-        if(this.renderer != renderer) {
+    public void setSceneView(SceneView sceneView) {
+        if(this.sceneView != sceneView) {
             FilamentAsset currentFilamentAsset = filamentAsset;
-            if(this.renderer != null) {
+            if(this.sceneView != null) {
                 if (currentFilamentAsset != null) {
                     int[] entities = currentFilamentAsset.getEntities();
                     for (int entity : entities) {
-                        this.renderer.getFilamentScene().removeEntity(entity);
+                        this.sceneView.getRenderer().getFilamentScene().removeEntity(entity);
                     }
                     int root = currentFilamentAsset.getRoot();
-                    this.renderer.getFilamentScene().removeEntity(root);
+                    this.sceneView.getRenderer().getFilamentScene().removeEntity(root);
                 }
-                this.renderer.removeInstance(this);
-                renderable.detatchFromRenderer();
+                this.sceneView.getRenderer().removeInstance(this);
+                renderable.detatchFromSceneView();
             }
-            if(renderer != null) {
-                renderer.addInstance(this);
-                renderable.attachToRenderer(renderer);
+            if(sceneView != null) {
+                sceneView.getRenderer().addInstance(this);
+                renderable.attachToSceneView(sceneView);
                 if (currentFilamentAsset != null) {
                     int[] entities = currentFilamentAsset.getEntities();
-                    Preconditions.checkNotNull(renderer)
+                    Preconditions.checkNotNull(sceneView.getRenderer())
                             .getFilamentScene()
                             .addEntity(currentFilamentAsset.getRoot());
-                    Preconditions.checkNotNull(renderer)
+                    Preconditions.checkNotNull(sceneView.getRenderer())
                             .getFilamentScene()
                             .addEntities(currentFilamentAsset.getEntities());
-                    Preconditions.checkNotNull(renderer).getFilamentScene().addEntities(entities);
+                    Preconditions.checkNotNull(sceneView.getRenderer()).getFilamentScene().addEntities(entities);
                 }
             }
-            this.renderer = renderer;
+            this.sceneView = sceneView;
         }
     }
 
@@ -595,7 +596,7 @@ public class RenderableInstance implements AnimatableModel {
      * Detach and destroy the instance
      */
     public void destroy() {
-        setRenderer(null);
+        setSceneView(null);
 
         if(filamentAsset != null) {
             ModelKt.destroy(filamentAsset);

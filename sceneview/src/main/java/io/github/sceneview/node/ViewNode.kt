@@ -50,10 +50,10 @@ open class ViewNode : Node {
     var renderableInstance: RenderableInstance? = null
         set(value) {
             if (field != value) {
-                field?.renderer = null
+                field?.sceneView = null
                 field?.destroy()
                 field = value
-                value?.renderer = if (shouldBeRendered) renderer else null
+                value?.sceneView = if (shouldBeRendered) sceneView else null
                 onRenderableChanged()
             }
         }
@@ -64,7 +64,7 @@ open class ViewNode : Node {
     override var isRendered: Boolean
         get() = super.isRendered
         set(value) {
-            renderableInstance?.renderer = if (value) renderer else null
+            renderableInstance?.sceneView = if (value) sceneView else null
             super.isRendered = value
         }
 

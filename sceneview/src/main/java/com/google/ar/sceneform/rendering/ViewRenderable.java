@@ -88,7 +88,7 @@ public class ViewRenderable extends Renderable {
   private VerticalAlignment verticalAlignment = VerticalAlignment.BOTTOM;
   private HorizontalAlignment horizontalAlignment = HorizontalAlignment.CENTER;
 
-  @Nullable private Renderer renderer;
+  @Nullable private SceneView sceneView;
   private boolean isInitialized;
 
   @SuppressWarnings({"initialization"})
@@ -270,7 +270,7 @@ public class ViewRenderable extends Renderable {
       isInitialized = true;
     }
 
-    if (renderer != null && renderer.isFrontFaceWindingInverted()) {
+    if (sceneView != null && sceneView.isFrontFaceWindingInverted()) {
       MaterialInstanceKt.setParameter(getMaterial(), "offsetUv", new Float2(1.0f, 0.0f));
     }
 
@@ -278,17 +278,17 @@ public class ViewRenderable extends Renderable {
   }
 
   @Override
-  void attachToRenderer(Renderer renderer) {
+  void attachToSceneView(SceneView sceneView) {
     Preconditions.checkNotNull(viewRenderableData)
         .getRenderView()
-        .attachView(renderer.getViewAttachmentManager());
-    this.renderer = renderer;
+        .attachView(sceneView.getRenderer().getViewAttachmentManager());
+    this.sceneView = sceneView;
   }
 
   @Override
-  void detatchFromRenderer() {
+  void detatchFromSceneView() {
     Preconditions.checkNotNull(viewRenderableData).getRenderView().detachView();
-    this.renderer = null;
+    this.sceneView = null;
   }
 
   private void updateSuggestedCollisionShapeAsync() {
