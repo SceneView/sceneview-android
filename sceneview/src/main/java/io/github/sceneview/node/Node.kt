@@ -1,5 +1,7 @@
 package io.github.sceneview.node
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.view.MotionEvent
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -14,6 +16,7 @@ import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
+import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.interaction.*
 import io.github.sceneview.math.*
 import io.github.sceneview.renderable.Renderable
@@ -687,6 +690,21 @@ open class Node(
             this.transform = transform
         }
     }
+
+    fun animatePositions(vararg positions: Position): ObjectAnimator =
+        NodeAnimator.ofPosition(this, *positions)
+
+    fun animateQuaternions(vararg quaternions: Quaternion): ObjectAnimator =
+        NodeAnimator.ofQuaternion(this, *quaternions)
+
+    fun animateRotations(vararg rotations: Rotation): ObjectAnimator =
+        NodeAnimator.ofRotation(this, *rotations)
+
+    fun animateScales(vararg scales: Scale): ObjectAnimator =
+        NodeAnimator.ofScale(this, *scales)
+
+    fun animateTransforms(vararg transforms: Transform): AnimatorSet =
+        NodeAnimator.ofTransform(this, *transforms)
 
     /**
      * ### Rotates the node to face a point in world-space
