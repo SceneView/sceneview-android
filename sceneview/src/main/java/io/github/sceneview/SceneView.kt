@@ -23,7 +23,6 @@ import com.google.android.filament.Entity
 import com.google.android.filament.LightManager
 import com.google.android.filament.View
 import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.KTX1Loader as KTXLoader
 import com.google.android.filament.utils.Manipulator
 import com.google.ar.sceneform.Camera
 import com.google.ar.sceneform.collision.CollisionSystem
@@ -49,6 +48,7 @@ import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.DefaultLifecycle
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.colorOf
+import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
 const val defaultSkybox = "sceneview/environments/indoor_studio/indoor_studio_skybox.ktx"
@@ -141,7 +141,7 @@ open class SceneView @JvmOverloads constructor(
             selectedNodes = listOfNotNull(value)
         }
 
-    open val selectionNode: (() -> Node)? = {
+    open val selectionVisualizer: (() -> Node)? = {
         ModelNode(context, lifecycle, "sceneview/models/node_selector.glb").apply {
             isSelectable = false
             collisionShape = null
@@ -182,7 +182,7 @@ open class SceneView @JvmOverloads constructor(
     var mainLight: Light? = null
         set(value) {
             field = value
-            _renderer?.mainLight = value
+            _renderer?.setMainLight(value)
         }
 
     var lastTouchEvent: MotionEvent? = null
