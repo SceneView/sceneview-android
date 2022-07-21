@@ -181,26 +181,6 @@ public class Renderer implements UiHelper.RendererCallback {
     }
 
     /**
-     * Checks whether winding is inverted for front face rendering.
-     *
-     * @hide Used internally by ViewRenderable
-     */
-
-    public boolean isFrontFaceWindingInverted() {
-        return view.isFrontFaceWindingInverted();
-    }
-
-    /**
-     * Inverts winding for front face rendering.
-     *
-     * @hide Used internally by ArSceneView
-     */
-
-    public void setFrontFaceWindingInverted(Boolean inverted) {
-        view.setFrontFaceWindingInverted(inverted);
-    }
-
-    /**
      * @hide
      */
     public void onPause() {
