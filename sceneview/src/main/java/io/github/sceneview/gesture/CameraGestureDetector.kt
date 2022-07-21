@@ -1,4 +1,4 @@
-package io.github.sceneview.interaction
+package io.github.sceneview.gesture
 
 import android.view.MotionEvent
 import com.google.android.filament.utils.Float2

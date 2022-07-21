@@ -10,8 +10,8 @@ import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
-import io.github.sceneview.interaction.MoveGestureDetector
-import io.github.sceneview.interaction.NodeMotionEvent
+import io.github.sceneview.gesture.MoveGestureDetector
+import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.node.ModelNode
 
 /**

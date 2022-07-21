@@ -1,4 +1,4 @@
-package io.github.sceneview.interaction
+package io.github.sceneview.gesture
 
 import android.content.Context
 import android.view.GestureDetector

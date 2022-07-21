@@ -1,9 +1,9 @@
-package io.github.sceneview.interaction
+package io.github.sceneview.gesture
 
 import android.content.Context
 import android.view.MotionEvent
 import dev.romainguy.kotlin.math.degrees
-import io.github.sceneview.interaction.RotateGestureDetector.OnRotateListener
+import io.github.sceneview.gesture.RotateGestureDetector.OnRotateListener
 import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.sqrt
