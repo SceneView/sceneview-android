@@ -316,12 +316,7 @@ open class ArSceneView @JvmOverloads constructor(
             config.geospatialEnabled = _geospatialEnabled
         }
 
-        // Feature config, therefore facing direction, can only be configured once per session.
-        if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
-            renderer.isFrontFaceWindingInverted = true
-        }
-
-        arCameraStream?.let { addEntity(it.renderable) }
+        addEntity(arCameraStream.renderable)
 
         onArSessionCreated?.invoke(session)
     }
@@ -345,6 +340,11 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun onArSessionConfigChanged(session: ArSession, config: Config) {
         super.onArSessionConfigChanged(session, config)
+
+        // Feature config, therefore facing direction, can only be configured once per session.
+        if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
+            isFrontFaceWindingInverted = true
+        }
 
         onArSessionConfigChanged?.invoke(session, config)
     }
