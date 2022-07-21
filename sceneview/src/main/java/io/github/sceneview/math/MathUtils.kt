@@ -11,8 +11,14 @@ typealias Rotation = Float3
 typealias Scale = Float3
 typealias Direction = Float3
 typealias Size = Float3
-typealias Transform = Mat4
 typealias Axis = VectorComponent
+typealias Transform = Mat4
+
+fun Transform(position: Position, quaternion: Quaternion, scale: Scale) =
+    translation(position) * rotation(quaternion) * scale(scale)
+
+fun Transform(position: Position, rotation: Rotation, scale: Scale) =
+    translation(position) * rotation(rotation.toQuaternion()) * scale(scale)
 
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }
@@ -37,12 +43,6 @@ fun Quaternion.toOldQuaternion() = com.google.ar.sceneform.math.Quaternion(x, y,
 
 //TODO: Remove when everything use Quaternion
 fun com.google.ar.sceneform.math.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
-
-fun Transform(position: Position, quaternion: Quaternion, scale: Scale) =
-    translation(position) * rotation(quaternion) * scale(scale)
-
-fun Transform(position: Position, rotation: Rotation, scale: Scale) =
-    translation(position) * rotation(rotation.toQuaternion()) * scale(scale)
 
 val Mat4.quaternion: Quaternion
     get() = rotation(this).toQuaternion()
