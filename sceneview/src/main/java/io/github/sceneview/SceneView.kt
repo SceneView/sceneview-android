@@ -185,6 +185,27 @@ open class SceneView @JvmOverloads constructor(
             _renderer?.setMainLight(value)
         }
 
+    /**
+     * ### Inverts winding for front face rendering
+     *
+     * Inverts the winding order of front faces. By default front faces use a counter-clockwise
+     * winding order. When the winding order is inverted, front faces are faces with a clockwise
+     * winding order.
+     *
+     * Changing the winding order will directly affect the culling mode in materials
+     * (see [com.google.android.filament.Material.getCullingMode]).
+     *
+     * Inverting the winding order of front faces is useful when rendering mirrored reflections
+     * (water, mirror surfaces, front camera in AR, etc.).
+     *
+     * `true` to invert front faces, false otherwise.
+     */
+    var isFrontFaceWindingInverted: Boolean
+        get() = renderer.filamentView.isFrontFaceWindingInverted
+        set(value) {
+            renderer.filamentView.isFrontFaceWindingInverted = value
+        }
+
     var lastTouchEvent: MotionEvent? = null
 
     private val gestureDetector by lazy { GestureDetector(context, ::pickNode, this) }
