@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.sceneview.interaction
+package io.github.sceneview.gesture
 
 import android.content.Context
 import androidx.lifecycle.Lifecycle

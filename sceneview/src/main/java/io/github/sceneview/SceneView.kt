@@ -33,10 +33,10 @@ import com.gorisse.thomas.lifecycle.getActivity
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.environment.loadEnvironmentSync
-import io.github.sceneview.interaction.CameraGestureDetector
-import io.github.sceneview.interaction.GestureDetector
-import io.github.sceneview.interaction.NodeMotionEvent
-import io.github.sceneview.interaction.transform
+import io.github.sceneview.gesture.CameraGestureDetector
+import io.github.sceneview.gesture.GestureDetector
+import io.github.sceneview.gesture.NodeMotionEvent
+import io.github.sceneview.gesture.transform
 import io.github.sceneview.light.Light
 import io.github.sceneview.light.build
 import io.github.sceneview.light.destroy

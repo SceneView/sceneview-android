@@ -17,7 +17,7 @@ import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
 import io.github.sceneview.animation.NodeAnimator
-import io.github.sceneview.interaction.*
+import io.github.sceneview.gesture.*
 import io.github.sceneview.math.*
 import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.FrameTime

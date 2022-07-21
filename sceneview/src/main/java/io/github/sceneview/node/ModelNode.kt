@@ -8,7 +8,7 @@ import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
-import io.github.sceneview.interaction.NodeMotionEvent
+import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.*
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.utils.FrameTime
