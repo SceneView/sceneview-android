@@ -445,7 +445,7 @@ open class Node(
 
     open fun onAttachToScene(sceneView: SceneView) {
         if (selectionVisualizer == null) {
-            selectionVisualizer = sceneView.selectionNode?.invoke()
+            selectionVisualizer = sceneView.selectionVisualizer?.invoke()
         }
         selectionVisualizer?.parent = if (isSelected) this else null
         onAttachedToScene.toList().forEach { it(sceneView) }
@@ -779,7 +779,7 @@ open class Node(
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
 
     open var selectionVisualizer: Node? = null
-        get() = field ?: sceneView?.selectionNode?.invoke()?.also {
+        get() = field ?: sceneView?.selectionVisualizer?.invoke()?.also {
             it.parent = if (isSelected) this else null
             field = it
         }
