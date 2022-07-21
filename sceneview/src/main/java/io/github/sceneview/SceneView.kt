@@ -6,13 +6,13 @@ import android.graphics.Color.BLACK
 import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
 import android.view.Choreographer
 import android.view.MotionEvent
-import android.view.Surface
 import android.view.SurfaceView
 import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
@@ -44,10 +44,7 @@ import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
 import io.github.sceneview.renderable.Renderable
-import io.github.sceneview.utils.Color
-import io.github.sceneview.utils.DefaultLifecycle
-import io.github.sceneview.utils.FrameTime
-import io.github.sceneview.utils.colorOf
+import io.github.sceneview.utils.*
 import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 const val defaultIbl = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
@@ -267,6 +264,7 @@ open class SceneView @JvmOverloads constructor(
             true
         } ?: cameraManipulatorBuilder?.invoke().also { field = it }
 
+    val surfaceCopier by lazy { SurfaceCopier(lifecycle) }
 
     var onOpenGLNotSupported: ((exception: Exception) -> Unit)? = null
 
@@ -528,32 +526,21 @@ open class SceneView @JvmOverloads constructor(
             }
         }
 
-    /**
-     * To capture the contents of this view, designate a [Surface] onto which this SceneView
-     * should be mirrored. Use [android.media.MediaRecorder.getSurface], [ ][android.media.MediaCodec.createInputSurface] or [ ][android.media.MediaCodec.createPersistentInputSurface] to obtain the input surface for
-     * recording. This will incur a rendering performance cost and should only be set when capturing
-     * this view. To stop the additional rendering, call stopMirroringToSurface.
-     *
-     * @param surface the Surface onto which the rendered scene should be mirrored.
-     * @param left    the left edge of the rectangle into which the view should be mirrored on surface.
-     * @param bottom  the bottom edge of the rectangle into which the view should be mirrored on
-     * surface.
-     * @param width   the width of the rectangle into which the SceneView should be mirrored on surface.
-     * @param height  the height of the rectangle into which the SceneView should be mirrored on
-     * surface.
-     */
-    fun startMirroringToSurface(surface: Surface, left: Int, bottom: Int, width: Int, height: Int) =
-        renderer.startMirroring(surface, left, bottom, width, height)
+    fun startRecording(mediaRecorder: MediaRecorder) {
+        mediaRecorder.apply {
+            setVideoSource(MediaRecorder.VideoSource.SURFACE)
+        }
+        mediaRecorder.prepare()
+        mediaRecorder.start()
+        surfaceCopier.startMirroring(mediaRecorder.surface)
+    }
 
-    /**
-     * When capturing is complete, call this method to stop mirroring the SceneView to the specified
-     * [Surface]. If this is not called, the additional performance cost will remain.
-     *
-     *
-     * The application is responsible for calling [Surface.release] on the Surface when
-     * done.
-     */
-    fun stopMirroringToSurface(surface: Surface) = renderer.stopMirroring(surface)
+    fun stopRecording(mediaRecorder: MediaRecorder) {
+        surfaceCopier.stopMirroring(mediaRecorder.surface)
+        mediaRecorder.stop()
+        mediaRecorder.reset()
+        mediaRecorder.surface.release()
+    }
 
     fun addEntity(@Entity entity: Int) {
         renderer.filamentScene.addEntity(entity)
