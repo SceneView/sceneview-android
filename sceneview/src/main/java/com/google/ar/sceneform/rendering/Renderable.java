@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import io.github.sceneview.Filament;
+import io.github.sceneview.SceneView;
 
 /*###########!!!!!!!!!!!!!!!!################
 /*###########!!!!!!!!!!!!!!!!################
@@ -328,10 +329,10 @@ public abstract class Renderable {
         }
     }
 
-    void attachToRenderer(Renderer renderer) {
+    void attachToSceneView(SceneView sceneView) {
     }
 
-    void detatchFromRenderer() {
+    void detatchFromSceneView() {
     }
 
     /**

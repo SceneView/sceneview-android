@@ -111,10 +111,10 @@ open class ModelNode : Node {
     var modelInstance: RenderableInstance? = null
         set(value) {
             if (field != value) {
-                field?.renderer = null
+                field?.sceneView = null
                 field?.destroy()
                 field = value
-                value?.renderer = if (shouldBeRendered) renderer else null
+                value?.sceneView = if (shouldBeRendered) sceneView else null
                 onModelChanged(value)
             }
         }
@@ -125,7 +125,7 @@ open class ModelNode : Node {
     override var isRendered: Boolean
         get() = super.isRendered
         set(value) {
-            modelInstance?.renderer = if (value) renderer else null
+            modelInstance?.sceneView = if (value) sceneView else null
             super.isRendered = value
         }
 
