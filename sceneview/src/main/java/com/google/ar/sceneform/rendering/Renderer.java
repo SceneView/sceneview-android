@@ -56,7 +56,6 @@ public class Renderer implements UiHelper.RendererCallback {
     private final ArrayList<RenderableInstance> renderableInstances = new ArrayList<>();
     private final ArrayList<LightInstance> lightInstances = new ArrayList<>();
     private final double[] cameraProjectionMatrix = new double[16];
-    private final List<Mirror> mirrors = new ArrayList<>();
     private Environment environment = null;
     @Entity
     private Integer mainLight = null;
@@ -104,36 +103,6 @@ public class Renderer implements UiHelper.RendererCallback {
 
     public void setCameraProvider(@Nullable CameraProvider cameraProvider) {
         this.cameraProvider = cameraProvider;
-    }
-
-    /**
-     * Starts mirroring to the specified {@link Surface}.
-     *
-     * @hide
-     */
-    public void startMirroring(Surface surface, int left, int bottom, int width, int height) {
-        Mirror mirror = new Mirror();
-        mirror.surface = surface;
-        mirror.viewport = new Viewport(left, bottom, width, height);
-        mirror.swapChain = null;
-        synchronized (mirrors) {
-            mirrors.add(mirror);
-        }
-    }
-
-    /**
-     * Stops mirroring to the specified {@link Surface}.
-     *
-     * @hide
-     */
-    public void stopMirroring(Surface surface) {
-        synchronized (mirrors) {
-            for (Mirror mirror : mirrors) {
-                if (mirror.surface == surface) {
-                    mirror.surface = null;
-                }
-            }
-        }
     }
 
     /**
@@ -236,48 +205,11 @@ public class Renderer implements UiHelper.RendererCallback {
         }
     }
 
-    private void updateMirrorConfig() {
-        synchronized (mirrors) {
-            Iterator<Mirror> mirrorIterator = mirrors.iterator();
-            while (mirrorIterator.hasNext()) {
-                Mirror mirror = mirrorIterator.next();
-                if (mirror.surface == null) {
-                    if (mirror.swapChain != null) {
-                        Filament.getEngine().destroySwapChain(
-                                Preconditions.checkNotNull(mirror.swapChain));
-                    }
-                    mirrorIterator.remove();
-                } else if (mirror.swapChain == null) {
-                    mirror.swapChain = Filament.getEngine().createSwapChain(
-                            Preconditions.checkNotNull(mirror.surface));
-                }
-            }
-        }
-    }
-
-    private void renderToMirror(com.google.android.filament.View currentView) {
-        synchronized (mirrors) {
-            for (Mirror mirror : mirrors) {
-                if (mirror.swapChain != null) {
-                    renderer.copyFrame(
-                            mirror.swapChain,
-                            getLetterboxViewport(currentView.getViewport(), mirror.viewport),
-                            currentView.getViewport(),
-                            com.google.android.filament.Renderer.MIRROR_FRAME_FLAG_COMMIT
-                                    | com.google.android.filament.Renderer
-                                    .MIRROR_FRAME_FLAG_SET_PRESENTATION_TIME
-                                    | com.google.android.filament.Renderer.MIRROR_FRAME_FLAG_CLEAR);
-                }
-            }
-        }
-    }
-
     /**
      * @hide
      */
     public boolean render(long frameTimeNanos) {
         doRecreationOfSwapChain();
-        updateMirrorConfig();
 
         @Nullable SwapChain swapChainLocal = swapChain;
         if (swapChainLocal == null)
@@ -318,8 +250,6 @@ public class Renderer implements UiHelper.RendererCallback {
                 com.google.android.filament.View currentView =
                         cameraProvider.isRendered() ? view : emptyView;
                 renderer.render(currentView);
-
-                renderToMirror(currentView);
 
                 if (onFrameRenderDebugCallback != null) {
                     onFrameRenderDebugCallback.run();
@@ -651,13 +581,5 @@ public class Renderer implements UiHelper.RendererCallback {
                 com.google.android.filament.Renderer renderer,
                 SwapChain swapChain,
                 Camera camera);
-    }
-
-    private static class Mirror {
-        @Nullable
-        SwapChain swapChain;
-        @Nullable
-        Surface surface;
-        Viewport viewport;
     }
 }
