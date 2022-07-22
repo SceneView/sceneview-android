@@ -700,8 +700,8 @@ open class Node(
         upDirection: Direction = Direction(y = 1.0f),
         smooth: Boolean = false
     ) {
-        // targetPosition is passed as eye so that the forward direction will be towards the target
         val newQuaternion = lookAt(
+            // targetPosition is passed as eye so that the forward direction will be towards the target
             eye = targetPosition,
             target = worldPosition,
             up = upDirection
@@ -743,7 +743,8 @@ open class Node(
     ) {
         val newQuaternion = lookTowards(
             worldPosition,
-            -lookDirection, // lookDirection is negated so that the forward direction will be aligned with the lookDirection
+            // lookDirection is negated so that the forward direction will be aligned with the lookDirection
+            -lookDirection,
             upDirection
         ).toQuaternion()
         if (smooth) {
