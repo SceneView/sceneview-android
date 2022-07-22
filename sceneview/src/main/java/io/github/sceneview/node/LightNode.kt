@@ -86,39 +86,13 @@ open class LightNode : Node {
             lightInstance = it
         }
 
-    override fun lookAt(
-        targetPosition: Position,
-        upDirection: Direction,
-        smooth: Boolean
-    ) {
-        val newQuaternion = lookAt(
-            worldPosition,
-            targetPosition,
-            upDirection
-        ).toQuaternion()
-        if (smooth) {
-            smooth(quaternion = newQuaternion)
-        } else {
-            transform(quaternion = newQuaternion)
-        }
-    }
-
     override fun lookTowards(
         lookDirection: Direction,
         upDirection: Direction,
         smooth: Boolean
-    ) {
-        val newQuaternion = lookTowards(
-            worldPosition,
-            lookDirection,
-            upDirection
-        ).toQuaternion()
-        if (smooth) {
-            smooth(quaternion = newQuaternion)
-        } else {
-            transform(quaternion = newQuaternion)
-        }
-    }
+    ) = // SPOTLIGHT and FOCUSED_SPOTLIGHT radiate light along their -forward axis.
+        // That's the reason we negate the lookDirection here.
+        super.lookTowards(-lookDirection, upDirection, smooth)
 
     /** ### Detach and destroy the node */
     override fun destroy() {
