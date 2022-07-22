@@ -695,7 +695,7 @@ open class Node(
      * @param upDirection The up direction will determine the orientation of the node around the direction
      * @param smooth Whether the rotation should happen smoothly
      */
-    open fun lookAt(
+    fun lookAt(
         targetPosition: Position,
         upDirection: Direction = Direction(y = 1.0f),
         smooth: Boolean = false
