@@ -49,7 +49,7 @@ private const val defaultTouchSlop = 8
  * +z ---- -y --------
  *
  * @param position See [Node.position]
- * @param rotation See [Node.rotation]
+ * @param quaternion See [Node.quaternion]
  * @param scale See [Node.scale]
  */
 open class Node(
@@ -717,18 +717,7 @@ open class Node(
         targetPosition: Position,
         upDirection: Direction = Direction(y = 1.0f),
         smooth: Boolean = false
-    ) {
-        val newQuaternion = lookAt(
-            targetPosition,
-            worldPosition,
-            upDirection
-        ).toQuaternion()
-        if (smooth) {
-            smooth(quaternion = newQuaternion)
-        } else {
-            transform(quaternion = newQuaternion)
-        }
-    }
+    ) = lookTowards(targetPosition - worldPosition, upDirection, smooth)
 
     /**
      * ### Rotates the node to face another node
@@ -753,16 +742,22 @@ open class Node(
      * @param upDirection The up direction will determine the orientation of the node around the look direction
      * @param smooth Whether the rotation should happen smoothly
      */
-    fun lookTowards(
+    open fun lookTowards(
         lookDirection: Direction,
         upDirection: Direction = Direction(y = 1.0f),
         smooth: Boolean = false
     ) {
-        val newQuaternion = lookTowards(
+        val newWorldQuaternion = lookTowards(
             worldPosition,
+            // lookDirection is negated so that the forward direction will be aligned with the lookDirection
             -lookDirection,
             upDirection
         ).toQuaternion()
+        // The quaternion we get from the lookTowards function should become the new worldQuaternion of the Node.
+        // We update the node's local quaternion through the smooth and transform methods.
+        // For this reason, we multiply the newWorldQuaternion by the worldToParent.toQuaternion()
+        // to get the new local quaternion.
+        val newQuaternion = worldToParent.toQuaternion() * newWorldQuaternion
         if (smooth) {
             smooth(quaternion = newQuaternion)
         } else {
