@@ -2,20 +2,25 @@ package com.google.ar.sceneform;
 
 import android.view.MotionEvent;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+import androidx.lifecycle.LifecycleOwner;
 
+import com.google.android.filament.Camera;
 import com.google.ar.sceneform.collision.Ray;
 import com.google.ar.sceneform.math.MathHelper;
 import com.google.ar.sceneform.math.Matrix;
 import com.google.ar.sceneform.math.Vector3;
-import com.google.ar.sceneform.rendering.CameraProvider;
 import com.google.ar.sceneform.utilities.Preconditions;
 
 import dev.romainguy.kotlin.math.Float3;
 import dev.romainguy.kotlin.math.Quaternion;
+import io.github.sceneview.Filament;
+import io.github.sceneview.FilamentKt;
 import io.github.sceneview.SceneView;
 import io.github.sceneview.node.Node;
 import io.github.sceneview.node.NodeParent;
+import io.github.sceneview.utils.FrameTime;
 
 /**
  * Represents a virtual camera, which determines the perspective through which the scene is viewed.
@@ -25,14 +30,14 @@ import io.github.sceneview.node.NodeParent;
  * UnsupportedOperationException} when called:
  *
  * <ul>
- *   <li>{@link #setParent(NodeParent)} - Camera's parent cannot be changed, it is always the scene.
- *   <li>{@link #setPosition(Float3)} - Camera's position cannot be changed, it is controlled
+ *   <li>{@link #setParent(NodeParent)} - CameraNode's parent cannot be changed, it is always the scene.
+ *   <li>{@link #setPosition(Float3)} - CameraNode's position cannot be changed, it is controlled
  *       by the ARCore camera pose.
- *   <li>{@link #setRotation(Float3)} - Camera's rotation cannot be changed, it is
+ *   <li>{@link #setRotation(Float3)} - CameraNode's rotation cannot be changed, it is
  *       controlled by the ARCore camera pose.
- *   <li>{@link #setPosition(Float3)} - Camera's position cannot be changed, it is controlled
+ *   <li>{@link #setPosition(Float3)} - CameraNode's position cannot be changed, it is controlled
  *       by the ARCore camera pose.
- *   <li>{@link #setRotation(Float3)} - Camera's rotation cannot be changed, it is
+ *   <li>{@link #setRotation(Float3)} - CameraNode's rotation cannot be changed, it is
  *       controlled by the ARCore camera pose.
  * </ul>
  * <p>
@@ -40,7 +45,7 @@ import io.github.sceneview.node.NodeParent;
  * camera, assign a collision shape to the camera, or add children to the camera. Disabling the
  * camera turns off rendering.
  */
-public class Camera extends Node implements CameraProvider {
+public class CameraNode extends Node {
     protected final Matrix viewMatrix = new Matrix();
     protected final Matrix projectionMatrix = new Matrix();
 
@@ -52,6 +57,8 @@ public class Camera extends Node implements CameraProvider {
     public static final int FALLBACK_VIEW_WIDTH = 1920;
     public static final int FALLBACK_VIEW_HEIGHT = 1080;
 
+    public Camera camera;
+
     // Default vertical field of view for non-ar camera.
     private static final float DEFAULT_VERTICAL_FOV_DEGREES = 90.0f;
 
@@ -60,28 +67,38 @@ public class Camera extends Node implements CameraProvider {
 
     private float verticalFov = DEFAULT_VERTICAL_FOV_DEGREES;
 
-    // isArCamera will be true if the Camera is part of an ArSceneView, false otherwise.
+    // isArCamera will be true if the CameraNode is part of an ArSceneView, false otherwise.
     private boolean isFixed;
     protected boolean areMatricesInitialized;
 
-    public Camera(SceneView scene) {
-        this(scene, true);
+    public CameraNode() {
+        this(true);
     }
 
-    public Camera(SceneView scene, boolean isFixed) {
+    public CameraNode(boolean isFixed) {
         super();
+        this.camera = FilamentKt.createCamera(Filament.getEngine());
+
         this.isFixed = isFixed;
         setPosition(DEFAULT_POSITION);
         setQuaternion(DEFAULT_QUATERNION);
+    }
 
-        Preconditions.checkNotNull(scene, "Parameter \"scene\" was null.");
-        super.setParent(scene);
+    private final double[] cameraProjectionMatrix = new double[16];
 
-        if (isFixed) {
-            scene.addOnLayoutChangeListener(
-                    (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
-                            refreshProjectionMatrix());
+    @Override
+    public void onFrame(@NonNull FrameTime frameTime) {
+        super.onFrame(frameTime);
+
+        final float[] projectionMatrixData = getProjectionMatrix().data;
+        for (int i = 0; i < 16; ++i) {
+            cameraProjectionMatrix[i] = projectionMatrixData[i];
         }
+
+        camera.setModelMatrix(getTransformationMatrix().data);
+        camera.setCustomProjection(cameraProjectionMatrix,
+                getNearClipPlane(),
+                getFarClipPlane());
     }
 
     /**
@@ -97,7 +114,6 @@ public class Camera extends Node implements CameraProvider {
         }
     }
 
-    @Override
     public float getNearClipPlane() {
         return nearPlane;
     }
@@ -148,24 +164,15 @@ public class Camera extends Node implements CameraProvider {
         return verticalFov;
     }
 
-    @Override
     public float getFarClipPlane() {
         return farPlane;
     }
 
-    /**
-     * @hide Used internally (b/113516741)
-     */
-    @Override
     public Matrix getViewMatrix() {
         Matrix.invert(getTransformationMatrix(), viewMatrix);
         return viewMatrix;
     }
 
-    /**
-     * @hide Used internally (b/113516741) and within rendering package
-     */
-    @Override
     public Matrix getProjectionMatrix() {
         return projectionMatrix;
     }
@@ -309,7 +316,7 @@ public class Camera extends Node implements CameraProvider {
         return scene.getHeight();
     }
 
-    protected void refreshProjectionMatrix() {
+    public void refreshProjectionMatrix() {
         int width = getViewWidth();
         int height = getViewHeight();
 
@@ -413,5 +420,13 @@ public class Camera extends Node implements CameraProvider {
         nearPlane = near;
         farPlane = far;
         areMatricesInitialized = true;
+    }
+
+    @Override
+    public void onDestroy(@NonNull LifecycleOwner owner) {
+        super.onDestroy(owner);
+
+        Filament.getEngine().destroyCameraComponent(camera.getEntity());
+        Filament.getEntityManager().destroy(camera.getEntity());
     }
 }
