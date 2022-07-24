@@ -156,7 +156,7 @@ public class VideoNode extends ModelNode {
     super.onFrame(frameTime);
 
     if (rotateAlwaysToCamera && getSceneView() != null) {
-      Vector3 cameraPosition = MathUtilsKt.toVector3(getSceneView().getCamera().getWorldPosition());
+      Vector3 cameraPosition = MathUtilsKt.toVector3(getSceneView().getCameraNode().getWorldPosition());
       Vector3 cardPosition = MathUtilsKt.toVector3(getWorldPosition());
       Vector3 direction = Vector3.subtract(cameraPosition, cardPosition);
       Quaternion lookRotation = Quaternion.lookRotation(direction, Vector3.up());
@@ -182,7 +182,7 @@ public class VideoNode extends ModelNode {
 
   /**
    * If this Flag is set to true, the VideoNode will always
-   * point to the Camera (You).
+   * point to the CameraNode (You).
    *
    * @param rotateAlwaysToCamera boolean
    */

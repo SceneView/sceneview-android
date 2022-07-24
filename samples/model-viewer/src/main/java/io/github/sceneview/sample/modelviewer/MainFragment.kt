@@ -40,7 +40,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         )
         sceneView.addChild(modelNode)
 
-        sceneView.camera.transform = lookAt(
+        sceneView.cameraNode.transform = lookAt(
             eye = modelNode.worldPosition.let {
                 Position(x = it.x, y = it.y + 0.5f, z = it.z + 2.0f)
             },
@@ -67,7 +67,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             )
             delay(1500)
             isLoading = false
-            sceneView.camera.smooth(
+            sceneView.cameraNode.smooth(
                 lookAt(
                     eye = modelNode.worldPosition.let {
                         Position(x = it.x - 0.4f, y = it.y + 0.4f, z = it.z - 0.6f)

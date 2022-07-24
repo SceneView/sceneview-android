@@ -1,7 +1,6 @@
 package io.github.sceneview.node
 
 import android.content.Context
-import android.view.MotionEvent
 import android.view.View
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
@@ -11,6 +10,7 @@ import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.Quaternion
+import io.github.sceneview.Filament
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -50,10 +50,11 @@ open class ViewNode : Node {
     var renderableInstance: RenderableInstance? = null
         set(value) {
             if (field != value) {
-                field?.sceneView = null
+                renderable?.detachView()
                 field?.destroy()
                 field = value
-                value?.sceneView = if (shouldBeRendered) sceneView else null
+                sceneEntities = value?.let { intArrayOf(it.renderedEntity) } ?: intArrayOf()
+                sceneView?.let { renderable?.attachView(it.viewAttachmentManager) }
                 onRenderableChanged()
             }
         }
@@ -61,12 +62,9 @@ open class ViewNode : Node {
     val renderable: ViewRenderable?
         get() = renderableInstance?.renderable as? ViewRenderable
 
-    override var isRendered: Boolean
-        get() = super.isRendered
-        set(value) {
-            renderableInstance?.sceneView = if (value) sceneView else null
-            super.isRendered = value
-        }
+    override var sceneEntities: IntArray
+        get() = super.sceneEntities
+        set(value) {}
 
     var onViewLoaded: ((renderableInstance: RenderableInstance, view: View) -> Unit)? = null
     var onError: ((exception: Exception) -> Unit)? = null
@@ -92,7 +90,9 @@ open class ViewNode : Node {
     }
 
     override fun onFrame(frameTime: FrameTime) {
-        if (isRendered) {
+        if (isAttached) {
+            renderableInstance?.prepareForDraw(sceneView)
+
             // TODO : Remove the renderable.id thing when Renderable is kotlined
             // Update state when the renderable has changed.
             renderable?.let { renderable ->
@@ -100,12 +100,30 @@ open class ViewNode : Node {
                     onRenderableChanged()
                 }
             }
+            renderableInstance?.let { renderableInstance ->
+                renderableInstance.setModelMatrix(
+                    Filament.transformManager,
+                    renderableInstance.worldModelMatrix.data
+                )
+            }
         }
         super.onFrame(frameTime)
     }
 
     open fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {
         onViewLoaded?.invoke(renderableInstance, view)
+    }
+
+    override fun onAttachedToScene(sceneView: SceneView) {
+        super.onAttachedToScene(sceneView)
+
+        renderable?.attachView(sceneView.viewAttachmentManager)
+    }
+
+    override fun onDetachedFromScene(sceneView: SceneView) {
+        super.onDetachedFromScene(sceneView)
+
+        renderable?.detachView()
     }
 
     open fun onError(exception: Exception) {

@@ -322,17 +322,7 @@ public abstract class Renderable {
      * until the view has been successfully drawn to an external texture, and initializing material
      * parameters.
      */
-    void prepareForDraw() {
-        if (getRenderableData() instanceof RenderableInternalFilamentAssetData) {
-            // Allow the resource loader to finalize textures that have become ready.
-            Filament.getResourceLoader().asyncUpdateLoad();
-        }
-    }
-
-    void attachToSceneView(SceneView sceneView) {
-    }
-
-    void detatchFromSceneView() {
+    public void prepareForDraw(SceneView sceneView) {
     }
 
     /**

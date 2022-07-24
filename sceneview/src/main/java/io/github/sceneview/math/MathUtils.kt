@@ -123,3 +123,6 @@ fun FloatArray.toLinearSpace() = map { pow(it, 2.2f) }.toFloatArray()
 fun lookAt(eye: Position, target: Position): Mat4 {
     return lookAt(eye, target - eye, Direction(y = 1.0f))
 }
+
+fun lookTowards(eye: Position, direction: Direction) =
+    lookTowards(eye, direction, Direction(y = 1.0f)).toQuaternion()

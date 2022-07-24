@@ -7,7 +7,6 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
-import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.common.TransformProvider
 import com.google.ar.sceneform.math.Matrix
 import com.google.ar.sceneform.math.Vector3
@@ -77,8 +76,15 @@ open class Node(
     fun getSceneViewInternal() = sceneView
     protected open val lifecycle: SceneLifecycle? get() = sceneView?.lifecycle
     protected val lifecycleScope get() = sceneView?.lifecycleScope
-    protected val renderer: Renderer? get() = sceneView?.renderer
-    private val collisionSystem: CollisionSystem? get() = sceneView?.collisionSystem
+
+    open var sceneEntities: IntArray = intArrayOf()
+        set(value) {
+            field.takeIf { it.isNotEmpty() }?.let { sceneView?.scene?.removeEntities(it) }
+            field = value
+            if (isVisibleInHierarchy) {
+                sceneView?.scene?.addEntities(sceneEntities)
+            }
+        }
 
     /**
      * ### Define your own custom name
@@ -277,9 +283,15 @@ open class Node(
         set(value) {
             if (field != value) {
                 field = value
-                updateVisibility()
+                if (isVisibleInHierarchy) {
+                    sceneView?.scene?.addEntities(sceneEntities)
+                } else {
+                    sceneView?.scene?.removeEntities(sceneEntities)
+                }
             }
         }
+
+    open val isVisibleInHierarchy get() = isVisible && allParents.all { isVisible }
 
     open var isPositionEditable = false
     open var isRotationEditable = false
@@ -297,41 +309,6 @@ open class Node(
 
     var currentEditedTransform: KProperty<*>? = null
 
-    // The first delta is always way off as it contains all delta until threshold to
-    // recognize rotate gesture is met
-    private var skipFirstRotateEdit = false
-
-    /**
-     * ### The active status
-     *
-     * A node is considered active if it meets ALL of the following conditions:
-     * - The node is part of a scene.
-     * - the node's parent is active.
-     * - The node is enabled.
-     *
-     * An active Node has the following behavior:
-     * - The node's [onFrame] function will be called every frame.
-     * - The node's [Renderable] will be rendered.
-     * - The node's [collisionShape] will be checked in calls to Scene.hitTest.
-     * - The node's [onTap] function will be called when the node is touched.
-     */
-    open val shouldBeRendered: Boolean
-        get() = isVisible && isAttached
-                && parentNode?.shouldBeRendered != false
-
-    open var isRendered = false
-        internal set(value) {
-            if (field != value) {
-                field = value
-                if (value) {
-                    collisionSystem?.let { collider?.setAttachedCollisionSystem(it) }
-                } else {
-                    collider?.setAttachedCollisionSystem(null)
-                }
-                onRenderingChanged(value)
-            }
-        }
-
     /**
      * ### The [Node] parent if the parent extends [Node]
      *
@@ -339,7 +316,6 @@ open class Node(
      * = Returns null if the parent is a [SceneView]
      */
     val parentNode get() = parent as? Node
-    override var _children = listOf<Node>()
 
     /**
      * ### Changes the parent node of this node
@@ -366,34 +342,21 @@ open class Node(
                 // Remove from old parent if not already removed
                 field?.takeIf { this in it.children }?.removeChild(this)
                 // Find the old parent SceneView
-                ((field as? SceneView) ?: (field as? Node)?.sceneView)?.let { sceneView ->
-                    // Make sure to listen to at least one lifecycle in case of no more parent in
-                    // order to unsure destroy
-                    if (value != null) {
-                        sceneView.lifecycle.removeObserver(this)
-                    }
-                    onDetachFromScene(sceneView)
-                }
+                ((field as? SceneView) ?: (field as? Node)?.sceneView)?.let { detachFromScene(it) }
                 field = value
                 // Add to new parent if not already added
                 value?.takeIf { this !in it.children }?.addChild(this)
                 // Find the new parent SceneView
-                ((value as? SceneView) ?: (value as? Node)?.sceneView)?.let { sceneView ->
-                    sceneView.lifecycle.addObserver(this)
-                    onAttachToScene(sceneView)
-                }
-                updateVisibility()
+                ((value as? SceneView) ?: (value as? Node)?.sceneView)?.let { attachToScene(it) }
             }
         }
 
-    private var allowDispatchTransformChanged = true
+    val allParents: List<NodeParent>
+        get() = listOfNotNull(parent) + (parentNode?.allParents ?: listOf())
 
     // Collision fields.
     var collider: Collider? = null
         private set
-
-    // Stores data used for detecting when a tap has occurred on this node.
-    private var touchTrackingData: TapTrackingData? = null
 
     /** ### Listener for [onFrame] call */
     val onFrame = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
@@ -403,9 +366,6 @@ open class Node(
 
     /** ### Listener for [onDetachedFromScene] call */
     val onDetachedFromScene = mutableListOf<((scene: SceneView) -> Unit)>()
-
-    /** ### Listener for [onRenderingChanged] call */
-    val onRenderingChanged = mutableListOf<((node: Node, isRendering: Boolean) -> Unit)>()
 
     /**
      * ### The transformation (position, rotation or scale) of the [Node] has changed
@@ -427,6 +387,17 @@ open class Node(
      */
     var onTap: ((motionEvent: MotionEvent, renderable: Renderable?) -> Unit)? = null
 
+    override var _children = listOf<Node>()
+
+    private var allowDispatchTransformChanged = true
+
+    // The first delta is always way off as it contains all delta until threshold to
+    // recognize rotate gesture is met
+    private var skipFirstRotateEdit = false
+
+    // Stores data used for detecting when a tap has occurred on this node.
+    private var touchTrackingData: TapTrackingData? = null
+
     /**
      * ### Construct a [Node] with it Position, Rotation and Scale
      *
@@ -443,45 +414,54 @@ open class Node(
         this.rotation = rotation
     }
 
-    open fun onAttachToScene(sceneView: SceneView) {
+    open fun attachToScene(sceneView: SceneView) {
+        sceneView.lifecycle.addObserver(this)
+        if (isVisibleInHierarchy) {
+            sceneView.scene.addEntities(sceneEntities)
+        }
+        sceneView.collisionSystem?.let { collider?.setAttachedCollisionSystem(it) }
         if (selectionVisualizer == null) {
             selectionVisualizer = sceneView.selectionVisualizer?.invoke()
         }
-        selectionVisualizer?.parent = if (isSelected) this else null
+        children.forEach { it.attachToScene(sceneView) }
+        onAttachedToScene(sceneView)
+    }
+
+    open fun detachFromScene(sceneView: SceneView) {
+        sceneView.lifecycle.removeObserver(this)
+        sceneView.scene.removeEntities(sceneEntities)
+        collider?.setAttachedCollisionSystem(null)
+        children.forEach { it.attachToScene(sceneView) }
+        onDetachedFromScene(sceneView)
+    }
+
+    open fun onAttachedToScene(sceneView: SceneView) {
         onAttachedToScene.toList().forEach { it(sceneView) }
     }
 
-    open fun onDetachFromScene(sceneView: SceneView) {
+    open fun onDetachedFromScene(sceneView: SceneView) {
         onDetachedFromScene.toList().forEach { it(sceneView) }
     }
 
-    /**
-     * ### Handles when this node becomes rendered (displayed) or not
-     *
-     * A Node is rendered if it's visible, part of a scene, and its parent is rendered.
-     * Override to perform any setup that needs to occur when the node is active or not.
-     */
-    open fun onRenderingChanged(isRendering: Boolean) {
-        onRenderingChanged.toList().forEach { it(this, isRendering) }
-    }
-
     override fun onFrame(frameTime: FrameTime) {
-        if (smoothTransform != transform) {
-            if (transform != lastFrameTransform) {
-                // Stop smooth if any of the position/rotation/scale has changed meanwhile
-                smoothTransform = transform
-            } else {
-                // Smooth the transform
-                transform = slerp(
-                    start = transform,
-                    end = smoothTransform,
-                    deltaSeconds = frameTime.intervalSeconds,
-                    speed = smoothSpeed
-                )
+        if (isAttached) {
+            if (smoothTransform != transform) {
+                if (transform != lastFrameTransform) {
+                    // Stop smooth if any of the position/rotation/scale has changed meanwhile
+                    smoothTransform = transform
+                } else {
+                    // Smooth the transform
+                    transform = slerp(
+                        start = transform,
+                        end = smoothTransform,
+                        deltaSeconds = frameTime.intervalSeconds,
+                        speed = smoothSpeed
+                    )
+                }
             }
+            lastFrameTransform = transform
+            onFrame.forEach { it(frameTime, this) }
         }
-        lastFrameTransform = transform
-        onFrame.forEach { it(frameTime, this) }
     }
 
     override fun onSingleTapConfirmed(e: NodeMotionEvent) {
@@ -591,11 +571,6 @@ open class Node(
     override fun onDestroy(owner: LifecycleOwner) {
         destroy()
         super.onDestroy(owner)
-    }
-
-    fun updateVisibility() {
-        isRendered = shouldBeRendered
-        children.forEach { it.updateVisibility() }
     }
 
     /**
@@ -779,10 +754,6 @@ open class Node(
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
 
     open var selectionVisualizer: Node? = null
-        get() = field ?: sceneView?.selectionVisualizer?.invoke()?.also {
-            it.parent = if (isSelected) this else null
-            field = it
-        }
         set(value) {
             field?.let { it.parent = null }
             field = value
@@ -846,8 +817,8 @@ open class Node(
                 if (collider == null) {
                     collider = Collider(this, value).apply {
                         // Attach the collider to the collision system if the node is already active.
-                        if (isRendered && collisionSystem != null) {
-                            setAttachedCollisionSystem(collisionSystem)
+                        if (sceneView?.collisionSystem != null) {
+                            setAttachedCollisionSystem(sceneView!!.collisionSystem)
                         }
                     }
                 } else if (collider!!.shape != value) {

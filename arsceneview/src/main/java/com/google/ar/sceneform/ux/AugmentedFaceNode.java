@@ -233,9 +233,8 @@ public class AugmentedFaceNode extends ArNode {
     }
 
     @Override
-    public void onAttachToScene(@NonNull SceneView sceneView) {
-        super.onAttachToScene(sceneView);
-
+    public void onAttachedToScene(@NonNull SceneView sceneView) {
+        super.onAttachedToScene(sceneView);
 
         Context context = sceneView.getContext();
 

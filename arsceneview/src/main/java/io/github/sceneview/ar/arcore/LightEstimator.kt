@@ -37,10 +37,12 @@ import java.nio.ByteOrder
  * virtual objects to light them under the same conditions as the scene they're placed in,
  * keeping users grounded and engaged.
  */
-class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver {
+class LightEstimator(
+    private val lifecycle: ArSceneLifecycle,
+    onUpdated: (LightEstimator) -> Unit
+) : ArSceneLifecycleObserver {
 
     private val sceneView get() = lifecycle.sceneView
-    private val renderer get() = sceneView.renderer
 
     /**
      * ### ARCore light estimation configuration
@@ -92,14 +94,9 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
                 LightEstimationMode.ENVIRONMENTAL_HDR -> 0.5f
                 else -> 1.0f
             }
-            environment = when (value) {
-                LightEstimationMode.DISABLED -> sceneView.environment
-                else -> environment
-            }
-            mainLight = when (value) {
-                LightEstimationMode.DISABLED -> sceneView.mainLight
-                else -> mainLight
-            }
+            environment = null
+            mainLight = null
+            onUpdated()
         }
 
     private var _precision: Float? = null
@@ -177,7 +174,7 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
      * In order to keep the "standard" Filament behavior we scale AR Core values.
      * Infos: https://github.com/ThomasGorisse/SceneformMaintained/pull/156#issuecomment-911873565
      */
-    val cameraExposureFactor get() = renderer.camera.exposureFactor
+    val cameraExposureFactor get() = sceneView.cameraNode.camera.exposureFactor
 
     var lastArFrame: ArFrame? = null
     var timestamp: Long? = null
@@ -193,12 +190,10 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
      */
     var environment: Environment? = null
         set(value) {
-            val environment = value ?: sceneView.environment
-            field?.takeIf { it != environment }?.destroy()
-            if (renderer.getEnvironment() != value) {
-                renderer.setEnvironment(environment)
+            if (field != value) {
+                field?.destroy()
+                field = value
             }
-            field = value
         }
 
     /**
@@ -211,13 +206,13 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
      */
     var mainLight: Light? = null
         set(value) {
-            val mainLight = value ?: mainLight
-            field?.takeIf { it != mainLight }?.destroy()
-            if (renderer.getMainLight() != mainLight) {
-                renderer.setMainLight(mainLight)
+            if (field != value) {
+                field?.destroy()
+                field = value
             }
-            field = value
         }
+
+    val onUpdated = mutableListOf(onUpdated)
 
     init {
         lifecycle.addObserver(this)
@@ -267,7 +262,7 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
                     environment = Environment(
                         indirectLight = IndirectLight.Builder().apply {
                             // Use default environment reflections
-                            sceneView.environment?.indirectLight?.reflectionsTexture?.let {
+                            sceneView.indirectLight?.reflectionsTexture?.let {
                                 reflections(it)
                             }
                             // Scale and bias the estimate to avoid over darkening. Modulates ambient color with
@@ -287,23 +282,23 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
                                         }
                                     })
                             }
-                            sceneView.environment?.indirectLight?.intensity?.let { baseIntensity ->
+                            sceneView.indirectLight?.intensity?.let { baseIntensity ->
                                 intensity(baseIntensity * pixelIntensity)
                             }
                         }.build(lifecycle),
                         sphericalHarmonics = sceneView.environment?.sphericalHarmonics
                     )
-                    mainLight = sceneView.mainLight?.let { baseLight ->
-                        (mainLight ?: baseLight.clone(lifecycle)).apply {
-                            max(colorIntensities).takeIf { it > 0 }?.let { maxIntensity ->
-                                // Normalize value if max = green:
-                                // colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
-                                val colorIntensitiesFactors = (colorIntensities / maxIntensity)
-                                color = baseLight.color * colorIntensitiesFactors
-                            }
-                            intensity = baseLight.intensity * pixelIntensity
+
+                    mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
+                        max(colorIntensities).takeIf { it > 0 }?.let { maxIntensity ->
+                            // Normalize value if max = green:
+                            // colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
+                            val colorIntensitiesFactors = (colorIntensities / maxIntensity)
+                            color *= colorIntensitiesFactors
                         }
+                        intensity *= pixelIntensity
                     }
+                    onUpdated()
                 }
                 Config.LightEstimationMode.ENVIRONMENTAL_HDR -> {
                     // Returns the intensity of the main directional light based on the inferred
@@ -333,7 +328,6 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
                         } else colorOf(r = 1.0f, g = 1.0f, b = 1.0f)
 
                     val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
-
                     environment = HDREnvironment(
                         lifecycle = lifecycle,
                         cubemap = when {
@@ -400,7 +394,7 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
                                 }
                             }
                             defaultEnvironmentReflections -> {
-                                sceneView.environment?.indirectLight?.reflectionsTexture
+                                sceneView.indirectLight?.reflectionsTexture
                             }
                             else -> null
                         },
@@ -423,33 +417,31 @@ class LightEstimation(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycl
                         sharedCubemap = true
                     )
 
-                    mainLight = sceneView.mainLight?.let { baseLight ->
-                        (mainLight ?: baseLight.clone(lifecycle)).apply {
-                            if (environmentalHdrMainLightDirection) {
-                                lightEstimate.environmentalHdrMainLightDirection.let { (x, y, z) ->
-                                    direction = Direction(-x, -y, -z)
-                                }
-                            }
-                            if (environmentalHdrMainLightIntensity) {
-                                // Apply the camera exposure factor
-                                color =
-                                    baseLight.color * colorIntensitiesFactors * cameraExposureFactor
-                                intensity =
-                                    baseLight.intensity * colorIntensity * cameraExposureFactor
+                    mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
+                        if (environmentalHdrMainLightDirection) {
+                            lightEstimate.environmentalHdrMainLightDirection.let { (x, y, z) ->
+                                direction = Direction(-x, -y, -z)
                             }
                         }
+                        if (environmentalHdrMainLightIntensity) {
+                            // Apply the camera exposure factor
+                            color *= colorIntensitiesFactors * cameraExposureFactor
+                            intensity *= colorIntensity * cameraExposureFactor
+                        }
                     }
-                }
-                else -> {
-                    environment = sceneView.environment
-                    mainLight = sceneView.mainLight
+                    onUpdated()
                 }
             }
         }
     }
 
+    open fun onUpdated() {
+        onUpdated.forEach { it(this) }
+    }
+
     override fun onDestroy(owner: LifecycleOwner) {
-        mainLight?.takeIf { it != sceneView.mainLight }?.destroy()
+        environment?.destroy()
+        mainLight?.destroy()
         super.onDestroy(owner)
     }
 

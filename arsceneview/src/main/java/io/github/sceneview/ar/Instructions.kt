@@ -58,7 +58,7 @@ class Instructions(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleOb
                 field?.let { it.parent = null }
                 field = value?.apply {
                     isVisible = this@Instructions.enabled
-                    parent = sceneView.camera
+                    parent = sceneView.cameraNode
                 }
                 field = value
             }

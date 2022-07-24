@@ -1,6 +1,5 @@
 package io.github.sceneview.node
 
-import androidx.annotation.UiThread
 import java.util.*
 
 /**
@@ -42,7 +41,6 @@ interface NodeParent {
      * @throws IllegalArgumentException if the child is the same object as the parent, or if the
      * parent is a descendant of the child
      */
-    @UiThread
     fun addChild(child: Node): Node {
         // Return early if the parent hasn't changed.
         if (child !in children) {

@@ -7,6 +7,7 @@ import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.*
+import io.github.sceneview.Filament.transformManager
 import io.github.sceneview.SceneView
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.*
@@ -111,23 +112,15 @@ open class ModelNode : Node {
     var modelInstance: RenderableInstance? = null
         set(value) {
             if (field != value) {
-                field?.sceneView = null
                 field?.destroy()
                 field = value
-                value?.sceneView = if (shouldBeRendered) sceneView else null
+                sceneEntities = value?.filamentAsset?.entities ?: intArrayOf()
                 onModelChanged(value)
             }
         }
 
     val model: Renderable?
         get() = modelInstance?.renderable
-
-    override var isRendered: Boolean
-        get() = super.isRendered
-        set(value) {
-            modelInstance?.sceneView = if (value) sceneView else null
-            super.isRendered = value
-        }
 
     var onModelLoaded = mutableListOf<OnModelLoaded>()
     var onModelChanged = mutableListOf<(modelInstance: RenderableInstance?) -> Unit>()
@@ -214,13 +207,21 @@ open class ModelNode : Node {
     }
 
     override fun onFrame(frameTime: FrameTime) {
-        if (isRendered) {
+        if (isAttached) {
+            modelInstance?.prepareForDraw(sceneView)
+
             // TODO : Remove the renderable.id thing when Renderable is kotlined
             // Update state when the renderable has changed.
             model?.let { model ->
                 if (model.id.checkChanged(renderableId)) {
                     onModelChanged(modelInstance)
                 }
+            }
+            modelInstance?.let { modelInstance ->
+                modelInstance.setModelMatrix(
+                    transformManager,
+                    modelInstance.worldModelMatrix.data
+                )
             }
         }
         super.onFrame(frameTime)
