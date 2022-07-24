@@ -47,17 +47,10 @@ const val defaultIndirectLightIntensity = 30_000.0f
  * @see [HDRLoader.loadEnvironment]
  */
 open class Environment(
-    indirectLight: IndirectLight? = null,
-    skybox: Skybox? = null,
-    sphericalHarmonics: FloatArray? = null
+    val indirectLight: IndirectLight? = null,
+    val skybox: Skybox? = null,
+    val sphericalHarmonics: FloatArray? = null
 ) : Closeable {
-
-    var indirectLight: IndirectLight? = indirectLight
-        private set
-    var skybox: Skybox? = skybox
-        private set
-    var sphericalHarmonics: FloatArray? = sphericalHarmonics
-        private set
 
     /**
      * ### Destroys the EnvironmentLights and frees all its associated resources.
@@ -67,10 +60,7 @@ open class Environment(
      */
     open fun destroy() {
         indirectLight?.destroy()
-        indirectLight = null
-        sphericalHarmonics = null
         skybox?.destroy()
-        skybox = null
     }
 
     override fun close() = destroy()

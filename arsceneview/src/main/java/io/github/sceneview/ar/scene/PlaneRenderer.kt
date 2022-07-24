@@ -32,7 +32,6 @@ import io.github.sceneview.utils.Color
 class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver {
 
     private val sceneView get() = lifecycle.sceneView
-    private val renderer get() = sceneView.renderer
 
     private val visualizers: MutableMap<Plane, PlaneVisualizer> = HashMap()
 
@@ -192,7 +191,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
         // Find the plane visualizer if it already exists.
         // If not, create a new plane visualizer for this plane.
         val planeVisualizer = visualizers[plane]
-            ?: PlaneVisualizer(lifecycle, plane, renderer).apply {
+            ?: PlaneVisualizer(sceneView, plane).apply {
                 if (planeMaterial != null) {
                     setPlaneMaterial(planeMaterial)
                 }

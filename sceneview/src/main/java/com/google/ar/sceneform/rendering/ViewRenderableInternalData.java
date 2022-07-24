@@ -5,14 +5,14 @@ package com.google.ar.sceneform.rendering;
  * when all {@link ViewRenderable}s using this data are finalized.
  */
 
-class ViewRenderableInternalData {
+public class ViewRenderableInternalData {
   private final RenderViewToExternalTexture renderView;
 
-  ViewRenderableInternalData(RenderViewToExternalTexture renderView) {
+  public ViewRenderableInternalData(RenderViewToExternalTexture renderView) {
     this.renderView = renderView;
   }
 
-  RenderViewToExternalTexture getRenderView() {
+  public RenderViewToExternalTexture getRenderView() {
     return renderView;
   }
 }

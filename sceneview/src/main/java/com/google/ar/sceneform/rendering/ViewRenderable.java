@@ -14,7 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.lifecycle.Lifecycle;
 
-import com.google.ar.sceneform.Camera;
+import com.google.ar.sceneform.CameraNode;
 import com.google.ar.sceneform.collision.Box;
 import com.google.ar.sceneform.collision.Plane;
 import com.google.ar.sceneform.collision.Ray;
@@ -77,7 +77,7 @@ public class ViewRenderable extends Renderable {
     TOP
   }
 
-  @Nullable private ViewRenderableInternalData viewRenderableData;
+  @Nullable public ViewRenderableInternalData viewRenderableData;
   private final View view;
 
   // Used to apply a final scale to the renderable that makes it render at an appropriate size based
@@ -88,7 +88,7 @@ public class ViewRenderable extends Renderable {
   private VerticalAlignment verticalAlignment = VerticalAlignment.BOTTOM;
   private HorizontalAlignment horizontalAlignment = HorizontalAlignment.CENTER;
 
-  @Nullable private SceneView sceneView;
+//  @Nullable private SceneView sceneView;
   private boolean isInitialized;
 
   @SuppressWarnings({"initialization"})
@@ -240,7 +240,7 @@ public class ViewRenderable extends Renderable {
   /** @hide */
   @Override
   @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
-  void prepareForDraw() {
+  public void prepareForDraw(SceneView sceneView) {
     if (getId().isEmpty()) {
       return;
     }
@@ -274,21 +274,17 @@ public class ViewRenderable extends Renderable {
       MaterialInstanceKt.setParameter(getMaterial(), "offsetUv", new Float2(1.0f, 0.0f));
     }
 
-    super.prepareForDraw();
+    super.prepareForDraw(sceneView);
   }
 
-  @Override
-  void attachToSceneView(SceneView sceneView) {
+  public void attachView(ViewAttachmentManager attachmentManager) {
     Preconditions.checkNotNull(viewRenderableData)
-        .getRenderView()
-        .attachView(sceneView.getRenderer().getViewAttachmentManager());
-    this.sceneView = sceneView;
+            .getRenderView()
+            .attachView(attachmentManager);
   }
 
-  @Override
-  void detatchFromSceneView() {
+  public void detachView() {
     Preconditions.checkNotNull(viewRenderableData).getRenderView().detachView();
-    this.sceneView = null;
   }
 
   private void updateSuggestedCollisionShapeAsync() {
@@ -405,7 +401,7 @@ public class ViewRenderable extends Renderable {
       motionEvent.getPointerProperties(i, props);
       motionEvent.getPointerCoords(i, coords);
 
-      Camera camera = scene.getCamera();
+      CameraNode camera = scene.getCameraNode();
       Ray ray = camera.screenPointToRay(coords.x, coords.y);
       if (plane.rayIntersection(ray, rayHit)) {
         Vector3 viewPosition = convertWorldPositionToLocalView(node, rayHit.getPoint());

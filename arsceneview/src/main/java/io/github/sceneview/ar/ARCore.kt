@@ -14,9 +14,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.google.ar.core.*
+import com.google.ar.core.ArCoreApk
 import com.google.ar.core.ArCoreApk.Availability
-import io.github.sceneview.ar.arcore.*
+import com.google.ar.core.Session
+import io.github.sceneview.ar.arcore.ArSession
 
 /**
  * ### Assumed distance from the device camera to the surface on which user will try to place models
@@ -34,14 +35,11 @@ const val defaultApproximateDistanceMeters = 2.0f
  * Manages an ARCore Session using the Android Lifecycle API. Before starting a Session, this class
  * requests installation of Google Play Services for AR if it's not installed or not up to date and
  * asks the user for required permissions if necessary.
- *
- * @property onConfigure Called when the Session must be configured (Before [Session.resume])
- * @property onException Creating a session may fail. In this case, session will remain null,
- * and this callback will be called with an exception.
  */
 class ARCore(
+    val activity: androidx.activity.ComponentActivity,
     val lifecycle: ArSceneLifecycle,
-    val features: () -> Set<Session.Feature> = { setOf() }
+    val features: Set<Session.Feature> = setOf()
 ) : ArSceneLifecycleObserver {
 
     /**
@@ -79,12 +77,12 @@ class ARCore(
     var onCameraPermissionResult: (isGranted: Boolean) -> Unit = { isGranted ->
         if (!isGranted) {
             if (!ActivityCompat.shouldShowRequestPermissionRationale(
-                    lifecycle.activity,
+                    activity,
                     Manifest.permission.CAMERA
                 )
             ) {
                 appSettingsRequested = true
-                showCameraPermissionSettings(lifecycle.activity)
+                showCameraPermissionSettings(activity)
             }
         }
     }
@@ -101,13 +99,13 @@ class ARCore(
         super.onCreate(owner)
 
         // Must be called before on resume
-        cameraPermissionLauncher = lifecycle.activity.activityResultRegistry.register(
+        cameraPermissionLauncher = activity.activityResultRegistry.register(
             "sceneview_camera_permission",
             owner,
             ActivityResultContracts.RequestPermission(),
             onCameraPermissionResult
         )
-        appSettingsLauncher = lifecycle.activity.activityResultRegistry.register(
+        appSettingsLauncher = activity.activityResultRegistry.register(
             "sceneview_app_settings",
             owner,
             ActivityResultContracts.StartActivityForResult(),
@@ -119,7 +117,7 @@ class ARCore(
         if (session == null) {
             // Camera Permission
             if (checkCameraPermission && !cameraPermissionRequested &&
-                !checkCameraPermission(lifecycle.activity, cameraPermissionLauncher)
+                !checkCameraPermission(activity, cameraPermissionLauncher)
             ) {
                 cameraPermissionRequested = true
             } else if (!appSettingsRequested) {
@@ -136,7 +134,7 @@ class ARCore(
                     // accessible (ARCore cannot be used without camera.
                     // Request installation if necessary
                     if (checkAvailability && !installRequested &&
-                        !checkInstall(lifecycle.activity, installRequested)
+                        !checkInstall(activity, installRequested)
                     ) {
                         // Session will be created if everything is ok on next onResume(), so we
                         // return for now
@@ -144,7 +142,7 @@ class ARCore(
                     } else {
                         // Create a session if Google Play Services for AR is installed and up to
                         // date.
-                        session = createSession(lifecycle, features())
+                        session = createSession(lifecycle, features)
                         session?.let {
                             lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
                                 onArSessionCreated(it)

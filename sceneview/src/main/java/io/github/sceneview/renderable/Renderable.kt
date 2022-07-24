@@ -61,3 +61,9 @@ fun Renderable.setMaterialAt(
     @IntRange(from = 0) primitiveIndex: Int,
     material: MaterialInstance
 ) = Filament.renderableManager.setMaterialInstanceAt(instance, primitiveIndex, material)
+
+/**
+ * @see RenderableManager.setScreenSpaceContactShadows
+ */
+fun Renderable.setScreenSpaceContactShadows(enabled: Boolean) =
+    Filament.renderableManager.setScreenSpaceContactShadows(instance, enabled)

@@ -3,11 +3,10 @@ package io.github.sceneview.ar
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
+import com.google.android.filament.IndirectLight
 import com.google.ar.core.*
 import com.google.ar.core.CameraConfig.FacingDirection
-import com.google.ar.sceneform.ArCamera
-import com.google.ar.sceneform.rendering.ArRenderer
-import com.google.ar.sceneform.rendering.Renderer
+import com.google.ar.sceneform.ArCameraNode
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneLifecycleOwner
@@ -15,40 +14,35 @@ import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.camera.ArCameraStream
 import io.github.sceneview.ar.scene.PlaneRenderer
+import io.github.sceneview.environment.Environment
+import io.github.sceneview.light.Light
 import io.github.sceneview.node.Node
 import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
 
 /**
- * A SurfaceView that integrates with ARCore and renders a scene.
+ * ### A SurfaceView that integrates with ARCore and renders a scene
+ *
+ * @param sessionFeatures Fundamental session features
  */
 open class ArSceneView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
-    defStyleRes: Int = 0
+    defStyleRes: Int = 0,
+    sessionFeatures: Set<Session.Feature> = setOf(),
+    override val cameraNode: ArCameraNode = ArCameraNode(),
 ) : SceneView(
     context,
     attrs,
     defStyleAttr,
-    defStyleRes
+    defStyleRes,
+    cameraNode
 ), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
 
-    //TODO : Move it to Lifecycle and NodeParent when Kotlined
-    override val camera = ArCamera(this)
+    override val arCore = ARCore(activity, lifecycle, sessionFeatures)
 
-    /**
-     * ### Fundamental session features
-     *
-     * Must be set before session creation = before the [onResume] call
-     */
-    var arSessionFeatures = { setOf<Session.Feature>() }
-
-    override val arCore = ARCore(
-        lifecycle = lifecycle,
-        features = arSessionFeatures
-    )
 
     private var _focusMode = Config.FocusMode.AUTO
 
@@ -208,14 +202,12 @@ open class ArSceneView @JvmOverloads constructor(
      * @see LightEstimationMode.DISABLED
      */
     var lightEstimationMode: LightEstimationMode
-        get() = lightEstimation.mode
+        get() = lightEstimator.mode
         set(value) {
-            lightEstimation.mode = value
+            lightEstimator.mode = value
         }
 
     var currentFrame: ArFrame? = null
-
-    override val renderer: Renderer = ArRenderer(this, camera)
 
     /**
      * ### The [ArCameraStream] used to control if the occlusion should be enabled or disabled
@@ -233,7 +225,30 @@ open class ArSceneView @JvmOverloads constructor(
      * - Environment handles a reflections, indirect lighting and skybox.
      * - ARCore will estimate the direction, the intensity and the color of the light
      */
-    val lightEstimation = LightEstimation(lifecycle)
+    val lightEstimator = LightEstimator(lifecycle, ::onLightEstimationUpdate)
+
+    var mainLightEstimated: Light? = null
+        private set(value) {
+            if (field != value) {
+                (field ?: mainLight)?.let { removeLight(it) }
+                field = value
+                (value ?: mainLight)?.let { addLight(it) }
+            }
+        }
+
+    var environmentEstimated: Environment? = null
+        private set(value) {
+            field = value
+            indirectLightEstimated = value?.indirectLight
+        }
+
+    var indirectLightEstimated: IndirectLight? = null
+        private set(value) {
+            if (field != value) {
+                field = value
+                scene.indirectLight = value ?: indirectLight
+            }
+        }
 
     val instructions = Instructions(lifecycle)
 
@@ -296,6 +311,9 @@ open class ArSceneView @JvmOverloads constructor(
      * @see AugmentedFace.getTrackingState
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
+
+    override val cameraGestureDetector = null
+    override val cameraManipulator = null
 
     override fun getLifecycle() =
         (sceneLifecycle ?: ArSceneLifecycle(this).also {
@@ -379,7 +397,7 @@ open class ArSceneView @JvmOverloads constructor(
         // At the start of the frame, update the tracked pose of the camera
         // to use in any calculations during the frame.
         // TODO : Move to dedicated Lifecycle aware classes when Kotlined them
-        this.camera.updateTrackedPose(arFrame.camera)
+        cameraNode.updateTrackedPose(arFrame.camera)
 
         if (onAugmentedImageUpdate.isNotEmpty()) {
             arFrame.updatedAugmentedImages.forEach { augmentedImage ->
@@ -398,6 +416,11 @@ open class ArSceneView @JvmOverloads constructor(
             onArFrame(arFrame)
         }
         onArFrame?.invoke(arFrame)
+    }
+
+    open fun onLightEstimationUpdate(lightEstimation: LightEstimator) {
+        mainLightEstimated = lightEstimation.mainLight
+        environmentEstimated = lightEstimation.environment
     }
 
     /**

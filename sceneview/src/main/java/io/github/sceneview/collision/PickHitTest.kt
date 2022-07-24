@@ -1,7 +1,7 @@
 package io.github.sceneview.collision
 
 import android.view.MotionEvent
-import com.google.ar.sceneform.Camera
+import com.google.ar.sceneform.CameraNode
 import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.Ray
@@ -20,7 +20,7 @@ import java.util.*
  * information about where the motion event hit the node in world-space
  */
 fun SceneView.pickHitTest(motionEvent: MotionEvent, focusableOnly: Boolean): PickHitResult =
-    pickHitTest(camera.motionEventToRay(motionEvent), focusableOnly)
+    pickHitTest(cameraNode.motionEventToRay(motionEvent), focusableOnly)
 
 /**
  * Tests to see if a ray is hitting any nodes within the scene and outputs a PickHitResult
@@ -30,7 +30,7 @@ fun SceneView.pickHitTest(motionEvent: MotionEvent, focusableOnly: Boolean): Pic
  * @param selectableOnly Filter the PickHitResult on only selectable nodes
  * @return the result includes the first node that was hit by the ray (may be null), and
  * information about where the ray hit the node in world-space
- * @see Camera.screenPointToRay
+ * @see CameraNode.screenPointToRay
  */
 fun SceneView.pickHitTest(ray: Ray, selectableOnly: Boolean) = PickHitResult()
     .apply {
@@ -48,7 +48,7 @@ fun SceneView.pickHitTest(ray: Ray, selectableOnly: Boolean) = PickHitResult()
  * no nodes were hit.
  */
 fun SceneView.pickHitTests(motionEvent: MotionEvent): ArrayList<PickHitResult> =
-    pickHitTests(camera.motionEventToRay(motionEvent))
+    pickHitTests(cameraNode.motionEventToRay(motionEvent))
 
 /**
  * Tests to see if a ray is hitting any nodes within the scene and returns a list of
@@ -57,7 +57,7 @@ fun SceneView.pickHitTests(motionEvent: MotionEvent): ArrayList<PickHitResult> =
  * @param ray The ray to use for the test.
  * @return Populated with a PickHitResult for each node that was hit sorted by distance. Empty if
  * no nodes were hit.
- * @see Camera.screenPointToRay
+ * @see CameraNode.screenPointToRay
  */
 fun SceneView.pickHitTests(ray: Ray) = ArrayList<PickHitResult>().apply {
     collisionSystem.raycastAll(

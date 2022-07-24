@@ -23,7 +23,7 @@ import android.widget.FrameLayout;
  * @hide
  */
 // TODO: Create Unit Tests for this class.
-class ViewAttachmentManager {
+public class ViewAttachmentManager {
   // View that owns the ViewAttachmentManager.
   // Used to post callbacks onto the UI thread.
   private final View ownerView;
@@ -41,7 +41,7 @@ class ViewAttachmentManager {
    *
    * @param ownerView used by the ViewAttachmentManager to post callbacks on the UI thread
    */
-  ViewAttachmentManager(Context context, View ownerView) {
+  public ViewAttachmentManager(Context context, View ownerView) {
     this.ownerView = ownerView;
 
     windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
@@ -55,7 +55,7 @@ class ViewAttachmentManager {
     return frameLayout;
   }
 
-  void onResume() {
+  public void onResume() {
     // A ownerView can only be added to the WindowManager after the activity has finished resuming.
     // Therefore, we must use post to ensure that the window is only added after resume is finished.
     ownerView.post(
@@ -66,7 +66,7 @@ class ViewAttachmentManager {
         });
   }
 
-  void onPause() {
+  public void onPause() {
     // The ownerView must be removed from the WindowManager before the activity is destroyed, or the
     // window will be leaked. Therefore we add/remove the ownerView in resume/pause.
     if (frameLayout.getParent() != null) {
@@ -81,7 +81,7 @@ class ViewAttachmentManager {
    * <p>Used by {@link RenderViewToExternalTexture} to ensure that the ownerView is drawn with all
    * appropriate lifecycle events being called correctly.
    */
-  void addView(View view) {
+  public void addView(View view) {
     if (view.getParent() == frameLayout) {
       return;
     }
@@ -95,7 +95,7 @@ class ViewAttachmentManager {
    * <p>Used by {@link RenderViewToExternalTexture} to remove ownerView's that no longer need to be
    * drawn.
    */
-  void removeView(View view) {
+  public void removeView(View view) {
     if (view.getParent() != frameLayout) {
       return;
     }

@@ -34,10 +34,10 @@ class SurfaceCopier(
 
         surfaceMirrors.forEach { mirror ->
             if (mirror.swapChain != null) {
-                sceneView.renderer.filamentRenderer.copyFrame(
+                sceneView.renderer.copyFrame(
                     mirror.swapChain!!,
-                    getLetterboxViewport(sceneView.renderer.filamentView.viewport, mirror.viewport),
-                    sceneView.renderer.filamentView.viewport,
+                    getLetterboxViewport(sceneView.view.viewport, mirror.viewport),
+                    sceneView.view.viewport,
                     Renderer.MIRROR_FRAME_FLAG_COMMIT
                             or Renderer.MIRROR_FRAME_FLAG_SET_PRESENTATION_TIME
                             or Renderer.MIRROR_FRAME_FLAG_CLEAR

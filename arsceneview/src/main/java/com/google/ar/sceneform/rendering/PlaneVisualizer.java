@@ -1,7 +1,6 @@
 package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle;
 
 import com.google.ar.core.Plane;
 import com.google.ar.core.TrackingState;
@@ -15,15 +14,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import io.github.sceneview.Filament;
+import io.github.sceneview.SceneView;
+
 /**
  * Renders a single ARCore Plane.
  */
 public class PlaneVisualizer implements TransformProvider {
     private static final String TAG = PlaneVisualizer.class.getSimpleName();
 
-    private final Lifecycle lifecycle;
+    private final SceneView sceneView;
     private final Plane plane;
-    private final Renderer renderer;
 
     private final Matrix planeMatrix = new Matrix();
 
@@ -74,12 +75,12 @@ public class PlaneVisualizer implements TransformProvider {
         }
     }
 
-    public PlaneVisualizer(Lifecycle lifecycle, Plane plane, Renderer renderer) {
-        this.lifecycle = lifecycle;
+    public PlaneVisualizer(SceneView sceneView, Plane plane) {
+        this.sceneView = sceneView;
         this.plane = plane;
-        this.renderer = renderer;
 
-        renderableDefinition = RenderableDefinition.builder().setVertices(vertices).build(lifecycle);
+        renderableDefinition = RenderableDefinition.builder().setVertices(vertices)
+                .build(sceneView.getLifecycle());
     }
 
     Plane getPlane() {
@@ -164,7 +165,8 @@ public class PlaneVisualizer implements TransformProvider {
 
         if (planeRenderable == null) {
             try {
-                planeRenderable = ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle).get();
+                planeRenderable = ModelRenderable.builder().setSource(renderableDefinition)
+                        .build(sceneView.getLifecycle()).get();
                 planeRenderable.setShadowCaster(false);
                 // Creating a Renderable is immediate when using RenderableDefinition.
             } catch (InterruptedException | ExecutionException ex) {
@@ -183,12 +185,16 @@ public class PlaneVisualizer implements TransformProvider {
             planeRenderableInstance.setBlendOrderAt(0, 0); // plane
             planeRenderableInstance.setBlendOrderAt(1, 1); // shadow
         }
+        planeRenderableInstance.prepareForDraw(sceneView);
+
+        planeRenderableInstance.setModelMatrix(Filament.getTransformManager(),
+                planeRenderableInstance.getWorldModelMatrix().data);
     }
 
     public void destroy() {
         removePlaneFromScene();
 
-        if(planeRenderableInstance != null) {
+        if (planeRenderableInstance != null) {
             planeRenderableInstance.destroy();
         }
         planeRenderable = null;
@@ -198,8 +204,8 @@ public class PlaneVisualizer implements TransformProvider {
         if (isPlaneAddedToScene || planeRenderableInstance == null) {
             return;
         }
+        sceneView.addEntity(planeRenderableInstance.getRenderedEntity());
 
-        renderer.addInstance(planeRenderableInstance);
         isPlaneAddedToScene = true;
     }
 
@@ -208,7 +214,8 @@ public class PlaneVisualizer implements TransformProvider {
             return;
         }
 
-        renderer.removeInstance(planeRenderableInstance);
+        sceneView.removeEntity(planeRenderableInstance.getRenderedEntity());
+
         isPlaneAddedToScene = false;
     }
 

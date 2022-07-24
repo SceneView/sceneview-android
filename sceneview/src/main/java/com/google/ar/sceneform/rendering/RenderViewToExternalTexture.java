@@ -38,7 +38,7 @@ import java.util.ArrayList;
  * @hide
  */
 
-class RenderViewToExternalTexture extends FrameLayout {
+public class RenderViewToExternalTexture extends FrameLayout {
   /** Interface definition for a callback to be invoked when the size of the view changes. */
   public interface OnViewSizeChangedListener {
     void onViewSizeChanged(int width, int height);
@@ -147,7 +147,7 @@ class RenderViewToExternalTexture extends FrameLayout {
     invalidate();
   }
 
-  void attachView(ViewAttachmentManager viewAttachmentManager) {
+  public void attachView(ViewAttachmentManager viewAttachmentManager) {
     if (this.viewAttachmentManager != null) {
       if (this.viewAttachmentManager != viewAttachmentManager) {
         throw new IllegalStateException(

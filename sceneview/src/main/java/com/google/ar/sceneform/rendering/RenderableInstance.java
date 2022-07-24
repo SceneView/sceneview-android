@@ -73,8 +73,6 @@ public class RenderableInstance implements AnimatableModel {
 
     private final TransformProvider transformProvider;
     private final Renderable renderable;
-    @Nullable
-    SceneView sceneView;
     @Entity
     int entity = 0;
     @Entity
@@ -191,6 +189,9 @@ public class RenderableInstance implements AnimatableModel {
                 if (renderableInstance == 0) {
                     continue;
                 }
+                //TODO: Used by Filament ModelViewer, see if it's usefull
+                renderableManager.setScreenSpaceContactShadows(renderableInstance, true);
+
                 MaterialInstance materialInstance = renderableManager.getMaterialInstanceAt(renderableInstance, 0);
                 materialNames.add(materialInstance.getName());
                 materialBindings.add(materialInstance);
@@ -265,7 +266,7 @@ public class RenderableInstance implements AnimatableModel {
         return (childEntity == 0) ? entity : childEntity;
     }
 
-    void setModelMatrix(TransformManager transformManager, @Size(min = 16) float[] transform) {
+    public void setModelMatrix(TransformManager transformManager, @Size(min = 16) float[] transform) {
         // Use entity, rather than childEntity; setting the latter would slam the local transform which
         // corrects for scaling and offset.
         @EntityInstance int instance = transformManager.getInstance(entity);
@@ -534,8 +535,8 @@ public class RenderableInstance implements AnimatableModel {
     /**
      * @hide
      */
-    public void prepareForDraw() {
-        renderable.prepareForDraw();
+    public void prepareForDraw(SceneView sceneView) {
+        renderable.prepareForDraw(sceneView);
 
         ChangeId changeId = renderable.getId();
         if (changeId.checkChanged(renderableId)) {
@@ -555,55 +556,13 @@ public class RenderableInstance implements AnimatableModel {
         }
     }
 
-    public SceneView getSceneView() {
-        return sceneView;
-    }
-
-    public void setSceneView(SceneView sceneView) {
-        if(this.sceneView != sceneView) {
-            FilamentAsset currentFilamentAsset = filamentAsset;
-            if(this.sceneView != null) {
-                if (currentFilamentAsset != null) {
-                    int[] entities = currentFilamentAsset.getEntities();
-                    for (int entity : entities) {
-                        this.sceneView.getRenderer().getFilamentScene().removeEntity(entity);
-                    }
-                    int root = currentFilamentAsset.getRoot();
-                    this.sceneView.getRenderer().getFilamentScene().removeEntity(root);
-                }
-                this.sceneView.getRenderer().removeInstance(this);
-                renderable.detatchFromSceneView();
-            }
-            if(sceneView != null) {
-                sceneView.getRenderer().addInstance(this);
-                renderable.attachToSceneView(sceneView);
-                if (currentFilamentAsset != null) {
-                    int[] entities = currentFilamentAsset.getEntities();
-                    Preconditions.checkNotNull(sceneView.getRenderer())
-                            .getFilamentScene()
-                            .addEntity(currentFilamentAsset.getRoot());
-                    Preconditions.checkNotNull(sceneView.getRenderer())
-                            .getFilamentScene()
-                            .addEntities(currentFilamentAsset.getEntities());
-                    Preconditions.checkNotNull(sceneView.getRenderer()).getFilamentScene().addEntities(entities);
-                }
-            }
-            this.sceneView = sceneView;
-        }
-    }
-
     /**
      * Detach and destroy the instance
      */
     public void destroy() {
-        setSceneView(null);
-
         if(filamentAsset != null) {
             ModelKt.destroy(filamentAsset);
             filamentAsset = null;
-        }
-        if (renderable.getRenderableData() instanceof RenderableInternalFilamentAssetData) {
-//            Filament.getResourceLoader().evictResourceData();
         }
 
         RenderableManager renderableManager = Filament.getRenderableManager();
