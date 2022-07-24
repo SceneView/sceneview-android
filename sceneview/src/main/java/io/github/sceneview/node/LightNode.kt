@@ -1,11 +1,11 @@
 package io.github.sceneview.node
 
-import androidx.lifecycle.Lifecycle
-import com.google.ar.sceneform.rendering.Light
-import com.google.ar.sceneform.rendering.LightInstance
-import io.github.sceneview.math.Position
-import io.github.sceneview.math.Rotation
-import io.github.sceneview.math.Scale
+import io.github.sceneview.light.Light
+import io.github.sceneview.light.destroy
+import io.github.sceneview.light.direction
+import io.github.sceneview.light.position
+import io.github.sceneview.math.*
+import io.github.sceneview.utils.FrameTime
 
 /**
  * ### A Node represents a transformation within the scene graph's hierarchy.
@@ -17,34 +17,11 @@ import io.github.sceneview.math.Scale
  */
 open class LightNode : Node {
 
-    /**
-     * ### The [Light] to display.
-     *
-     * To use, first create a [Light].
-     * Set the parameters you care about and then attach it to the node using this function.
-     * A node may have a renderable and a light or just act as a [Light].
-     *
-     * Pass null to remove the light.
-     */
-    var lightInstance: LightInstance? = null
+    var light: Light? = null
         set(value) {
-            if (field != value) {
-                field?.renderer = null
-                field?.destroy()
-                field = value
-                value?.renderer = if (shouldBeRendered) renderer else null
-                onLightChanged()
-            }
-        }
-
-    val light: Light?
-        get() = lightInstance?.light
-
-    override var isRendered: Boolean
-        get() = super.isRendered
-        set(value) {
-            lightInstance?.renderer = if (value) renderer else null
-            super.isRendered = value
+            field?.destroy()
+            field = value
+            sceneEntities = value?.let { intArrayOf(it) } ?: intArrayOf()
         }
 
     /**
@@ -63,37 +40,32 @@ open class LightNode : Node {
     /**
      * TODO : Doc
      */
-    constructor(lifecycle: Lifecycle, light: Light) : this() {
-        setLight(lifecycle, light)
+    constructor(light: Light) : this() {
+        this.light = light
+        worldPosition = light.position
+        worldQuaternion = lookTowards(eye = light.position, direction = light.direction)
     }
 
-    /**
-     * TODO : Doc
-     */
-    constructor(lightInstance: LightInstance) : this() {
-        this.lightInstance = lightInstance
-    }
+    override fun onFrame(frameTime: FrameTime) {
+        super.onFrame(frameTime)
 
-    open fun onLightChanged() {
-    }
-
-    // TODO: Lifecycle should be removed when LightInstance is kotlined
-    fun setLight(lifecycle: Lifecycle, light: Light?): LightInstance? =
-        light?.createInstance(lifecycle, this)?.also {
-            lightInstance = it
+        if (isAttached) {
+            light?.let { light ->
+                if (light.position != worldPosition) {
+                    light.position = worldPosition
+                }
+                //TODO: Check that
+                val worldDirection = worldQuaternion * Direction(y = 1.0f)
+                if (light.direction != worldDirection) {
+                    light.direction = worldDirection
+                }
+            }
         }
+    }
 
     /** ### Detach and destroy the node */
     override fun destroy() {
         super.destroy()
-        lightInstance?.destroy()
-    }
-
-    override fun clone() = copy(LightNode())
-
-    fun copy(toNode: LightNode = LightNode()): LightNode = toNode.apply {
-        super.copy(toNode)
-        // TODO: Should not use the instance
-        lightInstance = this@LightNode.lightInstance
+        light?.destroy()
     }
 }
