@@ -499,18 +499,18 @@ open class SceneView @JvmOverloads constructor(
             }
         }
 
-        // Render the scene, unless the renderer wants to skip the frame.
-        if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
-            renderer.render(view)
-            renderer.endFrame()
-        }
-
         lifecycle.dispatchEvent<SceneLifecycleObserver> {
             onFrame(frameTime)
         }
         onFrame?.invoke(frameTime)
 
         transformManager.commitLocalTransformTransaction()
+
+        // Render the scene, unless the renderer wants to skip the frame.
+        if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
+            renderer.render(view)
+            renderer.endFrame()
+        }
     }
 
     /** @see Scene.addEntity */
