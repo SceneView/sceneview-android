@@ -5,6 +5,8 @@ import android.animation.ObjectAnimator
 import android.view.MotionEvent
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.google.android.filament.Entity
+import com.google.android.filament.EntityInstance
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
 import com.google.ar.sceneform.common.TransformProvider
@@ -12,6 +14,7 @@ import com.google.ar.sceneform.math.Matrix
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
 import dev.romainguy.kotlin.math.*
+import io.github.sceneview.Filament.transformManager
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneView
@@ -19,6 +22,7 @@ import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.gesture.*
 import io.github.sceneview.math.*
 import io.github.sceneview.renderable.Renderable
+import io.github.sceneview.setTransform
 import io.github.sceneview.utils.FrameTime
 import kotlin.reflect.KProperty
 
@@ -77,6 +81,14 @@ open class Node(
     protected open val lifecycle: SceneLifecycle? get() = sceneView?.lifecycle
     protected val lifecycleScope get() = sceneView?.lifecycleScope
 
+    @Entity
+    open val transformEntity: Int? = null
+    val transformInstance: Int?
+        @EntityInstance
+        get() = transformEntity?.let { transformManager.getInstance(it) }
+
+
+    @Entity
     open var sceneEntities: IntArray = intArrayOf()
         set(value) {
             field.takeIf { it.isNotEmpty() }?.let { sceneView?.scene?.removeEntities(it) }
@@ -263,6 +275,7 @@ open class Node(
     var smoothTransform: Transform = Transform(transform)
 
     private var lastFrameTransform: Transform? = null
+    private var lastFrameWorldTransform: Transform? = null
 
     /**
      * ### The node can be selected when a touch event happened
@@ -419,7 +432,7 @@ open class Node(
         if (isVisibleInHierarchy) {
             sceneView.scene.addEntities(sceneEntities)
         }
-        sceneView.collisionSystem?.let { collider?.setAttachedCollisionSystem(it) }
+        sceneView.collisionSystem.let { collider?.setAttachedCollisionSystem(it) }
         if (selectionVisualizer == null) {
             selectionVisualizer = sceneView.selectionVisualizer?.invoke()
         }
@@ -444,24 +457,30 @@ open class Node(
     }
 
     override fun onFrame(frameTime: FrameTime) {
-        if (isAttached) {
-            if (smoothTransform != transform) {
-                if (transform != lastFrameTransform) {
-                    // Stop smooth if any of the position/rotation/scale has changed meanwhile
-                    smoothTransform = transform
-                } else {
-                    // Smooth the transform
-                    transform = slerp(
-                        start = transform,
-                        end = smoothTransform,
-                        deltaSeconds = frameTime.intervalSeconds,
-                        speed = smoothSpeed
-                    )
-                }
+        super.onFrame(frameTime)
+
+        if (smoothTransform != transform) {
+            if (transform != lastFrameTransform) {
+                // Stop smooth if any of the position/rotation/scale has changed meanwhile
+                smoothTransform = transform
+            } else {
+                // Smooth the transform
+                transform = slerp(
+                    start = transform,
+                    end = smoothTransform,
+                    deltaSeconds = frameTime.intervalSeconds,
+                    speed = smoothSpeed
+                )
             }
-            lastFrameTransform = transform
-            onFrame.forEach { it(frameTime, this) }
         }
+        lastFrameTransform = transform
+
+        transformInstance?.takeIf { worldTransform != lastFrameWorldTransform }?.let {
+            transformManager.setTransform(it, worldTransform)
+        }
+        lastFrameWorldTransform = worldTransform
+
+        onFrame.forEach { it(frameTime, this) }
     }
 
     override fun onSingleTapConfirmed(e: NodeMotionEvent) {
