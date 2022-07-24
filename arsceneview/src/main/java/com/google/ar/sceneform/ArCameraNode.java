@@ -4,7 +4,6 @@ import com.google.ar.core.Pose;
 import com.google.ar.sceneform.utilities.Preconditions;
 
 import dev.romainguy.kotlin.math.Float3;
-import io.github.sceneview.SceneView;
 import io.github.sceneview.ar.ArSceneView;
 import io.github.sceneview.ar.arcore.PoseKt;
 import io.github.sceneview.node.NodeParent;
@@ -17,10 +16,10 @@ import io.github.sceneview.node.NodeParent;
  * UnsupportedOperationException} when called:
  *
  * <ul>
- *   <li>{@link #setParent(NodeParent)} - Camera's parent cannot be changed, it is always the scene.
- *   <li>{@link #setPosition(Float3)} - Camera's position cannot be changed, it is controlled
+ *   <li>{@link #setParent(NodeParent)} - CameraNode's parent cannot be changed, it is always the scene.
+ *   <li>{@link #setPosition(Float3)} - CameraNode's position cannot be changed, it is controlled
  *       by the ARCore camera pose.
- *   <li>{@link #setRotation(Float3)} - Camera's rotation cannot be changed, it is
+ *   <li>{@link #setRotation(Float3)} - CameraNode's rotation cannot be changed, it is
  *       controlled by the ARCore camera pose.
  * </ul>
  * <p>
@@ -28,11 +27,11 @@ import io.github.sceneview.node.NodeParent;
  * camera, assign a collision shape to the camera, or add children to the camera. Disabling the
  * camera turns off rendering.
  */
-public class ArCamera extends Camera {
+public class ArCameraNode extends CameraNode {
 
     @SuppressWarnings("initialization")
-    public ArCamera(SceneView scene) {
-        super(scene, false);
+    public ArCameraNode() {
+        super(false);
     }
 
     /**
@@ -96,6 +95,6 @@ public class ArCamera extends Camera {
 
     // Only used if this camera is not controlled by ARCore.
     @Override
-    protected void refreshProjectionMatrix() {
+    public void refreshProjectionMatrix() {
     }
 }
