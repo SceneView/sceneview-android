@@ -1,9 +1,7 @@
 package io.github.sceneview
 
 import android.opengl.EGLContext
-import com.google.android.filament.Engine
-import com.google.android.filament.EntityManager
-import com.google.android.filament.RenderableManager
+import com.google.android.filament.*
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.gltfio.ResourceLoader
@@ -11,6 +9,8 @@ import com.google.android.filament.gltfio.UbershaderProvider
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.GLHelper
 import io.github.sceneview.environment.IBLPrefilter
+import io.github.sceneview.math.Transform
+import io.github.sceneview.math.toColumnsFloatArray
 import java.lang.ref.WeakReference
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
@@ -132,4 +132,8 @@ object Filament {
 }
 
 fun Engine.createCamera() = createCamera(entityManager.create())
+
 fun RenderableManager.Builder.build(entity: Int) = build(Filament.engine, entity)
+
+fun TransformManager.setTransform(@EntityInstance i: Int, worldTransform: Transform) =
+    setTransform(i, worldTransform.toColumnsFloatArray())

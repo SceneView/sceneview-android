@@ -7,7 +7,6 @@ import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.*
-import io.github.sceneview.Filament.transformManager
 import io.github.sceneview.SceneView
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.*
@@ -94,12 +93,6 @@ open class ModelNode : Node {
             }
         }
 
-    override val worldTransform: Transform
-        get() = super.worldTransform * modelTransform
-
-    // Rendering fields.
-    private var renderableId: Int = ChangeId.EMPTY_ID
-
     /**
      * ### The [RenderableInstance] to display.
      *
@@ -125,6 +118,15 @@ open class ModelNode : Node {
     var onModelLoaded = mutableListOf<OnModelLoaded>()
     var onModelChanged = mutableListOf<(modelInstance: RenderableInstance?) -> Unit>()
     var onModelError: ((exception: Exception) -> Unit)? = null
+
+    override val transformEntity: Int?
+        get() = modelInstance?.filamentAsset?.root
+
+    override val worldTransform: Transform
+        get() = super.worldTransform * modelTransform
+
+    // Rendering fields.
+    private var renderableId: Int = ChangeId.EMPTY_ID
 
     /**
      * ### Construct a [ModelNode] with it Position, Rotation and Scale
@@ -207,24 +209,17 @@ open class ModelNode : Node {
     }
 
     override fun onFrame(frameTime: FrameTime) {
-        if (isAttached) {
-            modelInstance?.prepareForDraw(sceneView)
+        super.onFrame(frameTime)
 
-            // TODO : Remove the renderable.id thing when Renderable is kotlined
-            // Update state when the renderable has changed.
-            model?.let { model ->
-                if (model.id.checkChanged(renderableId)) {
-                    onModelChanged(modelInstance)
-                }
-            }
-            modelInstance?.let { modelInstance ->
-                modelInstance.setModelMatrix(
-                    transformManager,
-                    modelInstance.worldModelMatrix.data
-                )
+        modelInstance?.prepareForDraw(sceneView)
+
+        // TODO : Remove the renderable.id thing when Renderable is kotlined
+        // Update state when the renderable has changed.
+        model?.let { model ->
+            if (model.id.checkChanged(renderableId)) {
+                onModelChanged(modelInstance)
             }
         }
-        super.onFrame(frameTime)
     }
 
     open fun onModelLoaded(modelInstance: RenderableInstance) {
