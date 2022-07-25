@@ -431,6 +431,10 @@ class LightEstimator(
                     }
                     onUpdated()
                 }
+                else -> {
+                    environment = null
+                    mainLight = null
+                }
             }
         }
     }
