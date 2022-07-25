@@ -90,9 +90,11 @@ open class LightNode : Node {
         lookDirection: Direction,
         upDirection: Direction,
         smooth: Boolean
-    ) = // SPOTLIGHT and FOCUSED_SPOTLIGHT radiate light along their -forward axis.
+    ) {
+        // SPOTLIGHT and FOCUSED_SPOTLIGHT radiate light along their -forward axis.
         // That's the reason we negate the lookDirection here.
         super.lookTowards(-lookDirection, upDirection, smooth)
+    }
 
     /** ### Detach and destroy the node */
     override fun destroy() {
