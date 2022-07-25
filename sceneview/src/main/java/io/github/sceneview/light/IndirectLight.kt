@@ -17,5 +17,5 @@ fun IndirectLight.Builder.build(lifecycle: Lifecycle): IndirectLight = build(Fil
  * Destroys an IndirectLight and frees all its associated resources.
  */
 fun IndirectLight.destroy() {
-    Filament.engine.destroyIndirectLight(this)
+    runCatching { Filament.engine.destroyIndirectLight(this) }
 }
