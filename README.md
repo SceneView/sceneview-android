@@ -1,5 +1,5 @@
 # SceneView Android
-### 3D/AR Android View with ARCore and Google Filament
+### 3D and AR Android View with Google Filament and ARCore
 
 This is a Sceneform replacement in Kotlin
 
