@@ -62,10 +62,6 @@ open class ViewNode : Node {
     val renderable: ViewRenderable?
         get() = renderableInstance?.renderable as? ViewRenderable
 
-    override var sceneEntities: IntArray
-        get() = super.sceneEntities
-        set(value) {}
-
     var onViewLoaded: ((renderableInstance: RenderableInstance, view: View) -> Unit)? = null
     var onError: ((exception: Exception) -> Unit)? = null
 
