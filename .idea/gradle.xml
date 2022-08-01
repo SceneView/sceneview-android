@@ -16,6 +16,7 @@
             <option value="$PROJECT_DIR$/samples/ar-cloud-anchor" />
             <option value="$PROJECT_DIR$/samples/ar-cursor-placement" />
             <option value="$PROJECT_DIR$/samples/ar-model-viewer" />
+            <option value="$PROJECT_DIR$/samples/ar-view-node" />
             <option value="$PROJECT_DIR$/samples/model-viewer" />
             <option value="$PROJECT_DIR$/sceneview" />
           </set>

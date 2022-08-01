@@ -1,10 +1,10 @@
 package io.github.sceneview.node
 
 import android.content.Context
+import android.view.MotionEvent
 import android.view.View
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
-import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.rendering.ViewRenderable
@@ -27,13 +27,6 @@ import io.github.sceneview.utils.FrameTime
  * another node, or the scene.
  */
 open class ViewNode : Node {
-
-    companion object {
-        val DEFAULT_POSITION = Position(x = 0.0f, y = 0.0f, z = -0.1f)
-        val DEFAULT_QUATERNION = Quaternion()
-        val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
-        val DEFAULT_SCALE = Scale(1.0f)
-    }
 
     // Rendering fields.
     private var renderableId: Int = ChangeId.EMPTY_ID
@@ -184,31 +177,16 @@ open class ViewNode : Node {
         return renderableInstance
     }
 
-    // TODO: Replace this method with the new system based on Filament picking
     /**
-     * ### Calls onTouchEvent if the node is active
+     * ### Dispatches the touch event to the view
      *
-     * Used by TouchEventSystem to dispatch touch events.
+     * This method is called after the `ViewNode` is picked using Filament.
      *
-     * @param pickHitResult Represents the node that was touched, and information about where it was
-     * touched. On ACTION_DOWN events, [PickHitResult.getNode] will always be this node or
-     * one of its children. On other events, the touch may have moved causing the
-     * [PickHitResult.getNode] to change (or possibly be null).
-     *
-     * @param motionEvent   The motion event.
-     * @return true if the event was handled, false otherwise.
+     * @param motionEvent The motion event that should be dispatched to the view.
      */
-    /*override fun dispatchTouchEvent(
-        pickHitResult: PickHitResult,
-        motionEvent: MotionEvent
-    ): Boolean {
-        if (isRendered) {
-            if (renderable?.dispatchTouchEventToView(this, motionEvent) == true) {
-                return true
-            }
-        }
-        return super.dispatchTouchEvent(pickHitResult, motionEvent)
-    }*/
+    fun dispatchTouchEvent(motionEvent: MotionEvent) {
+        renderable?.dispatchTouchEventToView(this, motionEvent)
+    }
 
     /** ### Detach and destroy the node */
     override fun destroy() {
@@ -222,5 +200,12 @@ open class ViewNode : Node {
     fun copy(toNode: ViewNode = ViewNode()): ViewNode = toNode.apply {
         super.copy(toNode)
         setRenderable(this@ViewNode.renderable)
+    }
+
+    companion object {
+        val DEFAULT_POSITION = Position()
+        val DEFAULT_QUATERNION = Quaternion()
+        val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
+        val DEFAULT_SCALE = Scale(1.0f)
     }
 }
