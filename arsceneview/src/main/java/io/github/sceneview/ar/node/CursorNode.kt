@@ -4,10 +4,9 @@ import android.content.Context
 import androidx.lifecycle.Lifecycle
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
-import com.google.ar.sceneform.rendering.RenderableInstance
-import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.material.setEmissiveColor
 import io.github.sceneview.math.Position
+import io.github.sceneview.model.Model
 import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.delay
@@ -20,7 +19,7 @@ open class CursorNode(
     scaleToUnits: Float? = null,
     centerOrigin: Position? = null,
     onError: ((error: Exception) -> Unit)? = null,
-    onLoaded: ((instance: RenderableInstance) -> Unit)? = null
+    onLoaded: ((model: Model) -> Unit)? = null
 ) : ArModelNode(
     context,
     lifecycle,
@@ -32,28 +31,6 @@ open class CursorNode(
     onLoaded
 ) {
 
-    var clickDuration = 250L
-
-    override var isTracking: Boolean = false
-        set(value) {
-            if (field != value) {
-                field = value
-                updateState()
-            }
-        }
-    var isClicked = false
-        set(value) {
-            if (field != value) {
-                field = value
-                updateState()
-                if (value) {
-                    lifecycleScope?.launchWhenCreated {
-                        delay(clickDuration)
-                        isClicked = false
-                    }
-                }
-            }
-        }
     var colorTracking: Color = colorOf(rgb = 1.0f)
         set(value) {
             field = value
@@ -70,37 +47,56 @@ open class CursorNode(
             updateState()
         }
 
-    init {
-        isSelectable = false
+    var clickDuration = 250L
+
+    var isClicked = false
+        set(value) {
+            if (field != value) {
+                field = value
+                updateState()
+            }
+        }
+
+    override var isSelectable = false
+
+    override var hitResult: HitResult?
+        get() = super.hitResult
+        set(value) {
+            super.hitResult = value
+            updateState()
+        }
+    override var model: Model?
+        get() = super.model
+        set(value) {
+            super.model = value
+            updateState()
+        }
+
+    override fun createAnchor(): Anchor? {
+        return super.createAnchor().also {
+            if (it != null) {
+                click()
+            }
+        }
     }
 
-    override fun onHitResult(hitResult: HitResult?) {
-        super.onHitResult(hitResult)
-
-        isTracking = hitResult?.isTracking ?: false
-    }
-
-    override fun onModelChanged(modelInstance: RenderableInstance?) {
-        super.onModelChanged(modelInstance)
-
-        updateState()
+    fun click() {
+        isClicked = true
+        lifecycleScope?.launchWhenCreated {
+            delay(clickDuration)
+            isClicked = false
+        }
     }
 
     open fun updateState() {
-        modelInstance?.materialInstance?.setEmissiveColor(
-            when {
-                isClicked -> colorClicked
-                isTracking -> colorTracking
-                else -> colorNotTracking
-            }
-        )
-    }
-
-    override fun createAnchor(): Anchor? {
-        return (hitResult?.takeIf { it.isTracking }?.let { super.createAnchor(it) }
-            ?: super.createAnchor())
-            .also {
-                isClicked = it != null
-            }
+        model?.materialInstances?.forEach {
+            it.setEmissiveColor(
+                when {
+                    isClicked -> colorClicked
+                    isTracking -> colorTracking
+                    else -> colorNotTracking
+                }
+            )
+        }
     }
 }

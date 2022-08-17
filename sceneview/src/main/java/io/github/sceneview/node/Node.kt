@@ -320,7 +320,7 @@ open class Node(
     var minEditableScale = 0.1f
     var maxEditableScale = 10.0f
 
-    var currentEditedTransform: KProperty<*>? = null
+    var currentEditingTransform: KProperty<*>? = null
 
     /**
      * ### The [Node] parent if the parent extends [Node]
@@ -375,10 +375,10 @@ open class Node(
     val onFrame = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
 
     /** ### Listener for [onAttachToScene] call */
-    val onAttachedToScene = mutableListOf<((scene: SceneView) -> Unit)>()
+    val onAttachedToScene = mutableListOf<(scene: SceneView) -> Unit>()
 
     /** ### Listener for [onDetachedFromScene] call */
-    val onDetachedFromScene = mutableListOf<((scene: SceneView) -> Unit)>()
+    val onDetachedFromScene = mutableListOf<(scene: SceneView) -> Unit>()
 
     /**
      * ### The transformation (position, rotation or scale) of the [Node] has changed
@@ -513,14 +513,14 @@ open class Node(
     }
 
     override fun onRotateBegin(detector: RotateGestureDetector, e: NodeMotionEvent) {
-        if (isRotationEditable && currentEditedTransform == null) {
-            currentEditedTransform = ::quaternion
+        if (isRotationEditable && currentEditingTransform == null) {
+            currentEditingTransform = ::quaternion
             skipFirstRotateEdit = true
         }
     }
 
     override fun onRotate(detector: RotateGestureDetector, e: NodeMotionEvent) {
-        if (isRotationEditable && currentEditedTransform == ::quaternion) {
+        if (isRotationEditable && currentEditingTransform == ::quaternion) {
             if (skipFirstRotateEdit) {
                 skipFirstRotateEdit = false
                 return
@@ -535,19 +535,19 @@ open class Node(
     }
 
     override fun onRotateEnd(detector: RotateGestureDetector, e: NodeMotionEvent) {
-        if (isRotationEditable && currentEditedTransform == ::quaternion) {
-            currentEditedTransform = null
+        if (isRotationEditable && currentEditingTransform == ::quaternion) {
+            currentEditingTransform = null
         }
     }
 
     override fun onScaleBegin(detector: ScaleGestureDetector, e: NodeMotionEvent) {
-        if (isScaleEditable && currentEditedTransform == null) {
-            currentEditedTransform = ::scale
+        if (isScaleEditable && currentEditingTransform == null) {
+            currentEditingTransform = ::scale
         }
     }
 
     override fun onScale(detector: ScaleGestureDetector, e: NodeMotionEvent) {
-        if (isScaleEditable && (currentEditedTransform == ::scale)) {
+        if (isScaleEditable && (currentEditingTransform == ::scale)) {
             onScale(e, detector.scaleFactor)
         }
     }
@@ -557,8 +557,8 @@ open class Node(
     }
 
     override fun onScaleEnd(detector: ScaleGestureDetector, e: NodeMotionEvent) {
-        if (isScaleEditable && currentEditedTransform == ::scale) {
-            currentEditedTransform = null
+        if (isScaleEditable && currentEditingTransform == ::scale) {
+            currentEditingTransform = null
         }
     }
 
@@ -875,12 +875,12 @@ open class Node(
      */
     fun doOnAttachedToScene(action: (scene: SceneView) -> Unit) {
         sceneView?.let(action) ?: run {
-            onAttachedToScene.add(object : (SceneView) -> Unit {
+            onAttachedToScene += object : (SceneView) -> Unit {
                 override fun invoke(sceneView: SceneView) {
                     onAttachedToScene -= this
                     action(sceneView)
                 }
-            })
+            }
         }
     }
 

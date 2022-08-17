@@ -291,9 +291,9 @@ fun Collection<HitResult>.firstValid(
         when (val trackable = hitResult.trackable!!) {
             is Plane -> plane && trackable.isPoseInPolygon(hitResult.hitPose) &&
                     hitResult.hitPose.calculateDistanceToPlane(camera.pose) > 0.0f
-            is DepthPoint -> depth && trackable.isTracking
             is Point -> depth && trackable.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
             is InstantPlacementPoint -> instantPlacement
+            is DepthPoint -> depth
             else -> false
         }
     }
