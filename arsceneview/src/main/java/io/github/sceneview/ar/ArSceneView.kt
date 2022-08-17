@@ -207,6 +207,29 @@ open class ArSceneView @JvmOverloads constructor(
             lightEstimator.mode = value
         }
 
+    /**
+     * ### Camera facing direction filter
+     *
+     * Currently, a back-facing (world) camera is guaranteed to be available on all ARCore supported
+     * devices. Most ARCore supported devices also include support for a front-facing (selfie)
+     * camera.
+     * See [ARCore supported devices](https://developers.google.com/ar/devices) for available camera
+     * configs by device.
+     *
+     * The default value is [CameraConfig.FacingDirection.BACK]
+     */
+    var cameraFacingDirection: FacingDirection = FacingDirection.BACK
+        set(value) {
+            field = value
+            configureSession { arSession, config ->
+                arSession.cameraConfig = arSession.getSupportedCameraConfigs(
+                    CameraConfigFilter(arSession).apply {
+                        facingDirection = value
+                    }
+                )[0]
+            }
+        }
+
     var currentFrame: ArFrame? = null
 
     /**
@@ -360,9 +383,7 @@ open class ArSceneView @JvmOverloads constructor(
         super.onArSessionConfigChanged(session, config)
 
         // Feature config, therefore facing direction, can only be configured once per session.
-        if (session.cameraConfig.facingDirection == FacingDirection.FRONT) {
-            isFrontFaceWindingInverted = true
-        }
+        isFrontFaceWindingInverted = session.cameraConfig.facingDirection == FacingDirection.FRONT
 
         onArSessionConfigChanged?.invoke(session, config)
     }
