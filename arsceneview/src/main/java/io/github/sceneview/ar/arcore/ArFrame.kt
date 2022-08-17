@@ -2,7 +2,9 @@ package io.github.sceneview.ar.arcore
 
 import android.view.MotionEvent
 import com.google.ar.core.*
+import io.github.sceneview.math.Position
 import io.github.sceneview.utils.FrameTime
+import kotlin.math.abs
 
 /**
  * ### Captures the state and changes to the AR system from a call to [Session.update]
@@ -69,7 +71,7 @@ data class ArFrame(
      * the tracking method for the returned point is
      * [InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE]
      * [com.google.ar.core.InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE]
-     * *Default: [ArSession.approximateDistanceMeters]*
+     * *Default: [ArSession.approximateDistance]*
      * @param plane enable plane results
      * *Default: [ArSession.planeFindingEnabled]*
      * @param depth enable depth results
@@ -87,10 +89,10 @@ data class ArFrame(
     fun hitTests(
         xPx: Float = session.displayWidth / 2.0f,
         yPx: Float = session.displayHeight / 2.0f,
-        approximateDistanceMeters: Float = session.approximateDistanceMeters,
         plane: Boolean = session.planeFindingEnabled,
         depth: Boolean = session.depthEnabled,
-        instantPlacement: Boolean = session.instantPlacementEnabled
+        instant: Boolean = session.instantPlacementEnabled,
+        approximateDistance: Float = session.approximateDistance
     ): List<HitResult> {
         if (camera.isTracking) {
             if (plane || depth) {
@@ -98,8 +100,8 @@ data class ArFrame(
                     return it
                 }
             }
-            if (instantPlacement) {
-                return frame.hitTestInstantPlacement(xPx, yPx, approximateDistanceMeters)
+            if (instant) {
+                return frame.hitTestInstantPlacement(xPx, yPx, approximateDistance)
             }
         }
         return listOf()
@@ -113,20 +115,34 @@ data class ArFrame(
     fun hitTest(
         xPx: Float = session.displayWidth / 2.0f,
         yPx: Float = session.displayHeight / 2.0f,
-        approximateDistanceMeters: Float = session.approximateDistanceMeters,
         plane: Boolean = session.planeFindingEnabled,
         depth: Boolean = session.depthEnabled,
-        instantPlacement: Boolean = session.instantPlacementEnabled
+        instant: Boolean = session.instantPlacementEnabled,
+        approximateDistance: Float = session.approximateDistance
     ): HitResult? {
         return hitTests(
             xPx = xPx,
             yPx = yPx,
-            approximateDistanceMeters = approximateDistanceMeters,
+            approximateDistance = approximateDistance,
             plane = plane,
             depth = depth,
-            instantPlacement = instantPlacement
-        ).firstValid(camera, plane, depth, instantPlacement)
+            instant = instant
+        ).firstValid(camera, plane, depth, instant)
     }
+
+    fun hitTest(
+        position: Position,
+        plane: Boolean,
+        depth: Boolean,
+        instant: Boolean
+    ) = hitTest(
+        xPx = session.displayWidth / 2.0f * (1.0f + position.x),
+        yPx = session.displayHeight / 2.0f * (1.0f - position.y),
+        plane = plane,
+        depth = depth,
+        instant = instant,
+        approximateDistance = abs(position.z)
+    )
 
     /**
      * @see hitTests
@@ -135,18 +151,18 @@ data class ArFrame(
     @JvmOverloads
     fun hitTest(
         motionEvent: MotionEvent,
-        approximateDistanceMeters: Float = session.approximateDistanceMeters,
         plane: Boolean = session.planeFindingEnabled,
         depth: Boolean = session.depthEnabled,
-        instantPlacement: Boolean = session.instantPlacementEnabled
+        instant: Boolean = session.instantPlacementEnabled,
+        approximateDistance: Float = session.approximateDistance
     ): HitResult? = hitTests(
         xPx = motionEvent.x,
         yPx = motionEvent.y,
-        approximateDistanceMeters = approximateDistanceMeters,
         plane = plane,
         depth = depth,
-        instantPlacement = instantPlacement
-    ).firstValid(frame.camera, plane, depth, instantPlacement)
+        instant = instant,
+        approximateDistance = approximateDistance
+    ).firstValid(frame.camera, plane, depth, instant)
 
     /**
      * ### Creates a new anchor at the hit location.
@@ -167,7 +183,7 @@ data class ArFrame(
      * the tracking method for the returned point is
      * [InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE]
      * [com.google.ar.core.InstantPlacementPoint.TrackingMethod.SCREENSPACE_WITH_APPROXIMATE_DISTANCE]
-     * *Default: [ArSession.approximateDistanceMeters]*
+     * *Default: [ArSession.approximateDistance]*
      * @param plane enable plane results
      * *Default: [ArSession.planeFindingEnabled]*
      * @param depth enable depth results
@@ -181,17 +197,17 @@ data class ArFrame(
     fun createAnchor(
         xPx: Float = session.displayWidth / 2.0f,
         yPx: Float = session.displayHeight / 2.0f,
-        approximateDistanceMeters: Float = session.approximateDistanceMeters,
         plane: Boolean = session.planeFindingEnabled,
         depth: Boolean = session.depthEnabled,
-        instantPlacement: Boolean = session.instantPlacementEnabled
+        instant: Boolean = session.instantPlacementEnabled,
+        approximateDistance: Float = session.approximateDistance
     ): Anchor? = hitTest(
         xPx = xPx,
         yPx = yPx,
-        approximateDistanceMeters = approximateDistanceMeters,
         plane = plane,
         depth = depth,
-        instantPlacement = instantPlacement
+        instant = instant,
+        approximateDistance = approximateDistance
     )?.createAnchor()
 
     /**
