@@ -19,6 +19,7 @@ import io.github.sceneview.ar.arcore.zDirection
 import io.github.sceneview.material.MaterialLoader
 import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setTexture
+import io.github.sceneview.math.Position
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
 import io.github.sceneview.utils.Color
@@ -128,17 +129,14 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             if (arFrame.fps(this.arFrame) < maxHitTestPerSecond) {
                 this.arFrame = arFrame
                 try {
-                    val session = arFrame.session
-
-                    // Do a hitTest on the current frame. The result is used to calculate a focusPoint
-                    // and to render the top most plane Trackable if planeRendererMode is set to
-                    // RENDER_TOP_MOST
+                    // Do a hitTest on the current frame. The result is used to calculate a
+                    // focusPoint and to render the top most plane Trackable if planeRendererMode is
+                    // set to RENDER_TOP_MOST
                     val hitResult = arFrame.hitTest(
-                        xPx = session.displayWidth / 2.0f,
-                        yPx = session.displayHeight / 2.0f,
+                        position = Position(x = 0.0f, y = 0.0f),
                         plane = true,
                         depth = false,
-                        instantPlacement = false
+                        instant = false
                     )
 
                     // Calculate the focusPoint. It is used to determine the position of
