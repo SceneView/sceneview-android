@@ -3,6 +3,7 @@ package io.github.sceneview.node
 import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
+import com.google.android.filament.gltfio.Animator
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.utilities.ChangeId
@@ -11,6 +12,7 @@ import io.github.sceneview.SceneView
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.*
 import io.github.sceneview.model.GLBLoader
+import io.github.sceneview.model.getAnimationIndex
 import io.github.sceneview.utils.FrameTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,12 +29,7 @@ typealias OnModelLoaded = (modelInstance: RenderableInstance) -> Unit
  */
 open class ModelNode : Node {
 
-    companion object {
-        val DEFAULT_MODEL_POSITION = Position(x = 0.0f, y = 0.0f, z = 0.0f)
-        val DEFAULT_MODEL_QUATERNION = Quaternion()
-        val DEFAULT_MODEL_ROTATION = DEFAULT_MODEL_QUATERNION.toEulerAngles()
-        val DEFAULT_MODEL_SCALE = Scale(1.0f)
-    }
+    data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
     /**
      * ### The node model origin (center)
@@ -102,7 +99,7 @@ open class ModelNode : Node {
      * The renderable is usually a 3D model.
      * If null, this node's current renderable will be removed.
      */
-    var modelInstance: RenderableInstance? = null
+    open var modelInstance: RenderableInstance? = null
         set(value) {
             if (field != value) {
                 field?.destroy()
@@ -114,6 +111,9 @@ open class ModelNode : Node {
 
     val model: Renderable?
         get() = modelInstance?.renderable
+
+    val animator: Animator? get() = modelInstance?.filamentAsset?.animator
+    var playingAnimations = mutableMapOf<Int, PlayingAnimation>()
 
     var onModelLoaded = mutableListOf<OnModelLoaded>()
     var onModelChanged = mutableListOf<(modelInstance: RenderableInstance?) -> Unit>()
@@ -212,6 +212,18 @@ open class ModelNode : Node {
         super.onFrame(frameTime)
 
         modelInstance?.prepareForDraw(sceneView)
+
+        animator?.apply {
+            playingAnimations.forEach { (index, animation) ->
+                val elapsedTimeSeconds = frameTime.intervalSeconds(animation.startTime)
+                applyAnimation(index, elapsedTimeSeconds.toFloat())
+
+                if (!animation.loop && elapsedTimeSeconds >= getAnimationDuration(index)) {
+                    playingAnimations.remove(index)
+                }
+            }
+            updateBoneMatrices()
+        }
 
         // TODO : Remove the renderable.id thing when Renderable is kotlined
         // Update state when the renderable has changed.
@@ -397,7 +409,7 @@ open class ModelNode : Node {
     ): RenderableInstance? {
         modelInstance = renderable?.createInstance(this)?.apply {
             if (autoAnimate && animationCount > 0) {
-                animate(true)?.start()
+                playAnimation(0)
             }
         }
         scaleToUnits?.let { scaleModel(it) }
@@ -437,6 +449,34 @@ open class ModelNode : Node {
         }
     }
 
+    /**
+     * ### Applies rotation, translation, and scale to entities that have been targeted by the given
+     * animation definition. Uses `TransformManager`.
+     *
+     * @param animationIndex Zero-based index for the `animation` of interest.
+     *
+     * @see Animator.getAnimationCount
+     */
+    fun playAnimation(animationIndex: Int, loop: Boolean = true) {
+        playingAnimations[animationIndex] = PlayingAnimation(loop = loop)
+    }
+
+    /**
+     * @see playAnimation
+     * @see Animator.getAnimationName
+     */
+    fun playAnimation(animationName: String, loop: Boolean = true) {
+        animator?.getAnimationIndex(animationName)?.let { playAnimation(it, loop) }
+    }
+
+    fun stopAnimation(animationIndex: Int) {
+        playingAnimations.remove(animationIndex)
+    }
+
+    fun stopAnimation(animationName: String) {
+        animator?.getAnimationIndex(animationName)?.let { stopAnimation(it) }
+    }
+
     /** ### Detach and destroy the node */
     override fun destroy() {
         modelInstance?.destroy()
@@ -448,5 +488,12 @@ open class ModelNode : Node {
     open fun copy(toNode: ModelNode = ModelNode()): ModelNode = toNode.apply {
         super.copy(toNode)
         setModel(this@ModelNode.model)
+    }
+
+    companion object {
+        val DEFAULT_MODEL_POSITION = Position(x = 0.0f, y = 0.0f, z = 0.0f)
+        val DEFAULT_MODEL_QUATERNION = Quaternion()
+        val DEFAULT_MODEL_ROTATION = DEFAULT_MODEL_QUATERNION.toEulerAngles()
+        val DEFAULT_MODEL_SCALE = Scale(1.0f)
     }
 }
