@@ -7,7 +7,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.*
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.defaultApproximateDistanceMeters
+import io.github.sceneview.ar.defaultApproximateDistance
 import io.github.sceneview.utils.FrameTime
 
 class ArSession(
@@ -35,12 +35,12 @@ class ArSession(
     var hasAugmentedImageDatabase = false
 
     /**
-     * ### The distance at which to create an InstantPlacementPoint
+     * ### The distance at which to create an InstantPlacementPoint in meters
      *
      * This is only used while the tracking method for the returned point is
      * InstantPlacementPoint.TrackingMethod#SCREENSPACE_WITH_APPROXIMATE_DISTANCE.
      */
-    val approximateDistanceMeters = defaultApproximateDistanceMeters
+    val approximateDistance = defaultApproximateDistance
 
     /**
      * ### The most recent ARCore Frame if it is available
