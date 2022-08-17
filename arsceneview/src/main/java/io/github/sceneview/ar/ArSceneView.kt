@@ -16,6 +16,7 @@ import io.github.sceneview.ar.camera.ArCameraStream
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.light.Light
+import io.github.sceneview.math.Position
 import io.github.sceneview.node.Node
 import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.utils.FrameTime
@@ -486,6 +487,34 @@ open class ArSceneView @JvmOverloads constructor(
     open fun onTapAr(hitResult: HitResult, motionEvent: MotionEvent) {
         onTapAr?.invoke(hitResult, motionEvent)
     }
+
+    fun hitTest(
+        position: Position,
+        plane: Boolean,
+        depth: Boolean,
+        instant: Boolean
+    ) = currentFrame?.hitTest(position, plane, depth, instant)
+
+    /**
+     * ### Performs a ray cast to retrieve the ARCore info at this camera point
+     *
+     * @param frame the [ArFrame] from where we take the [HitResult]
+     * By default the latest session frame if any exist
+     * @param xPx x view coordinate in pixels
+     * @property yPx y view coordinate in pixels
+     *
+     * @return the hitResult or null if no info is retrieved
+     *
+     * @see ArFrame.hitTest
+     */
+    fun hitTest(
+        xPx: Float,
+        yPx: Float,
+        plane: Boolean,
+        depth: Boolean,
+        instant: Boolean,
+        approximateDistance: Float = 2.0f
+    ) = currentFrame?.hitTest(xPx, yPx, plane, depth, instant, approximateDistance)
 }
 
 /**
