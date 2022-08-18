@@ -58,7 +58,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 indirectLight?.intensity = 50_000f
             }
 
-            modelNode.loadModel(
+            modelNode.loadModelGlb(
                 context = requireContext(),
                 lifecycle = lifecycle,
                 glbFileLocation = "https://sceneview.github.io/assets/models/MaterialSuite.glb",

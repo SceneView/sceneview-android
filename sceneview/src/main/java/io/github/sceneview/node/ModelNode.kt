@@ -149,7 +149,7 @@ open class ModelNode : RenderableNode {
      * [SceneView] is.
      * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
      * the node is never attached to a [SceneView]
-     * @param modelFileLocation the model glb/gltf file location:
+     * @param modelGlbFileLocation the model glb/gltf file location:
      * ```
      * - A relative asset file location *models/mymodel.glb*
      * - An Android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
@@ -177,17 +177,17 @@ open class ModelNode : RenderableNode {
     constructor(
         context: Context,
         lifecycle: Lifecycle? = null,
-        modelFileLocation: String,
+        modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((model: Model) -> Unit)? = null
     ) : this() {
-        loadModelAsync(
+        loadModelGlbAsync(
             context,
             lifecycle,
-            modelFileLocation,
+            modelGlbFileLocation,
             autoAnimate,
             scaleUnits,
             centerOrigin,
@@ -274,17 +274,17 @@ open class ModelNode : RenderableNode {
      * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      */
-    suspend fun loadModel(
+    suspend fun loadModelGlb(
         context: Context,
-        lifecycle: Lifecycle,
         glbFileLocation: String,
+        lifecycle: Lifecycle,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null
     ): Model? {
         return try {
-            GLBLoader.loadModel(context, lifecycle, glbFileLocation)?.also { model ->
+            GLBLoader.loadModel(context, glbFileLocation, lifecycle)?.also { model ->
                 withContext(Dispatchers.Main) {
                     setModel(model, autoAnimate, scaleToUnits, centerOrigin)
                     onModelLoaded(model)
@@ -322,7 +322,7 @@ open class ModelNode : RenderableNode {
      * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      */
-    fun loadModelAsync(
+    fun loadModelGlbAsync(
         context: Context,
         lifecycle: Lifecycle? = null,
         glbFileLocation: String,
@@ -334,10 +334,10 @@ open class ModelNode : RenderableNode {
     ): ModelNode {
         if (lifecycle != null) {
             lifecycle.coroutineScope.launchWhenCreated {
-                loadModel(
+                loadModelGlb(
                     context,
-                    lifecycle,
                     glbFileLocation,
+                    lifecycle,
                     autoAnimate,
                     scaleToUnits,
                     centerOrigin,
@@ -346,9 +346,130 @@ open class ModelNode : RenderableNode {
             }
         } else {
             doOnAttachedToScene { sceneView ->
-                loadModelAsync(
+                loadModelGlbAsync(
                     context, sceneView.lifecycle, glbFileLocation, autoAnimate, scaleToUnits,
                     centerOrigin, onError, onLoaded
+                )
+            }
+        }
+        return this
+    }
+
+    /**
+     * ### Loads a monolithic binary glTF and add it to the Node
+     *
+     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
+     * it (and its resources) when the lifecycle goes to destroy state.
+     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
+     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
+     * [SceneView] is.
+     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
+     * the node is never attached to a [SceneView]
+     * @param gltfFileLocation the gltf file location:
+     * - A relative asset file location *models/mymodel.gltf*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.gltf*
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     */
+    suspend fun loadModelGltf(
+        context: Context,
+        gltfFileLocation: String,
+        resourceLocationResolver: (String) -> String = { resourceFileName: String ->
+            "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
+        },
+        lifecycle: Lifecycle,
+        autoAnimate: Boolean = true,
+        scaleToUnits: Float? = null,
+        centerOrigin: Position? = null,
+        onError: ((error: Exception) -> Unit)? = null
+    ): Model? {
+        return try {
+            GLTFLoader.loadModel(context, gltfFileLocation, resourceLocationResolver, lifecycle)
+                ?.also { model ->
+                    withContext(Dispatchers.Main) {
+                        setModel(model, autoAnimate, scaleToUnits, centerOrigin)
+                        onModelLoaded(model)
+                    }
+                }
+        } catch (error: Exception) {
+            onModelError(error)
+            onError?.invoke(error)
+            null
+        }
+    }
+
+    /**
+     * ### Loads a monolithic binary glTF and add it to the Node
+     *
+     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
+     * it (and its resources) when the lifecycle goes to destroy state.
+     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
+     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
+     * [SceneView] is.
+     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
+     * the node is never attached to a [SceneView]
+     * @param gltfFileLocation the gltf file location:
+     * - A relative asset file location *models/mymodel.gltf*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.gltf*
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     */
+    fun loadModelGltfAsync(
+        context: Context,
+        lifecycle: Lifecycle? = null,
+        gltfFileLocation: String,
+        resourceLocationResolver: (String) -> String = { resourceFileName: String ->
+            "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
+        },
+        autoAnimate: Boolean = true,
+        scaleToUnits: Float? = null,
+        centerOrigin: Position? = null,
+        onError: ((error: Exception) -> Unit)? = null,
+        onLoaded: ((model: Model) -> Unit)? = null
+    ): ModelNode {
+        if (lifecycle != null) {
+            lifecycle.coroutineScope.launchWhenCreated {
+                loadModelGltf(
+                    context,
+                    gltfFileLocation,
+                    resourceLocationResolver,
+                    lifecycle,
+                    autoAnimate,
+                    scaleToUnits,
+                    centerOrigin,
+                    onError
+                )?.let { onLoaded?.invoke(it) }
+            }
+        } else {
+            doOnAttachedToScene { sceneView ->
+                loadModelGltfAsync(
+                    context,
+                    sceneView.lifecycle,
+                    gltfFileLocation,
+                    resourceLocationResolver,
+                    autoAnimate,
+                    scaleToUnits,
+                    centerOrigin,
+                    onError,
+                    onLoaded
                 )
             }
         }
