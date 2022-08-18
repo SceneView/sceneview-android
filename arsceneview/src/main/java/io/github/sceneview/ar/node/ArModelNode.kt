@@ -235,7 +235,7 @@ open class ArModelNode : ArNode {
      * [SceneView] is.
      * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
      * the node is never attached to a [SceneView]
-     * @param modelFileLocation the glb file location:
+     * @param modelGlbFileLocation the glb file location:
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
      * - A File path *Uri.fromFile(myModelFile).path*
@@ -250,22 +250,22 @@ open class ArModelNode : ArNode {
      * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      *
-     * @see loadModel
+     * @see loadModelGlb
      */
     constructor(
         context: Context,
         lifecycle: Lifecycle? = null,
-        modelFileLocation: String,
+        modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((model: Model) -> Unit)? = null
     ) : this() {
-        loadModelAsync(
+        loadModelGlbAsync(
             context,
             lifecycle,
-            modelFileLocation,
+            modelGlbFileLocation,
             autoAnimate,
             scaleToUnits,
             centerOrigin,
