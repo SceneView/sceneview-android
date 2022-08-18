@@ -92,7 +92,6 @@ open class SceneView @JvmOverloads constructor(
     val renderer: Renderer
     open val cameraNode: CameraNode = cameraNode
 
-
     /** @see View.setRenderQuality **/
     var renderQuality: RenderQuality
         get() = view.renderQuality
@@ -619,12 +618,7 @@ open class SceneView @JvmOverloads constructor(
             val pickedNode = allChildren
                 .mapNotNull { it as? ModelNode }
                 .firstOrNull { modelNode ->
-                    modelNode.modelInstance?.let { modelInstance ->
-                        modelInstance.entity == pickedRenderable ||
-                                modelInstance.childEntities.contains(
-                                    pickedRenderable
-                                )
-                    } ?: false
+                    modelNode.model?.renderableEntities?.contains(pickedRenderable) == true
                 }
             onPickingCompleted.invoke(pickedNode, pickedRenderable)
         }

@@ -27,38 +27,38 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     data class Model(
         val fileLocation: String,
         val scaleUnits: Float? = null,
-        val placementMode: PlacementMode = PlacementMode.BEST_AVAILABLE
+        val placementMode: PlacementMode = PlacementMode.BEST_AVAILABLE,
+        val applyPoseRotation: Boolean = true
     )
 
     val models = listOf(
         Model("models/spiderbot.glb"),
         Model(
-            "https://storage.googleapis.com/ar-answers-in-search-models/static/Tiger/model.glb",
-            placementMode = PlacementMode.BEST_AVAILABLE.apply {
-                keepRotation = true
-            },
+            fileLocation = "https://storage.googleapis.com/ar-answers-in-search-models/static/Tiger/model.glb",
             // Display the Tiger with a size of 3 m long
-            scaleUnits = 2.5f
+            scaleUnits = 2.5f,
+            placementMode = PlacementMode.BEST_AVAILABLE,
+            applyPoseRotation = false
         ),
         Model(
-            "https://sceneview.github.io/assets/models/DamagedHelmet.glb",
+            fileLocation = "https://sceneview.github.io/assets/models/DamagedHelmet.glb",
             placementMode = PlacementMode.INSTANT,
             scaleUnits = 0.5f
         ),
         Model(
-            "https://storage.googleapis.com/ar-answers-in-search-models/static/GiantPanda/model.glb",
+            fileLocation = "https://storage.googleapis.com/ar-answers-in-search-models/static/GiantPanda/model.glb",
             placementMode = PlacementMode.PLANE_HORIZONTAL,
             // Display the Tiger with a size of 1.5 m height
             scaleUnits = 1.5f
         ),
         Model(
-            "https://sceneview.github.io/assets/models/Spoons.glb",
+            fileLocation = "https://sceneview.github.io/assets/models/Spoons.glb",
             placementMode = PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL,
             // Keep original model size
             scaleUnits = null
         ),
         Model(
-            "https://sceneview.github.io/assets/models/Halloween.glb",
+            fileLocation = "https://sceneview.github.io/assets/models/Halloween.glb",
             placementMode = PlacementMode.PLANE_HORIZONTAL,
             scaleUnits = 2.5f
         ),
@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         val model = models[modelIndex]
         modelIndex = (modelIndex + 1) % models.size
         modelNode = ArModelNode(model.placementMode).apply {
+            applyPoseRotation = model.applyPoseRotation
             loadModelAsync(
                 context = this@MainActivity,
                 lifecycle = lifecycle,
@@ -151,8 +152,11 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                 sceneView.planeRenderer.isVisible = true
                 isLoading = false
             }
-            onPoseChanged = { node, _ ->
-                placeModelButton.isGone = node.isAnchored || !node.isTracking
+            onAnchorChanged = { node, _ ->
+                placeModelButton.isGone = node.isAnchored
+            }
+            onHitResult = { node, _ ->
+                placeModelButton.isGone = !node.isTracking
             }
         }
         sceneView.addChild(modelNode!!)

@@ -1,13 +1,16 @@
 package io.github.sceneview.model
 
 import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
-import com.google.ar.sceneform.rendering.ModelRenderable
+import com.gorisse.thomas.lifecycle.observe
+import io.github.sceneview.Filament.assetLoader
+import io.github.sceneview.Filament.resourceLoader
+import io.github.sceneview.renderable.setScreenSpaceContactShadows
+import io.github.sceneview.utils.useFileBufferNotNull
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
+import java.nio.Buffer
 
 object GLBLoader {
 
@@ -24,8 +27,10 @@ object GLBLoader {
         context: Context,
         lifecycle: Lifecycle,
         glbFileLocation: String
-    ): ModelRenderable? = withContext(Dispatchers.Main) {
-        createModel(context, lifecycle, glbFileLocation).await()
+    ): Model? = context.useFileBufferNotNull(glbFileLocation) { buffer ->
+        withContext(Dispatchers.Main) {
+            createModel(lifecycle, buffer)
+        }
     }
 
     /**
@@ -42,19 +47,23 @@ object GLBLoader {
         context: Context,
         lifecycle: Lifecycle,
         glbFileLocation: String,
-        result: (ModelRenderable?) -> Unit
+        result: (Model?) -> Unit
     ) = lifecycle.coroutineScope.launchWhenCreated {
-        result(
-            loadModel(context, lifecycle, glbFileLocation)
-        )
+        result(loadModel(context, lifecycle, glbFileLocation))
     }
 
-    fun createModel(context: Context, lifecycle: Lifecycle, glbFileLocation: String) =
-        ModelRenderable.builder()
-            .setSource(context, Uri.parse(glbFileLocation))
-            .setIsFilamentGltf(true)
-            .build(lifecycle)
-            .exceptionally {
-                throw it
+    fun createModel(lifecycle: Lifecycle? = null, buffer: Buffer): Model? =
+        assetLoader.createAssetFromBinary(buffer)?.also { asset ->
+            resourceLoader.loadResources(asset)
+            //TODO: Used by Filament ModelViewer, see if it's usefull
+            asset.renderableEntities.forEach {
+                it.setScreenSpaceContactShadows(true)
             }
+            asset.releaseSourceData()
+
+            lifecycle?.observe(onDestroy = {
+                // Prevent double destroy in case of manually destroyed
+                runCatching { asset.destroy() }
+            })
+        }
 }

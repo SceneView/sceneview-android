@@ -19,7 +19,7 @@ const val RENDER_PRIORITY_LAST = 7
 /**
  * @see RenderableManager.getInstance
  */
-val Renderable.instance: RenderableInstance
+val Renderable.renderableInstance: RenderableInstance
     @EntityInstance get() = Filament.renderableManager.getInstance(this)
 
 fun RenderableManager.Builder.build(lifecycle: Lifecycle): Renderable =
@@ -36,34 +36,62 @@ fun RenderableManager.Builder.build(lifecycle: Lifecycle): Renderable =
  * @see RenderableManager.setPriority
  */
 fun Renderable.setPriority(@IntRange(from = 0, to = 7) priority: Int) =
-    Filament.renderableManager.setPriority(instance, priority)
+    Filament.renderableManager.setPriority(renderableInstance, priority)
 
 /**
  * @see RenderableManager.getMaterialInstanceAt
  */
-fun Renderable.getMaterial() = getMaterialAt(0)
-
-/**
- * @see RenderableManager.getMaterialInstanceAt
- */
-fun Renderable.getMaterialAt(@IntRange(from = 0) primitiveIndex: Int) =
-    Filament.renderableManager.getMaterialInstanceAt(instance, primitiveIndex)
+fun Renderable.getMaterial(@IntRange(from = 0) primitiveIndex: Int = 0) =
+    Filament.renderableManager.getMaterialInstanceAt(renderableInstance, primitiveIndex)
 
 /**
  * @see RenderableManager.setMaterialInstanceAt
  */
-fun Renderable.setMaterial(material: MaterialInstance) = setMaterialAt(0, material)
+fun Renderable.setMaterial(
+    material: MaterialInstance,
+    @IntRange(from = 0) primitiveIndex: Int = 0
+) = Filament.renderableManager.setMaterialInstanceAt(renderableInstance, primitiveIndex, material)
 
 /**
- * @see RenderableManager.setMaterialInstanceAt
+ * @see RenderableManager.setCastShadows
  */
-fun Renderable.setMaterialAt(
-    @IntRange(from = 0) primitiveIndex: Int,
-    material: MaterialInstance
-) = Filament.renderableManager.setMaterialInstanceAt(instance, primitiveIndex, material)
+fun Renderable.setCastShadows(enabled: Boolean) =
+    Filament.renderableManager.setCastShadows(renderableInstance, enabled)
+
+/**
+ * @see RenderableManager.setReceiveShadows
+ */
+fun Renderable.setReceiveShadows(enabled: Boolean) =
+    Filament.renderableManager.setReceiveShadows(renderableInstance, enabled)
+
+/**
+ * @see RenderableManager.setCulling
+ */
+fun Renderable.setCulling(enabled: Boolean) =
+    Filament.renderableManager.setCulling(renderableInstance, enabled)
+
+/**
+ * @see RenderableManager.setBlendOrder
+ */
+fun Renderable.setBlendOrder(
+    @IntRange(from = 0, to = 65535) blendOrder: Int,
+    @IntRange(from = 0) primitiveIndex: Int = 0
+) = Filament.renderableManager.setBlendOrderAt(renderableInstance, primitiveIndex, blendOrder)
+
+/**
+ * @see RenderableManager.setGlobalBlendOrderEnabledAt
+ */
+fun Renderable.setGlobalBlendOrderEnabled(
+    enabled: Boolean,
+    @IntRange(from = 0) primitiveIndex: Int = 0,
+) = Filament.renderableManager.setGlobalBlendOrderEnabledAt(
+    renderableInstance,
+    primitiveIndex,
+    enabled
+)
 
 /**
  * @see RenderableManager.setScreenSpaceContactShadows
  */
 fun Renderable.setScreenSpaceContactShadows(enabled: Boolean) =
-    Filament.renderableManager.setScreenSpaceContactShadows(instance, enabled)
+    Filament.renderableManager.setScreenSpaceContactShadows(renderableInstance, enabled)
