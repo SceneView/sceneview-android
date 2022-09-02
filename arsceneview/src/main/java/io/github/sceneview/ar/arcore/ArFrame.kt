@@ -1,9 +1,11 @@
 package io.github.sceneview.ar.arcore
 
+import android.util.Log
 import android.view.MotionEvent
 import com.google.ar.core.*
 import io.github.sceneview.math.Position
 import io.github.sceneview.utils.FrameTime
+import io.github.sceneview.utils.TAG
 import kotlin.math.abs
 
 /**
@@ -201,14 +203,21 @@ data class ArFrame(
         depth: Boolean = session.depthEnabled,
         instant: Boolean = session.instantPlacementEnabled,
         approximateDistance: Float = session.approximateDistance
-    ): Anchor? = hitTest(
-        xPx = xPx,
-        yPx = yPx,
-        plane = plane,
-        depth = depth,
-        instant = instant,
-        approximateDistance = approximateDistance
-    )?.createAnchor()
+    ): Anchor? {
+        return try {
+            hitTest(
+                xPx = xPx,
+                yPx = yPx,
+                plane = plane,
+                depth = depth,
+                instant = instant,
+                approximateDistance = approximateDistance
+            )?.createAnchor()
+        } catch (exception: Exception) {
+            Log.e(TAG, "Can't create anchor: $exception")
+            null
+        }
+    }
 
     /**
      * ### Retrieve the frame tracked Planes
