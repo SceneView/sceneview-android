@@ -1,6 +1,7 @@
 package io.github.sceneview.ar.node
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import com.google.ar.core.*
 import com.google.ar.core.Config.PlaneFindingMode
@@ -13,6 +14,7 @@ import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.Model
 import io.github.sceneview.node.Node
+import io.github.sceneview.utils.TAG
 
 /**
  * ### AR positioned 3D model node
@@ -322,8 +324,12 @@ open class ArModelNode : ArNode {
         super.onMoveEnd(detector, e)
 
         if (isPositionEditable && currentEditingTransform == ::position) {
-            anchor = lastTrackingHitResult?.createAnchor()
-            currentEditingTransform = null
+            try {
+                anchor = lastTrackingHitResult?.createAnchor()
+                currentEditingTransform = null
+            } catch (exception: Exception) {
+                Log.e(TAG, "Can't create anchor: $exception")
+            }
         }
     }
 
@@ -377,9 +383,15 @@ open class ArModelNode : ArNode {
      */
     open fun createAnchor(): Anchor? {
         // lastTrackingHitResult might become not tracking anymore during time
-        val hitResult =
-            lastTrackingHitResult?.takeIf { it.isTracking } ?: hitTest()?.takeIf { it.isTracking }
-        return hitResult?.createAnchor()
+        return try {
+            val hitResult =
+                lastTrackingHitResult?.takeIf { it.isTracking }
+                    ?: hitTest()?.takeIf { it.isTracking }
+            hitResult?.createAnchor()
+        } catch (exception: Exception) {
+            Log.e(TAG, "Can't create anchor: $exception")
+            null
+        }
     }
 
     override fun clone() = copy(ArModelNode())
