@@ -5,6 +5,7 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.SwapChain
 import com.google.android.filament.Viewport
 import io.github.sceneview.Filament
+import io.github.sceneview.RendererLifecycleObserver
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 
@@ -13,7 +14,7 @@ import io.github.sceneview.SceneLifecycleObserver
  */
 class SurfaceCopier(
     private val lifecycle: SceneLifecycle
-) : SceneLifecycleObserver {
+) : RendererLifecycleObserver {
 
     data class SurfaceMirror(
         val surface: Surface,
@@ -29,8 +30,8 @@ class SurfaceCopier(
         lifecycle.addObserver(this)
     }
 
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
+    override fun onRenderFrame() {
+        super.onRenderFrame()
 
         surfaceMirrors.forEach { mirror ->
             if (mirror.swapChain != null) {

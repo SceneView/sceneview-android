@@ -508,6 +508,11 @@ open class SceneView @JvmOverloads constructor(
         // Render the scene, unless the renderer wants to skip the frame.
         if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
             renderer.render(view)
+
+            lifecycle.dispatchEvent<RendererLifecycleObserver> {
+                onRenderFrame()
+            }
+
             renderer.endFrame()
         }
     }
@@ -632,9 +637,6 @@ open class SceneView @JvmOverloads constructor(
     }
 
     fun startRecording(mediaRecorder: MediaRecorder) {
-        mediaRecorder.apply {
-            setVideoSource(MediaRecorder.VideoSource.SURFACE)
-        }
         mediaRecorder.prepare()
         mediaRecorder.start()
         surfaceCopier.startMirroring(mediaRecorder.surface)
@@ -644,7 +646,6 @@ open class SceneView @JvmOverloads constructor(
         surfaceCopier.stopMirroring(mediaRecorder.surface)
         mediaRecorder.stop()
         mediaRecorder.reset()
-        mediaRecorder.surface.release()
     }
 
     /**
@@ -750,5 +751,10 @@ interface SceneLifecycleObserver : DefaultLifecycleObserver {
     }
 
     fun onFrame(frameTime: FrameTime) {
+    }
+}
+
+interface RendererLifecycleObserver : DefaultLifecycleObserver {
+    fun onRenderFrame() {
     }
 }
