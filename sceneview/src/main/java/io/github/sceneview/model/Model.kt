@@ -18,6 +18,5 @@ fun Animator.getAnimationIndex(animationName: String) =
     (0 until animationCount).firstOrNull { getAnimationName(it) == animationName }
 
 fun Model.destroy() {
-    releaseSourceData()
     Filament.assetLoader.destroyAsset(this)
 }
