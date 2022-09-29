@@ -262,7 +262,7 @@ open class ArModelNode : ArNode {
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((model: Model) -> Unit)? = null
     ) : this() {
-        loadModelGlbAsync(
+        loadModelAsync(
             context,
             lifecycle,
             modelGlbFileLocation,

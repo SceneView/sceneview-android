@@ -1,71 +1,46 @@
 package io.github.sceneview.node
 
-import io.github.sceneview.light.Light
-import io.github.sceneview.light.destroy
-import io.github.sceneview.light.direction
-import io.github.sceneview.light.position
-import io.github.sceneview.math.*
-import io.github.sceneview.utils.FrameTime
+import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
+import com.google.android.filament.LightManager
+import com.google.android.filament.Material
+import io.github.sceneview.SceneView
+import io.github.sceneview.components.LightComponent
+import io.github.sceneview.managers.NodeManager
 
 /**
- * ### A Node represents a transformation within the scene graph's hierarchy.
+ * Light source [Node] in the scene such as a sun or street lights
  *
- * This node contains a light for the rendering engine to render.
+ * At least one light must be added to a scene in order to see anything
+ * (unless the [Material.Shading.UNLIT] is used).
  *
- * Each node can have an arbitrary number of child nodes and one parent. The parent may be
- * another node, or the scene.
+ * Creation and destruction
+ * - A Light component is created using the [LightManager.Builder] and destroyed by calling
+ * [LightManager.destroy].
+ *
+ * @see LightManager
  */
-open class LightNode : Node {
+class LightNode(
+    engine: Engine,
+    nodeManager: NodeManager,
+    type: LightManager.Type,
+    apply: LightManager.Builder.() -> Unit
+) : Node(engine, nodeManager, EntityManager.get().create()), LightComponent {
 
-    var light: Light? = null
-        set(value) {
-            field?.destroy()
-            field = value
-            sceneEntities = value?.let { intArrayOf(it) } ?: intArrayOf()
-        }
+    init {
+        LightManager.Builder(type)
+            .apply(apply)
+            .build(engine, entity)
+    }
 
-    /**
-     * ### Construct a [LightNode] with it Position, Rotation and Scale
-     *
-     * @param position See [Node.position]
-     * @param rotation See [Node.rotation]
-     * @param scale See [Node.scale]
-     */
     constructor(
-        position: Position = DEFAULT_POSITION,
-        rotation: Rotation = DEFAULT_ROTATION,
-        scale: Scale = DEFAULT_SCALE
-    ) : super(position, rotation, scale)
+        sceneView: SceneView,
+        type: LightManager.Type,
+        apply: LightManager.Builder.() -> Unit
+    ) : this(sceneView.engine, sceneView.nodeManager, type, apply)
 
-    /**
-     * TODO : Doc
-     */
-    constructor(light: Light) : this() {
-        this.light = light
-        worldPosition = light.position
-        worldQuaternion = lookTowards(eye = light.position, direction = light.direction)
-    }
-
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
-
-        if (isAttached) {
-            light?.let { light ->
-                if (light.position != worldPosition) {
-                    light.position = worldPosition
-                }
-                //TODO: Check that
-                val worldDirection = worldQuaternion * Direction(y = 1.0f)
-                if (light.direction != worldDirection) {
-                    light.direction = worldDirection
-                }
-            }
-        }
-    }
-
-    /** ### Detach and destroy the node */
     override fun destroy() {
+        lightManager.destroy(entity)
         super.destroy()
-        light?.destroy()
     }
 }

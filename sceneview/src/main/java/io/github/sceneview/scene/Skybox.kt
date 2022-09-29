@@ -1,21 +1,13 @@
 package io.github.sceneview.scene
 
-import androidx.lifecycle.Lifecycle
 import com.google.android.filament.Skybox
-import com.gorisse.thomas.lifecycle.observe
-import io.github.sceneview.Filament
+import io.github.sceneview.SceneView
 
-fun Skybox.Builder.build(lifecycle: Lifecycle): Skybox = build(Filament.engine)
-    .also { skybox ->
-        lifecycle.observe(onDestroy = {
-            // Prevent double destroy in case of manually destroyed
-            runCatching { skybox.destroy() }
-        })
-    }
+fun Skybox.Builder.build(sceneView: SceneView) = build(sceneView.engine).also {
+    sceneView.skyboxes += it
+}
 
-/**
- * Destroys a Skybox and frees all its associated resources.
- */
-fun Skybox.destroy() {
-    Filament.engine.destroySkybox(this)
+fun SceneView.destroySkybox(skybox: Skybox) {
+    engine.destroySkybox(skybox)
+    skyboxes -= skybox
 }

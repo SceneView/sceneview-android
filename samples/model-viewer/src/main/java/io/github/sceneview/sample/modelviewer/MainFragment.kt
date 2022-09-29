@@ -5,78 +5,50 @@ import android.view.View
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.google.android.filament.utils.HDRLoader
-import dev.romainguy.kotlin.math.lookAt
+import com.gorisse.thomas.lifecycle.lifecycle
 import io.github.sceneview.SceneView
-import io.github.sceneview.environment.loadEnvironment
-import io.github.sceneview.math.Direction
+import io.github.sceneview.loaders.loadHdrIndirectLight
+import io.github.sceneview.loaders.loadHdrSkybox
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
-import kotlinx.coroutines.delay
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
     lateinit var sceneView: SceneView
     lateinit var loadingView: View
 
-    var isLoading = false
-        set(value) {
-            field = value
-            loadingView.isGone = !value
-        }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        sceneView = view.findViewById(R.id.sceneView)
+        sceneView = view.findViewById<SceneView>(R.id.sceneView).apply {
+            setLifecycle(lifecycle)
+        }
         loadingView = view.findViewById(R.id.loadingView)
 
-        isLoading = true
-
-        val modelNode = ModelNode(
-            position = Position(z = -4.0f),
-            rotation = Rotation(x = 35.0f)
-        )
-        sceneView.addChild(modelNode)
-
-        sceneView.cameraNode.transform = lookAt(
-            eye = modelNode.worldPosition.let {
-                Position(x = it.x, y = it.y + 0.5f, z = it.z + 2.0f)
-            },
-            target = modelNode.worldPosition,
-            up = Direction(y = 1.0f)
-        )
-
         lifecycleScope.launchWhenCreated {
-            sceneView.environment = HDRLoader.loadEnvironment(
-                context = requireContext(),
-                lifecycle = lifecycle,
-                hdrFileLocation = "environments/studio_small_09_2k.hdr",
-                specularFilter = false
-            )?.apply {
-                indirectLight?.intensity = 50_000f
+            val hdrFile = "environments/studio_small_09_2k.hdr"
+            sceneView.loadHdrIndirectLight(hdrFile, specularFilter = true) {
+                intensity(30_000f)
+            }
+            sceneView.loadHdrSkybox(hdrFile) {
+                intensity(50_000f)
             }
 
-            modelNode.loadModelGlb(
-                context = requireContext(),
-                lifecycle = lifecycle,
-                glbFileLocation = "https://sceneview.github.io/assets/models/MaterialSuite.glb",
-                scaleToUnits = 1.0f,
-                centerOrigin = Position(x = 0.0f, y = 0.0f, z = 0.0f)
-            )
-            delay(1500)
-            isLoading = false
-            sceneView.cameraNode.smooth(
-                lookAt(
-                    eye = modelNode.worldPosition.let {
-                        Position(x = it.x - 0.4f, y = it.y + 0.4f, z = it.z - 0.6f)
-                    },
-                    target = modelNode.worldPosition,
-                    up = Direction(y = 1.0f)
-                ),
-                speed = 0.7f
-            )
+            val model = sceneView.modelLoader.loadModel("models/MaterialSuite.glb")!!
+            val modelNode = ModelNode(sceneView, model).apply {
+                transform(
+                    position = Position(z = -4.0f),
+                    rotation = Rotation(x = 15.0f)
+                )
+                scaleToUnitsCube(2.0f)
+                // TODO: Fix centerOrigin
+//                centerOrigin(Position(x=-1.0f, y=-1.0f))
+                playAnimation()
+            }
+            sceneView.addChildNode(modelNode)
+
+            loadingView.isGone = true
         }
     }
 }
