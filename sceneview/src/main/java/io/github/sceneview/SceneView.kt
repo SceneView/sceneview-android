@@ -2,15 +2,11 @@ package io.github.sceneview
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Color.BLACK
-import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
 import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
 import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
@@ -18,45 +14,55 @@ import android.view.SurfaceView
 import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
-import androidx.lifecycle.*
+import androidx.lifecycle.Lifecycle
 import com.google.android.filament.*
-import com.google.android.filament.Renderer.ClearOptions
-import com.google.android.filament.View.*
+import com.google.android.filament.View.AntiAliasing
+import com.google.android.filament.View.QualityLevel
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
-import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.Manipulator
-import com.google.ar.sceneform.CameraNode
-import com.google.ar.sceneform.collision.CollisionSystem
-import com.google.ar.sceneform.rendering.ResourceManager
-import com.google.ar.sceneform.rendering.ViewAttachmentManager
+import com.google.android.filament.utils.*
 import com.gorisse.thomas.lifecycle.getActivity
-import io.github.sceneview.Filament.engine
-import io.github.sceneview.Filament.resourceLoader
-import io.github.sceneview.Filament.transformManager
-import io.github.sceneview.environment.Environment
-import io.github.sceneview.environment.loadEnvironment
-import io.github.sceneview.environment.loadEnvironmentSync
-import io.github.sceneview.gesture.CameraGestureDetector
+import com.gorisse.thomas.lifecycle.observe
+import io.github.sceneview.geometries.Geometry
+import io.github.sceneview.geometries.destroyGeometry
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.gesture.NodeMotionEvent
-import io.github.sceneview.gesture.transform
-import io.github.sceneview.light.Light
-import io.github.sceneview.light.build
-import io.github.sceneview.light.destroy
+import io.github.sceneview.gesture.NodesManipulator
+import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.loaders.loadIndirectLight
+import io.github.sceneview.managers.NodeManager
+import io.github.sceneview.managers.WindowViewManager
+import io.github.sceneview.managers.destroyLight
+import io.github.sceneview.managers.destroyRenderable
+import io.github.sceneview.material.destroyMaterial
+import io.github.sceneview.material.destroyMaterialInstance
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Size
+import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.node.NodeParent
-import io.github.sceneview.renderable.Renderable
-import io.github.sceneview.scene.build
-import io.github.sceneview.scene.destroy
-import io.github.sceneview.utils.*
-import com.google.android.filament.utils.KTX1Loader as KTXLoader
+import io.github.sceneview.scene.*
+import io.github.sceneview.texture.ViewStream
+import io.github.sceneview.texture.destroyStream
+import io.github.sceneview.texture.destroyTexture
+import io.github.sceneview.texture.destroyViewStream
+import io.github.sceneview.utils.Color
+import io.github.sceneview.utils.FrameTime
+import io.github.sceneview.utils.IBLPrefilter
+import io.github.sceneview.utils.SurfaceMirorer
+import io.github.sceneview.view.FilamentView
+import io.github.sceneview.view.viewportToWorld
+import io.github.sceneview.view.worldToViewport
+import kotlinx.coroutines.Job
 
-const val defaultIblLocation = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
+typealias Entity = Int
+typealias CameraGestureDetector = com.google.android.filament.utils.GestureDetector
+typealias CameraManipulator = Manipulator
 
 /**
- * ### A SurfaceView that manages rendering and interactions with the 3D scene.
+ * A SurfaceView that manage rendering and interactions with the 3D scene
  *
  * Maintains the scene graph, a hierarchical organization of a scene's content.
  * A scene can have zero or more child nodes and each node can have zero or more child nodes.
@@ -68,143 +74,211 @@ open class SceneView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
-    cameraNode: CameraNode = CameraNode()
-) : SurfaceView(context, attrs, defStyleAttr, defStyleRes),
-    SceneLifecycleOwner,
-    DefaultLifecycleObserver,
-    Choreographer.FrameCallback,
-    NodeParent,
-    GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
+    /**
+     * Provide your own instance if you want to share Filament resources between multiple views
+     */
+    val sharedEngine: Engine? = null,
+    /**
+     * Provide your own instance if you want to share [Node]s instances between multiple views
+     */
+    val sharedNodeManager: NodeManager? = null,
+    /**
+     * Provided by Filament to manage SurfaceView and SurfaceTexture
+     * To choose a specific rendering resolution, add the following line:
+     * `uiHelper.setDesiredSize(1280, 720)`
+     */
+    val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
+    camera: Camera? = null,
+    cameraManipulator: CameraManipulator? = null,
+    nodesManipulator: NodesManipulator? = null
+) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
 
-    enum class SelectionMode {
-        NONE, SINGLE, MULTIPLE;
+    /**
+     * @param depth The value of the depth buffer at the picking query location
+     */
+    data class PickingResult internal constructor(
+        val node: Node?,
+        val worldPosition: Position,
+        val depth: Float
+    )
 
-        /**
-         * ### Whether it is possible to deselect nodes
-         *
-         * A [Node] can be deselected if no [Node] s are picked on tap.
-         */
-        var allowDeselection = true
-    }
+    /**
+     * DisplayHelper is provided by Filament to manage the display
+     */
+    var displayHelper: DisplayHelper
 
+    /**
+     * An Engine instance main function is to keep track of all resources created by the user and
+     * manage the rendering thread as well as the hardware renderer
+     */
+    val engine: Engine
+
+    /**
+     * Lens's focal length in millimeters
+     *
+     * @see [Camera.setLensProjection]
+     */
+    var cameraFocalLength = 28f
+        set(value) {
+            field = value
+            updateCameraProjection()
+        }
+
+    val nodeManager: NodeManager
+
+    /**
+     * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which
+     * is a bundle of Filament textures, vertex buffers, index buffers, etc.
+     * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and
+     * components.
+     */
+    var modelLoader: ModelLoader
+
+    /**
+     * A Filament Material defines the visual appearance of an object
+     *
+     * Materials function as a templates from which [MaterialInstance]s can be spawned.
+     */
+    var materialLoader: MaterialLoader
+
+    /**
+     * IBLPrefilter creates and initializes GPU state common to all environment map filters
+     *
+     * @see IBLPrefilterContext
+     */
+    var iblPrefilter: IBLPrefilter
+
+    /**
+     * A transform component gives an entity a position and orientation in space in the coordinate
+     * space of its parent transform
+     *
+     * The [TransformManager] takes care of computing the world-space transform of each component
+     * (i.e. its transform relative to the root).
+     */
+    val transformManager get() = engine.transformManager
+
+    /**
+     * Factory and manager for *renderables*, which are entities that can be drawn
+     */
+    val renderableManager get() = engine.renderableManager
+
+    /**
+     * LightManager allows you to create a light source in the scene, such as a sun or street lights
+     */
+    val lightManager get() = engine.lightManager
+
+    /**
+     * A [Scene] is a flat container of [RenderableManager] and [LightManager] components
+     */
     val scene: Scene
-    val view: View
+
+    /**
+     * Encompasses all the state needed for rendering a [Scene]
+     */
+    val filamentView: FilamentView
+
+    /**
+     * A [Renderer] instance represents an operating system's window.
+     */
     val renderer: Renderer
-    open val cameraNode: CameraNode = cameraNode
 
-    /** @see View.setRenderQuality **/
-    var renderQuality: RenderQuality
-        get() = view.renderQuality
-        set(value) {
-            view.renderQuality = value
-        }
-
-    /** @see View.setDynamicResolutionOptions **/
-    var dynamicResolution: DynamicResolutionOptions
-        get() = view.dynamicResolutionOptions
-        set(value) {
-            view.dynamicResolutionOptions = value
-        }
-
-    /** @see View.setMultiSampleAntiAliasingOptions **/
-    var multiSampleAntiAliasingOptions: MultiSampleAntiAliasingOptions
-        get() = view.multiSampleAntiAliasingOptions
-        set(value) {
-            view.multiSampleAntiAliasingOptions = value
-        }
-
-    /** @see View.setAntiAliasing **/
-    var antiAliasing: AntiAliasing
-        get() = view.antiAliasing
-        set(value) {
-            view.antiAliasing = value
-        }
-
-    /** @see View.setAmbientOcclusionOptions **/
-    var ambientOcclusionOptions: AmbientOcclusionOptions
-        get() = view.ambientOcclusionOptions
-        set(value) {
-            view.ambientOcclusionOptions = value
-        }
-
-    /** @see View.setBloomOptions **/
-    var bloomOptions: BloomOptions
-        get() = view.bloomOptions
-        set(value) {
-            view.bloomOptions = value
-        }
-
-    /** @see View.setDithering **/
-    var dithering: Dithering
-        get() = view.dithering
-        set(value) {
-            view.dithering = value
-        }
-
+    val surfaceMirorer: SurfaceMirorer
 
     /**
-     * ### The main directional light of the scene
-     *
-     * Usually the Sun.
+     * Helper that enables camera interaction similar to sketchfab or Google Maps
      */
-    @Entity
-    var mainLight: Light? = null
-        set(value) {
-            field?.let { removeLight(it) }
-            field = value
-            value?.let { addLight(value) }
-        }
+    val cameraManipulator: CameraManipulator
 
+    val nodesManipulator: NodesManipulator
 
     /**
-     * ### Defines the lighting environment and the skybox of the scene
-     *
-     * Environments are usually captured as high-resolution HDR equirectangular images and processed by
-     * the cmgen tool to generate the data needed by IndirectLight.
-     *
-     * You can also process an hdr at runtime but this is more consuming.
-     *
-     * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
-     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
-     * mountains.
-     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the future.
-     *
-     * - When added to a Scene, the Skybox fills all untouched pixels.
-     *
-     * @see [KTXLoader.loadEnvironment]
-     * @see [HDRLoader.loadEnvironment]
+     * Responds to Android touch events with listeners and/or camera manipulator
      */
-    var environment: Environment? = null
+    lateinit var gestureDetector: GestureDetector
+
+    /**
+     * Get the world space size from the screen space size
+     */
+    val worldSize: Size get() = viewToWorld(width.toFloat(), height.toFloat())
+
+    /**
+     * Calculated number of pixels within a world space unit
+     */
+    val pxPerUnit: Size get() = Size(x = width.toFloat(), y = height.toFloat()) / worldSize
+
+    /**
+     * Associates the specified Camera with this View
+     *
+     * A Camera can be associated with several View instances.
+     * To remove an existing association, simply pass null.
+     * The View does not take ownership of the Scene pointer.
+     */
+    var camera: Camera? = null
         set(value) {
             field = value
-            indirectLight = value?.indirectLight
-            skybox = value?.skybox
+            filamentView.camera = value
         }
 
     /**
-     * ### IndirectLight is used to simulate environment lighting
+     * Always add a direct light source since it is required for shadowing.
+     *
+     * We highly recommend adding an [IndirectLight] as well.
+     */
+    var lightNode: LightNode? = null
+        set(value) {
+            field?.let { removeChildNode(it) }
+            field = value
+            value?.let { addChildNode(it) }
+        }
+
+    /**
+     * IndirectLight is used to simulate environment lighting
      *
      * Environment lighting has a two components:
      * - irradiance
      * - reflections (specular component)
      *
+     * Indirect light are usually captured as high-resolution HDR equirectangular images and
+     * processed by the cmgen tool to generate the data needed.
+     *
+     * You can also process an hdr at runtime but this is more consuming
+     *
+     * Currently IndirectLight is intended to be used for "distant probes", that is, to represent
+     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
+     * mountains.
+     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
+     * future.
+     *
      * @see IndirectLight
      * @see Scene.setIndirectLight
+     * @see KTX1Loader.loadIndirectLight
+     * @see HDRLoader.loadIndirectLight
      */
-    var indirectLight: IndirectLight? = null
+    var indirectLight: IndirectLight?
+        get() = scene.indirectLight
         set(value) {
-            field = value
             scene.indirectLight = value
         }
 
     /**
-     * ### The Skybox is drawn last and covers all pixels not touched by geometry
+     * Image Based Light Spherical harmonics from the content of a KTX file.
+     * The resulting array of 9 * 3 floats, or null on failure.
+     */
+    var sphericalHarmonics: FloatArray? = null
+
+    /**
+     * The Skybox is drawn last and covers all pixels not touched by geometry
+     *
+     * The skybox texture is rendered as though it were an infinitely large cube with the camera
+     * inside it. This means that the cubemap which is mapped onto the cube's exterior
+     * will appear mirrored. This follows the OpenGL conventions.
      *
      * When added to a [SceneView], the `Skybox` fills all untouched pixels.
      *
-     * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
+     * Set to null to unset the Skybox.
      *
-     * @see Skybox
+     * @see HDRLoader
+     * @see KTX1Loader
      * @see Scene.setSkybox
      */
     var skybox: Skybox?
@@ -213,478 +287,430 @@ open class SceneView @JvmOverloads constructor(
             scene.skybox = value
         }
 
-    var backgroundColor: Color?
-        get() = renderer.clearOptions.clearColor.toColor()
-        set(value) {
-            renderer.clearOptions = ClearOptions().apply {
-                clear = true
-                isTranslucent = value == null || value.a != 1.0f
-                if (value != null && value.a != 0.0f) {
-                    clearColor = value.toFloatArray()
-                }
-            }
-        }
-
     /**
-     * ### Set the background to transparent.
+     * List of direct child entities that are within the [Scene] and has a node component within
+     * this [SceneView.nodeManager]
+     *
+     * @see allChildNodes
      */
-    var isTranslucent: Boolean = false
-        set(value) {
-            if (field != value) {
-                field = value
-                setZOrderOnTop(value)
-                holder.setFormat(if (value) PixelFormat.TRANSLUCENT else PixelFormat.OPAQUE)
-                view.blendMode = if (value) BlendMode.TRANSLUCENT else BlendMode.OPAQUE
-            }
-        }
+    val childNodes: List<Node> get() = allChildNodes.filter { it.parentNode == null }
 
     /**
-     * ### Inverts winding for front face rendering
+     * Flat list of all children entities within the hierarchy that are within the [Scene] and
+     * has a node component within this [SceneView.nodeManager]
      *
-     * Inverts the winding order of front faces. By default front faces use a counter-clockwise
-     * winding order. When the winding order is inverted, front faces are faces with a clockwise
-     * winding order.
-     *
-     * Changing the winding order will directly affect the culling mode in materials
-     * (see [com.google.android.filament.Material.getCullingMode]).
-     *
-     * Inverting the winding order of front faces is useful when rendering mirrored reflections
-     * (water, mirror surfaces, front camera in AR, etc.).
-     *
-     * `true` to invert front faces, false otherwise.
+     * @see Scene.hasEntity
+     * @see NodeManager.getNode
      */
-    var isFrontFaceWindingInverted: Boolean
-        get() = view.isFrontFaceWindingInverted
-        set(value) {
-            view.isFrontFaceWindingInverted = value
-        }
-
-    val collisionSystem = CollisionSystem()
-
-    val cameraManipulatorTarget: Node? = null
-        get() = field ?: selectedNode ?: allChildren.lastOrNull { it is ModelNode }
-
-    var selectionMode = SelectionMode.SINGLE
-
-    var selectedNodes: List<Node>
-        get() = allChildren.filter { it.isSelected }
-        set(value) = allChildren.forEach { it.isSelected = value.contains(it) }
-
-    var selectedNode: Node?
-        get() = selectedNodes.firstOrNull()
-        set(value) {
-            selectedNodes = listOfNotNull(value)
-        }
-
-    open val selectionVisualizer: (() -> Node)? = {
-        ModelNode(context, lifecycle, "sceneview/models/node_selector.glb").apply {
-            isSelectable = false
-            collisionShape = null
-        }
-    }
+    val allChildNodes: List<Node>
+        get() = nodeManager.entities.filter { scene.hasEntity(it) }
+            .mapNotNull { nodeManager.getNode(it) }
 
     /**
-     * ### Invoked when an frame is processed
+     * Invoked when an frame is processed
      *
      * Registers a callback to be invoked when a valid Frame is processing.
-     *
-     * The callback to be invoked once per frame **immediately before the scene
-     * is updated**.
-     *
-     * The callback will only be invoked if the Frame is considered as valid.
      */
-    var onFrame: ((frameTime: FrameTime) -> Unit)? = null
+    var onFrameListener: ((frameTime: FrameTime) -> Unit)? = null
+    var onTapListener: ((e: MotionEvent, pickingResult: PickingResult) -> Unit)? = null
 
-    /**
-     * ### Invoked when the `SceneView` is tapped
-     *
-     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
-     * used to find a touched node. The ID of the Filament renderable can be used to determine what
-     * part of a model is tapped.
-     *
-     * - `node` - The node that was tapped or `null`.
-     * - `renderable` - The ID of the Filament renderable that was tapped.
-     * - `motionEvent` - The motion event that caused the tap.
-     */
-    var onTap: ((motionEvent: MotionEvent, node: Node?, renderable: Renderable?) -> Unit)? = null
+    // Choreographer is used to schedule new frames
+    private val choreographer: Choreographer
 
-    protected var sceneLifecycle: SceneLifecycle? = null
+    // Performs the rendering and schedules new frames
+    private val frameScheduler = FrameCallback()
 
-    protected val activity: ComponentActivity
-        get() = try {
-            findFragment<Fragment>().requireActivity()
-        } catch (e: Exception) {
-            context.getActivity()!!
-        }
-
-    private val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
-        renderCallback = SurfaceCallback()
-        attachTo(this@SceneView)
-    }
-    private val displayHelper = DisplayHelper(context)
+    // A swap chain is Filament's representation of a surface
     private var swapChain: SwapChain? = null
 
-    private val parentLifecycleObserver = LifecycleEventObserver { _, event ->
-        lifecycle.currentState = event.targetState
-    }
+    internal lateinit var windowViewManager: WindowViewManager
 
-    override var _children = listOf<Node>()
+    private val colorGrading: ColorGrading
 
-    // TODO: Move to internal when ViewRenderable is kotlined
-    val viewAttachmentManager by lazy { ViewAttachmentManager(context, this) }
+    private val selectionModel: Model
 
     private val pickingHandler by lazy { Handler(Looper.getMainLooper()) }
 
     private var currentFrameTime: FrameTime = FrameTime(0)
 
     private var lastTouchEvent: MotionEvent? = null
-    private val gestureDetector by lazy { GestureDetector(context, ::pickNode, this) }
 
-    protected open val cameraGestureDetector: CameraGestureDetector? by lazy {
-        CameraGestureDetector(this, CameraGestureListener())
-    }
+    internal open val isOpaque get() = (background as? ColorDrawable)?.alpha == 255
 
-    // TODO: Ask Filament to add a startPosition and startRotation in order to handle previous
-    //  possible programmatic camera transforms.
-    //  Better would be that we don't have to create a new Manipulator and just update  it when
-    //  the camera is programmatically updated so it don't come back to  initial position.
-    //  Return field for now will use the default node position target or maybe just don't let the
-    //  user enable manipulator until the camera position is not anymore at its default
-    //  targetPosition
-    protected open val cameraManipulator: Manipulator? by lazy {
-        Manipulator.Builder()
-            .apply {
-                cameraNode.worldPosition.let { (x, y, z) ->
-                    orbitHomePosition(x, y, z)
-                }
-                cameraManipulatorTarget?.worldPosition?.let { (x, y, z) ->
-                    targetPosition(x, y, z)
-                }
-            }
-            .viewport(width, height)
-            .zoomSpeed(0.05f)
-            .build(Manipulator.Mode.ORBIT)
-    }
-
-    private val surfaceCopier by lazy { SurfaceCopier(lifecycle) }
+    val loadingJobs = mutableListOf<Job>()
+    internal val cameras = mutableListOf<Camera>()
+    internal val indirectLights = mutableListOf<IndirectLight>()
+    internal val skyboxes = mutableListOf<Skybox>()
+    internal val geometries = mutableListOf<Geometry>()
+    internal val renderables = mutableListOf<Entity>()
+    internal val lights = mutableListOf<Entity>()
+    internal val materials = mutableListOf<Material>()
+    internal val materialInstances = mutableListOf<MaterialInstance>()
+    internal val textures = mutableListOf<Texture>()
+    internal val streams = mutableListOf<Stream>()
+    internal val viewStreams = mutableListOf<ViewStream>()
 
     init {
-        Filament.retain()
+        displayHelper = DisplayHelper(context)
+        setupWindowViewManager()
 
+        choreographer = Choreographer.getInstance()
+
+        // Setup Filament
+        engine = sharedEngine ?: Engine.create()
+        nodeManager = sharedNodeManager ?: NodeManager(engine)
+        modelLoader = ModelLoader(engine, context)
+        materialLoader = MaterialLoader(engine, context)
+        iblPrefilter = IBLPrefilter(engine)
+
+        val backgroundColor = (background as? ColorDrawable)?.let { Color(it) }
         renderer = engine.createRenderer()
-        scene = engine.createScene()
-        view = engine.createView()
-        // on mobile, better use lower quality color buffer
-        view.renderQuality = view.renderQuality.apply {
-            hdrColorBuffer = View.QualityLevel.MEDIUM
-        }
-        // dynamic resolution often helps a lot
-        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
-            enabled = true
-            quality = View.QualityLevel.MEDIUM
-        }
-        // MSAA is needed with dynamic resolution MEDIUM
-        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
-            enabled = true
-        }
-        // FXAA is pretty cheap and helps a lot
-        view.antiAliasing = View.AntiAliasing.FXAA
-        // ambient occlusion is the cheapest effect that adds a lot of quality
-        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
-            enabled = true
-        }
-        // bloom is pretty expensive but adds a fair amount of realism
-        view.bloomOptions = view.bloomOptions.apply {
-            enabled = true
-        }
-        view.scene = scene
-        view.camera = cameraNode.camera
-        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example material
-        // orange 500.
-        view.colorGrading = ColorGrading.Builder()
-            .toneMapping(ColorGrading.ToneMapping.FILMIC)
-            .build()
-
-        val (r, g, b) = Colors.cct(6_500.0f)
-        mainLight = LightManager.Builder(LightManager.Type.DIRECTIONAL)
-            .color(r, g, b)
-            .intensity(100_000.0f)
-            .direction(0.0f, -1.0f, 0.0f)
-            .castShadows(true)
-            .build(lifecycle)
-        environment = KTXLoader.loadEnvironmentSync(
-            context, lifecycle,
-            iblKtxFileLocation = defaultIblLocation
-        )
-
-        cameraNode.parent = this
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-
-        lifecycle.addObserver(this)
-
-        findViewTreeLifecycleOwner()?.lifecycle?.let { viewTreeLifecycle ->
-            viewTreeLifecycle.addObserver(parentLifecycleObserver)
-            if (lifecycle.currentState != viewTreeLifecycle.currentState) {
-                lifecycle.currentState = viewTreeLifecycle.currentState
+        renderer.clearOptions = renderer.clearOptions.apply {
+            clear = !uiHelper.isOpaque
+            if (backgroundColor?.a == 1.0f) {
+                clearColor = backgroundColor.toFloatArray()
             }
         }
-    }
 
-    override fun onDetachedFromWindow() {
-        findViewTreeLifecycleOwner()?.lifecycle?.removeObserver(parentLifecycleObserver)
-        if (lifecycle.currentState != Lifecycle.State.DESTROYED) {
-            lifecycle.currentState = Lifecycle.State.DESTROYED
+        scene = engine.createScene()
+        filamentView = engine.createView().apply {
+            // on mobile, better use lower quality color buffer
+            renderQuality = renderQuality.apply {
+                hdrColorBuffer = QualityLevel.MEDIUM
+            }
+            // dynamic resolution often helps a lot
+            dynamicResolutionOptions = dynamicResolutionOptions.apply {
+                enabled = true
+                quality = QualityLevel.MEDIUM
+            }
+            // MSAA is needed with dynamic resolution MEDIUM
+            multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
+                enabled = true
+            }
+            // FXAA is pretty cheap and helps a lot
+            antiAliasing = AntiAliasing.FXAA
+            // ambient occlusion is the cheapest effect that adds a lot of quality
+            ambientOcclusionOptions = ambientOcclusionOptions.apply {
+                enabled = true
+            }
+            // bloom is pretty expensive but adds a fair amount of realism
+            bloomOptions = bloomOptions.apply {
+                enabled = true
+            }
         }
-        destroy()
-        super.onDetachedFromWindow()
-    }
+        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
+        // material orange 500.
+        colorGrading = ColorGrading.Builder()
+            .toneMapping(ColorGrading.ToneMapping.FILMIC)
+            .build(engine)
+        filamentView.colorGrading = colorGrading
+        filamentView.scene = scene
 
-    override fun onResume(owner: LifecycleOwner) {
-        super.onResume(owner)
+        surfaceMirorer = SurfaceMirorer(engine, filamentView, renderer)
 
-        viewAttachmentManager.onResume()
-
-        // Start the drawing when the renderer is resumed.  Remove and re-add the callback
-        // to avoid getting called twice.
-        Choreographer.getInstance().removeFrameCallback(this)
-        Choreographer.getInstance().postFrameCallback(this)
-    }
-
-    override fun onPause(owner: LifecycleOwner) {
-        super.onPause(owner)
-
-        Choreographer.getInstance().removeFrameCallback(this)
-
-        viewAttachmentManager.onPause()
-    }
-
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onSurfaceChanged(width, height)
+        this.camera = camera ?: engine.createCamera(EntityManager.get().create()).apply {
+            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+            // Since we define a light that has the same intensity as the sun, it guarantees a
+            // proper exposure
+            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
         }
+
+        this.cameraManipulator = cameraManipulator ?: Manipulator.Builder()
+            .targetPosition(DEFAULT_MODEL_POSITION)
+            .viewport(width, height)
+            .build(Manipulator.Mode.ORBIT)
+
+        selectionModel = modelLoader.createModel("models/selection.glb")!!
+        this.nodesManipulator = nodesManipulator ?: NodesManipulator(engine) { nodeSize ->
+            ModelNode(this@SceneView, modelLoader.createInstance(selectionModel)!!).apply {
+                isSelectable = false
+                size = size.apply {
+                    xy = nodeSize.xy
+                }
+            }
+        }
+
+        setupGestureDetector()
+
+        // Taken from Filament ModelViewer
+        val (r, g, b) = Colors.cct(6_500.0f)
+        lightNode = LightNode(engine, nodeManager, LightManager.Type.DIRECTIONAL) {
+            color(r, g, b)
+            intensity(100_000.0f)
+            direction(0.0f, -1.0f, 0.0f)
+            castShadows(true)
+        }
+
+        setupSurfaceView(backgroundColor)
     }
 
-    /**
-     * Callback that occurs for each display frame. Updates the scene and reposts itself to be called
-     * by the choreographer on the next frame.
-     */
-    override fun doFrame(frameTimeNanos: Long) {
-        // Always post the callback for the next frame.
-        Choreographer.getInstance().postFrameCallback(this)
-
-        currentFrameTime = FrameTime(frameTimeNanos, currentFrameTime.nanoseconds)
-        doFrame(currentFrameTime)
-    }
-
-    open fun doFrame(frameTime: FrameTime) {
+    open fun onFrame(frameTime: FrameTime) {
         if (!uiHelper.isReadyToRender) {
             return
         }
 
         // Allow the resource loader to finalize textures that have become ready.
-        resourceLoader.asyncUpdateLoad()
+        modelLoader.onFrame(frameTime)
 
-        transformManager.openLocalTransformTransaction()
-
-        // Only update the camera manipulator if a touch has been made
-        if (lastTouchEvent != null) {
-            cameraManipulator?.let { manipulator ->
-                manipulator.update(frameTime.intervalSeconds.toFloat())
-                // Extract the camera basis from the helper and push it to the Filament camera.
-                cameraNode.transform = manipulator.transform
-            }
+        // Extract the camera basis from the helper and push it to the Filament camera.
+        camera?.apply {
+            val (eye, target, upward) = cameraManipulator.getLookAt()
+            lookAt(eye, target, upward)
         }
 
-        lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onFrame(frameTime)
+        // Update child nodes
+        allChildNodes.forEach {
+            it.onFrame(frameTime)
         }
-        onFrame?.invoke(frameTime)
 
-        transformManager.commitLocalTransformTransaction()
+        // Call listeners
+        onFrameListener?.invoke(frameTime)
 
-        // Render the scene, unless the renderer wants to skip the frame.
+        // Render the scene, unless the renderer wants to skip the frame
+        // If beginFrame() returns false we skip the frame
+        // This means we are sending frames too quickly to the GPU
         if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
-            renderer.render(view)
+            renderer.render(filamentView)
             renderer.endFrame()
         }
-    }
 
-    /** @see Scene.addEntity */
-    fun addEntity(@Entity entity: Int) = scene.addEntity(entity)
-
-    /** @see Scene.removeEntity */
-    fun removeEntity(@Entity entity: Int) = scene.removeEntity(entity)
-
-    /** @see Scene.addEntities */
-    fun addEntities(@Entity entities: IntArray) = scene.addEntities(entities)
-
-    /** @see Scene.removeEntities */
-    fun removeEntities(@Entity entities: IntArray) = scene.removeEntities(entities)
-
-    /** @see Scene.addEntity */
-    fun addLight(@Entity light: Light) = scene.addEntity(light)
-
-    /** @see Scene.removeEntity */
-    fun removeLight(@Entity light: Light) = scene.removeEntity(light)
-
-    override fun setBackgroundDrawable(background: Drawable?) {
-        super.setBackgroundDrawable(background)
-
-        if (holder != null) {
-            updateBackground()
-        }
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
-        // This makes sure that the view's onTouchListener is called.
-        if (!super.onTouchEvent(motionEvent)) {
-            lastTouchEvent = motionEvent
-            gestureDetector.onTouchEvent(motionEvent)
-            cameraGestureDetector?.onTouchEvent(motionEvent)
-            return true
-        }
-        return false
-    }
-
-    override fun onSingleTapConfirmed(e: NodeMotionEvent) {
-        onTap(e.motionEvent, e.node, e.renderable)
+        surfaceMirorer.onFrame()
     }
 
     /**
-     * ### Invoked when the `SceneView` is tapped
+     * Add direct child [Node] and all its descendant child nodes to the [scene]
      *
-     * Calls the `onTap` listener if it is available.
-     *
-     * @param node The node that was tapped or `null`.
-     * @param renderable The ID of the Filament renderable that was tapped.
-     * @param motionEvent The motion event that caused the tap.
+     * Any future child add or remove inside the node hierarchy will be automatically applied to the
+     * [scene].
      */
-    open fun onTap(motionEvent: MotionEvent, node: Node?, renderable: Renderable?) {
-        if (node != null) {
-            when (selectionMode) {
-                SelectionMode.SINGLE ->
-                    if (node.isSelectable && !node.isSelected) {
-                        selectedNode = node
-                    } else if (selectionMode.allowDeselection) {
-                        selectedNode = null
-                    }
-                SelectionMode.MULTIPLE -> selectedNodes =
-                    if (node.isSelectable && !node.isSelected) {
-                        selectedNodes + node
-                    } else {
-                        selectedNodes - node
-                    }
-                else -> if (selectionMode.allowDeselection) {
-                    selectedNode = null
-                }
-            }
-        } else if (selectionMode.allowDeselection) {
-            selectedNode = null
+    fun addChildNode(node: Node) {
+        (listOf(node) + node.allChildNodes).forEach { childNode ->
+            childNode.onChildAdded += ::addChildNode
+            childNode.onChildRemoved += ::removeChildNode
+            scene.addEntities(childNode.sceneEntities.toIntArray())
         }
-
-        onTap?.invoke(motionEvent, node, renderable)
     }
 
     /**
-     * ### Picks a node at given coordinates
+     * Add multiple direct child [Node]s and all its descendant child nodes to the [scene]
+     *
+     * @see addChildNode
+     */
+    fun addChildNodes(nodes: List<Node>) = nodes.forEach { addChildNode(it) }
+
+    /**
+     * Remove a direct child [Node] and all its descendant child nodes from the [scene]
+     */
+    fun removeChildNode(node: Node) {
+        (listOf(node) + node.allChildNodes).forEach { childNode ->
+            childNode.onChildAdded -= ::addChildNode
+            childNode.onChildRemoved -= ::removeChildNode
+            scene.removeEntity(childNode.entity)
+        }
+    }
+
+    /**
+     * Picks a node at given coordinates
      *
      * Filament picking works with a small delay, therefore, a callback is used.
      * If no node is picked, the callback is invoked with a `null` value instead of a node.
      *
      * @param x The x coordinate within the `SceneView`.
      * @param y The y coordinate within the `SceneView`.
-     * @param onPickingCompleted Called when picking completes.
+     * @param onResult Called when picking completes.
      */
-    fun pickNode(
-        x: Int,
-        y: Int,
-        onPickingCompleted: (node: ModelNode?, renderable: Renderable) -> Unit
-    ) {
+    fun pickNode(x: Int, y: Int, onResult: (pickingResult: PickingResult) -> Unit) {
         // Invert the y coordinate since its origin is at the bottom
+        //TODO: Should we remove the -1?
         val invertedY = height - 1 - y
-
-        val start = System.currentTimeMillis()
-
-        view.pick(x, invertedY, pickingHandler) { pickResult ->
-            val end = System.currentTimeMillis()
-
-            Log.d("Test", "Picking took ${end - start} ms")
-
-            val pickedRenderable = pickResult.renderable
-            val pickedNode = allChildren
-                .mapNotNull { it as? ModelNode }
-                .firstOrNull { modelNode ->
-                    modelNode.model?.renderableEntities?.contains(pickedRenderable) == true
-                }
-            onPickingCompleted.invoke(pickedNode, pickedRenderable)
+        filamentView.pick(x, invertedY, pickingHandler) { result ->
+            onResult(
+                PickingResult(
+                    node = nodeManager.getNode(result.renderable),
+                    worldPosition = result.fragCoords.let { (x, y, z) ->
+                        filamentView.viewportToWorld(x, y, z)
+                    },
+                    depth = result.depth
+                )
+            )
         }
-    }
-
-    fun pickNode(
-        e: MotionEvent,
-        onPickingCompleted: (e: NodeMotionEvent) -> Unit
-    ) = pickNode(e.x.toInt(), e.y.toInt()) { node, renderable ->
-        onPickingCompleted(NodeMotionEvent(e, node, renderable))
-    }
-
-    fun startRecording(mediaRecorder: MediaRecorder) {
-        mediaRecorder.apply {
-            setVideoSource(MediaRecorder.VideoSource.SURFACE)
-        }
-        mediaRecorder.prepare()
-        mediaRecorder.start()
-        surfaceCopier.startMirroring(mediaRecorder.surface)
-    }
-
-    fun stopRecording(mediaRecorder: MediaRecorder) {
-        surfaceCopier.stopMirroring(mediaRecorder.surface)
-        mediaRecorder.stop()
-        mediaRecorder.reset()
-        mediaRecorder.surface.release()
     }
 
     /**
-     * ### Force destroy
+     * Picks a node at given motion event
      *
-     * You don't have to call this method because everything is already lifecycle aware.
-     * Meaning that they are already self destroyed when they receive the `onDestroy()` callback.
+     * @see pickNode
      */
-    open fun destroy() {
+    fun pickNode(e: MotionEvent, onResult: (pickingResult: PickingResult) -> Unit) =
+        pickNode(e.x.toInt(), e.y.toInt(), onResult)
+
+    fun startMirroring(mediaRecorder: MediaRecorder) =
+        surfaceMirorer.startMirroring(mediaRecorder.surface, width = width, height = height)
+
+    fun stopMirroring(mediaRecorder: MediaRecorder) =
+        surfaceMirorer.stopMirroring(mediaRecorder.surface)
+
+    /**
+     * Get a world space position from a screen space position
+     *
+     * @see viewportToWorld
+     */
+    fun viewToWorld(x: Float, y: Float, z: Float = 1.0f) = filamentView.viewportToWorld(
+        // Invert Y because SceneView Y points down and Filament points up
+        x = x, y = height - y, z = z
+    )
+
+    /**
+     * Get a screen space position from a world space position
+     *
+     * @see worldToViewport
+     */
+    fun worldToView(worldPosition: Position) = filamentView.worldToViewport(worldPosition).apply {
+        // Invert Y because Filament points up and screen Y points down.
+        y = height - y
+    }
+
+    fun resume() {
+        windowViewManager.resume(this)
+        choreographer.postFrameCallback(frameScheduler)
+    }
+
+    fun pause() {
+        choreographer.removeFrameCallback(frameScheduler)
+        windowViewManager.pause()
+    }
+
+    fun destroy() {
+        loadingJobs.forEach { it.cancel() }
+        loadingJobs.clear()
+
+        // Stop any pending frame
+        choreographer.removeFrameCallback(frameScheduler)
+        // Always detach the surface before destroying the engine
         uiHelper.detach()
+
+        windowViewManager.destroy()
+
+        cameras.toList().forEach { runCatching { destroyCamera(it) } }
+        cameras.clear()
+
+        indirectLights.toList().forEach { runCatching { destroyIndirectLight(it) } }
+        indirectLights.clear()
+
+        skyboxes.toList().forEach { runCatching { destroySkybox(it) } }
+        skyboxes.clear()
+
+        geometries.toList().forEach { runCatching { destroyGeometry(it) } }
+        geometries.clear()
+
+        renderables.toList().forEach { runCatching { destroyRenderable(it) } }
+        renderables.clear()
+
+        lights.toList().forEach { runCatching { destroyLight(it) } }
+        lights.clear()
+
+        materialInstances.toList().forEach { runCatching { destroyMaterialInstance(it) } }
+        materialInstances.clear()
+
+        materials.toList().forEach { runCatching { destroyMaterial(it) } }
+        materials.clear()
+
+        textures.toList().forEach { runCatching { destroyTexture(it) } }
+        textures.clear()
+
+        streams.toList().forEach { runCatching { destroyStream(it) } }
+        streams.clear()
+
+        viewStreams.toList().forEach { runCatching { destroyViewStream(it) } }
+        viewStreams.clear()
+
+        modelLoader.destroy()
+        materialLoader.destroy()
+        iblPrefilter.destroy()
+
+        engine.destroyRenderer(renderer)
+        engine.destroyView(filamentView)
+        engine.destroyColorGrading(colorGrading)
+        engine.destroyScene(scene)
+
+        camera?.let {
+            engine.destroyCameraComponent(it.entity)
+            EntityManager.get().destroy(it.entity)
+        }
 
         // Use runCatching because they should normally already been destroyed by the lifecycle and
         // Filament will throw an Exception when destroying them twice.
-        runCatching { cameraNode.destroy() }
-        runCatching { mainLight?.destroy() }
-        runCatching { indirectLight?.destroy() }
-        runCatching { skybox?.destroy() }
+        lightNode?.let {
+            engine.destroyEntity(it.entity)
+            EntityManager.get().destroy(it.entity)
+        }
+        indirectLight?.let { engine.destroyIndirectLight(it) }
+        skybox?.let { engine.destroySkybox(it) }
 
-        ResourceManager.getInstance().destroyAllResources()
+        if (nodeManager != sharedNodeManager) {
+            // Destroys all the created nodes
+            nodeManager.destroy()
+        }
 
-        engine.destroyRenderer(renderer)
-        engine.destroyView(view)
-        engine.destroyScene(scene)
-
-        Filament.release()
+        if (engine != sharedEngine) {
+            engine.destroy()
+        }
     }
 
-    override fun getLifecycle() =
-        sceneLifecycle ?: SceneLifecycle(this).also {
-            sceneLifecycle = it
-        }
+    /**
+     * Pass your lifecycle to the View in order to automatically handle the lifecycle states
+     *
+     * You can also handle it manually by calling the corresponding functions
+     */
+    fun setLifecycle(lifecycle: Lifecycle) {
+        lifecycle.observe(onResume = { resume() }, onPause = { pause() }, onDestroy = { destroy() })
+    }
 
-    private fun updateBackground() {
-        if ((background is ColorDrawable && background.alpha == 255) || skybox != null) {
-            backgroundColor = colorOf(color = (background as? ColorDrawable)?.color ?: BLACK)
-            isTranslucent = false
-        } else {
-            backgroundColor = colorOf(a = 0.0f)
-            isTranslucent = true
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        super.onTouchEvent(event)
+
+        lastTouchEvent = event
+        gestureDetector.onTouchEvent(event)
+
+        return true
+    }
+
+    protected fun getActivity(): ComponentActivity = try {
+        findFragment<Fragment>().requireActivity()
+    } catch (e: Exception) {
+        context.getActivity()!!
+    }
+
+    private fun setupWindowViewManager() {
+        windowViewManager = WindowViewManager(this)
+    }
+
+    private fun setupGestureDetector() {
+        gestureDetector = GestureDetector(this, cameraManipulator, nodesManipulator)
+        gestureDetector.onSingleTapConfirmedListeners += { e, pickingResult ->
+            onTapListener?.invoke(e, pickingResult)
         }
+    }
+
+    private fun setupSurfaceView(backgroundColor: Color?) {
+        // Setup SurfaceView
+        uiHelper.renderCallback = SurfaceCallback()
+        // Must be called before attachTo
+        uiHelper.isOpaque = isOpaque || backgroundColor?.a == 1.0f
+        uiHelper.attachTo(this)
+    }
+
+    private fun updateCameraProjection() {
+        val width = filamentView.viewport.width
+        val height = filamentView.viewport.height
+        val aspect = width.toDouble() / height.toDouble()
+        camera?.setLensProjection(
+            cameraFocalLength.toDouble(),
+            aspect,
+            NEAR_PLANE,
+            FAR_PLANE
+        )
     }
 
     inner class SurfaceCallback : UiHelper.RendererCallback {
@@ -704,51 +730,37 @@ open class SceneView @JvmOverloads constructor(
         }
 
         override fun onResized(width: Int, height: Int) {
-            view.viewport = Viewport(0, 0, width, height)
-            cameraManipulator?.setViewport(width, height)
-            cameraNode.refreshProjectionMatrix()
+            filamentView.viewport = Viewport(0, 0, width, height)
+            cameraManipulator.setViewport(width, height)
+            windowViewManager.setSize(width, height)
+            updateCameraProjection()
         }
     }
 
-    inner class CameraGestureListener : CameraGestureDetector.OnCameraGestureListener {
+    inner class FrameCallback : Choreographer.FrameCallback {
+        private val startTime = System.nanoTime()
 
-        override fun onScroll(x: Int, y: Int, scrollDelta: Float) {
-            cameraManipulator?.scroll(x, y, scrollDelta)
-        }
+        /**
+         * Callback that occurs for each display frame. Updates the scene and reposts itself to be
+         * called by the choreographer on the next frame.
+         */
+        override fun doFrame(frameTimeNanos: Long) {
+            // Always post the callback for the next frame.
+            choreographer.postFrameCallback(this)
 
-        override fun onGrabBegin(x: Int, y: Int, strafe: Boolean) {
-            cameraManipulator?.grabBegin(x, y, strafe)
-        }
-
-        override fun onGrabUpdate(x: Int, y: Int) {
-            cameraManipulator?.grabUpdate(x, y)
-        }
-
-        override fun onGrabEnd() {
-            cameraManipulator?.grabEnd()
+            currentFrameTime = FrameTime(frameTimeNanos, currentFrameTime.nanoseconds)
+            onFrame(currentFrameTime)
         }
     }
-}
 
-/**
- * A SurfaceView that integrates with ARCore and renders a scene.
- */
-interface SceneLifecycleOwner : LifecycleOwner {
-}
+    companion object {
+        // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
+        init {
+            Utils.init()
+        }
 
-open class SceneLifecycle(open val sceneView: SceneView) : DefaultLifecycle(sceneView) {
-}
-
-interface SceneLifecycleObserver : DefaultLifecycleObserver {
-    /**
-     * Records a change in surface dimensions.
-     *
-     * @param width the updated width of the surface.
-     * @param height the updated height of the surface.
-     */
-    fun onSurfaceChanged(width: Int, height: Int) {
-    }
-
-    fun onFrame(frameTime: FrameTime) {
+        const val NEAR_PLANE = 0.05 // 5 cm
+        const val FAR_PLANE = 1000.0 // 1 km
+        val DEFAULT_MODEL_POSITION = Position(0.0f, 0.0f, -4.0f)
     }
 }

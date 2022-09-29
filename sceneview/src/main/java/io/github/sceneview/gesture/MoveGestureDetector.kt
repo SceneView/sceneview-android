@@ -2,10 +2,13 @@ package io.github.sceneview.gesture
 
 import android.content.Context
 import android.view.MotionEvent
+import io.github.sceneview.gesture.MoveGestureDetector.OnMoveListener
 import kotlin.math.pow
 
+private const val MIN_DRAG_DISTANCE = 1000f
+
 /**
- * ### Detects move transformation gestures using the supplied [MotionEvent]s
+ * Detects move transformation gestures using the supplied [MotionEvent]s
  *
  * The [OnMoveListener] callback will notify users when a particular gesture event has
  * occurred.
@@ -19,15 +22,11 @@ import kotlin.math.pow
  *
  * @param context the application's context
  * @param listener the listener invoked for all the callbacks, this must not be null
- * @param handler the handler to use for running deferred listener events
  */
-
-private const val MIN_DRAG_DISTANCE = 1000f
-
 open class MoveGestureDetector(private val context: Context, private val listener: OnMoveListener) {
 
     /**
-     * ### The listener for receiving notifications when gestures occur
+     * The listener for receiving notifications when gestures occur
      *
      * If you want to listen for the different gestures then implement this interface.
      *
@@ -38,7 +37,7 @@ open class MoveGestureDetector(private val context: Context, private val listene
      */
     interface OnMoveListener {
         /**
-         * ### Responds to moving events for a gesture in progress
+         * Responds to moving events for a gesture in progress
          *
          * Reported by pointer motion.
          *
@@ -49,10 +48,10 @@ open class MoveGestureDetector(private val context: Context, private val listene
          * event is handled. This can be useful if an application, for example, only wants to update
          * rotation factors if the change is greater than 0.01.
          */
-        fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean
+        fun onMove(detector: MoveGestureDetector, e: MotionEvent)
 
         /**
-         * ### Responds to the beginning of a moving gesture
+         * Responds to the beginning of a moving gesture
          *
          * Reported by new pointers going down.
          *
@@ -62,10 +61,10 @@ open class MoveGestureDetector(private val context: Context, private val listene
          * For example, if a gesture is beginning with a focal point outside of a region where it
          * makes sense, onRotateBegin() may return false to ignore the rest of the gesture.
          */
-        fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent): Boolean
+        fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent)
 
         /**
-         * ### Responds to the end of a move gesture
+         * Responds to the end of a move gesture
          *
          * Reported by existing pointers going up.
          *
@@ -79,7 +78,7 @@ open class MoveGestureDetector(private val context: Context, private val listene
     }
 
     /**
-     * ### A convenience class to extend when you only want to listen for a subset of
+     * A convenience class to extend when you only want to listen for a subset of
      * move-related events
      *
      * This implements all methods in [OnMoveListener] but does nothing.
@@ -88,8 +87,8 @@ open class MoveGestureDetector(private val context: Context, private val listene
      * [OnMoveListener.onMoveBegin] returns `true`.
      */
     interface SimpleOnMoveListener : OnMoveListener {
-        override fun onMove(detector: MoveGestureDetector, e: MotionEvent) = false
-        override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent) = true
+        override fun onMove(detector: MoveGestureDetector, e: MotionEvent) {}
+        override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent) {}
         override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) {}
     }
 

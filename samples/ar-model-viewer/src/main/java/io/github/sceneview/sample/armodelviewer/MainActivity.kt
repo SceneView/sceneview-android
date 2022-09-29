@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         modelIndex = (modelIndex + 1) % models.size
         modelNode = ArModelNode(model.placementMode).apply {
             applyPoseRotation = model.applyPoseRotation
-            loadModelGlbAsync(
+            loadModelAsync(
                 context = this@MainActivity,
                 lifecycle = lifecycle,
                 glbFileLocation = model.fileLocation,

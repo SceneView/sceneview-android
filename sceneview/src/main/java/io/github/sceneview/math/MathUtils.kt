@@ -1,7 +1,6 @@
 package io.github.sceneview.math
 
-import com.google.ar.sceneform.math.MathHelper
-import com.google.ar.sceneform.math.Vector3
+import com.google.android.filament.Box
 import dev.romainguy.kotlin.math.*
 
 const val DEFAULT_EPSILON = 0.001f
@@ -26,23 +25,33 @@ fun FloatArray.toPosition() = this.let { (x, y, z) -> Position(x, y, z) }
 fun FloatArray.toRotation() = this.let { (x, y, z) -> Rotation(x, y, z) }
 fun FloatArray.toScale() = this.let { (x, y, z) -> Scale(x, y, z) }
 fun FloatArray.toDirection() = this.let { (x, y, z) -> Direction(x, y, z) }
+fun FloatArray.toQuaternion() = this.let { (x, y, z, w) -> Quaternion(x, y, z, w) }
+fun FloatArray.toSize() = this.let { (x, y, z) -> Size(x, y, z) }
+fun FloatArray.toTransform() = Transform.of(*this)
+fun DoubleArray.toTransform() = Transform.of(*this.map { it.toFloat() }.toFloatArray())
+
+operator fun Mat4.times(v: Float3) = (this * Float4(v, 1f)).xyz
 
 fun Rotation.toQuaternion(order: RotationsOrder = RotationsOrder.ZYX) =
     Quaternion.fromEuler(this, order)
 
 fun Quaternion.toRotation(order: RotationsOrder = RotationsOrder.ZYX) = eulerAngles(this, order)
 
-//TODO: Remove when everything use Float3
-fun Float3.toVector3() = Vector3(x, y, z)
+fun min(a: List<Float3>): Float3 {
+    var min = Float3()
+    a.forEach {
+        min = min(min, it)
+    }
+    return min
+}
 
-//TODO: Remove when everything use Float3
-fun Vector3.toFloat3() = Float3(x, y, z)
-
-//TODO: Remove when everything use Quaternion
-fun Quaternion.toOldQuaternion() = com.google.ar.sceneform.math.Quaternion(x, y, z, w)
-
-//TODO: Remove when everything use Quaternion
-fun com.google.ar.sceneform.math.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
+fun max(a: List<Float3>): Float3 {
+    var max = Float3()
+    a.forEach {
+        max = max(max, it)
+    }
+    return max
+}
 
 val Mat4.quaternion: Quaternion
     get() = rotation(this).toQuaternion()
@@ -54,71 +63,12 @@ fun Mat4.toColumnsFloatArray() = floatArrayOf(
     w.x, w.y, w.z, w.w
 )
 
-fun lerp(
-    start: Float3,
-    end: Float3,
-    deltaSeconds: Float,
-    epsilon: Float = DEFAULT_EPSILON
-): Float3 {
-    return if (!equals(start, end, epsilon)) {
-        return mix(start, end, deltaSeconds)
-    } else end
-}
-
-fun lerp(
-    start: Quaternion,
-    end: Quaternion,
-    deltaSeconds: Float,
-    epsilon: Float = DEFAULT_EPSILON
-): Quaternion {
-    return if (!equals(start, end, epsilon)) {
-        return dev.romainguy.kotlin.math.lerp(start, end, deltaSeconds)
-    } else end
-}
-
-fun slerp(
-    start: Quaternion,
-    end: Quaternion,
-    deltaSeconds: Float,
-    epsilon: Float = DEFAULT_EPSILON
-): Quaternion {
-    return if (!equals(start, end, epsilon)) {
-        return dev.romainguy.kotlin.math.slerp(start, end, deltaSeconds)
-    } else end
-}
-
-/**
- * ### Spherical Linear Interpolate a transform
- *
- * @epsilon Smooth Epsilon minimum equality limit
- * This is used to avoid very near positions/rotations/scale smooth modifications.
- * It prevents:
- * - The modifications from appearing too quick if the ranges are too close because of linearly
- * interpolation for upper dot products
- * - The end value to take to much time to be reached
- * - The end to never be reached because of matrices calculations floating points
- */
-fun slerp(
-    start: Transform,
-    end: Transform,
-    deltaSeconds: Double,
-    speed: Float,
-    epsilon: Float = DEFAULT_EPSILON
-): Transform {
-    return if (!equals(start, end, epsilon)) {
-        val lerpFactor = MathHelper.clamp((deltaSeconds * speed).toFloat(), 0.0f, 1.0f)
-        Transform(
-            position = lerp(start.position, end.position, lerpFactor, epsilon),
-            quaternion = slerp(start.quaternion, end.quaternion, lerpFactor, epsilon),
-            scale = lerp(start.scale, end.scale, lerpFactor, epsilon)
-        )
-    } else end
-}
-
 /**
  * If rendering in linear space, first convert the values to linear space by rising to the power 2.2
  */
 fun FloatArray.toLinearSpace() = map { pow(it, 2.2f) }.toFloatArray()
+
+data class LookAt(val eye: Position, val target: Position, val upward: Direction)
 
 fun lookAt(eye: Position, target: Position): Mat4 {
     return lookAt(eye, target - eye, Direction(y = 1.0f))
@@ -126,3 +76,39 @@ fun lookAt(eye: Position, target: Position): Mat4 {
 
 fun lookTowards(eye: Position, direction: Direction) =
     lookTowards(eye, direction, Direction(y = 1.0f)).toQuaternion()
+
+fun Box(center: Position, halfExtent: Size) = Box(center.toFloatArray(), halfExtent.toFloatArray())
+var Box.centerPosition: Position
+    get() = center.toPosition()
+    set(value) {
+        setCenter(value.x, value.y, value.z)
+    }
+var Box.halfExtentSize: Size
+    get() = halfExtent.toSize()
+    set(value) {
+        setHalfExtent(value.x, value.y, value.z)
+    }
+var Box.size
+    get() = halfExtentSize * 2.0f
+    set(value) {
+        halfExtentSize = value / 2.0f
+    }
+
+fun normalToTangent(normal: Float3): Quaternion {
+    var tangent: Float3
+    val bitangent: Float3
+
+    // Calculate basis vectors (+x = tangent, +y = bitangent, +z = normal).
+    tangent = cross(Direction(y = 1.0f), normal)
+
+    // Uses almostEqualRelativeAndAbs for equality checks that account for float inaccuracy.
+    if (dot(tangent, tangent) == 0.0f) {
+        bitangent = normalize(cross(normal, Direction(x = 1.0f)))
+        tangent = normalize(cross(bitangent, normal))
+    } else {
+        tangent = normalize(tangent)
+        bitangent = normalize(cross(normal, tangent))
+    }
+    // Rotation of a 4x4 Transformation Matrix is represented by the top-left 3x3 elements.
+    return Transform(right = tangent, up = bitangent, forward = normal).toQuaternion()
+}
