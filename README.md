@@ -18,6 +18,10 @@ This is a Sceneform replacement in Kotlin
 - Multiple instances are now possible.
 - Much easier to use. For example, the local and world `position`, `rotation` and `scale` of the `Node` are now directly accessible without creating ~`Vector3`~ objects (`position.x = 1f`, `rotation = Rotation(90f, 180f, 0f)`, `scale = Scale(0.5f)`, etc.).
 
+## Architecture
+
+[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=00vj8AttWO4)](https://www.youtube.com/watch?v=00vj8AttWO4)
+
 ## Dependency
 
 *app/build.gradle*
@@ -49,8 +53,6 @@ dependencies {
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 ```
-
-[![](https://yt-embed.herokuapp.com/embed?img=sddefault&v=mtoTqRREnmM)](https://www.youtube.com/watch?v=mtoTqRREnmM)
 
 ### AR
 
@@ -108,14 +110,14 @@ You can change it to adjust between a quick (`PlacementMode.INSTANT`), more accu
 The `hitTest`, `pose` and `anchor` will be influenced by this choice.  
 - `hitPosition` The node camera/screen/view position where the hit will be made to find an AR position  
 Until it is anchored, the `Node` will try to find the real world position/orientation of the screen coordinate and constantly place/orientate himself accordingly `followHitPosition` is `true`.  
-The Z value is only used when no surface is actually detected or when `followHitPosition` and `instantAnchor` is set to `false` or when instant placement is enabled:
+The Z value is only used when no surface is actually detected or when `followHitPosition` and `instantAnchor` is set to `false` or when instant placement is enabled.
 - `followHitPosition` Make the node follow the camera/screen matching real world positions  
 Controls if an unanchored node should be moved together with the camera.  
 The node `position` is updated with the realtime ARCore `pose` at the corresponding `hitPosition` until it is anchored (`isAnchored`) or until this this value is set to `false`.
     - While there is no AR tracking information available, the node is following the camera moves so it stays at this camera/screen relative position but without adjusting its position and orientation to the real world
-    - Then ARCore will try to find the real world position of the node at the [hitPosition] by looking at its [hitTest] on each `onArFrame`.
+    - Then ARCore will try to find the real world position of the node at the `hitPosition` by looking at its `hitTest` on each `onArFrame`.
     - In case of instant placement disabled, the z position (distance from the camera) will be estimated by the AR surface distance at the `(x,y)`.
-    - The node rotation will be also adjusted in case of [PlacementMode.DEPTH] or depending on the detected planes orientations in case of `PlacementMode.PLANE_HORIZONTAL`, `PlacementMode.PLANE_VERTICAL`, `PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL`
+    - The node rotation will be also adjusted in case of `PlacementMode.DEPTH` or depending on the detected planes orientations in case of `PlacementMode.PLANE_HORIZONTAL`, `PlacementMode.PLANE_VERTICAL`, `PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL`
 - `instantAnchor` Anchor the node as soon as an AR position/rotation is found/available  
 If `true`, the node will be anchored in the real world at the first suitable place available
 
@@ -173,7 +175,7 @@ lifecycleScope.launchWhenCreated {
 #### Parameters
 
 - `lifecycle` Provide your lifecycle in order to load your model instantly and to destroy it (and its resources) when the lifecycle goes to destroy state  
-Passing null means the model loading will be done when the Node is added to the SceneView and the destroy will be done when the SceneView is detached.
+Passing `null` means the model loading will be done when the `Node` is added to the `SceneView` and the destroy will be done when the `SceneView` is detached.
 - `modelFileLocation` The model glb/gltf file location
     - A relative asset file location (models/mymodel.glb)
     - An Android resource from the res folder (context.getResourceUri(R.raw.mymodel)
