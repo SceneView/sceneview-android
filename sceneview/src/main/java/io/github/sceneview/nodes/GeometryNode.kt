@@ -1,9 +1,10 @@
-package io.github.sceneview.node
+package io.github.sceneview.nodes
 
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.geometries.Geometry
@@ -35,13 +36,14 @@ import io.github.sceneview.managers.geometry
  *
  * @see Geometry
  */
-class GeometryNode(
+open class GeometryNode(
     engine: Engine,
     nodeManager: NodeManager,
     geometry: Geometry,
     materials: List<MaterialInstance?> = listOf(),
+    entity: Entity = EntityManager.get().create(),
     apply: RenderableManager.Builder.() -> Unit = {}
-) : Node(engine, nodeManager, EntityManager.get().create()), RenderableComponent {
+) : RenderableNode(engine, nodeManager, entity), RenderableComponent {
 
     init {
         RenderableManager.Builder(geometry.submeshes.size)
@@ -60,12 +62,14 @@ class GeometryNode(
         nodeManager: NodeManager,
         geometry: Geometry,
         material: MaterialInstance,
+        entity: Entity = EntityManager.get().create(),
         apply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine,
         nodeManager,
         geometry,
         geometry.submeshes.map { material },
+        entity,
         apply
     )
 
@@ -73,20 +77,31 @@ class GeometryNode(
         sceneView: SceneView,
         geometry: Geometry,
         materials: List<MaterialInstance?> = listOf(),
+        entity: Entity = EntityManager.get().create(),
         apply: RenderableManager.Builder.() -> Unit = {}
-    ) : this(sceneView.engine, sceneView.nodeManager, geometry, materials, apply)
+    ) : this(
+        sceneView.engine,
+        sceneView.nodeManager,
+        geometry,
+        materials,
+        entity,
+        apply
+    )
 
     constructor(
         sceneView: SceneView,
         geometry: Geometry,
         material: MaterialInstance,
+        entity: Entity = EntityManager.get().create(),
         apply: RenderableManager.Builder.() -> Unit = {}
-    ) : this(sceneView.engine, sceneView.nodeManager, geometry, material, apply)
+    ) : this(
+        sceneView.engine,
+        sceneView.nodeManager,
+        geometry,
+        material,
+        entity,
+        apply
+    )
 
     override fun getBoundingBox() = axisAlignedBoundingBox
-
-    override fun destroy() {
-        renderableManager.destroy(entity)
-        super.destroy()
-    }
 }

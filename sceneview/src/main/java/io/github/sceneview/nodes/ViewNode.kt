@@ -1,4 +1,4 @@
-package io.github.sceneview.node
+package io.github.sceneview.nodes
 
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -38,7 +38,7 @@ class ViewNode constructor(
     view: View,
     unlit: Boolean = false,
     invertFrontFaceWinding: Boolean = false
-) : Node(engine, nodeManager, EntityManager.get().create(), isSelectable = true),
+) : RenderableNode(engine, nodeManager, EntityManager.get().create()),
     RenderableComponent {
 
     val viewStream: ViewStream

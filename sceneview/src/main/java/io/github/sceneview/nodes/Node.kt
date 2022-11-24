@@ -1,10 +1,9 @@
-package io.github.sceneview.node
+package io.github.sceneview.nodes
 
 import android.view.MotionEvent
 import com.google.android.filament.Box
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
-import dev.romainguy.kotlin.math.max
 import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
@@ -39,18 +38,16 @@ open class Node(
     engine: Engine,
     nodeManager: NodeManager,
     final override val entity: Entity = EntityManager.get().create(),
-    val sceneEntities: List<Entity> = listOf(entity),
     /**
      * The node can be selected when a touch event happened
      *
-     * If a not selectable child [Node] is touched, we check the parent hierarchy to find the
+     * If a not selectable child [RenderableNode] is touched, we check the parent hierarchy to find the
      * closest selectable parent. In this case, the first selectable parent will be the one to have
      * its [isSelected] value to `true`.
      */
     var isSelectable: Boolean = false,
-    var isPositionEditable: Boolean = false,
-    var isRotationEditable: Boolean = false,
-    var isScaleEditable: Boolean = false
+    isEditable: Boolean = false,
+    val sceneEntities: List<Entity> = listOf(entity)
 ) : TransformComponent {
 
     private var _engine: Engine? = engine
@@ -100,23 +97,6 @@ open class Node(
             updateVisibility(value)
         }
 
-    /**
-     * Node selection visualizer
-     */
-    var selectionNode: Node? = null
-        set(value) {
-            if (isSelected) {
-                field?.let { removeChildNode(it) }
-            }
-            field = value
-            updateSelectionVisualizer()
-        }
-    var isSelected = false
-        internal set(value) {
-            field = value
-            updateSelectionVisualizer()
-        }
-
     open var size: Size
         get() = scale * getBoundingBox().size
         set(value) {
@@ -129,7 +109,27 @@ open class Node(
             position = value - getBoundingBox().centerPosition * scale
         }
 
-    var onFrameListener: ((node: Node, frameTime: FrameTime) -> Unit)? = null
+    /**
+     * Node selection visualizer
+     */
+    var selectionNode: Node? = null
+        set(value) {
+            if (isSelected) {
+                field?.let { removeChildNode(it) }
+            }
+            field = value
+            updateSelectionVisualizer()
+        }
+
+    var isSelected = false
+        internal set(value) {
+            field = value
+            updateSelectionVisualizer()
+        }
+
+    var isPositionEditable = isEditable
+    var isRotationEditable = isEditable
+    var isScaleEditable = isEditable
 
     /**
      * Invoked when the node is tapped
@@ -139,6 +139,8 @@ open class Node(
      * part of a model is tapped.
      */
     var onTapListener: ((node: Node) -> Unit)? = null
+
+    var onFrameListener: ((node: Node, frameTime: FrameTime) -> Unit)? = null
 
     internal val onChildAdded = mutableListOf<((Node) -> Unit)>()
     internal val onChildRemoved = mutableListOf<((Node) -> Unit)>()
@@ -150,7 +152,20 @@ open class Node(
         addComponent(entity)
     }
 
-    constructor(sceneView: SceneView) : this(sceneView.engine, sceneView.nodeManager)
+    constructor(
+        sceneView: SceneView,
+        entity: Entity = EntityManager.get().create(),
+        isSelectable: Boolean = false,
+        isEditable: Boolean = false,
+        sceneEntities: List<Entity> = listOf(entity)
+    ) : this(
+        sceneView.engine,
+        sceneView.nodeManager,
+        entity,
+        isSelectable,
+        isEditable,
+        sceneEntities
+    )
 
     private fun addComponent(entity: Entity) {
         nodeManager.addComponent(entity, this)
@@ -160,11 +175,10 @@ open class Node(
         onFrameListener?.invoke(this, frameTime)
     }
 
-    fun setEditable(editable: Boolean) {
-        isPositionEditable = editable
-        isRotationEditable = editable
-        isScaleEditable = editable
-    }
+    /**
+     * Returns true if the node completely handles the touch event by itself
+     */
+    open fun onTouchEvent(motionEvent: MotionEvent, pickingResult: SceneView.PickingResult) = false
 
     fun addChildNode(child: Node) {
         child.parentEntity = entity
@@ -184,7 +198,21 @@ open class Node(
      * @param units the number of units of the cube to scale into.
      */
     fun scaleToUnitsCube(units: Float = 1.0f) {
-        scale = Scale(units / max(size))
+        scale = Scale(units / dev.romainguy.kotlin.math.max(size))
+    }
+
+    open fun getBoundingBox(): Box {
+        val minPosition = min(childNodes.map { it.position - it.size / 2.0f })
+        val maxPosition = max(childNodes.map { it.position + it.size / 2.0f })
+        val halfExtent = (maxPosition - minPosition) / 2.0f
+        val center = minPosition + halfExtent
+        return Box(center, halfExtent)
+    }
+
+    fun setEditable(editable: Boolean) {
+        isPositionEditable = editable
+        isRotationEditable = editable
+        isScaleEditable = editable
     }
 
     // TODO: Should we bring it back?
@@ -208,21 +236,6 @@ open class Node(
 ////        position = value - getBoundingBox().centerPosition * scale
 //    }
 
-    open fun getBoundingBox(): Box {
-        val minPosition = min(childNodes.map { it.position - it.size / 2.0f })
-        val maxPosition = max(childNodes.map { it.position + it.size / 2.0f })
-        val halfExtent = (maxPosition - minPosition) / 2.0f
-        val center = minPosition + halfExtent
-        return Box(center, halfExtent)
-    }
-
-    /**
-     * Returns true if the node completely handles the touch event by itself
-     */
-    open fun onTouchEvent(
-        motionEvent: MotionEvent,
-        pickingResult: SceneView.PickingResult
-    ) = false
 
     protected open fun updateVisibility(visible: Boolean) {
         childNodes.forEach { childNode ->
