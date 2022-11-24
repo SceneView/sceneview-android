@@ -11,9 +11,6 @@ import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
-import androidx.activity.ComponentActivity
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.findFragment
 import androidx.lifecycle.Lifecycle
 import com.google.android.filament.*
 import com.google.android.filament.View.AntiAliasing
@@ -21,7 +18,6 @@ import com.google.android.filament.View.QualityLevel
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.*
-import com.gorisse.thomas.lifecycle.getActivity
 import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.geometries.destroyGeometry
@@ -40,9 +36,9 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
-import io.github.sceneview.node.LightNode
-import io.github.sceneview.node.ModelNode
-import io.github.sceneview.node.Node
+import io.github.sceneview.nodes.LightNode
+import io.github.sceneview.nodes.ModelNode
+import io.github.sceneview.nodes.Node
 import io.github.sceneview.scene.*
 import io.github.sceneview.texture.ViewStream
 import io.github.sceneview.texture.destroyStream
@@ -75,15 +71,16 @@ open class SceneView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
     /**
-     * Provide your own instance if you want to share Filament resources between multiple views
+     * Provide your own instance if you want to share Filament resources between multiple views.
      */
     val sharedEngine: Engine? = null,
     /**
-     * Provide your own instance if you want to share [Node]s instances between multiple views
+     * Provide your own instance if you want to share [Node]s instances between multiple views.
      */
     val sharedNodeManager: NodeManager? = null,
     /**
-     * Provided by Filament to manage SurfaceView and SurfaceTexture
+     * Provided by Filament to manage SurfaceView and SurfaceTexture.
+     *
      * To choose a specific rendering resolution, add the following line:
      * `uiHelper.setDesiredSize(1280, 720)`
      */
@@ -339,14 +336,20 @@ open class SceneView @JvmOverloads constructor(
     var onFrameListener: ((frameTime: FrameTime) -> Unit)? = null
     var onTapListener: ((e: MotionEvent, pickingResult: PickingResult) -> Unit)? = null
 
-    // Choreographer is used to schedule new frames
+    /**
+     * Choreographer is used to schedule new frames
+     */
     private val choreographer: Choreographer
 
-    // Performs the rendering and schedules new frames
+    /**
+     * Performs the rendering and schedules new frames
+     */
     private val frameScheduler = FrameCallback()
 
-    // A swap chain is Filament's representation of a surface
-    private var swapChain: SwapChain? = null
+    /**
+     * A swap chain is Filament's representation of a surface
+     */
+    open var swapChain: SwapChain? = null
 
     internal lateinit var windowViewManager: WindowViewManager
 
@@ -464,6 +467,25 @@ open class SceneView @JvmOverloads constructor(
         }
 
         setupSurfaceView(backgroundColor)
+    }
+
+    private fun setupWindowViewManager() {
+        windowViewManager = WindowViewManager(this)
+    }
+
+    private fun setupGestureDetector() {
+        gestureDetector = GestureDetector(this, cameraManipulator, nodesManipulator)
+        gestureDetector.onSingleTapConfirmedListeners += { e, pickingResult ->
+            onTapListener?.invoke(e, pickingResult)
+        }
+    }
+
+    private fun setupSurfaceView(backgroundColor: Color?) {
+        // Setup SurfaceView
+        uiHelper.renderCallback = SurfaceCallback()
+        // Must be called before attachTo
+        uiHelper.isOpaque = isOpaque || backgroundColor?.a == 1.0f
+        uiHelper.attachTo(this)
     }
 
     open fun onFrame(frameTime: FrameTime) {
@@ -591,17 +613,17 @@ open class SceneView @JvmOverloads constructor(
         y = height - y
     }
 
-    fun resume() {
+    open fun resume() {
         windowViewManager.resume(this)
         choreographer.postFrameCallback(frameScheduler)
     }
 
-    fun pause() {
+    open fun pause() {
         choreographer.removeFrameCallback(frameScheduler)
         windowViewManager.pause()
     }
 
-    fun destroy() {
+    open fun destroy() {
         loadingJobs.forEach { it.cancel() }
         loadingJobs.clear()
 
@@ -687,42 +709,7 @@ open class SceneView @JvmOverloads constructor(
         lifecycle.observe(onResume = { resume() }, onPause = { pause() }, onDestroy = { destroy() })
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        super.onTouchEvent(event)
-
-        lastTouchEvent = event
-        gestureDetector.onTouchEvent(event)
-
-        return true
-    }
-
-    protected fun getActivity(): ComponentActivity = try {
-        findFragment<Fragment>().requireActivity()
-    } catch (e: Exception) {
-        context.getActivity()!!
-    }
-
-    private fun setupWindowViewManager() {
-        windowViewManager = WindowViewManager(this)
-    }
-
-    private fun setupGestureDetector() {
-        gestureDetector = GestureDetector(this, cameraManipulator, nodesManipulator)
-        gestureDetector.onSingleTapConfirmedListeners += { e, pickingResult ->
-            onTapListener?.invoke(e, pickingResult)
-        }
-    }
-
-    private fun setupSurfaceView(backgroundColor: Color?) {
-        // Setup SurfaceView
-        uiHelper.renderCallback = SurfaceCallback()
-        // Must be called before attachTo
-        uiHelper.isOpaque = isOpaque || backgroundColor?.a == 1.0f
-        uiHelper.attachTo(this)
-    }
-
-    private fun updateCameraProjection() {
+    open fun updateCameraProjection() {
         val width = filamentView.viewport.width
         val height = filamentView.viewport.height
         val aspect = width.toDouble() / height.toDouble()
@@ -732,6 +719,16 @@ open class SceneView @JvmOverloads constructor(
             NEAR_PLANE,
             FAR_PLANE
         )
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        super.onTouchEvent(event)
+
+        lastTouchEvent = event
+        gestureDetector.onTouchEvent(event)
+
+        return true
     }
 
     inner class SurfaceCallback : UiHelper.RendererCallback {
