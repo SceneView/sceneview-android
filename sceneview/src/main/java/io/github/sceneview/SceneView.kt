@@ -113,7 +113,8 @@ open class SceneView @JvmOverloads constructor(
      * An Engine instance main function is to keep track of all resources created by the user and
      * manage the rendering thread as well as the hardware renderer
      */
-    val engine: Engine
+    lateinit var engine: Engine
+        private set
 
     /**
      * Lens's focal length in millimeters
@@ -126,7 +127,8 @@ open class SceneView @JvmOverloads constructor(
             updateCameraProjection()
         }
 
-    val nodeManager: NodeManager
+    lateinit var nodeManager: NodeManager
+        private set
 
     /**
      * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which
@@ -134,21 +136,21 @@ open class SceneView @JvmOverloads constructor(
      * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and
      * components.
      */
-    var modelLoader: ModelLoader
+    lateinit var modelLoader: ModelLoader
 
     /**
      * A Filament Material defines the visual appearance of an object
      *
      * Materials function as a templates from which [MaterialInstance]s can be spawned.
      */
-    var materialLoader: MaterialLoader
+    lateinit var materialLoader: MaterialLoader
 
     /**
      * IBLPrefilter creates and initializes GPU state common to all environment map filters
      *
      * @see IBLPrefilterContext
      */
-    var iblPrefilter: IBLPrefilter
+    lateinit var iblPrefilter: IBLPrefilter
 
     /**
      * A transform component gives an entity a position and orientation in space in the coordinate
@@ -172,26 +174,32 @@ open class SceneView @JvmOverloads constructor(
     /**
      * A [Scene] is a flat container of [RenderableManager] and [LightManager] components
      */
-    val scene: Scene
+    lateinit var scene: Scene
+        private set
 
     /**
      * Encompasses all the state needed for rendering a [Scene]
      */
-    val filamentView: FilamentView
+    lateinit var filamentView: FilamentView
+        private set
 
     /**
      * A [Renderer] instance represents an operating system's window.
      */
-    val renderer: Renderer
+    lateinit var renderer: Renderer
+        private set
 
-    val surfaceMirorer: SurfaceMirorer
+    lateinit var surfaceMirorer: SurfaceMirorer
+        private set
 
     /**
      * Helper that enables camera interaction similar to sketchfab or Google Maps
      */
-    val cameraManipulator: CameraManipulator?
+    var cameraManipulator: CameraManipulator? = null
+        private set
 
-    val nodesManipulator: NodesManipulator
+    lateinit var nodesManipulator: NodesManipulator
+        private set
 
     /**
      * Responds to Android touch events with listeners and/or camera manipulator
@@ -353,9 +361,9 @@ open class SceneView @JvmOverloads constructor(
 
     internal lateinit var windowViewManager: WindowViewManager
 
-    private val colorGrading: ColorGrading
+    private lateinit var colorGrading: ColorGrading
 
-    private val selectionModel: Model
+    private lateinit var selectionModel: Model
 
     private val pickingHandler by lazy { Handler(Looper.getMainLooper()) }
 
@@ -384,88 +392,90 @@ open class SceneView @JvmOverloads constructor(
 
         choreographer = Choreographer.getInstance()
 
-        // Setup Filament
-        engine = sharedEngine ?: Engine.create()
-        nodeManager = sharedNodeManager ?: NodeManager(engine)
-        modelLoader = ModelLoader(engine, context)
-        materialLoader = MaterialLoader(engine, context)
-        iblPrefilter = IBLPrefilter(engine)
-
         val backgroundColor = (background as? ColorDrawable)?.let { Color(it) }
-        renderer = engine.createRenderer()
-        renderer.clearOptions = renderer.clearOptions.apply {
-            clear = !uiHelper.isOpaque
-            if (backgroundColor?.a == 1.0f) {
-                clearColor = backgroundColor.toFloatArray()
-            }
-        }
 
-        scene = engine.createScene()
-        filamentView = engine.createView().apply {
-            // on mobile, better use lower quality color buffer
-            renderQuality = renderQuality.apply {
-                hdrColorBuffer = QualityLevel.MEDIUM
-            }
-            // dynamic resolution often helps a lot
-            dynamicResolutionOptions = dynamicResolutionOptions.apply {
-                enabled = true
-                quality = QualityLevel.MEDIUM
-            }
-            // MSAA is needed with dynamic resolution MEDIUM
-            multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
-                enabled = true
-            }
-            // FXAA is pretty cheap and helps a lot
-            antiAliasing = AntiAliasing.FXAA
-            // ambient occlusion is the cheapest effect that adds a lot of quality
-            ambientOcclusionOptions = ambientOcclusionOptions.apply {
-                enabled = true
-            }
-            // bloom is pretty expensive but adds a fair amount of realism
-            bloomOptions = bloomOptions.apply {
-                enabled = true
-            }
-        }
-        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
-        // material orange 500.
-        colorGrading = ColorGrading.Builder()
-            .toneMapping(ColorGrading.ToneMapping.FILMIC)
-            .build(engine)
-        filamentView.colorGrading = colorGrading
-        filamentView.scene = scene
+        if (!isInEditMode) {
+            // Setup Filament
+            engine = sharedEngine ?: Engine.create()
+            nodeManager = sharedNodeManager ?: NodeManager(engine)
+            modelLoader = ModelLoader(engine, context)
+            materialLoader = MaterialLoader(engine, context)
+            iblPrefilter = IBLPrefilter(engine)
 
-        surfaceMirorer = SurfaceMirorer(engine, filamentView, renderer)
-
-        this.camera = camera ?: engine.createCamera(EntityManager.get().create()).apply {
-            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
-            // Since we define a light that has the same intensity as the sun, it guarantees a
-            // proper exposure
-            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
-        }
-
-        this.cameraManipulator = cameraManipulator?.invoke(width, height)
-
-        selectionModel = modelLoader.createModel("models/selection.glb")!!
-        this.nodesManipulator = nodesManipulator ?: NodesManipulator(engine) { nodeSize ->
-            ModelNode(this@SceneView, modelLoader.createInstance(selectionModel)!!).apply {
-                isSelectable = false
-                size = size.apply {
-                    xy = nodeSize.xy
+            renderer = engine.createRenderer()
+            renderer.clearOptions = renderer.clearOptions.apply {
+                clear = !uiHelper.isOpaque
+                if (backgroundColor?.a == 1.0f) {
+                    clearColor = backgroundColor.toFloatArray()
                 }
             }
+
+            scene = engine.createScene()
+            filamentView = engine.createView().apply {
+                // on mobile, better use lower quality color buffer
+                renderQuality = renderQuality.apply {
+                    hdrColorBuffer = QualityLevel.MEDIUM
+                }
+                // dynamic resolution often helps a lot
+                dynamicResolutionOptions = dynamicResolutionOptions.apply {
+                    enabled = true
+                    quality = QualityLevel.MEDIUM
+                }
+                // MSAA is needed with dynamic resolution MEDIUM
+                multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
+                    enabled = true
+                }
+                // FXAA is pretty cheap and helps a lot
+                antiAliasing = AntiAliasing.FXAA
+                // ambient occlusion is the cheapest effect that adds a lot of quality
+                ambientOcclusionOptions = ambientOcclusionOptions.apply {
+                    enabled = true
+                }
+                // bloom is pretty expensive but adds a fair amount of realism
+                bloomOptions = bloomOptions.apply {
+                    enabled = true
+                }
+            }
+            // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
+            // material orange 500.
+            colorGrading = ColorGrading.Builder()
+                .toneMapping(ColorGrading.ToneMapping.FILMIC)
+                .build(engine)
+            filamentView.colorGrading = colorGrading
+            filamentView.scene = scene
+
+            surfaceMirorer = SurfaceMirorer(engine, filamentView, renderer)
+
+            this.camera = camera ?: engine.createCamera(EntityManager.get().create()).apply {
+                // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+                // Since we define a light that has the same intensity as the sun, it guarantees a
+                // proper exposure
+                setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+            }
+
+            this.cameraManipulator = cameraManipulator?.invoke(width, height)
+
+            selectionModel = modelLoader.createModel("models/selection.glb")!!
+            this.nodesManipulator = nodesManipulator ?: NodesManipulator(engine) { nodeSize ->
+                ModelNode(this@SceneView, modelLoader.createInstance(selectionModel)!!).apply {
+                    isSelectable = false
+                    size = size.apply {
+                        xy = nodeSize.xy
+                    }
+                }
+            }
+
+            setupGestureDetector()
+
+            // Taken from Filament ModelViewer
+            val (r, g, b) = Colors.cct(6_500.0f)
+            lightNode = LightNode(engine, nodeManager, LightManager.Type.DIRECTIONAL) {
+                color(r, g, b)
+                intensity(100_000.0f)
+                direction(0.0f, -1.0f, 0.0f)
+                castShadows(true)
+            }
         }
-
-        setupGestureDetector()
-
-        // Taken from Filament ModelViewer
-        val (r, g, b) = Colors.cct(6_500.0f)
-        lightNode = LightNode(engine, nodeManager, LightManager.Type.DIRECTIONAL) {
-            color(r, g, b)
-            intensity(100_000.0f)
-            direction(0.0f, -1.0f, 0.0f)
-            castShadows(true)
-        }
-
         setupSurfaceView(backgroundColor)
     }
 
@@ -774,7 +784,7 @@ open class SceneView @JvmOverloads constructor(
     companion object {
         // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init {
-            Utils.init()
+            runCatching { Utils.init() }
         }
 
         const val NEAR_PLANE = 0.05 // 5 cm
