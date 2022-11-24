@@ -4,11 +4,26 @@ plugins {
     id 'filament-tools-plugin'
     id 'org.jetbrains.dokka'
 }
-
+// *************************************************************************************************
+// Filament Plugin
+// *************************************************************************************************
+//
+// Needed if you want to generate Materials, Indirect Light (IBL) and Skyboxes.
+//
+// 1) Copy/paste the /buildSrc dir into your project root folder
+// 2) Copy/paste the plugins line above (plugins: { id 'filament-tools-plugin' }) and bellow into
+// your app/module build.gradle
+// 3) Download the Filament tools release archive for your development desktop:
+// Filament release download: https://github.com/google/filament/releases
+// (Choose the corresponding version to the filament_version bellow)
+// 4) Copy/paste the Filament Plugin part from the gradle.properties file to your project
+// 5) Sync Gradle and clean your project
 if (project.properties['filamentPluginEnabled']?.toBoolean()) {
     filamentTools {
+        // Material generation: .mat -> .filamat
         materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
         materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+        // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
         iblInputDir = project.layout.projectDirectory.dir("src/main/environments")
         iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/environments")
         iblFormat = "ktx"
@@ -19,6 +34,7 @@ if (project.properties['filamentPluginEnabled']?.toBoolean()) {
         delete "src/main/assets/environments"
     }
 }
+// *************************************************************************************************
 
 group = GROUP
 version = VERSION_NAME
@@ -27,6 +43,7 @@ android {
     namespace 'io.github.sceneview'
 
     compileSdk 33
+
     defaultConfig {
         minSdk 28
         targetSdk 33
@@ -90,7 +107,7 @@ dependencies {
     // Android Material
     implementation 'com.google.android.material:material:1.6.1'
 
-    // Fuel
+    // Fuel (Http)
     implementation "com.github.kittinunf.fuel:fuel:2.3.1"
     implementation "com.github.kittinunf.fuel:fuel-android:2.3.1"
     implementation "com.github.kittinunf.fuel:fuel-coroutines:2.3.1"
