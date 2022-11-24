@@ -13,7 +13,7 @@ import io.github.sceneview.SceneView
  */
 open class GestureDetector(
     private val view: SceneView,
-    cameraManipulator: CameraManipulator,
+    cameraManipulator: CameraManipulator?,
     private val nodesManipulator: NodesManipulator
 ) {
     val onDownListeners = mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
@@ -47,7 +47,7 @@ open class GestureDetector(
     var onScaleEndListeners = mutableListOf<(e: MotionEvent) -> Unit>()
 
     private val gestureDetector: GestureDetector
-    private val cameraGestureDetector: CameraGestureDetector
+    private val cameraGestureDetector: CameraGestureDetector?
     private val moveGestureDetector: MoveGestureDetector
     private val rotateGestureDetector: RotateGestureDetector
     private val scaleGestureDetector: ScaleGestureDetector
@@ -57,14 +57,14 @@ open class GestureDetector(
 
     init {
         gestureDetector = GestureDetector(view.context, OnGestureListener())
-        cameraGestureDetector = CameraGestureDetector(view, cameraManipulator)
+        cameraGestureDetector = cameraManipulator?.let { CameraGestureDetector(view, it) }
         moveGestureDetector = MoveGestureDetector(view.context, OnMoveGestureListener())
         rotateGestureDetector = RotateGestureDetector(view.context, OnRotateGestureListener())
         scaleGestureDetector = ScaleGestureDetector(view.context, OnScaleGestureListener())
     }
 
     fun onTouchEvent(e: MotionEvent) {
-        cameraGestureDetector.onTouchEvent(e)
+        cameraGestureDetector?.onTouchEvent(e)
 
         if (editingDetector == null) {
             view.pickNode(e) { pickingResult ->
