@@ -89,7 +89,12 @@ open class SceneView @JvmOverloads constructor(
      */
     val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
     camera: Camera? = null,
-    cameraManipulator: CameraManipulator? = null,
+    cameraManipulator: ((width: Int, height: Int) -> CameraManipulator)? = { width, height ->
+        Manipulator.Builder()
+            .targetPosition(DEFAULT_MODEL_POSITION)
+            .viewport(width, height)
+            .build(Manipulator.Mode.ORBIT)
+    },
     nodesManipulator: NodesManipulator? = null
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
 
@@ -187,7 +192,7 @@ open class SceneView @JvmOverloads constructor(
     /**
      * Helper that enables camera interaction similar to sketchfab or Google Maps
      */
-    val cameraManipulator: CameraManipulator
+    val cameraManipulator: CameraManipulator?
 
     val nodesManipulator: NodesManipulator
 
@@ -415,10 +420,7 @@ open class SceneView @JvmOverloads constructor(
             setExposure(16.0f, 1.0f / 125.0f, 100.0f)
         }
 
-        this.cameraManipulator = cameraManipulator ?: Manipulator.Builder()
-            .targetPosition(DEFAULT_MODEL_POSITION)
-            .viewport(width, height)
-            .build(Manipulator.Mode.ORBIT)
+        this.cameraManipulator = cameraManipulator?.invoke(width, height)
 
         selectionModel = modelLoader.createModel("models/selection.glb")!!
         this.nodesManipulator = nodesManipulator ?: NodesManipulator(engine) { nodeSize ->
@@ -453,9 +455,8 @@ open class SceneView @JvmOverloads constructor(
         modelLoader.onFrame(frameTime)
 
         // Extract the camera basis from the helper and push it to the Filament camera.
-        camera?.apply {
-            val (eye, target, upward) = cameraManipulator.getLookAt()
-            lookAt(eye, target, upward)
+        cameraManipulator?.getLookAt()?.let { (eye, target, upward) ->
+            camera?.lookAt(eye, target, upward)
         }
 
         // Update child nodes
@@ -731,7 +732,7 @@ open class SceneView @JvmOverloads constructor(
 
         override fun onResized(width: Int, height: Int) {
             filamentView.viewport = Viewport(0, 0, width, height)
-            cameraManipulator.setViewport(width, height)
+            cameraManipulator?.setViewport(width, height)
             windowViewManager.setSize(width, height)
             updateCameraProjection()
         }
