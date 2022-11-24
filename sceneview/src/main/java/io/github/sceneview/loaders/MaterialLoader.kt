@@ -29,10 +29,10 @@ class MaterialLoader(engine: Engine, context: Context) {
     private val materialInstances = mutableListOf<MaterialInstance>()
 
     val viewLitMaterial: Material by lazy {
-        createMaterial("materials/viewLit.filamat")
+        createMaterial("materials/view_lit.filamat")
     }
     val viewUnlitMaterial: Material by lazy {
-        createMaterial("materials/viewUnlit.filamat")
+        createMaterial("materials/view_unlit.filamat")
     }
 
     /**

@@ -6,7 +6,7 @@ import com.google.android.filament.EntityManager
 import com.google.android.filament.gltfio.*
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
-import io.github.sceneview.node.ModelNode
+import io.github.sceneview.nodes.ModelNode
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.loadFileBuffer
 import io.github.sceneview.utils.readFileBuffer
@@ -20,12 +20,12 @@ import java.nio.Buffer
  */
 class ModelLoader(engine: Engine, context: Context) {
 
-    private var _context: Context? = context
-    private val context get() = _context!!
-
     val materialProvider: MaterialProvider
     val assetLoader: AssetLoader
     var resourceLoader: ResourceLoader
+
+    private var _context: Context? = context
+    private val context get() = _context!!
 
     private val loadingJobs = mutableListOf<Job>()
     private val models = mutableListOf<Model>()

@@ -11,7 +11,7 @@ import io.github.sceneview.loaders.loadHdrIndirectLight
 import io.github.sceneview.loaders.loadHdrSkybox
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
-import io.github.sceneview.node.ModelNode
+import io.github.sceneview.nodes.ModelNode
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
