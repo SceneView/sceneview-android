@@ -1,4 +1,4 @@
-package io.github.sceneview.node
+package io.github.sceneview.nodes
 
 import androidx.annotation.IntRange
 import com.google.android.filament.Engine
@@ -6,10 +6,8 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.gltfio.Animator
 import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
-import io.github.sceneview.components.CameraComponent
-import io.github.sceneview.components.LightComponent
+import io.github.sceneview.components.ModelChildComponent
 import io.github.sceneview.components.RenderableComponent
-import io.github.sceneview.components.TransformComponent
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.managers.NodeManager
 import io.github.sceneview.model.Model
@@ -39,10 +37,10 @@ open class ModelNode private constructor(
     engine,
     nodeManager,
     rootEntity,
-    listOf(rootEntity) + entities,
-    isSelectable = true
-), TransformComponent {
-
+    true,
+    true,
+    listOf(rootEntity) + entities
+) {
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
     val renderableNodes: List<RenderableNode> get() = allChildNodes.mapNotNull { it as? RenderableNode }
@@ -56,20 +54,17 @@ open class ModelNode private constructor(
     var playingAnimations = mutableMapOf<Int, PlayingAnimation>()
 
     final override val allChildEntities: List<Entity>
-        get() = super<TransformComponent>.allChildEntities
+        get() = super.allChildEntities
 
     init {
         // We use allChildEntities instead of entities because of this:
         // https://github.com/google/filament/discussions/6113
         allChildEntities.forEach { childEntity ->
             val childNode = when (childEntity) {
-                in renderableEntities -> RenderableNode(
-                    model,
-                    childEntity
-                ).apply { setEditable(true) }
-                in lightEntities -> LightNode(model, childEntity)
-                in cameraEntities -> CameraNode(model, childEntity)
-                else -> ChildNode(model, childEntity)
+                in renderableEntities -> RenderableNode(engine, nodeManager, model, childEntity)
+                in lightEntities -> LightNode(engine, nodeManager, model, childEntity)
+                in cameraEntities -> CameraNode(engine, nodeManager, model, childEntity)
+                else -> Node(engine, nodeManager, model, childEntity)
             }
             nodeManager.addComponent(childEntity, childNode)
         }
@@ -303,18 +298,33 @@ open class ModelNode private constructor(
 
     override fun getBoundingBox() = model.boundingBox
 
-    open inner class ChildNode internal constructor(model: Model, entity: Entity) :
-        Node(engine, nodeManager, entity) {
-        val name: String? = model.getName(entity)
-        val extras: String? = model.getExtras(entity)
-    }
+    class Node internal constructor(
+        engine: Engine,
+        nodeManager: NodeManager,
+        override val model: Model,
+        entity: Entity
+    ) : io.github.sceneview.nodes.Node(engine, nodeManager, entity), ModelChildComponent
 
-    inner class RenderableNode internal constructor(model: Model, entity: Entity) :
-        ChildNode(model, entity), RenderableComponent
+    class RenderableNode internal constructor(
+        engine: Engine,
+        nodeManager: NodeManager,
+        override val model: Model,
+        entity: Entity
+    ) : io.github.sceneview.nodes.RenderableNode(
+        engine, nodeManager, entity, false, false
+    ), RenderableComponent, ModelChildComponent
 
-    inner class LightNode internal constructor(model: Model, entity: Entity) :
-        ChildNode(model, entity), LightComponent
+    class LightNode internal constructor(
+        engine: Engine,
+        nodeManager: NodeManager,
+        override val model: Model,
+        entity: Entity
+    ) : io.github.sceneview.nodes.LightNode(engine, nodeManager, entity), ModelChildComponent
 
-    inner class CameraNode internal constructor(model: Model, entity: Entity) :
-        ChildNode(model, entity), CameraComponent
+    class CameraNode internal constructor(
+        engine: Engine,
+        nodeManager: NodeManager,
+        override val model: Model,
+        entity: Entity
+    ) : io.github.sceneview.nodes.CameraNode(engine, nodeManager, entity), ModelChildComponent
 }

@@ -2,7 +2,7 @@ package io.github.sceneview.managers
 
 import com.google.android.filament.Engine
 import io.github.sceneview.Entity
-import io.github.sceneview.node.Node
+import io.github.sceneview.nodes.Node
 
 class NodeManager(val engine: Engine) {
 

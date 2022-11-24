@@ -5,7 +5,7 @@ import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.clamp
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.Size
-import io.github.sceneview.node.Node
+import io.github.sceneview.nodes.Node
 
 open class NodesManipulator(val engine: Engine, val selectionNode: (size: Size) -> Node?) {
 
