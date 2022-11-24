@@ -312,6 +312,26 @@ open class SceneView @JvmOverloads constructor(
             .mapNotNull { nodeManager.getNode(it) }
 
     /**
+     * Inverts the winding order of front faces.
+     *
+     * By default front faces use a counter-clockwise winding order. When the winding order is
+     * inverted, front faces are faces with a clockwise winding order.
+     *
+     * Changing the winding order will directly affect the culling mode in materials
+     * (see [Material.getCullingMode]).
+     *
+     * Inverting the winding order of front faces is useful when rendering mirrored reflections
+     * (water, mirror surfaces, front camera in AR, etc.).
+     *
+     * True to invert front faces, false otherwise.
+     */
+    var isFrontFaceWindingInverted: Boolean
+        get() = filamentView.isFrontFaceWindingInverted
+        set(value) {
+            filamentView.isFrontFaceWindingInverted = value
+        }
+
+    /**
      * Invoked when an frame is processed
      *
      * Registers a callback to be invoked when a valid Frame is processing.
