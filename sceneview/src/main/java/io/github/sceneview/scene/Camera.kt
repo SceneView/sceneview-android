@@ -91,6 +91,13 @@ fun Camera.luminance(ev100: Float) = pow(2.0f, ev100 - 3.0f)
 val Camera.projectionMatrix
     get() = DoubleArray(16).apply { getProjectionMatrix(this) }.toTransform()
 
+fun Camera.setCustomProjection(transform: Transform, near: Float, far: Float) =
+    setCustomProjection(
+        transform.toFloatArray().map { it.toDouble() }.toDoubleArray(),
+        near.toDouble(),
+        far.toDouble()
+    )
+
 /**
  * The camera's view matrix. The view matrix is the inverse of the model matrix
  */
@@ -99,7 +106,11 @@ val Camera.viewMatrix get() = FloatArray(16).apply { getViewMatrix(this) }.toTra
 /**
  * The camera's model matrix. The model matrix encodes the camera position and orientation, or pose
  */
-val Camera.modelMatrix get() = FloatArray(16).apply { getModelMatrix(this) }.toTransform()
+var Camera.modelMatrix: Transform
+    get() = FloatArray(16).apply { getModelMatrix(this) }.toTransform()
+    set(value) {
+        setModelMatrix(value.toFloatArray())
+    }
 
 /**
  * @see viewPortToClipSpace
