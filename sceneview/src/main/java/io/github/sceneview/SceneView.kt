@@ -36,6 +36,7 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.nodes.CameraNode
 import io.github.sceneview.nodes.LightNode
 import io.github.sceneview.nodes.ModelNode
 import io.github.sceneview.nodes.Node
@@ -79,20 +80,23 @@ open class SceneView @JvmOverloads constructor(
      */
     val sharedNodeManager: NodeManager? = null,
     /**
+     * Provide your own instance if you want to share [Node]s selection between multiple views.
+     */
+    sharedNodesManipulator: NodesManipulator? = null,
+    /**
      * Provided by Filament to manage SurfaceView and SurfaceTexture.
      *
      * To choose a specific rendering resolution, add the following line:
      * `uiHelper.setDesiredSize(1280, 720)`
      */
     val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
-    camera: Camera? = null,
+    cameraNode: CameraNode? = null,
     cameraManipulator: ((width: Int, height: Int) -> CameraManipulator)? = { width, height ->
         Manipulator.Builder()
             .targetPosition(DEFAULT_MODEL_POSITION)
             .viewport(width, height)
             .build(Manipulator.Mode.ORBIT)
-    },
-    nodesManipulator: NodesManipulator? = null
+    }
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
 
     /**
@@ -223,10 +227,10 @@ open class SceneView @JvmOverloads constructor(
      * To remove an existing association, simply pass null.
      * The View does not take ownership of the Scene pointer.
      */
-    var camera: Camera? = null
+    var cameraNode: CameraNode? = null
         set(value) {
             field = value
-            filamentView.camera = value
+            filamentView.camera = value?.camera
         }
 
     /**
@@ -446,7 +450,7 @@ open class SceneView @JvmOverloads constructor(
 
             surfaceMirorer = SurfaceMirorer(engine, filamentView, renderer)
 
-            this.camera = camera ?: engine.createCamera(EntityManager.get().create()).apply {
+            this.cameraNode = cameraNode ?: CameraNode(engine, nodeManager) {
                 // Set the exposure on the camera, this exposure follows the sunny f/16 rule
                 // Since we define a light that has the same intensity as the sun, it guarantees a
                 // proper exposure
@@ -456,7 +460,7 @@ open class SceneView @JvmOverloads constructor(
             this.cameraManipulator = cameraManipulator?.invoke(width, height)
 
             selectionModel = modelLoader.createModel("models/selection.glb")!!
-            this.nodesManipulator = nodesManipulator ?: NodesManipulator(engine) { nodeSize ->
+            nodesManipulator = sharedNodesManipulator ?: NodesManipulator(engine) { nodeSize ->
                 ModelNode(this@SceneView, modelLoader.createInstance(selectionModel)!!).apply {
                     isSelectable = false
                     size = size.apply {
@@ -508,7 +512,7 @@ open class SceneView @JvmOverloads constructor(
 
         // Extract the camera basis from the helper and push it to the Filament camera.
         cameraManipulator?.getLookAt()?.let { (eye, target, upward) ->
-            camera?.lookAt(eye, target, upward)
+            cameraNode?.lookAt(eye, target, upward)
         }
 
         // Update child nodes
@@ -686,17 +690,12 @@ open class SceneView @JvmOverloads constructor(
         engine.destroyColorGrading(colorGrading)
         engine.destroyScene(scene)
 
-        camera?.let {
-            engine.destroyCameraComponent(it.entity)
-            EntityManager.get().destroy(it.entity)
-        }
+        cameraNode?.destroy()
 
         // Use runCatching because they should normally already been destroyed by the lifecycle and
         // Filament will throw an Exception when destroying them twice.
-        lightNode?.let {
-            engine.destroyEntity(it.entity)
-            EntityManager.get().destroy(it.entity)
-        }
+        lightNode?.destroy()
+
         indirectLight?.let { engine.destroyIndirectLight(it) }
         skybox?.let { engine.destroySkybox(it) }
 
@@ -723,7 +722,7 @@ open class SceneView @JvmOverloads constructor(
         val width = filamentView.viewport.width
         val height = filamentView.viewport.height
         val aspect = width.toDouble() / height.toDouble()
-        camera?.setLensProjection(
+        cameraNode?.setLensProjection(
             cameraFocalLength.toDouble(),
             aspect,
             NEAR_PLANE,
@@ -782,9 +781,13 @@ open class SceneView @JvmOverloads constructor(
     }
 
     companion object {
-        // Load the library for the utility layer, which in turn loads gltfio and the Filament core.
         init {
-            runCatching { Utils.init() }
+            // Prevent isInEditMode Filament issue
+            runCatching {
+                // Load the library for the utility layer, which in turn loads gltfio and the
+                // Filament core.
+                Utils.init()
+            }
         }
 
         const val NEAR_PLANE = 0.05 // 5 cm
