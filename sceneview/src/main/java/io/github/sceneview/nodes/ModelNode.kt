@@ -6,7 +6,8 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.gltfio.Animator
 import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
-import io.github.sceneview.components.ModelChildComponent
+import io.github.sceneview.components.CameraComponent
+import io.github.sceneview.components.LightComponent
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.managers.NodeManager
@@ -16,7 +17,7 @@ import io.github.sceneview.model.getAnimationIndex
 import io.github.sceneview.utils.FrameTime
 
 /**
- * Create the ModelNode from a loaded model
+ * Create the ModelNode from a loaded model instance
  *
  * @param engine [SceneView.engine] or your own shared [Engine.create]
  *
@@ -26,26 +27,29 @@ import io.github.sceneview.utils.FrameTime
 open class ModelNode private constructor(
     engine: Engine,
     nodeManager: NodeManager,
-    val model: Model,
-    val animator: Animator,
-    rootEntity: Entity,
-    entities: List<Entity>,
-    val renderableEntities: List<Entity>,
-    val lightEntities: List<Entity>,
-    val cameraEntities: List<Entity>,
+    val modelInstance: ModelInstance
 ) : Node(
     engine,
     nodeManager,
-    rootEntity,
+    modelInstance.root,
     true,
     true,
-    listOf(rootEntity) + entities
+    listOf(modelInstance.root) + modelInstance.entities.toList()
 ) {
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
-    val renderableNodes: List<RenderableNode> get() = allChildNodes.mapNotNull { it as? RenderableNode }
-    val lightNodes: List<LightNode> get() = allChildNodes.mapNotNull { it as? LightNode }
-    val cameraNodes: List<CameraNode> get() = allChildNodes.mapNotNull { it as? CameraNode }
+    val model: Model get() = modelInstance.asset
+    val entities: List<Entity> get() = modelInstance.entities.toList()
+
+    val nodes: List<ChildNode>
+    val renderableNodes: List<RenderableNode> get() = nodes.mapNotNull { it as? RenderableNode }
+    val lightNodes: List<LightNode> get() = nodes.mapNotNull { it as? LightNode }
+    val cameraNodes: List<CameraNode> get() = nodes.mapNotNull { it as? CameraNode }
+
+    /**
+     * Retrieved the [Animator] for the model instance
+     */
+    val animator: Animator = modelInstance.animator
 
     /**
      * The number of animation definitions in the glTF asset
@@ -53,26 +57,35 @@ open class ModelNode private constructor(
     val animationCount get() = animator.animationCount
     var playingAnimations = mutableMapOf<Int, PlayingAnimation>()
 
-    final override val allChildEntities: List<Entity>
-        get() = super.allChildEntities
-
     init {
         // We use allChildEntities instead of entities because of this:
         // https://github.com/google/filament/discussions/6113
-        allChildEntities.forEach { childEntity ->
-            val childNode = when (childEntity) {
-                in renderableEntities -> RenderableNode(engine, nodeManager, model, childEntity)
-                in lightEntities -> LightNode(engine, nodeManager, model, childEntity)
-                in cameraEntities -> CameraNode(engine, nodeManager, model, childEntity)
-                else -> Node(engine, nodeManager, model, childEntity)
+        nodes = entities.map { childEntity ->
+            when {
+                engine.renderableManager.hasComponent(childEntity) -> RenderableNode(
+                    engine,
+                    nodeManager,
+                    modelInstance,
+                    childEntity
+                )
+                engine.lightManager.hasComponent(childEntity) -> LightNode(
+                    engine,
+                    nodeManager,
+                    modelInstance,
+                    childEntity
+                )
+                engine.getCameraComponent(childEntity) != null -> CameraNode(
+                    engine,
+                    nodeManager,
+                    modelInstance,
+                    childEntity
+                )
+                else -> ChildNode(engine, nodeManager, modelInstance, childEntity)
             }
-            nodeManager.addComponent(childEntity, childNode)
         }
 
         //TODO: Used by Filament ModelViewer, see if it's useful
         setScreenSpaceContactShadows(true)
-
-        model.releaseSourceData()
     }
 
     /**
@@ -81,62 +94,36 @@ open class ModelNode private constructor(
      * @see ModelLoader.loadModel
      * @see ModelLoader.createModel
      */
-    constructor(
-        engine: Engine,
-        nodeManager: NodeManager,
-        model: Model
-    ) : this(
+    constructor(engine: Engine, nodeManager: NodeManager, model: Model) : this(
         engine,
         nodeManager,
-        model,
-        model.animator,
-        model.root,
-        model.entities.toList(),
-        model.renderableEntities.toList(),
-        model.lightEntities.toList(),
-        model.cameraEntities.toList()
-    )
+        model.instance
+    ) {
+        model.releaseSourceData()
+    }
 
     /**
      * Create the ModelNode from a loaded model instance
-     *
-     * @see ModelLoader.loadInstancedModel
-     * @see ModelLoader.createInstance
-     */
-    constructor(engine: Engine, nodeManager: NodeManager, modelInstance: ModelInstance) : this(
-        engine,
-        nodeManager,
-        modelInstance.asset,
-        modelInstance.animator,
-        modelInstance.root,
-        modelInstance.entities.toList(),
-        modelInstance.entities.filter { engine.renderableManager.hasComponent(it) },
-        modelInstance.entities.filter { engine.lightManager.hasComponent(it) },
-        modelInstance.entities.filter { engine.getCameraComponent(it) != null }
-    )
-
-    /**
-     * Create the ModelNode from a loaded model
      *
      * @see ModelLoader.loadModel
      * @see ModelLoader.createModel
-     */
-    constructor(sceneView: SceneView, model: Model) : this(
-        sceneView.engine,
-        sceneView.nodeManager,
-        model
-    )
-
-    /**
-     * Create the ModelNode from a loaded model instance
-     *
-     * @see [ModelLoader.loadInstancedModel]
-     * @see [ModelLoader.createInstance]
      */
     constructor(sceneView: SceneView, modelInstance: ModelInstance) : this(
         sceneView.engine,
         sceneView.nodeManager,
         modelInstance
+    )
+
+    /**
+     * Create the ModelNode from a loaded model
+     *
+     * @see [ModelLoader.loadInstancedModel]
+     * @see [ModelLoader.createInstance]
+     */
+    constructor(sceneView: SceneView, model: Model) : this(
+        sceneView.engine,
+        sceneView.nodeManager,
+        model
     )
 
     override fun onFrame(frameTime: FrameTime) {
@@ -186,6 +173,77 @@ open class ModelNode private constructor(
     }
 
     /**
+     * Gets the skin count of this instance.
+     */
+    val skinCount: Int get() = modelInstance.skinCount
+
+    /**
+     * Gets the skin name at skin index in this instance.
+     */
+    val skinNames: List<String> get() = modelInstance.skinNames.toList()
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    fun attachSkin(target: Node, @IntRange(from = 0) skinIndex: Int = 0) =
+        modelInstance.attachSkin(skinIndex, target.entity)
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    fun detachSkin(target: Node, @IntRange(from = 0) skinIndex: Int = 0) =
+        modelInstance.detachSkin(skinIndex, target.entity)
+
+    /**
+     * Gets the joint count at skin index in this instance.
+     */
+    open fun getJointCount(@IntRange(from = 0) skinIndex: Int = 0): Int =
+        modelInstance.getJointCountAt(skinIndex)
+
+    /**
+     * Gets joints at skin index in this instance.
+     */
+    fun getJoints(@IntRange(from = 0) skinIndex: Int = 0): List<Node> =
+        modelInstance.getJointsAt(skinIndex).map { nodeManager.getNode(it) }.filterNotNull()
+
+    /**
+     * Changes the material instances binding for the given primitives
+     *
+     * @see RenderableComponent.materialInstances
+     */
+    var materialInstances: List<MaterialInstance>
+        get() = renderableNodes.flatMap { it.materialInstances }
+        // TODO: Is it the same:
+        // modelInstance.materialInstances.toList()
+        set(value) {
+            var start = 0
+            renderableNodes.forEach {
+                it.materialInstances = value.subList(start, start + it.primitiveCount)
+                start += it.primitiveCount
+            }
+        }
+
+    /**
+     * Changes the material instance binding for all primitives
+     *
+     * @see RenderableComponent.setMaterialInstance
+     */
+    fun setMaterialInstance(materialInstance: MaterialInstance) {
+        renderableNodes.forEach { it.setMaterialInstance(materialInstance) }
+    }
+
+    /**
+     * Returns the names of all material variants.
+     */
+    val materialVariantNames: List<String> get() = modelInstance.materialVariantNames.toList()
+
+    /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default
      *
      * The renderable must be built with morphing enabled. In legacy morphing mode, only the
@@ -193,7 +251,7 @@ open class ModelNode private constructor(
      *
      * @see RenderableComponent.setMorphWeights
      */
-    fun setMorphWeights(weights: FloatArray, @IntRange(from = 0) offset: Int) =
+    fun setMorphWeights(weights: FloatArray, @IntRange(from = 0) offset: Int = weights.size) =
         renderableNodes.forEach { it.setMorphWeights(weights, offset) }
 
     /**
@@ -248,30 +306,6 @@ open class ModelNode private constructor(
         renderableNodes.forEach { it.setScreenSpaceContactShadows(enabled) }
 
     /**
-     * Changes the material instances binding for the given primitives
-     *
-     * @see RenderableComponent.materialInstances
-     */
-    var materialInstances: List<MaterialInstance>
-        get() = renderableNodes.flatMap { it.materialInstances }
-        set(value) {
-            var start = 0
-            renderableNodes.forEach {
-                it.materialInstances = value.subList(start, start + it.primitiveCount)
-                start += it.primitiveCount
-            }
-        }
-
-    /**
-     * Changes the material instance binding for all primitives
-     *
-     * @see RenderableComponent.setMaterialInstance
-     */
-    fun setMaterialInstance(materialInstance: MaterialInstance) {
-        renderableNodes.forEach { it.setMaterialInstance(materialInstance) }
-    }
-
-    /**
      * Changes the drawing order for blended primitives
      *
      * The drawing order is either global or local (default) to this Renderable.
@@ -298,33 +332,52 @@ open class ModelNode private constructor(
 
     override fun getBoundingBox() = model.boundingBox
 
-    class Node internal constructor(
+    open class ChildNode internal constructor(
         engine: Engine,
         nodeManager: NodeManager,
-        override val model: Model,
+        val modelInstance: ModelInstance,
         entity: Entity
-    ) : io.github.sceneview.nodes.Node(engine, nodeManager, entity), ModelChildComponent
+    ) : Node(engine, nodeManager, entity, false, false) {
+        val model: Model get() = modelInstance.asset
+        val name: String? get() = model.getName(entity)
+
+        /**
+         * Gets the glTF extras string for the asset or a specific node.
+         *
+         * null if it does not exist.
+         */
+        val extras: String? get() = model.getExtras(entity)
+
+        /**
+         * Gets the names of all morph targets in the given entity.
+         */
+        val morphTargetNames: List<String> get() = model.getMorphTargetNames(entity).toList()
+    }
 
     class RenderableNode internal constructor(
         engine: Engine,
         nodeManager: NodeManager,
-        override val model: Model,
+        modelInstance: ModelInstance,
         entity: Entity
-    ) : io.github.sceneview.nodes.RenderableNode(
-        engine, nodeManager, entity, false, false
-    ), RenderableComponent, ModelChildComponent
+    ) : ChildNode(engine, nodeManager, modelInstance, entity),
+        RenderableComponent
 
     class LightNode internal constructor(
         engine: Engine,
         nodeManager: NodeManager,
-        override val model: Model,
+        modelInstance: ModelInstance,
         entity: Entity
-    ) : io.github.sceneview.nodes.LightNode(engine, nodeManager, entity), ModelChildComponent
+    ) : ChildNode(engine, nodeManager, modelInstance, entity),
+        LightComponent
 
     class CameraNode internal constructor(
         engine: Engine,
         nodeManager: NodeManager,
-        override val model: Model,
+        modelInstance: ModelInstance,
         entity: Entity
-    ) : io.github.sceneview.nodes.CameraNode(engine, nodeManager, entity), ModelChildComponent
+    ) : ChildNode(engine, nodeManager, modelInstance, entity),
+        CameraComponent
 }
+
+inline operator fun <reified T : ModelNode.ChildNode> List<T>.get(name: String): T? =
+    firstOrNull { it.name == name }
