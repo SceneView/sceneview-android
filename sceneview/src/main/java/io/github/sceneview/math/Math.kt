@@ -21,6 +21,7 @@ fun Transform(position: Position, rotation: Rotation, scale: Scale) =
 
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }
+fun DoubleArray.toFloat4() = this.map { it.toFloat() }.let { (x, y, z, w) -> Float4(x, y, z, w) }
 fun FloatArray.toPosition() = this.let { (x, y, z) -> Position(x, y, z) }
 fun FloatArray.toRotation() = this.let { (x, y, z) -> Rotation(x, y, z) }
 fun FloatArray.toScale() = this.let { (x, y, z) -> Scale(x, y, z) }
@@ -29,6 +30,8 @@ fun FloatArray.toQuaternion() = this.let { (x, y, z, w) -> Quaternion(x, y, z, w
 fun FloatArray.toSize() = this.let { (x, y, z) -> Size(x, y, z) }
 fun FloatArray.toTransform() = Transform.of(*this)
 fun DoubleArray.toTransform() = Transform.of(*this.map { it.toFloat() }.toFloatArray())
+fun Mat4.toDoubleArray() : DoubleArray = toFloatArray().map { it.toDouble() }.toDoubleArray()
+val Mat4.quaternion: Quaternion get() = rotation(this).toQuaternion()
 
 operator fun Mat4.times(v: Float3) = (this * Float4(v, 1f)).xyz
 
@@ -52,9 +55,6 @@ fun max(a: List<Float3>): Float3 {
     }
     return max
 }
-
-val Mat4.quaternion: Quaternion
-    get() = rotation(this).toQuaternion()
 
 fun Mat4.toColumnsFloatArray() = floatArrayOf(
     x.x, x.y, x.z, x.w,
