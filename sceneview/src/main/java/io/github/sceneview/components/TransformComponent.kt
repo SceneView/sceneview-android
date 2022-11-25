@@ -19,13 +19,14 @@ interface TransformComponent : Component {
 
     /**
      * Returns whether a particular [Entity] is associated with a component of the
-     * [TransformManager]
+     * [TransformManager].
+     *
      * @return true if this [Entity] has a component associated with this manager
      */
     val hasComponent get() = transformManager.hasComponent(entity)
 
     /**
-     * Parent entity from this transform
+     * Parent entity from this transform.
      *
      * It is an error to re-parent an entity to a descendant and will cause undefined behaviour.
      *
@@ -44,7 +45,7 @@ interface TransformComponent : Component {
         get() = parentEntity?.let { transformManager.getInstance(it) }
 
     /**
-     * Returns the number of children of an [EntityInstance]
+     * Returns the number of children of an [EntityInstance].
      *
      * @return The number of children of the queried component
      *
@@ -54,7 +55,7 @@ interface TransformComponent : Component {
         get() = transformManager.getChildCount(transformInstance)
 
     /**
-     * Gets a list of children for a transform component
+     * Gets a list of children for a transform component.
      *
      * @return Array of retrieved children [Entity]
      *
@@ -63,7 +64,7 @@ interface TransformComponent : Component {
     val childEntities: List<Entity> get() = transformManager.getChildren(transformInstance)
 
     /**
-     * Gets a flat list of all children within the hierarchy for a transform component
+     * Gets a flat list of all children within the hierarchy for a transform component.
      *
      * @return Array of retrieved children [Entity].
      *
@@ -72,7 +73,7 @@ interface TransformComponent : Component {
     val allChildEntities: List<Entity> get() = transformManager.getAllChildren(transformInstance)
 
     /**
-     * Position to locate within the coordinate system the parent
+     * Position to locate within the coordinate system the parent.
      *
      * Default is `Position(x = 0.0f, y = 0.0f, z = 0.0f)`, indicating that the component is placed
      * at the origin of the parent component's coordinate system.
@@ -115,7 +116,7 @@ interface TransformComponent : Component {
         }
 
     /**
-     * World-space position
+     * World-space position.
      *
      * The world position of this component (i.e. relative to the [SceneView]).
      * This is the composition of this component's local position with its parent's world position.
@@ -129,7 +130,7 @@ interface TransformComponent : Component {
         }
 
     /**
-     * Quaternion rotation
+     * Quaternion rotation.
      *
      * @see transform
      */
@@ -140,7 +141,7 @@ interface TransformComponent : Component {
         }
 
     /**
-     * The world-space quaternion
+     * The world-space quaternion.
      *
      * The world quaternion of this component (i.e. relative to the [SceneView]).
      * This is the composition of this component's local quaternion with its parent's world
@@ -155,7 +156,7 @@ interface TransformComponent : Component {
         }
 
     /**
-     * Orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`
+     * Orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`.
      *
      * The three-component rotation vector specifies the direction of the rotation axis in degrees.
      * Rotation is applied relative to the component's origin property.
@@ -188,7 +189,7 @@ interface TransformComponent : Component {
         }
 
     /**
-     * World-space rotation
+     * World-space rotation.
      *
      * The world rotation of this component (i.e. relative to the [SceneView]).
      * This is the composition of this component's local rotation with its parent's world
@@ -203,7 +204,7 @@ interface TransformComponent : Component {
         }
 
     /**
-     * Scale on each axis
+     * Scale on each axis.
      *
      * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
      *
@@ -216,7 +217,7 @@ interface TransformComponent : Component {
         }
 
     /**
-     * World-space scale
+     * World-space scale.
      *
      * The world scale of this component (i.e. relative to the [SceneView]).
      * This is the composition of this component's local scale with its parent's world
@@ -231,21 +232,21 @@ interface TransformComponent : Component {
         }
 
     /**
-     * Local transform of the transform component (i.e. relative to the parent)
+     * Local transform of the transform component (i.e. relative to the parent).
      *
      * @see TransformManager.getTransform
      * @see TransformManager.setTransform
      */
     var transform: Transform
-        get() = transpose(Transform.of(*FloatArray(16).apply {
+        get() = transpose(FloatArray(16).apply {
             transformManager.getTransform(transformInstance, this)
-        }))
+        }.toTransform())
         set(value) {
             transformManager.setTransform(transformInstance, transpose(value).toFloatArray())
         }
 
     /**
-     * World transform of a transform component (i.e. relative to the root)
+     * World transform of a transform component (i.e. relative to the root).
      *
      * @see TransformManager.getWorldTransform
      */
@@ -255,7 +256,7 @@ interface TransformComponent : Component {
         }))
 
     /**
-     * Transform from the world coordinate system to the coordinate system of the parent
+     * Transform from the world coordinate system to the coordinate system of the parent.
      *
      * @see TransformManager.getWorldTransform
      */
@@ -277,7 +278,7 @@ interface TransformComponent : Component {
     fun createComponent(): EntityInstance = transformManager.create(entity)
 
     /**
-     * Apply a scale to all axis
+     * Apply a scale to all axis.
      *
      * - reduce size: scale < 1.0f
      * - same size: scale = 1.0f
@@ -290,7 +291,7 @@ interface TransformComponent : Component {
     }
 
     /**
-     * Apply multiple transforms at at same time
+     * Apply multiple transforms at at same time.
      *
      * @see position
      * @see quaternion
@@ -314,7 +315,7 @@ interface TransformComponent : Component {
     }
 
     /**
-     * Apply multiple transforms at at same time
+     * Apply multiple transforms at at same time.
      *
      * @see position
      * @see rotation
@@ -330,7 +331,7 @@ interface TransformComponent : Component {
     ) = transform(position, rotation.toQuaternion(), scale, smooth, smoothSpeed)
 
     /**
-     * Smooth move, rotate and scale at a specified speed
+     * Smooth move, rotate and scale at a specified speed.
      *
      * @see position
      * @see quaternion
@@ -345,7 +346,7 @@ interface TransformComponent : Component {
     ) = smooth(Transform(position, quaternion, scale), speed)
 
     /**
-     * Smooth move, rotate and scale at a specified speed
+     * Smooth move, rotate and scale at a specified speed.
      *
      * @see position
      * @see quaternion
@@ -360,7 +361,7 @@ interface TransformComponent : Component {
     ) = smooth(Transform(position, rotation, scale), speed)
 
     /**
-     * Smooth move, rotate and scale at a specified speed
+     * Smooth move, rotate and scale at a specified speed.
      *
      * @see transform
      */
@@ -392,7 +393,7 @@ interface TransformComponent : Component {
         TransformAnimator.ofTransform(this, *transforms)
 
     /**
-     * Rotate the transform to face a point in world-space
+     * Rotate the transform to face a point in world-space.
      *
      * @param targetPosition The target position to look at in world space
      * @param smooth Whether the rotation should happen smoothly
@@ -418,7 +419,7 @@ interface TransformComponent : Component {
     }
 
     /**
-     * Rotates the transform to face another [TransformComponent]
+     * Rotates the transform to face another [TransformComponent].
      *
      * @param targetComponent The target [TransformComponent] to look at
      * @param smooth Whether the rotation should happen smoothly
@@ -430,7 +431,7 @@ interface TransformComponent : Component {
     ) = lookAt(eye, targetComponent.worldPosition, smooth)
 
     /**
-     * Rotates the transform to face a direction in world-space
+     * Rotates the transform to face a direction in world-space.
      *
      * The look direction and up direction cannot be coincident (parallel) or the orientation will
      * be invalid.

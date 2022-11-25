@@ -18,7 +18,7 @@ interface RenderableComponent : Component {
     val renderableInstance: RenderableInstance get() = renderableManager.getInstance(entity)
 
     /**
-     * Associates a [SkinningBuffer] to a renderable instance
+     * Associates a [SkinningBuffer] to a renderable instance.
      *
      * @param skinningBuffer [SkinningBuffer] to use
      * @param count Numbers of bones to set
@@ -30,7 +30,7 @@ interface RenderableComponent : Component {
         renderableManager.setSkinningBuffer(renderableInstance, skinningBuffer, count, offset)
 
     /**
-     * Sets the transforms associated with each bone of a Renderable
+     * Sets the transforms associated with each bone of a Renderable.
      *
      * @param matrices A FloatBuffer containing boneCount 4x4 packed matrices
      * (i.e. 16 floats each matrix and no gap between matrices)
@@ -48,7 +48,8 @@ interface RenderableComponent : Component {
     /**
      * Sets the transforms associated with each bone of a Renderable
      *
-     * @param quaternions A FloatBuffer containing boneCount transforms. Each transform consists of 8 float.
+     * @param quaternions A FloatBuffer containing boneCount transforms. Each transform consists of
+     * 8 float.
      * float 0 to 3 encode a unit quaternion w+ix+jy+kz stored as x,y,z,w.
      * float 4 to 7 encode a translation stored as x,y,z,1
      * @param boneCount Number of bones to set
@@ -63,18 +64,18 @@ interface RenderableComponent : Component {
     ) = renderableManager.setBonesAsQuaternions(renderableInstance, quaternions, boneCount, offset)
 
     /**
-     * Updates the vertex morphing weights on a renderable, all zeroes by default
+     * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
      * The renderable must be built with morphing enabled. In legacy morphing mode, only the
      * first 4 weights are considered.
      *
      * @see RenderableManager.setMorphWeights
      */
-    fun setMorphWeights(weights: FloatArray, @IntRange(from = 0) offset: Int) =
+    fun setMorphWeights(weights: FloatArray, @IntRange(from = 0) offset: Int = weights.size) =
         renderableManager.setMorphWeights(renderableInstance, weights, offset)
 
     /**
-     * Changes the morph target buffer for the given primitive
+     * Changes the morph target buffer for the given primitive.
      *
      * The renderable must be built with morphing enabled.
      *
@@ -96,7 +97,7 @@ interface RenderableComponent : Component {
     )
 
     /**
-     * Utility method to change morph target buffer for the given primitive
+     * Utility method to change morph target buffer for the given primitive.
      *
      * @see RenderableManager.setMorphTargetBufferAt
      */
@@ -114,15 +115,14 @@ interface RenderableComponent : Component {
     )
 
     /**
-     * Gets the morph target count on a renderable
+     * Gets the morph target count on a renderable.
      *
      * @see RenderableManager.getMorphTargetCount
      */
-    val morphTargetCount: Int
-        @IntRange(from = 0) get() = renderableManager.getMorphTargetCount(renderableInstance)
+    val morphTargetCount: Int get() = renderableManager.getMorphTargetCount(renderableInstance)
 
     /**
-     * Changes the bounding box used for frustum culling
+     * Changes the bounding box used for frustum culling.
      *
      * @see RenderableManager.getAxisAlignedBoundingBox
      * @see RenderableManager.setAxisAlignedBoundingBox
@@ -133,10 +133,15 @@ interface RenderableComponent : Component {
         }
         set(value) = renderableManager.setAxisAlignedBoundingBox(renderableInstance, value)
 
+    /**
+     * Changes the visibility.
+     *
+     * @see RenderableManager.setLayerMask
+     */
     fun setLayerVisible(visible: Boolean) = setLayerMask(0xff, if (visible) 0xff else 0x00)
 
     /**
-     * Changes the visibility bits
+     * Changes the visibility bits.
      *
      * @see RenderableManager.setLayerMask
      */
@@ -146,7 +151,7 @@ interface RenderableComponent : Component {
     ) = renderableManager.setLayerMask(renderableInstance, select, value)
 
     /**
-     * Changes the coarse-level draw ordering
+     * Changes the coarse-level draw ordering.
      *
      * @see RenderableManager.setPriority
      */
@@ -154,7 +159,7 @@ interface RenderableComponent : Component {
         renderableManager.setPriority(renderableInstance, priority)
 
     /**
-     * Changes whether or not frustum culling is on
+     * Changes whether or not frustum culling is on.
      *
      * @see RenderableManager.setCulling
      */
@@ -163,8 +168,8 @@ interface RenderableComponent : Component {
     /**
      * Returns whether a light channel is enabled on a specified renderable
      *
-     * @param channel  Light channel to query
-     * @return         true if the light channel is enabled, false otherwise
+     * @param channel Light channel to query
+     * @return true if the light channel is enabled, false otherwise
      *
      * @see RenderableManager.getLightChannel
      */
@@ -172,7 +177,7 @@ interface RenderableComponent : Component {
         renderableManager.getLightChannel(renderableInstance, channel)
 
     /**
-     * Enables or disables a light channel
+     * Enables or disables a light channel.
      *
      * Light channel 0 is enabled by default.
      *
@@ -185,7 +190,7 @@ interface RenderableComponent : Component {
         renderableManager.setLightChannel(renderableInstance, channel, enable)
 
     /**
-     * Changes whether or not the renderable casts shadows
+     * Changes whether or not the renderable casts shadows.
      *
      * @see RenderableManager.isShadowCaster
      * @see RenderableManager.setCastShadows
@@ -195,7 +200,7 @@ interface RenderableComponent : Component {
         set(value) = renderableManager.setCastShadows(renderableInstance, value)
 
     /**
-     * Changes whether or not the renderable can receive shadows
+     * Changes whether or not the renderable can receive shadows.
      *
      * @see RenderableManager.isShadowReceiver
      * @see RenderableManager.setReceiveShadows
@@ -205,7 +210,7 @@ interface RenderableComponent : Component {
         set(value) = renderableManager.setReceiveShadows(renderableInstance, value)
 
     /**
-     * Changes whether or not the renderable can use screen-space contact shadows
+     * Changes whether or not the renderable can use screen-space contact shadows.
      *
      * @see RenderableManager.setScreenSpaceContactShadows
      */
@@ -213,7 +218,7 @@ interface RenderableComponent : Component {
         renderableManager.setScreenSpaceContactShadows(renderableInstance, enabled)
 
     /**
-     * Gets the immutable number of primitives in the given renderable
+     * Gets the immutable number of primitives in the given renderable.
      *
      * @see RenderableManager.getPrimitiveCount
      */
@@ -221,7 +226,7 @@ interface RenderableComponent : Component {
         @IntRange(from = 0) get() = renderableManager.getPrimitiveCount(renderableInstance)
 
     /**
-     * Changes the material instance binding for the given primitive
+     * Changes the material instance binding for the given primitive.
      *
      * @see RenderableManager.getMaterialInstanceAt
      * @see RenderableManager.setMaterialInstanceAt
@@ -235,7 +240,7 @@ interface RenderableComponent : Component {
         }
 
     /**
-     * Changes the material instance binding for all primitives
+     * Changes the material instance binding for all primitives.
      *
      * @see RenderableManager.setMaterialInstanceAt
      */
@@ -246,7 +251,7 @@ interface RenderableComponent : Component {
     }
 
     /**
-     * Creates a MaterialInstance Java wrapper object for a particular material instance
+     * Creates a MaterialInstance Java wrapper object for a particular material instance.
      *
      * @see RenderableManager.getMaterialInstanceAt
      */
@@ -254,7 +259,7 @@ interface RenderableComponent : Component {
         renderableManager.getMaterialInstanceAt(renderableInstance, primitiveIndex)
 
     /**
-     * Changes the material instance binding for the given primitive
+     * Changes the material instance binding for the given primitive.
      *
      * @see RenderableManager.setMaterialInstanceAt
      */
@@ -273,7 +278,7 @@ interface RenderableComponent : Component {
     ) = setMaterialInstanceAt(primitiveIndex, materialInstance)
 
     /**
-     * Changes the geometry for the given renderable instance
+     * Changes the geometry for the given renderable instance.
      *
      * @see Geometry
      * @see Plane
@@ -286,7 +291,7 @@ interface RenderableComponent : Component {
         renderableManager.setGeometry(renderableInstance, geometry)
 
     /**
-     * Changes the geometry for the given primitive
+     * Changes the geometry for the given primitive.
      *
      * @see RenderableManager.setGeometryAt
      */
@@ -308,7 +313,7 @@ interface RenderableComponent : Component {
     )
 
     /**
-     * Changes the drawing order for blended primitives
+     * Changes the drawing order for blended primitives.
      *
      * The drawing order is either global or local (default) to this Renderable.
      * In either case, the Renderable priority takes precedence.
@@ -325,7 +330,7 @@ interface RenderableComponent : Component {
 
     /**
      * Changes the drawing order for blended primitives. The drawing order is either global or
-     * local (default) to this Renderable
+     * local (default) to this Renderable.
      *
      * In either case, the Renderable priority takes precedence.
      *
