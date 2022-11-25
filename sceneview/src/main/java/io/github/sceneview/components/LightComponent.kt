@@ -1,5 +1,6 @@
 package io.github.sceneview.components
 
+import androidx.annotation.IntRange
 import com.google.android.filament.LightManager
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.managers.*
@@ -14,6 +15,27 @@ interface LightComponent : Component {
     val lightInstance: EntityInstance get() = lightManager.getInstance(entity)
 
     val type: LightManager.Type get() = lightManager.getType(lightInstance)
+
+    /**
+     * Enables or disables a light channel.
+     * Light channel 0 is enabled by default.
+     *
+     * @param channel Light channel to set
+     * @param enable true to enable, false to disable
+     *
+     * @see LightManager.Builder.lightChannel
+     */
+    fun setLightChannel(@IntRange(from = 0, to = 7) channel: Int, enable: Boolean) =
+        lightManager.setLightChannel(lightInstance, channel, enable)
+
+    /**
+     * Returns whether a light channel is enabled on a specified renderable.
+     *
+     * @param channel Light channel to query
+     * @return true if the light channel is enabled, false otherwise
+     */
+    fun getLightChannel(@IntRange(from = 0, to = 7) channel: Int): Boolean =
+        lightManager.getLightChannel(lightInstance, channel)
 
     /**
      * The light's position in world space
@@ -52,18 +74,6 @@ interface LightComponent : Component {
         }
 
     /**
-     * Dynamically updates the light's intensity
-     *
-     * The intensity can be negative.
-     *
-     * @see LightManager.getIntensity
-     * @see LightManager.setIntensity
-     */
-    var intensity: Float
-        get() = lightManager.getIntensity(lightInstance)
-        set(value) = lightManager.setIntensity(lightInstance, value)
-
-    /**
      * Dynamically updates the light's hue as linear sRGB
      *
      * @see LightManager.getColor
@@ -76,17 +86,65 @@ interface LightComponent : Component {
         set(value) = lightManager.setColor(lightInstance, value.r, value.g, value.b)
 
     /**
-     * Whether this Light casts shadows (disabled by default)
+     * Dynamically updates the light's intensity
      *
-     * @see LightManager.isShadowCaster
-     * @see LightManager.setShadowCaster
+     * The intensity can be negative.
+     *
+     * This parameter depends on the [LightManager.Type], for directional lights, it specifies the
+     * illuminance in <i>lux</i> (or <i>lumen/m^2</i>).
+     * For point lights and spot lights, it specifies the luminous power in <i>lumen</i>.
+     * For example, the sun's illuminance is about 100,000 lux.
+     *
+     * This method is equivalent to calling setIntensity for directional lights
+     * ([LightManager.Type.DIRECTIONAL] or [LightManager.Type.SUN]).
+     *
+     * @see LightManager.getIntensity
+     * @see LightManager.setIntensity
      */
-    var isShadowCaster: Boolean
-        get() = lightManager.isShadowCaster(lightInstance)
-        set(value) = lightManager.setShadowCaster(lightInstance, value)
+    var intensity: Float
+        get() = lightManager.getIntensity(lightInstance)
+        set(value) = lightManager.setIntensity(lightInstance, value)
 
     /**
-     * The falloff distance for point lights and spot lights
+     * Dynamically updates the light's intensity in candela. The intensity can be negative.
+     *
+     * This method is equivalent to calling setIntensity for directional lights
+     * ([LightManager.Type.DIRECTIONAL] or [LightManager.Type.SUN]).
+     *
+     * @param intensity Luminous intensity in *candela*.
+     *
+     * @see LightManager.Builder.intensityCandela
+     */
+    fun setIntensityCandela(intensity: Float) =
+        lightManager.setIntensityCandela(lightInstance, intensity)
+
+    /**
+     * Dynamically updates the light's intensity. The intensity can be negative.
+     *
+     * Lightbulb type  | Efficiency
+     * -----------------+------------
+     * Incandescent |  2.2%
+     * Halogen  |  7.0%
+     * LED  |  8.7%
+     * Fluorescent  | 10.7%
+     *
+     * This call is equivalent to:
+     * ```
+     * Builder.intensity(efficiency * 683 * watts);
+     * ```
+     *
+     * @param watts Energy consumed by a lightbulb. It is related to the energy produced and
+     * ultimately the brightness by the efficiency parameter. This value is often available on the
+     * packaging of commercial lightbulbs.
+     * @param efficiency Efficiency in percent. This depends on the type of lightbulb used.
+     */
+    fun setIntensity(watts: Float, efficiency: Float) =
+        lightManager.setIntensity(lightInstance, watts, efficiency)
+
+    /**
+     * The falloff distance for point lights and spot lights.
+     *
+     * Falloff distance in world units. Default is 1 meter.
      *
      * @see LightManager.getFalloff
      * @see LightManager.setFalloff
@@ -96,31 +154,18 @@ interface LightComponent : Component {
         set(value) = lightManager.setFalloff(lightInstance, value)
 
     /**
-     * Dynamically updates the halo falloff of a Type.SUN light
+     * Dynamically updates a spot light's cone as angles
      *
-     * The falloff is a dimensionless number used as an exponent.
+     * @param inner inner cone angle in *radians* between 0 and pi/2
+     * @param outer outer cone angle in *radians* between inner and pi/2
      *
-     * @see LightManager.getSunHaloFalloff
-     * @see LightManager.setSunHaloFalloff
+     * @see LightManager.Builder.spotLightCone
      */
-    var sunHaloFalloff: Float
-        get() = lightManager.getSunHaloFalloff(lightInstance)
-        set(value) = lightManager.setSunHaloFalloff(lightInstance, value)
+    fun setSpotLightCone(inner: Float, outer: Float) =
+        lightManager.setSpotLightCone(lightInstance, inner, outer)
 
     /**
-     * Dynamically updates the halo radius of a Type.SUN light
-     *
-     * The radius of the halo is defined as a multiplier of the sun angular radius.
-     *
-     * @see LightManager.getSunHaloSize
-     * @see LightManager.setSunHaloSize
-     */
-    var sunHaloSize: Float
-        get() = lightManager.getSunHaloSize(lightInstance)
-        set(value) = lightManager.setSunHaloSize(lightInstance, value)
-
-    /**
-     * Dynamically updates the angular radius of a Type.SUN light
+     * Dynamically updates the angular radius of a Type.SUN light.
      *
      * The Sun as seen from Earth has an angular size of 0.526° to 0.545°
      *
@@ -132,37 +177,42 @@ interface LightComponent : Component {
         set(value) = lightManager.setSunAngularRadius(lightInstance, value)
 
     /**
-     * Dynamically updates a spot light's cone as angles
+     * Dynamically updates the halo radius of a Type.SUN light
      *
-     * @see LightManager.getInnerConeAngle
-     * @see LightManager.setSpotLightCone
+     * The radius of the halo is defined as a multiplier of the sun angular radius.
+     * Radius multiplier. Default is 10.0.
+     *
+     * @see LightManager.getSunHaloSize
+     * @see LightManager.setSunHaloSize
      */
-    var innerConeAngle: Float
-        get() = lightManager.getInnerConeAngle(lightInstance)
-        set(value) = lightManager.setSpotLightCone(lightInstance, value, outerConeAngle)
+    var sunHaloSize: Float
+        get() = lightManager.getSunHaloSize(lightInstance)
+        set(value) = lightManager.setSunHaloSize(lightInstance, value)
 
     /**
-     * Dynamically updates a spot light's cone as angles
+     * Dynamically updates the halo falloff of a Type.SUN light.
      *
-     * @see LightManager.getOuterConeAngle
-     * @see LightManager.setSpotLightCone
+     * The falloff is a dimensionless number used as an exponent.
+     *
+     * Halo falloff. Default is 80.0.
+     *
+     * @see LightManager.getSunHaloFalloff
+     * @see LightManager.setSunHaloFalloff
      */
-    var outerConeAngle: Float
-        get() = lightManager.getOuterConeAngle(lightInstance)
-        set(value) = lightManager.setSpotLightCone(lightInstance, innerConeAngle, value)
+    var sunHaloFalloff: Float
+        get() = lightManager.getSunHaloFalloff(lightInstance)
+        set(value) = lightManager.setSunHaloFalloff(lightInstance, value)
 
-//    // TODO: We need a clone on the Filament side in order to copy all values
-//    fun clone(engine: Engine, entity: Entity = EntityManager.get().create()) =
-//        LightManager.Builder(type)
-//            .castShadows(isShadowCaster)
-//            .position(lightPosition)
-//            .direction(lightDirection)
-//            .intensity(intensity)
-//            .color(color.r, color.g, color.b)
-//            .falloff(falloff)
-//            .sunHaloFalloff(sunHaloFalloff)
-//            .sunHaloSize(sunHaloSize)
-//            .sunAngularRadius(sunAngularRadius)
-//            .spotLightCone(innerConeAngle, outerConeAngle)
-//            .build(engine, entity)
+    /**
+     * Whether this Light casts shadows (disabled by default)
+     *
+     * @see LightManager.isShadowCaster
+     * @see LightManager.setShadowCaster
+     */
+    var isShadowCaster: Boolean
+        get() = lightManager.isShadowCaster(lightInstance)
+        set(value) = lightManager.setShadowCaster(lightInstance, value)
+
+    val outerConeAngle: Float get() = lightManager.getOuterConeAngle(lightInstance)
+    val innerConeAngle: Float get() = lightManager.getInnerConeAngle(lightInstance)
 }
