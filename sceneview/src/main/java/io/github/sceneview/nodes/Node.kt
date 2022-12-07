@@ -121,7 +121,7 @@ open class Node(
             updateSelectionVisualizer()
         }
 
-    var isSelected = false
+    open var isSelected = false
         internal set(value) {
             field = value
             updateSelectionVisualizer()
