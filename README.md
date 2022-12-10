@@ -20,7 +20,7 @@ This is a Sceneform replacement in Kotlin
 
 ## Architecture
 
-[![](https://i3.ytimg.com/vi/00vj8AttWO4/maxresdefault.jpg)](https://www.youtube.com/watch?v=00vj8AttWO4)
+[![](https://i3.ytimg.com/vi/00vj8AttWO4/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=00vj8AttWO4)
 
 ## Dependency
 
@@ -65,7 +65,7 @@ dependencies {
 
 ## 3D Model Viewer
 
-[![](https://i3.ytimg.com/vi/GDCy_bUdggg/maxresdefault.jpg)](https://www.youtube.com/watch?v=GDCy_bUdggg)
+[![](https://i3.ytimg.com/vi/GDCy_bUdggg/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=GDCy_bUdggg)
 
 ```kotlin
 sceneView.addChild(
@@ -90,7 +90,7 @@ Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
 
 ## AR Model Viewer
 
-[![](https://i3.ytimg.com/vi/HVqAvGJROWk/maxresdefault.jpg)](https://www.youtube.com/watch?v=HVqAvGJROWk)
+[![](https://i3.ytimg.com/vi/HVqAvGJROWk/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=HVqAvGJROWk)
 
 ```kotlin
 sceneView.addChild(
@@ -123,7 +123,7 @@ If `true`, the node will be anchored in the real world at the first suitable pla
 
 ## AR Placement Mode
 
-[![](https://i3.ytimg.com/vi/rxzLfTCsm_o/maxresdefault.jpg)](https://www.youtube.com/watch?v=rxzLfTCsm_o)
+[![](https://i3.ytimg.com/vi/rxzLfTCsm_o/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=rxzLfTCsm_o)
 
 Choose how an object is placed within the real world
 - `DISABLED` Disable every AR placement preview and handle it by yourself (`onTap`, `onAugmentedFace`, `onAugmentedImage`
@@ -194,7 +194,7 @@ Float cube position values between -1.0 and 1.0 corresponding to percents from  
 
 ## AR Cloud Anchors
 
-[![](https://i3.ytimg.com/vi/iptk8jsWyw4/maxresdefault.jpg)](https://www.youtube.com/watch?v=iptk8jsWyw4)
+[![](https://i3.ytimg.com/vi/iptk8jsWyw4/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=iptk8jsWyw4)
 
 [Sources](https://github.com/Gebort/FESTU.Navigator)
 
@@ -224,7 +224,7 @@ node.resolveCloudAnchor(cloudAnchorId) { anchor: Anchor, success: Boolean ->
 
 ## AR Depth/Objects Occlusion
 
-[![](https://i3.ytimg.com/vi/bzyoR3ugGFA/maxresdefault.jpg)](https://www.youtube.com/watch?v=bzyoR3ugGFA)
+[![](https://i3.ytimg.com/vi/bzyoR3ugGFA/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=bzyoR3ugGFA)
 
 ```kotlin
 sceneView.isDepthOcclusionEnabled = true
@@ -236,7 +236,7 @@ Disable this value to apply the standard camera material to the CameraStream.
 
 ## AR Geospatial API
 
-[![](https://i3.ytimg.com/vi/QZYg9WU5wSA/maxresdefault.jpg)](https://www.youtube.com/watch?v=QZYg9WU5wSA)
+[![](https://i3.ytimg.com/vi/QZYg9WU5wSA/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=QZYg9WU5wSA)
 
 Follow the [official developer guide](https://developers.google.com/ar/develop/java/geospatial/developer-guide)
 to enable Geospatial in your application. For configuring the ARCore session, you just need to enable
