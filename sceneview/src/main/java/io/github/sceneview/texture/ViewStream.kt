@@ -129,7 +129,7 @@ open class ViewStream @JvmOverloads constructor(
             val viewStream = ViewStream(view.context).apply {
                 stream = Stream.Builder()
                     .build(engine)
-                addView(view)
+                addView(this@Builder.view)
             }
             viewWindowViewManager.addView(viewStream)
             return viewStream
