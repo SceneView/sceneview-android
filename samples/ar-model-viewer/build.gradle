@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    compileSdk 31
+    compileSdk 33
 
     defaultConfig {
         applicationId "io.github.sceneview.sample.armodelviewer"
         minSdk 24
-        targetSdk 31
+        targetSdk 33
         versionCode 1
         versionName "1.0.0"
     }
@@ -38,7 +38,7 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:0.9.0"
+    releaseImplementation "io.github.sceneview:arsceneview:0.9.1"
     debugImplementation project(":arsceneview")
 
     // AndroidX
