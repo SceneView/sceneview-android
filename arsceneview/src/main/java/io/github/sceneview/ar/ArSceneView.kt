@@ -409,12 +409,10 @@ open class ArSceneView @JvmOverloads constructor(
      * The listener will be called in the order in which they were added.
      */
     protected open fun doArFrame(arFrame: ArFrame) {
-        if (arFrame.camera.isTracking != currentFrame?.camera?.isTracking) {
-            // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
-            // You will say thanks when still have battery after a long day debugging an AR app.
-            // ...and it's better for your users
-            activity.setKeepScreenOn(arFrame.camera.isTracking)
-        }
+        // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
+        // You will say thanks when still have battery after a long day debugging an AR app.
+        // ...and it's better for your users
+        activity.setKeepScreenOn(arFrame.camera.isTracking)
 
         // At the start of the frame, update the tracked pose of the camera
         // to use in any calculations during the frame.
