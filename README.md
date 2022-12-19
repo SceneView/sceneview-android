@@ -3,8 +3,8 @@
 
 This is a Sceneform replacement in Kotlin
 
-[![Maven Central - SceneView](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Maven%20Central%20-%20SceneView)](https://search.maven.org/search?q=g:%22io.github.sceneview%22)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Maven%20Central%20-%20ARSceneView)](https://search.maven.org/search?q=g:%22io.github.sceneview%22)
+[![Maven Central - SceneView](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Maven%20Central%20-%20SceneView)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Maven%20Central%20-%20ARSceneView)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 
