@@ -81,9 +81,9 @@ dependencies {
 
     // Kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.1"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.1"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.4"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
 
     // kotlin-math
     api 'dev.romainguy:kotlin-math:1.5.1'
@@ -101,11 +101,11 @@ dependencies {
 
     // Android KTX
     api "androidx.core:core-ktx:1.9.0"
-    api "androidx.fragment:fragment-ktx:1.5.3"
+    api "androidx.fragment:fragment-ktx:1.5.5"
     api "androidx.lifecycle:lifecycle-runtime-ktx:2.5.1"
 
     // Android Material
-    implementation 'com.google.android.material:material:1.6.1'
+    implementation 'com.google.android.material:material:1.7.0'
 
     // Fuel (Http)
     implementation "com.github.kittinunf.fuel:fuel:2.3.1"
