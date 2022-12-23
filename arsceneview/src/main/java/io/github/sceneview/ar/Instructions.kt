@@ -2,11 +2,11 @@ package io.github.sceneview.ar
 
 import com.google.ar.core.Config
 import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.ar.arcore.ArSession
-import io.github.sceneview.ar.node.ArNode
-import io.github.sceneview.ar.node.infos.AugmentedImageInfoNode
-import io.github.sceneview.ar.node.infos.SearchPlaneInfoNode
-import io.github.sceneview.ar.node.infos.TapArPlaneInfoNode
+import io.github.sceneview.ar.arcore.ArSessionOld
+import io.github.sceneview.ar.nodes.ArNode
+import io.github.sceneview.ar.nodes.infos.AugmentedImageInfoNode
+import io.github.sceneview.ar.nodes.infos.SearchPlaneInfoNode
+import io.github.sceneview.ar.nodes.infos.TapArPlaneInfoNode
 import io.github.sceneview.node.Node
 
 class Instructions(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver {
@@ -68,7 +68,7 @@ class Instructions(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleOb
         lifecycle.addObserver(this)
     }
 
-    override fun onArSessionConfigChanged(session: ArSession, config: Config) {
+    override fun onArSessionConfigChanged(session: ArSessionOld, config: Config) {
         infoNode = when {
             session.hasAugmentedImageDatabase -> augmentedImageInfoNode
             session.planeFindingEnabled -> searchPlaneInfoNode

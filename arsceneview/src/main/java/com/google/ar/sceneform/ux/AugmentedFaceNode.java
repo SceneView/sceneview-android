@@ -15,20 +15,7 @@
  */
 package com.google.ar.sceneform.ux;
 
-import android.content.Context;
-import android.net.Uri;
-import android.opengl.Matrix;
-import android.util.Log;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle;
-
-import com.google.android.filament.TransformManager;
 import com.google.ar.core.AugmentedFace;
-import com.google.ar.core.AugmentedFace.RegionType;
-import com.google.ar.core.Pose;
-import com.google.ar.core.TrackingState;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.ModelRenderable;
@@ -40,19 +27,9 @@ import com.google.ar.sceneform.rendering.Texture;
 import com.google.ar.sceneform.rendering.Vertex;
 import com.google.ar.sceneform.rendering.Vertex.UvCoordinate;
 
-import java.nio.FloatBuffer;
-import java.nio.ShortBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.ExecutionException;
-
 import io.github.sceneview.Filament;
-import io.github.sceneview.SceneView;
-import io.github.sceneview.ar.arcore.PoseKt;
-import io.github.sceneview.ar.node.ArNode;
-import io.github.sceneview.ar.node.PlacementMode;
+import io.github.sceneview.ar.nodes.ArNode;
 import io.github.sceneview.node.ModelNode;
-import io.github.sceneview.utils.FrameTime;
 
 /**
  * Node used to render visual effects on a face with ARCore's {@link AugmentedFace} feature.

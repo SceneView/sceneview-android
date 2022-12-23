@@ -1,19 +1,18 @@
 package io.github.sceneview.ar.arcore
 
 import android.content.Context
-import android.media.Image
 import android.view.Display
 import android.view.WindowManager
 import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.*
+import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.utils.FrameTime
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.*
 
-
-class ARSession(context: Context, features: Set<Feature> = setOf()) : Session(context, features) {
+class ArSessionOld(
+    val lifecycle: ArSceneLifecycle,
+    features: Set<Feature> = setOf()
+) : Session(lifecycle.context, features), ArSceneLifecycleObserver {
 
     val display: Display by lazy {
         (lifecycle.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
@@ -28,9 +27,17 @@ class ARSession(context: Context, features: Set<Feature> = setOf()) : Session(co
     var displayHeight = display.height
 
 
+
+    // TODO: See if it really has a performance impact
+//    private var _config: Config? = null
+
+
+
+
     var allTrackables: List<Trackable> = listOf()
 
     init {
+        lifecycle.addObserver(this)
     }
 
     override fun onResume(owner: LifecycleOwner) {
@@ -72,37 +79,20 @@ class ARSession(context: Context, features: Set<Feature> = setOf()) : Session(co
         setDisplayGeometry(display.rotation, width, height)
     }
 
-    val onArFrame = mutableListOf<(arFrame: Frame) -> Any>()
-
-
-
-
-
-    val cameraFlow = frameFlow { frame ->
-        frame.camera(AugmentedFace::class.java).toList()
-    }
-
-
-    fun <T> frameFlow(callback: (frame: Frame) -> T) = callbackFlow {
-        onArFrame += { frame: Frame ->
-            try {
-                trySend(callback(frame))
-            } catch (e: Exception) {
-                close(e)
-            }
-        }.also {
-            awaitClose {
-                onArFrame -= it
-            }
-        }
-    }
-
-    fun onArFrame(arFrame: ArFrame) {
-        onArFrame.forEach { it(arFrame.frame) }
+    override fun onArFrame(arFrame: ArFrame) {
         allTrackables = getAllTrackables(Trackable::class.java).toList()
     }
 
-
+    fun update(frameTime: FrameTime): ArFrame? {
+        // Check if no frame or same timestamp, no drawing.
+        return super.update()?.takeIf {
+            it.timestamp != (currentFrame?.frame?.timestamp ?: 0) && it.camera != null
+        }?.let { frame ->
+            ArFrame(this, frameTime, frame).also {
+                currentFrame = it
+            }
+        }
+    }
 
     override fun setDisplayGeometry(rotation: Int, widthPx: Int, heightPx: Int) {
         displayRotation = rotation
@@ -126,7 +116,7 @@ class ARSession(context: Context, features: Set<Feature> = setOf()) : Session(co
      *
      * @param config the apply block for the new config
      */
-    fun configure(config: (Config) -> Unit) {
+    fun configure(config: Config.() -> Unit) {
         super.configure(this.config.apply {
             config(this)
 
@@ -303,16 +293,42 @@ class ARSession(context: Context, features: Set<Feature> = setOf()) : Session(co
         }.isNotEmpty()
 }
 
+var Config.planeFindingEnabled
+    get() = planeFindingMode != Config.PlaneFindingMode.DISABLED
+    set(value) {
+        planeFindingMode = if (value) {
+            Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+        } else {
+            Config.PlaneFindingMode.DISABLED
+        }
+    }
 
-/**
- * Checks if the display rotation or viewport geometry changed since the previous `Frame`.
- * The application should re-query [Camera.getProjectionMatrix] and
- * [Frame.transformCoordinates2d] whenever this is true.
- *
- * @see Frame.hasDisplayGeometryChanged
- */
-fun displayGeometryChangedFlow(): Flow<Boolean> = frameFlow { frame ->
-    frame.hasDisplayGeometryChanged()
-}
+var Config.instantPlacementEnabled
+    get() = instantPlacementMode != Config.InstantPlacementMode.DISABLED
+    set(value) {
+        instantPlacementMode = if (value) {
+            Config.InstantPlacementMode.LOCAL_Y_UP
+        } else {
+            Config.InstantPlacementMode.DISABLED
+        }
+    }
 
+var Config.cloudAnchorEnabled
+    get() = cloudAnchorMode != Config.CloudAnchorMode.DISABLED
+    set(value) {
+        cloudAnchorMode = if (value) {
+            Config.CloudAnchorMode.ENABLED
+        } else {
+            Config.CloudAnchorMode.DISABLED
+        }
+    }
 
+var Config.geospatialEnabled
+    get() = geospatialMode != Config.GeospatialMode.DISABLED
+    set(value) {
+        geospatialMode = if (value) {
+            Config.GeospatialMode.ENABLED
+        } else {
+            Config.GeospatialMode.DISABLED
+        }
+    }

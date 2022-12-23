@@ -1,11 +1,15 @@
 package io.github.sceneview.utils
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.view.View
 import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.core.graphics.Insets
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.findFragment
 import com.gorisse.thomas.lifecycle.doOnActivityAttach
 
 fun Activity.setKeepScreenOn(keepScreenOn: Boolean = true) {
@@ -87,3 +91,21 @@ fun View.doOnApplyWindowInsets(action: (systemBarsInsets: Insets) -> Unit) {
         }
     }
 }
+
+fun View.getFragment(): Fragment? = try {
+    findFragment()
+} catch (e: Exception) {
+    null
+}
+
+fun View.getActivity(): Activity? = getFragment()?.activity ?: context.getActivity()
+
+fun View.getComponentActivity(): ComponentActivity? =
+    getFragment()?.activity ?: context.getComponentActivity()
+
+
+fun Context.getActivity(): Activity? = this as? Activity
+    ?: (this as? ContextWrapper)?.baseContext?.getActivity()
+
+fun Context.getComponentActivity(): ComponentActivity? = this as? ComponentActivity
+    ?: (this as? ContextWrapper)?.baseContext?.getComponentActivity()

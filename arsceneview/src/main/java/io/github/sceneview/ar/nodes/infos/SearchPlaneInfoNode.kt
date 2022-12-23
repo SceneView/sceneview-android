@@ -1,4 +1,4 @@
-package io.github.sceneview.ar.node.infos
+package io.github.sceneview.ar.nodes.infos
 
 import android.content.Context
 import android.os.Build

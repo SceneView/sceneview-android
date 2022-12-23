@@ -8,8 +8,8 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.CursorNode
+import io.github.sceneview.ar.nodes.ArModelNode
+import io.github.sceneview.ar.nodes.CursorNode
 import io.github.sceneview.math.Position
 import io.github.sceneview.utils.doOnApplyWindowInsets
 

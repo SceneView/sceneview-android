@@ -35,7 +35,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 intensity(50_000f)
             }
 
-            val model = sceneView.modelLoader.loadModel("models/MaterialSuite.glb")!!
+            val model = sceneView.modelLoader.loadModel("models/cam-anim-1.glb")!!
             val modelNode = ModelNode(sceneView, model).apply {
                 transform(
                     position = Position(z = -4.0f),
@@ -44,7 +44,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 scaleToUnitsCube(2.0f)
                 // TODO: Fix centerOrigin
 //                centerOrigin(Position(x=-1.0f, y=-1.0f))
-                playAnimation()
+//                playAnimation()
             }
             sceneView.addChildNode(modelNode)
 

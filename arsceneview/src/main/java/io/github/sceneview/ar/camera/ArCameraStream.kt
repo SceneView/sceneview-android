@@ -1,5 +1,13 @@
 package io.github.sceneview.ar.camera
 
+import android.graphics.ImageFormat
+import android.hardware.HardwareBuffer
+import android.media.Image
+import android.media.ImageReader
+import android.media.ImageReader.OnImageAvailableListener
+import android.os.Handler
+import android.os.Looper
+import android.util.Size
 import com.google.android.filament.*
 import com.google.android.filament.IndexBuffer.Builder.IndexType
 import com.google.android.filament.Texture.PixelBufferDescriptor
@@ -8,18 +16,16 @@ import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Session
 import com.google.ar.sceneform.rendering.GLHelper
 import com.google.ar.sceneform.rendering.Renderable.RENDER_PRIORITY_LAST
-import io.github.sceneview.ar.ArSceneLifecycle
-import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.ar.arcore.ArSession
+import io.github.sceneview.ar.arcore.ArSessionOld
 import io.github.sceneview.light.destroy
 import io.github.sceneview.material.*
 import io.github.sceneview.math.Transform
 import io.github.sceneview.renderable.*
-import io.github.sceneview.texture.build
 import io.github.sceneview.texture.destroy
-import io.github.sceneview.texture.setImage
 import io.github.sceneview.utils.clone
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -29,12 +35,58 @@ import java.nio.ShortBuffer
  * ### Displays the Camera stream using Filament.
  */
 class ArCameraStream(
-    private val lifecycle: ArSceneLifecycle,
-    val standardMaterialLocation: String = "sceneview/materials/camera_stream_standard.filamat",
-    val depthOcclusionMaterialLocation: String = "sceneview/materials/camera_stream_depth.filamat"
-) : ArSceneLifecycleObserver {
+    val imageSize: Size,
+    val backgroundHandler: Handler? = null,
+    val flatMaterialLocation: String = "materials/camera_stream_flat.filamat",
+    val depthOcclusionMaterialLocation: String = "sceneview/materials/camera_stream_flat.filamat"
+) : OnImageAvailableListener {
+    val imageReader: ImageReader = ImageReader.newInstance(
+        imageSize.width, imageSize.height,
+        ImageFormat.PRIVATE,
+        IMAGE_READER_MAX_IMAGES,
+        HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE
+    ).apply {
+        setOnImageAvailableListener(this@ArCameraStream, backgroundHandler)
+    }
 
-    private val sceneView get() = lifecycle.sceneView
+    val filamentStream: Stream
+
+    val onImage = mutableListOf<(image: Image) -> Unit>()
+
+    private val handler = Handler(Looper.getMainLooper())
+
+    override fun onImageAvailable(reader: ImageReader?) {
+        imageReader.acquireLatestImage()?.let { image ->
+            filamentStream.setAcquiredImage(image.hardwareBuffer, handler) {
+                image.close()
+            }
+        }
+    }
+
+    /**
+     * Updates an <pre>ACQUIRED</pre> stream with an image that is guaranteed to be used in the next
+     * frame.
+     */
+    fun setCameraAcquiredImage(image: Image, callback: () -> Unit = {}) {
+        filamentStream.setAcquiredImage(image.hardwareBuffer, handler, callback)
+    }
+
+    fun imageFlow() = imageFlow { it }
+
+    fun <T> imageFlow(callback: (image: Image) -> T) = callbackFlow {
+        onImage += { image: Image ->
+            try {
+                trySend(callback(image))
+            } catch (e: Exception) {
+                close(e)
+            }
+            Unit
+        }.also {
+            awaitClose {
+                onImage -= it
+            }
+        }
+    }
 
     /**
      * ### Changes the coarse-level camera draw ordering
@@ -54,7 +106,7 @@ class ArCameraStream(
         get() = _standardMaterial ?: MaterialLoader.createMaterial(
             context = sceneView.context,
             lifecycle = lifecycle,
-            filamatFileLocation = standardMaterialLocation
+            filamatFileLocation = flatMaterialLocation
         ).apply {
             setParameter("uvTransform", Transform())
             _standardMaterial = this
@@ -205,13 +257,13 @@ class ArCameraStream(
         lifecycle.addObserver(this)
     }
 
-    override fun onArSessionCreated(session: ArSession) {
+    override fun onArSessionCreated(session: ArSessionOld) {
         super.onArSessionCreated(session)
 
         session.setCameraTextureNames(cameraTextureIds)
     }
 
-    override fun onArSessionConfigChanged(session: ArSession, config: Config) {
+    override fun onArSessionConfigChanged(session: ArSessionOld, config: Config) {
         super.onArSessionConfigChanged(session, config)
 
         updateMaterial()
@@ -342,6 +394,10 @@ class ArCameraStream(
     }
 
     companion object {
+        // This seems a little high, but lower values cause occasional "client tried to acquire
+        // more than maxImages buffers" on a Pixel 3
+        var IMAGE_READER_MAX_IMAGES = 7
+
         const val MATERIAL_CAMERA_TEXTURE = "cameraTexture"
         const val MATERIAL_DEPTH_TEXTURE = "depthTexture"
 

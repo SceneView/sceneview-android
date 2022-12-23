@@ -56,7 +56,7 @@ fun Pose.calculateDistanceToPlane(cameraPose: Pose): Float {
     val cameraY = cameraPose.ty()
     val cameraZ = cameraPose.tz()
     // Get transformed Y axis of plane's coordinate system.
-    this.getTransformedAxis(1, 1.0f, normal, 0)
+    getTransformedAxis(1, 1.0f, normal, 0)
     // Compute dot product of plane's normal with vector from camera to plane center.
-    return (cameraX - this.tx()) * normal[0] + (cameraY - this.ty()) * normal[1] + (cameraZ - this.tz()) * normal[2]
+    return (cameraX - tx()) * normal[0] + (cameraY - ty()) * normal[1] + (cameraZ - this.tz()) * normal[2]
 }

@@ -1,4 +1,4 @@
-package io.github.sceneview.ar.node
+package io.github.sceneview.ar.nodes
 
 import android.content.Context
 import androidx.lifecycle.Lifecycle

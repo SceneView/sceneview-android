@@ -1,4 +1,4 @@
-package io.github.sceneview.ar
+package io.github.sceneview.ar.managers
 
 import android.Manifest
 import android.app.Activity
@@ -19,19 +19,39 @@ import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Session
 import io.github.sceneview.ar.arcore.ArSessionOld
 
-
+/**
+ * ### Assumed distance in meters from the device camera to the surface on which user will try to
+ * place models
+ *
+ * This value affects the apparent scale of objects while the tracking method of the Instant
+ * Placement point is SCREENSPACE_WITH_APPROXIMATE_DISTANCE. Values in the [0.2, 2.0] meter range
+ * are a good choice for most AR experiences. Use lower values for AR experiences where users are
+ * expected to place objects on surfaces close to the camera. Use larger values for experiences
+ * where the user will likely be standing and trying to place an object on the ground or floor in
+ * front of them.
+ */
+const val defaultApproximateDistance = 2.0f
 
 /**
  * Manages an ARCore Session using the Android Lifecycle API. Before starting a Session, this class
  * requests installation of Google Play Services for AR if it's not installed or not up to date and
  * asks the user for required permissions if necessary.
  */
-class ARCore(
+class ARManager(
     val activity: androidx.activity.ComponentActivity,
     val lifecycle: ArSceneLifecycle,
     val features: Set<Session.Feature> = setOf()
 ) : ArSceneLifecycleObserver {
 
+    /**
+     * ### Enable/Disable the auto camera permission check
+     */
+    var checkCameraPermission = true
+
+    /**
+     * ### Enable/Disable Google Play Services for AR availability check, auto install and update
+     */
+    var checkAvailability = true
 
     // TODO: See if it could be useful
 //    /**
@@ -92,7 +112,6 @@ class ARCore(
             ActivityResultContracts.StartActivityForResult(),
             onAppSettingsResult
         )
-
     }
 
     override fun onResume(owner: LifecycleOwner) {
@@ -115,7 +134,7 @@ class ARCore(
                     // For now, ARCore session will throw an exception if the camera is not
                     // accessible (ARCore cannot be used without camera.
                     // Request installation if necessary
-                    if (checkARCoreInstall && !installRequested &&
+                    if (checkAvailability && !installRequested &&
                         !checkInstall(activity, installRequested)
                     ) {
                         // Session will be created if everything is ok on next onResume(), so we
@@ -194,15 +213,10 @@ class ARCore(
         return isInstalled(activity) || !install(activity, installRequested)
     }
 
-    /**
-     * Check to see we have the necessary permissions for this app.
-     */
+    /** Check to see we have the necessary permissions for this app.  */
     fun isInstalled(context: Context) =
         ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
 
-    /**
-     * Request ARCore installation or update if needed.
-     */
     fun install(activity: Activity, installRequested: Boolean): Boolean {
         return ArCoreApk.getInstance().requestInstall(
             activity,

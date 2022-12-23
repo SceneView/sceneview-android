@@ -38,6 +38,12 @@ import java.nio.ByteOrder
  * keeping users grounded and engaged.
  */
 class LightEstimator(
+    var baseIndirectLightIntensity: Float,
+    var emulatedReflectionsTexture: Texture?,
+    /**
+     * Array of 9 * 3 floats
+     */
+    var emulatedSphericalHarmonics : FloatArray? = null,
     private val lifecycle: ArSceneLifecycle,
     onUpdated: (LightEstimator) -> Unit
 ) : ArSceneLifecycleObserver {
@@ -212,10 +218,15 @@ class LightEstimator(
             }
         }
 
+
     val onUpdated = mutableListOf(onUpdated)
 
     init {
         lifecycle.addObserver(this)
+    }
+
+    constructor(sceneView: SceneView) : this(emulatedReflectionsTexture = sceneView.indirectLight?.reflectionsTexture){
+
     }
 
     var cubeMapBuffer: ByteBuffer? = null
@@ -224,217 +235,237 @@ class LightEstimator(
     override fun onArFrame(arFrame: ArFrame) {
         super.onArFrame(arFrame)
 
-        arFrame.takeIf {
+        val lightEstimate = arFrame.takeIf {
             it.precision(lastArFrame) <= precision
         }?.frame?.lightEstimate?.takeIf {
             it.state == LightEstimate.State.VALID && it.timestamp != timestamp
-        }?.let { lightEstimate ->
-            lastArFrame = arFrame
-            timestamp = lightEstimate.timestamp
-            when (arFrame.session.lightEstimationMode) {
-                Config.LightEstimationMode.AMBIENT_INTENSITY -> {
-                    val (colorIntensities, pixelIntensity) = FloatArray(4).apply {
-                        // A value of a white colorCorrection (r=1.0, g=1.0, b=1.0) and pixelIntensity of 1.0 mean
-                        // that no changes are made to the light settings.
-                        // The color correction method uses the green channel as reference baseline and scales the
-                        // red and blue channels accordingly. In this way the overall intensity will not be
-                        // significantly changed
-                        lightEstimate.getColorCorrection(this, 0)
-                    }.toLinearSpace().let { colorCorrections -> // Rendering in linear space
-                        // Scale max r or b or g value and fit in range [0.0, 1.0)
-                        // if max = green than colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
-                        val colorIntensitiesFactors = colorCorrections.slice(0..2)
-                            .maxOrNull()?.takeIf { it > 0 }?.let { maxIntensity ->
-                                Color(
-                                    colorCorrections[0] / maxIntensity,
-                                    colorCorrections[1] / maxIntensity,
-                                    colorCorrections[2] / maxIntensity
-                                )
-                            } ?: Color(0.0001f, 0.0001f, 0.0001f)
+        } ?: return
 
-                        // Normalize the pixel intensity by multiplying it by 1.8
-                        val pixelIntensityFactor = colorCorrections[3] * 1.8f
-                        colorIntensitiesFactors to pixelIntensityFactor
-                    }
+        lastArFrame = arFrame
+        timestamp = lightEstimate.timestamp
+        when (arFrame.session.lightEstimationMode) {
+            Config.LightEstimationMode.AMBIENT_INTENSITY -> {
+                val colorCorrections = FloatArray(4).apply {
+                    // A value of a white colorCorrection (r=1.0, g=1.0, b=1.0) and pixelIntensity
+                    // of 1.0 mean that no changes are made to the light settings.
+                    // The color correction method uses the green channel as reference baseline and
+                    // scales the red and blue channels accordingly. In this way the overall
+                    // intensity will not be significantly changed
+                    lightEstimate.getColorCorrection(this, 0)
+                }.toLinearSpace() // Rendering in linear space
+                // Scale max r or b or g value and fit in range [0.0, 1.0)
+                // if `max == green` then
+                // `colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))`
+                val colorIntensities = colorCorrections.slice(0..2)
+                    .maxOrNull()?.takeIf { it > 0 }?.let { maxIntensity ->
+                        Color(
+                            colorCorrections[0] / maxIntensity,
+                            colorCorrections[1] / maxIntensity,
+                            colorCorrections[2] / maxIntensity
+                        )
+                    } ?: Color(0.0001f, 0.0001f, 0.0001f)
+                // Normalize the pixel intensity by multiplying it by 1.8
+                val pixelIntensity = colorCorrections[3] * 1.8f
 
-                    // Sets light estimate to modulate the scene lighting and intensity. The rendered lights
-                    // will use a combination of these values and the color and intensity of the lights.
-                    environment = Environment(
-                        indirectLight = IndirectLight.Builder().apply {
-                            // Use default environment reflections
-                            sceneView.indirectLight?.reflectionsTexture?.let {
-                                reflections(it)
-                            }
-                            // Scale and bias the estimate to avoid over darkening. Modulates ambient color with
-                            // modulation factor.
-                            // irradianceData must have at least one vector of three floats.
-                            sceneView.environment?.sphericalHarmonics?.let { sphericalHarmonics ->
-                                irradiance(
-                                    3,
-                                    FloatArray(sphericalHarmonics.size) { index ->
-                                        when (index) {
-                                            in 0..2 -> {
-                                                // Use the RGinB scale factors (components 0-2) to match the color
-                                                // of the light in the scene
-                                                sphericalHarmonics[index] * colorIntensities[index]
-                                            }
-                                            else -> sphericalHarmonics[index]
-                                        }
-                                    })
-                            }
-                            sceneView.indirectLight?.intensity?.let { baseIntensity ->
-                                intensity(baseIntensity * pixelIntensity)
-                            }
-                        }.build(lifecycle),
-                        sphericalHarmonics = sceneView.environment?.sphericalHarmonics
-                    )
-
-                    mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
-                        max(colorIntensities).takeIf { it > 0 }?.let { maxIntensity ->
-                            // Normalize value if max = green:
-                            // colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
-                            val colorIntensitiesFactors = (colorIntensities / maxIntensity)
-                            color *= colorIntensitiesFactors
-                        }
-                        intensity *= pixelIntensity
-                    }
-                    onUpdated()
-                }
-                Config.LightEstimationMode.ENVIRONMENTAL_HDR -> {
-                    // Returns the intensity of the main directional light based on the inferred
-                    // Environmental HDR Lighting Estimation. All return values are larger or equal to zero.
-                    // The color correction method uses the green channel as reference baseline and scales the
-                    // red and blue channels accordingly. In this way the overall intensity will not be
-                    // significantly changed
-                    val colorIntensitiesFactors: Color =
-                        if (environmentalHdrMainLightIntensity) {
-                            lightEstimate.environmentalHdrMainLightIntensity
-                                // Rendering in linear space
-                                .toLinearSpace()
-                                // Scale max r or b or g value and fit in range [0.0, 1.0)
-                                // Note that if we were not using the HDR cubemap from ARCore for specular
-                                // lighting, we would be adding a specular contribution from the main light
-                                // here.
-                                .let { colorCorrections ->
-                                    colorCorrections.maxOrNull()?.takeIf { it > 0 }
-                                        ?.let { maxIntensity ->
-                                            colorOf(
-                                                r = colorCorrections[0] / maxIntensity,
-                                                g = colorCorrections[1] / maxIntensity,
-                                                b = colorCorrections[2] / maxIntensity
-                                            )
-                                        }
-                                } ?: colorOf(r = 0.0001f, g = 0.0001f, b = 0.0001f)
-                        } else colorOf(r = 1.0f, g = 1.0f, b = 1.0f)
-
-                    val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
-                    environment = HDREnvironment(
-                        lifecycle = lifecycle,
-                        cubemap = when {
-                            environmentalHdrReflections -> {
-                                lightEstimate.acquireEnvironmentalHdrCubeMap()?.let { arImages ->
-                                    val (width, height) = arImages[0].width to arImages[0].height
-                                    val faceOffsets = IntArray(arImages.size)
-                                    // RGB Bytes per pixel : 6 * 2
-                                    val bufferSize = width * height * arImages.size * 6 * 2
-                                    val buffer = cubeMapBuffer?.takeIf {
-                                        it.capacity() == bufferSize
-                                    }?.apply {
-                                        clear()
-                                    } ?: ByteBuffer.allocateDirect(bufferSize).apply {
-                                        // Use the device hardware's native byte order
-                                        order(ByteOrder.nativeOrder())
-                                        cubeMapBuffer = this
-                                    }
-                                    val rgbBytes = ByteArray(6) // RGB Bytes per pixel
-                                    arImages.forEachIndexed { index, image ->
-                                        faceOffsets[index] = buffer.position()
-                                        image.planes[0].buffer.let { imageBuffer ->
-                                            while (imageBuffer.hasRemaining()) {
-                                                // Only take the RGB channels
-                                                imageBuffer.get(rgbBytes)
-                                                buffer.put(rgbBytes)
-                                                // Skip the Alpha channel
-                                                imageBuffer.position(imageBuffer.position() + 2)
-                                            }
-                                            imageBuffer.clear()
-                                        }
-                                    }
-                                    buffer.flip()
-
-                                    // Reuse the previous texture instead of creating a new one for
-                                    // performance and memory reasons
-                                    val texture = cubeMapTexture?.takeIf {
-                                        it.getWidth(0) == width &&
-                                                it.getHeight(0) == height
-                                    } ?: Texture.Builder()
-                                        .width(width)
-                                        .height(height)
-                                        .levels(0xff)
-                                        .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
-                                        .format(Texture.InternalFormat.R11F_G11F_B10F)
-                                        .build(lifecycle)
-                                        .also {
-                                            cubeMapTexture = it
-                                        }
-                                    texture.setImage(
-                                        0,
-                                        Texture.PixelBufferDescriptor(
-                                            buffer,
-                                            Texture.Format.RGB,
-                                            Texture.Type.HALF,
-                                            1, 0, 0, 0, null
-                                        ) {
-                                            arImages.forEach { it.close() }
-                                            buffer.clear()
-                                        },
-                                        faceOffsets
-                                    )
-                                    texture
+                // Sets light estimate to modulate the scene lighting and intensity. The rendered lights
+                // will use a combination of these values and the color and intensity of the lights.
+                val indirectLight = IndirectLight.Builder()
+                    .intensity(baseIndirectLightIntensity * pixelIntensity)
+                // Use emulated environment reflections if any
+                emulatedReflectionsTexture?.let { indirectLight.reflections(it) }
+                // Scale and bias the estimate to avoid over darkening. Modulates ambient color with
+                // modulation factor.
+                // irradianceData must have at least one vector of three floats.
+                emulatedSphericalHarmonics?.let { sphericalHarmonics ->
+                    indirectLight.irradiance(
+                        3,
+                        FloatArray(sphericalHarmonics.size) { index ->
+                            when (index) {
+                                in 0..2 -> {
+                                    // Use the RGinB scale factors (components 0-2) to match the color
+                                    // of the light in the scene
+                                    sphericalHarmonics[index] * colorIntensities[index]
                                 }
+                                else -> sphericalHarmonics[index]
                             }
-                            defaultEnvironmentReflections -> {
-                                sceneView.indirectLight?.reflectionsTexture
-                            }
-                            else -> null
-                        },
-                        indirectLightIrradiance = if (environmentalHdrSphericalHarmonics) {
-                            lightEstimate.environmentalHdrAmbientSphericalHarmonics
-                                ?.mapIndexed { index, sphericalHarmonic ->
-                                    // Convert Environmental HDR's spherical harmonics to Filament
-                                    // irradiance spherical harmonics.
-                                    sphericalHarmonic * SPHERICAL_HARMONICS_IRRADIANCE_FACTORS[index / 3]
-                                }?.toFloatArray()
-                        } else {
-                            sceneView.environment?.sphericalHarmonics
-                        },
-                        indirectLightSpecularFilter = environmentalHdrReflections &&
-                                environmentalHdrSpecularFilter,
-                        indirectLightIntensity = sceneView.environment?.indirectLight?.let {
-                            it.intensity * colorIntensity
-                        },
-                        createSkybox = false,
-                        sharedCubemap = true
-                    )
+                        })
+                }
 
-                    mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
-                        if (environmentalHdrMainLightDirection) {
-                            lightEstimate.environmentalHdrMainLightDirection.let { (x, y, z) ->
-                                direction = Direction(-x, -y, -z)
+                environment = Environment(
+                    indirectLight = IndirectLight.Builder().apply {
+
+                        sceneView.indirectLight?.reflectionsTexture?.let {
+                            reflections(it)
+                        }
+                        // Scale and bias the estimate to avoid over darkening. Modulates ambient color with
+                        // modulation factor.
+                        // irradianceData must have at least one vector of three floats.
+                        sceneView.environment?.sphericalHarmonics?.let { sphericalHarmonics ->
+                            irradiance(
+                                3,
+                                FloatArray(sphericalHarmonics.size) { index ->
+                                    when (index) {
+                                        in 0..2 -> {
+                                            // Use the RGinB scale factors (components 0-2) to match the color
+                                            // of the light in the scene
+                                            sphericalHarmonics[index] * colorIntensities[index]
+                                        }
+                                        else -> sphericalHarmonics[index]
+                                    }
+                                })
+                        }
+                        sceneView.indirectLight?.intensity?.let { baseIntensity ->
+                            intensity(baseIntensity * pixelIntensity)
+                        }
+                    }.build(lifecycle),
+                    sphericalHarmonics = sceneView.environment?.sphericalHarmonics
+                )
+
+                mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
+                    max(colorIntensities).takeIf { it > 0 }?.let { maxIntensity ->
+                        // Normalize value if max = green:
+                        // colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
+                        val colorIntensitiesFactors = (colorIntensities / maxIntensity)
+                        color *= colorIntensitiesFactors
+                    }
+                    intensity *= pixelIntensity
+                }
+                onUpdated()
+            }
+            Config.LightEstimationMode.ENVIRONMENTAL_HDR -> {
+                // Returns the intensity of the main directional light based on the inferred
+                // Environmental HDR Lighting Estimation. All return values are larger or equal to zero.
+                // The color correction method uses the green channel as reference baseline and scales the
+                // red and blue channels accordingly. In this way the overall intensity will not be
+                // significantly changed
+                val colorIntensitiesFactors: Color =
+                    if (environmentalHdrMainLightIntensity) {
+                        lightEstimate.environmentalHdrMainLightIntensity
+                            // Rendering in linear space
+                            .toLinearSpace()
+                            // Scale max r or b or g value and fit in range [0.0, 1.0)
+                            // Note that if we were not using the HDR cubemap from ARCore for specular
+                            // lighting, we would be adding a specular contribution from the main light
+                            // here.
+                            .let { colorCorrections ->
+                                colorCorrections.maxOrNull()?.takeIf { it > 0 }
+                                    ?.let { maxIntensity ->
+                                        colorOf(
+                                            r = colorCorrections[0] / maxIntensity,
+                                            g = colorCorrections[1] / maxIntensity,
+                                            b = colorCorrections[2] / maxIntensity
+                                        )
+                                    }
+                            } ?: colorOf(r = 0.0001f, g = 0.0001f, b = 0.0001f)
+                    } else colorOf(r = 1.0f, g = 1.0f, b = 1.0f)
+
+                val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
+                environment = HDREnvironment(
+                    lifecycle = lifecycle,
+                    cubemap = when {
+                        environmentalHdrReflections -> {
+                            lightEstimate.acquireEnvironmentalHdrCubeMap()?.let { arImages ->
+                                val (width, height) = arImages[0].width to arImages[0].height
+                                val faceOffsets = IntArray(arImages.size)
+                                // RGB Bytes per pixel : 6 * 2
+                                val bufferSize = width * height * arImages.size * 6 * 2
+                                val buffer = cubeMapBuffer?.takeIf {
+                                    it.capacity() == bufferSize
+                                }?.apply {
+                                    clear()
+                                } ?: ByteBuffer.allocateDirect(bufferSize).apply {
+                                    // Use the device hardware's native byte order
+                                    order(ByteOrder.nativeOrder())
+                                    cubeMapBuffer = this
+                                }
+                                val rgbBytes = ByteArray(6) // RGB Bytes per pixel
+                                arImages.forEachIndexed { index, image ->
+                                    faceOffsets[index] = buffer.position()
+                                    image.planes[0].buffer.let { imageBuffer ->
+                                        while (imageBuffer.hasRemaining()) {
+                                            // Only take the RGB channels
+                                            imageBuffer.get(rgbBytes)
+                                            buffer.put(rgbBytes)
+                                            // Skip the Alpha channel
+                                            imageBuffer.position(imageBuffer.position() + 2)
+                                        }
+                                        imageBuffer.clear()
+                                    }
+                                }
+                                buffer.flip()
+
+                                // Reuse the previous texture instead of creating a new one for
+                                // performance and memory reasons
+                                val texture = cubeMapTexture?.takeIf {
+                                    it.getWidth(0) == width &&
+                                            it.getHeight(0) == height
+                                } ?: Texture.Builder()
+                                    .width(width)
+                                    .height(height)
+                                    .levels(0xff)
+                                    .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
+                                    .format(Texture.InternalFormat.R11F_G11F_B10F)
+                                    .build(lifecycle)
+                                    .also {
+                                        cubeMapTexture = it
+                                    }
+                                texture.setImage(
+                                    0,
+                                    Texture.PixelBufferDescriptor(
+                                        buffer,
+                                        Texture.Format.RGB,
+                                        Texture.Type.HALF,
+                                        1, 0, 0, 0, null
+                                    ) {
+                                        arImages.forEach { it.close() }
+                                        buffer.clear()
+                                    },
+                                    faceOffsets
+                                )
+                                texture
                             }
                         }
-                        if (environmentalHdrMainLightIntensity) {
-                            // Apply the camera exposure factor
-                            color *= colorIntensitiesFactors * cameraExposureFactor
-                            intensity *= colorIntensity * cameraExposureFactor
+                        defaultEnvironmentReflections -> {
+                            sceneView.indirectLight?.reflectionsTexture
+                        }
+                        else -> null
+                    },
+                    indirectLightIrradiance = if (environmentalHdrSphericalHarmonics) {
+                        lightEstimate.environmentalHdrAmbientSphericalHarmonics
+                            ?.mapIndexed { index, sphericalHarmonic ->
+                                // Convert Environmental HDR's spherical harmonics to Filament
+                                // irradiance spherical harmonics.
+                                sphericalHarmonic * SPHERICAL_HARMONICS_IRRADIANCE_FACTORS[index / 3]
+                            }?.toFloatArray()
+                    } else {
+                        sceneView.environment?.sphericalHarmonics
+                    },
+                    indirectLightSpecularFilter = environmentalHdrReflections &&
+                            environmentalHdrSpecularFilter,
+                    indirectLightIntensity = sceneView.environment?.indirectLight?.let {
+                        it.intensity * colorIntensity
+                    },
+                    createSkybox = false,
+                    sharedCubemap = true
+                )
+
+                mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
+                    if (environmentalHdrMainLightDirection) {
+                        lightEstimate.environmentalHdrMainLightDirection.let { (x, y, z) ->
+                            direction = Direction(-x, -y, -z)
                         }
                     }
-                    onUpdated()
+                    if (environmentalHdrMainLightIntensity) {
+                        // Apply the camera exposure factor
+                        color *= colorIntensitiesFactors * cameraExposureFactor
+                        intensity *= colorIntensity * cameraExposureFactor
+                    }
                 }
-                else -> {
-                    environment = null
-                    mainLight = null
-                }
+                onUpdated()
+            }
+            else -> {
+                environment = null
+                mainLight = null
             }
         }
     }

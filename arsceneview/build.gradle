@@ -1,19 +1,53 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
+    id 'filament-tools-plugin'
     id 'org.jetbrains.dokka'
 }
+// *************************************************************************************************
+// Filament Plugin
+// *************************************************************************************************
+//
+// Needed if you want to generate Materials, Indirect Light (IBL) and Skyboxes.
+//
+// 1) Copy/paste the /buildSrc dir into your project root folder
+// 2) Copy/paste the plugins line above (plugins: { id 'filament-tools-plugin' }) and bellow into
+// your app/module build.gradle
+// 3) Download the Filament tools release archive for your development desktop:
+// Filament release download: https://github.com/google/filament/releases
+// (Choose the corresponding version to the filament_version bellow)
+// 4) Copy/paste the Filament Plugin part from the gradle.properties file to your project
+// 5) Sync Gradle and clean your project
+if (project.properties['filamentPluginEnabled']?.toBoolean()) {
+    filamentTools {
+        // Material generation: .mat -> .filamat
+        materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+        materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+        // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
+        iblInputDir = project.layout.projectDirectory.dir("src/main/environments")
+        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/environments")
+        iblFormat = "ktx"
+    }
+
+    clean.doFirst {
+        delete "src/main/assets/materials"
+        delete "src/main/assets/environments"
+    }
+}
+// *************************************************************************************************
 
 android {
     namespace 'io.github.sceneview.ar'
 
-    compileSdk 31
+    compileSdk 33
 
     defaultConfig {
-        minSdk 24
-        targetSdk 31
+        minSdk 29
+        targetSdk 33
 
         consumerProguardFiles "consumer-rules.pro"
+
+        buildConfigField 'String', 'VERSION_NAME', "\"${project.properties['VERSION_NAME']}\""
     }
 
     buildTypes {
@@ -40,16 +74,19 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.7.0'
-    implementation 'androidx.appcompat:appcompat:1.4.1'
-    implementation 'com.google.android.material:material:1.5.0'
+    // AndroidX
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+
+    // Android Material
+    implementation 'com.google.android.material:material:1.6.1'
 
     // SceneView
-    api "io.github.sceneview:sceneview:0.9.0"
-//    api project(":sceneview")
+//    api "io.github.sceneview:sceneview:0.9.0"
+    api project(":sceneview")
 
     // ARCore
-    def arcore_version = '1.32.0'
+    def arcore_version = '1.33.0'
     api "com.google.ar:core:$arcore_version"
 }
 

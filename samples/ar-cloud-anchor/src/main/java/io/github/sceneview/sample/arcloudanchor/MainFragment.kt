@@ -16,8 +16,8 @@ import com.google.android.material.floatingactionbutton.ExtendedFloatingActionBu
 import com.google.ar.core.Anchor
 import com.google.ar.core.Session
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.PlacementMode
+import io.github.sceneview.ar.nodes.ArModelNode
+import io.github.sceneview.ar.nodes.PlacementMode
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {

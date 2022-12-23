@@ -3,8 +3,8 @@ package io.github.sceneview.ar
 import android.content.Context
 import android.util.AttributeSet
 import androidx.core.content.res.use
-import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.PlacementMode
+import io.github.sceneview.ar.nodes.ArModelNode
+import io.github.sceneview.ar.nodes.PlacementMode
 import io.github.sceneview.ar.scene.PlaneRenderer
 
 // TODO: Use it for more actual ArNode and use view layout parameters for placement and glb file
@@ -36,7 +36,7 @@ internal class ArModelView @JvmOverloads constructor(
     /**
      * TODO: Doc
      *
-     * @see io.github.sceneview.ar.node.ArModelNode.placementMode
+     * @see io.github.sceneview.ar.nodes.ArModelNode.placementMode
      */
     var placementMode: PlacementMode
         get() = modelNode.placementMode

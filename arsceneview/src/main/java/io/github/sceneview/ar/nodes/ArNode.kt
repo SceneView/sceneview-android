@@ -1,4 +1,4 @@
-package io.github.sceneview.ar.node
+package io.github.sceneview.ar.nodes
 
 import com.google.ar.core.*
 import com.google.ar.core.Anchor.CloudAnchorState
@@ -18,7 +18,7 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
 
     override val sceneView: ArSceneView? get() = super.sceneView as? ArSceneView
     override val lifecycle: ArSceneLifecycle? get() = sceneView?.lifecycle
-    protected val arSession: ArSession? get() = sceneView?.arSession
+    protected val arSession: ArSessionOld? get() = sceneView?.arSession
 
     /**
      * ### Move smoothly/slowly when there is a pose (AR position and rotation) update

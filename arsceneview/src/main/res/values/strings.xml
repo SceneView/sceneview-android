@@ -6,7 +6,9 @@
     <string name="sceneview_insufficient_light_message">Too dark.\n\nTry moving to a well-lit area.</string>
     <string name="sceneview_insufficient_light_android_s_message">Too dark. Try moving to a well-lit area.\n\nAlso, make sure the Block Camera is set to off in system settings.</string>
     <string name="sceneview_bad_state_message">Tracking lost due to bad internal state.\n\nPlease try restarting the AR experience.</string>
-    <string name="sceneview_camera_unavailable_message">Another app is using the camera.\n\nTap on this app or try closing the other one.</string>
+    <string name="sceneview_camera_unavailable_message">Another app is using the camera.\n\nTry closing the other one.</string>
     <string name="sceneview_unknown_tracking_failure">Unknown tracking failure reason: %1$s</string>
     <string name="sceneview_camera_permission_required">Camera permission required</string>
+    <string name="sceneview_camera_error">Failed to open camera</string>
+    <string name="sceneview_arcore_not_installed">ARCore not installed</string>
 </resources>
