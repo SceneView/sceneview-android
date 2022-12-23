@@ -2,6 +2,7 @@ package io.github.sceneview.sample.modelviewer
 
 import android.os.Bundle
 import android.view.View
+import android.widget.TextView
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -12,6 +13,7 @@ import io.github.sceneview.loaders.loadHdrSkybox
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.nodes.ModelNode
+import io.github.sceneview.nodes.ViewNode
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
@@ -47,6 +49,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 playAnimation()
             }
             sceneView.addChildNode(modelNode)
+
+            sceneView.addChildNode(ViewNode(sceneView, TextView(context).apply { text = "Hello" }).apply {
+                position = Position(z=-4.0f)
+            })
 
             loadingView.isGone = true
         }

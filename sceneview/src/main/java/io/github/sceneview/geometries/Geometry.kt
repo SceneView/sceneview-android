@@ -38,8 +38,8 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Sphere
  */
 open class Geometry(
-    val vertexBuffer: VertexBuffer,
-    val indexBuffer: IndexBuffer
+    vertexBuffer: VertexBuffer,
+    indexBuffer: IndexBuffer
 ) {
 
     /**
@@ -72,62 +72,68 @@ open class Geometry(
     lateinit var offsetsCounts: List<Pair<Int, Int>>
         private set
 
+    init {
+        val vertexBuffer = VertexBuffer.Builder().apply {
+            bufferCount(
+                1 + // Position is never null
+                        (if (vertices.hasNormals) 1 else 0) +
+                        (if (vertices.hasUvCoordinates) 1 else 0) +
+                        (if (vertices.hasColors) 1 else 0)
+            )
+            vertexCount(vertices.size)
+
+            // Position Attribute
+            var bufferIndex = 0
+            attribute(
+                VertexBuffer.VertexAttribute.POSITION,
+                bufferIndex,
+                VertexBuffer.AttributeType.FLOAT3,
+                0,
+                kPositionSize * Float.SIZE_BYTES
+            )
+            // Tangents Attribute
+            if (vertices.hasNormals) {
+                bufferIndex++
+                attribute(
+                    VertexBuffer.VertexAttribute.TANGENTS,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT4,
+                    0,
+                    kTangentSize * Float.SIZE_BYTES
+                )
+                normalized(VertexBuffer.VertexAttribute.TANGENTS)
+            }
+            // Uv Attribute
+            if (vertices.hasUvCoordinates) {
+                bufferIndex++
+                attribute(
+                    VertexBuffer.VertexAttribute.UV0,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT2,
+                    0,
+                    kUVSize * Float.SIZE_BYTES
+                )
+            }
+            // Color Attribute
+            if (vertices.hasColors) {
+                bufferIndex++
+                attribute(
+                    VertexBuffer.VertexAttribute.COLOR,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT4,
+                    0,
+                    kColorSize * Float.SIZE_BYTES
+                )
+                normalized(VertexBuffer.VertexAttribute.COLOR)
+            }
+        }.build(engine)
+
+        setBufferVertices(vertices)
+    }
+
     open class Builder(val vertices: List<Vertex>, val submeshes: List<Submesh>) {
         open fun build(engine: Engine): Geometry {
-            val vertexBuffer = VertexBuffer.Builder().apply {
-                bufferCount(
-                    1 + // Position is never null
-                            (if (vertices.hasNormals) 1 else 0) +
-                            (if (vertices.hasUvCoordinates) 1 else 0) +
-                            (if (vertices.hasColors) 1 else 0)
-                )
-                vertexCount(vertices.size)
 
-                // Position Attribute
-                var bufferIndex = 0
-                attribute(
-                    VertexBuffer.VertexAttribute.POSITION,
-                    bufferIndex,
-                    VertexBuffer.AttributeType.FLOAT3,
-                    0,
-                    kPositionSize * Float.SIZE_BYTES
-                )
-                // Tangents Attribute
-                if (vertices.hasNormals) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.TANGENTS,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT4,
-                        0,
-                        kTangentSize * Float.SIZE_BYTES
-                    )
-                    normalized(VertexBuffer.VertexAttribute.TANGENTS)
-                }
-                // Uv Attribute
-                if (vertices.hasUvCoordinates) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.UV0,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT2,
-                        0,
-                        kUVSize * Float.SIZE_BYTES
-                    )
-                }
-                // Color Attribute
-                if (vertices.hasColors) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.COLOR,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT4,
-                        0,
-                        kColorSize * Float.SIZE_BYTES
-                    )
-                    normalized(VertexBuffer.VertexAttribute.COLOR)
-                }
-            }.build(engine)
 
             val indexBuffer = IndexBuffer.Builder()
                 // Determine how many indices there are
@@ -148,6 +154,10 @@ open class Geometry(
 
     fun setBufferVertices(engine: Engine, vertices: List<Vertex>) {
         this.vertices = vertices
+
+        val vertexBuffer = VertexBuffer.Builder().apply {
+
+        }.build(engine)
 
         var bufferIndex = 0
 
@@ -235,6 +245,61 @@ open class Geometry(
 val List<Geometry.Vertex>.hasNormals get() = any { it.normal != null }
 val List<Geometry.Vertex>.hasUvCoordinates get() = any { it.uvCoordinate != null }
 val List<Geometry.Vertex>.hasColors get() = any { it.color != null }
+
+fun VertexBuffer.Builder.vertices(vertices: List<Geometry.Vertex>) {
+    bufferCount(
+        1 + // Position is never null
+                (if (vertices.hasNormals) 1 else 0) +
+                (if (vertices.hasUvCoordinates) 1 else 0) +
+                (if (vertices.hasColors) 1 else 0)
+    )
+    vertexCount(vertices.size)
+
+    // Position Attribute
+    var bufferIndex = 0
+    attribute(
+        VertexBuffer.VertexAttribute.POSITION,
+        bufferIndex,
+        VertexBuffer.AttributeType.FLOAT3,
+        0,
+        kPositionSize * Float.SIZE_BYTES
+    )
+    // Tangents Attribute
+    if (vertices.hasNormals) {
+        bufferIndex++
+        attribute(
+            VertexBuffer.VertexAttribute.TANGENTS,
+            bufferIndex,
+            VertexBuffer.AttributeType.FLOAT4,
+            0,
+            kTangentSize * Float.SIZE_BYTES
+        )
+        normalized(VertexBuffer.VertexAttribute.TANGENTS)
+    }
+    // Uv Attribute
+    if (vertices.hasUvCoordinates) {
+        bufferIndex++
+        attribute(
+            VertexBuffer.VertexAttribute.UV0,
+            bufferIndex,
+            VertexBuffer.AttributeType.FLOAT2,
+            0,
+            kUVSize * Float.SIZE_BYTES
+        )
+    }
+    // Color Attribute
+    if (vertices.hasColors) {
+        bufferIndex++
+        attribute(
+            VertexBuffer.VertexAttribute.COLOR,
+            bufferIndex,
+            VertexBuffer.AttributeType.FLOAT4,
+            0,
+            kColorSize * Float.SIZE_BYTES
+        )
+        normalized(VertexBuffer.VertexAttribute.COLOR)
+    }
+}
 
 fun Engine.destroyGeometry(geometry: Geometry) {
     destroyVertexBuffer(geometry.vertexBuffer)

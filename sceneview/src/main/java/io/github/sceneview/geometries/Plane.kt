@@ -42,7 +42,7 @@ class Plane private constructor(
         val size: Size = Size(x = 2.0f, y = 2.0f),
         val normal: Direction = Direction(y = 1.0f) // Looking upper
     ) : Geometry.Builder(
-        vertices = getVertices(center, size, normal),
+        vertices = getPlaneVertices(center, size, normal),
         submeshes = mutableListOf(
             Geometry.Submesh(
                 // First triangle for this side.
@@ -61,11 +61,11 @@ class Plane private constructor(
         size: Size = this.size,
         normal: Direction = this.normal
     ) {
-        setBufferVertices(engine, getVertices(center, size, normal))
+        setBufferVertices(engine, getPlaneVertices(center, size, normal))
     }
 
     companion object {
-        fun getVertices(
+        fun getPlaneVertices(
             center: Position = Position(0.0f),
             size: Size = Size(x = 2.0f, y = 2.0f),
             normal: Direction = Direction(y = 1.0f)
