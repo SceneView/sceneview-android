@@ -1,14 +1,11 @@
 package io.github.sceneview.ar.arcore
 
 import android.content.Context
-import android.media.Image
 import android.view.Display
 import android.view.WindowManager
 import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.*
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.utils.FrameTime
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 

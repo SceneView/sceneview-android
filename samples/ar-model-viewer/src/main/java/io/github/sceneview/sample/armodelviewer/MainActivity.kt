@@ -10,7 +10,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.nodes.ArModelNode
 import io.github.sceneview.ar.nodes.PlacementMode
 import io.github.sceneview.math.Position
@@ -19,7 +19,7 @@ import io.github.sceneview.utils.setFullScreen
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
-    lateinit var sceneView: ArSceneView
+    lateinit var sceneView: ARSceneView
     lateinit var loadingView: View
     lateinit var placeModelButton: ExtendedFloatingActionButton
     lateinit var newModelButton: ExtendedFloatingActionButton
@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
             title = ""
         })
-        sceneView = findViewById<ArSceneView?>(R.id.sceneView)
+        sceneView = findViewById<ARSceneView?>(R.id.sceneView)
             .apply { setLifecycle(lifecycle) }
 
         loadingView = findViewById(R.id.loadingView)

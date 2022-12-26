@@ -7,7 +7,7 @@ import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
-import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.nodes.ArModelNode
 import io.github.sceneview.ar.nodes.CursorNode
 import io.github.sceneview.math.Position
@@ -15,7 +15,7 @@ import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
-    lateinit var sceneView: ArSceneView
+    lateinit var sceneView: ARSceneView
     lateinit var loadingView: View
     lateinit var actionButton: ExtendedFloatingActionButton
 
@@ -42,7 +42,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             setOnClickListener { cursorNode.createAnchor()?.let { anchorOrMove(it) } }
         }
 
-        sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
+        sceneView = view.findViewById<ARSceneView?>(R.id.sceneView).apply {
             planeRenderer.isVisible = false
             // Handle a fallback in case of non AR usage. The exception contains the failure reason
             // e.g. SecurityException in case of camera permission denied

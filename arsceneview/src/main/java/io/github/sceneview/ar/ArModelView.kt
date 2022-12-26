@@ -13,7 +13,7 @@ internal class ArModelView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0
-) : ArSceneView(
+) : ARSceneView(
     context,
     attrs,
     defStyleAttr,

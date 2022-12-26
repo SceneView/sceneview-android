@@ -5,7 +5,7 @@ import androidx.lifecycle.Lifecycle
 import com.google.ar.core.*
 import com.google.ar.core.Config.PlaneFindingMode
 import io.github.sceneview.SceneView
-import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.gesture.MoveGestureDetector
@@ -18,7 +18,7 @@ import io.github.sceneview.node.Node
  * ### AR positioned 3D model node
  *
  * This [io.github.sceneview.node.Node] follows the actual ARCore detected orientation and position
- * at the provided relative X, Y location in the [ArSceneView]
+ * at the provided relative X, Y location in the [ARSceneView]
  *
  * You can:
  * - [anchor] this node at any time to make it fixed at the actual position and rotation.
@@ -42,7 +42,7 @@ open class ArModelNode : ArNode {
         set(value) {
             field = value
             doOnAttachedToScene { sceneView ->
-                (sceneView as? ArSceneView)?.apply {
+                (sceneView as? ARSceneView)?.apply {
                     planeFindingMode = value.planeFindingMode
                     depthEnabled = value.depthEnabled
                     instantPlacementEnabled = value.instantPlacementEnabled

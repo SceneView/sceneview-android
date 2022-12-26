@@ -7,60 +7,60 @@ import io.github.sceneview.utils.FrameTime
 
 // Deprecated
 
-/** ## Deprecated: Use [ArSceneView] */
+/** ## Deprecated: Use [ARSceneView] */
 @Deprecated("Use ArSceneView", replaceWith = ReplaceWith(expression = "ArSceneView(context)"))
 open class BaseArFragment {
 
-    /** ## Deprecated: Use [ArSceneView] */
+    /** ## Deprecated: Use [ARSceneView] */
     @Deprecated(
         "Use ArSceneView",
         replaceWith = ReplaceWith(expression = "findViewById<ArSceneView>(R.id.arSceneView)")
     )
     fun getArSceneView() = null
 
-    /** ## Deprecated: Use [ArSceneView.onARCoreException] */
+    /** ## Deprecated: Use [ARSceneView.onARCoreException] */
     @Deprecated(
         "Use ArSceneView.onARCoreException",
         replaceWith = ReplaceWith(expression = "arSceneView.onARCoreException = { exception -> }")
     )
     fun setOnArUnavailableListener(any: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.instructions] */
+    /** ## Deprecated: Use [ARSceneView.instructions] */
     @Deprecated(
         "Use ArSceneView.instructions",
         replaceWith = ReplaceWith(expression = "arSceneView.instructions")
     )
     fun getInstructionsController() = null
 
-    /** ## Deprecated: Use [ArSceneView.nodeGestureRecognizer] */
+    /** ## Deprecated: Use [ARSceneView.nodeGestureRecognizer] */
     @Deprecated(
         "Use ArSceneView.nodeGestureRecognizer",
         replaceWith = ReplaceWith(expression = "arSceneView.nodeGestureRecognizer")
     )
     fun getTransformationSystem() = null
 
-    /** ## Deprecated: Use [ArSceneView.configureSession] */
+    /** ## Deprecated: Use [ARSceneView.configureSession] */
     @Deprecated(
         "Use ArSceneView.configureSession",
         replaceWith = ReplaceWith(expression = "arSceneView.configureSession = { config -> }")
     )
     fun setOnSessionConfigurationListener(any: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.onTouchAr] */
+    /** ## Deprecated: Use [ARSceneView.onTouchAr] */
     @Deprecated(
         "Use ArSceneView.onTouchAr",
         replaceWith = ReplaceWith(expression = "arSceneView.onTouchAr = { hitResult, _ -> }")
     )
     fun setOnTapArPlaneListener(listener: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.onAugmentedImageUpdate] */
+    /** ## Deprecated: Use [ARSceneView.onAugmentedImageUpdate] */
     @Deprecated(
         "Use ArSceneView.onAugmentedImageUpdate",
         replaceWith = ReplaceWith(expression = "arSceneView.onAugmentedImageUpdate = { augmentedImage -> }")
     )
     fun setOnAugmentedImageUpdateListener(listener: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.onAugmentedFaceUpdate] */
+    /** ## Deprecated: Use [ARSceneView.onAugmentedFaceUpdate] */
     @Deprecated(
         "Use ArSceneView.onAugmentedFaceUpdate",
         replaceWith = ReplaceWith(expression = "arSceneView.onAugmentedFaceUpdate = { augmentedFace -> }")
@@ -68,18 +68,18 @@ open class BaseArFragment {
     fun setOnAugmentedFaceUpdateListener(listener: Any?) = null
 }
 
-/** ## Deprecated: Use [ArSceneView] */
+/** ## Deprecated: Use [ARSceneView] */
 @Deprecated("Use ArSceneView", replaceWith = ReplaceWith(expression = "ArSceneView(context)"))
 class ArFragment : BaseArFragment() {
 
-    /** ## Deprecated: Use [ArSceneView.onArSessionResumed] */
+    /** ## Deprecated: Use [ARSceneView.onArSessionResumed] */
     @Deprecated(
         "Use ArSceneView",
         replaceWith = ReplaceWith(expression = "arSceneView")
     )
     fun setOnViewCreatedListener(any: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.setOnTapArPlaneGlbModel] */
+    /** ## Deprecated: Use [ARSceneView.setOnTapArPlaneGlbModel] */
     @Deprecated(
         "Use ArSceneView.setOnTapArPlaneGlbModel",
         replaceWith = ReplaceWith(expression = "arSceneView.setOnTapArPlaneGlbModel(glbSource)")
@@ -87,7 +87,7 @@ class ArFragment : BaseArFragment() {
     fun setOnTapPlaneGlbModel(glbSource: String) {
     }
 
-    /** ## Deprecated: Use [ArSceneView.setOnTapArPlaneGlbModel] */
+    /** ## Deprecated: Use [ARSceneView.setOnTapArPlaneGlbModel] */
     @Deprecated(
         "Use ArSceneView.setOnTapArPlaneGlbModel",
         replaceWith = ReplaceWith(expression = "arSceneView.setOnTapArPlaneGlbModel(glbSource)")
@@ -98,7 +98,7 @@ class ArFragment : BaseArFragment() {
     ) {
     }
 
-    /** ## Deprecated: Use [ArSceneView.setOnTapArPlaneGlbModel] */
+    /** ## Deprecated: Use [ARSceneView.setOnTapArPlaneGlbModel] */
     @Deprecated(
         "Use ArSceneView.setOnTapArPlaneGlbModel",
         replaceWith = ReplaceWith(expression = "arSceneView.setOnTapArPlaneGlbModel(glbSource)")
@@ -108,10 +108,10 @@ class ArFragment : BaseArFragment() {
 
 
 /**
- * ## Deprecated: Use [ArSceneView]
+ * ## Deprecated: Use [ARSceneView]
  *
  * ### All functions are directly on [SceneView] and [ArSceneview]*
- * *= [SceneView]/[ArSceneView] is a Scene (NodeParent)* that can contain
+ * *= [SceneView]/[ARSceneView] is a Scene (NodeParent)* that can contain
  * - Camera Node
  * - Lights Nodes
  * - Model Nodes
@@ -119,21 +119,21 @@ class ArFragment : BaseArFragment() {
  */
 @Deprecated("Use ArSceneView directly", replaceWith = ReplaceWith("SceneView(context)"))
 class Scene {
-    /** ## Deprecated: Use [ArSceneView.addChild] */
+    /** ## Deprecated: Use [ARSceneView.addChild] */
     @Deprecated(
         "Use ArSceneView.addChild",
         replaceWith = ReplaceWith(expression = "arSceneView.addChild(child)")
     )
     fun onAddChild(child: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.removeChild] */
+    /** ## Deprecated: Use [ARSceneView.removeChild] */
     @Deprecated(
         "Use ArSceneView.removeChild",
         replaceWith = ReplaceWith(expression = "arSceneView.removeChild(child)")
     )
     fun onRemoveChild(child: Any?) = null
 
-    /** ## Deprecated: Use [ArSceneView.onArFrame] */
+    /** ## Deprecated: Use [ARSceneView.onArFrame] */
     @Deprecated(
         "Use ArSceneView.onArFrame",
         replaceWith = ReplaceWith(expression = "onArFrame = { session, frame, camera -> }")
@@ -144,10 +144,10 @@ class Scene {
 // SceneView
 
 /**
- * ## Deprecated: Use [ArSceneView]
+ * ## Deprecated: Use [ARSceneView]
  *
  * ### All functions are directly on [SceneView] and [ArSceneview]*
- * *= [SceneView]/[ArSceneView] is a Scene (NodeParent)* that can contain
+ * *= [SceneView]/[ARSceneView] is a Scene (NodeParent)* that can contain
  * - Camera Node
  * - Lights Nodes
  * - Model Nodes
@@ -159,14 +159,14 @@ fun SceneView.getScene() = null
 
 // Session
 
-/** ## Deprecated: Use [ArSceneView.arSessionConfig] */
+/** ## Deprecated: Use [ARSceneView.arSessionConfig] */
 @Deprecated(
     "Use ArSceneView.sessionConfig",
     replaceWith = ReplaceWith(expression = "arSceneView.sessionConfig()")
 )
 fun Session.getConfig() = config
 
-/** ## Deprecated: Use [ArSceneView.configureSession] */
+/** ## Deprecated: Use [ARSceneView.configureSession] */
 @Deprecated(
     "Use ArSceneView.configureSession()",
     replaceWith = ReplaceWith(expression = "arSceneView.configureSession { config -> }")

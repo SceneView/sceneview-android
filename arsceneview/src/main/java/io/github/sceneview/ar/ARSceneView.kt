@@ -67,7 +67,7 @@ typealias ARFrame = Frame
 /**
  * A SurfaceView that integrates with ARCore and renders a scene
  */
-open class ArSceneView @JvmOverloads constructor(
+open class ARSceneView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
@@ -598,10 +598,10 @@ open class ArSceneView @JvmOverloads constructor(
                 // In last case, if the camera permission is still not granted a SecurityException
                 // will be thrown when trying to create session.
                 try {
+                    // Request Google Play Services for AR installation or update if necessary
                     // ARCore install and update if camera permission is granted.
                     // For now, ARCore session will throw an exception if the camera is not
-                    // accessible (ARCore cannot be used without camera.
-                    // Request installation if necessary
+                    // accessible (ARCore cannot be used without camera).
                     if (checkAvailability && !installRequested &&
                         !checkInstall(activity, installRequested)
                     ) {
@@ -629,52 +629,6 @@ open class ArSceneView @JvmOverloads constructor(
     private var cameraPermissionLauncher: ActivityResultLauncher<String>? = null
 
     private var requestedARCoreInstall = false
-
-    /**
-     * Define the Activity for lifecycle and automate camera permissions and ARCore checks.
-     *
-     * If you're not under a [Fragment] context, please handle lifecycle, permissions and
-     * ARCore on your side.
-     *
-     * Must be called before onResume()
-     */
-    fun setFragment(fragment: Fragment) {
-        activity = fragment.activity
-        // Must be called before on resume
-        cameraPermissionLauncher = fragment.registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            // We don't need to listen for onGranted since the onResume will call the launcher
-            if (!isGranted && !fragment.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-                onCameraPermissionDenied?.invoke()
-            }
-        }
-        setLifecycle(fragment.lifecycle)
-    }
-
-    /**
-     * Define the Activity for lifecycle and automate camera permissions and ARCore checks.
-     *
-     * - If you're under a [Fragment] context, please use [setFragment] instead in order to give
-     * link the view to the fragment lifecycle instead of the activity one.
-     * - If you're not under a [ComponentActivity] context, please handle lifecycle, permissions and
-     * ARCore on your side.
-     *
-     * Must be called before onResume()
-     */
-    fun setActivity(activity: ComponentActivity) {
-        this.activity = activity
-        // Must be called before on resume
-        cameraPermissionLauncher = activity.registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            // We don't need to listen for onGranted since the onResume will call the launcher
-            if (!isGranted && !activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-                onCameraPermissionDenied?.invoke()
-            }
-        }
-        setLifecycle(activity.lifecycle)
-    }
 
     // Whether ARCore is currently active.
     val isARCoreActive = MutableStateFlow(false)
@@ -774,7 +728,7 @@ open class ArSceneView @JvmOverloads constructor(
             } catch (e: Exception) {
                 onARCoreError?.invoke(Availability.SUPPORTED_INSTALLED, e)
             }
-            cameraActivation.unlock(this@ArSceneView)
+            cameraActivation.unlock(this@ARSceneView)
         }
 
         override fun onConfigureFailed(captureSession: CameraCaptureSession) {
@@ -879,7 +833,7 @@ open class ArSceneView @JvmOverloads constructor(
      */
     private fun lockCameraActivation(block: () -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
-            cameraActivation.withLock(this@ArSceneView, block)
+            cameraActivation.withLock(this@ARSceneView, block)
         }
     }
 
@@ -904,15 +858,15 @@ open class ArSceneView @JvmOverloads constructor(
      */
     open fun createSession(): Session? = try {
         ARSession(context, EnumSet.of(Session.Feature.SHARED_CAMERA)).apply {
-            cameraFacingDirection = this@ArSceneView.cameraFacingDirection
+            cameraFacingDirection = this@ARSceneView.cameraFacingDirection
             configure {
-                focusMode = this@ArSceneView.focusMode
-                lightEstimationMode = this@ArSceneView.lightEstimationMode
-                planeFindingMode = this@ArSceneView.planeFindingMode
-                depthMode = this@ArSceneView.depthMode
-                instantPlacementMode = this@ArSceneView.instantPlacementMode
-                cloudAnchorMode = this@ArSceneView.cloudAnchorMode
-                geospatialMode = this@ArSceneView.geospatialMode
+                focusMode = this@ARSceneView.focusMode
+                lightEstimationMode = this@ARSceneView.lightEstimationMode
+                planeFindingMode = this@ARSceneView.planeFindingMode
+                depthMode = this@ARSceneView.depthMode
+                instantPlacementMode = this@ARSceneView.instantPlacementMode
+                cloudAnchorMode = this@ARSceneView.cloudAnchorMode
+                geospatialMode = this@ARSceneView.geospatialMode
             }
         }.also {
             onSessionCreated?.invoke(it)
@@ -920,56 +874,6 @@ open class ArSceneView @JvmOverloads constructor(
     } catch (e: Exception) {
         onARCoreError?.invoke(Availability.SUPPORTED_INSTALLED, e)
         null
-    }
-
-    /**
-     * Check for user Camera permission.
-     *
-     * Make sure you have called [setFragment] or [setActivity] before calling this function.
-     * Handle the permission on your side if you aren't under a [Fragment] or [ComponentActivity]
-     * context (Flutter, ReactNative,...)
-     */
-    open fun checkCameraPermission(): Boolean {
-        return (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED).also { hasPermission ->
-            if (!hasPermission) {
-                cameraPermissionLauncher?.launch(Manifest.permission.CAMERA)
-            }
-        }
-    }
-
-    /**
-     * Make sure ARCore is installed and supported on this device.
-     *
-     * Request ARCore installation or update if needed.
-     */
-    open fun checkARCoreInstall(): Boolean {
-        return when (val availability = ArCoreApk.getInstance().checkAvailability(context)) {
-            Availability.SUPPORTED_INSTALLED -> true
-            Availability.SUPPORTED_APK_TOO_OLD,
-            Availability.SUPPORTED_NOT_INSTALLED -> try {
-                activity?.let { activity ->
-                    when (ArCoreApk.getInstance()
-                        .requestInstall(activity, requestedARCoreInstall)) {
-                        InstallStatus.INSTALLED -> true
-                        InstallStatus.INSTALL_REQUESTED -> {
-                            requestedARCoreInstall = true
-                            false
-                        }
-                    }
-                } ?: false
-            } catch (e: UnavailableException) {
-                onARCoreError?.invoke(availability, e)
-                false
-            }
-            Availability.UNKNOWN_ERROR,
-            Availability.UNKNOWN_CHECKING,
-            Availability.UNKNOWN_TIMED_OUT,
-            Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> {
-                onARCoreError?.invoke((availability, null)
-                false
-            }
-        }
     }
 
     fun <T> arFrameFlow(callback: (frame: Frame) -> T) = callbackFlow {
@@ -1135,8 +1039,7 @@ open class ArSceneView @JvmOverloads constructor(
     }
 
 
-    var nearPlane = 0.01f
-    var farPlane = 30.0f
+
 
     fun updateCamera(frame: Frame) {
         val arCamera = frame.camera ?: return
@@ -1572,6 +1475,90 @@ open class ArSceneView @JvmOverloads constructor(
             }
         }
     }
+
+    companion object {
+
+        /**
+         * Define the Activity for lifecycle and automate camera permissions and ARCore checks.
+         *
+         * If you're not under a [Fragment] context, please handle lifecycle, permissions and
+         * ARCore on your side.
+         *
+         * Must be called before onResume()
+         */
+        fun setFragment(fragment: Fragment) {
+            activity = fragment.activity
+            // Must be called before on resume
+            cameraPermissionLauncher = fragment.registerForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { isGranted: Boolean ->
+                // We don't need to listen for onGranted since the onResume will call the launcher
+                if (!isGranted && !fragment.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+                    onCameraPermissionDenied?.invoke()
+                }
+            }
+            setLifecycle(fragment.lifecycle)
+        }
+
+        /**
+         * Check for user Camera permission.
+         *
+         * Handle the permission on your side if you aren't under a [Fragment] or
+         * [ComponentActivity] context (Flutter, ReactNative,...)
+         *
+         * Must be called before onResume()
+         */
+        fun checkCameraPermission(activity: ComponentActivity): Boolean {
+            return (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) ==
+                    PackageManager.PERMISSION_GRANTED).also { hasPermission ->
+                if (!hasPermission) {
+                    // Must be called before on resume
+                    activity.registerForActivityResult(
+                        ActivityResultContracts.RequestPermission()
+                    ) { isGranted: Boolean ->
+                        // We don't need to listen for onGranted since the onResume will call the launcher
+                        if (!isGranted && !activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+                            onCameraPermissionDenied?.invoke()
+                        }
+                    }.launch(Manifest.permission.CAMERA)
+                }
+            }
+        }
+
+        /**
+         * Make sure ARCore is installed and supported on this device.
+         *
+         * Request ARCore installation or update if needed.
+         */
+        open fun checkARCoreInstall(): Boolean {
+            return when (val availability = ArCoreApk.getInstance().checkAvailability(context)) {
+                Availability.SUPPORTED_INSTALLED -> true
+                Availability.SUPPORTED_APK_TOO_OLD,
+                Availability.SUPPORTED_NOT_INSTALLED -> try {
+                    activity?.let { activity ->
+                        when (ArCoreApk.getInstance()
+                            .requestInstall(activity, requestedARCoreInstall)) {
+                            InstallStatus.INSTALLED -> true
+                            InstallStatus.INSTALL_REQUESTED -> {
+                                requestedARCoreInstall = true
+                                false
+                            }
+                        }
+                    } ?: false
+                } catch (e: UnavailableException) {
+                    onARCoreError?.invoke(availability, e)
+                    false
+                }
+                Availability.UNKNOWN_ERROR,
+                Availability.UNKNOWN_CHECKING,
+                Availability.UNKNOWN_TIMED_OUT,
+                Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> {
+                    onARCoreError?.invoke((availability, null)
+                    false
+                }
+            }
+        }
+    }
 }
 
 ///**
@@ -1583,8 +1570,8 @@ open class ArSceneView @JvmOverloads constructor(
 //    val arSessionConfig get() = arSession?.config
 //}
 
-class ArSceneLifecycle(sceneView: ArSceneView) : SceneLifecycle(sceneView) {
-    override val sceneView get() = super.sceneView as ArSceneView
+class ArSceneLifecycle(sceneView: ARSceneView) : SceneLifecycle(sceneView) {
+    override val sceneView get() = super.sceneView as ARSceneView
     val context get() = sceneView.context
     val arCore get() = sceneView.arCore
     val arSession get() = sceneView.arSession
@@ -1698,6 +1685,3 @@ fun Session.cameraConfig(cameraConfig: CameraConfig.() -> Unit) {
 fun Session.configure(config: Config.() -> Unit) {
     configure(this.config.apply(config))
 }
-
-fun Camera.getProjectionMatrix(near: Float, far: Float): Transform =
-    FloatArray(16).apply { getProjectionMatrix(this, 0, near, far) }.toTransform()

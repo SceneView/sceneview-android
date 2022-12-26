@@ -7,7 +7,7 @@ import dev.romainguy.kotlin.math.*
 import io.github.sceneview.*
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
-import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.node.ModelNode
 
@@ -16,7 +16,7 @@ import io.github.sceneview.node.ModelNode
  */
 open class ArNode : ModelNode, ArSceneLifecycleObserver {
 
-    override val sceneView: ArSceneView? get() = super.sceneView as? ArSceneView
+    override val sceneView: ARSceneView? get() = super.sceneView as? ARSceneView
     override val lifecycle: ArSceneLifecycle? get() = sceneView?.lifecycle
     protected val arSession: ArSessionOld? get() = sceneView?.arSession
 
@@ -57,7 +57,7 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
         private set
 
     /**
-     * ### The position of the intersection between a ray and detected real-world geometry.
+     * The position of the intersection between a ray and detected real-world geometry.
      *
      * The position is the location in space where the ray intersected the geometry.
      * The orientation is a best effort to face the user's device, and its exact definition differs

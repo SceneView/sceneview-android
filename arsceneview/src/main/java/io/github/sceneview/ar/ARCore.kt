@@ -22,9 +22,7 @@ import io.github.sceneview.ar.arcore.ArSessionOld
 
 
 /**
- * Manages an ARCore Session using the Android Lifecycle API. Before starting a Session, this class
- * requests installation of Google Play Services for AR if it's not installed or not up to date and
- * asks the user for required permissions if necessary.
+ * Manages an ARCore Session using the Android Lifecycle API.
  */
 class ARCore(
     val activity: androidx.activity.ComponentActivity,
@@ -54,6 +52,7 @@ class ARCore(
     private var installRequested = false
     internal var session: ArSessionOld? = null
         private set
+
 
     var onCameraPermissionResult: (isGranted: Boolean) -> Unit = { isGranted ->
         if (!isGranted) {

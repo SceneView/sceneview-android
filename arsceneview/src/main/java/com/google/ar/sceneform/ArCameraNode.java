@@ -4,14 +4,14 @@ import com.google.ar.core.Pose;
 import com.google.ar.sceneform.utilities.Preconditions;
 
 import dev.romainguy.kotlin.math.Float3;
-import io.github.sceneview.ar.ArSceneView;
+import io.github.sceneview.ar.ARSceneView;
 import io.github.sceneview.ar.arcore.PoseKt;
 import io.github.sceneview.node.NodeParent;
 
 /**
  * Represents a virtual camera, which determines the perspective through which the scene is viewed.
  *
- * <p>If the camera is part of an {@link ArSceneView}, then the camera automatically tracks the
+ * <p>If the camera is part of an {@link ARSceneView}, then the camera automatically tracks the
  * camera pose from ARCore. Additionally, the following methods will throw {@link
  * UnsupportedOperationException} when called:
  *

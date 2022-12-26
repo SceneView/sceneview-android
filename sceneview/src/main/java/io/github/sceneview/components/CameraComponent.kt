@@ -1,7 +1,6 @@
 package io.github.sceneview.components
 
 import com.google.android.filament.Camera
-import com.google.android.filament.Camera.Projection
 import com.google.android.filament.LightManager
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float4
@@ -43,7 +42,7 @@ interface CameraComponent : Component {
      * @see Projection
      */
     fun setProjection(
-        projection: Projection,
+        projection: Camera.Projection,
         left: Double,
         right: Double,
         bottom: Double,
@@ -61,15 +60,15 @@ interface CameraComponent : Component {
      * @param near distance in world units from the camera to the near plane.
      * The near plane's position in view space is z = -`near`.
      * Precondition:
-     * `near` > 0 for [Projection.PERSPECTIVE] or
-     * `near` != `far` for [Projection.ORTHO].
+     * `near` > 0 for [Camera.Projection.PERSPECTIVE] or
+     * `near` != `far` for [Camera.Projection.ORTHO].
      * @param far distance in world units from the camera to the far plane.
      * The far plane's position in view space is z = -`far`.
      * Precondition:
      * `far` > `near`
-     * for [Projection.PERSPECTIVE] or
+     * for [Camera.Projection.PERSPECTIVE] or
      * `far` != `near`
-     * for [Projection.ORTHO].
+     * for [Camera.Projection.ORTHO].
      * @param direction direction of the field-of-view parameter.
      *
      * These parameters are silently modified to meet the preconditions above.
@@ -112,6 +111,32 @@ interface CameraComponent : Component {
      * is all 3 axis are mapped to [-1, 1].
      *
      * @param inProjection custom projection matrix for rendering.
+     * @param near distance in world units from the camera to the near plane.
+     * The near plane's position in view space is z = -`near`.
+     * Precondition:
+     * `near` > 0 for [Projection.PERSPECTIVE] or
+     * `near` != `far` for [Projection.ORTHO].
+     * @param far distance in world units from the camera to the far plane.
+     * The far plane's position in view space is z = -`far`.
+     * Precondition:
+     * `far` > `near`
+     * for [Projection.PERSPECTIVE] or
+     * `far` != `near`
+     * for [Projection.ORTHO].
+     */
+    fun setCustomProjection(
+        inProjection: Transform,
+        near: Float,
+        far: Float
+    ) = camera.setCustomProjection(inProjection.toDoubleArray(), near.toDouble(), far.toDouble())
+
+    /**
+     * Sets a custom projection matrix.
+     *
+     * The projection matrices must define an NDC system that must match the OpenGL convention, that
+     * is all 3 axis are mapped to [-1, 1].
+     *
+     * @param inProjection custom projection matrix for rendering.
      * @param inProjectionForCulling custom projection matrix for culling.
      * @param near distance in world units from the camera to the near plane.
      * The near plane's position in view space is z = -`near`.
@@ -128,19 +153,15 @@ interface CameraComponent : Component {
      */
     fun setCustomProjection(
         inProjection: Transform,
-        inProjectionForCulling: Transform? = null,
-        near: Double,
-        far: Double
-    ) = if (inProjectionForCulling != null) {
-        camera.setCustomProjection(
-            inProjection.toDoubleArray(),
-            inProjectionForCulling.toDoubleArray(),
-            near,
-            far
-        )
-    } else {
-        camera.setCustomProjection(inProjection.toDoubleArray(), near, far)
-    }
+        inProjectionForCulling: Transform,
+        near: Float,
+        far: Float
+    ) = camera.setCustomProjection(
+        inProjection.toDoubleArray(),
+        inProjectionForCulling.toDoubleArray(),
+        near.toDouble(),
+        far.toDouble()
+    )
 
     /**
      * Sets an additional matrix that scales the projection matrix.
@@ -212,7 +233,7 @@ interface CameraComponent : Component {
     /**
      * Gets the distance to the far plane
      */
-    val cullingFar: Float get() = camera.cullingFar
+    val far: Float get() = camera.cullingFar
 
     /**
      * Retrieves the camera's projection matrix. The projection matrix used for rendering always has
@@ -221,12 +242,12 @@ interface CameraComponent : Component {
      *
      * Transform containing the camera's projection as a column-major matrix.
      */
-    val projectionTransform: Transform
+    val projection: Projection
         get() = DoubleArray(16).apply {
             camera.getProjectionMatrix(
                 this
             )
-        }.toTransform()
+        }.toProjection()
 
     /**
      * Retrieves the camera's culling matrix. The culling matrix is the same as the projection
@@ -234,10 +255,10 @@ interface CameraComponent : Component {
      *
      * Transform containing the camera's projection as a column-major matrix.
      */
-    val cullingProjectionTransform: Transform
+    val cullingProjection: Projection
         get() = DoubleArray(16).apply {
             camera.getCullingProjectionMatrix(this)
-        }.toTransform()
+        }.toProjection()
 
     /**
      * Returns the scaling amount used to scale the projection matrix.

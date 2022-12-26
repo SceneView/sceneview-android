@@ -6,6 +6,7 @@ import com.google.android.filament.EntityManager
 import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.CameraComponent
+import io.github.sceneview.components.FilamentCamera
 import io.github.sceneview.managers.NodeManager
 
 /**
@@ -25,27 +26,18 @@ import io.github.sceneview.managers.NodeManager
 open class CameraNode(
     engine: Engine,
     nodeManager: NodeManager,
-    entity: Entity
+    entity: Entity = EntityManager.get().create(),
+    camera: FilamentCamera.() -> Unit = {}
 ) : Node(engine, nodeManager, entity, isSelectable = false, isEditable = false), CameraComponent {
 
-    constructor(
-        engine: Engine,
-        nodeManager: NodeManager,
-        entity: Entity = EntityManager.get().create(),
-        apply: Camera.() -> Unit
-    ) : this(engine, nodeManager, entity) {
-        engine.createCamera(entity).apply(apply)
+    init {
+        engine.createCamera(entity).apply(camera)
     }
 
     constructor(
         sceneView: SceneView,
-        entity: Entity
-    ) : this(sceneView.engine, sceneView.nodeManager, entity)
-
-    constructor(
-        sceneView: SceneView,
         entity: Entity = EntityManager.get().create(),
-        apply: Camera.() -> Unit
+        camera: FilamentCamera.() -> Unit = {}
     ) : this(sceneView.engine, sceneView.nodeManager, entity, apply)
 
     override fun destroy() {
