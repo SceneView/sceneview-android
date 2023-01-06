@@ -38,7 +38,7 @@ open class CameraNode(
         sceneView: SceneView,
         entity: Entity = EntityManager.get().create(),
         camera: FilamentCamera.() -> Unit = {}
-    ) : this(sceneView.engine, sceneView.nodeManager, entity, apply)
+    ) : this(sceneView.engine, sceneView.nodeManager, entity, camera)
 
     override fun destroy() {
         engine.destroyCameraComponent(entity)
