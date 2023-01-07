@@ -73,14 +73,17 @@ open class SceneView @JvmOverloads constructor(
     defStyleRes: Int = 0,
     /**
      * Provide your own instance if you want to share Filament resources between multiple views.
+     * You will have to handle its destroy by yourself.
      */
     val sharedEngine: Engine? = null,
     /**
      * Provide your own instance if you want to share [Node]s instances between multiple views.
+     * You will have to handle its destroy by yourself.
      */
     val sharedNodeManager: NodeManager? = null,
     /**
      * Provide your own instance if you want to share [Node]s selection between multiple views.
+     * You will have to handle its destroy by yourself.
      */
     sharedNodesManipulator: NodesManipulator? = null,
     /**
@@ -90,13 +93,26 @@ open class SceneView @JvmOverloads constructor(
      * `uiHelper.setDesiredSize(1280, 720)`
      */
     val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
-    cameraNode: CameraNode? = null,
-    cameraManipulator: ((width: Int, height: Int) -> CameraManipulator)? = { width, height ->
+    camera: (engine: Engine, nodeManager: NodeManager) -> CameraNode = { engine, nodeManager ->
+        CameraNode(engine, nodeManager)
+    },
+    manipulator: ((width: Int, height: Int) -> CameraManipulator)? = { width, height ->
         Manipulator.Builder()
             .targetPosition(DEFAULT_MODEL_POSITION)
             .viewport(width, height)
             .build(Manipulator.Mode.ORBIT)
+    },
+    light: ((engine: Engine, nodeManager: NodeManager) -> LightNode)? = { engine, nodeManager ->
+        // Taken from Filament ModelViewer
+        val (r, g, b) = Colors.cct(6_500.0f)
+        LightNode(engine, nodeManager, LightManager.Type.DIRECTIONAL) {
+            color(r, g, b)
+            intensity(100_000.0f)
+            direction(0.0f, -1.0f, 0.0f)
+            castShadows(true)
+        }
     }
+
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
 
     /**
@@ -117,7 +133,7 @@ open class SceneView @JvmOverloads constructor(
      * An Engine instance main function is to keep track of all resources created by the user and
      * manage the rendering thread as well as the hardware renderer
      */
-    lateinit var engine: Engine
+    var engine: Engine = sharedEngine ?: Engine.create()
         private set
 
     /**
@@ -131,7 +147,7 @@ open class SceneView @JvmOverloads constructor(
             updateCameraProjection()
         }
 
-    lateinit var nodeManager: NodeManager
+    var nodeManager: NodeManager = sharedNodeManager ?: NodeManager(engine)
         private set
 
     /**
@@ -140,21 +156,21 @@ open class SceneView @JvmOverloads constructor(
      * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and
      * components.
      */
-    lateinit var modelLoader: ModelLoader
+    var modelLoader: ModelLoader
 
     /**
      * A Filament Material defines the visual appearance of an object
      *
      * Materials function as a templates from which [MaterialInstance]s can be spawned.
      */
-    lateinit var materialLoader: MaterialLoader
+    var materialLoader: MaterialLoader
 
     /**
      * IBLPrefilter creates and initializes GPU state common to all environment map filters
      *
      * @see IBLPrefilterContext
      */
-    lateinit var iblPrefilter: IBLPrefilter
+    var iblPrefilter: IBLPrefilter
 
     /**
      * A transform component gives an entity a position and orientation in space in the coordinate
@@ -178,31 +194,25 @@ open class SceneView @JvmOverloads constructor(
     /**
      * A [Scene] is a flat container of [RenderableManager] and [LightManager] components
      */
-    lateinit var scene: Scene
+    var scene: Scene
         private set
 
     /**
      * Encompasses all the state needed for rendering a [Scene]
      */
-    lateinit var filamentView: FilamentView
+    var filamentView: FilamentView
         private set
 
     /**
      * A [Renderer] instance represents an operating system's window.
      */
-    lateinit var renderer: Renderer
+    var renderer: Renderer
         private set
 
-    lateinit var surfaceMirorer: SurfaceMirorer
+    var surfaceMirorer: SurfaceMirorer
         private set
 
-    /**
-     * Helper that enables camera interaction similar to sketchfab or Google Maps
-     */
-    var cameraManipulator: CameraManipulator? = null
-        private set
-
-    lateinit var nodesManipulator: NodesManipulator
+    var nodesManipulator: NodesManipulator
         private set
 
     /**
@@ -227,18 +237,24 @@ open class SceneView @JvmOverloads constructor(
      * To remove an existing association, simply pass null.
      * The View does not take ownership of the Scene pointer.
      */
-    var cameraNode: CameraNode? = null
+    var cameraNode: CameraNode? = camera(engine, nodeManager)
         set(value) {
             field = value
             filamentView.camera = value?.camera
         }
 
     /**
+     * Helper that enables camera interaction similar to sketchfab or Google Maps
+     */
+    var cameraManipulator: CameraManipulator? = manipulator?.invoke(width, height)
+        private set
+
+    /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    var lightNode: LightNode? = null
+    var lightNode: LightNode? = light?.invoke(engine, nodeManager)
         set(value) {
             field?.let { removeChildNode(it) }
             field = value
@@ -365,9 +381,9 @@ open class SceneView @JvmOverloads constructor(
 
     internal lateinit var windowViewManager: WindowViewManager
 
-    private lateinit var colorGrading: ColorGrading
+    private var colorGrading: ColorGrading
 
-    private lateinit var selectionModel: Model
+    private var selectionModel: Model
 
     private val pickingHandler by lazy { Handler(Looper.getMainLooper()) }
 
@@ -398,88 +414,72 @@ open class SceneView @JvmOverloads constructor(
 
         val backgroundColor = (background as? ColorDrawable)?.let { Color(it) }
 
-        if (!isInEditMode) {
-            // Setup Filament
-            engine = sharedEngine ?: Engine.create()
-            nodeManager = sharedNodeManager ?: NodeManager(engine)
-            modelLoader = ModelLoader(engine, context)
-            materialLoader = MaterialLoader(engine, context)
-            iblPrefilter = IBLPrefilter(engine)
+        // Setup Filament
+        engine = sharedEngine ?: Engine.create()
+        nodeManager = sharedNodeManager ?: NodeManager(engine)
+        modelLoader = ModelLoader(engine, context)
+        materialLoader = MaterialLoader(engine, context)
+        iblPrefilter = IBLPrefilter(engine)
 
-            renderer = engine.createRenderer()
-            renderer.clearOptions = renderer.clearOptions.apply {
-                clear = !uiHelper.isOpaque
-                if (backgroundColor?.a == 1.0f) {
-                    clearColor = backgroundColor.toFloatArray()
-                }
-            }
-
-            scene = engine.createScene()
-            filamentView = engine.createView().apply {
-                // on mobile, better use lower quality color buffer
-                renderQuality = renderQuality.apply {
-                    hdrColorBuffer = QualityLevel.MEDIUM
-                }
-                // dynamic resolution often helps a lot
-                dynamicResolutionOptions = dynamicResolutionOptions.apply {
-                    enabled = true
-                    quality = QualityLevel.MEDIUM
-                }
-                // MSAA is needed with dynamic resolution MEDIUM
-                multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
-                    enabled = true
-                }
-                // FXAA is pretty cheap and helps a lot
-                antiAliasing = AntiAliasing.FXAA
-                // ambient occlusion is the cheapest effect that adds a lot of quality
-                ambientOcclusionOptions = ambientOcclusionOptions.apply {
-                    enabled = true
-                }
-                // bloom is pretty expensive but adds a fair amount of realism
-                bloomOptions = bloomOptions.apply {
-                    enabled = true
-                }
-            }
-            // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
-            // material orange 500.
-            colorGrading = ColorGrading.Builder()
-                .toneMapping(ColorGrading.ToneMapping.FILMIC)
-                .build(engine)
-            filamentView.colorGrading = colorGrading
-            filamentView.scene = scene
-
-            surfaceMirorer = SurfaceMirorer(engine, filamentView, renderer)
-
-            this.cameraNode = cameraNode ?: CameraNode(engine, nodeManager) {
-                // Set the exposure on the camera, this exposure follows the sunny f/16 rule
-                // Since we define a light that has the same intensity as the sun, it guarantees a
-                // proper exposure
-                setExposure(16.0f, 1.0f / 125.0f, 100.0f)
-            }
-
-            this.cameraManipulator = cameraManipulator?.invoke(width, height)
-
-            selectionModel = modelLoader.createModel("models/selection.glb")!!
-            nodesManipulator = sharedNodesManipulator ?: NodesManipulator(engine) { nodeSize ->
-                ModelNode(this@SceneView, modelLoader.createInstance(selectionModel)!!).apply {
-                    isSelectable = false
-                    size = size.apply {
-                        xy = nodeSize.xy
-                    }
-                }
-            }
-
-            setupGestureDetector()
-
-            // Taken from Filament ModelViewer
-            val (r, g, b) = Colors.cct(6_500.0f)
-            lightNode = LightNode(engine, nodeManager, LightManager.Type.DIRECTIONAL) {
-                color(r, g, b)
-                intensity(100_000.0f)
-                direction(0.0f, -1.0f, 0.0f)
-                castShadows(true)
+        renderer = engine.createRenderer()
+        renderer.clearOptions = renderer.clearOptions.apply {
+            clear = !uiHelper.isOpaque
+            if (backgroundColor?.a == 1.0f) {
+                clearColor = backgroundColor.toFloatArray()
             }
         }
+
+        scene = engine.createScene()
+        filamentView = engine.createView().apply {
+            // on mobile, better use lower quality color buffer
+            renderQuality = renderQuality.apply {
+                hdrColorBuffer = QualityLevel.MEDIUM
+            }
+            // dynamic resolution often helps a lot
+            dynamicResolutionOptions = dynamicResolutionOptions.apply {
+                enabled = true
+                quality = QualityLevel.MEDIUM
+            }
+            // MSAA is needed with dynamic resolution MEDIUM
+            multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
+                enabled = true
+            }
+            // FXAA is pretty cheap and helps a lot
+            antiAliasing = AntiAliasing.FXAA
+            // ambient occlusion is the cheapest effect that adds a lot of quality
+            ambientOcclusionOptions = ambientOcclusionOptions.apply {
+                enabled = true
+            }
+            // bloom is pretty expensive but adds a fair amount of realism
+            bloomOptions = bloomOptions.apply {
+                enabled = true
+            }
+        }
+        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
+        // material orange 500.
+        colorGrading = ColorGrading.Builder()
+            .toneMapping(ColorGrading.ToneMapping.FILMIC)
+            .build(engine)
+        filamentView.colorGrading = colorGrading
+        filamentView.scene = scene
+        filamentView.camera = cameraNode?.camera
+
+        surfaceMirorer = SurfaceMirorer(engine, filamentView, renderer)
+
+        selectionModel = modelLoader.createModel("models/selection.glb")!!
+        nodesManipulator = sharedNodesManipulator ?: NodesManipulator(engine) { nodeSize ->
+            ModelNode(this@SceneView, modelLoader.createInstance(selectionModel)!!).apply {
+                isSelectable = false
+                size = size.apply {
+                    xy = nodeSize.xy
+                }
+            }
+        }
+
+        lightNode?.let { addChildNode(it) }
+
+        setupGestureDetector()
+
         setupSurfaceView(backgroundColor)
     }
 

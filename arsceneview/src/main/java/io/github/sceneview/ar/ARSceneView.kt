@@ -36,16 +36,13 @@ import com.google.ar.core.Config.LightEstimationMode
 import com.google.ar.core.exceptions.UnavailableException
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.*
+import io.github.sceneview.ar.camera.ARCameraNode
 import io.github.sceneview.ar.camera.ArCameraStream
 import io.github.sceneview.ar.camera.CameraManager
 import io.github.sceneview.ar.camera.SharedCamera
-import io.github.sceneview.ar.nodes.ARCameraNode
-import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.ar.utils.PermissionHelper
 import io.github.sceneview.gesture.NodesManipulator
 import io.github.sceneview.managers.NodeManager
-import io.github.sceneview.math.Transform
-import io.github.sceneview.math.toTransform
 import io.github.sceneview.nodes.Node
 import io.github.sceneview.scene.setCustomProjection
 import io.github.sceneview.utils.FrameTime
@@ -133,8 +130,8 @@ open class ARSceneView @JvmOverloads constructor(
     sharedNodeManager,
     sharedNodesManipulator,
     uiHelper,
-    cameraNode = ARCameraNode(),
-    cameraManipulator = null
+    camera = { engine, nodesManipulator -> ARCameraNode(engine, nodesManipulator) },
+    manipulator = null
 ) {
     var session: Session? = null
         private set
@@ -380,11 +377,6 @@ open class ARSceneView @JvmOverloads constructor(
 
     var cameraStream: ArCameraStream? = null
         private set
-
-    /**
-     * ### [PlaneRenderer] used to control plane visualization.
-     */
-    val planeRenderer = PlaneRenderer(lifecycle)
 
     /**
      * ### The environment and main light that are estimated by AR Core to render the scene.
@@ -1037,8 +1029,6 @@ open class ARSceneView @JvmOverloads constructor(
         }
         onArFrame?.invoke(arFrame)
     }
-
-
 
 
     fun updateCamera(frame: Frame) {

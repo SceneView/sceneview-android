@@ -1,11 +1,9 @@
-package io.github.sceneview.ar.nodes
+package io.github.sceneview.ar.camera
 
 import com.google.android.filament.Engine
-import com.google.android.filament.EntityManager
 import com.google.ar.core.Camera
 import com.google.ar.core.Pose
 import dev.romainguy.kotlin.math.Mat4
-import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ARFrame
 import io.github.sceneview.ar.ARSceneView
@@ -31,9 +29,13 @@ import io.github.sceneview.utils.FrameTime
 open class ARCameraNode(
     engine: Engine,
     nodeManager: NodeManager,
-    entity: Entity = EntityManager.get().create(),
-    camera: FilamentCamera.() -> Unit = {}
-) : CameraNode(engine, nodeManager, entity, camera), ARComponent {
+    camera: FilamentCamera.() -> Unit = {
+        // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+        // Since we define a light that has the same intensity as the sun, it guarantees a
+        // proper exposure
+        setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+    }
+) : CameraNode(engine, nodeManager, camera), ARComponent {
 
     override var near: Float = 0.01f
     override var far: Float = 30.0f
@@ -115,9 +117,8 @@ open class ARCameraNode(
 
     constructor(
         sceneView: SceneView,
-        entity: Entity = EntityManager.get().create(),
         camera: FilamentCamera.() -> Unit = {}
-    ) : this(sceneView.engine, sceneView.nodeManager, entity, camera)
+    ) : this(sceneView.engine, sceneView.nodeManager, camera)
 
     override fun onARFrame(frameTime: FrameTime, frame: ARFrame) {
         val arCamera = frame.camera

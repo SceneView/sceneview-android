@@ -3,9 +3,7 @@ package io.github.sceneview.components
 import androidx.annotation.IntRange
 import com.google.android.filament.LightManager
 import dev.romainguy.kotlin.math.Quaternion
-import io.github.sceneview.managers.*
-import io.github.sceneview.math.Direction
-import io.github.sceneview.math.Position
+import io.github.sceneview.math.*
 import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.toColor
 
@@ -40,25 +38,15 @@ interface LightComponent : Component {
     /**
      * The light's position in world space
      *
-     * @see LightManager.getDirection
-     * @see LightManager.setDirection
+     * @see LightManager.getPosition
+     * @see LightManager.setPosition
      */
-    var lightPosition: Position
-        get() = lightManager.getPosition(lightInstance)
+    var position: Position
+        get() = FloatArray(3).apply {
+            lightManager.getPosition(lightInstance, this)
+        }.toPosition()
         set(value) {
-            lightManager.setPosition(lightInstance, value)
-        }
-
-    /**
-     * The light's rotation in world space
-     *
-     * @see LightManager.getDirection
-     * @see LightManager.setDirection
-     */
-    var lightQuaternion: Quaternion
-        get() = lightManager.getQuaternion(lightInstance)
-        set(value) {
-            lightManager.setQuaternion(lightInstance, value)
+            lightManager.setPosition(lightInstance, position.x, position.y, position.z)
         }
 
     /**
@@ -67,10 +55,24 @@ interface LightComponent : Component {
      * @see LightManager.getDirection
      * @see LightManager.setDirection
      */
-    var lightDirection: Direction
-        get() = lightManager.getDirection(lightInstance)
+    var direction: Direction
+        get() = FloatArray(3).apply {
+            lightManager.getDirection(lightInstance, this)
+        }.toDirection()
         set(value) {
-            lightManager.setDirection(lightInstance, value)
+            lightManager.setDirection(lightInstance, value.x, value.y, value.z)
+        }
+
+    /**
+     * The light's rotation in world space
+     *
+     * @see LightManager.getDirection
+     * @see LightManager.setDirection
+     */
+    var quaternion: Quaternion
+        get() = lookTowards(eye = position, direction = direction)
+        set(value) {
+            direction = value * Direction(y = 1.0f)
         }
 
     /**

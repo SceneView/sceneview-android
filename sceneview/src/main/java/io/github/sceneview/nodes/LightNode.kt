@@ -4,7 +4,6 @@ import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.LightManager
 import com.google.android.filament.Material
-import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.LightComponent
 import io.github.sceneview.managers.NodeManager
@@ -24,32 +23,27 @@ import io.github.sceneview.managers.NodeManager
 open class LightNode(
     engine: Engine,
     nodeManager: NodeManager,
-    entity: Entity
-) : Node(engine, nodeManager, entity, false, false), LightComponent {
+    type: LightManager.Type,
+    builder: LightManager.Builder.() -> Unit
+) : Node(
+    engine = engine,
+    nodeManager = nodeManager,
+    entity = EntityManager.get().create(),
+    isSelectable = false,
+    isEditable = false
+), LightComponent {
 
-    constructor(
-        engine: Engine,
-        nodeManager: NodeManager,
-        type: LightManager.Type,
-        entity: Entity = EntityManager.get().create(),
-        apply: LightManager.Builder.() -> Unit
-    ) : this(engine, nodeManager, entity) {
+    init {
         LightManager.Builder(type)
-            .apply(apply)
+            .apply(builder)
             .build(engine, entity)
     }
 
     constructor(
         sceneView: SceneView,
-        entity: Entity
-    ) : this(sceneView.engine, sceneView.nodeManager, entity)
-
-    constructor(
-        sceneView: SceneView,
         type: LightManager.Type,
-        entity: Entity = EntityManager.get().create(),
-        apply: LightManager.Builder.() -> Unit
-    ) : this(sceneView.engine, sceneView.nodeManager, type, entity, apply)
+        builder: LightManager.Builder.() -> Unit
+    ) : this(sceneView.engine, sceneView.nodeManager, type, builder)
 
     override fun destroy() {
         lightManager.destroy(entity)

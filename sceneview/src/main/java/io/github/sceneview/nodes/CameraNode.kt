@@ -26,9 +26,14 @@ import io.github.sceneview.managers.NodeManager
 open class CameraNode(
     engine: Engine,
     nodeManager: NodeManager,
-    entity: Entity = EntityManager.get().create(),
     camera: FilamentCamera.() -> Unit = {}
-) : Node(engine, nodeManager, entity, isSelectable = false, isEditable = false), CameraComponent {
+) : Node(
+    engine = engine,
+    nodeManager = nodeManager,
+    entity = EntityManager.get().create(),
+    isSelectable = false,
+    isEditable = false
+), CameraComponent {
 
     init {
         engine.createCamera(entity).apply(camera)
@@ -36,9 +41,8 @@ open class CameraNode(
 
     constructor(
         sceneView: SceneView,
-        entity: Entity = EntityManager.get().create(),
         camera: FilamentCamera.() -> Unit = {}
-    ) : this(sceneView.engine, sceneView.nodeManager, entity, camera)
+    ) : this(sceneView.engine, sceneView.nodeManager, camera)
 
     override fun destroy() {
         engine.destroyCameraComponent(entity)
