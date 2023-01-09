@@ -167,3 +167,4 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         sceneView.selectedNode = modelNode
     }
 }
+
