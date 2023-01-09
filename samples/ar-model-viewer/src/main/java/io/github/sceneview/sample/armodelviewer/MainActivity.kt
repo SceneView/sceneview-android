@@ -16,6 +16,7 @@ import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.math.Position
 import io.github.sceneview.utils.doOnApplyWindowInsets
 import io.github.sceneview.utils.setFullScreen
+import io.github.sceneview.gesture.GestureDetector
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
@@ -23,6 +24,8 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     lateinit var loadingView: View
     lateinit var placeModelButton: ExtendedFloatingActionButton
     lateinit var newModelButton: ExtendedFloatingActionButton
+    
+    private var gestureDetector: GestureDetector.SimpleOnGestureListener = GestureDetector.SimpleOnGestureListener()
 
     data class Model(
         val fileLocation: String,
