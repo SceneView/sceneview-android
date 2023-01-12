@@ -277,12 +277,12 @@ class ArCameraStream(
         when (sceneView.depthMode) {
             Config.DepthMode.AUTOMATIC -> {
                 runCatching {
-                    frame.acquireDepthImage()
+                    frame.acquireDepthImage16Bits()
                 }.getOrNull()
             }
             Config.DepthMode.RAW_DEPTH_ONLY -> {
                 runCatching {
-                    frame.acquireRawDepthImage()
+                    frame.acquireRawDepthImage16Bits()
                 }.getOrNull()
             }
             else -> null
