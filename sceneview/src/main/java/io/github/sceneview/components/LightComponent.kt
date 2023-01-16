@@ -35,19 +35,19 @@ interface LightComponent : Component {
     fun getLightChannel(@IntRange(from = 0, to = 7) channel: Int): Boolean =
         lightManager.getLightChannel(lightInstance, channel)
 
-    /**
-     * The light's position in world space
-     *
-     * @see LightManager.getPosition
-     * @see LightManager.setPosition
-     */
-    var position: Position
-        get() = FloatArray(3).apply {
-            lightManager.getPosition(lightInstance, this)
-        }.toPosition()
-        set(value) {
-            lightManager.setPosition(lightInstance, position.x, position.y, position.z)
-        }
+//    /**
+//     * The light's position in world space
+//     *
+//     * @see LightManager.getPosition
+//     * @see LightManager.setPosition
+//     */
+//    var position: Position
+//        get() = FloatArray(3).apply {
+//            lightManager.getPosition(lightInstance, this)
+//        }.toPosition()
+//        set(value) {
+//            lightManager.setPosition(lightInstance, position.x, position.y, position.z)
+//        }
 
     /**
      * The light's direction in world space
@@ -63,17 +63,17 @@ interface LightComponent : Component {
             lightManager.setDirection(lightInstance, value.x, value.y, value.z)
         }
 
-    /**
-     * The light's rotation in world space
-     *
-     * @see LightManager.getDirection
-     * @see LightManager.setDirection
-     */
-    var quaternion: Quaternion
-        get() = lookTowards(eye = position, direction = direction)
-        set(value) {
-            direction = value * Direction(y = 1.0f)
-        }
+//    /**
+//     * The light's rotation in world space
+//     *
+//     * @see LightManager.getDirection
+//     * @see LightManager.setDirection
+//     */
+//    var quaternion: Quaternion
+//        get() = lookTowards(eye = position, direction = direction)
+//        set(value) {
+//            direction = value * Direction(y = 1.0f)
+//        }
 
     /**
      * Dynamically updates the light's hue as linear sRGB

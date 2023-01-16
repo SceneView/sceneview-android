@@ -35,7 +35,7 @@ open class ARCameraNode(
         // proper exposure
         setExposure(16.0f, 1.0f / 125.0f, 100.0f)
     }
-) : CameraNode(engine, nodeManager, camera), ARComponent {
+) : CameraNode(engine, nodeManager, camera) {
 
     override var near: Float = 0.01f
     override var far: Float = 30.0f
@@ -60,7 +60,7 @@ open class ARCameraNode(
      * Note: This pose is only useful when {@link #getTrackingState()} returns {@link
      * com.google.ar.core.TrackingState#TRACKING } and otherwise should not be used.
      */
-    override var pose: Pose? = null
+    var pose: Pose? = null
         set(value) {
             field = value
             // Change the camera.modelTransform instead of transform to keep transform being applied
@@ -120,7 +120,7 @@ open class ARCameraNode(
         camera: FilamentCamera.() -> Unit = {}
     ) : this(sceneView.engine, sceneView.nodeManager, camera)
 
-    override fun onARFrame(frameTime: FrameTime, frame: ARFrame) {
+    open fun update(frameTime: FrameTime, frame: ARFrame) {
         val arCamera = frame.camera
         projectionMatrix = arCamera.getProjection(near, far)
         pose = arCamera.displayOrientedPose

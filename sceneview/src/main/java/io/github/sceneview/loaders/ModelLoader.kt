@@ -18,7 +18,7 @@ import java.nio.Buffer
  * a bundle of Filament textures, vertex buffers, index buffers, etc.
  * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and components.
  */
-class ModelLoader(engine: Engine, context: Context) {
+class ModelLoader(context: Context, engine: Engine) {
 
     val materialProvider: MaterialProvider
     val assetLoader: AssetLoader

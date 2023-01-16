@@ -40,10 +40,12 @@ import io.github.sceneview.ar.camera.ARCameraNode
 import io.github.sceneview.ar.camera.ArCameraStream
 import io.github.sceneview.ar.camera.CameraManager
 import io.github.sceneview.ar.camera.SharedCamera
+import io.github.sceneview.ar.light.ARMainLightNode
 import io.github.sceneview.ar.utils.PermissionHelper
 import io.github.sceneview.gesture.NodesManipulator
 import io.github.sceneview.managers.NodeManager
 import io.github.sceneview.nodes.Node
+import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.scene.setCustomProjection
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.setKeepScreenOn
@@ -131,7 +133,8 @@ open class ARSceneView @JvmOverloads constructor(
     sharedNodesManipulator,
     uiHelper,
     camera = { engine, nodesManipulator -> ARCameraNode(engine, nodesManipulator) },
-    manipulator = null
+    manipulator = null,
+    light = { engine, nodesManipulator -> ARMainLightNode(engine, nodesManipulator) }
 ) {
     var session: Session? = null
         private set
@@ -951,12 +954,11 @@ open class ARSceneView @JvmOverloads constructor(
 
     override fun onFrame(frameTime: FrameTime) {
         // Perform ARCore per-frame update.
-
-        // Perform ARCore per-frame update.
-        val frame = session?.update()?.let { frame ->
-            if (frame.timestamp != 0 &&)
-                onARFrame(frameTime, frame)
+        session?.let { session ->
+            val frame = session.update()
+            onARFrame(session, frameTime, frame)
         }
+
         // Check if no frame or same timestamp, no drawing.
         return super.update()?.takeIf {
             it.timestamp != (currentFrame?.frame?.timestamp ?: 0) && it.camera != null
@@ -975,8 +977,12 @@ open class ARSceneView @JvmOverloads constructor(
         super.onFrame(frameTime)
     }
 
-    fun onARFrame(frameTime: FrameTime, frame: Frame) {
-
+    fun onARFrame(session: Session, frameTime: FrameTime, frame: Frame) {
+        (cameraNode as? ARCameraNode)?.update(frameTime, frame)
+        (lightNode as? ARMainLightNode)?.update(
+            session.config.lightEstimationMode,
+            cameraNode?.camera?.exposureFactor ?: 1.0f, frame.lightEstimate
+        )
     }
 
     /**

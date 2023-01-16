@@ -4,8 +4,8 @@ import com.google.android.filament.Engine
 import com.google.android.filament.LightManager
 import com.google.ar.core.Config
 import com.google.ar.core.LightEstimate
-import com.google.ar.core.Session
 import dev.romainguy.kotlin.math.max
+import io.github.sceneview.ar.arcore.getColorCorrection
 import io.github.sceneview.components.FilamentCamera
 import io.github.sceneview.managers.NodeManager
 import io.github.sceneview.math.Direction
@@ -47,7 +47,11 @@ class ARMainLightNode(
      * In order to keep the "standard" Filament behavior we scale AR Core values.
      * Ref: https://github.com/ThomasGorisse/SceneformMaintained/pull/156#issuecomment-911873565
      */
-    fun update(session: Session, camera: FilamentCamera, lightEstimate: LightEstimate) {
+    fun update(
+        lightEstimationMode: Config.LightEstimationMode,
+        cameraExposureFactor: Float,
+        lightEstimate: LightEstimate
+    ) {
         this.lightEstimate = lightEstimate
 
         if (lightEstimate.state != LightEstimate.State.VALID
@@ -55,22 +59,13 @@ class ARMainLightNode(
         ) {
             return
         }
-
-        val cameraExposureFactor = camera.exposureFactor
-        when (session.config.lightEstimationMode) {
+        when (lightEstimationMode) {
             Config.LightEstimationMode.AMBIENT_INTENSITY -> {
-                val colorCorrections = FloatArray(4).apply {
-                    // A value of a white colorCorrection (r=1.0, g=1.0, b=1.0) and pixelIntensity
-                    // of 1.0 mean that no changes are made to the light settings.
-                    // The color correction method uses the green channel as reference baseline and
-                    // scales the red and blue channels accordingly. In this way the overall
-                    // intensity will not be significantly changed
-                    lightEstimate.getColorCorrection(this, 0)
-                }.toLinearSpace() // Rendering in linear space
+                val colorCorrection = lightEstimate.getColorCorrection()
                 // Scale max r or b or g value and fit in range [0.0, 1.0)
                 // if `max == green` then
                 // `colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))`
-                val colorIntensities = colorCorrections.slice(0..2)
+                val colorIntensities = colorCorrection.slice(0..2)
                     .maxOrNull()?.takeIf { it > 0 }?.let { maxIntensity ->
                         Color(
                             colorCorrections[0] / maxIntensity,

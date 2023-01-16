@@ -68,7 +68,12 @@ fun Mat4.toColumnsFloatArray() = floatArrayOf(
 /**
  * If rendering in linear space, first convert the values to linear space by rising to the power 2.2
  */
-fun FloatArray.toLinearSpace() = map { pow(it, 2.2f) }.toFloatArray()
+fun Float.toLinearSpace() = pow(this, 2.2f)
+
+/**
+ * If rendering in linear space, first convert the values to linear space by rising to the power 2.2
+ */
+fun FloatArray.toLinearSpace() = map { it.toLinearSpace() }.toFloatArray()
 
 data class LookAt(val eye: Position, val target: Position, val upward: Direction)
 

@@ -133,8 +133,7 @@ open class SceneView @JvmOverloads constructor(
      * An Engine instance main function is to keep track of all resources created by the user and
      * manage the rendering thread as well as the hardware renderer
      */
-    var engine: Engine = sharedEngine ?: Engine.create()
-        private set
+    val engine: Engine = sharedEngine ?: Engine.create()
 
     /**
      * Lens's focal length in millimeters
@@ -147,8 +146,7 @@ open class SceneView @JvmOverloads constructor(
             updateCameraProjection()
         }
 
-    var nodeManager: NodeManager = sharedNodeManager ?: NodeManager(engine)
-        private set
+    val nodeManager: NodeManager = sharedNodeManager ?: NodeManager(engine)
 
     /**
      * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which
@@ -415,10 +413,8 @@ open class SceneView @JvmOverloads constructor(
         val backgroundColor = (background as? ColorDrawable)?.let { Color(it) }
 
         // Setup Filament
-        engine = sharedEngine ?: Engine.create()
-        nodeManager = sharedNodeManager ?: NodeManager(engine)
-        modelLoader = ModelLoader(engine, context)
-        materialLoader = MaterialLoader(engine, context)
+        modelLoader = ModelLoader(context, engine)
+        materialLoader = MaterialLoader(context, engine)
         iblPrefilter = IBLPrefilter(engine)
 
         renderer = engine.createRenderer()

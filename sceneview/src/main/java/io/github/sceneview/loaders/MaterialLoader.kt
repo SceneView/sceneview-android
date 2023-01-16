@@ -17,7 +17,7 @@ import java.nio.Buffer
  *
  * Materials function as a templates from which [MaterialInstance]s can be spawned.
  */
-class MaterialLoader(engine: Engine, context: Context) {
+class MaterialLoader(context: Context, engine: Engine) {
 
     private var _engine: Engine? = engine
     private val engine get() = _engine!!
