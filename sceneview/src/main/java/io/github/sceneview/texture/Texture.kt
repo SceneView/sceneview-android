@@ -1,23 +1,35 @@
 package io.github.sceneview.texture
 
+import androidx.annotation.IntRange
+import androidx.annotation.Size
+import androidx.lifecycle.Lifecycle
+import com.google.android.filament.Stream
 import com.google.android.filament.Texture
-import io.github.sceneview.SceneView
-import kotlinx.coroutines.*
+import com.gorisse.thomas.lifecycle.observe
+import io.github.sceneview.Filament
 
-fun Texture.Builder.build(sceneView: SceneView): Texture = build(sceneView.engine).also {
-    sceneView.textures += it
-}
+fun <R> Texture.use(block: (Texture) -> R): R = block(this).also { destroy() }
+fun Texture.Builder.build(lifecycle: Lifecycle? = null): Texture = build(Filament.engine)
+    .also { texture ->
+        lifecycle?.observe(onDestroy = {
+            // Prevent double destroy in case of manually destroyed
+            runCatching { texture.destroy() }
+        })
+    }
 
-inline fun <reified T : Texture.Builder> Deferred<T>.build(
-    sceneView: SceneView,
-    crossinline onResult: (Texture) -> Unit
-): Job = CoroutineScope(Dispatchers.IO).launch {
-    onResult(await().build(sceneView.engine))
-}.also {
-    sceneView.loadingJobs += it
-}
+fun Texture.setExternalStream(stream: Stream) = setExternalStream(Filament.engine, stream)
+fun Texture.setImage(level: Int, buffer: Texture.PixelBufferDescriptor) =
+    setImage(Filament.engine, level, buffer)
 
-fun SceneView.destroyTexture(texture: Texture) {
-    engine.destroyTexture(texture)
-    textures -= texture
+fun Texture.setImage(
+    @IntRange(from = 0) level: Int,
+    buffer: Texture.PixelBufferDescriptor,
+    @Size(min = 6) faceOffsetsInBytes: IntArray
+) = setImage(Filament.engine, level, buffer, faceOffsetsInBytes)
+
+/**
+ * Destroys a Texture and frees all its associated resources.
+ */
+fun Texture.destroy() {
+    Filament.engine.destroyTexture(this)
 }

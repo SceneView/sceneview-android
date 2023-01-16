@@ -1,220 +1,339 @@
 package io.github.sceneview.gesture
 
+import android.content.Context
 import android.view.GestureDetector
 import android.view.MotionEvent
-import io.github.sceneview.CameraGestureDetector
-import io.github.sceneview.CameraManipulator
-import io.github.sceneview.SceneView
+import io.github.sceneview.node.Node
+import io.github.sceneview.renderable.Renderable
 
 /**
- * Responds to Android touch events with listeners and/or camera manipulator
+ * ### Responds to Android touch events with listeners and/or camera manipulator
  *
  * Camera supports one-touch orbit, two-touch pan, and pinch-to-zoom.
  */
 open class GestureDetector(
-    private val view: SceneView,
-    cameraManipulator: CameraManipulator?,
-    private val nodesManipulator: NodesManipulator
-) {
-    val onDownListeners = mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    val onShowPressListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    val onSingleTapUpListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    val onLongPressListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onSingleTapConfirmedListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onDoubleTapListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onDoubleTapEventListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onContextClickListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onMoveBeginListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onMoveListeners =
-        mutableListOf<(e: MotionEvent, start: SceneView.PickingResult, end: SceneView.PickingResult) -> Unit>()
-    var onMoveEndListeners = mutableListOf<(e: MotionEvent) -> Unit>()
-    var onRotateBeginListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onRotateListeners =
-        mutableListOf<(e: MotionEvent, detector: RotateGestureDetector) -> Unit>()
-    var onRotateEndListeners = mutableListOf<(e: MotionEvent) -> Unit>()
-    var onScaleBeginListeners =
-        mutableListOf<(e: MotionEvent, result: SceneView.PickingResult) -> Unit>()
-    var onScaleListeners = mutableListOf<(e: MotionEvent, detector: ScaleGestureDetector) -> Unit>()
-    var onScaleEndListeners = mutableListOf<(e: MotionEvent) -> Unit>()
-
-    private val gestureDetector: GestureDetector
-    private val cameraGestureDetector: CameraGestureDetector?
-    private val moveGestureDetector: MoveGestureDetector
-    private val rotateGestureDetector: RotateGestureDetector
-    private val scaleGestureDetector: ScaleGestureDetector
-
-    var editingDetector: Any? = null
-    lateinit var touchEventResult: SceneView.PickingResult
-
-    init {
-        gestureDetector = GestureDetector(view.context, OnGestureListener())
-        cameraGestureDetector = cameraManipulator?.let { CameraGestureDetector(view, it) }
-        moveGestureDetector = MoveGestureDetector(view.context, OnMoveGestureListener())
-        rotateGestureDetector = RotateGestureDetector(view.context, OnRotateGestureListener())
-        scaleGestureDetector = ScaleGestureDetector(view.context, OnScaleGestureListener())
-    }
-
-    fun onTouchEvent(e: MotionEvent) {
-        cameraGestureDetector?.onTouchEvent(e)
-
-        if (editingDetector == null) {
-            view.pickNode(e) { pickingResult ->
-                dispatchTouchEvent(e, pickingResult)
-            }
-        } else {
-            // Prevent too much picking while editing
-            dispatchTouchEvent(e, touchEventResult)
-        }
-    }
-
-    fun dispatchTouchEvent(e: MotionEvent, touchEventResult: SceneView.PickingResult) {
-        this.touchEventResult = touchEventResult
-        if (touchEventResult.node?.onTouchEvent(e, touchEventResult) != true) {
-            gestureDetector.onTouchEvent(e)
-            moveGestureDetector.onTouchEvent(e)
-            rotateGestureDetector.onTouchEvent(e)
-            scaleGestureDetector.onTouchEvent(e)
-        }
-    }
-
-    inner class OnGestureListener() : GestureDetector.SimpleOnGestureListener() {
-        override fun onSingleTapUp(e: MotionEvent) = super.onSingleTapUp(e).also {
-            onSingleTapUpListeners.forEach { it(e, touchEventResult) }
-        }
-
-        override fun onLongPress(e: MotionEvent) = super.onLongPress(e).also {
-            onLongPressListeners.forEach { it(e, touchEventResult) }
-        }
-
-        override fun onShowPress(e: MotionEvent) = super.onShowPress(e).also {
-            onShowPressListeners.forEach { it(e, touchEventResult) }
-        }
-
+    context: Context,
+    pickNode: (MotionEvent, (NodeMotionEvent) -> Unit) -> Unit,
+    listener: OnGestureListener
+) : GestureDetector(context,
+    object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = super.onDown(e).also {
-            onDownListeners.forEach { it(e, touchEventResult) }
+            pickNode(e) { ne ->
+                ne.node?.onDown(ne)
+                listener.onDown(ne)
+            }
         }
 
-        override fun onDoubleTap(e: MotionEvent) = super.onDoubleTap(e).also {
-            onDoubleTapListeners.forEach { it(e, touchEventResult) }
+        override fun onShowPress(e: MotionEvent) = pickNode(e) { ne ->
+            ne.node?.onShowPress(ne)
+            listener.onShowPress(ne)
         }
 
-        override fun onDoubleTapEvent(e: MotionEvent) = super.onDoubleTapEvent(e).also {
-            onDoubleTapEventListeners.forEach { it(e, touchEventResult) }
+        override fun onSingleTapUp(e: MotionEvent) = super.onSingleTapUp(e).also {
+            pickNode(e) { ne ->
+                ne.node?.onSingleTapUp(ne)
+                listener.onSingleTapUp(ne)
+            }
+        }
+
+        override fun onScroll(
+            e1: MotionEvent,
+            e2: MotionEvent,
+            distanceX: Float,
+            distanceY: Float
+        ) = super.onScroll(e1, e2, distanceX, distanceY).also {
+            pickNode(e1) { ne1 ->
+                pickNode(e2) { ne2 ->
+                    ne1.node?.onScroll(ne1, ne2, distanceX, distanceY)
+                    listener.onScroll(ne1, ne2, distanceX, distanceY)
+                }
+            }
+        }
+
+        override fun onLongPress(e: MotionEvent) = pickNode(e, listener::onLongPress)
+
+        override fun onFling(
+            e1: MotionEvent,
+            e2: MotionEvent,
+            velocityX: Float,
+            velocityY: Float
+        ) = super.onFling(e1, e2, velocityX, velocityY).also {
+            pickNode(e1) { ne1 ->
+                pickNode(e2) { ne2 ->
+                    ne1.node?.onFling(ne1, ne2, velocityX, velocityY)
+                    listener.onFling(ne1, ne2, velocityX, velocityY)
+                }
+            }
         }
 
         override fun onSingleTapConfirmed(e: MotionEvent) = super.onSingleTapConfirmed(e).also {
-            nodesManipulator.onTap(touchEventResult.node)
-            onSingleTapConfirmedListeners.forEach { it(e, touchEventResult) }
+            pickNode(e) { ne ->
+                ne.node?.onSingleTapConfirmed(ne)
+                listener.onSingleTapConfirmed(ne)
+            }
         }
 
-        override fun onContextClick(e: MotionEvent) = super.onContextClick(e).also {
-            onContextClickListeners.forEach { it(e, touchEventResult) }
+        override fun onDoubleTap(e: MotionEvent) = super.onDoubleTap(e).also {
+            pickNode(e) { ne ->
+                ne.node?.onDoubleTap(ne)
+                listener.onDoubleTap(ne)
+            }
+        }
+
+        override fun onDoubleTapEvent(e: MotionEvent) = super.onDoubleTapEvent(e).also {
+            pickNode(e) { ne ->
+                ne.node?.onDoubleTapEvent(ne)
+                listener.onDoubleTapEvent(ne)
+            }
+        }
+
+        override fun onContextClick(e: MotionEvent) = super.onDoubleTapEvent(e).also {
+            pickNode(e) { ne ->
+                ne.node?.onContextClick(ne)
+                listener.onContextClick(ne)
+            }
+        }
+    }) {
+
+    interface OnGestureListener {
+        fun onDown(e: NodeMotionEvent)
+        fun onShowPress(e: NodeMotionEvent)
+        fun onSingleTapUp(e: NodeMotionEvent)
+        fun onScroll(e1: NodeMotionEvent, e2: NodeMotionEvent, distanceX: Float, distanceY: Float)
+        fun onLongPress(e: NodeMotionEvent)
+        fun onFling(e1: NodeMotionEvent, e2: NodeMotionEvent, velocityX: Float, velocityY: Float)
+        fun onSingleTapConfirmed(e: NodeMotionEvent)
+        fun onDoubleTap(e: NodeMotionEvent)
+        fun onDoubleTapEvent(e: NodeMotionEvent)
+        fun onContextClick(e: NodeMotionEvent)
+        fun onMoveBegin(detector: MoveGestureDetector, e: NodeMotionEvent)
+        fun onMove(detector: MoveGestureDetector, e: NodeMotionEvent)
+        fun onMoveEnd(detector: MoveGestureDetector, e: NodeMotionEvent)
+        fun onRotateBegin(detector: RotateGestureDetector, e: NodeMotionEvent)
+        fun onRotate(detector: RotateGestureDetector, e: NodeMotionEvent)
+        fun onRotateEnd(detector: RotateGestureDetector, e: NodeMotionEvent)
+        fun onScaleBegin(detector: ScaleGestureDetector, e: NodeMotionEvent)
+        fun onScale(detector: ScaleGestureDetector, e: NodeMotionEvent)
+        fun onScaleEnd(detector: ScaleGestureDetector, e: NodeMotionEvent)
+    }
+
+    class SimpleOnGestureListener : OnGestureListener {
+
+        var onDown = listOf<(e: NodeMotionEvent) -> Unit>()
+        var onShowPress = listOf<(e: NodeMotionEvent) -> Unit>()
+        var onSingleTapUp = listOf<(e: NodeMotionEvent) -> Unit>()
+        var onScroll =
+            listOf<(e1: NodeMotionEvent, e2: NodeMotionEvent, distanceX: Float, distanceY: Float) -> Unit>()
+        var onLongPress = listOf<(e: NodeMotionEvent) -> Unit>()
+        var onFling =
+            listOf<(e1: NodeMotionEvent, e2: NodeMotionEvent, velocityX: Float, velocityY: Float) -> Unit>()
+        var onSingleTapConfirmed = listOf<(e: NodeMotionEvent) -> Unit>()
+        var onDoubleTap = listOf<(e: NodeMotionEvent) -> Unit>()
+        var onDoubleTapEvent = listOf<(e: NodeMotionEvent) -> Unit>()
+        var onContextClick = listOf<(e: NodeMotionEvent) -> Unit>()
+
+        var onMove = listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
+        var onMoveBegin = listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
+        var onMoveEnd = listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
+
+        var onRotate = listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
+        var onRotateBegin = listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
+        var onRotateEnd = listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
+
+        var onScale = listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
+        var onScaleBegin = listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
+        var onScaleEnd = listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
+
+        override fun onDown(e: NodeMotionEvent) {
+            onDown.forEach { it(e) }
+        }
+
+        override fun onShowPress(e: NodeMotionEvent) {
+            onShowPress.forEach { it(e) }
+        }
+
+        override fun onSingleTapUp(e: NodeMotionEvent) {
+            onSingleTapUp.forEach { it(e) }
+        }
+
+        override fun onScroll(
+            e1: NodeMotionEvent,
+            e2: NodeMotionEvent,
+            distanceX: Float,
+            distanceY: Float
+        ) {
+            onScroll.forEach { it(e1, e2, distanceX, distanceY) }
+        }
+
+        override fun onLongPress(e: NodeMotionEvent) {
+            onLongPress.forEach { it(e) }
+        }
+
+        override fun onFling(
+            e1: NodeMotionEvent,
+            e2: NodeMotionEvent,
+            velocityX: Float,
+            velocityY: Float
+        ) {
+            onFling.forEach { it(e1, e2, velocityX, velocityY) }
+        }
+
+        override fun onSingleTapConfirmed(e: NodeMotionEvent) {
+            onSingleTapConfirmed.forEach { it(e) }
+        }
+
+        override fun onDoubleTap(e: NodeMotionEvent) {
+            onDoubleTap.forEach { it(e) }
+        }
+
+        override fun onDoubleTapEvent(e: NodeMotionEvent) {
+            onDoubleTapEvent.forEach { it(e) }
+        }
+
+        override fun onContextClick(e: NodeMotionEvent) {
+            onContextClick.forEach { it(e) }
+        }
+
+        override fun onMoveBegin(detector: MoveGestureDetector, e: NodeMotionEvent) {
+            onMoveBegin.forEach { it(detector, e) }
+        }
+
+        override fun onMove(detector: MoveGestureDetector, e: NodeMotionEvent) {
+            onMove.forEach { it(detector, e) }
+        }
+
+        override fun onMoveEnd(detector: MoveGestureDetector, e: NodeMotionEvent) {
+            onMoveEnd.forEach { it(detector, e) }
+        }
+
+        override fun onRotateBegin(detector: RotateGestureDetector, e: NodeMotionEvent) {
+            onRotateBegin.forEach { it(detector, e) }
+        }
+
+        override fun onRotate(detector: RotateGestureDetector, e: NodeMotionEvent) {
+            onRotate.forEach { it(detector, e) }
+        }
+
+        override fun onRotateEnd(detector: RotateGestureDetector, e: NodeMotionEvent) {
+            onRotateEnd.forEach { it(detector, e) }
+        }
+
+        override fun onScaleBegin(detector: ScaleGestureDetector, e: NodeMotionEvent) {
+            onScaleBegin.forEach { it(detector, e) }
+        }
+
+        override fun onScale(detector: ScaleGestureDetector, e: NodeMotionEvent) {
+            onScale.forEach { it(detector, e) }
+        }
+
+        override fun onScaleEnd(detector: ScaleGestureDetector, e: NodeMotionEvent) {
+            onScaleEnd.forEach { it(detector, e) }
         }
     }
 
-    inner class OnMoveGestureListener : MoveGestureDetector.SimpleOnMoveListener {
+    val moveGestureDetector = MoveGestureDetector(context,
+        object : MoveGestureDetector.SimpleOnMoveListener {
+            var moveBeginEvent: NodeMotionEvent? = null
 
-        override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent) =
-            super.onMoveBegin(detector, e).also {
-                if (editingDetector == null) {
-                    editingDetector = detector
-                    touchEventResult.node?.let { nodesManipulator.onMoveBegin(it) }
-                    onMoveBeginListeners.forEach { it(e, touchEventResult) }
-                }
-            }
-
-        override fun onMove(detector: MoveGestureDetector, e: MotionEvent) =
-            super.onMove(detector, e).also {
-                if (editingDetector == detector) {
-                    view.pickNode(e) { pickingResult ->
-                        touchEventResult.node?.let { nodesManipulator.onMove(it, pickingResult) }
-                        onMoveListeners.forEach { it(e, touchEventResult, pickingResult) }
+            override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent) =
+                super.onMoveBegin(detector, e).also {
+                    pickNode(e) { ne ->
+                        moveBeginEvent = ne
+                        ne.node?.onMoveBegin(detector, ne)
+                        listener.onMoveBegin(detector, ne)
                     }
                 }
-            }
 
-        override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) =
-            super.onMoveEnd(detector, e).also {
-                if (editingDetector == detector) {
-                    editingDetector = null
-                    onMoveEndListeners.forEach { it(e) }
+            override fun onMove(detector: MoveGestureDetector, e: MotionEvent) =
+                super.onMove(detector, e).also {
+                    moveBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                        ne.node?.onMove(detector, ne)
+                        listener.onMove(detector, ne)
+                    }
                 }
-            }
-    }
 
-    inner class OnRotateGestureListener : RotateGestureDetector.SimpleOnRotateListener {
-
-        // The first delta is always way off as it contains all delta until threshold to
-        // recognize rotate gesture is met
-        private var skipFirstRotateEdit = false
-
-        override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) =
-            super.onRotateBegin(detector, e).also {
-                if (editingDetector == null) {
-                    skipFirstRotateEdit = true
-                    editingDetector = detector
-                    touchEventResult.node?.let { nodesManipulator.onRotateBegin(it) }
-                    onRotateBeginListeners.forEach { it(e, touchEventResult) }
+            override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) {
+                moveBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                    ne.node?.onMoveEnd(detector, ne)
+                    listener.onMoveEnd(detector, ne)
                 }
+                moveBeginEvent = null
             }
+        })
 
-        override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) =
-            super.onRotate(detector, e).also {
-                if (editingDetector == detector) {
-                    if (!skipFirstRotateEdit) {
-                        touchEventResult.node?.let {
-                            nodesManipulator.onRotate(it, detector.deltaQuaternion)
+    val rotateGestureDetector = RotateGestureDetector(context,
+        object : RotateGestureDetector.SimpleOnRotateListener {
+            var rotateBeginEvent: NodeMotionEvent? = null
+
+            override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) =
+                super.onRotateBegin(detector, e).also {
+                    pickNode(e) { ne ->
+                        rotateBeginEvent = ne
+                        ne.node?.onRotateBegin(detector, ne)
+                        listener.onRotateBegin(detector, ne)
+                    }
+                }
+
+            override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) =
+                super.onRotate(detector, e).also {
+                    rotateBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }
+                        ?.let { ne ->
+                            ne.node?.onRotate(detector, ne)
+                            listener.onRotate(detector, ne)
                         }
-                        onRotateListeners.forEach { it(e, detector) }
-                    } else {
-                        skipFirstRotateEdit = false
-                    }
+                }
+
+            override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {
+                rotateBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                    ne.node?.onRotateEnd(detector, ne)
+                    listener.onRotateEnd(detector, ne)
+                }
+                rotateBeginEvent = null
+            }
+        })
+
+    val scaleGestureDetector = ScaleGestureDetector(context,
+        object : ScaleGestureDetector.OnScaleListener {
+            var scaleBeginEvent: NodeMotionEvent? = null
+
+            override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) {
+                pickNode(e) { ne ->
+                    scaleBeginEvent = ne
+                    ne.node?.onScaleBegin(detector, ne)
+                    listener.onScaleBegin(detector, ne)
                 }
             }
 
-        override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) =
-            super.onRotateEnd(detector, e).also {
-                if (editingDetector == detector) {
-                    editingDetector = null
-                    onRotateEndListeners.forEach { it(e) }
-                }
-            }
-    }
-
-    inner class OnScaleGestureListener : ScaleGestureDetector.SimpleOnScaleListener {
-
-        override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) =
-            super.onScaleBegin(detector, e).also {
-                if (editingDetector == null) {
-                    editingDetector = detector
-                    touchEventResult.node?.let { nodesManipulator.onScaleBegin(it) }
-                    onScaleBeginListeners.forEach { it(e, touchEventResult) }
+            override fun onScale(detector: ScaleGestureDetector, e: MotionEvent) {
+                scaleBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                    ne.node?.onScale(detector, ne)
+                    listener.onScale(detector, ne)
                 }
             }
 
-        override fun onScale(detector: ScaleGestureDetector, e: MotionEvent) =
-            super.onScale(detector, e).also {
-                if (editingDetector == detector) {
-                    touchEventResult.node?.let { nodesManipulator.onScaleBegin(it) }
-                    onScaleListeners.forEach { it(e, detector) }
+            override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {
+                scaleBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                    ne.node?.onScaleEnd(detector, ne)
+                    listener.onScaleEnd(detector, ne)
                 }
+                scaleBeginEvent = null
             }
+        })
 
-        override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) =
-            super.onScaleEnd(detector, e).also {
-                if (editingDetector == detector) {
-                    editingDetector = null
-                    onScaleEndListeners.forEach { it(e) }
-                }
-            }
+    var lastTouchEvent: MotionEvent? = null
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        return super.onTouchEvent(event).also {
+            lastTouchEvent = event
+            moveGestureDetector.onTouchEvent(event)
+            rotateGestureDetector.onTouchEvent(event)
+            scaleGestureDetector.onTouchEvent(event)
+        }
     }
 }
+
+data class NodeMotionEvent(
+    val motionEvent: MotionEvent,
+    val node: Node? = null,
+    val renderable: Renderable? = null
+)

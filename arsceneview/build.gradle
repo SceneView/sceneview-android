@@ -45,8 +45,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.7.0'
 
     // SceneView
-    api "io.github.sceneview:sceneview:0.9.0"
-//    api project(":sceneview")
+    api project(":sceneview")
 
     // ARCore
     def arcore_version = '1.35.0'

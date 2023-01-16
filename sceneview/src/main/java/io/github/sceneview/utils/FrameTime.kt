@@ -5,7 +5,7 @@ import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.DurationUnit
 
 /**
- * Provides time information for the current frame
+ * ### Provides time information for the current frame.
  *
  * @param nanoseconds The time when this frame started
  * @param lastNanoseconds The time when the previous frame started
@@ -13,7 +13,7 @@ import kotlin.time.DurationUnit
 data class FrameTime(val nanoseconds: Long, val lastNanoseconds: Long? = null) {
 
     /**
-     * The duration between this frame and the last frame
+     * ### The duration between this frame and the last frame
      */
     val interval: Duration by lazy { interval(lastNanoseconds) }
 
@@ -22,7 +22,7 @@ data class FrameTime(val nanoseconds: Long, val lastNanoseconds: Long? = null) {
     val fps: Double by lazy { fps(lastNanoseconds) }
 
     /**
-     * The duration between this frame and the last frame
+     * ### The duration between this frame and the last frame
      */
     fun interval(lastNanoseconds: Long?): Duration =
         (nanoseconds - (lastNanoseconds ?: 0)).nanoseconds
