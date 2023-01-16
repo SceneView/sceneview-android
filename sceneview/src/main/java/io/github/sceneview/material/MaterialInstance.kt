@@ -8,9 +8,18 @@ import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Mat4
-import io.github.sceneview.SceneView
+import io.github.sceneview.Filament
 import io.github.sceneview.texture.TextureSampler2D
+import io.github.sceneview.texture.TextureSamplerExternal
 import io.github.sceneview.utils.Color
+
+fun MaterialInstance.destroy() {
+    // TODO: Shall we
+//    if (material.defaultInstance == this) {
+//        material.destroy()
+//    }
+    Filament.engine.destroyMaterialInstance(this)
+}
 
 fun MaterialInstance.setParameter(name: String, value: Float2) =
     setParameter(name, value.x, value.y)
@@ -24,31 +33,20 @@ fun MaterialInstance.setParameter(name: String, value: Mat4) =
 fun MaterialInstance.setParameter(name: String, value: Float3) =
     setParameter(name, value.x, value.y, value.z)
 
-// Texture
-
 fun MaterialInstance.setTexture(
     name: String,
     texture: Texture,
-    textureSampler: TextureSampler = TextureSampler(
-        TextureSampler.MinFilter.LINEAR_MIPMAP_LINEAR,
-        TextureSampler.MagFilter.LINEAR,
-        TextureSampler.WrapMode.REPEAT
-    )
+    textureSampler: TextureSampler = TextureSampler2D()
 ) = setParameter(name, texture, textureSampler)
 
 fun MaterialInstance.setExternalTexture(
     name: String,
     texture: Texture
-) = setTexture(
-    name, texture, TextureSampler(
-        TextureSampler.MinFilter.LINEAR,
-        TextureSampler.MagFilter.LINEAR,
-        TextureSampler.WrapMode.CLAMP_TO_EDGE
-    )
-)
+) = setTexture(name, texture, TextureSamplerExternal())
 
+// **********
 // Base Color
-
+// **********
 fun MaterialInstance.setBaseColorIndex(value: Int) = setParameter("baseColorIndex", value)
 fun MaterialInstance.setBaseColor(value: Color) = setParameter("baseColorFactor", value)
 
@@ -57,8 +55,9 @@ fun MaterialInstance.setBaseColorMap(
     textureSampler: TextureSampler = TextureSampler2D()
 ) = setTexture("baseColorMap", texture, textureSampler)
 
+// **********************
 // Metallic-Roughness Map
-
+// **********************
 fun MaterialInstance.setMetallicRoughnessIndex(value: Int) =
     setParameter("metallicRoughnessIndex", value)
 
@@ -69,8 +68,9 @@ fun MaterialInstance.setMetallicRoughnessMap(
     textureSampler: TextureSampler = TextureSampler2D()
 ) = setTexture("metallicRoughnessMap", texture, textureSampler)
 
+// **********
 // Normal Map
-
+// **********
 fun MaterialInstance.setNormalIndex(value: Int) = setParameter("normalIndex", value)
 fun MaterialInstance.setNormalScale(value: Float) = setParameter("normalScale", value)
 fun MaterialInstance.setNormalMap(
@@ -78,8 +78,9 @@ fun MaterialInstance.setNormalMap(
     textureSampler: TextureSampler = TextureSampler2D()
 ) = setTexture("normalMap", texture, textureSampler)
 
+// *****************
 // Ambient Occlusion
-
+// *****************
 fun MaterialInstance.setAoIndex(value: Int) = setParameter("aoIndex", value)
 fun MaterialInstance.setAoStrength(value: Float) = setParameter("aoStrength", value)
 fun MaterialInstance.setOcclusionMap(
@@ -87,8 +88,9 @@ fun MaterialInstance.setOcclusionMap(
     textureSampler: TextureSampler = TextureSampler2D()
 ) = setTexture("occlusionMap", texture, textureSampler)
 
+// ************
 // Emissive Map
-
+// ************
 fun MaterialInstance.setEmissiveIndex(value: Int) = setParameter("emissiveIndex", value)
 fun MaterialInstance.setEmissiveColor(value: Color) = setParameter("emissiveFactor", value)
 
@@ -100,32 +102,3 @@ fun MaterialInstance.setEmissiveMap(
 fun MaterialInstance.setBaseTexture(
     texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
 ) = setBaseColorMap(texture, textureSampler)
-
-// View
-
-fun MaterialInstance.setViewTexture(
-    viewTexture: Texture,
-    textureParamName: String = "viewTexture"
-) {
-    setTexture(
-        textureParamName,
-        viewTexture,
-        TextureSampler(
-            TextureSampler.MinFilter.LINEAR,
-            TextureSampler.MagFilter.LINEAR,
-            TextureSampler.WrapMode.REPEAT
-        )
-    )
-}
-
-fun MaterialInstance.setInvertFrontFaceWinding(
-    invert: Boolean,
-    uvOffsetParamName: String = "uvOffset"
-) {
-    setParameter(uvOffsetParamName, if (invert) Float2(1.0f, 0.0f) else Float2(0.0f))
-}
-
-fun SceneView.destroyMaterialInstance(materialInstance: MaterialInstance) {
-    engine.destroyMaterialInstance(materialInstance)
-    materialInstances -= materialInstance
-}

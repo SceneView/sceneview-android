@@ -2,19 +2,17 @@ package io.github.sceneview.gesture
 
 import android.content.Context
 import android.view.MotionEvent
-import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.degrees
 import io.github.sceneview.gesture.RotateGestureDetector.OnRotateListener
-import io.github.sceneview.math.Direction
 import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
 /**
- * Detects rotation transformation gestures using the supplied [MotionEvent]s
+ * ### Detects rotation transformation gestures using the supplied [MotionEvent]s
  *
  * The [OnRotateListener] callback will notify users when a particular gesture event has
- * occurred
+ * occurred.
  *
  * This class should only be used with [MotionEvent]s reported via touch.
  *
@@ -31,73 +29,6 @@ open class RotateGestureDetector(
     private val listener: OnRotateListener
 ) {
 
-    /**
-     * The listener for receiving notifications when gestures occur
-     *
-     * If you want to listen for the different gestures then implement this interface.
-     *
-     * An application will receive events in the following order:
-     * - One [onRotateBegin]
-     * - Zero or more [onRotate]
-     * - One [onRotateEnd]
-     */
-    interface OnRotateListener {
-        /**
-         * Responds to rotating events for a gesture in progress
-         *
-         * Reported by pointer motion.
-         *
-         * @param detector The detector reporting the event - use this to retrieve extended info
-         * about event state.
-         * @return Whether or not the detector should consider this event as handled.
-         * If an event was not handled, the detector will continue to accumulate movement until an
-         * event is handled. This can be useful if an application, for example, only wants to update
-         * rotation factors if the change is greater than 0.01.
-         */
-        fun onRotate(detector: RotateGestureDetector, e: MotionEvent): Boolean
-
-        /**
-         * Responds to the beginning of a scaling gesture
-         *
-         * Reported by new pointers going down.
-         *
-         * @param detector The detector reporting the event - use this to retrieve extended info
-         * about event state.
-         * @return Whether or not the detector should continue recognizing this gesture.
-         * For example, if a gesture is beginning with a focal point outside of a region where it
-         * makes sense, onRotateBegin() may return false to ignore the rest of the gesture.
-         */
-        fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent): Boolean
-
-        /**
-         * Responds to the end of a scale gesture
-         *
-         * Reported by existing pointers going up.
-         *
-         * Once a scale has ended, [focusX] and [focusY] will return focal point of the pointers
-         * remaining on the screen.
-         *
-         * @param detector The detector reporting the event - use this to retrieve extended info
-         * about event state.
-         */
-        fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent)
-    }
-
-    /**
-     * A convenience class to extend when you only want to listen for a subset of
-     * rotation-related events
-     *
-     * This implements all methods in [OnRotateListener] but does nothing.
-     * [OnRotateListener.onRotate] returns `false` so that a subclass can retrieve the accumulated
-     * rotation factor in an overridden [OnRotateListener.onRotateEnd].
-     * [OnRotateListener.onRotateBegin] returns `true`.
-     */
-    interface SimpleOnRotateListener : OnRotateListener {
-        override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) = false
-        override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) = true
-        override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {}
-    }
-
     private var previousEvent: MotionEvent? = null
     private var currentEvent: MotionEvent? = null
 
@@ -110,13 +41,13 @@ open class RotateGestureDetector(
     private var currentPressure = 0f
 
     /**
-     * `true` if a rotate gesture is in progress
+     * ### `true` if a rotate gesture is in progress.
      */
     var isGestureInProgress: Boolean = false
         private set
 
     /**
-     * The X coordinate of the current gesture's focal point in pixels
+     * ### The X coordinate of the current gesture's focal point in pixels
      *
      * If a gesture is in progress, the focal point is between each of the pointers forming the
      * gesture.
@@ -127,7 +58,7 @@ open class RotateGestureDetector(
         private set
 
     /**
-     * The Y coordinate of the current gesture's focal point in pixels
+     * ### The Y coordinate of the current gesture's focal point in pixels
      *
      * If a gesture is in progress, the focal point is between each of the pointers forming the
      * gesture.
@@ -138,19 +69,19 @@ open class RotateGestureDetector(
         private set
 
     /**
-     * The current distance in pixels between the two pointers forming the gesture in progress
+     * ### The current distance in pixels between the two pointers forming the gesture in progress
      */
     var currentSpan = 0f
         private set
 
     /**
-     * The previous distance in pixels between the two pointers forming the gesture in progress
+     * ### The previous distance in pixels between the two pointers forming the gesture in progress
      */
     var previousSpan = 0f
         private set
 
     /**
-     * The average angle in radians between each of the pointers forming the gesture in progress
+     * ### The average angle in radians between each of the pointers forming the gesture in progress
      * through the focal point
      */
     var currentAngle = 0f
@@ -160,7 +91,7 @@ open class RotateGestureDetector(
         }
 
     /**
-     * The previous average angle in radians between each of the pointers forming the gesture in
+     * ### The previous average angle in radians between each of the pointers forming the gesture in
      * progress through the focal point.
      */
     var previousAngle = 0f
@@ -168,12 +99,8 @@ open class RotateGestureDetector(
 
     var lastAngle = 0.0f
 
-    val deltaRadians get() = currentAngle - lastAngle
-    val deltaQuaternion
-        get() = Quaternion.fromAxisAngle(Direction(y = 1.0f), degrees(-deltaRadians))
-
     /**
-     * The rotation factor in degrees from the previous rotation event to the current event
+     * ### The rotation factor in degrees from the previous rotation event to the current event
      *
      * This value is defined as ([currentAngle] / [previousAngle]).
      */
@@ -181,21 +108,21 @@ open class RotateGestureDetector(
         private set
 
     /**
-     * The initial rotation threshold in degrees for detecting a gesture
+     * ### The initial rotation threshold in degrees for detecting a gesture
      *
      * This value is selected to avoid conflicts with the [android.view.ScaleGestureDetector]
      */
     var rotationThreshold = 2f
 
     /**
-     * The time difference in milliseconds between the previous accepted GestureDetector event
+     * ### The time difference in milliseconds between the previous accepted GestureDetector event
      * and the current GestureDetector event
      */
     var timeDelta = 0L
         private set
 
     /**
-     * Accepts MotionEvents and dispatches events to a [OnRotateListener] when
+     * ### Accepts MotionEvents and dispatches events to a [OnRotateListener] when
      * appropriate
      *
      * Applications should pass a complete and consistent event stream to this method.
@@ -246,7 +173,7 @@ open class RotateGestureDetector(
                     reset()
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    if (event.pointerCount != 2) {
+                    if (event.pointerCount > 2) {
                         lastAngle = 0f
                         listener.onRotateEnd(this, event)
                         reset()
@@ -310,6 +237,73 @@ open class RotateGestureDetector(
         currentEvent?.recycle()
         currentEvent = null
         isGestureInProgress = false
+    }
+
+    /**
+     * ### The listener for receiving notifications when gestures occur
+     *
+     * If you want to listen for the different gestures then implement this interface.
+     *
+     * An application will receive events in the following order:
+     * - One [onRotateBegin]
+     * - Zero or more [onRotate]
+     * - One [onRotateEnd]
+     */
+    interface OnRotateListener {
+        /**
+         * ### Responds to rotating events for a gesture in progress
+         *
+         * Reported by pointer motion.
+         *
+         * @param detector The detector reporting the event - use this to retrieve extended info
+         * about event state.
+         * @return Whether or not the detector should consider this event as handled.
+         * If an event was not handled, the detector will continue to accumulate movement until an
+         * event is handled. This can be useful if an application, for example, only wants to update
+         * rotation factors if the change is greater than 0.01.
+         */
+        fun onRotate(detector: RotateGestureDetector, e: MotionEvent): Boolean
+
+        /**
+         * ### Responds to the beginning of a scaling gesture
+         *
+         * Reported by new pointers going down.
+         *
+         * @param detector The detector reporting the event - use this to retrieve extended info
+         * about event state.
+         * @return Whether or not the detector should continue recognizing this gesture.
+         * For example, if a gesture is beginning with a focal point outside of a region where it
+         * makes sense, onRotateBegin() may return false to ignore the rest of the gesture.
+         */
+        fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent): Boolean
+
+        /**
+         * ### Responds to the end of a scale gesture
+         *
+         * Reported by existing pointers going up.
+         *
+         * Once a scale has ended, [focusX] and [focusY] will return focal point of the pointers
+         * remaining on the screen.
+         *
+         * @param detector The detector reporting the event - use this to retrieve extended info
+         * about event state.
+         */
+        fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent)
+    }
+
+    /**
+     * ### A convenience class to extend when you only want to listen for a subset of
+     * rotation-related events
+     *
+     * This implements all methods in [OnRotateListener] but does nothing.
+     * [OnRotateListener.onRotate] returns `false` so that a subclass can retrieve the accumulated
+     * rotation factor in an overridden [OnRotateListener.onRotateEnd].
+     * [OnRotateListener.onRotateBegin] returns `true`.
+     */
+    interface SimpleOnRotateListener : OnRotateListener {
+        override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) = false
+        override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) = true
+        override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {}
     }
 
     companion object {

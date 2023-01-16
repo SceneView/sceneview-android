@@ -1,0 +1,20 @@
+<resources>
+
+    <style name="Theme.SceneViewSample" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">@color/sceneview</item>
+        <item name="colorAccent">@color/sceneview</item>
+        <item name="colorPrimaryDark">@android:color/transparent</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
+    <style name="Theme.SceneViewSample.Toolbar" parent="ThemeOverlay.MaterialComponents.ActionBar">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="logo">@drawable/sceneview_logo</item>
+    </style>
+</resources>

@@ -18,6 +18,7 @@
             <option value="$PROJECT_DIR$/samples/ar-model-viewer" />
             <option value="$PROJECT_DIR$/samples/model-viewer" />
             <option value="$PROJECT_DIR$/sceneview" />
+            <option value="$PROJECT_DIR$/sceneview_1_0_0" />
           </set>
         </option>
       </GradleProjectSettings>
