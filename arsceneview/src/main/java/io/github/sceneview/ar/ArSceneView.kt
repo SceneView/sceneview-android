@@ -397,10 +397,11 @@ open class ArSceneView @JvmOverloads constructor(
      * obtained. Update the scene before rendering.
      */
     override fun doFrame(frameTime: FrameTime) {
+        super.doFrame(frameTime)
+
         arSession?.update(frameTime)?.let { frame ->
             doArFrame(frame)
         }
-        super.doFrame(frameTime)
     }
 
     /**
@@ -421,28 +422,27 @@ open class ArSceneView @JvmOverloads constructor(
             // ...and it's better for your users
             activity.setKeepScreenOn(arFrame.camera.isTracking)
 
-        // At the start of the frame, update the tracked pose of the camera
-        // to use in any calculations during the frame.
-        // TODO : Move to dedicated Lifecycle aware classes when Kotlined them
-        cameraNode.updateTrackedPose(arFrame.camera)
+            // At the start of the frame, update the tracked pose of the camera
+            // to use in any calculations during the frame.
+            cameraNode.updateTrackedPose(arFrame.camera)
 
-        if (onAugmentedImageUpdate.isNotEmpty()) {
-            arFrame.updatedAugmentedImages.forEach { augmentedImage ->
-                onAugmentedImageUpdate.forEach {
-                    it(augmentedImage)
+            if (onAugmentedImageUpdate.isNotEmpty()) {
+                arFrame.updatedAugmentedImages.forEach { augmentedImage ->
+                    onAugmentedImageUpdate.forEach {
+                        it(augmentedImage)
+                    }
                 }
             }
-        }
 
-        if (onAugmentedFaceUpdate != null) {
-            arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
-        }
+            if (onAugmentedFaceUpdate != null) {
+                arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
+            }
 
-        currentFrame = arFrame
-        lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
-            onArFrame(arFrame)
+            lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
+                onArFrame(arFrame)
+            }
+            onArFrame?.invoke(arFrame)
         }
-        onArFrame?.invoke(arFrame)
     }
 
     open fun onLightEstimationUpdate(lightEstimation: LightEstimator) {
