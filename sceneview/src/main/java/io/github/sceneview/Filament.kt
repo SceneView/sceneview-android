@@ -7,10 +7,10 @@ import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.gltfio.ResourceLoader
 import com.google.android.filament.gltfio.UbershaderProvider
 import com.google.android.filament.utils.Utils
-import com.google.ar.sceneform.rendering.GLHelper
 import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.math.Transform
 import io.github.sceneview.math.toColumnsFloatArray
+import io.github.sceneview.utils.OpenGL
 import java.lang.ref.WeakReference
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
@@ -28,7 +28,7 @@ object Filament {
 
     @JvmStatic
     val engine: Engine
-        get() = _engine?.get() ?: (eglContext?.get() ?: GLHelper.makeContext())
+        get() = _engine?.get() ?: (eglContext?.get() ?: OpenGL.createEglContext())
             .let { eglContext ->
                 this.eglContext = WeakReference(eglContext)
                 Engine.create(eglContext).also { engine ->
@@ -124,7 +124,7 @@ object Filament {
         _engine = null
 
         eglContext?.get()?.let {
-            GLHelper.destroyContext(it)
+            OpenGL.destroyEglContext(it)
         }
         eglContext?.clear()
         eglContext = null
