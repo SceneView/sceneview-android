@@ -38,7 +38,7 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:0.9.2"
+    releaseImplementation "io.github.sceneview:arsceneview:0.9.3"
     debugImplementation project(":arsceneview")
 
     // AndroidX

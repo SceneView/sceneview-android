@@ -10,7 +10,7 @@ This is a Sceneform replacement in Kotlin
 
 ## Features
 
-- Use `SceneView` for 3D only or `ArSceneView` for 3D and ARCore.
+- Use `sceneview` dependency for 3D only or `arsceneview` for 3D and ARCore.
 - Compose: Use the `Scene` or `ARScene` `@Composable` 
 - Layout: Add the `<SceneView>` or `<ArSceneView>` tag to your layout or call the `ArSceneview(context: Context)` constructor in your code.
 - Requesting the camera permission and installing/updating the Google Play Services for AR is handled automatically in the `ArSceneView`.
@@ -31,7 +31,7 @@ This is a Sceneform replacement in Kotlin
 ```gradle
 dependencies {
     // 3D only
-    implementation 'io.github.sceneview:sceneview:1.0.1'
+    implementation 'io.github.sceneview:sceneview:1.0.2'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
@@ -40,7 +40,7 @@ dependencies {
 ```gradle
 dependencies {
     // 3D and ARCore
-    implementation 'io.github.sceneview:arsceneview:0.9.2'
+    implementation 'io.github.sceneview:arsceneview:0.9.3'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
