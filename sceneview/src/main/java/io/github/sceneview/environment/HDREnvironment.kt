@@ -138,8 +138,8 @@ class IBLPrefilter(engine: Engine) {
     fun specularFilter(skybox: Texture) = specularFilter.run(skybox)
 
     fun destroy() {
-        specularFilter.destroy()
-        equirectangularToCubemap.destroy()
-        context.destroy()
+        runCatching { specularFilter.destroy() }
+        runCatching { equirectangularToCubemap.destroy() }
+        runCatching { context.destroy() }
     }
 }

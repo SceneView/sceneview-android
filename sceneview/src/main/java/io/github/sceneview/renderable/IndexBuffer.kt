@@ -18,4 +18,6 @@ fun IndexBuffer.setBuffer(buffer: Buffer) = setBuffer(Filament.engine, buffer)
 fun IndexBuffer.setBuffer(buffer: Buffer, destOffsetInBytes: Int, count: Int) =
     setBuffer(Filament.engine, buffer, destOffsetInBytes, count)
 
-fun IndexBuffer.destroy() = Filament.engine.destroyIndexBuffer(this)
+fun IndexBuffer.destroy() {
+    runCatching { Filament.engine.destroyIndexBuffer(this) }
+}

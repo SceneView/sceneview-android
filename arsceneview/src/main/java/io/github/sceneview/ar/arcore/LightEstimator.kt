@@ -207,7 +207,7 @@ class LightEstimator(
     var mainLight: Light? = null
         set(value) {
             if (field != value) {
-                field?.destroy()
+                field?.destroyLight()
                 field = value
             }
         }
@@ -445,7 +445,7 @@ class LightEstimator(
 
     override fun onDestroy(owner: LifecycleOwner) {
         environment?.destroy()
-        mainLight?.destroy()
+        mainLight?.destroyLight()
         super.onDestroy(owner)
     }
 

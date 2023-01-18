@@ -14,4 +14,6 @@ fun Stream.Builder.build(lifecycle: Lifecycle? = null): Stream = build(Filament.
         })
     }
 
-fun Stream.destroy() = Filament.engine.destroyStream(this)
+fun Stream.destroy() {
+    runCatching { Filament.engine.destroyStream(this) }
+}

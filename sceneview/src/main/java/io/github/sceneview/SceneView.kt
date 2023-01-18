@@ -44,6 +44,7 @@ import io.github.sceneview.gesture.transform
 import io.github.sceneview.light.Light
 import io.github.sceneview.light.build
 import io.github.sceneview.light.destroy
+import io.github.sceneview.light.destroyLight
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent
@@ -654,20 +655,20 @@ open class SceneView @JvmOverloads constructor(
      * Meaning that they are already self destroyed when they receive the `onDestroy()` callback.
      */
     open fun destroy() {
-        uiHelper.detach()
+        runCatching { uiHelper.detach() }
 
         // Use runCatching because they should normally already been destroyed by the lifecycle and
         // Filament will throw an Exception when destroying them twice.
         runCatching { cameraNode.destroy() }
-        runCatching { mainLight?.destroy() }
+        runCatching { mainLight?.destroyLight() }
         runCatching { indirectLight?.destroy() }
         runCatching { skybox?.destroy() }
 
-        ResourceManager.getInstance().destroyAllResources()
+        runCatching { ResourceManager.getInstance().destroyAllResources() }
 
-        engine.destroyRenderer(renderer)
-        engine.destroyView(view)
-        engine.destroyScene(scene)
+        runCatching { engine.destroyRenderer(renderer) }
+        runCatching { engine.destroyView(view) }
+        runCatching { engine.destroyScene(scene) }
 
         Filament.release()
     }
@@ -689,7 +690,7 @@ open class SceneView @JvmOverloads constructor(
 
     inner class SurfaceCallback : UiHelper.RendererCallback {
         override fun onNativeWindowChanged(surface: Surface) {
-            swapChain?.let { engine.destroySwapChain(it) }
+            swapChain?.let { runCatching { engine.destroySwapChain(it) } }
             swapChain = engine.createSwapChain(surface)
             displayHelper.attach(renderer, display)
         }
@@ -697,7 +698,7 @@ open class SceneView @JvmOverloads constructor(
         override fun onDetachedFromSurface() {
             displayHelper.detach()
             swapChain?.let {
-                engine.destroySwapChain(it)
+                runCatching { engine.destroySwapChain(it) }
                 engine.flushAndWait()
                 swapChain = null
             }

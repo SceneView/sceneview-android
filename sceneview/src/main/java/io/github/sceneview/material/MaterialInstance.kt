@@ -14,11 +14,7 @@ import io.github.sceneview.texture.TextureSamplerExternal
 import io.github.sceneview.utils.Color
 
 fun MaterialInstance.destroy() {
-    // TODO: Shall we
-//    if (material.defaultInstance == this) {
-//        material.destroy()
-//    }
-    Filament.engine.destroyMaterialInstance(this)
+    runCatching { Filament.engine.destroyMaterialInstance(this) }
 }
 
 fun MaterialInstance.setParameter(name: String, value: Float2) =

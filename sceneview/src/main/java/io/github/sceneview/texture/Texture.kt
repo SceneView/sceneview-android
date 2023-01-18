@@ -31,5 +31,5 @@ fun Texture.setImage(
  * Destroys a Texture and frees all its associated resources.
  */
 fun Texture.destroy() {
-    Filament.engine.destroyTexture(this)
+    runCatching { Filament.engine.destroyTexture(this) }
 }

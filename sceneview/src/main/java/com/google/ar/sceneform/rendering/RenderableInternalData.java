@@ -210,7 +210,9 @@ class RenderableInternalData implements IRenderableInternalData {
             || renderableManager.getPrimitiveCount(renderableInstance) != meshCount) {
       // Destroy the old one if it exists.
       if (renderableInstance != 0) {
-        renderableManager.destroy(renderedEntity);
+        try {
+          renderableManager.destroy(renderedEntity);
+        } catch (Exception e) {}
       }
 
       // Build the filament renderable.

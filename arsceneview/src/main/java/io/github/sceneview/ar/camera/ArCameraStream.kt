@@ -11,7 +11,6 @@ import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.ArSession
-import io.github.sceneview.light.destroy
 import io.github.sceneview.material.*
 import io.github.sceneview.math.Transform
 import io.github.sceneview.renderable.*
@@ -274,7 +273,7 @@ class ArCameraStream(
             vertexBuffer.setBufferAt(UV_BUFFER_INDEX, transformedUvCoordinates)
         }
 
-        if(isDepthOcclusionEnabled) {
+        if (isDepthOcclusionEnabled) {
             when (sceneView.depthMode) {
                 Config.DepthMode.AUTOMATIC -> {
                     runCatching {
@@ -336,7 +335,7 @@ class ArCameraStream(
         _standardMaterial?.destroy()
         _depthOcclusionMaterial?.destroy()
         vertexBuffer.destroy()
-        renderable.destroy()
+        renderable.destroyRenderable()
         cameraTextures?.forEach { it.destroy() }
         depthTexture?.destroy()
         uvCoordinates.clear()

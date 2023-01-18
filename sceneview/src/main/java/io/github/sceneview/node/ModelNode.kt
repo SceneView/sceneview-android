@@ -95,7 +95,7 @@ open class ModelNode : RenderableNode {
     open var model: Model? = null
         set(value) {
             if (field != value) {
-                field?.destroy()
+//                field?.destroy()
                 field = value
                 animator = value?.animator
                 sceneEntities = value?.entities ?: intArrayOf()

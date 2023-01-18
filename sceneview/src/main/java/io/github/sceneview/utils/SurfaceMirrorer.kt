@@ -95,7 +95,7 @@ class SurfaceMirrorer(
      */
     fun stopMirroring(surface: Surface) {
         surfaceMirrors.removeAll(surfaceMirrors.filter { it.surface == surface }.onEach { mirror ->
-            mirror.swapChain?.let { Filament.engine.destroySwapChain(it) }
+            mirror.swapChain?.let { runCatching { Filament.engine.destroySwapChain(it) } }
             mirror.swapChain = null
         })
     }
