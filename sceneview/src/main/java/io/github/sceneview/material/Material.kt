@@ -10,7 +10,8 @@ fun Material.Builder.build(lifecycle: Lifecycle? = null): Material = build(Filam
     .also { material ->
         lifecycle?.observe(onDestroy = {
             // Prevent double destroy in case of manually destroyed
-            runCatching { material.destroy() }
+            // TODO: Hot fix because of not destroyed instances
+//            runCatching { material.destroy() }
         })
     }
 
