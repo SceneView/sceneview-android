@@ -11,13 +11,13 @@ val Model.allEntities get() = entities + lightEntities
 
 val Model.renderableNames get() = renderableEntities.map { getName(it) }
 
-fun Model.getRenderableByName(name: String) : Renderable? =
+fun Model.getRenderableByName(name: String): Renderable? =
     getFirstEntityByName(name).takeIf { it != 0 }
 
 fun Animator.getAnimationIndex(animationName: String) =
     (0 until animationCount).firstOrNull { getAnimationName(it) == animationName }
 
 fun Model.destroy() {
-    releaseSourceData()
-    Filament.assetLoader.destroyAsset(this)
+    runCatching { releaseSourceData() }
+    runCatching { Filament.assetLoader.destroyAsset(this) }
 }

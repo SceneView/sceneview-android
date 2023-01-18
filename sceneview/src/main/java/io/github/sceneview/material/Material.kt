@@ -26,5 +26,5 @@ fun Material.destroy() {
     // TODO : We still have an issue because of material instances not destroyed before this call.
     //  It should be fixed when Material override is removed and we don't allow multiple instances
     //  anymore. Anyway Filament.destroyMaterials() might do the job at the end.
-//    Filament.engine.destroyMaterial(this)
+    runCatching { Filament.engine.destroyMaterial(this) }
 }

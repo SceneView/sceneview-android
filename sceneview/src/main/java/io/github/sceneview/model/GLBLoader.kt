@@ -59,7 +59,7 @@ object GLBLoader {
     fun createModel(buffer: Buffer, lifecycle: Lifecycle? = null): Model? =
         assetLoader.createAssetFromBinary(buffer)?.also { asset ->
             resourceLoader.loadResources(asset)
-            asset.releaseSourceData()
+            runCatching { asset.releaseSourceData() }
 
             //TODO: Used by Filament ModelViewer, see if it's usefull
             asset.renderableEntities.forEach {

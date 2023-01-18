@@ -426,7 +426,11 @@ public class CameraNode extends Node {
     public void onDestroy(@NonNull LifecycleOwner owner) {
         super.onDestroy(owner);
 
-        Filament.getEngine().destroyCameraComponent(camera.getEntity());
-        Filament.getEntityManager().destroy(camera.getEntity());
+        try {
+            Filament.getEngine().destroyCameraComponent(camera.getEntity());
+        } catch (Exception e) {}
+        try {
+            Filament.getEntityManager().destroy(camera.getEntity());
+        } catch (Exception e) {}
     }
 }

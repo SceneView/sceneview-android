@@ -26,7 +26,7 @@ fun LightManager.Builder.build(lifecycle: Lifecycle? = null): Light =
     }.also { light ->
         lifecycle?.observe(onDestroy = {
             // Prevent double destroy in case of manually destroyed
-            runCatching { light.destroy() }
+            runCatching { light.destroyLight() }
         })
     }
 
@@ -147,8 +147,8 @@ fun Light.clone(lifecycle: Lifecycle) = LightManager.Builder(type)
 /**
  * Destroys a Light and frees all its associated resources.
  */
-fun Light.destroy() {
-    Filament.engine.destroyEntity(this)
-    Filament.engine.entityManager.destroy(this)
-//    Filament.lightManager.destroy(this)
+fun Light.destroyLight() {
+    runCatching { Filament.engine.destroyEntity(this) }
+    runCatching { Filament.engine.entityManager.destroy(this) }
+    runCatching { Filament.lightManager.destroy(this) }
 }

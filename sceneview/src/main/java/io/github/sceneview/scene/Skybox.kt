@@ -17,5 +17,5 @@ fun Skybox.Builder.build(lifecycle: Lifecycle): Skybox = build(Filament.engine)
  * Destroys a Skybox and frees all its associated resources.
  */
 fun Skybox.destroy() {
-    Filament.engine.destroySkybox(this)
+    runCatching { Filament.engine.destroySkybox(this) }
 }

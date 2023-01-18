@@ -55,6 +55,6 @@ fun Camera.luminance(ev100: Float) = pow(2.0f, ev100 - 3.0f)
  * Destroys the Camera component associated with the camera entity.
  */
 fun Camera.destroy() {
-    Filament.engine.destroyCameraComponent(entity)
-    Filament.entityManager.destroy(entity)
+    runCatching { Filament.engine.destroyCameraComponent(entity) }
+    runCatching { Filament.entityManager.destroy(entity) }
 }

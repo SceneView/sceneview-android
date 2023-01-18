@@ -3,13 +3,13 @@ package io.github.sceneview.model
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.KTX1Loader as KTXLoader
 import com.google.ar.sceneform.rendering.Renderable
 import io.github.sceneview.environment.loadEnvironment
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.future.await
+import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 /**
  *

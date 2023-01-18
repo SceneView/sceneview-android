@@ -1,7 +1,7 @@
 package io.github.sceneview.node
 
 import io.github.sceneview.light.Light
-import io.github.sceneview.light.destroy
+import io.github.sceneview.light.destroyLight
 import io.github.sceneview.light.direction
 import io.github.sceneview.light.position
 import io.github.sceneview.math.*
@@ -19,7 +19,7 @@ open class LightNode : Node {
 
     var light: Light? = null
         set(value) {
-            field?.destroy()
+//            field?.destroyLight()
             field = value
             sceneEntities = value?.let { intArrayOf(it) } ?: intArrayOf()
         }
@@ -66,6 +66,6 @@ open class LightNode : Node {
     /** ### Detach and destroy the node */
     override fun destroy() {
         super.destroy()
-        light?.destroy()
+        light?.destroyLight()
     }
 }

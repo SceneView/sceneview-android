@@ -7,7 +7,6 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
-import io.github.sceneview.light.destroy
 
 typealias Renderable = Int
 typealias RenderableInstance = Int
@@ -28,7 +27,7 @@ fun RenderableManager.Builder.build(lifecycle: Lifecycle): Renderable =
     }.also { renderable ->
         lifecycle.observe(onDestroy = {
             // Prevent double destroy in case of manually destroyed
-            runCatching { renderable.destroy() }
+            runCatching { renderable.destroyRenderable() }
         })
     }
 
@@ -95,3 +94,9 @@ fun Renderable.setGlobalBlendOrderEnabled(
  */
 fun Renderable.setScreenSpaceContactShadows(enabled: Boolean) =
     Filament.renderableManager.setScreenSpaceContactShadows(renderableInstance, enabled)
+
+fun Renderable.destroyRenderable() {
+    runCatching { Filament.engine.destroyEntity(this) }
+    runCatching { Filament.engine.entityManager.destroy(this) }
+    runCatching { Filament.renderableManager.destroy(this) }
+}

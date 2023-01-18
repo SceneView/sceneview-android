@@ -20,4 +20,6 @@ fun VertexBuffer.setBufferAt(bufferIndex: Int, buffer: Buffer) =
 fun VertexBuffer.setBufferAt(bufferIndex: Int, buffer: Buffer, destOffsetInBytes: Int, count: Int) =
     setBufferAt(Filament.engine, bufferIndex, buffer, destOffsetInBytes, count)
 
-fun VertexBuffer.destroy() = Filament.engine.destroyVertexBuffer(this)
+fun VertexBuffer.destroy() {
+    runCatching { Filament.engine.destroyVertexBuffer(this) }
+}

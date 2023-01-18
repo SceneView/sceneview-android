@@ -82,7 +82,7 @@ object GLTFLoader {
                 resourceLoader.addResourceData(uri, resourceBuffer)
             }
             resourceLoader.loadResources(asset)
-            asset.releaseSourceData()
+            runCatching { asset.releaseSourceData() }
 
             //TODO: Used by Filament ModelViewer, see if it's usefull
             asset.renderableEntities.forEach {

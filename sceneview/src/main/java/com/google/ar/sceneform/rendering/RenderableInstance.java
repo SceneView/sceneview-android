@@ -561,17 +561,23 @@ public class RenderableInstance implements AnimatableModel {
      */
     public void destroy() {
         if(filamentAsset != null) {
-            ModelKt.destroy(filamentAsset);
+            try {
+                ModelKt.destroy(filamentAsset);
+            } catch (Exception e) {}
             filamentAsset = null;
         }
 
         RenderableManager renderableManager = Filament.getRenderableManager();
         if (childEntity != 0) {
-            renderableManager.destroy(childEntity);
+            try {
+                renderableManager.destroy(childEntity);
+            } catch (Exception e) {}
             childEntity = 0;
         }
         if (entity != 0) {
-            renderableManager.destroy(entity);
+            try {
+                renderableManager.destroy(entity);
+            } catch (Exception e) {}
             entity = 0;
         }
     }

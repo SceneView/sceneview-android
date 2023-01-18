@@ -105,26 +105,26 @@ object Filament {
         _assetLoader = null
 
         _resourceLoader?.apply {
-            asyncCancelLoad()
-            evictResourceData()
-            destroy()
+            runCatching { asyncCancelLoad() }
+            runCatching { evictResourceData() }
+            runCatching { destroy() }
         }
         _resourceLoader = null
 
         // TODO: Materials should be destroyed by their own
-        _materialProvider?.destroyMaterials()
-        _materialProvider?.destroy()
+        runCatching { _materialProvider?.destroyMaterials() }
+        runCatching { _materialProvider?.destroy() }
         _materialProvider = null
 
-        _iblPrefilter?.destroy()
+        runCatching { _iblPrefilter?.destroy() }
         _iblPrefilter = null
 
-        _engine?.get()?.destroy()
+        runCatching { _engine?.get()?.destroy() }
         _engine?.clear()
         _engine = null
 
         eglContext?.get()?.let {
-            OpenGL.destroyEglContext(it)
+            runCatching { OpenGL.destroyEglContext(it) }
         }
         eglContext?.clear()
         eglContext = null
