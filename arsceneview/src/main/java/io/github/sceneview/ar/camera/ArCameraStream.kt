@@ -6,7 +6,6 @@ import com.google.android.filament.Texture.PixelBufferDescriptor
 import com.google.ar.core.Config
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Session
-import com.google.ar.sceneform.rendering.GLHelper
 import com.google.ar.sceneform.rendering.Renderable.RENDER_PRIORITY_LAST
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
@@ -275,50 +274,52 @@ class ArCameraStream(
             vertexBuffer.setBufferAt(UV_BUFFER_INDEX, transformedUvCoordinates)
         }
 
-        when (sceneView.depthMode) {
-            Config.DepthMode.AUTOMATIC -> {
-                runCatching {
-                    frame.acquireDepthImage16Bits()
-                }.getOrNull()
-            }
-            Config.DepthMode.RAW_DEPTH_ONLY -> {
-                runCatching {
-                    frame.acquireRawDepthImage16Bits()
-                }.getOrNull()
-            }
-            else -> null
-        }?.let { depthImage ->
-            // Recalculate Occlusion
-            val depthTexture = depthTexture?.takeIf {
-                it.getWidth(0) == depthImage.width &&
-                        it.getHeight(0) == depthImage.height
-            } ?: Texture.Builder()
-                .width(depthImage.width)
-                .height(depthImage.height)
-                .sampler(Texture.Sampler.SAMPLER_2D)
-                .format(Texture.InternalFormat.RG8)
-                .levels(1)
-                .build(lifecycle).also {
-                    depthTexture?.destroy()
-                    depthTexture = it
+        if(isDepthOcclusionEnabled) {
+            when (sceneView.depthMode) {
+                Config.DepthMode.AUTOMATIC -> {
+                    runCatching {
+                        frame.acquireDepthImage16Bits()
+                    }.getOrNull()
                 }
-            // To solve a problem with a to early released DepthImage the ByteBuffer which holds
-            // all necessary data is cloned. The cloned ByteBuffer is unaffected of a released
-            // DepthImage and therefore produces not a flickering result.
-            val buffer = depthImage.planes[0].buffer//.clone()
-            depthTexture.setImage(
-                0,
-                PixelBufferDescriptor(
-                    buffer,
-                    Texture.Format.RG,
-                    Texture.Type.UBYTE,
-                    1, 0, 0, 0, null
-                ) {
-                    // Close the image only after the execution
-                    depthImage.close()
-                    buffer.clear()
+                Config.DepthMode.RAW_DEPTH_ONLY -> {
+                    runCatching {
+                        frame.acquireRawDepthImage16Bits()
+                    }.getOrNull()
                 }
-            )
+                else -> null
+            }?.let { depthImage ->
+                // Recalculate Occlusion
+                val depthTexture = depthTexture?.takeIf {
+                    it.getWidth(0) == depthImage.width &&
+                            it.getHeight(0) == depthImage.height
+                } ?: Texture.Builder()
+                    .width(depthImage.width)
+                    .height(depthImage.height)
+                    .sampler(Texture.Sampler.SAMPLER_2D)
+                    .format(Texture.InternalFormat.RG8)
+                    .levels(1)
+                    .build(lifecycle).also {
+                        depthTexture?.destroy()
+                        depthTexture = it
+                    }
+                // To solve a problem with a to early released DepthImage the ByteBuffer which holds
+                // all necessary data is cloned. The cloned ByteBuffer is unaffected of a released
+                // DepthImage and therefore produces not a flickering result.
+                val buffer = depthImage.planes[0].buffer//.clone()
+                depthTexture.setImage(
+                    0,
+                    PixelBufferDescriptor(
+                        buffer,
+                        Texture.Format.RG,
+                        Texture.Type.UBYTE,
+                        1, 0, 0, 0, null
+                    ) {
+                        // Close the image only after the execution
+                        depthImage.close()
+                        buffer.clear()
+                    }
+                )
+            }
         }
     }
 
