@@ -366,7 +366,7 @@ open class SceneView @JvmOverloads constructor(
             .build(Manipulator.Mode.ORBIT)
     }
 
-    private val surfaceCopier by lazy { SurfaceCopier(lifecycle) }
+    private val surfaceMirrorer by lazy { SurfaceMirrorer(lifecycle) }
 
     init {
         Filament.retain()
@@ -637,11 +637,11 @@ open class SceneView @JvmOverloads constructor(
         }
         mediaRecorder.prepare()
         mediaRecorder.start()
-        surfaceCopier.startMirroring(mediaRecorder.surface)
+        surfaceMirrorer.startMirroring(mediaRecorder.surface)
     }
 
     fun stopRecording(mediaRecorder: MediaRecorder) {
-        surfaceCopier.stopMirroring(mediaRecorder.surface)
+        surfaceMirrorer.stopMirroring(mediaRecorder.surface)
         mediaRecorder.stop()
         mediaRecorder.reset()
         mediaRecorder.surface.release()
