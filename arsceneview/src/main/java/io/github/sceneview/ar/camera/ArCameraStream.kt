@@ -19,6 +19,7 @@ import io.github.sceneview.renderable.*
 import io.github.sceneview.texture.build
 import io.github.sceneview.texture.destroy
 import io.github.sceneview.texture.setImage
+import io.github.sceneview.utils.OpenGL
 import io.github.sceneview.utils.clone
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -164,7 +165,7 @@ class ArCameraStream(
     /**
      * Passing multiple textures allows for a multithreaded rendering pipeline
      */
-    val cameraTextureIds = IntArray(6) { GLHelper.createCameraTexture() }
+    val cameraTextureIds = IntArray(6) { OpenGL.createExternalTextureId() }
 
     /**
      * The init is done when we have the session frame size
