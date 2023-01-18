@@ -112,8 +112,9 @@ object Filament {
         _resourceLoader = null
 
         // TODO: Materials should be destroyed by their own
-        runCatching { _materialProvider?.destroyMaterials() }
-        runCatching { _materialProvider?.destroy() }
+        // TODO: Hot fix because of not destroyed instances
+//        runCatching { _materialProvider?.destroyMaterials() }
+//        runCatching { _materialProvider?.destroy() }
         _materialProvider = null
 
         runCatching { _iblPrefilter?.destroy() }
