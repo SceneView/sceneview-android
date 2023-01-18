@@ -1,5 +1,5 @@
 # SceneView Android
-### 3D and AR Android View with Google Filament and ARCore
+### 3D and AR Android Composable and View with Google Filament and ARCore
 
 This is a Sceneform replacement in Kotlin
 
@@ -11,8 +11,8 @@ This is a Sceneform replacement in Kotlin
 ## Features
 
 - Use `SceneView` for 3D only or `ArSceneView` for 3D and ARCore.
-- Everything is accessible at the `SceneView`/`ArSceneView` level. For example, no more ~`ArFragment`~ and code like ~`arFragment.arSceneView.scene`~, ~`arFragment.session.config`~, etc.
-- Just add the `<ArSceneView>` tag to your layout or call the `ArSceneview(context: Context)` constructor in your code. *Compose is coming next ...*
+- Compose: Use the `Scene` or `ARScene` `@Composable` 
+- Layout: Add the `<SceneView>` or `<ArSceneView>` tag to your layout or call the `ArSceneview(context: Context)` constructor in your code.
 - Requesting the camera permission and installing/updating the Google Play Services for AR is handled automatically in the `ArSceneView`.
 - Support for the latest ARCore features (the upcoming features will be integrated quicker thanks to Kotlin).
 - Lifecycle-aware components = Better memory management and performance.
@@ -48,7 +48,24 @@ dependencies {
 ## Usage
 
 ### 3D
+- Compose
+```kotlin
+@Composable
+fun ModelScreen() {
+    val nodes = remember { mutableStateListOf<Node>() }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            nodes = nodes,
+            onCreate = { sceneView ->
+                // Apply your configuration
+            }
+        )
+    }
+}
+```
+- Layout
 ```xml
 <io.github.sceneview.SceneView
     android:id="@+id/sceneView"
@@ -58,6 +75,34 @@ dependencies {
 
 ### AR
 
+- Compose
+```kotlin
+@Composable
+fun ARScreen() {
+    val nodes = remember { mutableStateListOf<ArNode>() }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        ARScene(
+            modifier = Modifier.fillMaxSize(),
+            nodes = nodes,
+            planeRenderer = true,
+            onCreate = { arSceneView ->
+              // Apply your configuration
+            },
+            onSessionCreate = { session ->
+              // Configure the ARCore session
+            },
+            onFrame = { arFrame ->
+              // Retrieve ARCore frame update
+            },
+            onTap = { hitResult ->
+              // User tapped in the AR view
+            }
+        )
+    }
+}
+```
+- Layout
 ```xml
 <io.github.sceneview.ar.ArSceneView
     android:id="@+id/sceneView"
@@ -70,12 +115,10 @@ dependencies {
 [![](https://i3.ytimg.com/vi/GDCy_bUdggg/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=GDCy_bUdggg)
 
 ```kotlin
-sceneView.addChild(
-    ModelNode(
-        position = Position(x = 0.0f, y = 0.0f, z = -4.0f),
-        rotation = Rotation(y = 90.0f),
-        scale = Scale(0.5f)
-    )
+ModelNode(
+    position = Position(x = 0.0f, y = 0.0f, z = -4.0f),
+    rotation = Rotation(y = 90.0f),
+    scale = Scale(0.5f)
 )
 ```
 
@@ -95,13 +138,11 @@ Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
 [![](https://i3.ytimg.com/vi/HVqAvGJROWk/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=HVqAvGJROWk)
 
 ```kotlin
-sceneView.addChild(
-    ArModelNode(
-        placementMode = PlacementMode.BEST_AVAILABLE,
-        hitPosition = Position(0.0f, 0.0f, -2.0f),
-        followHitPosition = true,
-        instantAnchor = false
-    )
+ArModelNode(
+    placementMode = PlacementMode.BEST_AVAILABLE, 
+    hitPosition = Position(0.0f, 0.0f, -2.0f),
+    followHitPosition = true,
+    instantAnchor = false
 )
 ```
 
