@@ -30,7 +30,7 @@ object GLBLoader {
     suspend fun loadModel(
         context: Context,
         glbFileLocation: String,
-        lifecycle: Lifecycle? = null,
+        lifecycle: Lifecycle? = null
     ): Model? = context.useFileBufferNotNull(glbFileLocation) { buffer ->
         withContext(Dispatchers.Main) {
             createModel(buffer, lifecycle)
