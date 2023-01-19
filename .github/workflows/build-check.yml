@@ -22,8 +22,5 @@ jobs:
           distribution: adopt
           java-version: 11
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
       - name: Build library
         run: ./gradlew assembleDebug --stacktrace

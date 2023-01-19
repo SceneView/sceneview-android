@@ -17,8 +17,6 @@ jobs:
         with:
           distribution: adopt
           java-version: 11
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
       - name: Generate Dokka HTML docs
         run: ./gradlew dokkaGfmMultiModule
       - name: Deploy to GitHub pages

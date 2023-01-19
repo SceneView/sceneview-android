@@ -21,9 +21,6 @@ jobs:
           distribution: adopt
           java-version: 11
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
       - name: Upload release to Sonatype Staging Repository
         run: ./gradlew publishAllPublicationsToMavenCentralRepository --no-daemon --no-parallel
         env:

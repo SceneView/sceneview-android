@@ -20,9 +20,6 @@ jobs:
           distribution: adopt
           java-version: 11
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
       - name: Publish release
         run: ./gradlew closeAndReleaseRepository --no-daemon --no-parallel
         env:
