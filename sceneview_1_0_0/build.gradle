@@ -115,9 +115,6 @@ dependencies {
     api "androidx.fragment:fragment-ktx:1.5.5"
     api "androidx.lifecycle:lifecycle-runtime-ktx:2.5.1"
 
-    // Android Material
-    implementation 'com.google.android.material:material:1.7.0'
-
     // Fuel (Http)
     implementation "com.github.kittinunf.fuel:fuel:2.3.1"
     implementation "com.github.kittinunf.fuel:fuel-android:2.3.1"
