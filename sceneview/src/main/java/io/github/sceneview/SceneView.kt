@@ -531,6 +531,7 @@ open class SceneView @JvmOverloads constructor(
     /** @see Scene.removeEntity */
     fun removeLight(@Entity light: Light) = scene.removeEntity(light)
 
+    @Deprecated("Deprecated in Java")
     override fun setBackgroundDrawable(background: Drawable?) {
         super.setBackgroundDrawable(background)
 
