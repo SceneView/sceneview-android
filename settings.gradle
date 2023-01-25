@@ -12,11 +12,8 @@ include ':arsceneview'
 include ':sceneview_1_0_0'
 
 // Samples
-include ':sample-ar-cloud-anchor'
-project(':sample-ar-cloud-anchor').projectDir = new File('samples/ar-cloud-anchor')
-include ':sample-ar-cursor-placement'
-project(':sample-ar-cursor-placement').projectDir = new File('samples/ar-cursor-placement')
-include ':sample-ar-model-viewer'
-project(':sample-ar-model-viewer').projectDir = new File('samples/ar-model-viewer')
-include ':sample-model-viewer'
-project(':sample-model-viewer').projectDir = new File('samples/model-viewer')
+include ':samples:common'
+include ':samples:ar-cloud-anchor'
+include ':samples:ar-cursor-placement'
+include ':samples:ar-model-viewer'
+include ':samples:model-viewer'
