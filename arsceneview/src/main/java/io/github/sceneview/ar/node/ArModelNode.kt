@@ -11,7 +11,7 @@ import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.Position
-import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.Node
 
 /**
@@ -260,7 +260,7 @@ open class ArModelNode : ArNode {
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
-        onLoaded: ((model: Model) -> Unit)? = null
+        onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
     ) : this() {
         loadModelGlbAsync(
             context,
