@@ -74,7 +74,7 @@ object GLTFLoader {
         resourceBufferResolver: suspend (String) -> Buffer,
         lifecycle: Lifecycle? = null
     ): Model? = withContext(Dispatchers.Main) {
-        assetLoader.createAssetFromJson(buffer)?.also { asset ->
+        assetLoader.createAsset(buffer)?.also { asset ->
             for (uri in asset.resourceUris) {
                 val resourceBuffer = withContext(Dispatchers.IO) {
                     resourceBufferResolver(uri)

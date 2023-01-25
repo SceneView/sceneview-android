@@ -619,7 +619,7 @@ open class SceneView @JvmOverloads constructor(
             val pickedNode = allChildren
                 .mapNotNull { it as? ModelNode }
                 .firstOrNull { modelNode ->
-                    modelNode.model?.renderableEntities?.contains(pickedRenderable) == true
+                    pickedRenderable in modelNode.renderables
                 }
             onPickingCompleted.invoke(pickedNode, pickedRenderable)
         }

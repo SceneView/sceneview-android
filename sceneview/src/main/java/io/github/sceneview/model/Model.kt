@@ -3,11 +3,12 @@ package io.github.sceneview.model
 import com.google.android.filament.gltfio.Animator
 import com.google.android.filament.gltfio.FilamentAsset
 import io.github.sceneview.Filament
+import io.github.sceneview.Filament.assetLoader
 import io.github.sceneview.renderable.Renderable
 
 typealias Model = FilamentAsset
 
-val Model.allEntities get() = entities + lightEntities
+fun Model.createInstance() = assetLoader.createInstance(this)
 
 val Model.renderableNames get() = renderableEntities.map { getName(it) }
 

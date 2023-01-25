@@ -56,12 +56,7 @@ object Filament {
 
     @JvmStatic
     val resourceLoader: ResourceLoader
-        get() = _resourceLoader ?: ResourceLoader(
-            engine,
-            true,
-            true,
-            false
-        ).also { _resourceLoader = it }
+        get() = _resourceLoader ?: ResourceLoader(engine).also { _resourceLoader = it }
 
     private var _materialProvider: UbershaderProvider? = null
 

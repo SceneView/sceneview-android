@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.gltfio.Animator
+import com.google.ar.sceneform.math.Vector3
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
 import io.github.sceneview.gesture.NodeMotionEvent
@@ -92,7 +93,15 @@ open class ModelNode : RenderableNode {
      * The renderable is usually a 3D model.
      * If null, this node's current renderable will be removed.
      */
-    open var model: Model? = null
+    open val model: Model? get() = modelInstance?.asset
+
+    /**
+     * The [ModelInstance] to display.
+     *
+     * The renderable is usually a 3D model.
+     * If null, this node's current renderable will be removed.
+     */
+    open var modelInstance: ModelInstance? = null
         set(value) {
             if (field != value) {
 //                field?.destroy()
@@ -100,22 +109,25 @@ open class ModelNode : RenderableNode {
                 animator = value?.animator
                 sceneEntities = value?.entities ?: intArrayOf()
 
-                onModelChanged(value)
+                onModelChanged(modelInstance)
             }
         }
 
     var animator: Animator? = null
     var playingAnimations = mutableMapOf<Int, PlayingAnimation>()
 
-    var onModelLoaded = mutableListOf<(model: Model) -> Unit>()
-    var onModelChanged = mutableListOf<(model: Model?) -> Unit>()
+    var onModelLoaded = mutableListOf<(modelInstance: ModelInstance) -> Unit>()
+    var onModelChanged = mutableListOf<() -> Unit>()
     var onModelError: ((exception: Exception) -> Unit)? = null
 
     override val transformEntity: Int?
-        get() = model?.root
+        get() = modelInstance?.root
 
     override val renderables: List<Renderable>
-        get() = model?.renderableEntities?.toList() ?: listOf()
+        get() = modelInstance?.renderables?.toList() ?: listOf()
+
+    val lights: List<Renderable>
+        get() = modelInstance?.lights?.toList() ?: listOf()
 
     val renderableNames: List<String>
         get() = model?.renderableNames?.toList() ?: listOf()
@@ -182,7 +194,7 @@ open class ModelNode : RenderableNode {
         scaleUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
-        onLoaded: ((model: Model) -> Unit)? = null
+        onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
     ) : this() {
         loadModelGlbAsync(
             context,
@@ -212,16 +224,25 @@ open class ModelNode : RenderableNode {
         }
     }
 
-    open fun onModelLoaded(model: Model) {
-        onModelLoaded.forEach { it(model) }
+    open fun onModelLoaded(modelInstance: ModelInstance) {
+        onModelLoaded.forEach { it(modelInstance) }
     }
 
-    open fun onModelChanged(mode: Model?) {
+    open fun onModelChanged(modelInstance: ModelInstance?) {
+        collisionShape = modelInstance?.model?.boundingBox?.let { boundingBox ->
+            val halfExtent = boundingBox.halfExtent
+            val center = boundingBox.center
+            com.google.ar.sceneform.collision.Box(
+                Vector3(halfExtent[0], halfExtent[1], halfExtent[2]).scaled(2.0f),
+                Vector3(center[0], center[1], center[2])
+            )
+        }
+
         // Refresh the collider to ensure it is using the correct collision shape now
         // that the renderable has changed.
         onTransformChanged()
 
-        onModelChanged.forEach { it(model) }
+        onModelChanged.forEach { it() }
     }
 
     open fun onModelError(exception: Exception) {
@@ -236,14 +257,14 @@ open class ModelNode : RenderableNode {
         modelScale = clamp(modelScale * scaleFactor, minEditableScale, maxEditableScale)
     }
 
-    fun doOnModelLoaded(action: (model: Model) -> Unit) {
-        if (model != null) {
-            action(model!!)
+    fun doOnModelLoaded(action: (modelInstance: ModelInstance) -> Unit) {
+        if (modelInstance != null) {
+            action(modelInstance!!)
         } else {
-            onModelLoaded += object : (Model) -> Unit {
-                override fun invoke(model: Model) {
+            onModelLoaded += object : (ModelInstance) -> Unit {
+                override fun invoke(modelInstance: ModelInstance) {
                     onModelLoaded -= this
-                    action(model)
+                    action(modelInstance)
                 }
             }
         }
@@ -282,14 +303,14 @@ open class ModelNode : RenderableNode {
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null
-    ): Model? {
+    ): ModelInstance? {
         return try {
             GLBLoader.loadModel(context, glbFileLocation, lifecycle)?.also { model ->
                 withContext(Dispatchers.Main) {
-                    setModel(model, autoAnimate, scaleToUnits, centerOrigin)
-                    onModelLoaded(model)
+                    setModelInstance(model.instance, autoAnimate, scaleToUnits, centerOrigin)
+                    onModelLoaded(model.instance)
                 }
-            }
+            }?.instance
         } catch (error: Exception) {
             onModelError(error)
             onError?.invoke(error)
@@ -330,7 +351,7 @@ open class ModelNode : RenderableNode {
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
-        onLoaded: ((model: Model) -> Unit)? = null
+        onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
     ): ModelNode {
         if (lifecycle != null) {
             lifecycle.coroutineScope.launchWhenCreated {
@@ -396,8 +417,8 @@ open class ModelNode : RenderableNode {
             GLTFLoader.loadModel(context, gltfFileLocation, resourceLocationResolver, lifecycle)
                 ?.also { model ->
                     withContext(Dispatchers.Main) {
-                        setModel(model, autoAnimate, scaleToUnits, centerOrigin)
-                        onModelLoaded(model)
+                        setModelInstance(model.instance, autoAnimate, scaleToUnits, centerOrigin)
+                        onModelLoaded(model.instance)
                     }
                 }
         } catch (error: Exception) {
@@ -489,15 +510,15 @@ open class ModelNode : RenderableNode {
      * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
      * - ...
      */
-    open fun setModel(
-        model: Model?,
+    open fun setModelInstance(
+        modelInstance: ModelInstance?,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
     ) {
-        this.model = model
-        if (model != null) {
-            if (autoAnimate && model.animator.animationCount > 0) {
+        this.modelInstance = modelInstance
+        if (modelInstance != null) {
+            if (autoAnimate && modelInstance.animator.animationCount > 0) {
                 playAnimation(0)
             }
             scaleToUnits?.let { scaleModel(it) }
@@ -505,16 +526,16 @@ open class ModelNode : RenderableNode {
         }
     }
 
-    fun getRenderableByName(name: String) = model?.getRenderableByName(name)
-
     /**
      * ### Sets up a root transform on the current model to make it fit into a unit cube
      *
      * @param units the number of units of the cube to scale into.
      */
     fun scaleModel(units: Float = 1.0f) {
-        doOnModelLoaded { model ->
-            val halfExtent = model.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+        doOnModelLoaded { modelInstance ->
+            val halfExtent = modelInstance.model.boundingBox.halfExtent.let { v ->
+                Float3(v[0], v[1], v[2])
+            }
             modelScale = Scale(units / (max(halfExtent) * 2.0f))
         }
     }
@@ -528,9 +549,11 @@ open class ModelNode : RenderableNode {
      * - left | top aligned: [-1, 1, 0]
      */
     fun centerModel(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
-        doOnModelLoaded { model ->
-            val center = model.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
-            val halfExtent = model.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+        doOnModelLoaded { modelInstance ->
+            val center =
+                modelInstance.model.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
+            val halfExtent =
+                modelInstance.model.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
             modelPosition = -(center + halfExtent * origin) * modelScale
         }
     }
@@ -565,7 +588,10 @@ open class ModelNode : RenderableNode {
 
     /** ### Detach and destroy the node */
     override fun destroy() {
-        model?.destroy()
+        modelInstance?.destroy()
+        if (model?.instance == modelInstance?.model) {
+            model?.destroy()
+        }
         super.destroy()
     }
 
@@ -573,7 +599,7 @@ open class ModelNode : RenderableNode {
 
     open fun copy(toNode: ModelNode = ModelNode()): ModelNode = toNode.apply {
         super.copy(toNode)
-        setModel(this@ModelNode.model)
+        setModelInstance(this@ModelNode.modelInstance)
     }
 
     companion object {
