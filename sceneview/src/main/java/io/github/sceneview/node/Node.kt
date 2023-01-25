@@ -87,7 +87,6 @@ open class Node(
         @EntityInstance
         get() = transformEntity?.let { transformManager.getInstance(it) }
 
-
     @Entity
     open var sceneEntities: IntArray = intArrayOf()
         set(value) {
@@ -352,15 +351,15 @@ open class Node(
     var parent: NodeParent? = null
         set(value) {
             if (field != value) {
-                // Remove from old parent if not already removed
-                field?.takeIf { this in it.children }?.removeChild(this)
                 // Find the old parent SceneView
-                ((field as? SceneView) ?: (field as? Node)?.sceneView)?.let { detachFromScene(it) }
+                sceneView?.let { detachFromScene(it) }
+                // Remove from old parent if not already removed
+                field?.removeChild(this)
                 field = value
                 // Add to new parent if not already added
-                value?.takeIf { this !in it.children }?.addChild(this)
+                value?.addChild(this)
                 // Find the new parent SceneView
-                ((value as? SceneView) ?: (value as? Node)?.sceneView)?.let { attachToScene(it) }
+                sceneView?.let { attachToScene(it) }
             }
         }
 
@@ -400,7 +399,7 @@ open class Node(
      */
     var onTap: ((motionEvent: MotionEvent, renderable: Renderable?) -> Unit)? = null
 
-    override var _children = listOf<Node>()
+    override var children = listOf<Node>()
 
     private var allowDispatchTransformChanged = true
 
@@ -444,7 +443,7 @@ open class Node(
         sceneView.lifecycle.removeObserver(this)
         sceneView.scene.removeEntities(sceneEntities)
         collider?.setAttachedCollisionSystem(null)
-        children.forEach { it.attachToScene(sceneView) }
+        children.forEach { it.detachFromScene(sceneView) }
         onDetachedFromScene(sceneView)
     }
 
