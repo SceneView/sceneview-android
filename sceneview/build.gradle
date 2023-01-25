@@ -5,10 +5,27 @@ plugins {
     id 'org.jetbrains.dokka'
 }
 
+
+// *************************************************************************************************
+// Filament Plugin
+// *************************************************************************************************
+//
+// Needed if you want to generate Materials, Indirect Light (IBL) and Skyboxes.
+//
+// 1) Copy/paste the /buildSrc dir into your project root folder
+// 2) Copy/paste the plugins line above (plugins: { id 'filament-tools-plugin' }) and bellow into
+// your app/module build.gradle
+// 3) Download the Filament tools release archive for your development desktop:
+// Filament release download: https://github.com/google/filament/releases
+// (Choose the corresponding version to the filament_version bellow)
+// 4) Copy/paste the Filament Plugin part from the gradle.properties file to your project
+// 5) Sync Gradle and clean your project
 if (project.properties['filamentPluginEnabled']?.toBoolean()) {
     filamentTools {
+        // Material generation: .mat -> .filamat
         materialInputDir = project.layout.projectDirectory.dir("../assets/materials")
         materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/materials")
+        // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
         iblInputDir = project.layout.projectDirectory.dir("../assets/environments")
         iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/environments")
         iblFormat = "ktx"
@@ -16,8 +33,10 @@ if (project.properties['filamentPluginEnabled']?.toBoolean()) {
 
     clean.doFirst {
         delete "src/main/assets/sceneview/materials"
+        delete "src/main/assets/sceneview/environments"
     }
 }
+// *************************************************************************************************
 
 group = GROUP
 version = VERSION_NAME
@@ -83,7 +102,7 @@ dependencies {
 //    api 'dev.romainguy:kotlin-math:1.5.1'
 
     // Filament
-    def filament_version = '1.25.1'
+    def filament_version = '1.31.2'
     api "com.google.android.filament:filament-android:$filament_version"
     api "com.google.android.filament:gltfio-android:$filament_version"
     api "com.google.android.filament:filament-utils-android:$filament_version"

@@ -13,25 +13,10 @@ interface NodeParent {
     /**
      * ### An immutable list of this parent's children
      */
-    var _children: List<Node>
     val onChildAdded: ((Node) -> Unit)? get() = null
     val onChildRemoved: ((Node) -> Unit)? get() = null
 
-    var children: List<Node>
-        get() = _children
-        set(value) {
-            val oldChildren = _children
-            _children = value
-            oldChildren.filter { it !in value }.forEach { oldChild ->
-                oldChild.parent = null
-                onChildRemoved(oldChild)
-            }
-            value.filter { it !in oldChildren }.forEach { newChild ->
-                newChild.parent = this
-                onChildAdded(newChild)
-            }
-        }
-
+    var children : List<Node>
 
     /**
      * Adds a node as a child of this NodeParent. If the node already has a parent, it is removed from
@@ -45,6 +30,8 @@ interface NodeParent {
         // Return early if the parent hasn't changed.
         if (child !in children) {
             children = children + child
+            child.parent = this
+            onChildAdded(child)
         }
         return child
     }
@@ -58,6 +45,8 @@ interface NodeParent {
     fun removeChild(child: Node): Node {
         if (child in children) {
             children = children - child
+            child.parent = null
+            onChildRemoved(child)
         }
         return child
     }
@@ -78,7 +67,6 @@ interface NodeParent {
      */
     val allChildren: List<Node>
         get() = children + children.flatMap { it.allChildren }
-
 
     /**
      * ### Traverse the hierarchy

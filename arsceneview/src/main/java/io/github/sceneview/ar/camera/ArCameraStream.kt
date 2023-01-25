@@ -29,7 +29,7 @@ import java.nio.ShortBuffer
  */
 class ArCameraStream(
     private val lifecycle: ArSceneLifecycle,
-    val standardMaterialLocation: String = "sceneview/materials/camera_stream_standard.filamat",
+    val flatMaterialLocation: String = "sceneview/materials/camera_stream_flat.filamat",
     val depthOcclusionMaterialLocation: String = "sceneview/materials/camera_stream_depth.filamat"
 ) : ArSceneLifecycleObserver {
 
@@ -44,22 +44,22 @@ class ArCameraStream(
             renderable.setPriority(value)
         }
 
-    private var _standardMaterial: MaterialInstance? = null
+    private var _flatMaterial: MaterialInstance? = null
 
     /**
      * ### Flat camera material
      */
-    var standardMaterial: MaterialInstance
-        get() = _standardMaterial ?: MaterialLoader.createMaterial(
+    var flatMaterial: MaterialInstance
+        get() = _flatMaterial ?: MaterialLoader.createMaterial(
             context = sceneView.context,
             lifecycle = lifecycle,
-            filamatFileLocation = standardMaterialLocation
+            filamatFileLocation = flatMaterialLocation
         ).apply {
             setParameter("uvTransform", Transform())
-            _standardMaterial = this
+            _flatMaterial = this
         }
         set(value) {
-            _standardMaterial = value
+            _flatMaterial = value
         }
 
     private var _depthOcclusionMaterial: MaterialInstance? = null
@@ -143,7 +143,7 @@ class ArCameraStream(
                     // Create screen quad geometry to camera stream to
                     setBuffer(ShortBuffer.wrap(INDICES))
                 })
-        .material(0, standardMaterial)
+        .material(0, flatMaterial)
         .build(lifecycle)
 
     /**
@@ -151,33 +151,24 @@ class ArCameraStream(
      *
      * Depending on [isDepthOcclusionEnabled] and device Depth compatibility
      */
-    var material: MaterialInstance = renderable.getMaterial()
+    var materialInstance: MaterialInstance = renderable.getMaterial()
         set(value) {
             field = value
-            cameraTexture?.let { value.setExternalTexture(MATERIAL_CAMERA_TEXTURE, it) }
             renderable.setMaterial(value)
         }
-
-    private var hasSetTextureNames = false
 
     /**
      * Passing multiple textures allows for a multithreaded rendering pipeline
      */
     val cameraTextureIds = IntArray(6) { OpenGL.createExternalTextureId() }
 
-    /**
-     * The init is done when we have the session frame size
-     */
-    var cameraTextures: List<Texture>? = null
-
-    /**
-     * We apply the multithreaded actual rendering texture
-     */
-    var cameraTexture: Texture? = null
-        set(value) {
-            field = value
-            value?.let { material.setExternalTexture(MATERIAL_CAMERA_TEXTURE, it) }
-        }
+    val flatTextures = cameraTextureIds.associateWith {
+        Texture.Builder()
+            .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+            .format(Texture.InternalFormat.RGB8)
+            .importTexture(it.toLong())
+            .build(lifecycle)
+    }
 
     /**
      * ### Extracted texture from the session depth image
@@ -221,36 +212,20 @@ class ArCameraStream(
 
         val frame = arFrame.frame
 
-        // Texture names should only be set once on a GL thread unless they change.
-        // This is done during updateFrame rather than init since the session is
-        // not guaranteed to have been initialized during the execution of init.
-        if (!hasSetTextureNames) {
-            arFrame.session.setCameraTextureNames(cameraTextureIds)
-            hasSetTextureNames = true
-        }
+//        // Texture names should only be set once on a GL thread unless they change.
+//        // This is done during updateFrame rather than init since the session is
+//        // not guaranteed to have been initialized during the execution of init.
+//        if (!hasSetTextureNames) {
+//            arFrame.session.setCameraTextureNames(cameraTextureIds)
+//
+//            hasSetTextureNames = true
+//        }
 
-        // Setup External Camera Texture if needed
-        val (width, height) = arFrame.camera.textureIntrinsics.imageDimensions
-        // The ExternalTexture can't be created until we receive the first AR Core Frame so
-        // that we can access the width and height of the camera texture. Return early if
-        // the External Texture hasn't been created yet so we don't start rendering until we
-        // have a valid texture. This will be called again when the ExternalTexture is
-        // created.
-        val cameraTextures = cameraTextures?.takeIf {
-            it[0].getWidth(0) == width && it[0].getHeight(0) == height
-        } ?: cameraTextureIds.map { cameraTextureId ->
-            Texture.Builder()
-                .width(width)
-                .height(height)
-                .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                .format(Texture.InternalFormat.RGB8)
-                .importTexture(cameraTextureId.toLong())
-                .build(lifecycle)
-        }.also { textures ->
-            cameraTextures?.forEach { it.destroy() }
-            cameraTextures = textures
-        }
-        cameraTexture = cameraTextures.getOrNull(cameraTextureIds.indexOf(frame.cameraTextureName))
+        // Retrieve the actual ARCore frame texture for next draw
+        materialInstance.setExternalTexture(
+            MATERIAL_CAMERA_TEXTURE,
+            flatTextures[frame.cameraTextureName]!!
+        )
 
         // Recalculate camera Uvs if necessary.
         if (transformedUvCoordinates == null || frame.hasDisplayGeometryChanged()) {
@@ -258,7 +233,9 @@ class ArCameraStream(
                 ?: uvCoordinates.clone().also {
                     transformedUvCoordinates = it
                 }
-            // Recalculate Camera Uvs
+
+            // If display rotation changed (also includes view size change), we need to re-query the UV
+            // coordinates for the screen rect, as they may have changed as well.
             frame.transformCoordinates2d(
                 Coordinates2d.VIEW_NORMALIZED,
                 uvCoordinates,
@@ -323,20 +300,20 @@ class ArCameraStream(
     }
 
     private fun updateMaterial() {
-        material = if (isDepthOcclusionEnabled && sceneView.depthEnabled) {
+        materialInstance = if (isDepthOcclusionEnabled && sceneView.depthEnabled) {
             depthOcclusionMaterial
         } else {
-            standardMaterial
+            flatMaterial
         }
     }
 
     fun destroy() {
         lifecycle.removeObserver(this)
-        _standardMaterial?.destroy()
+        _flatMaterial?.destroy()
         _depthOcclusionMaterial?.destroy()
         vertexBuffer.destroy()
         renderable.destroyRenderable()
-        cameraTextures?.forEach { it.destroy() }
+        flatTextures.values.forEach { it.destroy() }
         depthTexture?.destroy()
         uvCoordinates.clear()
         transformedUvCoordinates?.clear()

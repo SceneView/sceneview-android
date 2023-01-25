@@ -56,13 +56,13 @@ object GLBLoader {
         result(loadModel(context, glbFileLocation, lifecycle))
     }
 
-    fun createModel(buffer: Buffer, lifecycle: Lifecycle? = null): Model? =
-        assetLoader.createAssetFromBinary(buffer)?.also { asset ->
+    fun createModel(buffer: Buffer, lifecycle: Lifecycle? = null): Model? {
+        return assetLoader.createAsset(buffer)?.also { asset ->
             resourceLoader.loadResources(asset)
             runCatching { asset.releaseSourceData() }
 
             //TODO: Used by Filament ModelViewer, see if it's usefull
-            asset.renderableEntities.forEach {
+            asset.instance.renderables.forEach {
                 it.setScreenSpaceContactShadows(true)
             }
 
@@ -71,4 +71,28 @@ object GLBLoader {
                 runCatching { asset.destroy() }
             })
         }
+    }
+
+    private fun createInstancedModel(
+        buffer: Buffer,
+        count: Int,
+        lifecycle: Lifecycle? = null
+    ): Pair<Model, Array<ModelInstance?>>? {
+        val instances = arrayOfNulls<ModelInstance>(count)
+        return assetLoader.createInstancedAsset(buffer, instances)?.let { asset ->
+            resourceLoader.loadResources(asset)
+            runCatching { asset.releaseSourceData() }
+
+            //TODO: Used by Filament ModelViewer, see if it's usefull
+            instances.flatMap { it?.renderables ?: listOf() }.forEach {
+                it.setScreenSpaceContactShadows(true)
+            }
+
+            lifecycle?.observe(onDestroy = {
+                // Prevent double destroy in case of manually destroyed
+                runCatching { asset.destroy() }
+            })
+            Pair(asset, instances)
+        }
+    }
 }

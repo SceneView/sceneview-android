@@ -6,7 +6,7 @@ import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
 import io.github.sceneview.material.setEmissiveColor
 import io.github.sceneview.math.Position
-import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.delay
@@ -19,7 +19,7 @@ open class CursorNode(
     scaleToUnits: Float? = null,
     centerOrigin: Position? = null,
     onError: ((error: Exception) -> Unit)? = null,
-    onLoaded: ((model: Model) -> Unit)? = null
+    onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
 ) : ArModelNode(
     context,
     lifecycle,
@@ -65,12 +65,11 @@ open class CursorNode(
             super.hitResult = value
             updateState()
         }
-    override var model: Model?
-        get() = super.model
-        set(value) {
-            super.model = value
-            updateState()
-        }
+
+    override fun onModelChanged(modelInstance: ModelInstance?) {
+        super.onModelChanged(modelInstance)
+        updateState()
+    }
 
     override fun createAnchor(): Anchor? {
         return super.createAnchor().also {
@@ -89,7 +88,7 @@ open class CursorNode(
     }
 
     open fun updateState() {
-        model?.materialInstances?.forEach {
+        modelInstance?.materialInstances?.forEach {
             it.setEmissiveColor(
                 when {
                     isClicked -> colorClicked
