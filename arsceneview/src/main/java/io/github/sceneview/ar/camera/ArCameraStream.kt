@@ -29,7 +29,7 @@ import java.nio.ShortBuffer
  */
 class ArCameraStream(
     private val lifecycle: ArSceneLifecycle,
-    val standardMaterialLocation: String = "sceneview/materials/camera_stream_standard.filamat",
+    val flatMaterialLocation: String = "sceneview/materials/camera_stream_flat.filamat",
     val depthOcclusionMaterialLocation: String = "sceneview/materials/camera_stream_depth.filamat"
 ) : ArSceneLifecycleObserver {
 
@@ -44,22 +44,22 @@ class ArCameraStream(
             renderable.setPriority(value)
         }
 
-    private var _standardMaterial: MaterialInstance? = null
+    private var _flatMaterial: MaterialInstance? = null
 
     /**
      * ### Flat camera material
      */
-    var standardMaterial: MaterialInstance
-        get() = _standardMaterial ?: MaterialLoader.createMaterial(
+    var flatMaterial: MaterialInstance
+        get() = _flatMaterial ?: MaterialLoader.createMaterial(
             context = sceneView.context,
             lifecycle = lifecycle,
-            filamatFileLocation = standardMaterialLocation
+            filamatFileLocation = flatMaterialLocation
         ).apply {
             setParameter("uvTransform", Transform())
-            _standardMaterial = this
+            _flatMaterial = this
         }
         set(value) {
-            _standardMaterial = value
+            _flatMaterial = value
         }
 
     private var _depthOcclusionMaterial: MaterialInstance? = null
@@ -143,7 +143,7 @@ class ArCameraStream(
                     // Create screen quad geometry to camera stream to
                     setBuffer(ShortBuffer.wrap(INDICES))
                 })
-        .material(0, standardMaterial)
+        .material(0, flatMaterial)
         .build(lifecycle)
 
     /**
@@ -303,13 +303,13 @@ class ArCameraStream(
         materialInstance = if (isDepthOcclusionEnabled && sceneView.depthEnabled) {
             depthOcclusionMaterial
         } else {
-            standardMaterial
+            flatMaterial
         }
     }
 
     fun destroy() {
         lifecycle.removeObserver(this)
-        _standardMaterial?.destroy()
+        _flatMaterial?.destroy()
         _depthOcclusionMaterial?.destroy()
         vertexBuffer.destroy()
         renderable.destroyRenderable()
