@@ -1,0 +1,1 @@
+This is a module for storing common dependencies, resources and code that are used in the samples but shouldn't be included in the main library
