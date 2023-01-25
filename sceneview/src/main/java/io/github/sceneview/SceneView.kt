@@ -329,7 +329,7 @@ open class SceneView @JvmOverloads constructor(
         lifecycle.currentState = event.targetState
     }
 
-    override var _children = listOf<Node>()
+    override var children = listOf<Node>()
 
     // TODO: Move to internal when ViewRenderable is kotlined
     val viewAttachmentManager by lazy { ViewAttachmentManager(context, this) }
