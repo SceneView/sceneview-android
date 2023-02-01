@@ -198,6 +198,10 @@ open class ArModelNode : ArNode {
 
     var onHitResult: ((node: ArModelNode, hitResult: HitResult) -> Unit)? = null
 
+    constructor(a: Anchor): this() {
+        anchor = a
+    }
+
     /**
      * ### Create an AR positioned 3D model node
      *
