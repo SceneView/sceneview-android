@@ -1,0 +1,30 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="io.github.sceneview.sample.arcursorplacement.io.github.sceneview.sample.arpointcloud.Activity">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/containerFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?actionBarSize"
+        android:fitsSystemWindows="true"
+        android:minHeight="?attr/actionBarSize"
+        android:popupTheme="@style/ThemeOverlay.MaterialComponents.ActionBar"
+        android:theme="@style/Theme.SceneViewSample.Toolbar"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
