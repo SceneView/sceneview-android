@@ -3,6 +3,7 @@ package io.github.sceneview.model
 import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
+import com.gorisse.thomas.lifecycle.doOnDestroy
 import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament.assetLoader
 import io.github.sceneview.Filament.resourceLoader
@@ -66,10 +67,10 @@ object GLBLoader {
                 it.setScreenSpaceContactShadows(true)
             }
 
-            lifecycle?.observe(onDestroy = {
+            lifecycle?.doOnDestroy {
                 // Prevent double destroy in case of manually destroyed
                 runCatching { asset.destroy() }
-            })
+            }
         }
     }
 
