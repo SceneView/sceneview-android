@@ -73,6 +73,12 @@ object GLBLoader {
         }
     }
 
+    suspend fun loadInstancedModel(context: Context,glbFileLocation:String,count: Int) = context.useFileBufferNotNull(glbFileLocation){buffer ->
+        withContext(Dispatchers.Main){
+            createInstancedModel(buffer,count)
+        }
+    }
+
     private fun createInstancedModel(
         buffer: Buffer,
         count: Int,
