@@ -1,8 +1,13 @@
 package io.github.sceneview.sample.arcursorplacement
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.media.MediaRecorder
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.app.ActivityCompat
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -11,8 +16,12 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.CursorNode
 import io.github.sceneview.math.Position
+import io.github.sceneview.utils.SurfaceMirrorer
 import io.github.sceneview.utils.doOnApplyWindowInsets
+import java.io.IOException
 
+private const val LOG_TAG = "AudioRecordTest"
+private const val REQUEST_RECORD_AUDIO_PERMISSION = 200
 class MainFragment : Fragment(R.layout.fragment_main) {
 
     lateinit var sceneView: ArSceneView
@@ -29,6 +38,13 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             actionButton.isGone = value
         }
 
+    var fileName: String = ""
+    private var recorder: MediaRecorder? = null
+
+
+    // Requesting permission to RECORD_AUDIO
+    private var permissionToRecordAccepted = false
+    private var permissions: Array<String> = arrayOf(Manifest.permission.RECORD_AUDIO)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -39,7 +55,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
                     systemBarsInsets.bottom + bottomMargin
             }
-            setOnClickListener { cursorNode.createAnchor()?.let { anchorOrMove(it) } }
+//            setOnClickListener { cursorNode.createAnchor()?.let { anchorOrMove(it) } }
+            setOnClickListener { startRecording() }
         }
 
         sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
@@ -77,6 +94,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 actionButton.setIconResource(R.drawable.ic_target)
                 isLoading = false
             })
+        ActivityCompat.requestPermissions(requireActivity(), permissions, REQUEST_RECORD_AUDIO_PERMISSION)
+
     }
 
     fun anchorOrMove(anchor: Anchor) {
@@ -84,5 +103,51 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             sceneView.addChild(modelNode)
         }
         modelNode.anchor = anchor
+    }
+
+    fun startRecording() {
+        fileName = "${context?.externalCacheDir?.absolutePath}/audiorecordtest.mp4"
+        recorder = MediaRecorder().apply {
+            setVideoSource(MediaRecorder.VideoSource.SURFACE)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setOutputFile(fileName)
+            setVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT)
+//            setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT)
+            try {
+                prepare()
+            } catch (e: IOException) {
+                Log.e(LOG_TAG, "prepare() failed")
+            }
+
+            start()
+            val surfaceMirrorer = SurfaceMirrorer(sceneView.lifecycle)
+            surfaceMirrorer.startMirroring(this.surface)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopRecording()
+    }
+    private fun stopRecording() {
+        recorder?.apply {
+            stop()
+            release()
+        }
+        recorder = null
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        permissionToRecordAccepted = if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        } else {
+            false
+        }
+        if (!permissionToRecordAccepted) activity?.finish()
     }
 }
