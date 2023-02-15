@@ -40,6 +40,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     var fileName: String = ""
     private var recorder: MediaRecorder? = null
+    var isRecording = false
 
 
     // Requesting permission to RECORD_AUDIO
@@ -56,7 +57,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                     systemBarsInsets.bottom + bottomMargin
             }
 //            setOnClickListener { cursorNode.createAnchor()?.let { anchorOrMove(it) } }
-            setOnClickListener { startRecording() }
+            setOnClickListener {
+                if (isRecording){
+                    stopRecording()
+                    isRecording = false
+                } else {
+                    startRecording()
+                    isRecording = true
+                }}
         }
 
         sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
@@ -112,6 +120,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setOutputFile(fileName)
             setVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT)
+            setVideoSize(sceneView.width, sceneView.height)
 //            setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT)
             try {
                 prepare()
@@ -120,8 +129,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
 
             start()
-            val surfaceMirrorer = SurfaceMirrorer(sceneView.lifecycle)
-            surfaceMirrorer.startMirroring(this.surface)
+//            val surfaceMirrorer = SurfaceMirrorer(sceneView.lifecycle)
+            sceneView.startMirroring(this.surface)
+//            surfaceMirrorer.startMirroring(this.surface)
         }
     }
 
@@ -131,6 +141,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
     private fun stopRecording() {
         recorder?.apply {
+            sceneView.stopMirroring(surface)
             stop()
             release()
         }
