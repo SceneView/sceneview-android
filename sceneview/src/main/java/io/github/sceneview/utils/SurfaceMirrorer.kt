@@ -25,17 +25,12 @@ class SurfaceMirrorer(
 
     private val sceneView get() = lifecycle.sceneView
 
-    init {
-        lifecycle.addObserver(this)
-    }
-
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
-
+    fun copyFrame() {
         surfaceMirrors.forEach { mirror ->
             if (mirror.swapChain != null) {
                 sceneView.renderer.copyFrame(
                     mirror.swapChain!!,
+                    // TODO could this be moved to [startMirroring]?
                     getLetterboxViewport(sceneView.view.viewport, mirror.viewport),
                     sceneView.view.viewport,
                     Renderer.MIRROR_FRAME_FLAG_COMMIT
