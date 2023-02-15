@@ -103,16 +103,10 @@ class ArSession(
 
     fun update(frameTime: FrameTime): ArFrame? {
         // Check if no frame or same timestamp, no drawing.
-        return try {
-            super.update()?.takeIf {
-                it.timestamp != (currentFrame?.frame?.timestamp ?: 0) && it.camera != null
-            }?.let { frame ->
-                ArFrame(this, frameTime, frame).also {
-                    currentFrame = it
-                }
+        return super.update()?.let { frame ->
+            ArFrame(this, frameTime, frame).also {
+                currentFrame = it
             }
-        } catch (e: Exception) {
-            null
         }
     }
 
