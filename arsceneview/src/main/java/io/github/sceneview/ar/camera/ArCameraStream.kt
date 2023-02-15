@@ -168,7 +168,13 @@ class ArCameraStream(
     /**
      * The init is done when we have the session frame size
      */
-    var cameraTextures: List<Texture>? = null
+    var cameraTextures: Map<Int, Texture> = cameraTextureIds.associateWith { cameraTextureId ->
+        Texture.Builder()
+            .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+            .format(Texture.InternalFormat.RGB8)
+            .importTexture(cameraTextureId.toLong())
+            .build(lifecycle)
+    }
 
     /**
      * We apply the multithreaded actual rendering texture
@@ -182,10 +188,12 @@ class ArCameraStream(
     /**
      * ### Extracted texture from the session depth image
      */
-    var depthTexture: Texture? = null
-        set(value) {
-            field = value
-            value?.let { depthOcclusionMaterial.setTexture(MATERIAL_DEPTH_TEXTURE, value) }
+    var depthTexture: Texture? = Texture.Builder()
+        .sampler(Texture.Sampler.SAMPLER_2D)
+        .format(Texture.InternalFormat.RG8)
+        .levels(1)
+        .build(lifecycle).also {
+            depthOcclusionMaterial.setTexture(MATERIAL_DEPTH_TEXTURE, it)
         }
 
     private val uvCoordinates: FloatBuffer =
@@ -229,28 +237,7 @@ class ArCameraStream(
             hasSetTextureNames = true
         }
 
-        // Setup External Camera Texture if needed
-        val (width, height) = arFrame.camera.textureIntrinsics.imageDimensions
-        // The ExternalTexture can't be created until we receive the first AR Core Frame so
-        // that we can access the width and height of the camera texture. Return early if
-        // the External Texture hasn't been created yet so we don't start rendering until we
-        // have a valid texture. This will be called again when the ExternalTexture is
-        // created.
-        val cameraTextures = cameraTextures?.takeIf {
-            it[0].getWidth(0) == width && it[0].getHeight(0) == height
-        } ?: cameraTextureIds.map { cameraTextureId ->
-            Texture.Builder()
-                .width(width)
-                .height(height)
-                .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                .format(Texture.InternalFormat.RGB8)
-                .importTexture(cameraTextureId.toLong())
-                .build(lifecycle)
-        }.also { textures ->
-            cameraTextures?.forEach { it.destroy() }
-            cameraTextures = textures
-        }
-        cameraTexture = cameraTextures.getOrNull(cameraTextureIds.indexOf(frame.cameraTextureName))
+        cameraTexture = cameraTextures[frame.cameraTextureName]
 
         // Recalculate camera Uvs if necessary.
         if (transformedUvCoordinates == null || frame.hasDisplayGeometryChanged()) {
@@ -289,24 +276,11 @@ class ArCameraStream(
                 else -> null
             }?.let { depthImage ->
                 // Recalculate Occlusion
-                val depthTexture = depthTexture?.takeIf {
-                    it.getWidth(0) == depthImage.width &&
-                            it.getHeight(0) == depthImage.height
-                } ?: Texture.Builder()
-                    .width(depthImage.width)
-                    .height(depthImage.height)
-                    .sampler(Texture.Sampler.SAMPLER_2D)
-                    .format(Texture.InternalFormat.RG8)
-                    .levels(1)
-                    .build(lifecycle).also {
-                        depthTexture?.destroy()
-                        depthTexture = it
-                    }
                 // To solve a problem with a to early released DepthImage the ByteBuffer which holds
                 // all necessary data is cloned. The cloned ByteBuffer is unaffected of a released
                 // DepthImage and therefore produces not a flickering result.
                 val buffer = depthImage.planes[0].buffer//.clone()
-                depthTexture.setImage(
+                depthTexture?.setImage(
                     0,
                     PixelBufferDescriptor(
                         buffer,
@@ -337,7 +311,7 @@ class ArCameraStream(
         _depthOcclusionMaterial?.destroy()
         vertexBuffer.destroy()
         renderable.destroyRenderable()
-        cameraTextures?.forEach { it.destroy() }
+        cameraTextures.values.forEach { it.destroy() }
         depthTexture?.destroy()
         uvCoordinates.clear()
         transformedUvCoordinates?.clear()
