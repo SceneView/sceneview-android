@@ -15,6 +15,9 @@ buildscript {
 }
 
 apply plugin: 'org.jetbrains.dokka'
+apply plugin: 'maven'
+
+group = 'com.github.sameerjj'
 
 afterEvaluate {
     if (tasks.findByName('dokkaGfmPartial') == null) {
