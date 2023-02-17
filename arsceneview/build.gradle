@@ -64,6 +64,6 @@ dependencies {
 }
 
 apply plugin: "com.vanniktech.maven.publish"
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 group = 'com.github.sameerjj'
