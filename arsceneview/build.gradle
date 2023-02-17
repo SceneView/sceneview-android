@@ -43,11 +43,6 @@ android {
     androidResources {
         noCompress 'filamat', 'ktx'
     }
-    publishing {
-        singleVariant('release') {
-            withSourcesJar()
-        }
-    }
 }
 
 dependencies {
