@@ -63,7 +63,6 @@ dependencies {
     api "com.google.ar:core:$arcore_version"
 }
 
-apply plugin: "com.vanniktech.maven.publish"
 apply plugin: 'maven-publish'
 
 group = 'com.github.sameerjj'
