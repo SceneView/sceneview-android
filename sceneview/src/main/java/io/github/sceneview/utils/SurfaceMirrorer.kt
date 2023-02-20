@@ -25,7 +25,13 @@ class SurfaceMirrorer(
 
     private val sceneView get() = lifecycle.sceneView
 
-    fun copyFrame() {
+    init {
+        lifecycle.addObserver(this)
+    }
+
+    override fun onFrame(frameTime: FrameTime) {
+        super.onFrame(frameTime)
+
         surfaceMirrors.forEach { mirror ->
             if (mirror.swapChain != null) {
                 sceneView.renderer.copyFrame(
