@@ -70,8 +70,7 @@ public class ExternalTexture {
         // Create the filament texture.
         filamentTexture = TextureKt.build(new Texture.Builder()
                         .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                        .format(Texture.InternalFormat.RGB8)
-                , lifecycle);
+                        .format(Texture.InternalFormat.RGB8));
 
         TextureKt.setExternalStream(filamentTexture, filamentStream);
     }

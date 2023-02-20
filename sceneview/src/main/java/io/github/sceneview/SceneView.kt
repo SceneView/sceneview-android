@@ -32,7 +32,6 @@ import com.google.ar.sceneform.rendering.ResourceManager
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import com.gorisse.thomas.lifecycle.getActivity
 import io.github.sceneview.Filament.engine
-import io.github.sceneview.Filament.resourceLoader
 import io.github.sceneview.Filament.transformManager
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.loadEnvironment
@@ -278,7 +277,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
     open val selectionVisualizer: (() -> Node)? = {
-        ModelNode(context, lifecycle, "sceneview/models/node_selector.glb").apply {
+        ModelNode(context, "sceneview/models/node_selector.glb").apply {
             isSelectable = false
             collisionShape = null
         }
@@ -486,7 +485,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
         // Allow the resource loader to finalize textures that have become ready.
-        resourceLoader.asyncUpdateLoad()
+//        resourceLoader.asyncUpdateLoad()
 
         transformManager.openLocalTransformTransaction()
 

@@ -91,7 +91,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             isVisible = false
             loadModelGlbAsync(
                 context = requireContext(),
-                lifecycle = lifecycle,
                 glbFileLocation = "models/spiderbot.glb"
             ) {
                 isLoading = false

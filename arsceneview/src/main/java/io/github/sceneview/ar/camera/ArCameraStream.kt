@@ -173,7 +173,7 @@ class ArCameraStream(
             .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
             .format(Texture.InternalFormat.RGB8)
             .importTexture(cameraTextureId.toLong())
-            .build(lifecycle)
+            .build()
     }
 
     /**
@@ -192,7 +192,7 @@ class ArCameraStream(
         .sampler(Texture.Sampler.SAMPLER_2D)
         .format(Texture.InternalFormat.RG8)
         .levels(1)
-        .build(lifecycle).also {
+        .build().also {
             depthOcclusionMaterial.setTexture(MATERIAL_DEPTH_TEXTURE, it)
         }
 
