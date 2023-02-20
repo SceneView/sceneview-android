@@ -1,9 +1,7 @@
 package io.github.sceneview.model
 
 import android.content.Context
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.coroutineScope
-import com.gorisse.thomas.lifecycle.observe
+import androidx.lifecycle.LifecycleCoroutineScope
 import io.github.sceneview.Filament.assetLoader
 import io.github.sceneview.Filament.resourceLoader
 import io.github.sceneview.renderable.setScreenSpaceContactShadows
@@ -29,16 +27,15 @@ object GLTFLoader {
         gltfFileLocation: String,
         resourceLocationResolver: (String) -> String = { resourceFileName: String ->
             "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
-        },
-        lifecycle: Lifecycle? = null
+        }
     ): Model? = context.useFileBufferNotNull(gltfFileLocation) { buffer ->
         withContext(Dispatchers.Main) {
             val buffers = mutableListOf<Buffer>()
-            createModel(buffer, { resourceFileName ->
+            createModel(buffer) { resourceFileName ->
                 context.fileBuffer(resourceLocationResolver(resourceFileName))!!.also {
                     buffers += it
                 }
-            }, lifecycle).also {
+            }.also {
                 buffers.forEach { it.clear() }
             }
         }
@@ -55,15 +52,15 @@ object GLTFLoader {
      *
      */
     fun loadModelAsync(
+        coroutineScope: LifecycleCoroutineScope,
         context: Context,
-        lifecycle: Lifecycle,
         gltfFileLocation: String,
         resourceLocationResolver: (String) -> String = { resourceFileName: String ->
             "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
         },
         result: (Model?) -> Unit
-    ) = lifecycle.coroutineScope.launchWhenCreated {
-        result(loadModel(context, gltfFileLocation, resourceLocationResolver, lifecycle))
+    ) = coroutineScope.launchWhenCreated {
+        result(loadModel(context, gltfFileLocation, resourceLocationResolver))
     }
 
     /**
@@ -71,10 +68,9 @@ object GLTFLoader {
      */
     suspend fun createModel(
         buffer: Buffer,
-        resourceBufferResolver: suspend (String) -> Buffer,
-        lifecycle: Lifecycle? = null
+        resourceBufferResolver: suspend (String) -> Buffer
     ): Model? = withContext(Dispatchers.Main) {
-        assetLoader.createAsset(buffer)?.also { asset ->
+        assetLoader?.createAsset(buffer)?.also { asset ->
             for (uri in asset.resourceUris) {
                 val resourceBuffer = withContext(Dispatchers.IO) {
                     resourceBufferResolver(uri)
@@ -82,17 +78,12 @@ object GLTFLoader {
                 resourceLoader.addResourceData(uri, resourceBuffer)
             }
             resourceLoader.loadResources(asset)
-            runCatching { asset.releaseSourceData() }
+//            runCatching { asset.releaseSourceData() }
 
             //TODO: Used by Filament ModelViewer, see if it's usefull
             asset.renderableEntities.forEach {
                 it.setScreenSpaceContactShadows(true)
             }
-
-            lifecycle?.observe(onDestroy = {
-                // Prevent double destroy in case of manually destroyed
-                runCatching { asset.destroy() }
-            })
         }
     }
 }

@@ -99,7 +99,7 @@ open class ModelNode private constructor(
         nodeManager,
         model.instance
     ) {
-        model.releaseSourceData()
+        runCatching { model.releaseSourceData() }
     }
 
     /**

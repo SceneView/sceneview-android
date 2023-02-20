@@ -1,7 +1,6 @@
 package io.github.sceneview.ar.node
 
 import android.content.Context
-import androidx.lifecycle.Lifecycle
 import com.google.ar.core.*
 import com.google.ar.core.Config.PlaneFindingMode
 import io.github.sceneview.SceneView
@@ -254,7 +253,6 @@ open class ArModelNode : ArNode {
      */
     constructor(
         context: Context,
-        lifecycle: Lifecycle? = null,
         modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
@@ -264,7 +262,6 @@ open class ArModelNode : ArNode {
     ) : this() {
         loadModelGlbAsync(
             context,
-            lifecycle,
             modelGlbFileLocation,
             autoAnimate,
             scaleToUnits,

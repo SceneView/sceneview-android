@@ -82,7 +82,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
         }
 
-        cursorNode = CursorNode(context = requireContext(), lifecycle = lifecycle).apply {
+        cursorNode = CursorNode(context = requireContext()).apply {
             onHitResult = { node, _ ->
                 if (!isLoading) {
                     anchorButton.isGone = !node.isTracking
@@ -94,7 +94,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         isLoading = true
         modelNode = ArModelNode(
             context = requireContext(),
-            lifecycle = lifecycle,
             modelGlbFileLocation = "models/spiderbot.glb",
             onLoaded = { modelInstance ->
                 anchorButton.text = getString(R.string.move_object)
