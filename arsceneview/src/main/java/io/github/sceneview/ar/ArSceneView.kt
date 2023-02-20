@@ -400,7 +400,8 @@ open class ArSceneView @JvmOverloads constructor(
         arSession?.update(frameTime)?.let { arFrame ->
             // During startup the camera system may not produce actual images immediately.
             // In this common case, a frame with timestamp = 0 will be returned.
-            if (arFrame.frame.timestamp != 0L) {
+            if (arFrame.frame.timestamp != 0L && arFrame.time != currentFrame?.time) {
+                currentFrame = arFrame
                 doArFrame(arFrame)
                 super.doFrame(frameTime)
             }
@@ -413,7 +414,6 @@ open class ArSceneView @JvmOverloads constructor(
      * The listener will be called in the order in which they were added.
      */
     protected open fun doArFrame(arFrame: ArFrame) {
-        currentFrame = arFrame
         // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
         // You will say thanks when still have battery after a long day debugging an AR app.
         // ...and it's better for your users
