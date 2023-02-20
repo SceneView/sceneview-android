@@ -641,6 +641,14 @@ open class SceneView @JvmOverloads constructor(
         surfaceMirrorer.startMirroring(mediaRecorder.surface)
     }
 
+    fun startMirroring(surface: Surface) {
+        surfaceMirrorer.startMirroring(surface)
+    }
+
+    fun stopMirroring(surface: Surface) {
+        surfaceMirrorer.stopMirroring(surface)
+    }
+
     fun stopRecording(mediaRecorder: MediaRecorder) {
         surfaceMirrorer.stopMirroring(mediaRecorder.surface)
         mediaRecorder.stop()

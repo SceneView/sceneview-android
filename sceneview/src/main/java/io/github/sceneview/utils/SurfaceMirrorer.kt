@@ -36,6 +36,7 @@ class SurfaceMirrorer(
             if (mirror.swapChain != null) {
                 sceneView.renderer.copyFrame(
                     mirror.swapChain!!,
+                    // TODO could this be moved to [startMirroring]?
                     getLetterboxViewport(sceneView.view.viewport, mirror.viewport),
                     sceneView.view.viewport,
                     Renderer.MIRROR_FRAME_FLAG_COMMIT
