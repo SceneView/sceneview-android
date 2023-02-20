@@ -86,6 +86,8 @@ open class ViewNode : Node {
     }
 
     override fun onFrame(frameTime: FrameTime) {
+        super.onFrame(frameTime)
+
         if (isAttached) {
             renderableInstance?.prepareForDraw(sceneView)
 
@@ -103,7 +105,6 @@ open class ViewNode : Node {
                 )
             }
         }
-        super.onFrame(frameTime)
     }
 
     open fun onViewLoaded(renderableInstance: RenderableInstance, view: View) {
