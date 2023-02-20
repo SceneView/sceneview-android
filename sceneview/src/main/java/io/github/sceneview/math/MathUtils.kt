@@ -3,6 +3,7 @@ package io.github.sceneview.math
 import com.google.ar.sceneform.math.MathHelper
 import com.google.ar.sceneform.math.Vector3
 import dev.romainguy.kotlin.math.*
+import kotlin.math.absoluteValue
 
 const val DEFAULT_EPSILON = 0.001f
 
@@ -126,3 +127,11 @@ fun lookAt(eye: Position, target: Position): Mat4 {
 
 fun lookTowards(eye: Position, direction: Direction) =
     lookTowards(eye, direction, Direction(y = 1.0f)).toQuaternion()
+
+fun Float.equalsWithDelta(v: Float, delta: Float) = (this - v).absoluteValue < delta
+
+fun Float4.equalsWithDelta(v: Float4, delta: Float = DEFAULT_EPSILON) =
+    x.equalsWithDelta(v.x, delta) && y.equalsWithDelta(v.y, delta) && z.equalsWithDelta(v.z, delta) && w.equalsWithDelta(v.w, delta)
+
+fun Mat4.equalsWithDelta(m: Mat4, delta: Float = DEFAULT_EPSILON) =
+    x.equalsWithDelta(m.x, delta) && y.equalsWithDelta(m.y, delta) && z.equalsWithDelta(m.z, delta) && w.equalsWithDelta(m.w, delta)

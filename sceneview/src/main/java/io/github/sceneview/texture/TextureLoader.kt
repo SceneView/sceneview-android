@@ -61,7 +61,7 @@ object TextureLoader {
             .format(internalFormat(type))
             // This tells Filament to figure out the number of mip levels
             .levels(0xff)
-            .build(lifecycle).apply {
+            .build().apply {
                 // TextureHelper offers a method that skips the copy of the bitmap into a
                 // ByteBuffer
                 TextureHelper.setBitmap(Filament.engine, this, 0, bitmap)

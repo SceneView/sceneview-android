@@ -16,6 +16,7 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.toLinearSpace
 import io.github.sceneview.scene.exposureFactor
 import io.github.sceneview.texture.build
+import io.github.sceneview.texture.destroy
 import io.github.sceneview.texture.setImage
 import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.colorOf
@@ -373,8 +374,9 @@ class LightEstimator(
                                         .levels(0xff)
                                         .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
                                         .format(Texture.InternalFormat.R11F_G11F_B10F)
-                                        .build(lifecycle)
+                                        .build()
                                         .also {
+                                            runCatching { cubeMapTexture?.destroy() }
                                             cubeMapTexture = it
                                         }
                                     texture.setImage(

@@ -242,8 +242,8 @@ class ModelLoader(engine: Engine, context: Context) {
     }
 
     fun destroyModel(model: Model) {
-        model.releaseSourceData()
-        assetLoader.destroyAsset(model)
+//        model.releaseSourceData()
+//        assetLoader.destroyAsset(model)
         models -= model
     }
 

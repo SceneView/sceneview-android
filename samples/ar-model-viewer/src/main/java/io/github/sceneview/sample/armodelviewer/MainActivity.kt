@@ -142,7 +142,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             applyPoseRotation = model.applyPoseRotation
             loadModelGlbAsync(
                 context = this@MainActivity,
-                lifecycle = lifecycle,
                 glbFileLocation = model.fileLocation,
                 autoAnimate = true,
                 scaleToUnits = model.scaleUnits,

@@ -1,7 +1,6 @@
 package io.github.sceneview.node
 
 import android.content.Context
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.gltfio.Animator
 import com.google.ar.sceneform.math.Vector3
@@ -135,6 +134,8 @@ open class ModelNode : RenderableNode {
     override val worldTransform: Transform
         get() = super.worldTransform * modelTransform
 
+    private var loadedModel: Model? = null
+
     /**
      * ### Construct a [ModelNode] with it Position, Rotation and Scale
      *
@@ -188,7 +189,6 @@ open class ModelNode : RenderableNode {
      */
     constructor(
         context: Context,
-        lifecycle: Lifecycle? = null,
         modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleUnits: Float? = null,
@@ -198,7 +198,6 @@ open class ModelNode : RenderableNode {
     ) : this() {
         loadModelGlbAsync(
             context,
-            lifecycle,
             modelGlbFileLocation,
             autoAnimate,
             scaleUnits,
@@ -298,14 +297,14 @@ open class ModelNode : RenderableNode {
     suspend fun loadModelGlb(
         context: Context,
         glbFileLocation: String,
-        lifecycle: Lifecycle,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null
     ): ModelInstance? {
         return try {
-            GLBLoader.loadModel(context, glbFileLocation, lifecycle)?.also { model ->
+            GLBLoader.loadModel(context, glbFileLocation)?.also { model ->
+                loadedModel = model
                 withContext(Dispatchers.Main) {
                     setModelInstance(model.instance, autoAnimate, scaleToUnits, centerOrigin)
                     onModelLoaded(model.instance)
@@ -345,7 +344,6 @@ open class ModelNode : RenderableNode {
      */
     fun loadModelGlbAsync(
         context: Context,
-        lifecycle: Lifecycle? = null,
         glbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
@@ -353,24 +351,18 @@ open class ModelNode : RenderableNode {
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
     ): ModelNode {
-        if (lifecycle != null) {
-            lifecycle.coroutineScope.launchWhenCreated {
+        doOnAttachedToScene { sceneView ->
+            sceneView.lifecycle.coroutineScope.launchWhenCreated {
                 loadModelGlb(
                     context,
                     glbFileLocation,
-                    lifecycle,
                     autoAnimate,
                     scaleToUnits,
                     centerOrigin,
                     onError
-                )?.let { onLoaded?.invoke(it) }
-            }
-        } else {
-            doOnAttachedToScene { sceneView ->
-                loadModelGlbAsync(
-                    context, sceneView.lifecycle, glbFileLocation, autoAnimate, scaleToUnits,
-                    centerOrigin, onError, onLoaded
-                )
+                )?.also {
+                    onLoaded?.invoke(it)
+                }
             }
         }
         return this
@@ -407,15 +399,15 @@ open class ModelNode : RenderableNode {
         resourceLocationResolver: (String) -> String = { resourceFileName: String ->
             "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
         },
-        lifecycle: Lifecycle,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null
     ): Model? {
         return try {
-            GLTFLoader.loadModel(context, gltfFileLocation, resourceLocationResolver, lifecycle)
+            GLTFLoader.loadModel(context, gltfFileLocation, resourceLocationResolver)
                 ?.also { model ->
+                    loadedModel = model
                     withContext(Dispatchers.Main) {
                         setModelInstance(model.instance, autoAnimate, scaleToUnits, centerOrigin)
                         onModelLoaded(model.instance)
@@ -455,7 +447,6 @@ open class ModelNode : RenderableNode {
      */
     fun loadModelGltfAsync(
         context: Context,
-        lifecycle: Lifecycle? = null,
         gltfFileLocation: String,
         resourceLocationResolver: (String) -> String = { resourceFileName: String ->
             "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
@@ -466,32 +457,19 @@ open class ModelNode : RenderableNode {
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((model: Model) -> Unit)? = null
     ): ModelNode {
-        if (lifecycle != null) {
-            lifecycle.coroutineScope.launchWhenCreated {
+        doOnAttachedToScene { sceneView ->
+            sceneView.lifecycle.coroutineScope.launchWhenCreated {
                 loadModelGltf(
                     context,
                     gltfFileLocation,
                     resourceLocationResolver,
-                    lifecycle,
                     autoAnimate,
                     scaleToUnits,
                     centerOrigin,
                     onError
-                )?.let { onLoaded?.invoke(it) }
-            }
-        } else {
-            doOnAttachedToScene { sceneView ->
-                loadModelGltfAsync(
-                    context,
-                    sceneView.lifecycle,
-                    gltfFileLocation,
-                    resourceLocationResolver,
-                    autoAnimate,
-                    scaleToUnits,
-                    centerOrigin,
-                    onError,
-                    onLoaded
-                )
+                )?.also {
+                    onLoaded?.invoke(it)
+                }
             }
         }
         return this
@@ -588,10 +566,7 @@ open class ModelNode : RenderableNode {
 
     /** ### Detach and destroy the node */
     override fun destroy() {
-        modelInstance?.destroy()
-        if (model?.instance == modelInstance?.model) {
-            model?.destroy()
-        }
+        loadedModel?.destroy()
         super.destroy()
     }
 

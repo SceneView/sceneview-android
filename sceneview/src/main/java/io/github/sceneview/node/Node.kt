@@ -458,8 +458,8 @@ open class Node(
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
-        if (smoothTransform != transform) {
-            if (transform != lastFrameTransform) {
+        if (!smoothTransform.equalsWithDelta(transform)) {
+            if(transform != lastFrameTransform) {
                 // Stop smooth if any of the position/rotation/scale has changed meanwhile
                 smoothTransform = transform
             } else {
@@ -471,12 +471,14 @@ open class Node(
                     speed = smoothSpeed
                 )
             }
+        } else {
+            smoothTransform = transform
         }
         lastFrameTransform = transform
 
-        transformInstance?.takeIf { worldTransform != lastFrameWorldTransform }?.let {
-            transformManager.setTransform(it, worldTransform)
-        }
+       if(worldTransform != lastFrameWorldTransform) {
+           transformInstance?.let { transformManager.setTransform(it, worldTransform) }
+       }
         lastFrameWorldTransform = worldTransform
 
         onFrame.forEach { it(frameTime, this) }
