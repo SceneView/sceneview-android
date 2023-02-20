@@ -14,10 +14,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
+import io.github.sceneview.ar.arcore.LightEstimationMode
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.model.destroy
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.doOnApplyWindowInsets
 import kotlinx.coroutines.launch
@@ -84,7 +86,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         super.onViewCreated(view, savedInstanceState)
 
         sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
-            planeRenderer.isVisible = false
+            planeRenderer.isEnabled = false
+            lightEstimationMode = LightEstimationMode.DISABLED
             onArFrame = this@MainFragment::onArFrame
         }
 
@@ -217,6 +220,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 } else 0.0
                 scoreText.text = getString(R.string.score, score, pointCloudNodes.size)
             }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        pointCloudModel?.destroy()
     }
 
     override fun onPause() {

@@ -67,12 +67,14 @@ object Filament {
     private var _assetLoader: AssetLoader? = null
 
     @JvmStatic
-    val assetLoader: AssetLoader
-        get() = _assetLoader ?: AssetLoader(
-            engine,
-            materialProvider,
-            entityManager
-        ).also { _assetLoader = it }
+    val assetLoader: AssetLoader?
+        get() = _assetLoader ?: _engine?.get()?.let {
+            AssetLoader(
+                it,
+                materialProvider,
+                entityManager
+            ).also { _assetLoader = it }
+        }
 
     private var _iblPrefilter: IBLPrefilter? = null
 

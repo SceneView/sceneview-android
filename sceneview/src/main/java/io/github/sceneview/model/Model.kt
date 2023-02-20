@@ -2,13 +2,12 @@ package io.github.sceneview.model
 
 import com.google.android.filament.gltfio.Animator
 import com.google.android.filament.gltfio.FilamentAsset
-import io.github.sceneview.Filament
 import io.github.sceneview.Filament.assetLoader
 import io.github.sceneview.renderable.Renderable
 
 typealias Model = FilamentAsset
 
-fun Model.createInstance() = assetLoader.createInstance(this)
+fun Model.createInstance() = assetLoader?.createInstance(this)
 
 val Model.renderableNames get() = renderableEntities.map { getName(it) }
 
@@ -19,5 +18,5 @@ fun Animator.getAnimationIndex(animationName: String) =
     (0 until animationCount).firstOrNull { getAnimationName(it) == animationName }
 
 fun Model.destroy() {
-    runCatching { Filament.assetLoader.destroyAsset(this) }
+    runCatching { assetLoader?.destroyAsset(this) }
 }
