@@ -508,6 +508,7 @@ open class SceneView @JvmOverloads constructor(
         // Render the scene, unless the renderer wants to skip the frame.
         if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
             renderer.render(view)
+            surfaceMirrorer.onFrame()
             renderer.endFrame()
         }
     }

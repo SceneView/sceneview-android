@@ -13,7 +13,7 @@ import io.github.sceneview.SceneLifecycleObserver
  */
 class SurfaceMirrorer(
     private val lifecycle: SceneLifecycle
-) : SceneLifecycleObserver {
+) {
 
     data class SurfaceMirror(
         val surface: Surface,
@@ -25,12 +25,7 @@ class SurfaceMirrorer(
 
     private val sceneView get() = lifecycle.sceneView
 
-    init {
-        lifecycle.addObserver(this)
-    }
-
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
+    fun onFrame() {
 
         surfaceMirrors.forEach { mirror ->
             if (mirror.swapChain != null) {
