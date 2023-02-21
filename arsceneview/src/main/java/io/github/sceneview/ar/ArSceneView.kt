@@ -274,7 +274,13 @@ open class ArSceneView @JvmOverloads constructor(
             }
         }
 
-    val instructions = Instructions(lifecycle)
+    open var trackingFailureReason: TrackingFailureReason? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                onTrackingFailureChanged?.invoke(value)
+            }
+        }
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
@@ -335,6 +341,8 @@ open class ArSceneView @JvmOverloads constructor(
      * @see AugmentedFace.getTrackingState
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
+
+    var onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null
 
     override val cameraGestureDetector = null
     override val cameraManipulator = null
@@ -414,16 +422,22 @@ open class ArSceneView @JvmOverloads constructor(
      * The listener will be called in the order in which they were added.
      */
     protected open fun doArFrame(arFrame: ArFrame) {
+        val camera = arFrame.camera
+
         // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
         // You will say thanks when still have battery after a long day debugging an AR app.
         // ...and it's better for your users
-        activity.setKeepScreenOn(arFrame.camera.isTracking)
+        activity.setKeepScreenOn(camera.isTracking)
 
         arCameraStream.update(arFrame)
 
         // At the start of the frame, update the tracked pose of the camera
         // to use in any calculations during the frame.
         cameraNode.updateTrackedPose(arFrame.camera)
+
+        trackingFailureReason = if (!camera.isTracking) {
+            arFrame.camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
+        } else null
 
         if (onAugmentedImageUpdate.isNotEmpty()) {
             arFrame.updatedAugmentedImages.forEach { augmentedImage ->

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
@@ -17,6 +18,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Session
+import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.arcore.ArSession
 
 /**
@@ -229,4 +231,20 @@ class ARCore(
         // Create a session if Google Play Services for AR is installed and up to date.
         return ArSession(lifecycle, features)
     }
+}
+
+fun TrackingFailureReason.getDescription(context: Context) = when(this) {
+    TrackingFailureReason.NONE -> ""
+    TrackingFailureReason.BAD_STATE -> context.getString(R.string.sceneview_bad_state_message)
+    TrackingFailureReason.INSUFFICIENT_LIGHT -> context.getString(
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
+            R.string.sceneview_insufficient_light_message
+        } else {
+            R.string.sceneview_insufficient_light_android_s_message
+        }
+    )
+    TrackingFailureReason.EXCESSIVE_MOTION -> context.getString(R.string.sceneview_excessive_motion_message)
+    TrackingFailureReason.INSUFFICIENT_FEATURES -> context.getString(R.string.sceneview_insufficient_features_message)
+    TrackingFailureReason.CAMERA_UNAVAILABLE -> context.getString(R.string.sceneview_camera_unavailable_message)
+    else -> context.getString(R.string.sceneview_unknown_tracking_failure, this)
 }
