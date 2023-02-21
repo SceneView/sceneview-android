@@ -295,15 +295,12 @@ open class Node(
         set(value) {
             if (field != value) {
                 field = value
-                if (isVisibleInHierarchy) {
-                    sceneView?.scene?.addEntities(sceneEntities)
-                } else {
-                    sceneView?.scene?.removeEntities(sceneEntities)
-                }
+                updateVisibility()
             }
         }
 
-    open val isVisibleInHierarchy get() = isVisible && allParents.all { isVisible }
+    open val isVisibleInHierarchy: Boolean
+        get() = isVisible && (parentNode?.isVisibleInHierarchy ?: true)
 
     open var isPositionEditable = false
     open var isRotationEditable = false
@@ -459,7 +456,7 @@ open class Node(
         super.onFrame(frameTime)
 
         if (!smoothTransform.equalsWithDelta(transform)) {
-            if(transform != lastFrameTransform) {
+            if (transform != lastFrameTransform) {
                 // Stop smooth if any of the position/rotation/scale has changed meanwhile
                 smoothTransform = transform
             } else {
@@ -476,9 +473,9 @@ open class Node(
         }
         lastFrameTransform = transform
 
-       if(worldTransform != lastFrameWorldTransform) {
-           transformInstance?.let { transformManager.setTransform(it, worldTransform) }
-       }
+        if (worldTransform != lastFrameWorldTransform) {
+            transformInstance?.let { transformManager.setTransform(it, worldTransform) }
+        }
         lastFrameWorldTransform = worldTransform
 
         onFrame.forEach { it(frameTime, this) }
@@ -772,6 +769,15 @@ open class Node(
      */
     fun isDescendantOf(ancestor: NodeParent): Boolean =
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
+
+    open fun updateVisibility() {
+        if (isVisibleInHierarchy) {
+            sceneView?.scene?.addEntities(sceneEntities)
+        } else {
+            sceneView?.scene?.removeEntities(sceneEntities)
+        }
+        children.forEach { it.updateVisibility() }
+    }
 
     open var selectionVisualizer: Node? = null
         set(value) {
