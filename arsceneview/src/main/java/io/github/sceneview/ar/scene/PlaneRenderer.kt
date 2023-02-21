@@ -34,7 +34,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
 
     private val sceneView get() = lifecycle.sceneView
 
-    private val visualizers: MutableMap<Plane, PlaneVisualizer> = HashMap()
+    private val visualizers = mutableMapOf<Plane, PlaneVisualizer>()
 
     // TODO: Remove when it isn't used in PlaneVisualizer
     private var planeMaterial: Material? = null
@@ -62,7 +62,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
      *
      * The default mode is `RENDER_TOP_MOST`
      */
-    var planeRendererMode = PlaneRendererMode.RENDER_TOP_MOST
+    var planeRendererMode = PlaneRendererMode.RENDER_CENTER
 
     // Distance from the camera to last plane hit, default value is 4 meters (standing height).
     private var planeHitDistance = 4.0f
@@ -129,25 +129,34 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             if (arFrame.fps(this.arFrame) < maxHitTestPerSecond) {
                 this.arFrame = arFrame
                 try {
-                    // Do a hitTest on the current frame. The result is used to calculate a
-                    // focusPoint and to render the top most plane Trackable if planeRendererMode is
-                    // set to RENDER_TOP_MOST
-                    val hitResult = arFrame.hitTest(
-                        position = Position(x = 0.0f, y = 0.0f),
-                        plane = true,
-                        depth = false,
-                        instant = false
-                    )
-
-                    // Calculate the focusPoint. It is used to determine the position of
-                    // the visualized grid.
-                    val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-                    materialInstance?.setParameter(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
-
                     if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
                         renderAll(arFrame.updatedPlanes)
-                    } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST && hitResult != null) {
-                        renderPlane(hitResult.trackable as Plane)
+                    } else if (planeRendererMode == PlaneRendererMode.RENDER_CENTER) {
+                        // Do a hitTest on the current frame. The result is used to calculate a
+                        // focusPoint and to render the top most plane Trackable if planeRendererMode is
+                        // set to RENDER_TOP_MOST
+                        val hitResult = arFrame.hitTest(
+                            position = Position(x = 0.0f, y = 0.0f),
+                            plane = true,
+                            depth = false,
+                            instant = false
+                        )
+                        if (hitResult != null) {
+                            val centerPlane = hitResult.trackable as? Plane
+                            if (centerPlane != null) {
+                                // Calculate the focusPoint. It is used to determine the position of
+                                // the visualized grid.
+//                                val focusPoint = getFocusPoint(arFrame.frame, hitResult)
+//                                materialInstance?.setParameter(
+//                                    MATERIAL_SPOTLIGHT_FOCUS_POINT,
+//                                    focusPoint
+//                                )
+                                renderPlane(centerPlane)
+                            }
+                            visualizers.forEach { (plane, visualizer) ->
+                                visualizer.setVisible(plane == centerPlane)
+                            }
+                        }
                     }
 
                     // Check for not tracking Plane-Trackables and remove them.
@@ -188,22 +197,24 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
     private fun renderPlane(plane: Plane) {
         // Find the plane visualizer if it already exists.
         // If not, create a new plane visualizer for this plane.
-        val planeVisualizer = visualizers[plane]
-            ?: PlaneVisualizer(sceneView, plane).apply {
-                if (planeMaterial != null) {
-                    setPlaneMaterial(planeMaterial)
+        if (plane.trackingState == TrackingState.TRACKING || plane.subsumedBy == null) {
+            val planeVisualizer = visualizers[plane]
+                ?: PlaneVisualizer(sceneView, plane).apply {
+                    if (planeMaterial != null) {
+                        setPlaneMaterial(planeMaterial)
+                    }
+                    if (shadowMaterial != null) {
+                        setShadowMaterial(shadowMaterial)
+                    }
+                    setShadowReceiver(isShadowReceiver)
+                    setVisible(isVisible)
+                    setEnabled(isEnabled)
+                }.also {
+                    visualizers[plane] = it
                 }
-                if (shadowMaterial != null) {
-                    setShadowMaterial(shadowMaterial)
-                }
-                setShadowReceiver(isShadowReceiver)
-                setVisible(isVisible)
-                setEnabled(isEnabled)
-            }.also {
-                visualizers[plane] = it
-            }
-        // Update the plane visualizer.
-        planeVisualizer.updatePlane()
+            // Update the plane visualizer.
+            planeVisualizer.updatePlane()
+        }
     }
 
     /**
@@ -299,7 +310,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
         /**
          * Render only the top most [Plane] which is visible to the camera.
          */
-        RENDER_TOP_MOST
+        RENDER_CENTER
     }
 
     companion object {
