@@ -142,12 +142,23 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
 
     var onAnchorChanged: ((node: ArNode, anchor: Anchor?) -> Unit)? = null
 
+    var isCameraTracking = false
+        private set(value) {
+            if (field != value) {
+                field = value
+                updateVisibility()
+            }
+        }
+
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
     override var isSelectable = true
 
     override var isRotationEditable: Boolean = true
     override var isScaleEditable: Boolean = true
+
+    override val isVisibleInHierarchy: Boolean
+        get() = super.isVisibleInHierarchy && isCameraTracking
 
     constructor() : super() {
     }
@@ -158,6 +169,8 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
 
     override fun onArFrame(arFrame: ArFrame) {
         super.onArFrame(arFrame)
+
+        isCameraTracking = arFrame.camera.isTracking
 
         val anchor = anchor ?: return
 
