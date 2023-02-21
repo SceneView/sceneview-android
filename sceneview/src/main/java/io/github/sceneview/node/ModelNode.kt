@@ -207,6 +207,29 @@ open class ModelNode : RenderableNode {
         )
     }
 
+    /**
+     * ### Create the Node and load a monolithic binary glTF and add it to the Node
+     *
+     * @param modelInstance the model instance
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     */
+    constructor(
+        modelInstance: ModelInstance,
+        autoAnimate: Boolean = true,
+        scaleToUnits: Float? = null,
+        centerOrigin: Position? = null
+    ) : this() {
+        setModelInstance(modelInstance, autoAnimate, scaleToUnits, centerOrigin)
+    }
+
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
