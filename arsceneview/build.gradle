@@ -63,3 +63,17 @@ dependencies {
     def arcore_version = '1.35.0'
     api "com.google.ar:core:$arcore_version"
 }
+
+afterEvaluate {
+    publishing {
+        publications {
+// Creates a Maven publication called "release".
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.github.sameerjj'
+                artifactId = 'sceneview-android'
+                version = '0.9.6'
+            }
+        }
+    }
+}
