@@ -419,6 +419,8 @@ open class ArSceneView @JvmOverloads constructor(
         // ...and it's better for your users
         activity.setKeepScreenOn(arFrame.camera.isTracking)
 
+        arCameraStream.update(arFrame)
+
         // At the start of the frame, update the tracked pose of the camera
         // to use in any calculations during the frame.
         cameraNode.updateTrackedPose(arFrame.camera)

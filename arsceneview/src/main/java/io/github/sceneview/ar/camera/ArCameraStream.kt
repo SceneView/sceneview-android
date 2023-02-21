@@ -224,9 +224,7 @@ class ArCameraStream(
         updateMaterial()
     }
 
-    override fun onArFrame(arFrame: ArFrame) {
-        super.onArFrame(arFrame)
-
+    fun update(arFrame: ArFrame) {
         val frame = arFrame.frame
 
         // Texture names should only be set once on a GL thread unless they change.
