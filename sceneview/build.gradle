@@ -102,7 +102,7 @@ dependencies {
 //    api 'dev.romainguy:kotlin-math:1.5.1'
 
     // Filament
-    def filament_version = '1.31.2'
+    def filament_version = '1.31.4'
     api "com.google.android.filament:filament-android:$filament_version"
     api "com.google.android.filament:gltfio-android:$filament_version"
     api "com.google.android.filament:filament-utils-android:$filament_version"
