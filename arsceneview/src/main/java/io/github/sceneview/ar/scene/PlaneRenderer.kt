@@ -14,6 +14,7 @@ import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.arcore.ArFrame
+import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.zDirection
 import io.github.sceneview.material.MaterialLoader
@@ -62,7 +63,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
      *
      * The default mode is `RENDER_TOP_MOST`
      */
-    var planeRendererMode = PlaneRendererMode.RENDER_CENTER
+    var planeRendererMode = PlaneRendererMode.RENDER_ALL
 
     // Distance from the camera to last plane hit, default value is 4 meters (standing height).
     private var planeHitDistance = 4.0f
@@ -116,6 +117,14 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             }
         }
 
+    private var isCameraTracking = false
+        set(value) {
+            if (field != value) {
+                field = value
+                visualizers.values.forEach { it.setEnabled(isEnabled && value) }
+            }
+        }
+
     init {
         lifecycle.addObserver(this)
         lifecycle.coroutineScope.launchWhenCreated {
@@ -128,6 +137,9 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
         if (isEnabled) {
             if (arFrame.fps(this.arFrame) < maxHitTestPerSecond) {
                 this.arFrame = arFrame
+
+                isCameraTracking = arFrame.camera.isTracking
+
                 try {
                     if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
                         renderAll(arFrame.updatedPlanes)
@@ -208,7 +220,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
                     }
                     setShadowReceiver(isShadowReceiver)
                     setVisible(isVisible)
-                    setEnabled(isEnabled)
+                    setEnabled(isEnabled && isCameraTracking)
                 }.also {
                     visualizers[plane] = it
                 }
