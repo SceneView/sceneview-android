@@ -3,6 +3,21 @@ plugins {
     id 'kotlin-android'
     id 'filament-tools-plugin'
     id 'org.jetbrains.dokka'
+    id 'maven-publish'
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+// Creates a Maven publication called "release".
+            release(MavenPublication) {
+                from components.release
+//                groupId = 'com.github.sameerjj'
+//                artifactId = 'sceneview-android'
+//                version = '0.9.6'
+            }
+        }
+    }
 }
 
 
