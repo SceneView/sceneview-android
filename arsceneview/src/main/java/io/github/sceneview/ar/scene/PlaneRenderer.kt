@@ -154,7 +154,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
                                 renderPlane(centerPlane)
                             }
                             visualizers.forEach { (plane, visualizer) ->
-                                visualizer.setVisible(plane == centerPlane)
+                                visualizer.setVisible(isVisible && plane == centerPlane)
                             }
                         }
                     }

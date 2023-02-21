@@ -59,14 +59,15 @@ fragment {
 
         material.baseColor = texture(materialParams_texture, variable_texCoordsAlpha.xy);
         material.baseColor.rgb *= materialParams.color;
-        float textureAlpha = material.baseColor.a;
+
+        //float textureAlpha = material.baseColor.a;
 
         // Create a spotlight effect around the focus point.
-        float distToFocus = distance(getWorldPosition() + getWorldOffset(), materialParams.focusPoint);
-        float alpha = 1.0 - smoothstep(materialParams.radius * 0.5, materialParams.radius, distToFocus);
+        //float distToFocus = distance(getWorldPosition() + getWorldOffset(), materialParams.focusPoint);
+        //float alpha = 1.0 - smoothstep(materialParams.radius * 0.5, materialParams.radius, distToFocus);
 
         // Transparent blending uses pre-multiplied alpha,
         // so multiply the entire baseColor by the alpha for this fragment.
-        material.baseColor *= variable_texCoordsAlpha.z * alpha;
+        //material.baseColor *= variable_texCoordsAlpha.z * alpha;
     }
 }
