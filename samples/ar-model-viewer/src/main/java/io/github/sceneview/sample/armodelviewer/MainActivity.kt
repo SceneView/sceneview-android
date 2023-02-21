@@ -5,12 +5,14 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import io.github.sceneview.ar.ArSceneView
+import io.github.sceneview.ar.getDescription
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.math.Position
@@ -21,6 +23,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     lateinit var sceneView: ArSceneView
     lateinit var loadingView: View
+    lateinit var statusText: TextView
     lateinit var placeModelButton: ExtendedFloatingActionButton
     lateinit var newModelButton: ExtendedFloatingActionButton
 
@@ -88,7 +91,13 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
             title = ""
         })
-        sceneView = findViewById(R.id.sceneView)
+        statusText = findViewById(R.id.statusText)
+        sceneView = findViewById<ArSceneView?>(R.id.sceneView).apply {
+            onTrackingFailureChanged = { reason ->
+                statusText.text = reason?.getDescription(context)
+                statusText.isGone = reason == null
+            }
+        }
         loadingView = findViewById(R.id.loadingView)
         newModelButton = findViewById<ExtendedFloatingActionButton>(R.id.newModelButton).apply {
             // Add system bar margins
