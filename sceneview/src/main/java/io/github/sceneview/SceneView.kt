@@ -10,7 +10,6 @@ import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
 import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
@@ -608,13 +607,7 @@ open class SceneView @JvmOverloads constructor(
         // Invert the y coordinate since its origin is at the bottom
         val invertedY = height - 1 - y
 
-        val start = System.currentTimeMillis()
-
         view.pick(x, invertedY, pickingHandler) { pickResult ->
-            val end = System.currentTimeMillis()
-
-            Log.d("Test", "Picking took ${end - start} ms")
-
             val pickedRenderable = pickResult.renderable
             val pickedNode = allChildren
                 .mapNotNull { it as? ModelNode }

@@ -233,6 +233,8 @@ open class ModelNode : RenderableNode {
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
+        model?.let { it.popRenderable() }
+
         animator?.apply {
             playingAnimations.forEach { (index, animation) ->
                 val elapsedTimeSeconds = frameTime.intervalSeconds(animation.startTime)
@@ -394,13 +396,6 @@ open class ModelNode : RenderableNode {
     /**
      * ### Loads a monolithic binary glTF and add it to the Node
      *
-     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
-     * it (and its resources) when the lifecycle goes to destroy state.
-     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
-     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
-     * [SceneView] is.
-     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
-     * the node is never attached to a [SceneView]
      * @param gltfFileLocation the gltf file location:
      * - A relative asset file location *models/mymodel.gltf*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
