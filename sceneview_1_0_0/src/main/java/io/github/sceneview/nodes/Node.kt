@@ -259,7 +259,11 @@ open class Node(
     }
 
     open fun destroy() {
-        nodeManager.destroyNode(entity)
+        childNodes.forEach {
+            it.destroy()
+            removeChildNode(it)
+        }
+        nodeManager.removeComponent(entity)
         engine.destroyEntity(entity)
         EntityManager.get().destroy(entity)
 
