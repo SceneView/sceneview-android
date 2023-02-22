@@ -278,7 +278,7 @@ open class ArSceneView @JvmOverloads constructor(
         set(value) {
             if (field != value) {
                 field = value
-                onTrackingFailureChanged?.invoke(value)
+                onArTrackingFailureChanged?.invoke(value)
             }
         }
 
@@ -342,7 +342,7 @@ open class ArSceneView @JvmOverloads constructor(
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
 
-    var onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null
+    var onArTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null
 
     override val cameraGestureDetector = null
     override val cameraManipulator = null

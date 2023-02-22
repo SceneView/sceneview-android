@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         })
         statusText = findViewById(R.id.statusText)
         sceneView = findViewById<ArSceneView?>(R.id.sceneView).apply {
-            onTrackingFailureChanged = { reason ->
+            onArTrackingFailureChanged = { reason ->
                 statusText.text = reason?.getDescription(context)
                 statusText.isGone = reason == null
             }
