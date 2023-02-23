@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "io.github.sceneview.sample.arpointcloud"
-        minSdk 24
+        minSdk 28
         targetSdk 33
         versionCode 1
         versionName "1.0.0"
@@ -34,6 +34,6 @@ dependencies {
     implementation project(":samples:common")
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:0.9.5"
+    releaseImplementation "io.github.sceneview:arsceneview:0.9.7"
     debugImplementation project(":arsceneview")
 }

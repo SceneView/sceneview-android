@@ -274,7 +274,13 @@ open class ArSceneView @JvmOverloads constructor(
             }
         }
 
-    val instructions = Instructions(lifecycle)
+    open var trackingFailureReason: TrackingFailureReason? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                onArTrackingFailureChanged?.invoke(value)
+            }
+        }
 
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
@@ -335,6 +341,8 @@ open class ArSceneView @JvmOverloads constructor(
      * @see AugmentedFace.getTrackingState
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
+
+    var onArTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null
 
     override val cameraGestureDetector = null
     override val cameraManipulator = null
@@ -397,10 +405,14 @@ open class ArSceneView @JvmOverloads constructor(
      * obtained. Update the scene before rendering.
      */
     override fun doFrame(frameTime: FrameTime) {
-        super.doFrame(frameTime)
-
-        arSession?.update(frameTime)?.let { frame ->
-            doArFrame(frame)
+        arSession?.update(frameTime)?.let { arFrame ->
+            // During startup the camera system may not produce actual images immediately.
+            // In this common case, a frame with timestamp = 0 will be returned.
+            if (arFrame.frame.timestamp != 0L && arFrame.time != currentFrame?.time) {
+                currentFrame = arFrame
+                doArFrame(arFrame)
+                super.doFrame(frameTime)
+            }
         }
     }
 
@@ -410,39 +422,39 @@ open class ArSceneView @JvmOverloads constructor(
      * The listener will be called in the order in which they were added.
      */
     protected open fun doArFrame(arFrame: ArFrame) {
-        // During startup the camera system may not produce actual images immediately.
-        // In this common case, a frame with timestamp = 0 will be returned.
-        if (arFrame.frame.timestamp != 0L &&
-            arFrame.frame.timestamp != currentFrame?.frame?.timestamp
-        ) {
-            currentFrame = arFrame
+        val camera = arFrame.camera
 
-            // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
-            // You will say thanks when still have battery after a long day debugging an AR app.
-            // ...and it's better for your users
-            activity.setKeepScreenOn(arFrame.camera.isTracking)
+        // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
+        // You will say thanks when still have battery after a long day debugging an AR app.
+        // ...and it's better for your users
+        activity.setKeepScreenOn(camera.isTracking)
 
-            // At the start of the frame, update the tracked pose of the camera
-            // to use in any calculations during the frame.
-            cameraNode.updateTrackedPose(arFrame.camera)
+        arCameraStream.update(arFrame)
 
-            if (onAugmentedImageUpdate.isNotEmpty()) {
-                arFrame.updatedAugmentedImages.forEach { augmentedImage ->
-                    onAugmentedImageUpdate.forEach {
-                        it(augmentedImage)
-                    }
+        // At the start of the frame, update the tracked pose of the camera
+        // to use in any calculations during the frame.
+        cameraNode.updateTrackedPose(arFrame.camera)
+
+        trackingFailureReason = if (!camera.isTracking) {
+            arFrame.camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
+        } else null
+
+        if (onAugmentedImageUpdate.isNotEmpty()) {
+            arFrame.updatedAugmentedImages.forEach { augmentedImage ->
+                onAugmentedImageUpdate.forEach {
+                    it(augmentedImage)
                 }
             }
-
-            if (onAugmentedFaceUpdate != null) {
-                arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
-            }
-
-            lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
-                onArFrame(arFrame)
-            }
-            onArFrame?.invoke(arFrame)
         }
+
+        if (onAugmentedFaceUpdate != null) {
+            arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
+        }
+
+        lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
+            onArFrame(arFrame)
+        }
+        onArFrame?.invoke(arFrame)
     }
 
     open fun onLightEstimationUpdate(lightEstimation: LightEstimator) {

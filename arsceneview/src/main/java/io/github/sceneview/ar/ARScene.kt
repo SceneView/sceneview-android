@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.ar.core.HitResult
+import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.ArSession
 import io.github.sceneview.node.Node
@@ -20,6 +21,7 @@ fun ARScene(
     planeRenderer: Boolean = true,
     onCreate: ((ArSceneView) -> Unit)? = null,
     onSessionCreate: (ArSceneView.(session: ArSession) -> Unit)? = null,
+    onTrackingFailureChanged: (ArSceneView.(trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
     onFrame: (ArSceneView.(arFrame: ArFrame) -> Unit)? = null,
     onTap: (ArSceneView.(hitResult: HitResult) -> Unit)? = null
 ) {
@@ -34,6 +36,7 @@ fun ARScene(
                 ArSceneView(context).apply {
                     this.onArSessionCreated = { onSessionCreate?.invoke(this, it) }
                     this.onArFrame = { onFrame?.invoke(this, it) }
+                    this.onArTrackingFailureChanged = { onTrackingFailureChanged?.invoke(this, it) }
                     this.onTapAr = { hitResult, _ -> onTap?.invoke(this, hitResult) }
                     onCreate?.invoke(this)
                 }

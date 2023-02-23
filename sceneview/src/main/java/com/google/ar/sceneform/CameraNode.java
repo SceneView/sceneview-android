@@ -13,7 +13,10 @@ import com.google.ar.sceneform.math.Matrix;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.utilities.Preconditions;
 
+import java.util.Arrays;
+
 import dev.romainguy.kotlin.math.Float3;
+import dev.romainguy.kotlin.math.Mat4;
 import dev.romainguy.kotlin.math.Quaternion;
 import io.github.sceneview.Filament;
 import io.github.sceneview.FilamentKt;
@@ -84,21 +87,29 @@ public class CameraNode extends Node {
         setQuaternion(DEFAULT_QUATERNION);
     }
 
-    private final double[] cameraProjectionMatrix = new double[16];
+    private float[] lastTransform = new float[16];
+    private float[] lastProjectionMatrix = new float[16];
 
     @Override
     public void onFrame(@NonNull FrameTime frameTime) {
         super.onFrame(frameTime);
 
-        final float[] projectionMatrixData = getProjectionMatrix().data;
-        for (int i = 0; i < 16; ++i) {
-            cameraProjectionMatrix[i] = projectionMatrixData[i];
+        float[] transform = getTransformationMatrix().data;
+        if (!Arrays.equals(transform, lastTransform)) {
+            lastTransform = transform;
+            camera.setModelMatrix(transform);
         }
-
-        camera.setModelMatrix(getTransformationMatrix().data);
-        camera.setCustomProjection(cameraProjectionMatrix,
-                getNearClipPlane(),
-                getFarClipPlane());
+        float[] projectionMatrix = getProjectionMatrix().data;
+        if (!Arrays.equals(projectionMatrix, lastProjectionMatrix)) {
+            lastProjectionMatrix = projectionMatrix;
+            double[] projectionMatrixDouble = new double[projectionMatrix.length];
+            for (int i = 0; i < projectionMatrix.length; i++) {
+                projectionMatrixDouble[i] = projectionMatrix[i];
+            }
+            camera.setCustomProjection(projectionMatrixDouble,
+                    getNearClipPlane(),
+                    getFarClipPlane());
+        }
     }
 
     /**

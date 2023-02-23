@@ -1,10 +1,8 @@
 package io.github.sceneview.ar.node
 
 import android.content.Context
-import androidx.lifecycle.Lifecycle
 import com.google.ar.core.*
 import com.google.ar.core.Config.PlaneFindingMode
-import io.github.sceneview.SceneView
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
@@ -12,7 +10,6 @@ import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.ModelInstance
-import io.github.sceneview.node.Node
 
 /**
  * ### AR positioned 3D model node
@@ -228,13 +225,6 @@ open class ArModelNode : ArNode {
     /**
      * ### Create the Node and load a monolithic binary glTF and add it to the Node
      *
-     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
-     * it (and its resources) when the lifecycle goes to destroy state.
-     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
-     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
-     * [SceneView] is.
-     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
-     * the node is never attached to a [SceneView]
      * @param modelGlbFileLocation the glb file location:
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
@@ -254,7 +244,6 @@ open class ArModelNode : ArNode {
      */
     constructor(
         context: Context,
-        lifecycle: Lifecycle? = null,
         modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
@@ -264,7 +253,6 @@ open class ArModelNode : ArNode {
     ) : this() {
         loadModelGlbAsync(
             context,
-            lifecycle,
             modelGlbFileLocation,
             autoAnimate,
             scaleToUnits,
@@ -272,6 +260,29 @@ open class ArModelNode : ArNode {
             onError,
             onLoaded
         )
+    }
+
+    /**
+     * ### Create the Node and load a monolithic binary glTF and add it to the Node
+     *
+     * @param modelInstance the model instance
+     * @param autoAnimate Plays the animations automatically if the model has one
+     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
+     * size
+     * @param centerOrigin Center the model origin to this unit cube position
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     */
+    constructor(
+        modelInstance: ModelInstance,
+        autoAnimate: Boolean = true,
+        scaleToUnits: Float? = null,
+        centerOrigin: Position? = null
+    ) : this() {
+        setModelInstance(modelInstance, autoAnimate, scaleToUnits, centerOrigin)
     }
 
     override fun onArFrame(arFrame: ArFrame) {

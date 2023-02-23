@@ -14,6 +14,7 @@ import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.ArSceneLifecycle
 import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.arcore.ArFrame
+import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.zDirection
 import io.github.sceneview.material.MaterialLoader
@@ -34,7 +35,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
 
     private val sceneView get() = lifecycle.sceneView
 
-    private val visualizers: MutableMap<Plane, PlaneVisualizer> = HashMap()
+    private val visualizers = mutableMapOf<Plane, PlaneVisualizer>()
 
     // TODO: Remove when it isn't used in PlaneVisualizer
     private var planeMaterial: Material? = null
@@ -42,7 +43,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
     /**
      * Default material instance used to render the planes.
      */
-    var materialInstance: MaterialInstance? = null
+    var planeMaterialInstance: MaterialInstance? = null
         private set
 
     // TODO: Remove when it isn't used in PlaneVisualizer
@@ -62,7 +63,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
      *
      * The default mode is `RENDER_TOP_MOST`
      */
-    var planeRendererMode = PlaneRendererMode.RENDER_TOP_MOST
+    var planeRendererMode = PlaneRendererMode.RENDER_CENTER
 
     // Distance from the camera to last plane hit, default value is 4 meters (standing height).
     private var planeHitDistance = 4.0f
@@ -116,6 +117,14 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             }
         }
 
+    private var isCameraTracking = false
+        set(value) {
+            if (field != value) {
+                field = value
+                visualizers.values.forEach { it.setEnabled(isEnabled && value) }
+            }
+        }
+
     init {
         lifecycle.addObserver(this)
         lifecycle.coroutineScope.launchWhenCreated {
@@ -128,26 +137,43 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
         if (isEnabled) {
             if (arFrame.fps(this.arFrame) < maxHitTestPerSecond) {
                 this.arFrame = arFrame
+
+                isCameraTracking = arFrame.camera.isTracking
+
                 try {
-                    // Do a hitTest on the current frame. The result is used to calculate a
-                    // focusPoint and to render the top most plane Trackable if planeRendererMode is
-                    // set to RENDER_TOP_MOST
-                    val hitResult = arFrame.hitTest(
-                        position = Position(x = 0.0f, y = 0.0f),
-                        plane = true,
-                        depth = false,
-                        instant = false
-                    )
-
-                    // Calculate the focusPoint. It is used to determine the position of
-                    // the visualized grid.
-                    val focusPoint = getFocusPoint(arFrame.frame, hitResult)
-                    materialInstance?.setParameter(MATERIAL_SPOTLIGHT_FOCUS_POINT, focusPoint)
-
+                    val updatedPlanes = arFrame.updatedPlanes
                     if (planeRendererMode == PlaneRendererMode.RENDER_ALL) {
-                        renderAll(arFrame.updatedPlanes)
-                    } else if (planeRendererMode == PlaneRendererMode.RENDER_TOP_MOST && hitResult != null) {
-                        renderPlane(hitResult.trackable as Plane)
+                        updatedPlanes.forEach { renderPlane(it) }
+                    } else if (planeRendererMode == PlaneRendererMode.RENDER_CENTER) {
+                        // Do a hitTest on the current frame. The result is used to calculate a
+                        // focusPoint and to render the top most plane Trackable if planeRendererMode is
+                        // set to RENDER_TOP_MOST
+
+                        val centerPlane = if (isVisible) {
+                            // Don't make the hit test if we don't need to know the center plane
+                            arFrame.hitTest(
+                                position = Position(x = 0.0f, y = 0.0f),
+                                plane = true,
+                                depth = false,
+                                instant = false
+                            )?.trackable as? Plane
+                        } else null
+//                        if (centerPlane != null) {
+//                            // Calculate the focusPoint. It is used to determine the position of
+//                            // the visualized grid.
+//                                val focusPoint = getFocusPoint(arFrame.frame, hitResult)
+//                                materialInstance?.setParameter(
+//                                    MATERIAL_SPOTLIGHT_FOCUS_POINT,
+//                                    focusPoint
+//                                )
+//                            renderPlane(centerPlane)
+//                        }
+                        updatedPlanes.forEach { renderPlane(it, visible = it == centerPlane) }
+                        visualizers.forEach { (plane, visualizer) ->
+                            if (plane !in updatedPlanes) {
+                                visualizer.setVisible(isVisible && plane == centerPlane)
+                            }
+                        }
                     }
 
                     // Check for not tracking Plane-Trackables and remove them.
@@ -169,15 +195,6 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
     }
 
     /**
-     * Render all tracked Planes
-     *
-     * @param updatedPlanes [Collection]<[Plane]>
-     */
-    private fun renderAll(updatedPlanes: Collection<Plane>) {
-        updatedPlanes.forEach { renderPlane(it) }
-    }
-
-    /**
      * This function is responsible to update the rendering
      * of a [PlaneVisualizer]. If for the given [Plane]
      * no [PlaneVisualizer] exists, create a new one and add
@@ -185,25 +202,27 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
      *
      * @param plane [Plane]
      */
-    private fun renderPlane(plane: Plane) {
+    private fun renderPlane(plane: Plane, visible: Boolean = true) {
         // Find the plane visualizer if it already exists.
         // If not, create a new plane visualizer for this plane.
-        val planeVisualizer = visualizers[plane]
-            ?: PlaneVisualizer(sceneView, plane).apply {
-                if (planeMaterial != null) {
-                    setPlaneMaterial(planeMaterial)
+        if (plane.trackingState == TrackingState.TRACKING || plane.subsumedBy == null) {
+            val planeVisualizer = visualizers[plane]
+                ?: PlaneVisualizer(sceneView, plane).apply {
+                    if (planeMaterial != null) {
+                        setPlaneMaterial(planeMaterial)
+                    }
+                    if (shadowMaterial != null) {
+                        setShadowMaterial(shadowMaterial)
+                    }
+                    setShadowReceiver(isShadowReceiver)
+                    setVisible(isVisible && visible)
+                    setEnabled(isEnabled && isCameraTracking)
+                }.also {
+                    visualizers[plane] = it
                 }
-                if (shadowMaterial != null) {
-                    setShadowMaterial(shadowMaterial)
-                }
-                setShadowReceiver(isShadowReceiver)
-                setVisible(isVisible)
-                setEnabled(isEnabled)
-            }.also {
-                visualizers[plane] = it
-            }
-        // Update the plane visualizer.
-        planeVisualizer.updatePlane()
+            // Update the plane visualizer.
+            planeVisualizer.updatePlane()
+        }
     }
 
     /**
@@ -243,7 +262,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             TextureType.COLOR
         ) ?: throw AssertionError("Can't load the plane renderer texture")
 
-        materialInstance = MaterialLoader.loadMaterial(
+        planeMaterialInstance = MaterialLoader.loadMaterial(
             sceneView.context,
             lifecycle,
             "sceneview/materials/plane_renderer.filamat"
@@ -259,7 +278,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
         } ?: throw AssertionError("Can't load the plane renderer material")
 
-        planeMaterial = Material(lifecycle, materialInstance)
+        planeMaterial = Material(lifecycle, planeMaterialInstance)
         for (planeVisualizer in visualizers.values) {
             planeVisualizer.setPlaneMaterial(planeMaterial)
         }
@@ -299,7 +318,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
         /**
          * Render only the top most [Plane] which is visible to the camera.
          */
-        RENDER_TOP_MOST
+        RENDER_CENTER
     }
 
     companion object {

@@ -295,15 +295,12 @@ open class Node(
         set(value) {
             if (field != value) {
                 field = value
-                if (isVisibleInHierarchy) {
-                    sceneView?.scene?.addEntities(sceneEntities)
-                } else {
-                    sceneView?.scene?.removeEntities(sceneEntities)
-                }
+                updateVisibility()
             }
         }
 
-    open val isVisibleInHierarchy get() = isVisible && allParents.all { isVisible }
+    open val isVisibleInHierarchy: Boolean
+        get() = isVisible && (parentNode?.isVisibleInHierarchy ?: true)
 
     open var isPositionEditable = false
     open var isRotationEditable = false
@@ -458,7 +455,7 @@ open class Node(
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
-        if (smoothTransform != transform) {
+        if (!smoothTransform.equalsWithDelta(transform)) {
             if (transform != lastFrameTransform) {
                 // Stop smooth if any of the position/rotation/scale has changed meanwhile
                 smoothTransform = transform
@@ -471,11 +468,13 @@ open class Node(
                     speed = smoothSpeed
                 )
             }
+        } else {
+            smoothTransform = transform
         }
         lastFrameTransform = transform
 
-        transformInstance?.takeIf { worldTransform != lastFrameWorldTransform }?.let {
-            transformManager.setTransform(it, worldTransform)
+        if (worldTransform != lastFrameWorldTransform) {
+            transformInstance?.let { transformManager.setTransform(it, worldTransform) }
         }
         lastFrameWorldTransform = worldTransform
 
@@ -770,6 +769,15 @@ open class Node(
      */
     fun isDescendantOf(ancestor: NodeParent): Boolean =
         parent == ancestor || parentNode?.isDescendantOf(ancestor) == true
+
+    open fun updateVisibility() {
+        if (isVisibleInHierarchy) {
+            sceneView?.scene?.addEntities(sceneEntities)
+        } else {
+            sceneView?.scene?.removeEntities(sceneEntities)
+        }
+        children.forEach { it.updateVisibility() }
+    }
 
     open var selectionVisualizer: Node? = null
         set(value) {

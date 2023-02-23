@@ -10,7 +10,6 @@ import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
 import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
@@ -32,7 +31,6 @@ import com.google.ar.sceneform.rendering.ResourceManager
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import com.gorisse.thomas.lifecycle.getActivity
 import io.github.sceneview.Filament.engine
-import io.github.sceneview.Filament.resourceLoader
 import io.github.sceneview.Filament.transformManager
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.loadEnvironment
@@ -278,7 +276,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
     open val selectionVisualizer: (() -> Node)? = {
-        ModelNode(context, lifecycle, "sceneview/models/node_selector.glb").apply {
+        ModelNode(context, "sceneview/models/node_selector.glb").apply {
             isSelectable = false
             collisionShape = null
         }
@@ -376,28 +374,28 @@ open class SceneView @JvmOverloads constructor(
         scene = engine.createScene()
         view = engine.createView()
         // on mobile, better use lower quality color buffer
-        view.renderQuality = view.renderQuality.apply {
-            hdrColorBuffer = View.QualityLevel.MEDIUM
-        }
-        // dynamic resolution often helps a lot
-        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
-            enabled = true
-            quality = View.QualityLevel.MEDIUM
-        }
-        // MSAA is needed with dynamic resolution MEDIUM
-        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
-            enabled = true
-        }
-        // FXAA is pretty cheap and helps a lot
-        view.antiAliasing = View.AntiAliasing.FXAA
-        // ambient occlusion is the cheapest effect that adds a lot of quality
-        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
-            enabled = true
-        }
-        // bloom is pretty expensive but adds a fair amount of realism
-        view.bloomOptions = view.bloomOptions.apply {
-            enabled = true
-        }
+//        view.renderQuality = view.renderQuality.apply {
+//            hdrColorBuffer = View.QualityLevel.MEDIUM
+//        }
+//        // dynamic resolution often helps a lot
+//        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+//            enabled = false
+//            quality = View.QualityLevel.MEDIUM
+//        }
+//        // MSAA is needed with dynamic resolution MEDIUM
+//        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
+//            enabled = true
+//        }
+//        // FXAA is pretty cheap and helps a lot
+//        view.antiAliasing = View.AntiAliasing.FXAA
+//        // ambient occlusion is the cheapest effect that adds a lot of quality
+//        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+//            enabled = true
+//        }
+//        // bloom is pretty expensive but adds a fair amount of realism
+//        view.bloomOptions = view.bloomOptions.apply {
+//            enabled = true
+//        }
         view.scene = scene
         view.camera = cameraNode.camera
         // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example material
@@ -486,7 +484,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
         // Allow the resource loader to finalize textures that have become ready.
-        resourceLoader.asyncUpdateLoad()
+//        resourceLoader.asyncUpdateLoad()
 
         transformManager.openLocalTransformTransaction()
 
@@ -609,13 +607,7 @@ open class SceneView @JvmOverloads constructor(
         // Invert the y coordinate since its origin is at the bottom
         val invertedY = height - 1 - y
 
-        val start = System.currentTimeMillis()
-
         view.pick(x, invertedY, pickingHandler) { pickResult ->
-            val end = System.currentTimeMillis()
-
-            Log.d("Test", "Picking took ${end - start} ms")
-
             val pickedRenderable = pickResult.renderable
             val pickedNode = allChildren
                 .mapNotNull { it as? ModelNode }
@@ -640,6 +632,14 @@ open class SceneView @JvmOverloads constructor(
         mediaRecorder.prepare()
         mediaRecorder.start()
         surfaceMirrorer.startMirroring(mediaRecorder.surface)
+    }
+
+    fun startMirroring(surface: Surface) {
+        surfaceMirrorer.startMirroring(surface)
+    }
+
+    fun stopMirroring(surface: Surface) {
+        surfaceMirrorer.stopMirroring(surface)
     }
 
     fun stopRecording(mediaRecorder: MediaRecorder) {

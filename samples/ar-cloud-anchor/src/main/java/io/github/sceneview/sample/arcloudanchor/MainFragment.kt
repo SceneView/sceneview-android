@@ -58,8 +58,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         sceneView = view.findViewById(R.id.sceneView)
         sceneView.apply {
             cloudAnchorEnabled = true
-            // Move the instructions up to avoid an overlap with the buttons
-            instructions.searchPlaneInfoNode.position.y = -0.5f
         }
 
         loadingView = view.findViewById(R.id.loadingView)
@@ -91,7 +89,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             isVisible = false
             loadModelGlbAsync(
                 context = requireContext(),
-                lifecycle = lifecycle,
                 glbFileLocation = "models/spiderbot.glb"
             ) {
                 isLoading = false

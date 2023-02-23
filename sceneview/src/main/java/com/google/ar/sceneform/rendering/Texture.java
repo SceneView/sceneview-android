@@ -363,8 +363,7 @@ public class Texture {
                               .depth(1)
                               .levels(mipLevels)
                               .sampler(textureSampler)
-                              .format(textureInternalFormat)
-                      , lifecycle);
+                              .format(textureInternalFormat));
 
       TextureHelper.setBitmap(Filament.getEngine(), filamentTexture, 0, bitmap);
 
