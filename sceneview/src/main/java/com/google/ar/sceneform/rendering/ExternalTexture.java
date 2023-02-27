@@ -40,7 +40,7 @@ public class ExternalTexture {
      * Creates an ExternalTexture with a new Android {@link SurfaceTexture} and {@link Surface}.
      */
     @SuppressWarnings("initialization")
-    public ExternalTexture(@Nullable Lifecycle lifecycle) {
+    public ExternalTexture() {
         SurfaceTexture surfaceTexture = new SurfaceTexture(0);
         surfaceTexture.detachFromGLContext();
         this.surfaceTexture = surfaceTexture;

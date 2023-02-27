@@ -31,7 +31,7 @@ import com.google.android.filament.utils.KTX1Loader as KTXLoader
  */
 suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.build(lifecycle: Lifecycle) {
     lifecycle.coroutineScope.launchWhenCreated {
-        await(lifecycle)
+        await()
     }
 }
 
@@ -53,9 +53,8 @@ suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T,
  * @see [KTXLoader.loadEnvironment]
  * @see [HDRLoader.loadEnvironment]
  */
-suspend fun <T : Renderable, B : Renderable.Builder<T, B>>
-        Renderable.Builder<T, B>.await(lifecycle: Lifecycle) =
-    build(lifecycle).await()
+suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.await() =
+    build().await()
 
 /**
  * ### Deferred renderable loading is a non-blocking cancellable future.
@@ -64,6 +63,5 @@ suspend fun <T : Renderable, B : Renderable.Builder<T, B>>
  *
  * @see [Deferred]
  */
-fun <T : Renderable, B : Renderable.Builder<T, B>>
-        Renderable.Builder<T, B>.asDeferred(lifecycle: Lifecycle) =
-    build(lifecycle).asDeferred()
+fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.asDeferred() =
+    build().asDeferred()

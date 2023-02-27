@@ -161,7 +161,7 @@ open class ViewNode : Node {
                 try {
                     val renderable = ViewRenderable.builder()
                         .setView(context, layoutResId)
-                        .await(lifecycle)
+                        .await()
                     val view = renderable.view
                     val instance = setRenderable(renderable)
                     onLoaded?.invoke(instance!!, view)
