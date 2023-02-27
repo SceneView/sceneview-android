@@ -113,7 +113,6 @@ public class RenderableDefinition {
         }
     }
 
-    protected Lifecycle lifecycle;
     private List<Vertex> vertices;
     private List<Submesh> submeshes;
 
@@ -269,7 +268,7 @@ public class RenderableDefinition {
         }
 
         if (createVertexBuffer) {
-            vertexBuffer = createVertexBuffer(lifecycle, numVertices, descriptionAttributes);
+            vertexBuffer = createVertexBuffer(numVertices, descriptionAttributes);
             data.setVertexBuffer(vertexBuffer);
         }
 
@@ -402,8 +401,7 @@ public class RenderableDefinition {
         }
     }
 
-    private RenderableDefinition(Builder builder, @Nullable Lifecycle lifecycle) {
-        this.lifecycle = lifecycle;
+    private RenderableDefinition(Builder builder) {
         vertices = Preconditions.checkNotNull(builder.vertices);
         submeshes = Preconditions.checkNotNull(builder.submeshes);
     }
@@ -412,8 +410,7 @@ public class RenderableDefinition {
         return new Builder();
     }
 
-    private static VertexBuffer createVertexBuffer(@Nullable Lifecycle lifecycle,
-                                                   int vertexCount, EnumSet<VertexAttribute> attributes) {
+    private static VertexBuffer createVertexBuffer(int vertexCount, EnumSet<VertexAttribute> attributes) {
         VertexBuffer.Builder builder = new VertexBuffer.Builder();
 
         builder.vertexCount(vertexCount).bufferCount(attributes.size());
@@ -545,8 +542,8 @@ public class RenderableDefinition {
             return this;
         }
 
-        public RenderableDefinition build(@Nullable Lifecycle lifecycle) {
-            return new RenderableDefinition(this, lifecycle);
+        public RenderableDefinition build() {
+            return new RenderableDefinition(this);
         }
     }
 }

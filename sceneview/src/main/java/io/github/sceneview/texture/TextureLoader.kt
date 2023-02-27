@@ -2,12 +2,11 @@ package io.github.sceneview.texture
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.coroutineScope
 import com.google.android.filament.Texture
 import com.google.android.filament.android.TextureHelper
 import io.github.sceneview.Filament
 import io.github.sceneview.utils.useFileBufferNotNull
+import io.github.sceneview.utils.useLocalFileBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
@@ -19,28 +18,24 @@ object TextureLoader {
 
     suspend fun loadImageTexture(
         context: Context,
-        lifecycle: Lifecycle,
         imageFileLocation: String,
         type: TextureType = TextureType.COLOR
     ): Texture? =
         context.useFileBufferNotNull(imageFileLocation) { buffer ->
             withContext(Dispatchers.Main) {
-                createImageTexture(lifecycle, buffer, type)
+                createImageTexture(buffer, type)
             }
         }
 
-    fun loadImageTextureAsync(
+    fun createImageTexture(
         context: Context,
-        lifecycle: Lifecycle,
         imageFileLocation: String,
-        type: TextureType = TextureType.COLOR,
-        result: (Texture?) -> Unit
-    ) = lifecycle.coroutineScope.launchWhenCreated {
-        result(loadImageTexture(context, lifecycle, imageFileLocation, type))
+        type: TextureType = TextureType.COLOR
+    ): Texture = context.useLocalFileBuffer(imageFileLocation) { buffer ->
+        createImageTexture(buffer!!, type)
     }
 
     fun createImageTexture(
-        lifecycle: Lifecycle? = null,
         imageBuffer: ByteBuffer,
         type: TextureType = TextureType.COLOR,
     ): Texture {

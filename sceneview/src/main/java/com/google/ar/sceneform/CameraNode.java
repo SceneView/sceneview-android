@@ -16,7 +16,6 @@ import com.google.ar.sceneform.utilities.Preconditions;
 import java.util.Arrays;
 
 import dev.romainguy.kotlin.math.Float3;
-import dev.romainguy.kotlin.math.Mat4;
 import dev.romainguy.kotlin.math.Quaternion;
 import io.github.sceneview.Filament;
 import io.github.sceneview.FilamentKt;

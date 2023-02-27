@@ -25,7 +25,7 @@ public class PlaneFactory {
      */
     @SuppressWarnings("AndroidApiChecker")
     // CompletableFuture requires api level 24
-    public static ModelRenderable makePlane(Vector3 size, Vector3 center, MaterialInstance material, @Nullable Lifecycle lifecycle) {
+    public static ModelRenderable makePlane(Vector3 size, Vector3 center, MaterialInstance material) {
         AndroidPreconditions.checkMinAndroidApiLevel();
 
         Vector3 extents = size.scaled(0.5f);
@@ -72,11 +72,11 @@ public class PlaneFactory {
         RenderableDefinition renderableDefinition = RenderableDefinition.builder()
                 .setVertices(vertices)
                 .setSubmeshes(Arrays.asList(submesh))
-                .build(lifecycle);
+                .build();
 
         CompletableFuture<ModelRenderable> future = ModelRenderable.builder()
                 .setSource(renderableDefinition)
-                .build(lifecycle);
+                .build();
 
         @Nullable ModelRenderable result;
         try {

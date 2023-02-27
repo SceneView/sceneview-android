@@ -12,8 +12,8 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.lifecycle.Lifecycle;
 
+import com.google.android.filament.gltfio.FilamentInstance;
 import com.google.ar.sceneform.CameraNode;
 import com.google.ar.sceneform.collision.Box;
 import com.google.ar.sceneform.collision.Plane;
@@ -42,7 +42,7 @@ import io.github.sceneview.node.Node;
 
 /**
  * Renders a 2D Android view in 3D space by attaching it to a {@link Node}
- * with {@link ModelNode#setModel(Renderable)}. By default, the size of the
+ * with {@link ModelNode#setModelInstance(FilamentInstance)}. By default, the size of the
  * view is 1 meter in the {@link SceneView} per 250dp in the layout. Use a
  * {@link ViewSizer} to control how the size of the view in the {@link
  * SceneView} is calculated.
@@ -130,7 +130,7 @@ public class ViewRenderable extends Renderable {
     horizontalAlignment = builder.horizontalAlignment;
     verticalAlignment = builder.verticalAlignment;
     RenderViewToExternalTexture renderView =
-        new RenderViewToExternalTexture(view.getContext(), view, lifecycle);
+        new RenderViewToExternalTexture(view.getContext(), view);
     renderView.addOnViewSizeChangedListener(onViewSizeChangedListener);
     viewRenderableData = new ViewRenderableInternalData(renderView);
 
@@ -598,7 +598,7 @@ public class ViewRenderable extends Renderable {
 
     @Override
     @SuppressWarnings("AndroidApiChecker") // java.util.concurrent.CompletableFuture
-    public CompletableFuture<ViewRenderable> build(Lifecycle lifecycle) {
+    public CompletableFuture<ViewRenderable> build() {
       if (!hasSource() && context != null) {
         // For ViewRenderables, the registryId must come from the View, not the RCB source.
         // If the source is a View, use that as the registryId. If the view is null, then the source
@@ -607,7 +607,7 @@ public class ViewRenderable extends Renderable {
 
         CompletableFuture<Void> setSourceFuture = Material.builder()
                 .setSource(context, Uri.parse("sceneview/materials/view_renderable.filamat"))
-                .build(lifecycle)
+                .build()
                 .thenAccept(
                         material -> {
                           ArrayList<Vertex> vertices = new ArrayList<>();
@@ -644,14 +644,14 @@ public class ViewRenderable extends Renderable {
                                   RenderableDefinition.builder()
                                           .setVertices(vertices)
                                           .setSubmeshes(Arrays.asList(submesh))
-                                          .build(lifecycle)
+                                          .build()
                           );
                         }
                 );
-        return setSourceFuture.thenCompose((Void) -> super.build(lifecycle));
+        return setSourceFuture.thenCompose((Void) -> super.build());
       }
 
-      return super.build(lifecycle);
+      return super.build();
     }
 
     @Override

@@ -6,9 +6,9 @@ import android.net.Uri;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.MaterialInstance;
+import com.google.android.filament.gltfio.FilamentInstance;
 import com.google.ar.sceneform.collision.Box;
 import com.google.ar.sceneform.collision.CollisionShape;
 import com.google.ar.sceneform.common.TransformProvider;
@@ -28,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import io.github.sceneview.Filament;
 import io.github.sceneview.SceneView;
 
 /*###########!!!!!!!!!!!!!!!!################
@@ -53,13 +52,10 @@ import io.github.sceneview.SceneView;
 
 /**
  * Base class for rendering in 3D space by attaching to a {@link io.github.sceneview.node.Node} with
- * {@link io.github.sceneview.node.ModelNode#setModel(Renderable)}.
+ * {@link io.github.sceneview.node.ModelNode#setModelInstance(FilamentInstance)}.
  */
 @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
 public abstract class Renderable {
-
-    @Nullable
-    protected Lifecycle lifecycle;
 
     // Data that can be shared between Renderables with makeCopy()
     private final IRenderableInternalData renderableData;
@@ -93,7 +89,6 @@ public abstract class Renderable {
     @SuppressWarnings("initialization") // Suppress @UnderInitialization warning.
     protected Renderable(Builder<? extends Renderable, ? extends Builder<?, ?>> builder) {
         Preconditions.checkNotNull(builder, "Parameter \"builder\" was null.");
-        this.lifecycle = builder.lifecycle;
         if (builder.isFilamentAsset) {
             renderableData = new RenderableInternalFilamentAssetData();
         } else if (builder.isGltf) {
@@ -113,8 +108,6 @@ public abstract class Renderable {
         if (other.getId().isEmpty()) {
             throw new AssertionError("Cannot copy uninitialized Renderable.");
         }
-
-        this.lifecycle = other.lifecycle;
 
         // Share renderableData with the original Renderable.
         renderableData = other.renderableData;
@@ -283,7 +276,7 @@ public abstract class Renderable {
      * @hide
      */
     public RenderableInstance createInstance(TransformProvider transformProvider) {
-        return new RenderableInstance(lifecycle, transformProvider, this);
+        return new RenderableInstance(transformProvider, this);
     }
 
     public void updateFromDefinition(RenderableDefinition definition) {
@@ -358,8 +351,6 @@ public abstract class Renderable {
     @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
     public abstract static class Builder<T extends Renderable, B extends Builder<T, B>> {
 
-        @Nullable
-        protected Lifecycle lifecycle = null;
         /**
          * @hide
          */
@@ -482,8 +473,7 @@ public abstract class Renderable {
          *
          * @return the constructed {@link Renderable}
          */
-        public CompletableFuture<T> build(@Nullable Lifecycle lifecycle) {
-            this.lifecycle = lifecycle;
+        public CompletableFuture<T> build() {
             try {
                 checkPreconditions();
             } catch (Throwable failedPrecondition) {

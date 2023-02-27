@@ -102,18 +102,9 @@ public class RenderableInstance implements AnimatableModel {
     private Matrix cachedRelativeTransformInverse;
 
     @SuppressWarnings("initialization") // Suppress @UnderInitialization warning.
-    public RenderableInstance(@Nullable Lifecycle lifecycle, TransformProvider transformProvider, Renderable renderable) {
+    public RenderableInstance(TransformProvider transformProvider, Renderable renderable) {
         Preconditions.checkNotNull(transformProvider, "Parameter \"transformProvider\" was null.");
         Preconditions.checkNotNull(renderable, "Parameter \"renderable\" was null.");
-        if(lifecycle != null) {
-            lifecycle.addObserver(new DefaultLifecycleObserver() {
-                @Override
-                public void onDestroy(@NonNull LifecycleOwner owner) {
-                    DefaultLifecycleObserver.super.onDestroy(owner);
-                    destroy();
-                }
-            });
-        }
         this.transformProvider = transformProvider;
         this.renderable = renderable;
         this.materialBindings = new ArrayList<>(renderable.getMaterialBindings());
@@ -131,10 +122,10 @@ public class RenderableInstance implements AnimatableModel {
 
         createGltfModelInstance();
 
-        createFilamentAssetModelInstance(lifecycle);
+        createFilamentAssetModelInstance();
     }
 
-    void createFilamentAssetModelInstance(@Nullable Lifecycle lifecycle) {
+    void createFilamentAssetModelInstance() {
         if (renderable.getRenderableData() instanceof RenderableInternalFilamentAssetData) {
             RenderableInternalFilamentAssetData renderableData =
                     (RenderableInternalFilamentAssetData) renderable.getRenderableData();
