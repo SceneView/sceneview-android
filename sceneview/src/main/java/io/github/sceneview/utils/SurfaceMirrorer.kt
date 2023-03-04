@@ -6,7 +6,6 @@ import com.google.android.filament.SwapChain
 import com.google.android.filament.Viewport
 import io.github.sceneview.Filament
 import io.github.sceneview.SceneLifecycle
-import io.github.sceneview.SceneLifecycleObserver
 
 /**
  * ### Displays the Camera stream using Filament.
@@ -32,7 +31,7 @@ class SurfaceMirrorer(
                 sceneView.renderer.copyFrame(
                     mirror.swapChain!!,
                     // TODO could this be moved to [startMirroring]?
-                    getLetterboxViewport(sceneView.view.viewport, mirror.viewport),
+                    mirror.viewport,
                     sceneView.view.viewport,
                     Renderer.MIRROR_FRAME_FLAG_COMMIT
                             or Renderer.MIRROR_FRAME_FLAG_SET_PRESENTATION_TIME
@@ -71,11 +70,14 @@ class SurfaceMirrorer(
         width: Int = sceneView.width,
         height: Int = sceneView.height
     ) {
+        val targetViewport = Viewport(left, bottom, width, height)
+        val viewport = getLetterboxViewport(sceneView.view.viewport, targetViewport)
+
         surfaceMirrors.add(
             SurfaceMirror(
                 surface,
                 Filament.engine.createSwapChain(surface),
-                Viewport(left, bottom, width, height)
+                viewport
             )
         )
     }
