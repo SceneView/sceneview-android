@@ -2,6 +2,7 @@ package io.github.sceneview.sample.arcursorplacement
 
 import android.media.MediaRecorder
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isGone
@@ -115,16 +116,18 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     fun startRecording() {
+        var width = sceneView.width
+        var height = sceneView.height
         recorder = MediaRecorder().apply {
             setVideoSource(MediaRecorder.VideoSource.SURFACE)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setOutputFile(fileName)
             setVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT)
-            setVideoSize(sceneView.width, sceneView.height)
+            setVideoSize(width, height)
             prepare()
         }
         recorder.start()
-        sceneView.startMirroring(recorder.surface)
+        sceneView.startMirroring(recorder.surface, 0 , 0 ,width, height)
     }
 
     private fun stopRecording() {

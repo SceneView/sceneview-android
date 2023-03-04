@@ -642,8 +642,12 @@ open class SceneView @JvmOverloads constructor(
         surfaceMirrorer.startMirroring(mediaRecorder.surface)
     }
 
-    fun startMirroring(surface: Surface) {
-        surfaceMirrorer.startMirroring(surface)
+    fun startMirroring(surface: Surface,
+                       left: Int = 0,
+                       bottom: Int = 0,
+                       width: Int = this.width,
+                       height: Int = this.height) {
+        surfaceMirrorer.startMirroring(surface, left, bottom, width, height)
     }
 
     fun stopMirroring(surface: Surface) {
