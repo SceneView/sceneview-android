@@ -151,7 +151,7 @@ open class ModelNode private constructor(
      * @see animationCount
      */
     fun playAnimation(animationIndex: Int = 0, loop: Boolean = true) {
-        if (animationIndex <= animationCount) {
+        if (animationIndex < animationCount) {
             playingAnimations[animationIndex] = PlayingAnimation(loop = loop)
         }
     }
