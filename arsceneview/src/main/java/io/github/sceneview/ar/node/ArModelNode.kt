@@ -322,7 +322,7 @@ open class ArModelNode : ArNode {
                 xPx = e.motionEvent.x,
                 yPx = e.motionEvent.y,
                 plane = placementMode.planeEnabled,
-                depth = placementMode.depthEnabled,
+                depth = sceneView?.depthEnabled ?: placementMode.depthEnabled,
                 instant = placementMode.instantPlacementEnabled
             )
         }
@@ -353,7 +353,7 @@ open class ArModelNode : ArNode {
      */
     fun hitTest(
         plane: Boolean = placementMode.planeEnabled,
-        depth: Boolean = placementMode.depthEnabled,
+        depth: Boolean = sceneView?.depthEnabled ?: placementMode.depthEnabled,
         instant: Boolean = placementMode.instantPlacementEnabled,
     ): HitResult? = sceneView?.hitTest(hitPosition, plane, depth, instant)
 
