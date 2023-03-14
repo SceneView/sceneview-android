@@ -41,7 +41,6 @@ open class ArModelNode : ArNode {
             doOnAttachedToScene { sceneView ->
                 (sceneView as? ArSceneView)?.apply {
                     planeFindingMode = value.planeFindingMode
-                    depthEnabled = value.depthEnabled
                     instantPlacementEnabled = value.instantPlacementEnabled
                 }
             }
