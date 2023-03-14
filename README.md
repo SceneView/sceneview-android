@@ -138,8 +138,7 @@ Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
 [![](https://i3.ytimg.com/vi/HVqAvGJROWk/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=HVqAvGJROWk)
 
 ```kotlin
-ArModelNode(
-    placementMode = PlacementMode.BEST_AVAILABLE, 
+ArModelNode( 
     hitPosition = Position(0.0f, 0.0f, -2.0f),
     followHitPosition = true,
     instantAnchor = false
@@ -148,7 +147,7 @@ ArModelNode(
 
 #### Parameters
 
-- `placementMode` Define the [AR Placement Mode](#ar-placement-mode) depending on your need  
+- `placementMode` (WILL AVAILABLE IN FUTURE) - Define the [AR Placement Mode](#ar-placement-mode) depending on your need  
 You can change it to adjust between a quick (`PlacementMode.INSTANT`), more accurate (`PlacementMode.DEPTH`), only on planes/walls (`PlacementMode.PLANE_HORIZONTAL`, `PlacementMode.PLANE_VERTICAL`, `PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL`) or with auto refining accuracy placement (`PlacementMode.BEST_AVAILABLE`).  
 The `hitTest`, `pose` and `anchor` will be influenced by this choice.  
 - `hitPosition` The node camera/screen/view position where the hit will be made to find an AR position  
@@ -164,7 +163,7 @@ The node `position` is updated with the realtime ARCore `pose` at the correspond
 - `instantAnchor` Anchor the node as soon as an AR position/rotation is found/available  
 If `true`, the node will be anchored in the real world at the first suitable place available
 
-## AR Placement Mode
+## AR Placement Mode (WILL AVAILABLE IN FUTURE)
 
 [![](https://i3.ytimg.com/vi/rxzLfTCsm_o/maxresdefault.jpg)Youtube](https://www.youtube.com/watch?v=rxzLfTCsm_o)
 
