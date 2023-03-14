@@ -26,8 +26,11 @@ import io.github.sceneview.model.ModelInstance
 open class ArModelNode : ArNode {
 
     /**
-     * ### How/where does the node is positioned in the real world
+     * ### This feature must be enabled at SceneView level.
+     * THIS FEATURE WILL AVAILABLE IN FUTURE.,
+     * AS OF NOW IT MUST BE ENABLED IN SCENEVIEW LEVEL.
      *
+     * ### How/where does the node is positioned in the real world
      * Depending on your need, you can change it to adjust between a quick
      * ([PlacementMode.INSTANT]), more accurate ([PlacementMode.DEPTH]), only on planes/walls
      * ([PlacementMode.PLANE_HORIZONTAL], [PlacementMode.PLANE_VERTICAL],
@@ -36,15 +39,6 @@ open class ArModelNode : ArNode {
      * The [hitTest], [pose] and [anchor] will be influenced by this choice.
      */
     var placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE
-        set(value) {
-            field = value
-            doOnAttachedToScene { sceneView ->
-                (sceneView as? ArSceneView)?.apply {
-                    planeFindingMode = value.planeFindingMode
-                    instantPlacementEnabled = value.instantPlacementEnabled
-                }
-            }
-        }
 
     /**
      * ### The node camera/screen/view position where the hit will be made to find an AR position
@@ -322,7 +316,7 @@ open class ArModelNode : ArNode {
                 xPx = e.motionEvent.x,
                 yPx = e.motionEvent.y,
                 plane = placementMode.planeEnabled,
-                depth = sceneView?.depthEnabled ?: placementMode.depthEnabled,
+                depth = placementMode.depthEnabled,
                 instant = placementMode.instantPlacementEnabled
             )
         }
@@ -353,7 +347,7 @@ open class ArModelNode : ArNode {
      */
     fun hitTest(
         plane: Boolean = placementMode.planeEnabled,
-        depth: Boolean = sceneView?.depthEnabled ?: placementMode.depthEnabled,
+        depth: Boolean = placementMode.depthEnabled,
         instant: Boolean = placementMode.instantPlacementEnabled,
     ): HitResult? = sceneView?.hitTest(hitPosition, plane, depth, instant)
 
