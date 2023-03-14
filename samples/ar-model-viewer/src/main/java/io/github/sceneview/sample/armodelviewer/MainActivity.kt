@@ -11,6 +11,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.ar.core.Config
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.getDescription
 import io.github.sceneview.ar.node.ArModelNode
@@ -123,12 +124,32 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         item.isChecked = !item.isChecked
         modelNode?.detachAnchor()
-        modelNode?.placementMode = when (item.itemId) {
-            R.id.menuPlanePlacement -> PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL
-            R.id.menuInstantPlacement -> PlacementMode.INSTANT
-            R.id.menuDepthPlacement -> PlacementMode.DEPTH
-            R.id.menuBestPlacement -> PlacementMode.BEST_AVAILABLE
-            else -> PlacementMode.DISABLED
+        when (item.itemId) {
+            R.id.menuPlanePlacement -> {
+                sceneView.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                sceneView.instantPlacementEnabled = false
+                sceneView.depthEnabled = false
+            }
+            R.id.menuInstantPlacement -> {
+                sceneView.planeFindingMode = Config.PlaneFindingMode.DISABLED
+                sceneView.instantPlacementEnabled = true
+                sceneView.depthEnabled = false
+            }
+            R.id.menuDepthPlacement -> {
+                sceneView.planeFindingMode = Config.PlaneFindingMode.DISABLED
+                sceneView.instantPlacementEnabled = true
+                sceneView.depthEnabled = true
+            }
+            R.id.menuBestPlacement -> {
+                sceneView.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                sceneView.instantPlacementEnabled = true
+                sceneView.depthEnabled = false
+            }
+            else -> {
+                sceneView.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                sceneView.instantPlacementEnabled = false
+                sceneView.depthEnabled = false
+            }
         }
         return super.onOptionsItemSelected(item)
     }
