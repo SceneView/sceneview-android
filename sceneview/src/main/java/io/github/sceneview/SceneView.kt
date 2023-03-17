@@ -498,8 +498,9 @@ open class SceneView @JvmOverloads constructor(
         }
 
 
-        transformManager.commitLocalTransformTransaction()
         onFrame?.invoke(frameTime)
+
+        transformManager.commitLocalTransformTransaction()
 
         // Render the scene, unless the renderer wants to skip the frame.
         if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
