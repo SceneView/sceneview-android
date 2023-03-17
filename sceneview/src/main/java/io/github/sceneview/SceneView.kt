@@ -504,10 +504,10 @@ open class SceneView @JvmOverloads constructor(
 
         // Render the scene, unless the renderer wants to skip the frame.
         if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
-            renderer.render(view)
             lifecycle.dispatchEvent<SceneLifecycleObserver> {
                 onFrame(frameTime)
             }
+            renderer.render(view)
             renderer.endFrame()
         }
     }
