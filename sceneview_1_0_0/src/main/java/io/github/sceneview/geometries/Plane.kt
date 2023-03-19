@@ -1,8 +1,6 @@
 package io.github.sceneview.geometries
 
 import com.google.android.filament.Engine
-import com.google.android.filament.IndexBuffer
-import com.google.android.filament.VertexBuffer
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
@@ -11,9 +9,8 @@ class Plane private constructor(
     center: Position,
     size: Size,
     normal: Direction,
-    vertexBuffer: VertexBuffer,
-    indexBuffer: IndexBuffer
-) : Geometry(vertexBuffer, indexBuffer) {
+    val geometry: Geometry
+) : Geometry(geometry.vertexBuffer, geometry.indexBuffer) {
 
     /**
      * Center of the constructed plane
@@ -47,7 +44,7 @@ class Plane private constructor(
     ) : Geometry.Builder(
         vertices = getVertices(center, size, normal),
         submeshes = mutableListOf(
-            Submesh(
+            Geometry.Submesh(
                 // First triangle for this side.
                 3, 1, 0,
                 // Second triangle for this side.
@@ -55,17 +52,7 @@ class Plane private constructor(
             )
         )
     ) {
-        override fun build(engine: Engine): Plane {
-            val geometry = super.build(engine)
-            val plane = Plane(center, size, normal, geometry.vertexBuffer, geometry.indexBuffer)
-            plane.setParentFields(vertices, submeshes)
-            return plane
-        }
-    }
-
-    private fun setParentFields(vertices: List<Vertex>, submeshes: List<Submesh>) {
-        super.vertices = vertices
-        super.submeshes = submeshes
+        override fun build(engine: Engine) = Plane(center, size, normal, super.build(engine))
     }
 
     fun update(
