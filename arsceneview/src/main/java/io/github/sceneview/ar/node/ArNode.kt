@@ -98,7 +98,7 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
                     // Should we move back the node to the default position
 //                    transform(DEFAULT_POSITION, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
                 }
-                onPoseChanged?.invoke(this, value)
+                onPoseChanged?.invoke(value)
             }
         }
 
@@ -110,7 +110,7 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
             field?.detach()
             field = value
             pose = value?.pose
-            onAnchorChanged?.invoke(this, value)
+            onAnchorChanged?.invoke(value)
         }
 
     /**
@@ -136,11 +136,11 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
         replaceWith = ReplaceWith("onPoseChanged"),
         DeprecationLevel.ERROR
     )
-    var onTrackingChanged: ((node: ArNode, isTracking: Boolean, pose: Pose?) -> Unit)? = null
+    var onTrackingChanged: ((isTracking: Boolean) -> Unit)? = null
 
-    var onPoseChanged: ((node: ArNode, pose: Pose?) -> Unit)? = null
+    var onPoseChanged: ((pose: Pose?) -> Unit)? = null
 
-    var onAnchorChanged: ((node: ArNode, anchor: Anchor?) -> Unit)? = null
+    var onAnchorChanged: ((anchor: Anchor?) -> Unit)? = null
 
     var isCameraTracking = false
         private set(value) {
