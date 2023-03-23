@@ -1,6 +1,5 @@
 package io.github.sceneview.ar.node
 
-import android.content.Context
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
 import io.github.sceneview.material.setEmissiveColor
@@ -11,7 +10,6 @@ import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.delay
 
 open class CursorNode(
-    context: Context,
     modelFileLocation: String = "sceneview/models/cursor.glb",
     autoAnimate: Boolean = true,
     scaleToUnits: Float? = null,
@@ -19,7 +17,6 @@ open class CursorNode(
     onError: ((error: Exception) -> Unit)? = null,
     onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
 ) : ArModelNode(
-    context,
     modelFileLocation,
     autoAnimate,
     scaleToUnits,
