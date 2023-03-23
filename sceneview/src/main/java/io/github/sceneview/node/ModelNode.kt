@@ -188,7 +188,6 @@ open class ModelNode : RenderableNode {
      * @see loadModel
      */
     constructor(
-        context: Context,
         modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleUnits: Float? = null,
@@ -197,7 +196,6 @@ open class ModelNode : RenderableNode {
         onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
     ) : this() {
         loadModelGlbAsync(
-            context,
             modelGlbFileLocation,
             autoAnimate,
             scaleUnits,
