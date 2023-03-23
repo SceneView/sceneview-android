@@ -44,6 +44,7 @@ open class ArSceneView @JvmOverloads constructor(
 
     override val arCore = ARCore(activity, lifecycle, sessionFeatures)
 
+    override var frameRate: FrameRate = FrameRate.Half
 
     private var _focusMode = Config.FocusMode.AUTO
 
@@ -236,12 +237,12 @@ open class ArSceneView @JvmOverloads constructor(
     /**
      * ### The [ArCameraStream] used to control if the occlusion should be enabled or disabled
      */
-    val arCameraStream = ArCameraStream(lifecycle)
+    val arCameraStream = ArCameraStream(this)
 
     /**
      * ### [PlaneRenderer] used to control plane visualization.
      */
-    val planeRenderer = PlaneRenderer(lifecycle)
+    val planeRenderer = PlaneRenderer(this)
 
     /**
      * ### The environment and main light that are estimated by AR Core to render the scene.
@@ -342,7 +343,8 @@ open class ArSceneView @JvmOverloads constructor(
      */
     var onAugmentedFaceUpdate: ((augmentedFace: AugmentedFace) -> Unit)? = null
 
-    var onArTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null
+    var onArTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? =
+        null
 
     override val cameraGestureDetector = null
     override val cameraManipulator = null
@@ -355,7 +357,11 @@ open class ArSceneView @JvmOverloads constructor(
     override fun onArSessionCreated(session: ArSession) {
         super.onArSessionCreated(session)
 
+        session.setCameraTextureNames(arCameraStream.cameraTextureIds)
+
         session.configure { config ->
+            // getting ar frame doesn't block and gives last frame
+            //config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
             // FocusMode must be changed after the session resume to work
             // config.focusMode = focusMode
             config.planeFindingMode = _planeFindingMode
@@ -429,14 +435,14 @@ open class ArSceneView @JvmOverloads constructor(
         // ...and it's better for your users
         activity.setKeepScreenOn(camera.isTracking)
 
+        cameraNode.updateTrackedPose(camera)
+
         arCameraStream.update(arFrame)
 
-        // At the start of the frame, update the tracked pose of the camera
-        // to use in any calculations during the frame.
-        cameraNode.updateTrackedPose(arFrame.camera)
+        planeRenderer.update(arFrame)
 
         trackingFailureReason = if (!camera.isTracking) {
-            arFrame.camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
+            camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
         } else null
 
         if (onAugmentedImageUpdate.isNotEmpty()) {
@@ -532,6 +538,13 @@ open class ArSceneView @JvmOverloads constructor(
         instant: Boolean,
         approximateDistance: Float = 2.0f
     ) = currentFrame?.hitTest(xPx, yPx, plane, depth, instant, approximateDistance)
+
+    override fun destroy() {
+        super.destroy()
+
+        arCameraStream.destroy()
+        planeRenderer.destroy()
+    }
 }
 
 /**
