@@ -1,6 +1,5 @@
 package io.github.sceneview.ar.node
 
-import android.content.Context
 import com.google.ar.core.*
 import com.google.ar.core.Config.PlaneFindingMode
 import io.github.sceneview.ar.ArSceneView
@@ -243,7 +242,6 @@ open class ArModelNode : ArNode {
      * @see loadModelGlb
      */
     constructor(
-        context: Context,
         modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
@@ -252,7 +250,6 @@ open class ArModelNode : ArNode {
         onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
     ) : this() {
         loadModelGlbAsync(
-            context,
             modelGlbFileLocation,
             autoAnimate,
             scaleToUnits,
