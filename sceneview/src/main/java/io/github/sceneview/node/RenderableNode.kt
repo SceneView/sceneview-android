@@ -46,8 +46,11 @@ open class RenderableNode : Node {
     /**
      * @see RenderableManager.setMaterialInstanceAt
      */
-    fun setMaterial(material: MaterialInstance, @IntRange(from = 0) primitiveIndex: Int = 0) =
-        renderables.forEach { it.setMaterial(material, primitiveIndex) }
+    fun setMaterialInstance(
+        materialInstance: MaterialInstance,
+        @IntRange(from = 0) primitiveIndex: Int = 0
+    ) =
+        renderables.forEach { it.setMaterialInstance(materialInstance, primitiveIndex) }
 
     /**
      * @see RenderableManager.setCastShadows
