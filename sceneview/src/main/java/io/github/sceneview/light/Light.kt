@@ -1,9 +1,7 @@
 package io.github.sceneview.light
 
-import androidx.lifecycle.Lifecycle
 import com.google.android.filament.EntityInstance
 import com.google.android.filament.LightManager
-import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
@@ -20,14 +18,9 @@ typealias LightInstance = Int
  */
 val Light.instance: LightInstance @EntityInstance get() = Filament.lightManager.getInstance(this)
 
-fun LightManager.Builder.build(lifecycle: Lifecycle? = null): Light =
+fun LightManager.Builder.build(): Light =
     Filament.entityManager.create().apply {
         build(Filament.engine, this)
-    }.also { light ->
-        lifecycle?.observe(onDestroy = {
-            // Prevent double destroy in case of manually destroyed
-            runCatching { light.destroyLight() }
-        })
     }
 
 /**
@@ -131,7 +124,7 @@ var Light.outerConeAngle: Float
     set(value) = Filament.lightManager.setSpotLightCone(instance, innerConeAngle, value)
 
 // TODO: We need a clone on the Filament side in order to copy all values
-fun Light.clone(lifecycle: Lifecycle) = LightManager.Builder(type)
+fun Light.clone() = LightManager.Builder(type)
     .castShadows(isShadowCaster)
     .position(position.x, position.y, position.z)
     .direction(direction.x, direction.y, direction.z)
@@ -142,7 +135,7 @@ fun Light.clone(lifecycle: Lifecycle) = LightManager.Builder(type)
     .sunHaloSize(sunHaloSize)
     .sunAngularRadius(sunAngularRadius)
     .spotLightCone(innerConeAngle, outerConeAngle)
-    .build(lifecycle)
+    .build()
 
 /**
  * Destroys a Light and frees all its associated resources.

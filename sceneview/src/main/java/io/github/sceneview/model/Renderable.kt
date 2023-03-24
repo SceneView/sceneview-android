@@ -1,7 +1,6 @@
 package io.github.sceneview.model
 
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.coroutineScope
+import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.filament.utils.HDRLoader
 import com.google.ar.sceneform.rendering.Renderable
 import io.github.sceneview.environment.loadEnvironment
@@ -29,8 +28,10 @@ import com.google.android.filament.utils.KTX1Loader as KTXLoader
  * @see [KTXLoader.loadEnvironment]
  * @see [HDRLoader.loadEnvironment]
  */
-suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.build(lifecycle: Lifecycle) {
-    lifecycle.coroutineScope.launchWhenCreated {
+suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.build(
+    coroutineScope: LifecycleCoroutineScope
+) {
+    coroutineScope.launchWhenCreated {
         await()
     }
 }

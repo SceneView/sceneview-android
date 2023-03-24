@@ -1,11 +1,9 @@
 package io.github.sceneview.renderable
 
 import androidx.annotation.IntRange
-import androidx.lifecycle.Lifecycle
 import com.google.android.filament.EntityInstance
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
-import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
 
 typealias Renderable = Int
