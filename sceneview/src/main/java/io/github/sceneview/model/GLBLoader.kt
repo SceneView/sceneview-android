@@ -29,6 +29,11 @@ object GLBLoader {
         }
     }
 
+    suspend fun loadModelInstance(
+        context: Context,
+        glbFileLocation: String
+    ) = loadModel(context, glbFileLocation)?.instance
+
     /**
      * Consumes the contents of a glTF 2.0 file and produces a primary asset with one or more
      * instances.
