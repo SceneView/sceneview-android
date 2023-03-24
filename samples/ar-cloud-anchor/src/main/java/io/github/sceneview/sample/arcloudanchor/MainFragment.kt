@@ -88,7 +88,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             isSmoothPoseEnable = false
             isVisible = false
             loadModelGlbAsync(
-                context = requireContext(),
                 glbFileLocation = "models/spiderbot.glb"
             ) {
                 isLoading = false

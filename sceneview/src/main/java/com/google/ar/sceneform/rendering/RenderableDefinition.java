@@ -1,7 +1,6 @@
 package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.IndexBuffer.Builder.IndexType;
@@ -214,9 +213,7 @@ public class RenderableDefinition {
             indexBuffer = IndexBufferKt.build(
                     new IndexBuffer.Builder()
                             .indexCount(numIndices)
-                            .bufferType(IndexType.UINT),
-                    // IndexBuffer destroy manually handled (not lifecycle aware)
-                    null);
+                            .bufferType(IndexType.UINT));
             data.setIndexBuffer(indexBuffer);
         }
 
@@ -458,7 +455,7 @@ public class RenderableDefinition {
         }
 
         // VertexBufferKt destroy manually handled (not lifecycle aware)
-        return VertexBufferKt.build(builder, null);
+        return VertexBufferKt.build(builder);
     }
 
     private static void addVector3ToBuffer(Vector3 vector3, FloatBuffer buffer) {

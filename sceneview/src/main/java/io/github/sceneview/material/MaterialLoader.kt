@@ -1,8 +1,6 @@
 package io.github.sceneview.material
 
 import android.content.Context
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.coroutineScope
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.utils.useFileBufferNotNull
@@ -27,7 +25,6 @@ object MaterialLoader {
      */
     suspend fun loadMaterial(
         context: Context,
-        lifecycle: Lifecycle,
         filamatFileLocation: String
     ): Material? = context.useFileBufferNotNull(filamatFileLocation) { buffer ->
         withContext(Dispatchers.Main) {
@@ -54,11 +51,10 @@ object MaterialLoader {
     /**
      * ### Load a Material object outside of a coroutine scope from a local filamat file.
      *
-     * @see MaterialLoader.loadMaterial
+     * @see MaterialLoader.loadMaterialInstance
      */
     fun createMaterial(
         context: Context,
-        lifecycle: Lifecycle? = null,
         filamatFileLocation: String,
     ): Material = context.useLocalFileBuffer(filamatFileLocation) { buffer ->
         if (buffer == null) throw IOException("Unable to load the material. Check whether the material exists")
@@ -75,7 +71,6 @@ object MaterialLoader {
      * @return the newly created object
      */
     fun createMaterial(
-        lifecycle: Lifecycle? = null,
         filamatBuffer: Buffer
     ): Material = Material.Builder()
         .payload(filamatBuffer, filamatBuffer.remaining())
