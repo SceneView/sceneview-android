@@ -422,7 +422,7 @@ open class SceneView @JvmOverloads constructor(
             .intensity(100_000.0f)
             .direction(0.0f, -1.0f, 0.0f)
             .castShadows(true)
-            .build(lifecycle)
+            .build()
         environment = KTXLoader.loadEnvironmentSync(
             context, lifecycle,
             iblKtxFileLocation = defaultIblLocation
@@ -497,35 +497,33 @@ open class SceneView @JvmOverloads constructor(
     }
 
     open fun doFrame(frameTime: FrameTime) {
-        if (!uiHelper.isReadyToRender) {
-            return
-        }
-
-        // Allow the resource loader to finalize textures that have become ready.
+        if (uiHelper.isReadyToRender) {
+            // Allow the resource loader to finalize textures that have become ready.
 //        resourceLoader.asyncUpdateLoad()
 
-        transformManager.openLocalTransformTransaction()
+            transformManager.openLocalTransformTransaction()
 
-        // Only update the camera manipulator if a touch has been made
-        if (lastTouchEvent != null) {
-            cameraManipulator?.let { manipulator ->
-                manipulator.update(frameTime.intervalSeconds.toFloat())
-                // Extract the camera basis from the helper and push it to the Filament camera.
-                cameraNode.transform = manipulator.transform
+            // Only update the camera manipulator if a touch has been made
+            if (lastTouchEvent != null) {
+                cameraManipulator?.let { manipulator ->
+                    manipulator.update(frameTime.intervalSeconds.toFloat())
+                    // Extract the camera basis from the helper and push it to the Filament camera.
+                    cameraNode.transform = manipulator.transform
+                }
             }
-        }
 
-        lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onFrame(frameTime)
-        }
-        onFrame?.invoke(frameTime)
+            lifecycle.dispatchEvent<SceneLifecycleObserver> {
+                onFrame(frameTime)
+            }
+            onFrame?.invoke(frameTime)
 
-        transformManager.commitLocalTransformTransaction()
+            transformManager.commitLocalTransformTransaction()
 
-        // Render the scene, unless the renderer wants to skip the frame.
-        if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
-            renderer.render(view)
-            renderer.endFrame()
+            // Render the scene, unless the renderer wants to skip the frame.
+            if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
+                renderer.render(view)
+                renderer.endFrame()
+            }
         }
     }
 
