@@ -87,14 +87,6 @@ open class ModelNode : RenderableNode {
         }
 
     /**
-     * ### The [Model] to display.
-     *
-     * The renderable is usually a 3D model.
-     * If null, this node's current renderable will be removed.
-     */
-    open val model: Model? get() = modelInstance?.asset
-
-    /**
      * The [ModelInstance] to display.
      *
      * The renderable is usually a 3D model.
@@ -129,7 +121,7 @@ open class ModelNode : RenderableNode {
         get() = modelInstance?.lights?.toList() ?: listOf()
 
     val renderableNames: List<String>
-        get() = model?.renderableNames?.toList() ?: listOf()
+        get() = modelInstance?.model?.renderableNames?.toList() ?: listOf()
 
     override val worldTransform: Transform
         get() = super.worldTransform * modelTransform
@@ -231,7 +223,7 @@ open class ModelNode : RenderableNode {
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
-        model?.let { it.popRenderable() }
+        modelInstance?.model?.let { it.popRenderable() }
 
         animator?.apply {
             playingAnimations.forEach { (index, animation) ->
@@ -366,7 +358,6 @@ open class ModelNode : RenderableNode {
      * - ...
      */
     fun loadModelGlbAsync(
-        context: Context,
         glbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
@@ -377,7 +368,7 @@ open class ModelNode : RenderableNode {
         doOnAttachedToScene { sceneView ->
             sceneView.lifecycle.coroutineScope.launchWhenCreated {
                 loadModelGlb(
-                    context,
+                    sceneView.context,
                     glbFileLocation,
                     autoAnimate,
                     scaleToUnits,
