@@ -1,11 +1,9 @@
 package io.github.sceneview.renderable
 
 import androidx.annotation.IntRange
-import androidx.lifecycle.Lifecycle
 import com.google.android.filament.EntityInstance
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
-import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
 
 typealias Renderable = Int
@@ -21,14 +19,9 @@ const val RENDER_PRIORITY_LAST = 7
 val Renderable.renderableInstance: RenderableInstance
     @EntityInstance get() = Filament.renderableManager.getInstance(this)
 
-fun RenderableManager.Builder.build(lifecycle: Lifecycle): Renderable =
+fun RenderableManager.Builder.build(): Renderable =
     Filament.entityManager.create().apply {
         build(Filament.engine, this)
-    }.also { renderable ->
-        lifecycle.observe(onDestroy = {
-            // Prevent double destroy in case of manually destroyed
-            runCatching { renderable.destroyRenderable() }
-        })
     }
 
 /**
@@ -46,7 +39,7 @@ fun Renderable.getMaterial(@IntRange(from = 0) primitiveIndex: Int = 0) =
 /**
  * @see RenderableManager.setMaterialInstanceAt
  */
-fun Renderable.setMaterial(
+fun Renderable.setMaterialInstance(
     material: MaterialInstance,
     @IntRange(from = 0) primitiveIndex: Int = 0
 ) = Filament.renderableManager.setMaterialInstanceAt(renderableInstance, primitiveIndex, material)

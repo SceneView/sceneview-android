@@ -13,6 +13,7 @@ include ':sceneview_1_0_0'
 
 // Samples
 include ':samples:common'
+include ':samples:ar-augmented-image'
 include ':samples:ar-cloud-anchor'
 include ':samples:ar-cursor-placement'
 include ':samples:ar-model-viewer'

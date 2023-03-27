@@ -1,6 +1,5 @@
 package io.github.sceneview.environment
 
-import androidx.lifecycle.Lifecycle
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
@@ -15,7 +14,6 @@ const val defaultSpecularFilter = true
 const val defaultCreateSkybox = true
 
 open class HDREnvironment(
-    lifecycle: Lifecycle,
     cubemap: Texture? = null,
     indirectLightIrradiance: FloatArray? = null,
     indirectLightIntensity: Float? = null,
@@ -44,12 +42,12 @@ open class HDREnvironment(
         indirectLightIntensity?.let {
             intensity(it)
         }
-    }.build(lifecycle),
+    }.build(),
     sphericalHarmonics = indirectLightIrradiance,
     skybox = cubemap?.takeIf { createSkybox }?.let {
         Skybox.Builder().apply {
             environment(it)
-        }.build(lifecycle)
+        }.build()
     }
 ) {
     var cubemap: Texture? = cubemap

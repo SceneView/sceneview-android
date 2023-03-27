@@ -32,7 +32,7 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeCube(Lifecycle lifecycle, Vector3 size, Vector3 center, Material material) {
+  public static ModelRenderable makeCube(Vector3 size, Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
     Vector3 extents = size.scaled(0.5f);
@@ -117,10 +117,10 @@ public final class ShapeFactory {
         RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build(lifecycle);
+            .build();
 
     CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle);
+        ModelRenderable.builder().setSource(renderableDefinition).build();
 
     @Nullable ModelRenderable result;
     try {
@@ -221,10 +221,10 @@ public final class ShapeFactory {
         RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build(lifecycle);
+            .build();
 
     CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle);
+        ModelRenderable.builder().setSource(renderableDefinition).build();
 
     @Nullable ModelRenderable result;
     try {
@@ -251,7 +251,7 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeCylinder(Lifecycle lifecycle,float radius, float height,
+  public static ModelRenderable makeCylinder(float radius, float height,
                                              Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
@@ -378,10 +378,10 @@ public final class ShapeFactory {
         RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build(lifecycle);
+            .build();
 
     CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build(lifecycle);
+        ModelRenderable.builder().setSource(renderableDefinition).build();
 
     @Nullable ModelRenderable result;
     try {

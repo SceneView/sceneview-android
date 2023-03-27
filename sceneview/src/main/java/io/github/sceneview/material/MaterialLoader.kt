@@ -1,8 +1,6 @@
 package io.github.sceneview.material
 
 import android.content.Context
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.coroutineScope
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import io.github.sceneview.utils.useFileBufferNotNull
@@ -27,11 +25,10 @@ object MaterialLoader {
      */
     suspend fun loadMaterial(
         context: Context,
-        lifecycle: Lifecycle,
         filamatFileLocation: String
-    ): MaterialInstance? = context.useFileBufferNotNull(filamatFileLocation) { buffer ->
+    ): Material? = context.useFileBufferNotNull(filamatFileLocation) { buffer ->
         withContext(Dispatchers.Main) {
-            createMaterial(lifecycle, buffer)
+            createMaterial(buffer)
         }
     }
 
@@ -40,34 +37,29 @@ object MaterialLoader {
      *
      * The material file is a binary blob produced by libfilamat or by matc.
      *
-     * For Java compatibility usage.
-     *
-     * Kotlin developers should use [loadMaterial]
-     *
-     * [See][loadMaterial]
+     * @param filamatFileLocation the filamat file location.
+     * - A relative file location *materials/mymaterial.filamat*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymaterial)*
+     * - A File path *Uri.fromFile(myMaterialFile).path*
+     * - An http or https url *https://mydomain.com/mymaterial.filamat*
      */
-    fun loadMaterialAsync(
+    suspend fun loadMaterialInstance(
         context: Context,
-        lifecycle: Lifecycle,
-        filamatFileLocation: String,
-        result: (MaterialInstance?) -> Unit
-    ) = lifecycle.coroutineScope.launchWhenCreated {
-        result(loadMaterial(context, lifecycle, filamatFileLocation))
-    }
+        filamatFileLocation: String
+    ): MaterialInstance? = loadMaterial(context, filamatFileLocation)?.defaultInstance
 
     /**
      * ### Load a Material object outside of a coroutine scope from a local filamat file.
      *
-     * @see MaterialLoader.loadMaterial
+     * @see MaterialLoader.loadMaterialInstance
      */
     fun createMaterial(
         context: Context,
-        lifecycle: Lifecycle? = null,
         filamatFileLocation: String,
-    ): MaterialInstance = context.useLocalFileBuffer(filamatFileLocation) { buffer ->
+    ): Material = context.useLocalFileBuffer(filamatFileLocation) { buffer ->
         if (buffer == null) throw IOException("Unable to load the material. Check whether the material exists")
 
-        createMaterial(lifecycle, buffer)
+        createMaterial(buffer)
     }
 
     /**
@@ -79,10 +71,8 @@ object MaterialLoader {
      * @return the newly created object
      */
     fun createMaterial(
-        lifecycle: Lifecycle? = null,
         filamatBuffer: Buffer
-    ): MaterialInstance = Material.Builder()
+    ): Material = Material.Builder()
         .payload(filamatBuffer, filamatBuffer.remaining())
-        .build(lifecycle)
-        .defaultInstance
+        .build()
 }

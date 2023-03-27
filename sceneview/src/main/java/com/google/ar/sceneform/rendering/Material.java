@@ -196,12 +196,12 @@ public class Material {
         return filamentMaterialInstance;
     }
 
-    public Material(@Nullable Lifecycle lifecycle, com.google.android.filament.Material filamentMaterial) {
-        this(lifecycle, filamentMaterial, false);
+    public Material(com.google.android.filament.Material filamentMaterial) {
+        this(filamentMaterial, false);
     }
 
     @SuppressWarnings("initialization")
-    public Material(@Nullable Lifecycle lifecycle, com.google.android.filament.Material filamentMaterial, boolean useDefaultInstance) {
+    public Material(com.google.android.filament.Material filamentMaterial, boolean useDefaultInstance) {
         this.lifecycle = lifecycle;
         this.filamentMaterial = filamentMaterial;
         this.filamentMaterialInstance = useDefaultInstance ? filamentMaterial.getDefaultInstance() : filamentMaterial.createInstance();
@@ -216,7 +216,7 @@ public class Material {
 
     @SuppressWarnings("initialization")
     private Material(Material other) {
-        this(other.lifecycle, other.filamentMaterial);
+        this(other.filamentMaterial);
         copyMaterialParameters(other.materialParameters);
     }
 
@@ -227,7 +227,6 @@ public class Material {
      * new materials, so there is no need to expose a builder.
      */
     public static final class Builder {
-        Lifecycle lifecycle;
         /**
          * The {@link Material} will be constructed from the contents of this buffer
          */
@@ -338,7 +337,7 @@ public class Material {
          * specified.
          */
         @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"})
-        public CompletableFuture<Material> build(Lifecycle lifecycle) {
+        public CompletableFuture<Material> build() {
             try {
                 checkPreconditions();
             } catch (Throwable failedPrecondition) {
@@ -348,8 +347,6 @@ public class Material {
                         TAG, result, "Unable to load Material registryId='" + registryId + "'");
                 return result;
             }
-
-            this.lifecycle = lifecycle;
 
             // For static-analysis check.
             Object registryId = this.registryId;
@@ -364,7 +361,7 @@ public class Material {
 
             if (sourceBuffer != null) {
                 com.google.android.filament.Material filamentMaterial = createFilamentMaterial(sourceBuffer);
-                Material material = new Material(lifecycle, filamentMaterial);
+                Material material = new Material(filamentMaterial);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -377,7 +374,7 @@ public class Material {
                         TAG, result, "Unable to load Material registryId='" + registryId + "'");
                 return result;
             } else if (existingMaterial != null) {
-                Material material = new Material(lifecycle, existingMaterial);
+                Material material = new Material(existingMaterial);
 
                 // Register the new material in the registry.
                 if (registryId != null) {
@@ -421,7 +418,7 @@ public class Material {
                                     ThreadPools.getThreadPoolExecutor())
                             .thenApplyAsync(
                                     byteBuffer -> {
-                                        return new Material(lifecycle, createFilamentMaterial(byteBuffer));
+                                        return new Material(createFilamentMaterial(byteBuffer));
                                     },
                                     ThreadPools.getMainExecutor());
 
@@ -448,7 +445,7 @@ public class Material {
         private com.google.android.filament.Material createFilamentMaterial(ByteBuffer sourceBuffer) {
             try {
                 return MaterialKt.build(new com.google.android.filament.Material.Builder()
-                        .payload(sourceBuffer, sourceBuffer.limit()), lifecycle);
+                        .payload(sourceBuffer, sourceBuffer.limit()));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Unable to create material from source byte buffer.", e);
             }
