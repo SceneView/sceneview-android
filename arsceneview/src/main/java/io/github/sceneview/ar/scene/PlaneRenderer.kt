@@ -1,28 +1,25 @@
 package io.github.sceneview.ar.scene
 
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.coroutineScope
-import com.google.android.filament.MaterialInstance
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
 import com.google.ar.core.Plane
 import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.DeadlineExceededException
-import com.google.ar.sceneform.rendering.Material
 import com.google.ar.sceneform.rendering.PlaneVisualizer
 import dev.romainguy.kotlin.math.Float3
-import io.github.sceneview.ar.ArSceneLifecycle
-import io.github.sceneview.ar.ArSceneLifecycleObserver
+import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.zDirection
 import io.github.sceneview.material.MaterialLoader
+import io.github.sceneview.material.destroy
 import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setTexture
 import io.github.sceneview.math.Position
 import io.github.sceneview.texture.TextureLoader
 import io.github.sceneview.texture.TextureLoader.TextureType
+import io.github.sceneview.texture.destroy
 import io.github.sceneview.utils.Color
 
 /**
@@ -31,26 +28,42 @@ import io.github.sceneview.utils.Color
  *
  * Used to visualize detected planes and to control whether Renderables cast shadows on them.
  */
-class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleObserver {
-
-    private val sceneView get() = lifecycle.sceneView
+class PlaneRenderer(val sceneView: ArSceneView) {
 
     private val visualizers = mutableMapOf<Plane, PlaneVisualizer>()
 
-    // TODO: Remove when it isn't used in PlaneVisualizer
-    private var planeMaterial: Material? = null
+    val planeTexture = TextureLoader.createImageTexture(
+        sceneView.context,
+        "sceneview/textures/plane_renderer.png",
+        TextureType.COLOR
+    )
 
     /**
      * Default material instance used to render the planes.
      */
-    var planeMaterialInstance: MaterialInstance? = null
-        private set
+    val planeMaterial = MaterialLoader.createMaterial(
+        sceneView.context,
+        "sceneview/materials/plane_renderer.filamat"
+    ).apply {
+        defaultInstance.apply {
+            setTexture(MATERIAL_TEXTURE, planeTexture)
+
+            val widthToHeightRatio =
+                planeTexture.getWidth(0).toFloat() / planeTexture.getHeight(0).toFloat()
+            val scaleX = BASE_UV_SCALE
+            val scaleY = scaleX * widthToHeightRatio
+            setParameter(MATERIAL_UV_SCALE, scaleX, scaleY)
+
+            setParameter(MATERIAL_COLOR, Color(1.0f, 1.0f, 1.0f))
+            setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
+        }
+    }
 
     // TODO: Remove when it isn't used in PlaneVisualizer
-    private var shadowMaterial: Material? = null
-
-    var shadowMaterialInstance: MaterialInstance? = null
-        private set
+    private var shadowMaterial = MaterialLoader.createMaterial(
+        sceneView.context,
+        "sceneview/materials/plane_renderer_shadow.filamat"
+    )
 
     /**
      * Determines how tracked planes should be visualized on the screen. Two options are available,
@@ -125,15 +138,7 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             }
         }
 
-    init {
-        lifecycle.addObserver(this)
-        lifecycle.coroutineScope.launchWhenCreated {
-            loadPlaneMaterial()
-            loadShadowMaterial()
-        }
-    }
-
-    override fun onArFrame(arFrame: ArFrame) {
+    fun update(arFrame: ArFrame) {
         if (isEnabled) {
             if (arFrame.fps(this.arFrame) < maxHitTestPerSecond) {
                 this.arFrame = arFrame
@@ -184,14 +189,12 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
         }
     }
 
-    override fun onDestroy(owner: LifecycleOwner) {
-        destroy()
-
-        super.onDestroy(owner)
-    }
-
     fun destroy() {
         visualizers.forEach { (_, planeVisualizer) -> planeVisualizer.destroy() }
+
+        planeTexture.destroy()
+        planeMaterial.destroy()
+        shadowMaterial.destroy()
     }
 
     /**
@@ -208,12 +211,8 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
         if (plane.trackingState == TrackingState.TRACKING || plane.subsumedBy == null) {
             val planeVisualizer = visualizers[plane]
                 ?: PlaneVisualizer(sceneView, plane).apply {
-                    if (planeMaterial != null) {
-                        setPlaneMaterial(planeMaterial)
-                    }
-                    if (shadowMaterial != null) {
-                        setShadowMaterial(shadowMaterial)
-                    }
+                    setPlaneMaterial(planeMaterial.defaultInstance)
+                    setShadowMaterial(shadowMaterial.defaultInstance)
                     setShadowReceiver(isShadowReceiver)
                     setVisible(isVisible && visible)
                     setEnabled(isEnabled && isCameraTracking)
@@ -240,47 +239,6 @@ class PlaneRenderer(private val lifecycle: ArSceneLifecycle) : ArSceneLifecycleO
             } else {
                 false
             }
-        }
-    }
-
-    private suspend fun loadShadowMaterial() {
-        shadowMaterialInstance = MaterialLoader.loadMaterial(
-            sceneView.context,
-            lifecycle,
-            "sceneview/materials/plane_renderer_shadow.filamat"
-        ) ?: throw AssertionError("Can't load the plane renderer shadow material")
-        shadowMaterial = Material(lifecycle, shadowMaterialInstance)
-
-        visualizers.values.forEach { it.setShadowMaterial(shadowMaterial) }
-    }
-
-    private suspend fun loadPlaneMaterial() {
-        val texture = TextureLoader.loadImageTexture(
-            sceneView.context,
-            lifecycle,
-            "sceneview/textures/plane_renderer.png",
-            TextureType.COLOR
-        ) ?: throw AssertionError("Can't load the plane renderer texture")
-
-        planeMaterialInstance = MaterialLoader.loadMaterial(
-            sceneView.context,
-            lifecycle,
-            "sceneview/materials/plane_renderer.filamat"
-        )?.apply {
-            setTexture(MATERIAL_TEXTURE, texture)
-
-            val widthToHeightRatio = texture.getWidth(0).toFloat() / texture.getHeight(0).toFloat()
-            val scaleX = BASE_UV_SCALE
-            val scaleY = scaleX * widthToHeightRatio
-
-            setParameter(MATERIAL_UV_SCALE, scaleX, scaleY)
-            setParameter(MATERIAL_COLOR, Color(1.0f, 1.0f, 1.0f))
-            setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
-        } ?: throw AssertionError("Can't load the plane renderer material")
-
-        planeMaterial = Material(lifecycle, planeMaterialInstance)
-        for (planeVisualizer in visualizers.values) {
-            planeVisualizer.setPlaneMaterial(planeMaterial)
         }
     }
 

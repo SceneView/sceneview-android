@@ -50,7 +50,10 @@ import io.github.sceneview.renderable.Renderable
 import io.github.sceneview.scene.build
 import io.github.sceneview.scene.destroy
 import io.github.sceneview.utils.*
+import java.util.concurrent.TimeUnit
 import com.google.android.filament.utils.KTX1Loader as KTXLoader
+
+private const val maxFramesPerSecond = 60
 
 const val defaultIblLocation = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
 
@@ -75,6 +78,12 @@ open class SceneView @JvmOverloads constructor(
     NodeParent,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
+    sealed class FrameRate(val factor: Long) {
+        object Full : FrameRate(1)
+        object Half : FrameRate(2)
+        object Third : FrameRate(3)
+    }
+
     enum class SelectionMode {
         NONE, SINGLE, MULTIPLE;
 
@@ -85,6 +94,8 @@ open class SceneView @JvmOverloads constructor(
          */
         var allowDeselection = true
     }
+
+    open var frameRate: FrameRate = FrameRate.Full
 
     val scene: Scene
     val view: View
@@ -276,7 +287,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
     open val selectionVisualizer: (() -> Node)? = {
-        ModelNode(context, "sceneview/models/node_selector.glb").apply {
+        ModelNode("sceneview/models/node_selector.glb").apply {
             isSelectable = false
             collisionShape = null
         }
@@ -365,6 +376,7 @@ open class SceneView @JvmOverloads constructor(
             .build(Manipulator.Mode.ORBIT)
     }
 
+    private var lastTick: Long = 0
     private val surfaceMirrorer by lazy { SurfaceMirrorer(lifecycle) }
 
     init {
@@ -410,7 +422,7 @@ open class SceneView @JvmOverloads constructor(
             .intensity(100_000.0f)
             .direction(0.0f, -1.0f, 0.0f)
             .castShadows(true)
-            .build(lifecycle)
+            .build()
         environment = KTXLoader.loadEnvironmentSync(
             context, lifecycle,
             iblKtxFileLocation = defaultIblLocation
@@ -474,40 +486,44 @@ open class SceneView @JvmOverloads constructor(
         // Always post the callback for the next frame.
         Choreographer.getInstance().postFrameCallback(this)
 
-        currentFrameTime = FrameTime(frameTimeNanos, currentFrameTime.nanoseconds)
-        doFrame(currentFrameTime)
+        // limit to max fps
+        val nanoTime = System.nanoTime()
+        val tick = nanoTime / (TimeUnit.SECONDS.toNanos(1) / maxFramesPerSecond)
+
+        if (lastTick / frameRate.factor != tick / frameRate.factor) {
+            currentFrameTime = FrameTime(frameTimeNanos, currentFrameTime.nanoseconds)
+            doFrame(currentFrameTime)
+        }
     }
 
     open fun doFrame(frameTime: FrameTime) {
-        if (!uiHelper.isReadyToRender) {
-            return
-        }
-
-        // Allow the resource loader to finalize textures that have become ready.
+        if (uiHelper.isReadyToRender) {
+            // Allow the resource loader to finalize textures that have become ready.
 //        resourceLoader.asyncUpdateLoad()
 
-        transformManager.openLocalTransformTransaction()
+            transformManager.openLocalTransformTransaction()
 
-        // Only update the camera manipulator if a touch has been made
-        if (lastTouchEvent != null) {
-            cameraManipulator?.let { manipulator ->
-                manipulator.update(frameTime.intervalSeconds.toFloat())
-                // Extract the camera basis from the helper and push it to the Filament camera.
-                cameraNode.transform = manipulator.transform
+            // Only update the camera manipulator if a touch has been made
+            if (lastTouchEvent != null) {
+                cameraManipulator?.let { manipulator ->
+                    manipulator.update(frameTime.intervalSeconds.toFloat())
+                    // Extract the camera basis from the helper and push it to the Filament camera.
+                    cameraNode.transform = manipulator.transform
+                }
             }
-        }
 
-        lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onFrame(frameTime)
-        }
-        onFrame?.invoke(frameTime)
+            lifecycle.dispatchEvent<SceneLifecycleObserver> {
+                onFrame(frameTime)
+            }
+            onFrame?.invoke(frameTime)
 
-        transformManager.commitLocalTransformTransaction()
+            transformManager.commitLocalTransformTransaction()
 
-        // Render the scene, unless the renderer wants to skip the frame.
-        if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
-            renderer.render(view)
-            renderer.endFrame()
+            // Render the scene, unless the renderer wants to skip the frame.
+            if (renderer.beginFrame(swapChain!!, frameTime.nanoseconds)) {
+                renderer.render(view)
+                renderer.endFrame()
+            }
         }
     }
 

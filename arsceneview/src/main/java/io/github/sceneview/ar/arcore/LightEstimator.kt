@@ -286,11 +286,11 @@ class LightEstimator(
                             sceneView.indirectLight?.intensity?.let { baseIntensity ->
                                 intensity(baseIntensity * pixelIntensity)
                             }
-                        }.build(lifecycle),
+                        }.build(),
                         sphericalHarmonics = sceneView.environment?.sphericalHarmonics
                     )
 
-                    mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
+                    mainLight = sceneView.mainLight?.clone()?.apply {
                         max(colorIntensities).takeIf { it > 0 }?.let { maxIntensity ->
                             // Normalize value if max = green:
                             // colorIntensitiesFactors = Color(r=(0.0,1.0}, g=1.0, b=(0.0,1.0}))
@@ -330,7 +330,6 @@ class LightEstimator(
 
                     val colorIntensity = colorIntensitiesFactors.toFloatArray().average().toFloat()
                     environment = HDREnvironment(
-                        lifecycle = lifecycle,
                         cubemap = when {
                             environmentalHdrReflections -> {
                                 lightEstimate.acquireEnvironmentalHdrCubeMap()?.let { arImages ->
@@ -419,7 +418,7 @@ class LightEstimator(
                         sharedCubemap = true
                     )
 
-                    mainLight = sceneView.mainLight?.clone(lifecycle)?.apply {
+                    mainLight = sceneView.mainLight?.clone()?.apply {
                         if (environmentalHdrMainLightDirection) {
                             lightEstimate.environmentalHdrMainLightDirection.let { (x, y, z) ->
                                 direction = Direction(-x, -y, -z)

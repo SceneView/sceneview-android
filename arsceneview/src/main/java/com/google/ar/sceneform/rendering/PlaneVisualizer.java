@@ -2,6 +2,8 @@ package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.MaterialInstance;
+import com.google.android.filament.TransformManager;
 import com.google.ar.core.Plane;
 import com.google.ar.core.TrackingState;
 import com.google.ar.sceneform.common.TransformProvider;
@@ -79,20 +81,20 @@ public class PlaneVisualizer implements TransformProvider {
         this.sceneView = sceneView;
         this.plane = plane;
 
-        renderableDefinition = RenderableDefinition.builder().setVertices(vertices)
-                .build(sceneView.getLifecycle());
+        renderableDefinition = RenderableDefinition
+                .builder()
+                .setVertices(vertices)
+                .build();
     }
 
-    Plane getPlane() {
-        return plane;
-    }
-
-    public void setShadowMaterial(Material material) {
+    public void setShadowMaterial(MaterialInstance materialInstance) {
         if (shadowSubmesh == null) {
-            shadowSubmesh =
-                    Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
+            shadowSubmesh = Submesh.builder()
+                    .setTriangleIndices(triangleIndices)
+                    .setMaterial(materialInstance)
+                    .build();
         } else {
-            shadowSubmesh.setMaterial(material.filamentMaterialInstance);
+            shadowSubmesh.setMaterial(materialInstance);
         }
 
         if (planeRenderable != null) {
@@ -100,12 +102,14 @@ public class PlaneVisualizer implements TransformProvider {
         }
     }
 
-    public void setPlaneMaterial(Material material) {
+    public void setPlaneMaterial(MaterialInstance materialInstance) {
         if (planeSubmesh == null) {
-            planeSubmesh =
-                    Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
+            planeSubmesh = Submesh.builder()
+                    .setTriangleIndices(triangleIndices)
+                    .setMaterial(materialInstance)
+                    .build();
         } else {
-            planeSubmesh.setMaterial(material.filamentMaterialInstance);
+            planeSubmesh.setMaterial(materialInstance);
         }
 
         if (planeRenderable != null) {
@@ -165,8 +169,10 @@ public class PlaneVisualizer implements TransformProvider {
 
         if (planeRenderable == null) {
             try {
-                planeRenderable = ModelRenderable.builder().setSource(renderableDefinition)
-                        .build(sceneView.getLifecycle()).get();
+                planeRenderable = ModelRenderable.builder()
+                        .setSource(renderableDefinition)
+                        .build()
+                        .get();
                 planeRenderable.setShadowCaster(false);
                 // Creating a Renderable is immediate when using RenderableDefinition.
             } catch (InterruptedException | ExecutionException ex) {
@@ -187,8 +193,9 @@ public class PlaneVisualizer implements TransformProvider {
         }
         planeRenderableInstance.prepareForDraw(sceneView);
 
-        planeRenderableInstance.setModelMatrix(Filament.getTransformManager(),
-                planeRenderableInstance.getWorldModelMatrix().data);
+        TransformManager transformManager = Filament.getTransformManager();
+        int instance = transformManager.getInstance(planeRenderableInstance.entity);
+        transformManager.setTransform(instance, planeRenderableInstance.getWorldModelMatrix().data);
     }
 
     public void destroy() {

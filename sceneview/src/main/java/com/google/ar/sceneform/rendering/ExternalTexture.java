@@ -4,7 +4,6 @@ import android.graphics.SurfaceTexture;
 import android.view.Surface;
 
 import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle;
 
 import com.google.android.filament.Stream;
 import com.google.android.filament.Texture;
@@ -40,7 +39,7 @@ public class ExternalTexture {
      * Creates an ExternalTexture with a new Android {@link SurfaceTexture} and {@link Surface}.
      */
     @SuppressWarnings("initialization")
-    public ExternalTexture(@Nullable Lifecycle lifecycle) {
+    public ExternalTexture() {
         SurfaceTexture surfaceTexture = new SurfaceTexture(0);
         surfaceTexture.detachFromGLContext();
         this.surfaceTexture = surfaceTexture;
@@ -51,15 +50,15 @@ public class ExternalTexture {
         // Create the filament stream.
         //TODO : We actually have an issue with stream being destroyed from elsewhere maybe material
         // Fix it whith kotlining here
-        Stream stream = StreamKt.build(new Stream.Builder().stream(surfaceTexture), null);
+        Stream stream = StreamKt.build(new Stream.Builder().stream(surfaceTexture));
 
         //TODO : We actually have an issue with stream being destroyed from elsewhere maybe material
         // Fix it when kotlining here
-        initialize(null, stream);
+        initialize(stream);
     }
 
     @SuppressWarnings("initialization")
-    private void initialize(Lifecycle lifecycle, Stream filamentStream) {
+    private void initialize(Stream filamentStream) {
         if (filamentTexture != null) {
             throw new AssertionError("Stream was initialized twice");
         }
@@ -69,8 +68,8 @@ public class ExternalTexture {
 
         // Create the filament texture.
         filamentTexture = TextureKt.build(new Texture.Builder()
-                        .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                        .format(Texture.InternalFormat.RGB8));
+                .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+                .format(Texture.InternalFormat.RGB8));
 
         TextureKt.setExternalStream(filamentTexture, filamentStream);
     }

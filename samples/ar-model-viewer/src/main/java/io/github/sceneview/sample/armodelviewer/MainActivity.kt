@@ -150,7 +150,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         modelNode = ArModelNode(model.placementMode).apply {
             applyPoseRotation = model.applyPoseRotation
             loadModelGlbAsync(
-                context = this@MainActivity,
                 glbFileLocation = model.fileLocation,
                 autoAnimate = true,
                 scaleToUnits = model.scaleUnits,
@@ -160,8 +159,8 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                 sceneView.planeRenderer.isVisible = true
                 isLoading = false
             }
-            onAnchorChanged = { node, _ ->
-                placeModelButton.isGone = node.isAnchored
+            onAnchorChanged = { anchor ->
+                placeModelButton.isGone = anchor != null
             }
             onHitResult = { node, _ ->
                 placeModelButton.isGone = !node.isTracking

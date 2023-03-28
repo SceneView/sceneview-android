@@ -1,27 +1,9 @@
 package io.github.sceneview.material
 
-import androidx.lifecycle.Lifecycle
 import com.google.android.filament.Material
-import com.google.android.filament.MaterialInstance
-import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
 
-fun Material.Builder.build(lifecycle: Lifecycle? = null): Material = build(Filament.engine)
-    .also { material ->
-        lifecycle?.observe(onDestroy = {
-            // Prevent double destroy in case of manually destroyed
-            // TODO: Hot fix because of not destroyed instances
-//            runCatching { material.destroy() }
-        })
-    }
-
-fun Material.createInstance(lifecycle: Lifecycle? = null): MaterialInstance =
-    createInstance().also { materialInstance ->
-        lifecycle?.observe(onDestroy = {
-            // Prevent double destroy in case of manually destroyed
-            runCatching { materialInstance.destroy() }
-        })
-    }
+fun Material.Builder.build(): Material = build(Filament.engine)
 
 fun Material.destroy() {
     // TODO : We still have an issue because of material instances not destroyed before this call.

@@ -9,12 +9,10 @@ import androidx.fragment.app.Fragment
 import com.gorisse.thomas.lifecycle.doOnActivityAttach
 
 fun Activity.setKeepScreenOn(keepScreenOn: Boolean = true) {
-    runOnUiThread {
-        if (keepScreenOn) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+    if (keepScreenOn) {
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    } else {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 }
 
