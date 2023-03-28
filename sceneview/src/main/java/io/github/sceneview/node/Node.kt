@@ -786,7 +786,7 @@ open class Node(
             value?.let { it.parent = if (isSelected) this else null }
         }
 
-    var isSelected = false
+    open var isSelected = false
         set(value) {
             if (field != value) {
                 field = value
