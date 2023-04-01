@@ -8,6 +8,16 @@ This is a Sceneform replacement in Kotlin
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 
+## Support our work
+
+- Buy a[SceneView T-Shirt](https://sceneview.threadless.com/designs/sceneview)
+
+[![Shop](https://user-images.githubusercontent.com/6597529/229289239-beabba4a-b368-4667-b68a-b49b9729cd56.png)](https://sceneview.threadless.com/designs/sceneview)
+
+- Contribute [$9.99](https://opencollective.com/sceneview/contribute/say-thank-you-ask-a-question-ask-for-features-and-fixes-33651)
+
+[![Open Collective](https://user-images.githubusercontent.com/6597529/229289721-bdecf986-1b83-46bd-92cb-433114f03429.png)](https://opencollective.com/sceneview)
+
 ## Features
 
 - Use `sceneview` dependency for 3D only or `arsceneview` for 3D and ARCore.
