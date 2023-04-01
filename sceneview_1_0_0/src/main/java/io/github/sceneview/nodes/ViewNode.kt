@@ -62,8 +62,8 @@ class ViewNode constructor(
             .build(engine)
         material = materialLoader.createViewMaterial(texture, unlit, invertFrontFaceWinding)
 
-        RenderableManager.Builder(geometry.geometry.submeshes.size)
-            .geometry(geometry.geometry)
+        RenderableManager.Builder(geometry.submeshes.size)
+            .geometry(geometry)
             .material(0, material)
             .build(engine, entity)
     }
