@@ -1,5 +1,7 @@
 package io.github.sceneview.geometries
 
+import com.google.android.filament.IndexBuffer
+import com.google.android.filament.VertexBuffer
 import dev.romainguy.kotlin.math.PI
 import dev.romainguy.kotlin.math.TWO_PI
 import dev.romainguy.kotlin.math.normalize
@@ -7,7 +9,20 @@ import io.github.sceneview.math.Position
 import kotlin.math.cos
 import kotlin.math.sin
 
-class Sphere {
+class Sphere(
+    /**
+     * The radius of the constructed sphere
+     */
+    val radius: Float,
+    /**
+     * The center of the constructed sphere
+     */
+    val center: Position,
+    val stacks: Int,
+    val slices: Int,
+    vertexBuffer: VertexBuffer,
+    indexBuffer: IndexBuffer
+) : Geometry(vertexBuffer, indexBuffer) {
     /**
      * Creates a [Geometry] in the shape of a sphere with the give specifications.
      *
@@ -15,12 +30,12 @@ class Sphere {
      * @param center the center of the constructed sphere
      */
     class Builder(
-        radius: Float = 1.0f,
-        center: Position = Position(0.0f),
-        stacks: Int = 24,
-        slices: Int = 24
-    ) : Geometry.Builder(
-        vertices = mutableListOf<Geometry.Vertex>().apply {
+        val radius: Float = 1.0f,
+        val center: Position = Position(0.0f),
+        val stacks: Int = 24,
+        val slices: Int = 24
+    ) : BaseBuilder<Sphere>(
+        vertices = mutableListOf<Vertex>().apply {
             for (stack in 0..stacks) {
                 val phi = PI * stack.toFloat() / stacks.toFloat()
                 for (slice in 0..slices) {
@@ -34,7 +49,7 @@ class Sphere {
                         x = 1.0f - slice.toFloat() / slices, y = 1.0f - stack.toFloat() / stacks
                     )
                     add(
-                        Geometry.Vertex(
+                        Vertex(
                             position = position,
                             normal = normal,
                             uvCoordinate = uvCoordinate
@@ -43,7 +58,7 @@ class Sphere {
                 }
             }
         },
-        submeshes = mutableListOf<Geometry.Submesh>().apply {
+        submeshes = mutableListOf<Submesh>().apply {
             var v = 0
             for (stack in 0 until stacks) {
                 val triangleIndices = mutableListOf<Int>()
@@ -63,8 +78,11 @@ class Sphere {
                         triangleIndices.add(v + slice + slices + 1)
                     }
                 }
-                add(Geometry.Submesh(triangleIndices))
+                add(Submesh(triangleIndices))
                 v += slices + 1
             }
-        })
+        }) {
+        override fun build(vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer) =
+            Sphere(radius, center, stacks, slices, vertexBuffer, indexBuffer)
+    }
 }

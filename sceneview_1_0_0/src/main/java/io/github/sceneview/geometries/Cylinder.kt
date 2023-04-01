@@ -1,5 +1,7 @@
 package io.github.sceneview.geometries
 
+import com.google.android.filament.IndexBuffer
+import com.google.android.filament.VertexBuffer
 import dev.romainguy.kotlin.math.TWO_PI
 import dev.romainguy.kotlin.math.normalize
 import io.github.sceneview.math.Direction
@@ -8,7 +10,26 @@ import io.github.sceneview.math.Size
 import kotlin.math.cos
 import kotlin.math.sin
 
-class Cylinder {
+class Cylinder(
+    /**
+     * The radius of the constructed cylinder
+     */
+    val radius: Float,
+    /**
+     * The height of the constructed cylinder
+     */
+    val height: Float,
+    /**
+     * The center of the constructed cylinder
+     */
+    val center: Position,
+    /**
+     * Number of faces
+     */
+    val sideCount: Int,
+    vertexBuffer: VertexBuffer,
+    indexBuffer: IndexBuffer
+) : Geometry(vertexBuffer, indexBuffer) {
     /**
      * Creates a [Geometry] in the shape of a cylinder with the give specifications.
      *
@@ -17,11 +38,11 @@ class Cylinder {
      * @param center the center of the constructed cylinder
      */
     class Builder(
-        radius: Float = 1.0f,
-        height: Float = 2.0f,
-        center: Position = Position(0.0f),
-        sideCount: Int = 24
-    ) : Geometry.Builder(
+        val radius: Float = 1.0f,
+        val height: Float = 2.0f,
+        val center: Position = Position(0.0f),
+        val sideCount: Int = 24
+    ) : BaseBuilder<Cylinder>(
         vertices = mutableListOf<Geometry.Vertex>().apply {
             val halfHeight = height / 2
             val thetaIncrement = TWO_PI / sideCount
@@ -132,5 +153,8 @@ class Cylinder {
                     )
                 )
             }
-        })
+        }) {
+        override fun build(vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer) =
+            Cylinder(radius, height, center, sideCount, vertexBuffer, indexBuffer)
+    }
 }

@@ -1,35 +1,28 @@
 package io.github.sceneview.geometries
 
 import com.google.android.filament.Engine
+import com.google.android.filament.IndexBuffer
+import com.google.android.filament.VertexBuffer
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 class Plane private constructor(
-    center: Position,
-    size: Size,
-    normal: Direction,
-    geometry: Geometry
-) : Geometry(geometry.vertexBuffer, geometry.indexBuffer) {
-
-    /**
-     * Center of the constructed plane
-     */
-    var center: Position = center
-        private set
-
     /**
      * Size of the constructed plane
      */
-    var size: Size = size
-        private set
-
+    val size: Size,
+    /**
+     * Center of the constructed plane
+     */
+    val center: Position,
     /**
      * Looking at direction
      */
-    var normal: Direction = normal
-        private set
-
+    val normal: Direction,
+    vertexBuffer: VertexBuffer,
+    indexBuffer: IndexBuffer
+) : Geometry(vertexBuffer, indexBuffer) {
     /**
      * Creates a [Geometry] in the shape of a plane with the give specifications
      *
@@ -38,10 +31,10 @@ class Plane private constructor(
      * @param normal Looking at direction
      */
     class Builder(
-        val center: Position = Position(0.0f),
         val size: Size = Size(x = 2.0f, y = 2.0f),
+        val center: Position = Position(0.0f),
         val normal: Direction = Direction(y = 1.0f) // Looking upper
-    ) : Geometry.Builder(
+    ) : BaseBuilder<Plane>(
         vertices = getVertices(center, size, normal),
         submeshes = mutableListOf(
             Geometry.Submesh(
@@ -52,7 +45,10 @@ class Plane private constructor(
             )
         )
     ) {
-        override fun build(engine: Engine) = Plane(center, size, normal, super.build(engine))
+        override fun build(
+            vertexBuffer: VertexBuffer,
+            indexBuffer: IndexBuffer
+        ) = Plane(size, center, normal, vertexBuffer, indexBuffer)
     }
 
     fun update(
