@@ -13,6 +13,7 @@ This is a Sceneform replacement in Kotlin
 - [Buy a SceneView T-Shirt](https://sceneview.threadless.com/designs/sceneview)
 
 [![Shop](https://user-images.githubusercontent.com/6597529/229289239-beabba4a-b368-4667-b68a-b49b9729cd56.png)](https://sceneview.threadless.com/designs/sceneview)
+[![Shop](https://user-images.githubusercontent.com/6597529/229322274-1842af45-a328-4b8c-b51a-9fc2402c1fc8.png)](https://sceneview.threadless.com/designs/sceneview)
 
 - [Contribute $9.99](https://opencollective.com/sceneview/contribute/say-thank-you-ask-a-question-ask-for-features-and-fixes-33651)
 
