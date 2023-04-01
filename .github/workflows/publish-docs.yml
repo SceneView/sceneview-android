@@ -20,14 +20,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Generate Dokka HTML docs
-        run: ./gradlew dokkaGfmMultiModule
+        run: ./gradlew dokkaHtmlMultiModule
       - name: Deploy to GitHub pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           external_repository: SceneView/sceneview.github.io
           publish_branch: main
-          publish_dir: ./build/dokka/gfmMultiModule
+          publish_dir: ./build/dokka/htmlMultiModule
           destination_dir: api/sceneview-android
           full_commit_message: Dokka docs - sceneview-android
-          enable_jekyll: true
+          enable_jekyll: false
