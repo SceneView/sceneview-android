@@ -72,8 +72,25 @@ open class Geometry(
     lateinit var offsetsCounts: List<Pair<Int, Int>>
         private set
 
-    open class Builder(val vertices: List<Vertex>, val submeshes: List<Submesh>) {
-        open fun build(engine: Engine): Geometry {
+    open class Builder(
+        vertices: List<Vertex> = listOf(),
+        submeshes: List<Submesh> = listOf()
+    ) : BaseBuilder<Geometry>(vertices, submeshes) {
+        override fun build(
+            vertexBuffer: VertexBuffer,
+            indexBuffer: IndexBuffer
+        ) = Geometry(vertexBuffer, indexBuffer)
+    }
+
+    abstract class BaseBuilder<T : Geometry> internal constructor(
+        var vertices: List<Vertex> = listOf(),
+        var submeshes: List<Submesh> = listOf()
+    ) {
+
+        fun vertices(vertices: List<Vertex>) = apply { this.vertices = vertices }
+        fun submeshes(submeshes: List<Submesh>) = apply { this.submeshes = submeshes }
+
+        open fun build(engine: Engine): T {
             val vertexBuffer = VertexBuffer.Builder().apply {
                 bufferCount(
                     1 + // Position is never null
@@ -129,21 +146,23 @@ open class Geometry(
                 }
             }.build(engine)
 
-            val indexBuffer = IndexBuffer.Builder()
-                // Determine how many indices there are
-                .indexCount(submeshes.sumOf { it.triangleIndices.size })
-                .bufferType(IndexBuffer.Builder.IndexType.UINT)
-                .build(engine)
+            // Determine how many indices there are
+            val indexBuffer = IndexBuffer.Builder().apply {
+                indexCount(submeshes.sumOf { it.triangleIndices.size })
+                    .bufferType(IndexBuffer.Builder.IndexType.UINT)
+            }.build(engine)
 
-            return Geometry(vertexBuffer, indexBuffer).apply {
-                setBufferVertices(engine, this@Builder.vertices)
-                setBufferIndices(engine, this@Builder.submeshes)
+            return build(vertexBuffer, indexBuffer).apply {
+                setBufferVertices(engine, vertices)
+                setBufferIndices(engine, submeshes)
             }
         }
 
         fun build(sceneView: SceneView) = build(sceneView.engine).also {
             sceneView.geometries += it
         }
+
+        internal abstract fun build(vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer): T
     }
 
     fun setBufferVertices(engine: Engine, vertices: List<Vertex>) {
