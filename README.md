@@ -7,6 +7,7 @@ This is a Sceneform replacement in Kotlin
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Maven%20Central%20-%20ARSceneView)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
+[![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
 
 ## Support our work
 
