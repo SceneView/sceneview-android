@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipToPadding="false"
-    android:background="@drawable/sceneview_info_background"
+    android:background="@drawable/info_background"
     tools:context="io.github.sceneview.sample.modelviewer.Activity">
 
     <ImageView
@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:adjustViewBounds="true"
         android:alpha="0.5"
-        android:src="@drawable/sceneview_logo"
+        android:src="@drawable/logo"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
