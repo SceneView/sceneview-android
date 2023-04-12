@@ -20,7 +20,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="?actionBarSize"
-        android:background="@drawable/sceneview_info_background"
+        android:background="@drawable/info_background"
         android:gravity="center"
         android:padding="8dp"
         android:text="@string/score"
