@@ -172,8 +172,6 @@ class ArCameraStream(
     val renderable: Renderable = RenderableManager.Builder(4)
         .castShadows(false)
         .receiveShadows(false)
-        // Use different channel from other ones
-        .channel(3)
         // Always draw the camera feed last to avoid overdraw
         .culling(false)
         .priority(priority)
