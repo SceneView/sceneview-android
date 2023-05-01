@@ -3,7 +3,6 @@ package io.github.sceneview.node
 import android.content.Context
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.gltfio.Animator
-import com.google.ar.sceneform.math.Vector3
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
 import io.github.sceneview.gesture.NodeMotionEvent
@@ -140,7 +139,11 @@ open class ModelNode : RenderableNode {
         position: Position = DEFAULT_POSITION,
         rotation: Rotation = DEFAULT_ROTATION,
         scale: Scale = DEFAULT_SCALE
-    ) : super(position, rotation, scale)
+    ) : super() {
+        this.position = position
+        this.rotation = rotation
+        this.scale = scale
+    }
 
     /**
      * ### Create the Node and load a monolithic binary glTF and add it to the Node
@@ -243,14 +246,7 @@ open class ModelNode : RenderableNode {
     }
 
     open fun onModelChanged(modelInstance: ModelInstance?) {
-        collisionShape = modelInstance?.model?.boundingBox?.let { boundingBox ->
-            val halfExtent = boundingBox.halfExtent
-            val center = boundingBox.center
-            com.google.ar.sceneform.collision.Box(
-                Vector3(halfExtent[0], halfExtent[1], halfExtent[2]).scaled(2.0f),
-                Vector3(center[0], center[1], center[2])
-            )
-        }
+        collisionShape = modelInstance?.model?.collisionShape
 
         // Refresh the collider to ensure it is using the correct collision shape now
         // that the renderable has changed.
