@@ -540,10 +540,10 @@ open class ArSceneView @JvmOverloads constructor(
     ) = currentFrame?.hitTest(xPx, yPx, plane, depth, instant, approximateDistance)
 
     override fun destroy() {
-        super.destroy()
-
         arCameraStream.destroy()
         planeRenderer.destroy()
+
+        super.destroy()
     }
 }
 
