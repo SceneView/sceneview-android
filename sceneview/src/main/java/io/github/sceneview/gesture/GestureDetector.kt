@@ -96,6 +96,29 @@ open class GestureDetector(
     }) {
 
     interface OnGestureListener {
+        var onDown: List<(e: NodeMotionEvent) -> Unit>
+        var onShowPress: List<(e: NodeMotionEvent) -> Unit>
+        var onSingleTapUp: List<(e: NodeMotionEvent) -> Unit>
+        var onScroll: List<(e1: NodeMotionEvent, e2: NodeMotionEvent, distanceX: Float, distanceY: Float) -> Unit>
+        var onLongPress: List<(e: NodeMotionEvent) -> Unit>
+        var onFling: List<(e1: NodeMotionEvent, e2: NodeMotionEvent, velocityX: Float, velocityY: Float) -> Unit>
+        var onSingleTapConfirmed: List<(e: NodeMotionEvent) -> Unit>
+        var onDoubleTap: List<(e: NodeMotionEvent) -> Unit>
+        var onDoubleTapEvent: List<(e: NodeMotionEvent) -> Unit>
+        var onContextClick: List<(e: NodeMotionEvent) -> Unit>
+
+        var onMove: List<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>
+        var onMoveBegin: List<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>
+        var onMoveEnd: List<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>
+
+        var onRotate: List<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>
+        var onRotateBegin: List<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>
+        var onRotateEnd: List<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>
+
+        var onScale: List<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>
+        var onScaleBegin: List<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>
+        var onScaleEnd: List<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>
+
         fun onDown(e: NodeMotionEvent)
         fun onShowPress(e: NodeMotionEvent)
         fun onSingleTapUp(e: NodeMotionEvent)
@@ -119,30 +142,38 @@ open class GestureDetector(
 
     class SimpleOnGestureListener : OnGestureListener {
 
-        var onDown = listOf<(e: NodeMotionEvent) -> Unit>()
-        var onShowPress = listOf<(e: NodeMotionEvent) -> Unit>()
-        var onSingleTapUp = listOf<(e: NodeMotionEvent) -> Unit>()
-        var onScroll =
+        override var onDown = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onShowPress = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onSingleTapUp = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onScroll =
             listOf<(e1: NodeMotionEvent, e2: NodeMotionEvent, distanceX: Float, distanceY: Float) -> Unit>()
-        var onLongPress = listOf<(e: NodeMotionEvent) -> Unit>()
-        var onFling =
+        override var onLongPress = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onFling =
             listOf<(e1: NodeMotionEvent, e2: NodeMotionEvent, velocityX: Float, velocityY: Float) -> Unit>()
-        var onSingleTapConfirmed = listOf<(e: NodeMotionEvent) -> Unit>()
-        var onDoubleTap = listOf<(e: NodeMotionEvent) -> Unit>()
-        var onDoubleTapEvent = listOf<(e: NodeMotionEvent) -> Unit>()
-        var onContextClick = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onSingleTapConfirmed = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onDoubleTap = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onDoubleTapEvent = listOf<(e: NodeMotionEvent) -> Unit>()
+        override var onContextClick = listOf<(e: NodeMotionEvent) -> Unit>()
 
-        var onMove = listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
-        var onMoveBegin = listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
-        var onMoveEnd = listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onMove = listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onMoveBegin =
+            listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onMoveEnd =
+            listOf<(detector: MoveGestureDetector, e: NodeMotionEvent) -> Unit>()
 
-        var onRotate = listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
-        var onRotateBegin = listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
-        var onRotateEnd = listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onRotate =
+            listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onRotateBegin =
+            listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onRotateEnd =
+            listOf<(detector: RotateGestureDetector, e: NodeMotionEvent) -> Unit>()
 
-        var onScale = listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
-        var onScaleBegin = listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
-        var onScaleEnd = listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onScale =
+            listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onScaleBegin =
+            listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
+        override var onScaleEnd =
+            listOf<(detector: ScaleGestureDetector, e: NodeMotionEvent) -> Unit>()
 
         override fun onDown(e: NodeMotionEvent) {
             onDown.forEach { it(e) }

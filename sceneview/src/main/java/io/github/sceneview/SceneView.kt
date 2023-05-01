@@ -348,7 +348,7 @@ open class SceneView @JvmOverloads constructor(
     private var currentFrameTime: FrameTime = FrameTime(0)
 
     private var lastTouchEvent: MotionEvent? = null
-    private val gestureDetector by lazy { GestureDetector(context, ::pickNode, this) }
+    val gestureDetector by lazy { GestureDetector(context, ::pickNode, this) }
 
     protected open val cameraGestureDetector: CameraGestureDetector? by lazy {
         CameraGestureDetector(this, CameraGestureListener())
