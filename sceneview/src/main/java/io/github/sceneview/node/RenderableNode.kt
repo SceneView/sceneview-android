@@ -18,24 +18,10 @@ import io.github.sceneview.renderable.*
  * another node, or the [SceneView]
  * .
  */
-open class RenderableNode : Node {
+open class RenderableNode(open val renderables: List<Renderable> = listOf()) : Node() {
 
-    open val renderables = listOf<Renderable>()
+
     val materialInstances get() = renderables.map { it.getMaterial() }
-
-    /**
-     * ### Construct a [RenderableNode] with it Position, Rotation and Scale
-     *
-     * @param position See [Node.position]
-     * @param rotation See [Node.rotation]
-     * @param scale See [Node.scale]
-     */
-    @JvmOverloads
-    constructor(
-        position: Position = DEFAULT_POSITION,
-        rotation: Rotation = DEFAULT_ROTATION,
-        scale: Scale = DEFAULT_SCALE
-    ) : super(position, rotation, scale)
 
     /**
      * @see RenderableManager.setPriority
