@@ -390,10 +390,10 @@ open class SceneView @JvmOverloads constructor(
 //            hdrColorBuffer = View.QualityLevel.MEDIUM
 //        }
 //        // dynamic resolution often helps a lot
-//        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
-//            enabled = false
-//            quality = View.QualityLevel.MEDIUM
-//        }
+        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+            enabled = false
+            quality = QualityLevel.MEDIUM
+        }
 //        // MSAA is needed with dynamic resolution MEDIUM
 //        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
 //            enabled = true
@@ -408,6 +408,13 @@ open class SceneView @JvmOverloads constructor(
 //        view.bloomOptions = view.bloomOptions.apply {
 //            enabled = true
 //        }
+//        view.antiAliasing = AntiAliasing.NONE
+//        view.setScreenSpaceRefractionEnabled(false)
+//        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+//            this.enabled = false
+//        }
+//        view.setPostProcessingEnabled(false)
+
         view.scene = scene
         view.camera = cameraNode.camera
         // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example material
