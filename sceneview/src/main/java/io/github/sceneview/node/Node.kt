@@ -676,7 +676,8 @@ open class Node(
      */
     fun smooth(transform: Transform, speed: Float = this.smoothSpeed) {
         smoothSpeed = speed
-        if (!equals(this.transform, transform, DEFAULT_EPSILON)) {
+        val (x, y, z, w) = equal(this.transform, transform, DEFAULT_EPSILON)
+        if (!x || !y || !z || !w) {
             this.smoothTransform = transform
         } else {
             this.transform = transform

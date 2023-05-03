@@ -17,8 +17,6 @@
 // Operators +, *, / based on http://half.sourceforge.net/ by Christian Rau
 // and licensed under MIT
 
-@file:Suppress("NOTHING_TO_INLINE")
-
 package dev.romainguy.kotlin.math
 
 import dev.romainguy.kotlin.math.Half.Companion.POSITIVE_INFINITY
@@ -67,6 +65,27 @@ fun Half(value: Double) = Half(floatToHalf(value.toFloat()))
 fun Double.toHalf() = Half(floatToHalf(toFloat()))
 
 /**
+ * Converts this double-precision float value into a half-precision float value.
+ * The following special cases are handled:
+ *
+ *  - If the input is NaN (see [Double.isNaN]), the returned value is [Half.NaN]
+ *  - If the input is [Double.POSITIVE_INFINITY] or [Double.NEGATIVE_INFINITY],
+ *  the returned value is respectively [Half.POSITIVE_INFINITY] or [Half.NEGATIVE_INFINITY]
+ *  - If the input is 0 (positive or negative), the returned value is [Half.POSITIVE_ZERO]
+ *  or [Half.NEGATIVE_ZERO]
+ *  - If the input is less than [Half.MIN_VALUE], the returned value is flushed to
+ *  [Half.POSITIVE_ZERO] or [Half.NEGATIVE_ZERO]
+ *  - If the input is less than [Half.MIN_NORMAL], the returned value is a denormal
+ *  half-precision float
+ *  - Otherwise, the returned value is rounded to the nearest representable
+ *  half-precision float value
+ *
+ * @return A half-precision float value
+ */
+val Double.h: Half
+    get() = Half(floatToHalf(toFloat()))
+
+/**
  * Converts the specified single-precision float value into a
  * half-precision float value. The following special cases are handled:
  *
@@ -106,6 +125,27 @@ fun Half(value: Float) = Half(floatToHalf(value))
  * @return A half-precision float value
  */
 fun Float.toHalf() = Half(floatToHalf(this))
+
+/**
+ * Converts this single-precision float value into a half-precision float value.
+ * The following special cases are handled:
+ *
+ *  - If the input is NaN (see [Float.isNaN]), the returned value is [Half.NaN]
+ *  - If the input is [Float.POSITIVE_INFINITY] or [Float.NEGATIVE_INFINITY],
+ *  the returned value is respectively [Half.POSITIVE_INFINITY] or [Half.NEGATIVE_INFINITY]
+ *  - If the input is 0 (positive or negative), the returned value is [Half.POSITIVE_ZERO]
+ *  or [Half.NEGATIVE_ZERO]
+ *  - If the input is less than [Half.MIN_VALUE], the returned value is flushed to
+ *  [Half.POSITIVE_ZERO] or [Half.NEGATIVE_ZERO]
+ *  - If the input is less than [Half.MIN_NORMAL], the returned value is a denormal
+ *  half-precision float
+ *  - Otherwise, the returned value is rounded to the nearest representable
+ *  half-precision float value
+ *
+ * @return A half-precision float value
+ */
+val Float.h: Half
+    get() = Half(floatToHalf(this))
 
 /**
  * Returns the half-precision float value represented by the specified string.
@@ -453,7 +493,7 @@ value class Half(private val v: UShort) : Comparable<Half> {
      * @return True if the value is normalized, false otherwise
      */
     fun isNormalized() = (v.toInt() and FP16_EXPONENT_MAX) != 0
-        && (v.toInt() and FP16_EXPONENT_MAX) != FP16_EXPONENT_MAX
+            && (v.toInt() and FP16_EXPONENT_MAX) != FP16_EXPONENT_MAX
 
     /**
      * Returns this value with the sign bit same as of the [sign] value.
@@ -533,11 +573,11 @@ value class Half(private val v: UShort) : Comparable<Half> {
         // Handle NaNs and infinities
         if (ax >= FP16_EXPONENT_MAX || ay >= FP16_EXPONENT_MAX) {
             return Half((
-                if (ax > FP16_EXPONENT_MAX || ay > FP16_EXPONENT_MAX) quiet(ax, ay)
-                else if (ay != FP16_EXPONENT_MAX) xbits
-                else if (sub && ax == FP16_EXPONENT_MAX) FP16_QUIET_NAN
-                else ybits
-            ).toUShort())
+                    if (ax > FP16_EXPONENT_MAX || ay > FP16_EXPONENT_MAX) quiet(ax, ay)
+                    else if (ay != FP16_EXPONENT_MAX) xbits
+                    else if (sub && ax == FP16_EXPONENT_MAX) FP16_QUIET_NAN
+                    else ybits
+                    ).toUShort())
         }
 
         // Handle zero operands, including signs
@@ -557,12 +597,12 @@ value class Half(private val v: UShort) : Comparable<Half> {
         val d = e - (ay shr 10) - if (ay <= FP16_SIGNIFICAND_MASK) 1 else 0
 
         var mx = ((ax and FP16_SIGNIFICAND_MASK) or
-            ((if (ax > FP16_SIGNIFICAND_MASK) 1 else 0) shl 10)) shl 3
+                ((if (ax > FP16_SIGNIFICAND_MASK) 1 else 0) shl 10)) shl 3
         var my: Int
 
         if (d < 13) {
             my = ((ay and FP16_SIGNIFICAND_MASK) or
-                ((if (ay > FP16_SIGNIFICAND_MASK) 1 else 0) shl 10)) shl 3
+                    ((if (ay > FP16_SIGNIFICAND_MASK) 1 else 0) shl 10)) shl 3
             my = (my shr d) or (if ((my and ((1 shl d) - 1)) != 0) 1 else 0)
         } else {
             my = 1
@@ -627,7 +667,7 @@ value class Half(private val v: UShort) : Comparable<Half> {
         // Add leading 1. and perform the multiplication as uint32
         val m =
             ((ax and FP16_SIGNIFICAND_MASK) or 0x400).toUInt() *
-            ((ay and FP16_SIGNIFICAND_MASK) or 0x400).toUInt()
+                    ((ay and FP16_SIGNIFICAND_MASK) or 0x400).toUInt()
 
         val i = m shr 21
         e += (ax shr 10) + (ay shr 10) + i.toInt()
@@ -854,7 +894,7 @@ fun min(x: Half, y: Half): Half {
     }
 
     return if ((if (a and FP16_SIGN_MASK != 0) 0x8000 - (a and 0xffff) else a and 0xffff) <
-               (if (b and FP16_SIGN_MASK != 0) 0x8000 - (b and 0xffff) else b and 0xffff)) x else y
+        (if (b and FP16_SIGN_MASK != 0) 0x8000 - (b and 0xffff) else b and 0xffff)) x else y
 }
 
 /**
@@ -882,7 +922,7 @@ fun max(x: Half, y: Half): Half {
     }
 
     return if ((if (a and FP16_SIGN_MASK != 0) 0x8000 - (a and 0xffff) else a and 0xffff) >
-               (if (b and FP16_SIGN_MASK != 0) 0x8000 - (b and 0xffff) else b and 0xffff)) x else y
+        (if (b and FP16_SIGN_MASK != 0) 0x8000 - (b and 0xffff) else b and 0xffff)) x else y
 }
 
 /**

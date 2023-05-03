@@ -75,7 +75,7 @@ value class Rational(private val r: Long) : Comparable<Rational> {
     }
 
     operator fun unaryMinus(): Rational {
-      return Rational(-numerator, denominator)
+        return Rational(-numerator, denominator)
     }
 
     operator fun unaryPlus() = Rational(r)

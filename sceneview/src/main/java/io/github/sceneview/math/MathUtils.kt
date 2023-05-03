@@ -61,7 +61,8 @@ fun lerp(
     deltaSeconds: Float,
     epsilon: Float = DEFAULT_EPSILON
 ): Float3 {
-    return if (!equals(start, end, epsilon)) {
+    val (x, y, z) = equal(start, end, epsilon)
+    return if (!x || !y || !z) {
         return mix(start, end, deltaSeconds)
     } else end
 }
@@ -72,7 +73,8 @@ fun lerp(
     deltaSeconds: Float,
     epsilon: Float = DEFAULT_EPSILON
 ): Quaternion {
-    return if (!equals(start, end, epsilon)) {
+    val (x, y, z, w) = equal(start, end, epsilon)
+    return if (!x || !y || !z || !w) {
         return dev.romainguy.kotlin.math.lerp(start, end, deltaSeconds)
     } else end
 }
@@ -83,7 +85,8 @@ fun slerp(
     deltaSeconds: Float,
     epsilon: Float = DEFAULT_EPSILON
 ): Quaternion {
-    return if (!equals(start, end, epsilon)) {
+    val (x, y, z, w) = equal(start, end, epsilon)
+    return if (!x || !y || !z || !w) {
         return dev.romainguy.kotlin.math.slerp(start, end, deltaSeconds)
     } else end
 }
@@ -106,7 +109,8 @@ fun slerp(
     speed: Float,
     epsilon: Float = DEFAULT_EPSILON
 ): Transform {
-    return if (!equals(start, end, epsilon)) {
+    val (x, y, z, w) = equal(start, end, epsilon)
+    return if (!x || !y || !z || !w) {
         val lerpFactor = MathHelper.clamp((deltaSeconds * speed).toFloat(), 0.0f, 1.0f)
         Transform(
             position = lerp(start.position, end.position, lerpFactor, epsilon),
