@@ -330,7 +330,7 @@ open class ArModelNode : ArNode {
         super.onMoveEnd(detector, e)
 
         if (isPositionEditable && currentEditingTransform == ::position) {
-            anchor = lastTrackingHitResult?.createAnchor()
+            anchor = anchor()
             currentEditingTransform = null
         }
     }
