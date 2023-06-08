@@ -361,7 +361,7 @@ open class ArSceneView @JvmOverloads constructor(
 
         session.configure { config ->
             // getting ar frame doesn't block and gives last frame
-            //config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
+            config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
             // FocusMode must be changed after the session resume to work
             // config.focusMode = focusMode
             config.planeFindingMode = _planeFindingMode
@@ -414,12 +414,14 @@ open class ArSceneView @JvmOverloads constructor(
         arSession?.update(frameTime)?.let { arFrame ->
             // During startup the camera system may not produce actual images immediately.
             // In this common case, a frame with timestamp = 0 will be returned.
-            if (arFrame.frame.timestamp != 0L && arFrame.time != currentFrame?.time) {
+//            if (arFrame.frame.timestamp != 0L
+            // && arFrame.time != currentFrame?.time
+//            ) {
                 currentFrame = arFrame
                 doArFrame(arFrame)
-                super.doFrame(frameTime)
-            }
+//            }
         }
+        super.doFrame(frameTime)
     }
 
     /**

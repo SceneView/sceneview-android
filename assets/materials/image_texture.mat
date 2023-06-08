@@ -1,0 +1,23 @@
+material {
+    "name" : "Transparent Textured",
+
+    "parameters" : [
+        {
+           "type" : "sampler2d",
+           "name" : "texture"
+        }
+    ],
+    "requires" : [
+        "position",
+        "uv0"
+    ],
+    "shadingModel" : "unlit",
+    "blending" : "transparent",
+    "culling" : "none"
+}
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_texture, getUV0());
+    }
+}

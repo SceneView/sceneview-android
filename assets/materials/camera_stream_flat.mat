@@ -34,4 +34,4 @@ vertex {
         clip.z = 0.9999f;
         material.worldPosition = mulMat4x4Float3(getWorldFromClipMatrix(), clip.xyz);
     }
-} 
+}
