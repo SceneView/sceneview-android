@@ -13,11 +13,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = JavaVersion.VERSION_17
     }
 }
 
@@ -28,10 +28,10 @@ dependencies {
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
 
     // AndroidX
-    api "androidx.core:core-ktx:1.9.0"
-    api "androidx.appcompat:appcompat:1.6.0"
-    api "androidx.fragment:fragment-ktx:1.5.5"
+    api "androidx.core:core-ktx:1.10.1"
+    api "androidx.appcompat:appcompat:1.6.1"
+    api "androidx.fragment:fragment-ktx:1.5.7"
 
     // Material
-    api "com.google.android.material:material:1.7.0"
+    api "com.google.android.material:material:1.9.0"
 }
