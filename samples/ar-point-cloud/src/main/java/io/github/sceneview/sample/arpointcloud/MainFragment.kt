@@ -69,7 +69,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
         }
 
-    private var maxPoints: Int = 700
+    private var maxPoints: Int = 500
         set(value) {
             if (field != value) {
                 field = value
@@ -88,6 +88,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
             planeRenderer.isEnabled = false
             lightEstimationMode = LightEstimationMode.DISABLED
+            environment = null
             onArFrame = this@MainFragment::onArFrame
         }
 
