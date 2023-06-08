@@ -11,7 +11,6 @@ import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.math.Transform
 import io.github.sceneview.math.toColumnsFloatArray
 import io.github.sceneview.utils.OpenGL
-import java.lang.ref.WeakReference
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
 object Filament {
@@ -22,19 +21,17 @@ object Filament {
         Utils.init()
     }
 
-    private var eglContext: WeakReference<EGLContext>? = null
+    private var eglContext: EGLContext? = null
 
-    private var _engine: WeakReference<Engine>? = null
+    private var _engine: Engine? = null
 
     @JvmStatic
     val engine: Engine
-        get() = _engine?.get() ?: (eglContext?.get() ?: OpenGL.createEglContext())
-            .let { eglContext ->
-                this.eglContext = WeakReference(eglContext)
-                Engine.create(eglContext).also { engine ->
-                    _engine = WeakReference(engine)
-                }
-            }
+        get() = _engine ?: Engine.create(eglContext ?: OpenGL.createEglContext().also {
+            eglContext = it
+        }).also {
+            _engine = it
+        }
 
     @JvmStatic
     val entityManager
@@ -42,33 +39,33 @@ object Filament {
 
     @JvmStatic
     val transformManager
-        get() = engine.transformManager
+        get() = _engine!!.transformManager
 
     @JvmStatic
     val renderableManager
-        get() = engine.renderableManager
+        get() = _engine!!.renderableManager
 
     @JvmStatic
     val lightManager
-        get() = engine.lightManager
+        get() = _engine!!.lightManager
 
     private var _resourceLoader: ResourceLoader? = null
 
     @JvmStatic
     val resourceLoader: ResourceLoader
-        get() = _resourceLoader ?: ResourceLoader(engine).also { _resourceLoader = it }
+        get() = _resourceLoader ?: ResourceLoader(_engine!!).also { _resourceLoader = it }
 
     private var _materialProvider: UbershaderProvider? = null
 
     @JvmStatic
     val materialProvider
-        get() = _materialProvider ?: UbershaderProvider(engine).also { _materialProvider = it }
+        get() = _materialProvider ?: UbershaderProvider(_engine!!).also { _materialProvider = it }
 
     private var _assetLoader: AssetLoader? = null
 
     @JvmStatic
     val assetLoader: AssetLoader?
-        get() = _assetLoader ?: _engine?.get()?.let {
+        get() = _assetLoader ?: _engine?.let {
             AssetLoader(
                 it,
                 materialProvider,
@@ -80,12 +77,13 @@ object Filament {
 
     @JvmStatic
     val iblPrefilter: IBLPrefilter
-        get() = _iblPrefilter ?: IBLPrefilter(engine).also { _iblPrefilter = it }
+        get() = _iblPrefilter ?: IBLPrefilter(_engine!!).also { _iblPrefilter = it }
 
     var retainers = 0
 
     fun retain() {
         retainers++
+
     }
 
     fun release() {
@@ -117,21 +115,19 @@ object Filament {
         runCatching { _iblPrefilter?.destroy() }
         _iblPrefilter = null
 
-        runCatching { _engine?.get()?.destroy() }
-        _engine?.clear()
+        runCatching { _engine?.destroy() }
         _engine = null
 
-        eglContext?.get()?.let {
+        eglContext?.let {
             runCatching { OpenGL.destroyEglContext(it) }
         }
-        eglContext?.clear()
         eglContext = null
     }
 }
 
 fun Engine.createCamera() = createCamera(entityManager.create())
 
-fun RenderableManager.Builder.build(entity: Int) = build(Filament.engine, entity)
+fun RenderableManager.Builder.build(@Entity entity: Int) = build(Filament.engine, entity)
 
 fun TransformManager.setTransform(@EntityInstance i: Int, worldTransform: Transform) =
     setTransform(i, worldTransform.toColumnsFloatArray())
