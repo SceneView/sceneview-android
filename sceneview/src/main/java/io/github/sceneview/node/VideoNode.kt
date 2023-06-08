@@ -20,10 +20,7 @@ import io.github.sceneview.material.setParameter
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.toNewQuaternion
 import io.github.sceneview.math.toVector3
-import io.github.sceneview.model.GLBLoader
-import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
-import io.github.sceneview.model.destroy
 import io.github.sceneview.texture.*
 import io.github.sceneview.utils.FrameTime
 import io.github.sceneview.utils.colorOf
@@ -118,9 +115,6 @@ open class VideoNode(
      */
     val surface: Surface = Surface(surfaceTexture)
 
-    lateinit var model: Model
-        private set
-
     lateinit var material: Material
         private set
 
@@ -171,12 +165,9 @@ open class VideoNode(
         doOnAttachedToScene { sceneView ->
             sceneView.lifecycle.coroutineScope.launchWhenCreated {
                 try {
-                    model = GLBLoader.loadModel(
-                        sceneView.context,
-                        glbFileLocation = glbFileLocation
-                    )!!
-                    setModelInstance(
-                        model.instance,
+                    loadModelGlb(
+                        context = sceneView.context,
+                        glbFileLocation = glbFileLocation,
                         autoAnimate = autoAnimate,
                         scaleToUnits = scaleToUnits,
                         centerOrigin = centerOrigin
@@ -192,7 +183,7 @@ open class VideoNode(
                         setExternalTexture("videoTexture", texture)
                     }
                     setMaterialInstance(materialInstance)
-                    onLoaded?.invoke(model.instance, materialInstance)
+                    onLoaded?.invoke(modelInstance!!, materialInstance)
                 } catch (error: Exception) {
                     onError(error)
                 }
@@ -215,7 +206,6 @@ open class VideoNode(
 
     override fun onDestroy(owner: LifecycleOwner) {
         super.onDestroy(owner)
-        model.destroy()
         material.destroy()
         materialInstances.forEach { it.destroy() }
     }
