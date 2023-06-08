@@ -20,8 +20,10 @@ import io.github.sceneview.renderable.*
  */
 open class RenderableNode(open val renderables: List<Renderable> = listOf()) : Node() {
 
-
+    val renderable get() = renderables.firstOrNull()
     val materialInstances get() = renderables.map { it.getMaterial() }
+
+    constructor(renderable: Renderable) : this(listOf(renderable))
 
     /**
      * @see RenderableManager.setPriority
@@ -35,26 +37,22 @@ open class RenderableNode(open val renderables: List<Renderable> = listOf()) : N
     fun setMaterialInstance(
         materialInstance: MaterialInstance,
         @IntRange(from = 0) primitiveIndex: Int = 0
-    ) =
-        renderables.forEach { it.setMaterialInstance(materialInstance, primitiveIndex) }
+    ) = renderables.forEach { it.setMaterialInstance(materialInstance, primitiveIndex) }
 
     /**
      * @see RenderableManager.setCastShadows
      */
-    fun setCastShadows(enabled: Boolean) =
-        renderables.forEach { it.setCastShadows(enabled) }
+    fun setCastShadows(enabled: Boolean) = renderables.forEach { it.setCastShadows(enabled) }
 
     /**
      * @see RenderableManager.setReceiveShadows
      */
-    fun setReceiveShadows(enabled: Boolean) =
-        renderables.forEach { it.setReceiveShadows(enabled) }
+    fun setReceiveShadows(enabled: Boolean) = renderables.forEach { it.setReceiveShadows(enabled) }
 
     /**
      * @see RenderableManager.setCulling
      */
-    fun setCulling(enabled: Boolean) =
-        renderables.forEach { it.setCulling(enabled) }
+    fun setCulling(enabled: Boolean) = renderables.forEach { it.setCulling(enabled) }
 
     /**
      * @see RenderableManager.setBlendOrder
