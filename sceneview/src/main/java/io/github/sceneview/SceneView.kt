@@ -25,7 +25,6 @@ import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.Manipulator
-import com.google.ar.sceneform.CameraNode
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.ResourceManager
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
@@ -43,6 +42,7 @@ import io.github.sceneview.light.Light
 import io.github.sceneview.light.build
 import io.github.sceneview.light.destroy
 import io.github.sceneview.light.destroyLight
+import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.NodeParent

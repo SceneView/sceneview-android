@@ -6,13 +6,13 @@ import android.view.MotionEvent
 import com.google.android.filament.IndirectLight
 import com.google.ar.core.*
 import com.google.ar.core.CameraConfig.FacingDirection
-import com.google.ar.sceneform.ArCameraNode
 import io.github.sceneview.SceneLifecycle
 import io.github.sceneview.SceneLifecycleObserver
 import io.github.sceneview.SceneLifecycleOwner
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.camera.ArCameraStream
+import io.github.sceneview.ar.node.ArCameraNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.light.Light

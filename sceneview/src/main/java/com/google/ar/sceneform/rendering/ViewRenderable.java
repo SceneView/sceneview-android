@@ -14,7 +14,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import com.google.android.filament.gltfio.FilamentInstance;
-import com.google.ar.sceneform.CameraNode;
 import com.google.ar.sceneform.collision.Box;
 import com.google.ar.sceneform.collision.Plane;
 import com.google.ar.sceneform.collision.Ray;
@@ -37,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import dev.romainguy.kotlin.math.Float2;
 import io.github.sceneview.SceneView;
 import io.github.sceneview.material.MaterialInstanceKt;
+import io.github.sceneview.node.CameraNode;
 import io.github.sceneview.node.ModelNode;
 import io.github.sceneview.node.Node;
 
