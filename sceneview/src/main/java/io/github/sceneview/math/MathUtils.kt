@@ -91,6 +91,15 @@ var Box.size
         halfExtentSize = value / 2.0f
     }
 
+fun Box.toVector3Box() : com.google.ar.sceneform.collision.Box {
+    val halfExtent = halfExtent
+    val center = center
+    return com.google.ar.sceneform.collision.Box(
+        Vector3(halfExtent[0], halfExtent[1], halfExtent[2]).scaled(2.0f),
+        Vector3(center[0], center[1], center[2])
+    )
+}
+
 /**
  * ### Spherical Linear Interpolate a transform
  *
