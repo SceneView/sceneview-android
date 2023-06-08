@@ -76,10 +76,11 @@ object GLBLoader {
         return assetLoader?.createAsset(buffer)?.also { asset ->
             resourceLoader.loadResources(asset)
 
-            //TODO: Used by Filament ModelViewer, see if it's usefull
-//            asset.instance.renderables.forEach {
-//                it.setScreenSpaceContactShadows(true)
-//            }
+            //TODO: Used by Filament ModelViewer, see if it's useful
+            asset.instance.renderables.forEach {
+                it.setScreenSpaceContactShadows(false)
+                it.setCulling(true)
+            }
         }
     }
 
@@ -92,10 +93,11 @@ object GLBLoader {
             resourceLoader.loadResources(asset)
             runCatching { asset.releaseSourceData() }
 
-            //TODO: Used by Filament ModelViewer, see if it's usefull
-//            instances.flatMap { it?.renderables ?: listOf() }.forEach {
-//                it.setScreenSpaceContactShadows(true)
-//            }
+            //TODO: Used by Filament ModelViewer, see if it's useful
+            instances.flatMap { it?.renderables ?: listOf() }.forEach {
+                it.setScreenSpaceContactShadows(false)
+                it.setCulling(true)
+            }
             Pair(asset, instances)
         }
     }

@@ -7,7 +7,7 @@ import android.graphics.BitmapFactory
 import com.google.android.filament.Engine
 import com.google.android.filament.Texture
 import com.google.android.filament.android.TextureHelper
-import com.google.android.filament.textured.TextureType
+import com.google.android.filament.utils.TextureType
 import io.github.sceneview.utils.readFileBuffer
 
 class ImageTexture private constructor(val bitmap: Bitmap, texture: Texture) {

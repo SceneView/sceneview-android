@@ -82,7 +82,8 @@ object GLTFLoader {
 
             //TODO: Used by Filament ModelViewer, see if it's usefull
             asset.renderableEntities.forEach {
-                it.setScreenSpaceContactShadows(true)
+                it.setScreenSpaceContactShadows(false)
+                it.setCulling(true)
             }
         }
     }

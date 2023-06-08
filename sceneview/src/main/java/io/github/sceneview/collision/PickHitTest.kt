@@ -1,7 +1,6 @@
 package io.github.sceneview.collision
 
 import android.view.MotionEvent
-import com.google.ar.sceneform.CameraNode
 import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.Ray

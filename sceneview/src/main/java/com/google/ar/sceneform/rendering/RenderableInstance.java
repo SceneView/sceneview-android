@@ -180,7 +180,8 @@ public class RenderableInstance implements AnimatableModel {
                     continue;
                 }
                 //TODO: Used by Filament ModelViewer, see if it's usefull
-                renderableManager.setScreenSpaceContactShadows(renderableInstance, true);
+                renderableManager.setScreenSpaceContactShadows(renderableInstance, false);
+                renderableManager.setCulling(renderableInstance, true);
 
                 MaterialInstance materialInstance = renderableManager.getMaterialInstanceAt(renderableInstance, 0);
                 materialNames.add(materialInstance.getName());
