@@ -700,7 +700,7 @@ open class SceneView @JvmOverloads constructor(
         runCatching { indirectLight?.destroy() }
         runCatching { skybox?.destroy() }
 
-        runCatching { ResourceManager.getInstance().destroyAllResources() }
+//        runCatching { ResourceManager.getInstance().destroyAllResources() }
 
         runCatching { engine.destroyRenderer(renderer) }
         runCatching { engine.destroyView(view) }
