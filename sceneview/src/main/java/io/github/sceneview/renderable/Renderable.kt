@@ -1,10 +1,12 @@
 package io.github.sceneview.renderable
 
 import androidx.annotation.IntRange
+import com.google.android.filament.Box
 import com.google.android.filament.EntityInstance
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.Filament
+import io.github.sceneview.math.toVector3Box
 
 typealias Renderable = Int
 typealias RenderableInstance = Int
@@ -81,6 +83,20 @@ fun Renderable.setGlobalBlendOrderEnabled(
     primitiveIndex,
     enabled
 )
+
+/**
+ * Changes the bounding box used for frustum culling.
+ *
+ * @see RenderableManager.getAxisAlignedBoundingBox
+ * @see RenderableManager.setAxisAlignedBoundingBox
+ */
+var Renderable.axisAlignedBoundingBox: Box
+    get() = Box().apply {
+        Filament.renderableManager.getAxisAlignedBoundingBox(renderableInstance, this)
+    }
+    set(value) = Filament.renderableManager.setAxisAlignedBoundingBox(renderableInstance, value)
+
+val Renderable.collisionShape get() = axisAlignedBoundingBox.toVector3Box()
 
 /**
  * @see RenderableManager.setScreenSpaceContactShadows
