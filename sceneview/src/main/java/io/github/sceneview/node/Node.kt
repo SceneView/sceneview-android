@@ -455,7 +455,7 @@ open class Node(
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
-        if (!smoothTransform.equalsWithDelta(transform)) {
+        if (smoothTransform != transform) {
             if (transform != lastFrameTransform) {
                 // Stop smooth if any of the position/rotation/scale has changed meanwhile
                 smoothTransform = transform
@@ -468,15 +468,13 @@ open class Node(
                     speed = smoothSpeed
                 )
             }
-        } else {
-            smoothTransform = transform
         }
         lastFrameTransform = transform
 
-        if (worldTransform != lastFrameWorldTransform) {
-            transformInstance?.let { transformManager.setTransform(it, worldTransform) }
-        }
-        lastFrameWorldTransform = worldTransform
+//        if (worldTransform != lastFrameWorldTransform) {
+        transformInstance?.let { transformManager.setTransform(it, worldTransform) }
+//        }
+//        lastFrameWorldTransform = worldTransform
 
         onFrame.forEach { it(frameTime, this) }
     }
@@ -674,13 +672,9 @@ open class Node(
      *
      * @see transform
      */
-    fun smooth(transform: Transform, speed: Float = this.smoothSpeed) {
+    fun smooth(transform: Transform, speed: Float = smoothSpeed) {
         smoothSpeed = speed
-        if (!equals(this.transform, transform, DEFAULT_EPSILON)) {
-            this.smoothTransform = transform
-        } else {
-            this.transform = transform
-        }
+        smoothTransform = transform
     }
 
     fun animatePositions(vararg positions: Position): ObjectAnimator =
