@@ -3,6 +3,7 @@ package io.github.sceneview.node
 import android.content.Context
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.gltfio.Animator
+import com.google.android.filament.gltfio.FilamentAsset
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
 import io.github.sceneview.gesture.NodeMotionEvent
@@ -84,6 +85,11 @@ open class ModelNode : RenderableNode {
                 modelScale = value.scale
             }
         }
+
+    /**
+     * The source [Model] ([FilamentAsset]) from the [ModelInstance] [ModelInstance]
+     */
+    open val model get() = modelInstance?.model
 
     /**
      * The [ModelInstance] to display.
