@@ -65,11 +65,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
@@ -92,17 +92,17 @@ dependencies {
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
 
     // kotlin-math
-    api 'dev.romainguy:kotlin-math:1.5.1'
+    api 'dev.romainguy:kotlin-math:1.5.3'
 
     // Filament
-    def filament_version = '1.31.2'
+    def filament_version = '1.36.0'
     api "com.google.android.filament:filament-android:$filament_version"
     api "com.google.android.filament:gltfio-android:$filament_version"
     api "com.google.android.filament:filament-utils-android:$filament_version"
 
     // AndroidX
-    implementation "androidx.annotation:annotation:1.5.0"
-    api "androidx.lifecycle:lifecycle-common-java8:2.5.1"
+    implementation "androidx.annotation:annotation:1.6.0"
+    api "androidx.lifecycle:lifecycle-common-java8:2.6.1"
     api "androidx.lifecycle:lifecycle-extensions:2.2.0"
 
     // Compose

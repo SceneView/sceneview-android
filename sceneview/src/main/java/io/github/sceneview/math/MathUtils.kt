@@ -1,18 +1,14 @@
 package io.github.sceneview.math
 
-import com.google.ar.sceneform.math.MathHelper
+import com.google.android.filament.Box
 import com.google.ar.sceneform.math.Vector3
 import dev.romainguy.kotlin.math.*
-import kotlin.math.absoluteValue
-
-const val DEFAULT_EPSILON = 0.001f
 
 typealias Position = Float3
 typealias Rotation = Float3
 typealias Scale = Float3
 typealias Direction = Float3
 typealias Size = Float3
-typealias Axis = VectorComponent
 typealias Transform = Mat4
 
 fun Transform(position: Position, quaternion: Quaternion, scale: Scale) =
@@ -32,6 +28,8 @@ fun Rotation.toQuaternion(order: RotationsOrder = RotationsOrder.ZYX) =
     Quaternion.fromEuler(this, order)
 
 fun Quaternion.toRotation(order: RotationsOrder = RotationsOrder.ZYX) = eulerAngles(this, order)
+
+fun FloatArray.toSize() = this.let { (x, y, z) -> Size(x, y, z) }
 
 //TODO: Remove when everything use Float3
 fun Float3.toVector3() = Vector3(x, y, z)
@@ -55,38 +53,43 @@ fun Mat4.toColumnsFloatArray() = floatArrayOf(
     w.x, w.y, w.z, w.w
 )
 
-fun lerp(
-    start: Float3,
-    end: Float3,
-    deltaSeconds: Float,
-    epsilon: Float = DEFAULT_EPSILON
-): Float3 {
-    return if (!equals(start, end, epsilon)) {
-        return mix(start, end, deltaSeconds)
-    } else end
+fun lerp(start: Float3, end: Float3, deltaSeconds: Float) = mix(start, end, deltaSeconds)
+
+fun normalToTangent(normal: Float3): Quaternion {
+    var tangent: Float3
+    val bitangent: Float3
+
+    // Calculate basis vectors (+x = tangent, +y = bitangent, +z = normal).
+    tangent = cross(Direction(y = 1.0f), normal)
+
+    // Uses almostEqualRelativeAndAbs for equality checks that account for float inaccuracy.
+    if (dot(tangent, tangent) == 0.0f) {
+        bitangent = normalize(cross(normal, Direction(x = 1.0f)))
+        tangent = normalize(cross(bitangent, normal))
+    } else {
+        tangent = normalize(tangent)
+        bitangent = normalize(cross(normal, tangent))
+    }
+    // Rotation of a 4x4 Transformation Matrix is represented by the top-left 3x3 elements.
+    return Transform(right = tangent, up = bitangent, forward = normal).toQuaternion()
 }
 
-fun lerp(
-    start: Quaternion,
-    end: Quaternion,
-    deltaSeconds: Float,
-    epsilon: Float = DEFAULT_EPSILON
-): Quaternion {
-    return if (!equals(start, end, epsilon)) {
-        return dev.romainguy.kotlin.math.lerp(start, end, deltaSeconds)
-    } else end
-}
-
-fun slerp(
-    start: Quaternion,
-    end: Quaternion,
-    deltaSeconds: Float,
-    epsilon: Float = DEFAULT_EPSILON
-): Quaternion {
-    return if (!equals(start, end, epsilon)) {
-        return dev.romainguy.kotlin.math.slerp(start, end, deltaSeconds)
-    } else end
-}
+fun Box(center: Position, halfExtent: Size) = Box(center.toFloatArray(), halfExtent.toFloatArray())
+var Box.centerPosition: Position
+    get() = center.toPosition()
+    set(value) {
+        setCenter(value.x, value.y, value.z)
+    }
+var Box.halfExtentSize: Size
+    get() = halfExtent.toSize()
+    set(value) {
+        setHalfExtent(value.x, value.y, value.z)
+    }
+var Box.size
+    get() = halfExtentSize * 2.0f
+    set(value) {
+        halfExtentSize = value / 2.0f
+    }
 
 /**
  * ### Spherical Linear Interpolate a transform
@@ -103,17 +106,14 @@ fun slerp(
     start: Transform,
     end: Transform,
     deltaSeconds: Double,
-    speed: Float,
-    epsilon: Float = DEFAULT_EPSILON
+    speed: Float
 ): Transform {
-    return if (!equals(start, end, epsilon)) {
-        val lerpFactor = MathHelper.clamp((deltaSeconds * speed).toFloat(), 0.0f, 1.0f)
-        Transform(
-            position = lerp(start.position, end.position, lerpFactor, epsilon),
-            quaternion = slerp(start.quaternion, end.quaternion, lerpFactor, epsilon),
-            scale = lerp(start.scale, end.scale, lerpFactor, epsilon)
-        )
-    } else end
+    val lerpFactor = clamp((deltaSeconds * speed).toFloat(), 0.0f, 1.0f)
+    return Transform(
+        position = lerp(start.position, end.position, lerpFactor),
+        quaternion = slerp(start.quaternion, end.quaternion, lerpFactor),
+        scale = lerp(start.scale, end.scale, lerpFactor)
+    )
 }
 
 /**
@@ -127,11 +127,3 @@ fun lookAt(eye: Position, target: Position): Mat4 {
 
 fun lookTowards(eye: Position, direction: Direction) =
     lookTowards(eye, direction, Direction(y = 1.0f)).toQuaternion()
-
-fun Float.equalsWithDelta(v: Float, delta: Float) = (this - v).absoluteValue < delta
-
-fun Float4.equalsWithDelta(v: Float4, delta: Float = DEFAULT_EPSILON) =
-    x.equalsWithDelta(v.x, delta) && y.equalsWithDelta(v.y, delta) && z.equalsWithDelta(v.z, delta) && w.equalsWithDelta(v.w, delta)
-
-fun Mat4.equalsWithDelta(m: Mat4, delta: Float = DEFAULT_EPSILON) =
-    x.equalsWithDelta(m.x, delta) && y.equalsWithDelta(m.y, delta) && z.equalsWithDelta(m.z, delta) && w.equalsWithDelta(m.w, delta)
