@@ -44,7 +44,7 @@ open class ArSceneView @JvmOverloads constructor(
 
     override val arCore = ARCore(activity, lifecycle, sessionFeatures)
 
-    override var frameRate: FrameRate = FrameRate.Half
+//    override var frameRate: FrameRate = FrameRate.Half
 
     private var _focusMode = Config.FocusMode.AUTO
 
