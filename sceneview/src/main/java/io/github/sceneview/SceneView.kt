@@ -380,14 +380,32 @@ open class SceneView @JvmOverloads constructor(
         scene = engine.createScene()
         view = engine.createView()
         // on mobile, better use lower quality color buffer
-//        view.renderQuality = view.renderQuality.apply {
-//            hdrColorBuffer = View.QualityLevel.MEDIUM
-//        }
-//        // dynamic resolution often helps a lot
+        view.renderQuality = view.renderQuality.apply {
+            hdrColorBuffer = View.QualityLevel.HIGH
+        }
+        context.getSystemService<WindowManager>()?.defaultDisplay?.let { display ->
+            renderer.displayInfo = Renderer.DisplayInfo().apply {
+                refreshRate = display.refreshRate
+            }
+        }
+        view.setShadowingEnabled(false)
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
             enabled = false
-            quality = QualityLevel.MEDIUM
+            quality = QualityLevel.ULTRA
         }
+//        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+//            enabled = false
+//        }
+//        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
+//            enabled = false
+//        }
+//        view.screenSpaceReflectionsOptions = view.screenSpaceReflectionsOptions.apply {
+//            enabled = false
+//        }
+//        view.depthOfFieldOptions = view.depthOfFieldOptions.apply {
+//            enabled = false
+//        }
+//        view.blendMode = BlendMode.TRANSLUCENT
 //        // MSAA is needed with dynamic resolution MEDIUM
 //        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
 //            enabled = true
