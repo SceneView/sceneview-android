@@ -2,31 +2,25 @@ package io.github.sceneview
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Color.BLACK
 import android.graphics.PixelFormat
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
 import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.view.Choreographer
-import android.view.MotionEvent
-import android.view.Surface
-import android.view.SurfaceView
+import android.view.*
 import androidx.activity.ComponentActivity
+import androidx.core.content.getSystemService
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.*
 import com.google.android.filament.*
-import com.google.android.filament.Renderer.ClearOptions
+import com.google.android.filament.View
 import com.google.android.filament.View.*
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.Manipulator
 import com.google.ar.sceneform.collision.CollisionSystem
-import com.google.ar.sceneform.rendering.ResourceManager
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import com.gorisse.thomas.lifecycle.getActivity
 import io.github.sceneview.Filament.engine
@@ -223,17 +217,17 @@ open class SceneView @JvmOverloads constructor(
             scene.skybox = value
         }
 
-    var backgroundColor: Color?
-        get() = renderer.clearOptions.clearColor.toColor()
-        set(value) {
-            renderer.clearOptions = ClearOptions().apply {
-                clear = true
-                isTranslucent = value == null || value.a != 1.0f
-                if (value != null && value.a != 0.0f) {
-                    clearColor = value.toFloatArray()
-                }
-            }
-        }
+//    var backgroundColor: Color?
+//        get() = renderer.clearOptions.clearColor.toColor()
+//        set(value) {
+//            renderer.clearOptions = ClearOptions().apply {
+//                clear = true
+//                isTranslucent = value == null || value.a != 1.0f
+//                if (value != null && value.a != 0.0f) {
+//                    clearColor = value.toFloatArray()
+//                }
+//            }
+//        }
 
     /**
      * ### Set the background to transparent.
@@ -327,7 +321,7 @@ open class SceneView @JvmOverloads constructor(
             context.getActivity()!!
         }
 
-    private val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
+    val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
         renderCallback = SurfaceCallback()
         attachTo(this@SceneView)
     }
@@ -552,14 +546,14 @@ open class SceneView @JvmOverloads constructor(
     /** @see Scene.removeEntity */
     fun removeLight(@Entity light: Light) = scene.removeEntity(light)
 
-    @Deprecated("Deprecated in Java")
-    override fun setBackgroundDrawable(background: Drawable?) {
-        super.setBackgroundDrawable(background)
-
-        if (holder != null) {
-            updateBackground()
-        }
-    }
+//    @Deprecated("Deprecated in Java")
+//    override fun setBackgroundDrawable(background: Drawable?) {
+//        super.setBackgroundDrawable(background)
+//
+//        if (holder != null) {
+//            updateBackground()
+//        }
+//    }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
@@ -702,15 +696,15 @@ open class SceneView @JvmOverloads constructor(
             sceneLifecycle = it
         }
 
-    private fun updateBackground() {
-        if ((background is ColorDrawable && background.alpha == 255) || skybox != null) {
-            backgroundColor = colorOf(color = (background as? ColorDrawable)?.color ?: BLACK)
-            isTranslucent = false
-        } else {
-            backgroundColor = colorOf(a = 0.0f)
-            isTranslucent = true
-        }
-    }
+//    private fun updateBackground() {
+//        if ((background is ColorDrawable && background.alpha == 255) || skybox != null) {
+//            backgroundColor = colorOf(color = (background as? ColorDrawable)?.color ?: BLACK)
+//            isTranslucent = false
+//        } else {
+//            backgroundColor = colorOf(a = 0.0f)
+//            isTranslucent = true
+//        }
+//    }
 
     inner class SurfaceCallback : UiHelper.RendererCallback {
         override fun onNativeWindowChanged(surface: Surface) {
