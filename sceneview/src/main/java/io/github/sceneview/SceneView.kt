@@ -72,11 +72,11 @@ open class SceneView @JvmOverloads constructor(
     NodeParent,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
-    sealed class FrameRate(val factor: Long) {
-        object Full : FrameRate(1)
-        object Half : FrameRate(2)
-        object Third : FrameRate(3)
-    }
+//    sealed class FrameRate(val factor: Long) {
+//        object Full : FrameRate(1)
+//        object Half : FrameRate(2)
+//        object Third : FrameRate(3)
+//    }
 
     enum class SelectionMode {
         NONE, SINGLE, MULTIPLE;
@@ -89,7 +89,7 @@ open class SceneView @JvmOverloads constructor(
         var allowDeselection = true
     }
 
-    open var frameRate: FrameRate = FrameRate.Full
+//    open var frameRate: FrameRate = FrameRate.Full
 
     val scene: Scene
     val view: View
@@ -491,10 +491,10 @@ open class SceneView @JvmOverloads constructor(
         val nanoTime = System.nanoTime()
         val tick = nanoTime / (TimeUnit.SECONDS.toNanos(1) / maxFramesPerSecond)
 
-        if (lastTick / frameRate.factor != tick / frameRate.factor) {
-            currentFrameTime = FrameTime(frameTimeNanos, currentFrameTime.nanoseconds)
-            doFrame(currentFrameTime)
-        }
+//        if (lastTick / frameRate.factor != tick / frameRate.factor) {
+        currentFrameTime = FrameTime(frameTimeNanos, currentFrameTime.nanoseconds)
+        doFrame(currentFrameTime)
+//        }
     }
 
     open fun doFrame(frameTime: FrameTime) {
