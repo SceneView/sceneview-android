@@ -17,6 +17,7 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.texture.ViewStream
 import io.github.sceneview.texture.ViewTexture
 import io.github.sceneview.texture.destroyViewStream
+import kotlin.math.absoluteValue
 
 /**
  * A Node that can display an Android [View]
@@ -52,20 +53,31 @@ class ViewNode constructor(
         viewStream = ViewStream.Builder()
             .view(view)
             .build(engine, viewWindowViewManager)
+
         geometry = Plane.Builder(size = viewStream.worldSize, normal = Direction(z = 1.0f))
             .build(engine)
-        viewStream.onSizeChanged = { size ->
-            geometry.update(engine, size = size)
-        }
+
         texture = ViewTexture.Builder()
             .viewStream(viewStream)
             .build(engine)
+
         material = materialLoader.createViewMaterial(texture, unlit, invertFrontFaceWinding)
 
-        RenderableManager.Builder(geometry.submeshes.size)
-            .geometry(geometry)
-            .material(0, material)
-            .build(engine, entity)
+        val drawView: () -> Unit = {
+            if (viewStream.worldSize.x.absoluteValue != 0.0f && viewStream.worldSize.y.absoluteValue != 0.0f) {
+                RenderableManager.Builder(geometry.submeshes.size)
+                    .geometry(geometry)
+                    .material(0, material)
+                    .build(engine, entity)
+            }
+        }
+
+        viewStream.onSizeChanged = { size ->
+            geometry.update(engine, size = size)
+            drawView()
+        }
+
+        drawView()
     }
 
     constructor(
