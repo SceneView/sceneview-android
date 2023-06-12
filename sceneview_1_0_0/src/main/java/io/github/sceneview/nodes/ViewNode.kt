@@ -3,8 +3,13 @@ package io.github.sceneview.nodes
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
-import com.google.android.filament.*
+import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
+import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
+import com.google.android.filament.Texture
 import com.google.android.filament.View.PickingQueryResult
+import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.geometries.Plane
@@ -14,10 +19,10 @@ import io.github.sceneview.managers.NodeManager
 import io.github.sceneview.managers.WindowViewManager
 import io.github.sceneview.managers.geometry
 import io.github.sceneview.math.Direction
+import io.github.sceneview.math.size
 import io.github.sceneview.texture.ViewStream
 import io.github.sceneview.texture.ViewTexture
 import io.github.sceneview.texture.destroyViewStream
-import kotlin.math.absoluteValue
 
 /**
  * A Node that can display an Android [View]
@@ -63,8 +68,8 @@ class ViewNode constructor(
 
         material = materialLoader.createViewMaterial(texture, unlit, invertFrontFaceWinding)
 
-        val drawView: () -> Unit = {
-            if (viewStream.worldSize.x.absoluteValue != 0.0f && viewStream.worldSize.y.absoluteValue != 0.0f) {
+        val renderView: () -> Unit = {
+            if (geometry.boundingBox.size != Float3(0f)) {
                 RenderableManager.Builder(geometry.submeshes.size)
                     .geometry(geometry)
                     .material(0, material)
@@ -74,10 +79,10 @@ class ViewNode constructor(
 
         viewStream.onSizeChanged = { size ->
             geometry.update(engine, size = size)
-            drawView()
+            renderView()
         }
 
-        drawView()
+        renderView()
     }
 
     constructor(
