@@ -18,6 +18,7 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.managers.NodeManager
 import io.github.sceneview.managers.WindowViewManager
 import io.github.sceneview.managers.geometry
+import io.github.sceneview.managers.setGeometry
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.size
 import io.github.sceneview.texture.ViewStream
@@ -79,7 +80,11 @@ class ViewNode constructor(
 
         viewStream.onSizeChanged = { size ->
             geometry.update(engine, size = size)
-            renderView()
+            if (engine.renderableManager.hasComponent(entity)) {
+                engine.renderableManager.setGeometry(entity, geometry)
+            } else {
+                renderView()
+            }
         }
 
         renderView()
