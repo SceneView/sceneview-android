@@ -239,8 +239,8 @@ abstract class BaseGeometryBuilder<T : Geometry> internal constructor(
         }.build(engine)
 
         return build(vertexBuffer, indexBuffer).apply {
-            setBufferVertices(engine, vertices)
-            setBufferIndices(engine, submeshes)
+            setBufferVertices(engine, this@BaseGeometryBuilder.vertices)
+            setBufferIndices(engine, this@BaseGeometryBuilder.submeshes)
         }
     }
 
