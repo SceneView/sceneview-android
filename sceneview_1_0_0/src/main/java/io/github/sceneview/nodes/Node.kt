@@ -260,8 +260,8 @@ open class Node(
 
     open fun destroy() {
         childNodes.forEach {
-            it.destroy()
             removeChildNode(it)
+            it.destroy()
         }
         nodeManager.removeComponent(entity)
         engine.destroyEntity(entity)
