@@ -176,7 +176,7 @@ class ArCameraStream(
         .receiveShadows(false)
         // Always draw the camera feed last to avoid overdraw
         .culling(false)
-        .screenSpaceContactShadows(false)
+//        .screenSpaceContactShadows(false)
 //        .blendOrder(0, 0)
 //        .globalBlendOrderEnabled(0, false)
         .priority(priority)
