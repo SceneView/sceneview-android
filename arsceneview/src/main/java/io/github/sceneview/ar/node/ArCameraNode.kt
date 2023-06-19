@@ -1,8 +1,8 @@
 package io.github.sceneview.ar.node
 
 import com.google.ar.core.Camera
-import io.github.sceneview.ar.arcore.position
-import io.github.sceneview.ar.arcore.quaternion
+import com.google.ar.core.TrackingState
+import io.github.sceneview.ar.arcore.transform
 import io.github.sceneview.node.CameraNode
 import kotlin.math.atan
 
@@ -48,8 +48,8 @@ class ArCameraNode : CameraNode(false) {
         camera.getViewMatrix(viewMatrix.data, 0)
 
         // Update the node's transformation properties to match the tracked pose.
-        val pose = camera.displayOrientedPose
-        super.position = pose.position
-        super.quaternion = pose.quaternion
+        if (camera.trackingState == TrackingState.TRACKING) {
+            transform = camera.displayOrientedPose.transform
+        }
     }
 }
