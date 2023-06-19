@@ -12,9 +12,9 @@ import android.widget.TextView
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.google.ar.core.Config
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.ar.arcore.LightEstimationMode
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.GLBLoader
 import io.github.sceneview.model.Model
@@ -87,7 +87,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
             planeRenderer.isEnabled = false
-            lightEstimationMode = LightEstimationMode.DISABLED
+            lightEstimationMode = Config.LightEstimationMode.DISABLED
             environment = null
             onArFrame = this@MainFragment::onArFrame
         }
