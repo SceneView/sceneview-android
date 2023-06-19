@@ -168,45 +168,11 @@ open class ArSceneView @JvmOverloads constructor(
      * These modes consist of separate APIs that allow for granular and realistic lighting
      * estimation for directional lighting, shadows, specular highlights, and reflections.
      */
-    var sessionLightEstimationMode: Config.LightEstimationMode
+    var lightEstimationMode: Config.LightEstimationMode
         get() = arSession?.lightEstimationMode ?: _sessionLightEstimationMode
         set(value) {
             _sessionLightEstimationMode = value
             arSession?.lightEstimationMode = value
-        }
-
-    /**
-     * ### ARCore light estimation configuration
-     *
-     * ARCore estimate lighting to provide directional light, ambient spherical harmonics,
-     * and reflection cubemap estimation
-     *
-     * Light bounces off of surfaces differently depending on whether the surface has specular
-     * (highly reflective) or diffuse (not reflective) properties.
-     * For example, a metallic ball will be highly specular and reflect its environment, while
-     * another ball painted a dull matte gray will be diffuse. Most real-world objects have a
-     * combination of these properties — think of a scuffed-up bowling ball or a well-used credit
-     * card.
-     *
-     * Reflective surfaces also pick up colors from the ambient environment. The coloring of an
-     * object can be directly affected by the coloring of its environment. For example, a white ball
-     * in a blue room will take on a bluish hue.
-     *
-     * The main directional light API calculates the direction and intensity of the scene's
-     * main light source. This information allows virtual objects in your scene to show reasonably
-     * positioned specular highlights, and to cast shadows in a direction consistent with other
-     * visible real objects.
-     *
-     * @see LightEstimationMode.ENVIRONMENTAL_HDR
-     * @see LightEstimationMode.ENVIRONMENTAL_HDR_NO_REFLECTIONS
-     * @see LightEstimationMode.ENVIRONMENTAL_HDR_FAKE_REFLECTIONS
-     * @see LightEstimationMode.AMBIENT_INTENSITY
-     * @see LightEstimationMode.DISABLED
-     */
-    var lightEstimationMode: LightEstimationMode
-        get() = lightEstimator.mode
-        set(value) {
-            lightEstimator.mode = value
         }
 
     /**
@@ -250,7 +216,7 @@ open class ArSceneView @JvmOverloads constructor(
      * - Environment handles a reflections, indirect lighting and skybox.
      * - ARCore will estimate the direction, the intensity and the color of the light
      */
-    val lightEstimator = LightEstimator(lifecycle, ::onLightEstimationUpdate)
+    var lightEstimator: LightEstimator? = LightEstimator()
 
     var mainLightEstimated: Light? = null
         private set(value) {
@@ -417,8 +383,8 @@ open class ArSceneView @JvmOverloads constructor(
 //            if (arFrame.frame.timestamp != 0L
             // && arFrame.time != currentFrame?.time
 //            ) {
-                currentFrame = arFrame
-                doArFrame(arFrame)
+            currentFrame = arFrame
+            doArFrame(arFrame)
 //            }
         }
         super.doFrame(frameTime)
@@ -440,6 +406,11 @@ open class ArSceneView @JvmOverloads constructor(
         cameraNode.updateTrackedPose(camera)
 
         arCameraStream.update(arFrame)
+
+        lightEstimator?.update(this, arFrame)?.let { (environment, mainLight)->
+            environmentEstimated = environment
+            mainLightEstimated = mainLight
+        }
 
         planeRenderer.update(arFrame)
 
@@ -463,11 +434,6 @@ open class ArSceneView @JvmOverloads constructor(
             onArFrame(arFrame)
         }
         onArFrame?.invoke(arFrame)
-    }
-
-    open fun onLightEstimationUpdate(lightEstimation: LightEstimator) {
-        mainLightEstimated = lightEstimation.mainLight
-        environmentEstimated = lightEstimation.environment
     }
 
     /**
@@ -543,6 +509,7 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun destroy() {
         arCameraStream.destroy()
+        lightEstimator?.destroy()
         planeRenderer.destroy()
 
         super.destroy()
