@@ -370,6 +370,8 @@ open class SceneView @JvmOverloads constructor(
             .build(Manipulator.Mode.ORBIT)
     }
 
+    var isDestroyed = false
+
     private var lastTick: Long = 0
     private val surfaceMirrorer by lazy { SurfaceMirrorer(lifecycle) }
 
@@ -691,22 +693,25 @@ open class SceneView @JvmOverloads constructor(
      * Meaning that they are already self destroyed when they receive the `onDestroy()` callback.
      */
     open fun destroy() {
-        runCatching { uiHelper.detach() }
+        if (!isDestroyed) {
+            runCatching { uiHelper.detach() }
 
-        // Use runCatching because they should normally already been destroyed by the lifecycle and
-        // Filament will throw an Exception when destroying them twice.
-        runCatching { cameraNode.destroy() }
-        runCatching { mainLight?.destroyLight() }
-        runCatching { indirectLight?.destroy() }
-        runCatching { skybox?.destroy() }
+            // Use runCatching because they should normally already been destroyed by the lifecycle and
+            // Filament will throw an Exception when destroying them twice.
+            runCatching { cameraNode.destroy() }
+            runCatching { mainLight?.destroyLight() }
+            runCatching { indirectLight?.destroy() }
+            runCatching { skybox?.destroy() }
 
 //        runCatching { ResourceManager.getInstance().destroyAllResources() }
 
-        runCatching { engine.destroyRenderer(renderer) }
-        runCatching { engine.destroyView(view) }
-        runCatching { engine.destroyScene(scene) }
+            runCatching { engine.destroyRenderer(renderer) }
+            runCatching { engine.destroyView(view) }
+            runCatching { engine.destroyScene(scene) }
 
-        Filament.release()
+            Filament.release()
+            isDestroyed = true
+        }
     }
 
     override fun getLifecycle() =
