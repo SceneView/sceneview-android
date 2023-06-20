@@ -405,7 +405,7 @@ open class ArSceneView @JvmOverloads constructor(
 
         cameraNode.updateTrackedPose(camera)
 
-        arCameraStream.update(arFrame)
+        arCameraStream.update(this, arFrame)
 
         lightEstimator?.update(this, arFrame)?.let { (environment, mainLight)->
             environmentEstimated = environment
@@ -508,9 +508,11 @@ open class ArSceneView @JvmOverloads constructor(
     ) = currentFrame?.hitTest(xPx, yPx, plane, depth, instant, approximateDistance)
 
     override fun destroy() {
-        arCameraStream.destroy()
-        lightEstimator?.destroy()
-        planeRenderer.destroy()
+        if(!isDestroyed) {
+            arCameraStream.destroy()
+            lightEstimator?.destroy()
+            planeRenderer.destroy()
+        }
 
         super.destroy()
     }

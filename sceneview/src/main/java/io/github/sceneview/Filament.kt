@@ -1,6 +1,7 @@
 package io.github.sceneview
 
 import android.opengl.EGLContext
+import android.util.Log
 import com.google.android.filament.*
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.Gltfio
@@ -83,7 +84,6 @@ object Filament {
 
     fun retain() {
         retainers++
-
     }
 
     fun release() {
@@ -96,7 +96,7 @@ object Filament {
     fun destroy() {
         // TODO: We still got some errors on this destroy due to this nightmare Renderable
         //  Should be solved with RIP Renderable
-//        _assetLoader?.destroy()
+        runCatching {_assetLoader?.destroy() }
         _assetLoader = null
 
         _resourceLoader?.apply {
@@ -108,13 +108,14 @@ object Filament {
 
         // TODO: Materials should be destroyed by their own
         // TODO: Hot fix because of not destroyed instances
-//        runCatching { _materialProvider?.destroyMaterials() }
-//        runCatching { _materialProvider?.destroy() }
+        runCatching { _materialProvider?.destroyMaterials() }
+        runCatching { _materialProvider?.destroy() }
         _materialProvider = null
 
         runCatching { _iblPrefilter?.destroy() }
         _iblPrefilter = null
 
+        runCatching { _engine?.flushAndWait() }
         runCatching { _engine?.destroy() }
         _engine = null
 
@@ -122,6 +123,8 @@ object Filament {
             runCatching { OpenGL.destroyEglContext(it) }
         }
         eglContext = null
+
+        Log.d("Sceneview", "Filament Engine destroyed")
     }
 }
 
