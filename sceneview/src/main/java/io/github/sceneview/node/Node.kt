@@ -271,7 +271,7 @@ open class Node(
      */
     var smoothSpeed = 5.0f
 
-    var smoothTransform: Transform = Transform(transform)
+    var smoothTransform: Transform? = null
 
     private var lastFrameTransform: Transform? = null
     private var lastFrameWorldTransform: Transform? = null
@@ -455,18 +455,22 @@ open class Node(
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
-        if (smoothTransform != transform) {
-            if (transform != lastFrameTransform) {
-                // Stop smooth if any of the position/rotation/scale has changed meanwhile
-                smoothTransform = transform
+        smoothTransform?.let { smoothTransform ->
+            if (smoothTransform != transform) {
+                if (transform != lastFrameTransform) {
+                    // Stop smooth if any of the position/rotation/scale has changed meanwhile
+                    this.smoothTransform = null
+                } else {
+                    // Smooth the transform
+                    transform = slerp(
+                        start = transform,
+                        end = smoothTransform,
+                        deltaSeconds = frameTime.intervalSeconds,
+                        speed = smoothSpeed
+                    )
+                }
             } else {
-                // Smooth the transform
-                transform = slerp(
-                    start = transform,
-                    end = smoothTransform,
-                    deltaSeconds = frameTime.intervalSeconds,
-                    speed = smoothSpeed
-                )
+                this.smoothTransform = null
             }
         }
         lastFrameTransform = transform
