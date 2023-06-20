@@ -53,6 +53,13 @@ fun Mat4.toColumnsFloatArray() = floatArrayOf(
     w.x, w.y, w.z, w.w
 )
 
+fun FloatArray.toTransform() = Transform(
+    x = Float4(this[0], this[1], this[2], this[3]),
+    y = Float4(this[4], this[5], this[6], this[7]),
+    z = Float4(this[8], this[9], this[10], this[11]),
+    w = Float4(this[12], this[13], this[14], this[15])
+)
+
 fun lerp(start: Float3, end: Float3, deltaSeconds: Float) = mix(start, end, deltaSeconds)
 
 fun normalToTangent(normal: Float3): Quaternion {
@@ -91,7 +98,7 @@ var Box.size
         halfExtentSize = value / 2.0f
     }
 
-fun Box.toVector3Box() : com.google.ar.sceneform.collision.Box {
+fun Box.toVector3Box(): com.google.ar.sceneform.collision.Box {
     val halfExtent = halfExtent
     val center = center
     return com.google.ar.sceneform.collision.Box(

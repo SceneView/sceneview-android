@@ -14,15 +14,12 @@ import com.google.ar.sceneform.math.Matrix
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
 import dev.romainguy.kotlin.math.*
+import io.github.sceneview.*
 import io.github.sceneview.Filament.transformManager
-import io.github.sceneview.SceneLifecycle
-import io.github.sceneview.SceneLifecycleObserver
-import io.github.sceneview.SceneView
 import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.gesture.*
 import io.github.sceneview.math.*
 import io.github.sceneview.renderable.Renderable
-import io.github.sceneview.setTransform
 import io.github.sceneview.utils.FrameTime
 import kotlin.reflect.KProperty
 
@@ -475,10 +472,12 @@ open class Node(
         }
         lastFrameTransform = transform
 
-//        if (worldTransform != lastFrameWorldTransform) {
-        transformInstance?.let { transformManager.setTransform(it, worldTransform) }
-//        }
-//        lastFrameWorldTransform = worldTransform
+        transformInstance?.let {
+            val worldTransform = this.worldTransform
+            if (transformManager.getTransform(it) != worldTransform) {
+                transformManager.setTransform(it, worldTransform)
+            }
+        }
 
         onFrame.forEach { it(frameTime, this) }
     }
