@@ -145,7 +145,6 @@ open class SceneView @JvmOverloads constructor(
             view.dithering = value
         }
 
-
     /**
      * ### The main directional light of the scene
      *
@@ -382,18 +381,25 @@ open class SceneView @JvmOverloads constructor(
         scene = engine.createScene()
         view = engine.createView()
         // on mobile, better use lower quality color buffer
+
+        // on mobile, better use lower quality color buffer
         view.renderQuality = view.renderQuality.apply {
-            hdrColorBuffer = View.QualityLevel.HIGH
+            hdrColorBuffer = QualityLevel.MEDIUM
         }
-        context.getSystemService<WindowManager>()?.defaultDisplay?.let { display ->
-            renderer.displayInfo = Renderer.DisplayInfo().apply {
-                refreshRate = display.refreshRate
-            }
-        }
-        view.setShadowingEnabled(false)
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
             enabled = false
-            quality = QualityLevel.ULTRA
+            quality = QualityLevel.MEDIUM
+        }
+        view.setShadowingEnabled(false)
+        // FXAA is pretty cheap and helps a lot
+        view.antiAliasing = View.AntiAliasing.NONE
+        // ambient occlusion is the cheapest effect that adds a lot of quality
+        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+            enabled = false
+        }
+        // bloom is pretty expensive but adds a fair amount of realism
+        view.bloomOptions = view.bloomOptions.apply {
+            enabled = false
         }
 //        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
 //            enabled = false
