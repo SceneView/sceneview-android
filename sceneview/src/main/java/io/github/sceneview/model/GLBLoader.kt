@@ -4,7 +4,6 @@ import android.content.Context
 import io.github.sceneview.Filament.assetLoader
 import io.github.sceneview.Filament.resourceLoader
 import io.github.sceneview.renderable.setCulling
-import io.github.sceneview.renderable.setScreenSpaceContactShadows
 import io.github.sceneview.utils.useFileBufferNotNull
 import io.github.sceneview.utils.useLocalFileBufferNotNull
 import kotlinx.coroutines.Dispatchers
@@ -96,9 +95,8 @@ object GLBLoader {
 
             resourceLoader.loadResources(asset)
 
-            //TODO: Used by Filament ModelViewer, see if it's useful
             asset.instance.renderables.forEach {
-                it.setScreenSpaceContactShadows(false)
+//                it.setScreenSpaceContactShadows(false)
                 it.setCulling(true)
             }
         }
@@ -113,9 +111,8 @@ object GLBLoader {
             resourceLoader.loadResources(asset)
             runCatching { asset.releaseSourceData() }
 
-            //TODO: Used by Filament ModelViewer, see if it's useful
             instances.flatMap { it?.renderables ?: listOf() }.forEach {
-                it.setScreenSpaceContactShadows(false)
+//                it.setScreenSpaceContactShadows(false)
                 it.setCulling(true)
             }
             Pair(asset, instances)
