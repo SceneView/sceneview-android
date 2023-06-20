@@ -9,7 +9,6 @@ import android.os.Looper
 import android.util.AttributeSet
 import android.view.*
 import androidx.activity.ComponentActivity
-import androidx.core.content.getSystemService
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.*
@@ -27,7 +26,6 @@ import io.github.sceneview.Filament.engine
 import io.github.sceneview.Filament.transformManager
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.loadEnvironment
-import io.github.sceneview.environment.loadEnvironmentSync
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.NodeMotionEvent
@@ -48,8 +46,6 @@ import java.util.concurrent.TimeUnit
 import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 private const val maxFramesPerSecond = 60
-
-const val defaultIblLocation = "sceneview/environments/indoor_studio/indoor_studio_ibl.ktx"
 
 /**
  * ### A SurfaceView that manages rendering and interactions with the 3D scene.
@@ -450,10 +446,9 @@ open class SceneView @JvmOverloads constructor(
             .direction(0.0f, -1.0f, 0.0f)
             .castShadows(true)
             .build()
-        environment = KTXLoader.loadEnvironmentSync(
-            context, lifecycle,
-            iblKtxFileLocation = defaultIblLocation
-        )
+        skybox = Skybox.Builder()
+            .color(0.0f, 0.0f, 0.0f, 1.0f)
+            .build()
 
         cameraNode.parent = this
     }
