@@ -34,6 +34,6 @@ dependencies {
     implementation project(":samples:common")
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:0.9.9"
+    releaseImplementation "io.github.sceneview:arsceneview:0.9.10"
     debugImplementation project(":arsceneview")
 }
