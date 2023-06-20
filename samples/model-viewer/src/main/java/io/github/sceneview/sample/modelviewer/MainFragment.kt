@@ -12,6 +12,7 @@ import io.github.sceneview.loaders.loadHdrSkybox
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.nodes.ModelNode
+import io.github.sceneview.nodes.ViewNode
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
@@ -43,10 +44,21 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 )
                 scaleToUnitsCube(2.0f)
                 // TODO: Fix centerOrigin
-//                centerOrigin(Position(x=-1.0f, y=-1.0f))
+                //  centerOrigin(Position(x=-1.0f, y=-1.0f))
                 playAnimation()
             }
             sceneView.addChildNode(modelNode)
+
+            val viewNode = ViewNode(
+                sceneView = sceneView,
+                viewResourceId = R.layout.view_node_layout
+            ).apply {
+                transform(
+                    position = Position(z = -4f),
+                    rotation = Rotation()
+                )
+            }
+            sceneView.addChildNode(viewNode)
 
             loadingView.isGone = true
         }

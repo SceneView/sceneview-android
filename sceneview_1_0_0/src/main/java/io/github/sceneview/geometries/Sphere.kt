@@ -34,7 +34,7 @@ class Sphere(
         val center: Position = Position(0.0f),
         val stacks: Int = 24,
         val slices: Int = 24
-    ) : BaseBuilder<Sphere>(
+    ) : BaseGeometryBuilder<Sphere>(
         vertices = mutableListOf<Vertex>().apply {
             for (stack in 0..stacks) {
                 val phi = PI * stack.toFloat() / stacks.toFloat()

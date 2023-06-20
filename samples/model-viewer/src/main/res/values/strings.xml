@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">3D Model Viewer</string>
+    <string name="hello_view_node">Hello ViewNode</string>
 </resources>

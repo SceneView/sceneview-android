@@ -3,8 +3,13 @@ package io.github.sceneview.nodes
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
-import com.google.android.filament.*
+import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
+import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
+import com.google.android.filament.Texture
 import com.google.android.filament.View.PickingQueryResult
+import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.geometries.Plane
@@ -13,7 +18,9 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.managers.NodeManager
 import io.github.sceneview.managers.WindowViewManager
 import io.github.sceneview.managers.geometry
+import io.github.sceneview.managers.setGeometry
 import io.github.sceneview.math.Direction
+import io.github.sceneview.math.size
 import io.github.sceneview.texture.ViewStream
 import io.github.sceneview.texture.ViewTexture
 import io.github.sceneview.texture.destroyViewStream
@@ -52,20 +59,35 @@ class ViewNode constructor(
         viewStream = ViewStream.Builder()
             .view(view)
             .build(engine, viewWindowViewManager)
+
         geometry = Plane.Builder(size = viewStream.worldSize, normal = Direction(z = 1.0f))
             .build(engine)
-        viewStream.onSizeChanged = { size ->
-            geometry.update(engine, size = size)
-        }
+
         texture = ViewTexture.Builder()
             .viewStream(viewStream)
             .build(engine)
+
         material = materialLoader.createViewMaterial(texture, unlit, invertFrontFaceWinding)
 
-        RenderableManager.Builder(geometry.submeshes.size)
-            .geometry(geometry)
-            .material(0, material)
-            .build(engine, entity)
+        val renderView: () -> Unit = {
+            if (geometry.boundingBox.size != Float3(0f)) {
+                RenderableManager.Builder(geometry.submeshes.size)
+                    .geometry(geometry)
+                    .material(0, material)
+                    .build(engine, entity)
+            }
+        }
+
+        viewStream.onSizeChanged = { size ->
+            geometry.update(engine, size = size)
+            if (engine.renderableManager.hasComponent(entity)) {
+                engine.renderableManager.setGeometry(entity, geometry)
+            } else {
+                renderView()
+            }
+        }
+
+        renderView()
     }
 
     constructor(

@@ -42,7 +42,7 @@ class Cylinder(
         val height: Float = 2.0f,
         val center: Position = Position(0.0f),
         val sideCount: Int = 24
-    ) : BaseBuilder<Cylinder>(
+    ) : BaseGeometryBuilder<Cylinder>(
         vertices = mutableListOf<Geometry.Vertex>().apply {
             val halfHeight = height / 2
             val thetaIncrement = TWO_PI / sideCount
