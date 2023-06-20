@@ -75,94 +75,11 @@ open class Geometry(
     open class Builder(
         vertices: List<Vertex> = listOf(),
         submeshes: List<Submesh> = listOf()
-    ) : BaseBuilder<Geometry>(vertices, submeshes) {
+    ) : BaseGeometryBuilder<Geometry>(vertices, submeshes) {
         override fun build(
             vertexBuffer: VertexBuffer,
             indexBuffer: IndexBuffer
         ) = Geometry(vertexBuffer, indexBuffer)
-    }
-
-    abstract class BaseBuilder<T : Geometry> internal constructor(
-        var vertices: List<Vertex> = listOf(),
-        var submeshes: List<Submesh> = listOf()
-    ) {
-
-        fun vertices(vertices: List<Vertex>) = apply { this.vertices = vertices }
-        fun submeshes(submeshes: List<Submesh>) = apply { this.submeshes = submeshes }
-
-        open fun build(engine: Engine): T {
-            val vertexBuffer = VertexBuffer.Builder().apply {
-                bufferCount(
-                    1 + // Position is never null
-                            (if (vertices.hasNormals) 1 else 0) +
-                            (if (vertices.hasUvCoordinates) 1 else 0) +
-                            (if (vertices.hasColors) 1 else 0)
-                )
-                vertexCount(vertices.size)
-
-                // Position Attribute
-                var bufferIndex = 0
-                attribute(
-                    VertexBuffer.VertexAttribute.POSITION,
-                    bufferIndex,
-                    VertexBuffer.AttributeType.FLOAT3,
-                    0,
-                    kPositionSize * Float.SIZE_BYTES
-                )
-                // Tangents Attribute
-                if (vertices.hasNormals) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.TANGENTS,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT4,
-                        0,
-                        kTangentSize * Float.SIZE_BYTES
-                    )
-                    normalized(VertexBuffer.VertexAttribute.TANGENTS)
-                }
-                // Uv Attribute
-                if (vertices.hasUvCoordinates) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.UV0,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT2,
-                        0,
-                        kUVSize * Float.SIZE_BYTES
-                    )
-                }
-                // Color Attribute
-                if (vertices.hasColors) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.COLOR,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT4,
-                        0,
-                        kColorSize * Float.SIZE_BYTES
-                    )
-                    normalized(VertexBuffer.VertexAttribute.COLOR)
-                }
-            }.build(engine)
-
-            // Determine how many indices there are
-            val indexBuffer = IndexBuffer.Builder().apply {
-                indexCount(submeshes.sumOf { it.triangleIndices.size })
-                    .bufferType(IndexBuffer.Builder.IndexType.UINT)
-            }.build(engine)
-
-            return build(vertexBuffer, indexBuffer).apply {
-                setBufferVertices(engine, vertices)
-                setBufferIndices(engine, submeshes)
-            }
-        }
-
-        fun build(sceneView: SceneView) = build(sceneView.engine).also {
-            sceneView.geometries += it
-        }
-
-        internal abstract fun build(vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer): T
     }
 
     fun setBufferVertices(engine: Engine, vertices: List<Vertex>) {
@@ -249,6 +166,89 @@ open class Geometry(
             }
         }
     }
+}
+
+abstract class BaseGeometryBuilder<T : Geometry> internal constructor(
+    var vertices: List<Geometry.Vertex> = listOf(),
+    var submeshes: List<Geometry.Submesh> = listOf()
+) {
+
+    fun vertices(vertices: List<Geometry.Vertex>) = apply { this.vertices = vertices }
+    fun submeshes(submeshes: List<Geometry.Submesh>) = apply { this.submeshes = submeshes }
+
+    open fun build(engine: Engine): T {
+        val vertexBuffer = VertexBuffer.Builder().apply {
+            bufferCount(
+                1 + // Position is never null
+                        (if (vertices.hasNormals) 1 else 0) +
+                        (if (vertices.hasUvCoordinates) 1 else 0) +
+                        (if (vertices.hasColors) 1 else 0)
+            )
+            vertexCount(vertices.size)
+
+            // Position Attribute
+            var bufferIndex = 0
+            attribute(
+                VertexBuffer.VertexAttribute.POSITION,
+                bufferIndex,
+                VertexBuffer.AttributeType.FLOAT3,
+                0,
+                kPositionSize * Float.SIZE_BYTES
+            )
+            // Tangents Attribute
+            if (vertices.hasNormals) {
+                bufferIndex++
+                attribute(
+                    VertexBuffer.VertexAttribute.TANGENTS,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT4,
+                    0,
+                    kTangentSize * Float.SIZE_BYTES
+                )
+                normalized(VertexBuffer.VertexAttribute.TANGENTS)
+            }
+            // Uv Attribute
+            if (vertices.hasUvCoordinates) {
+                bufferIndex++
+                attribute(
+                    VertexBuffer.VertexAttribute.UV0,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT2,
+                    0,
+                    kUVSize * Float.SIZE_BYTES
+                )
+            }
+            // Color Attribute
+            if (vertices.hasColors) {
+                bufferIndex++
+                attribute(
+                    VertexBuffer.VertexAttribute.COLOR,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT4,
+                    0,
+                    kColorSize * Float.SIZE_BYTES
+                )
+                normalized(VertexBuffer.VertexAttribute.COLOR)
+            }
+        }.build(engine)
+
+        // Determine how many indices there are
+        val indexBuffer = IndexBuffer.Builder().apply {
+            indexCount(submeshes.sumOf { it.triangleIndices.size })
+                .bufferType(IndexBuffer.Builder.IndexType.UINT)
+        }.build(engine)
+
+        return build(vertexBuffer, indexBuffer).apply {
+            setBufferVertices(engine, this@BaseGeometryBuilder.vertices)
+            setBufferIndices(engine, this@BaseGeometryBuilder.submeshes)
+        }
+    }
+
+    fun build(sceneView: SceneView) = build(sceneView.engine).also {
+        sceneView.geometries += it
+    }
+
+    internal abstract fun build(vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer): T
 }
 
 val List<Geometry.Vertex>.hasNormals get() = any { it.normal != null }

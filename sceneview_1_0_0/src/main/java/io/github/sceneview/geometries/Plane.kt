@@ -34,7 +34,7 @@ class Plane private constructor(
         val size: Size = Size(x = 2.0f, y = 2.0f),
         val center: Position = Position(0.0f),
         val normal: Direction = Direction(y = 1.0f) // Looking upper
-    ) : BaseBuilder<Plane>(
+    ) : BaseGeometryBuilder<Plane>(
         vertices = getVertices(center, size, normal),
         submeshes = mutableListOf(
             Geometry.Submesh(

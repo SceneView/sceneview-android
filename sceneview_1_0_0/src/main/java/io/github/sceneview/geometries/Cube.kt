@@ -25,7 +25,7 @@ class Cube private constructor(
      * @param center the center of the constructed cube
      */
     class Builder(val size: Size = Size(2.0f), val center: Position = Position(0.0f)) :
-        BaseBuilder<Cube>(
+        BaseGeometryBuilder<Cube>(
             vertices = mutableListOf<Vertex>().apply {
                 val extents = size * 0.5f
                 val p0 = center + Size(-extents.x, -extents.y, extents.z)
