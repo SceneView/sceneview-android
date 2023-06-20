@@ -160,18 +160,16 @@ open class ArSceneView @JvmOverloads constructor(
             arSession?.geospatialEnabled = value
         }
 
-    private var _sessionLightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-
     /**
      * ### The behavior of the lighting estimation subsystem
      *
      * These modes consist of separate APIs that allow for granular and realistic lighting
      * estimation for directional lighting, shadows, specular highlights, and reflections.
      */
-    var lightEstimationMode: Config.LightEstimationMode
-        get() = arSession?.lightEstimationMode ?: _sessionLightEstimationMode
+    var lightEstimationMode = Config.LightEstimationMode.DISABLED
+        get() = arSession?.lightEstimationMode ?: field
         set(value) {
-            _sessionLightEstimationMode = value
+            field = value
             arSession?.lightEstimationMode = value
         }
 
@@ -327,14 +325,14 @@ open class ArSceneView @JvmOverloads constructor(
 
         session.configure { config ->
             // getting ar frame doesn't block and gives last frame
-            config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
+//            config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
             // FocusMode must be changed after the session resume to work
             // config.focusMode = focusMode
             config.planeFindingMode = _planeFindingMode
             config.depthMode = _depthMode
             config.instantPlacementEnabled = _instantPlacementEnabled
             config.cloudAnchorEnabled = _cloudAnchorEnabled
-            config.lightEstimationMode = _sessionLightEstimationMode
+            config.lightEstimationMode = lightEstimationMode
             config.geospatialEnabled = _geospatialEnabled
         }
 
@@ -407,7 +405,7 @@ open class ArSceneView @JvmOverloads constructor(
 
         arCameraStream.update(this, arFrame)
 
-        lightEstimator?.update(this, arFrame)?.let { (environment, mainLight)->
+        lightEstimator?.update(this, arFrame)?.let { (environment, mainLight) ->
             environmentEstimated = environment
             mainLightEstimated = mainLight
         }
@@ -508,7 +506,7 @@ open class ArSceneView @JvmOverloads constructor(
     ) = currentFrame?.hitTest(xPx, yPx, plane, depth, instant, approximateDistance)
 
     override fun destroy() {
-        if(!isDestroyed) {
+        if (!isDestroyed) {
             arCameraStream.destroy()
             lightEstimator?.destroy()
             planeRenderer.destroy()
