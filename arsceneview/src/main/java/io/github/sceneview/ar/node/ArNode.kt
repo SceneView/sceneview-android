@@ -43,6 +43,8 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
      */
     var applyPoseRotation = false
 
+    var updateAnchorPose = true
+
     /**
      * ### Adjust the anchor pose update interval in seconds
      *
@@ -52,7 +54,7 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
      * Only used when the [ArNode] is anchored.
      * `null` means never update the pose
      */
-    var anchorPoseUpdateInterval: Double? = 0.1
+    var anchorPoseUpdateInterval: Double? = null
     var anchorUpdatedFrame: ArFrame? = null
         private set
 
@@ -84,9 +86,16 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
      */
     open var pose: Pose? = null
         set(value) {
-            if (field?.transform != value?.transform) {
-                field = value
-                if (value != null) {
+//            if (field?.transform != value?.transform) {
+            field = value
+            if (value != null) {
+                if (applyPosePosition && applyPoseRotation) {
+                    if (isSmoothPoseEnable) {
+                        smoothTransform = value.transform
+                    } else {
+                        transform = value.transform
+                    }
+                } else {
                     val posePosition = value.takeIf { applyPosePosition }?.position
                         ?: position
                     val poseQuaternion = value.takeIf { applyPoseRotation }?.quaternion
@@ -94,12 +103,13 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
                     if (position != posePosition || quaternion != poseQuaternion) {
                         transform(posePosition, poseQuaternion, smooth = isSmoothPoseEnable)
                     }
-                } else {
-                    // Should we move back the node to the default position
-//                    transform(DEFAULT_POSITION, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
                 }
-                onPoseChanged?.invoke(value)
+            } else {
+                // Should we move back the node to the default position
+//                    transform(DEFAULT_POSITION, DEFAULT_QUATERNION, smooth = isSmoothPoseEnable)
             }
+            onPoseChanged?.invoke(value)
+//            }
         }
 
     /**
@@ -176,8 +186,8 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
 
         // Update the anchor position if any
         if (anchor.trackingState == TrackingState.TRACKING) {
-            if (anchorPoseUpdateInterval != null
-                && arFrame.intervalSeconds(anchorUpdatedFrame) >= anchorPoseUpdateInterval!!
+            if (updateAnchorPose && (anchorPoseUpdateInterval == null
+                        || arFrame.intervalSeconds(anchorUpdatedFrame) >= anchorPoseUpdateInterval!!)
             ) {
                 // Get the current pose of an Anchor in world space. The Anchor pose is updated
                 // during calls to session.update() as ARCore refines its estimate of the world.
