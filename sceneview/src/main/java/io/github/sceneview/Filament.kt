@@ -11,6 +11,7 @@ import com.google.android.filament.utils.Utils
 import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.math.Transform
 import io.github.sceneview.math.toColumnsFloatArray
+import io.github.sceneview.math.toTransform
 import io.github.sceneview.utils.OpenGL
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
@@ -96,7 +97,7 @@ object Filament {
     fun destroy() {
         // TODO: We still got some errors on this destroy due to this nightmare Renderable
         //  Should be solved with RIP Renderable
-        runCatching {_assetLoader?.destroy() }
+        runCatching { _assetLoader?.destroy() }
         _assetLoader = null
 
         _resourceLoader?.apply {
@@ -131,6 +132,9 @@ object Filament {
 fun Engine.createCamera() = createCamera(entityManager.create())
 
 fun RenderableManager.Builder.build(@Entity entity: Int) = build(Filament.engine, entity)
+
+fun TransformManager.getTransform(@EntityInstance i: Int) =
+    FloatArray(16).apply { getTransform(i, this) }.toTransform()
 
 fun TransformManager.setTransform(@EntityInstance i: Int, worldTransform: Transform) =
     setTransform(i, worldTransform.toColumnsFloatArray())
