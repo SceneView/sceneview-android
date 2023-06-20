@@ -33,7 +33,7 @@ const val kDepthTextureParameter = "depthTexture"
  * ### Displays the Camera stream using Filament.
  */
 class ArCameraStream(
-    private val sceneView: ArSceneView,
+    sceneView: ArSceneView,
     standardMaterialLocation: String = "sceneview/materials/camera_stream_flat.filamat",
     depthOcclusionMaterialLocation: String = "sceneview/materials/camera_stream_depth.filamat"
 ) {
@@ -68,7 +68,7 @@ class ArCameraStream(
      */
     var cameraTexture: Texture = cameraTextures[cameraTextureIds[0]]!!
         set(value) {
-            if(field != value) {
+            if (field != value) {
                 field = value
                 materialInstance.setExternalTexture(kCameraTextureParameter, value)
             }
@@ -204,7 +204,7 @@ class ArCameraStream(
     // Note: ARCore expects the UV buffers to be direct or will assert in transformDisplayUvCoords
     private var transformedUvCoordinates: FloatBuffer? = null
 
-    fun update(arFrame: ArFrame) {
+    fun update(sceneView: ArSceneView, arFrame: ArFrame) {
         val frame = arFrame.frame
 
         // Recalculate camera Uvs if necessary.

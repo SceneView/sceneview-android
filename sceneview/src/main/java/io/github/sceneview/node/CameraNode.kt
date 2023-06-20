@@ -50,7 +50,12 @@ open class CameraNode(val isFixed: Boolean = true) : Node() {
             Matrix.invert(transformationMatrix, this)
         }
 
-    var camera: Camera = engine.createCamera()
+    var camera: Camera = engine.createCamera().apply {
+        // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+        // Since we define a light that has the same intensity as the sun, it guarantees a
+        // proper exposure
+        setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+    }
 
     var nearClipPlane: Float = DEFAULT_NEAR_PLANE
         set(value) {
