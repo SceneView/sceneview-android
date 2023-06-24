@@ -128,5 +128,3 @@ dependencies {
     // Android View Lifecycle
     api "com.gorisse.thomas:android-view-lifecycle:1.0.5"
 }
-
-apply plugin: "com.vanniktech.maven.publish"
