@@ -52,8 +52,6 @@ class ArSession(
     var currentFrame: ArFrame? = null
         private set
 
-    var allTrackables: List<Trackable> = listOf()
-
     init {
         lifecycle.addObserver(this)
     }
@@ -95,10 +93,6 @@ class ArSession(
 
     override fun onSurfaceChanged(width: Int, height: Int) {
         setDisplayGeometry(display.rotation, width, height)
-    }
-
-    override fun onArFrame(arFrame: ArFrame) {
-        allTrackables = getAllTrackables(Trackable::class.java).toList()
     }
 
     fun update(frameTime: FrameTime): ArFrame? {
@@ -240,73 +234,6 @@ class ArSession(
                 }
             }
         }
-
-    /**
-     * ### Retrieve the session tracked Planes
-     */
-    val allPlanes: List<Plane> get() = allTrackables.mapNotNull { it as? Plane }
-
-    /**
-     * ### Retrieve if the session has already tracked a Plane
-     *
-     * @return true if the session has tracked at least one Plane
-     */
-    val hasTrackedPlane: Boolean
-        get() = allPlanes.filter {
-            it.trackingState in listOf(TrackingState.TRACKING, TrackingState.PAUSED)
-        }.isNotEmpty()
-
-    /**
-     * ### Retrieve if the session frame is currently tracking a Plane
-     *
-     * @return true if the session frame is fully tracking at least one Plane
-     */
-    val isTrackingPlane: Boolean get() = currentFrame?.isTrackingPlane == true
-
-    /**
-     * ### Retrieve the session tracked Augmented Images
-     */
-    val allAugmentedImages: List<AugmentedImage> get() = allTrackables.mapNotNull { it as? AugmentedImage }
-
-    /**
-     * ### Retrieve if the session frame is currently tracking an Augmented Image
-     *
-     * @return true if the session frame is fully tracking at least one Augmented Image
-     */
-    val isTrackingAugmentedImage: Boolean get() = currentFrame?.isTrackingAugmentedImage == true
-
-    /**
-     * ### Retrieve if the session has already tracked an Augmented Image
-     *
-     * @return true if the session has tracked at least one Augmented Image
-     */
-    val hasTrackedAugmentedImage: Boolean
-        get() = allAugmentedImages.filter {
-            it.trackingMethod == AugmentedImage.TrackingMethod.FULL_TRACKING &&
-                    it.trackingState in listOf(TrackingState.TRACKING, TrackingState.PAUSED)
-        }.isNotEmpty()
-
-    /**
-     * ### Retrieve the session tracked Augmented Faces
-     */
-    val allAugmentedFaces: List<AugmentedFace> get() = allTrackables.mapNotNull { it as? AugmentedFace }
-
-    /**
-     * ### Retrieve if the session frame is currently tracking an Augmented Face
-     *
-     * @return true if the session frame is fully tracking at least one Augmented Face
-     */
-    val isTrackingAugmentedFace: Boolean get() = currentFrame?.isTrackingAugmentedFace == true
-
-    /**
-     * ### Retrieve if the session has already tracked an Augmented Face
-     *
-     * @return true if the session has tracked at least one Augmented Face
-     */
-    val hasTrackedAugmentedFace: Boolean
-        get() = allAugmentedFaces.filter {
-            it.trackingState in listOf(TrackingState.TRACKING, TrackingState.PAUSED)
-        }.isNotEmpty()
 }
 
 var Config.planeFindingEnabled
