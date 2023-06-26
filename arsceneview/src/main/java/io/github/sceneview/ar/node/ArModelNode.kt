@@ -35,16 +35,6 @@ open class ArModelNode : ArNode {
      * The [hitTest], [pose] and [anchor] will be influenced by this choice.
      */
     var placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE
-        set(value) {
-            field = value
-            doOnAttachedToScene { sceneView ->
-                (sceneView as? ArSceneView)?.apply {
-                    planeFindingMode = value.planeFindingMode
-                    depthEnabled = value.depthEnabled
-                    instantPlacementEnabled = value.instantPlacementEnabled
-                }
-            }
-        }
 
     /**
      * ### The node camera/screen/view position where the hit will be made to find an AR position
