@@ -1,5 +1,6 @@
 package io.github.sceneview.ar.node
 
+import com.google.android.filament.Engine
 import com.google.ar.core.*
 import com.google.ar.core.Config.PlaneFindingMode
 import io.github.sceneview.ar.ArSceneView
@@ -8,6 +9,7 @@ import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Transform
 import io.github.sceneview.model.ModelInstance
 
 /**
@@ -147,6 +149,13 @@ open class ArModelNode : ArNode {
             }
         }
 
+    /**
+     * ### Move smoothly/slowly when there is a pose (AR position and rotation) update
+     *
+     * Use [smoothSpeed] to adjust the position and rotation change smoothness level
+     */
+    var isSmoothPoseEnable = true
+
     override var isPositionEditable: Boolean = true
 
     var lastTrackingHitResult: HitResult? = null
@@ -160,6 +169,16 @@ open class ArModelNode : ArNode {
                 pose = value.hitPose
             }
             value?.let { onHitResult?.invoke(this, it) }
+        }
+
+    override var poseTransform: Transform? = super.poseTransform
+        set(value) {
+            if (field != value) {
+                field = value
+                if (value != null) {
+                    transform(value, smooth = isSmoothPoseEnable && !isAnchored)
+                }
+            }
         }
 
     /**
