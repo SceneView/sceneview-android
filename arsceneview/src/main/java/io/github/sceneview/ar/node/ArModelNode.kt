@@ -83,7 +83,7 @@ open class ArModelNode : ArNode {
      *
      * @see followHitPosition
      */
-    var hitPosition: Position = DEFAULT_HIT_POSITION
+    var screenPosition: Position = DEFAULT_SCREEN_POSITION
         set(value) {
             field = value
             position = Position(value)
@@ -95,13 +95,13 @@ open class ArModelNode : ArNode {
      * Controls if an unanchored node should be moved together with the camera.
      *
      * The node [position] is updated with the realtime ARCore [pose] at the corresponding
-     * [hitPosition] until it is anchored ([isAnchored]) or until this this value is set to false.
+     * [screenPosition] until it is anchored ([isAnchored]) or until this this value is set to false.
      *
      * - While there is no AR tracking information available, the node is following the camera moves
      * so it stays at this camera/screen relative position but without adjusting its position and
      * orientation to the real world
      *
-     * - Then ARCore will try to find the real world position of the node at the [hitPosition] by
+     * - Then ARCore will try to find the real world position of the node at the [screenPosition] by
      * looking at its [hitTest] on each [onArFrame].
      *
      * - In case of instant placement disabled, the z position (distance from the camera) will be
@@ -121,7 +121,7 @@ open class ArModelNode : ArNode {
      * - `false` The pose of an unanchored node is not updated. This is used e.g. while moving a
      *  node using gestures.
      *
-     * @see hitPosition
+     * @see screenPosition
      */
     var followHitPosition: Boolean = true
 
@@ -166,7 +166,7 @@ open class ArModelNode : ArNode {
      * ### Adjust the max screen [ArFrame.hitTest] number per seconds
      *
      * When this node is not anchored and [followHitPosition] is set to true, the node will
-     * constantly try to find its place in real world. Following the [hitPosition] on the
+     * constantly try to find its place in real world. Following the [screenPosition] on the
      * screen.
      *
      * Decrease if you don't need a very precise position update and want to reduce frame
@@ -194,12 +194,12 @@ open class ArModelNode : ArNode {
      */
     constructor(
         placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE,
-        hitPosition: Position = DEFAULT_HIT_POSITION,
+        screenPosition: Position = DEFAULT_SCREEN_POSITION,
         followHitPosition: Boolean = true,
         instantAnchor: Boolean = false
     ) : super() {
         this.placementMode = placementMode
-        this.hitPosition = hitPosition
+        this.screenPosition = screenPosition
         this.followHitPosition = followHitPosition
         this.instantAnchor = instantAnchor
     }
@@ -331,9 +331,9 @@ open class ArModelNode : ArNode {
      * @param frame the [ArFrame] from where we take the [HitResult]
      * By default the latest session frame if any exist
      * @param xPx x view coordinate in pixels
-     * By default the [cameraPosition.x][hitPosition] of this Node is used
+     * By default the [cameraPosition.x][screenPosition] of this Node is used
      * @param yPx y view coordinate in pixels
-     * By default the [cameraPosition.y][hitPosition] of this Node is used
+     * By default the [cameraPosition.y][screenPosition] of this Node is used
      *
      * @return the hitResult or null if no info is retrieved
      *
@@ -343,7 +343,7 @@ open class ArModelNode : ArNode {
         plane: Boolean = placementMode.planeEnabled,
         depth: Boolean = placementMode.depthEnabled,
         instant: Boolean = placementMode.instantPlacementEnabled,
-    ): HitResult? = sceneView?.hitTest(hitPosition, plane, depth, instant)
+    ): HitResult? = sceneView?.hitTest(screenPosition, plane, depth, instant)
 
     /**
      * ### Anchor this node to make it fixed at the actual position and orientation is the world
@@ -386,13 +386,13 @@ open class ArModelNode : ArNode {
         super.copy(toNode)
 
         placementMode = this@ArModelNode.placementMode
-        hitPosition = this@ArModelNode.hitPosition
+        screenPosition = this@ArModelNode.screenPosition
     }
 
     companion object {
         val DEFAULT_PLACEMENT_MODE = PlacementMode.BEST_AVAILABLE
         val DEFAULT_PLACEMENT_DISTANCE = 2.0f
-        val DEFAULT_HIT_POSITION =
+        val DEFAULT_SCREEN_POSITION =
             Position(0.0f, 0.0f, -DEFAULT_PLACEMENT_DISTANCE)
     }
 }
