@@ -345,7 +345,7 @@ open class ArSceneView @JvmOverloads constructor(
 
         session.configure { config ->
             // getting ar frame doesn't block and gives last frame
-//            config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
+            config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
             // FocusMode must be changed after the session resume to work
             // config.focusMode = focusMode
             config.planeFindingMode = _planeFindingMode
