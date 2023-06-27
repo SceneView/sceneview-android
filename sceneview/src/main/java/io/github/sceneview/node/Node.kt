@@ -447,7 +447,7 @@ open class Node(val engine: Engine) : NodeParent, TransformProvider,
         sceneEntities = _sceneEntities
 
         sceneView.collisionSystem.let { collider?.setAttachedCollisionSystem(it) }
-        if (selectionVisualizer == null) {
+        if (selectionVisualizer == null && sceneView.selectionVisualizer != null) {
             selectionVisualizer = sceneView.selectionVisualizer?.invoke()
         }
         children.forEach { it.attachToScene(sceneView) }
