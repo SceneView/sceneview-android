@@ -83,16 +83,20 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
 
         isLoading = true
-        cloudAnchorNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
-            parent = sceneView
-            isSmoothPoseEnable = false
-            isVisible = false
-            loadModelGlbAsync(
-                glbFileLocation = "models/spiderbot.glb"
-            ) {
-                isLoading = false
+        cloudAnchorNode =
+            ArModelNode(
+                engine = sceneView.engine,
+                placementMode = PlacementMode.PLANE_HORIZONTAL
+            ).apply {
+                parent = sceneView
+                isSmoothPoseEnable = false
+                isVisible = false
+                loadModelGlbAsync(
+                    glbFileLocation = "models/spiderbot.glb"
+                ) {
+                    isLoading = false
+                }
             }
-        }
     }
 
     private fun actionButtonClicked() {
