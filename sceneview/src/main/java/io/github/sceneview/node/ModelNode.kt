@@ -32,8 +32,27 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
 
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
+    open var modelRootEntity: Int? = null
+        @Entity
+        set(value) {
+            modelRootInstance?.let {
+                if (transformManager.getParentOrNull(it) == transformEntity) {
+                    transformManager.setParent(it, null)
+                }
+            }
+            field = value
+            modelRootInstance?.let {
+                transformManager.setParent(it, transformInstance)
+            }
+            modelTransform = _modelTransform
+        }
+
+    val modelRootInstance: Int?
+        @EntityInstance
+        get() = modelRootEntity?.let { transformManager.getInstance(it) }
+
     /**
-     * ### The node model origin (center)
+     * The node model origin (center)
      *
      * A node's content origin is the transformation between its coordinate space and that used by
      * its [position]. The default origin is zero vector, specifying that the node's position
@@ -45,15 +64,25 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
      * containing a sphere geometry relative to where the sphere would rest on a floor instead of
      * relative to its center.
      */
-    open var modelPosition = DEFAULT_MODEL_POSITION
+    open var modelPosition: Position
+        get() = modelTransform.position
+        set(value) {
+            modelTransform = Transform(value, modelQuaternion, modelScale)
+        }
 
     /**
-     * TODO: Doc
+     * Model quaternion rotation.
+     *
+     * @see modelTransform
      */
-    var modelQuaternion: Quaternion = DEFAULT_MODEL_QUATERNION
+    var modelQuaternion: Quaternion
+        get() = modelTransform.quaternion
+        set(value) {
+            modelTransform = Transform(modelPosition, value, modelScale)
+        }
 
     /**
-     * ### The node model orientation
+     * The node model orientation
      *
      * A node's content origin is the transformation between its coordinate space and that used by
      * its [quaternion]. The default origin is zero vector, specifying that the node's orientation
@@ -74,22 +103,35 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
         }
 
     /**
-     * ### The node model scale
+     * The model scale
      */
-    open var modelScale = DEFAULT_MODEL_SCALE
-
-    open var modelTransform: Transform = Transform(modelPosition, modelQuaternion, modelScale)
-        get() = field.takeIf {
-            it.position == modelPosition && it.quaternion == modelQuaternion && it.scale == modelScale
-        } ?: Transform(modelPosition, modelQuaternion, modelScale)
+    open var modelScale: Scale
+        get() = modelTransform.scale
         set(value) {
-            if (field != value) {
-                field = value
-                modelPosition = value.position
-                modelQuaternion = value.quaternion
-                modelScale = value.scale
+            modelTransform = Transform(modelPosition, modelQuaternion, value)
+        }
+
+    private var _modelTransform = Transform()
+
+    /**
+     * Local transform of the model transform component (i.e. relative to the parent).
+     *
+     * @see TransformManager.getTransform
+     * @see TransformManager.setTransform
+     */
+    var modelTransform: Transform
+        get() = _modelTransform
+        set(value) {
+            _modelTransform = value
+            modelRootInstance?.let {
+                transformManager.setTransform(it, value)
             }
         }
+
+    val modelWorldTransform: Transform
+        get() = modelRootInstance?.let {
+            transformManager.getWorldTransform(it)
+        } ?: worldTransform
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance] [ModelInstance]
@@ -108,6 +150,7 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
 //                field?.destroy()
                 field = value
                 animator = value?.animator
+                modelRootEntity = value?.root
                 sceneEntities = value?.entities ?: intArrayOf()
 
                 onModelChanged(modelInstance)
@@ -121,9 +164,6 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
     var onModelChanged = mutableListOf<() -> Unit>()
     var onModelError: ((exception: Exception) -> Unit)? = null
 
-    override val transformEntity: Int?
-        get() = modelInstance?.root
-
     override val renderables: List<Renderable>
         get() = modelInstance?.renderables?.toList() ?: listOf()
 
@@ -132,9 +172,6 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
 
     val renderableNames: List<String>
         get() = modelInstance?.model?.renderableNames?.toList() ?: listOf()
-
-    override val worldTransform: Transform
-        get() = super.worldTransform * modelTransform
 
     private var loadedModel: Model? = null
 
@@ -532,6 +569,10 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
         animator?.getAnimationIndex(animationName)?.let { stopAnimation(it) }
     }
 
+    override fun getTransformationMatrix(): Matrix {
+        return Matrix(modelWorldTransform.toColumnsFloatArray())
+    }
+
     /** ### Detach and destroy the node */
     override fun destroy() {
         loadedModel?.destroy()
@@ -543,12 +584,5 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
     open fun copy(toNode: ModelNode = ModelNode(engine)): ModelNode = toNode.apply {
         super.copy(toNode)
         setModelInstance(this@ModelNode.modelInstance)
-    }
-
-    companion object {
-        val DEFAULT_MODEL_POSITION = Position(x = 0.0f, y = 0.0f, z = 0.0f)
-        val DEFAULT_MODEL_QUATERNION = Quaternion()
-        val DEFAULT_MODEL_ROTATION = DEFAULT_MODEL_QUATERNION.toEulerAngles()
-        val DEFAULT_MODEL_SCALE = Scale(1.0f)
     }
 }
