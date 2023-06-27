@@ -3,7 +3,6 @@ package io.github.sceneview.model
 import android.content.Context
 import io.github.sceneview.Filament.assetLoader
 import io.github.sceneview.Filament.resourceLoader
-import io.github.sceneview.renderable.setCulling
 import io.github.sceneview.utils.useFileBufferNotNull
 import io.github.sceneview.utils.useLocalFileBufferNotNull
 import kotlinx.coroutines.Dispatchers
@@ -97,7 +96,7 @@ object GLBLoader {
 
             asset.instance.renderables.forEach {
 //                it.setScreenSpaceContactShadows(false)
-                it.setCulling(true)
+//                it.setCulling(true)
             }
         }
     }
@@ -113,7 +112,7 @@ object GLBLoader {
 
             instances.flatMap { it?.renderables ?: listOf() }.forEach {
 //                it.setScreenSpaceContactShadows(false)
-                it.setCulling(true)
+//                it.setCulling(true)
             }
             Pair(asset, instances)
         }

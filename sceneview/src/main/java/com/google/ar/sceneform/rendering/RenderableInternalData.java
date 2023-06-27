@@ -224,7 +224,7 @@ class RenderableInternalData implements IRenderableInternalData {
 
       setupSkeleton(builder);
 
-      FilamentKt.build(builder, renderedEntity);
+      FilamentKt.build(builder, Filament.getEngine(), renderedEntity);
 
       renderableInstance = renderableManager.getInstance(renderedEntity);
       if (renderableInstance == 0) {
