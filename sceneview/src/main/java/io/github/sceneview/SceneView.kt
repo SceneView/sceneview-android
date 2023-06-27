@@ -372,7 +372,7 @@ open class SceneView @JvmOverloads constructor(
 
         // on mobile, better use lower quality color buffer
         view.renderQuality = view.renderQuality.apply {
-            hdrColorBuffer = QualityLevel.MEDIUM
+            hdrColorBuffer = QualityLevel.HIGH
         }
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
             enabled = false
