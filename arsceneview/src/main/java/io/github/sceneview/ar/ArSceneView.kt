@@ -3,16 +3,16 @@ package io.github.sceneview.ar
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
+import androidx.lifecycle.LifecycleOwner
+import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.ar.core.*
 import com.google.ar.core.CameraConfig.FacingDirection
-import io.github.sceneview.SceneLifecycle
-import io.github.sceneview.SceneLifecycleObserver
-import io.github.sceneview.SceneLifecycleOwner
-import io.github.sceneview.SceneView
+import io.github.sceneview.*
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.camera.ArCameraStream
 import io.github.sceneview.ar.node.ArCameraNode
+import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.light.Light
@@ -410,15 +410,17 @@ open class ArSceneView @JvmOverloads constructor(
      */
     protected open fun doArFrame(arFrame: ArFrame) {
         val camera = arFrame.camera
+        val isCameraTracking = camera.isTracking
 
         // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
         // You will say thanks when still have battery after a long day debugging an AR app.
         // ...and it's better for your users
-        activity.setKeepScreenOn(camera.isTracking)
-
-        cameraNode.updateTrackedPose(camera)
+        activity?.setKeepScreenOn(isCameraTracking)
 
         arCameraStream.update(this, arFrame)
+        cameraNode.updateTrackedPose(camera)
+
+        children.filterIsInstance<ArNode>().forEach { it.onArFrame(arFrame, isCameraTracking) }
 
         lightEstimator?.update(this, arFrame)?.let { (environment, mainLight) ->
             environmentEstimated = environment
@@ -427,7 +429,7 @@ open class ArSceneView @JvmOverloads constructor(
 
         planeRenderer.update(arFrame)
 
-        trackingFailureReason = if (!camera.isTracking) {
+        trackingFailureReason = if (isCameraTracking) {
             camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
         } else null
 
