@@ -34,6 +34,6 @@ dependencies {
     implementation project(":samples:common")
 
     // SceneView
-    releaseImplementation "io.github.sceneview:sceneview:1.0.9"
+    releaseImplementation "io.github.sceneview:sceneview:1.0.10"
     debugImplementation project(":sceneview_1_0_0")
 }
