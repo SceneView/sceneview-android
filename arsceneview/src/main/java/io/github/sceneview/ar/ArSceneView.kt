@@ -40,7 +40,7 @@ open class ArSceneView @JvmOverloads constructor(
     defStyleAttr,
     defStyleRes,
     cameraNode
-), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
+) {
 
     open val arCore = ARCore(
         onSessionCreated = ::onArSessionCreated,
@@ -443,9 +443,6 @@ open class ArSceneView @JvmOverloads constructor(
             arFrame.updatedAugmentedFaces.forEach(onAugmentedFaceUpdate)
         }
 
-        lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
-            onArFrame(arFrame)
-        }
         onArFrame?.invoke(arFrame)
     }
 
@@ -534,83 +531,5 @@ open class ArSceneView @JvmOverloads constructor(
         }
 
         super.destroy()
-    }
-}
-
-/**
- * ### A SurfaceView that integrates with ARCore and renders a scene.
- */
-interface ArSceneLifecycleOwner : SceneLifecycleOwner {
-    val arCore: ARCore
-    val arSession get() = arCore.session
-    val arSessionConfig get() = arSession?.config
-}
-
-class ArSceneLifecycle(sceneView: ArSceneView) : SceneLifecycle(sceneView) {
-    override val sceneView get() = super.sceneView as ArSceneView
-    val context get() = sceneView.context
-    val arCore get() = sceneView.arCore
-    val arSession get() = sceneView.arSession
-
-    /**
-     * ### Performs the given action when ARCore session is created
-     *
-     * If the ARCore session is already created the action will be performed immediately, otherwise
-     * the action will be performed after the ARCore session is next created.
-     * The action will only be invoked once, and any listeners will then be removed.
-     */
-    fun doOnArSessionCreated(action: (session: ArSession) -> Unit) {
-        arSession?.let(action) ?: addObserver(onArSessionCreated = {
-            removeObserver(this)
-            action(it)
-        })
-    }
-
-    fun addObserver(
-        onArSessionCreated: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
-        onArSessionFailed: (ArSceneLifecycleObserver.(exception: Exception) -> Unit)? = null,
-        onArSessionResumed: (ArSceneLifecycleObserver.(session: ArSession) -> Unit)? = null,
-        onArSessionConfigChanged: (ArSceneLifecycleObserver.(session: ArSession, config: Config) -> Unit)? = null,
-        onArFrame: (ArSceneLifecycleObserver.(arFrame: ArFrame) -> Unit)? = null
-    ) {
-        addObserver(object : ArSceneLifecycleObserver {
-            override fun onArSessionCreated(session: ArSession) {
-                onArSessionCreated?.invoke(this, session)
-            }
-
-            override fun onArSessionFailed(exception: Exception) {
-                onArSessionFailed?.invoke(this, exception)
-            }
-
-            override fun onArSessionResumed(session: ArSession) {
-                onArSessionResumed?.invoke(this, session)
-            }
-
-            override fun onArSessionConfigChanged(session: ArSession, config: Config) {
-                onArSessionConfigChanged?.invoke(this, session, config)
-            }
-
-            override fun onArFrame(arFrame: ArFrame) {
-                onArFrame?.invoke(this, arFrame)
-            }
-        })
-    }
-}
-
-interface ArSceneLifecycleObserver : SceneLifecycleObserver {
-
-    fun onArSessionCreated(session: ArSession) {
-    }
-
-    fun onArSessionFailed(exception: Exception) {
-    }
-
-    fun onArSessionResumed(session: ArSession) {
-    }
-
-    fun onArSessionConfigChanged(session: ArSession, config: Config) {
-    }
-
-    fun onArFrame(arFrame: ArFrame) {
     }
 }
