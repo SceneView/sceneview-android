@@ -166,10 +166,8 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
         this.anchor = anchor
     }
 
-    override fun onArFrame(arFrame: ArFrame) {
-        super.onArFrame(arFrame)
-
-        isCameraTracking = arFrame.camera.isTracking
+    open fun onArFrame(arFrame: ArFrame, isCameraTracking: Boolean) {
+        this.isCameraTracking = isCameraTracking
 
         val anchor = anchor ?: return
 
