@@ -52,13 +52,6 @@ private const val defaultTouchSlop = 8
 open class Node(val engine: Engine) : NodeParent, TransformProvider,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
-    companion object {
-        val DEFAULT_POSITION get() = Position(x = 0.0f, y = 0.0f, z = 0.0f)
-        val DEFAULT_QUATERNION get() = Quaternion()
-        val DEFAULT_ROTATION = DEFAULT_QUATERNION.toEulerAngles()
-        val DEFAULT_SCALE get() = Scale(1.0f)
-    }
-
     /**
      * ### The scene that this node is part of, null if it isn't part of any scene
      *
@@ -490,7 +483,6 @@ open class Node(val engine: Engine) : NodeParent, TransformProvider,
             }
         }
         children.forEach { it.onFrame(frameTime) }
-//        lastFrameTransform = transform
 
         onFrame?.invoke(frameTime, this)
     }
