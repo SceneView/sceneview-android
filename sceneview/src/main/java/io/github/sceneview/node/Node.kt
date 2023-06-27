@@ -334,18 +334,81 @@ open class Node(val engine: Engine) : NodeParent, TransformProvider,
     val allParents: List<NodeParent>
         get() = listOfNotNull(parent) + (parentNode?.allParents ?: listOf())
 
+    open var _sceneEntities = intArrayOf()
+
+    open var sceneEntities: IntArray
+        get() = _sceneEntities
+        set(value) {
+            sceneView?.removeEntities(_sceneEntities)
+            _sceneEntities = value
+            if (isVisibleInHierarchy) {
+                sceneView?.addEntities(sceneEntities)
+            }
+        }
+
+    /**
+     * ## The smooth position, rotation and scale speed
+     *
+     * This value is used by [smooth]
+     */
+    var smoothSpeed = 5.0f
+
+    var smoothTransform: Transform? = null
+
+    /**
+     * ### The node can be selected when a touch event happened
+     *
+     * If a not selectable child [Node] is touched, we check the parent hierarchy to find the
+     * closest selectable parent. In this case, the first selectable parent will be the one to have
+     * its [isSelected] value to `true`.
+     */
+    open var isSelectable = false
+
+    /**
+     * ### The visible state of this node.
+     *
+     * Note that a Node may be enabled but still inactive if it isn't part of the scene or if its
+     * parent is inactive.
+     */
+    open var isVisible = true
+        set(value) {
+            if (field != value) {
+                field = value
+                updateVisibility()
+            }
+        }
+
+    open val isVisibleInHierarchy: Boolean
+        get() = isVisible && (parentNode?.isVisibleInHierarchy != false)
+
+    open var isPositionEditable = false
+    open var isRotationEditable = false
+    open var isScaleEditable = false
+    open var isEditable: Boolean
+        get() = isPositionEditable || isRotationEditable || isScaleEditable
+        set(value) {
+            isPositionEditable = value
+            isRotationEditable = value
+            isScaleEditable = value
+        }
+
+    var minEditableScale = 0.1f
+    var maxEditableScale = 10.0f
+
+    var currentEditingTransform: KProperty<*>? = null
+
     // Collision fields.
     var collider: Collider? = null
         private set
 
-    /** ### Listener for [onFrame] call */
-    val onFrame = mutableListOf<((frameTime: FrameTime, node: Node) -> Unit)>()
+    /** Listener for [onFrame] call */
+    var onFrame: ((frameTime: FrameTime, node: Node) -> Unit)? = null
 
-    /** ### Listener for [onAttachToScene] call */
-    val onAttachedToScene = mutableListOf<(scene: SceneView) -> Unit>()
+    /** Listener for [onAttachedToScene] call */
+    var onAttachedToScene: ((sceneView: SceneView) -> Unit)? = null
 
-    /** ### Listener for [onDetachedFromScene] call */
-    val onDetachedFromScene = mutableListOf<(scene: SceneView) -> Unit>()
+    /** Listener for [onDetachedFromScene] call */
+    var onDetachedFromScene: ((sceneView: SceneView) -> Unit)? = null
 
     /**
      * ### The transformation (position, rotation or scale) of the [Node] has changed
@@ -380,23 +443,6 @@ open class Node(val engine: Engine) : NodeParent, TransformProvider,
     // Stores data used for detecting when a tap has occurred on this node.
     private var touchTrackingData: TapTrackingData? = null
 
-    /**
-     * ### Construct a [Node] with it Position, Rotation and Scale
-     *
-     * @param position See [Node.position]
-     * @param rotation See [Node.rotation]
-     * @param scale See [Node.scale]
-     */
-    @JvmOverloads
-    constructor(
-        engine: Engine,
-        position: Position = DEFAULT_POSITION,
-        rotation: Rotation,
-        scale: Scale = DEFAULT_SCALE
-    ) : this(engine) {
-        transform(position, rotation, scale)
-    }
-
     open fun attachToScene(sceneView: SceneView) {
         sceneEntities = _sceneEntities
 
@@ -424,22 +470,20 @@ open class Node(val engine: Engine) : NodeParent, TransformProvider,
         onDetachedFromScene?.invoke(sceneView)
     }
 
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
-
+    open fun onFrame(frameTime: FrameTime) {
         smoothTransform?.let { smoothTransform ->
             if (smoothTransform != transform) {
-                if (transform != lastFrameTransform) {
-                    // Stop smooth if any of the position/rotation/scale has changed meanwhile
-                    this.smoothTransform = null
+                val slerpTransform = slerp(
+                    start = transform,
+                    end = smoothTransform,
+                    deltaSeconds = frameTime.intervalSeconds,
+                    speed = smoothSpeed
+                )
+                if (!slerpTransform.equals(this.transform, delta = 0.001f)) {
+                    this.transform = slerpTransform
                 } else {
-                    // Smooth the transform
-                    transform = slerp(
-                        start = transform,
-                        end = smoothTransform,
-                        deltaSeconds = frameTime.intervalSeconds,
-                        speed = smoothSpeed
-                    )
+                    this.transform = smoothTransform
+                    this.smoothTransform = null
                 }
             } else {
                 this.smoothTransform = null
@@ -553,11 +597,6 @@ open class Node(val engine: Engine) : NodeParent, TransformProvider,
         super.removeChild(child)
 
         onTransformChanged()
-    }
-
-    override fun onDestroy(owner: LifecycleOwner) {
-        destroy()
-        super.onDestroy(owner)
     }
 
     /**
