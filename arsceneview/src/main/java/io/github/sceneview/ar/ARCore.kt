@@ -1,7 +1,6 @@
 package io.github.sceneview.ar
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,14 +8,14 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.result.ActivityResult
+import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LifecycleOwner
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.ArCoreApk.Availability
+import com.google.ar.core.Config
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.arcore.ArSession
@@ -40,10 +39,11 @@ const val defaultApproximateDistance = 2.0f
  * asks the user for required permissions if necessary.
  */
 class ARCore(
-    val activity: androidx.activity.ComponentActivity,
-    val lifecycle: ArSceneLifecycle,
-    val features: Set<Session.Feature> = setOf()
-) : ArSceneLifecycleObserver {
+    val onSessionCreated: (session: ArSession) -> Unit,
+    val onSessionResumed: (session: ArSession) -> Unit,
+    val onArSessionFailed: (exception: Exception) -> Unit,
+    val onSessionConfigChanged: (session: ArSession, config: Config) -> Unit
+) {
 
     /**
      * ### Enable/Disable the auto camera permission check
@@ -69,6 +69,7 @@ class ARCore(
 //     */
 //    var isOptional = false
 
+    lateinit var features: Set<Session.Feature>
     lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
     private var cameraPermissionRequested = false
     lateinit var appSettingsLauncher: ActivityResultLauncher<Intent>
@@ -77,86 +78,103 @@ class ARCore(
     internal var session: ArSession? = null
         private set
 
-    var onCameraPermissionResult: (isGranted: Boolean) -> Unit = { isGranted ->
-        if (!isGranted) {
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(
-                    activity,
-                    Manifest.permission.CAMERA
-                )
-            ) {
-                appSettingsRequested = true
-                showCameraPermissionSettings(activity)
-            }
-        }
-    }
-
-    var onAppSettingsResult: (result: ActivityResult) -> Unit = { _ ->
-        appSettingsRequested = false
-    }
-
-    init {
-        lifecycle.addObserver(this)
-    }
-
-    override fun onCreate(owner: LifecycleOwner) {
-        super.onCreate(owner)
-
+    fun create(context: Context, activity: ComponentActivity?, features: Set<Session.Feature>) {
+        this.features = features
         // Must be called before on resume
-        cameraPermissionLauncher = activity.activityResultRegistry.register(
-            "sceneview_camera_permission",
-            owner,
-            ActivityResultContracts.RequestPermission(),
-            onCameraPermissionResult
-        )
-        appSettingsLauncher = activity.activityResultRegistry.register(
-            "sceneview_app_settings",
-            owner,
-            ActivityResultContracts.StartActivityForResult(),
-            onAppSettingsResult
-        )
-    }
-
-    override fun onResume(owner: LifecycleOwner) {
-        if (session == null) {
-            // Camera Permission
-            if (checkCameraPermission && !cameraPermissionRequested &&
-                !checkCameraPermission(activity, cameraPermissionLauncher)
-            ) {
-                cameraPermissionRequested = true
-            } else if (!appSettingsRequested) {
-                // In case of Camera permission previously denied, the allow popup won't show but
-                // the onResume will be called anyway.
-                // So if we launch the app settings screen, the onResume will be called twice.
-                // In order to avoid multiple session creation failing because camera permission is
-                // still not granted, we check if the app settings screen is displayed.
-                // In last case, if the camera permission is still not granted a SecurityException
-                // will be thrown when trying to create session.
-                try {
-                    // ARCore install and update if camera permission is granted.
-                    // For now, ARCore session will throw an exception if the camera is not
-                    // accessible (ARCore cannot be used without camera.
-                    // Request installation if necessary
-                    if (checkAvailability && !installRequested &&
-                        !checkInstall(activity, installRequested)
+        if (activity != null) {
+            cameraPermissionLauncher = activity.activityResultRegistry.register(
+                "sceneview_camera_permission",
+                ActivityResultContracts.RequestPermission()
+            ) { isGranted ->
+                if (!isGranted) {
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(
+                            activity,
+                            Manifest.permission.CAMERA
+                        )
                     ) {
-                        // Session will be created if everything is ok on next onResume(), so we
-                        // return for now
-                        installRequested = true
-                    } else {
-                        // Create a session if Google Play Services for AR is installed and up to
-                        // date.
-                        session = createSession(lifecycle, features)
-                        session?.let {
-                            lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
-                                onArSessionCreated(it)
-                            }
-                        }
+                        appSettingsRequested = true
+                        showCameraPermissionSettings(activity)
                     }
-                } catch (e: Exception) {
-                    onException(e)
                 }
             }
+            appSettingsLauncher = activity.activityResultRegistry.register(
+                "sceneview_app_settings",
+                ActivityResultContracts.StartActivityForResult()
+            ) {
+                appSettingsRequested = false
+            }
+            // If no activity, no permission check
+            if (checkPermissionAndInstall(activity)) {
+                createSession(context)
+            }
+        } else {
+            createSession(context)
         }
+    }
+
+    fun resume(context: Context, activity: ComponentActivity?) {
+        if (session == null) {
+            // If no activity, no permission check
+            if (activity == null || checkPermissionAndInstall(activity)) {
+                // Create a session if Google Play Services for AR is installed and up to
+                // date.
+                createSession(context)
+            }
+        }
+        session?.resume()
+    }
+
+    fun pause() {
+        session?.pause()
+    }
+
+    fun createSession(context: Context) {
+        // Create a session if Google Play Services for AR is installed and up to date.
+        try {
+            session = ArSession(
+                context,
+                features,
+                onResumed = onSessionResumed,
+                onConfigChanged = onSessionConfigChanged
+            ).also(onSessionCreated)
+        } catch (exception: Exception) {
+            onException(exception)
+        }
+    }
+
+    fun checkPermissionAndInstall(activity: ComponentActivity): Boolean {
+        // Camera Permission
+        if (checkCameraPermission && !cameraPermissionRequested &&
+            !checkCameraPermission(activity, cameraPermissionLauncher)
+        ) {
+            cameraPermissionRequested = true
+        } else if (!appSettingsRequested) {
+            // In case of Camera permission previously denied, the allow popup won't show but
+            // the onResume will be called anyway.
+            // So if we launch the app settings screen, the onResume will be called twice.
+            // In order to avoid multiple session creation failing because camera permission is
+            // still not granted, we check if the app settings screen is displayed.
+            // In last case, if the camera permission is still not granted a SecurityException
+            // will be thrown when trying to create session.
+            try {
+                // ARCore install and update if camera permission is granted.
+                // For now, ARCore session will throw an exception if the camera is not
+                // accessible (ARCore cannot be used without camera.
+                // Request installation if necessary
+                if (checkAvailability && !installRequested &&
+                    !checkInstall(activity, installRequested)
+                ) {
+                    // Session will be created if everything is ok on next onResume(), so we
+                    // return for now
+                    installRequested = true
+                } else {
+                    return true
+                }
+            } catch (e: Exception) {
+                onException(e)
+            }
+        }
+        return false
     }
 
     /**
@@ -165,15 +183,13 @@ class ARCore(
      * Review the API reference for important considerations before calling close() in apps with
      * more complicated lifecycle requirements: [Session.close]
      */
-    override fun onDestroy(owner: LifecycleOwner) {
+    fun destroy() {
+        session?.destroy()
         session = null
-        super.onDestroy(owner)
     }
 
     fun onException(exception: Exception) {
-        lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
-            onArSessionFailed(exception)
-        }
+        onArSessionFailed(exception)
     }
 
     /** Check to see we have the necessary permissions for this app.  */
@@ -194,7 +210,7 @@ class ARCore(
         }
     }
 
-    fun showCameraPermissionSettings(activity: Activity) {
+    fun showCameraPermissionSettings(activity: ComponentActivity) {
         // Permission denied with checking "Do not ask again".
         Toast.makeText(
             activity,
@@ -208,7 +224,7 @@ class ARCore(
         })
     }
 
-    fun checkInstall(activity: Activity, installRequested: Boolean): Boolean {
+    fun checkInstall(activity: ComponentActivity, installRequested: Boolean): Boolean {
         // Request installation if necessary
         return isInstalled(activity) || !install(activity, installRequested)
     }
@@ -217,23 +233,15 @@ class ARCore(
     fun isInstalled(context: Context) =
         ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
 
-    fun install(activity: Activity, installRequested: Boolean): Boolean {
+    fun install(activity: ComponentActivity, installRequested: Boolean): Boolean {
         return ArCoreApk.getInstance().requestInstall(
             activity,
             !installRequested
         ) == ArCoreApk.InstallStatus.INSTALL_REQUESTED
     }
-
-    fun createSession(
-        lifecycle: ArSceneLifecycle,
-        features: Set<Session.Feature> = setOf()
-    ): ArSession {
-        // Create a session if Google Play Services for AR is installed and up to date.
-        return ArSession(lifecycle, features)
-    }
 }
 
-fun TrackingFailureReason.getDescription(context: Context) = when(this) {
+fun TrackingFailureReason.getDescription(context: Context) = when (this) {
     TrackingFailureReason.NONE -> ""
     TrackingFailureReason.BAD_STATE -> context.getString(R.string.sceneview_bad_state_message)
     TrackingFailureReason.INSUFFICIENT_LIGHT -> context.getString(
