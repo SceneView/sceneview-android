@@ -4,14 +4,17 @@ import android.media.MediaRecorder
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Anchor
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.CursorNode
-import io.github.sceneview.math.Position
+import io.github.sceneview.model.GLBLoader
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.utils.doOnApplyWindowInsets
 
 class MainFragment : Fragment(R.layout.fragment_main) {
@@ -22,7 +25,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     lateinit var recordButton: ExtendedFloatingActionButton
 
     lateinit var cursorNode: CursorNode
-    lateinit var modelNode: ArModelNode
+    var modelNode: ArModelNode? = null
+
+    var modelInstance: ModelInstance? = null
 
     var isLoading = false
         set(value) {
@@ -68,21 +73,21 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
             planeRenderer.isVisible = false
+            depthEnabled = true
+            instantPlacementEnabled = true
             // Handle a fallback in case of non AR usage. The exception contains the failure reason
             // e.g. SecurityException in case of camera permission denied
-            onArSessionFailed = { _: Exception ->
+            onArSessionFailed = { e: Exception ->
                 // If AR is not available or the camara permission has been denied, we add the model
                 // directly to the scene for a fallback 3D only usage
-                modelNode.centerModel(origin = Position(x = 0.0f, y = 0.0f, z = 0.0f))
-                modelNode.scaleModel(units = 1.0f)
-                sceneView.addChild(modelNode)
+                Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
             }
             onTapAr = { hitResult, _ ->
                 anchorOrMove(hitResult.createAnchor())
             }
         }
 
-        cursorNode = CursorNode().apply {
+        cursorNode = CursorNode(sceneView.engine).apply {
             onHitResult = { node, _ ->
                 if (!isLoading) {
                     anchorButton.isGone = !node.isTracking
@@ -92,13 +97,16 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         sceneView.addChild(cursorNode)
 
         isLoading = true
-        modelNode = ArModelNode(
-            modelGlbFileLocation = "models/spiderbot.glb",
-            onLoaded = { modelInstance ->
-                anchorButton.text = getString(R.string.move_object)
-                anchorButton.setIconResource(R.drawable.ic_target)
-                isLoading = false
-            })
+        lifecycleScope.launchWhenCreated {
+            modelInstance = GLBLoader.loadModelInstance(
+                context = requireContext(),
+                glbFileLocation = "models/spiderbot.glb"
+            )
+            modelNode?.modelInstance = modelInstance
+            anchorButton.text = getString(R.string.move_object)
+            anchorButton.setIconResource(R.drawable.ic_target)
+            isLoading = false
+        }
     }
 
     override fun onDestroy() {
@@ -107,10 +115,16 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     fun anchorOrMove(anchor: Anchor) {
-        if (!sceneView.children.contains(modelNode)) {
-            sceneView.addChild(modelNode)
+        if (modelNode == null) {
+            modelNode = ArModelNode(
+                sceneView.engine,
+                followHitPosition = false
+            ).apply {
+                modelInstance = modelInstance
+                parent = sceneView
+            }
         }
-        modelNode.anchor = anchor
+        modelNode!!.anchor = anchor
     }
 
     fun startRecording() {
