@@ -5,12 +5,8 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.IntRange;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
 
 import com.google.android.filament.Entity;
 import com.google.android.filament.EntityInstance;
@@ -164,7 +160,7 @@ public class RenderableInstance implements AnimatableModel {
                 }
             }
 
-            if(renderable.asyncLoadEnabled) {
+            if (renderable.asyncLoadEnabled) {
                 Filament.getResourceLoader().asyncBeginLoad(createdAsset);
             } else {
                 Filament.getResourceLoader().loadResources(createdAsset);
@@ -249,7 +245,7 @@ public class RenderableInstance implements AnimatableModel {
     }
 
     public @Entity int[] getChildEntities() {
-        return filamentAsset!=null ? filamentAsset.getEntities() : new int[0];
+        return filamentAsset != null ? filamentAsset.getEntities() : new int[0];
     }
 
     public @Entity
@@ -290,36 +286,36 @@ public class RenderableInstance implements AnimatableModel {
 
     /**
      * ### Changes whether or not frustum culling is on
-     *
+     * <p>
      * The view frustum is the region of space in the modeled world that may appear on the screen.
      * Viewing-frustum culling is the process of removing objects that lie completely outside the
      * viewing frustum from the rendering process.
      * In other words, `true` = your model won't be visible/rendered when not any part of its
      * bounding box is visible/inside the camera view.
-     *
+     * <p>
      * Rendering these object would be a waste of time since they are not directly visible.
      * To make culling fast, it is usually done using bounding box surrounding the objects rather
      * than the objects themselves.
      * Instead of sending all information to your GPU, you will sort visible and invisible elements
      * and render only visible elements.
      * Thanks to this technique, you will earn GPU compute time.
-     *
+     * <p>
      * Do not confuse frustum culling with backface culling. The latter is controlled via the
      * material
-     *
+     * <p>
      * true by default
      */
     public void setCulling(boolean isCulling) {
         RenderableManager renderableManager = Filament.getRenderableManager();
         @EntityInstance int renderableInstance = renderableManager.getInstance(getEntity());
         if (renderableInstance != 0 && renderableManager.hasComponent(renderableInstance)) {
-            renderableManager.setCulling(renderableInstance, isCulling);
+//            renderableManager.setCulling(renderableInstance, isCulling);
         }
         int[] entities = getFilamentAsset().getEntities();
         for (int i = 0; i < entities.length; i++) {
             renderableInstance = renderableManager.getInstance(entities[i]);
             if (renderableInstance != 0) {
-                renderableManager.setCulling(renderableInstance, isCulling);
+//                renderableManager.setCulling(renderableInstance, isCulling);
             }
         }
     }
@@ -418,8 +414,8 @@ public class RenderableInstance implements AnimatableModel {
      * Returns the material bound to the specified name.
      */
     public MaterialInstance getMaterialInstance(String name) {
-        for(int i=0;i<materialBindings.size();i++) {
-            if(TextUtils.equals(materialNames.get(i), name)) {
+        for (int i = 0; i < materialBindings.size(); i++) {
+            if (TextUtils.equals(materialNames.get(i), name)) {
                 return materialBindings.get(i);
             }
         }
@@ -551,10 +547,11 @@ public class RenderableInstance implements AnimatableModel {
      * Detach and destroy the instance
      */
     public void destroy() {
-        if(filamentAsset != null) {
+        if (filamentAsset != null) {
             try {
                 ModelKt.destroy(filamentAsset);
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
             filamentAsset = null;
         }
 
@@ -562,13 +559,15 @@ public class RenderableInstance implements AnimatableModel {
         if (childEntity != 0) {
             try {
                 renderableManager.destroy(childEntity);
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
             childEntity = 0;
         }
         if (entity != 0) {
             try {
                 renderableManager.destroy(entity);
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
             entity = 0;
         }
     }

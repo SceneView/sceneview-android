@@ -5,14 +5,13 @@ import com.google.android.filament.gltfio.FilamentAsset
 import io.github.sceneview.Filament.assetLoader
 import io.github.sceneview.math.toVector3Box
 import io.github.sceneview.renderable.Renderable
-import io.github.sceneview.renderable.setCulling
 
 typealias Model = FilamentAsset
 
 fun Model.createInstance() = assetLoader?.createInstance(this)?.apply {
     renderables.forEach {
 //        it.setScreenSpaceContactShadows(false)
-        it.setCulling(true)
+//        it.setCulling(true)
     }
 }
 
