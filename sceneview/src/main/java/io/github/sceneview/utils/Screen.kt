@@ -32,21 +32,6 @@ fun Fragment.setFullScreen(
     )
 }
 
-fun View.setFullScreen(
-    fullScreen: Boolean = true,
-    hideSystemBars: Boolean = true,
-    fitsSystemWindows: Boolean = true
-) {
-    doOnActivityAttach { activity ->
-        activity.setFullScreen(
-            this,
-            fullScreen,
-            hideSystemBars,
-            fitsSystemWindows
-        )
-    }
-}
-
 fun Activity.setFullScreen(
     rootView: View,
     fullScreen: Boolean = true,
