@@ -1,5 +1,6 @@
 package io.github.sceneview.ar.node
 
+import com.google.android.filament.Engine
 import com.google.ar.core.Camera
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.arcore.transform
@@ -26,7 +27,7 @@ import kotlin.math.atan
  * camera, assign a collision shape to the camera, or add children to the camera. Disabling the
  * camera turns off rendering.
  */
-class ArCameraNode : CameraNode(false) {
+class ArCameraNode(engine: Engine) : CameraNode(engine, false) {
 
     override var verticalFovDegrees: Float
         get() {

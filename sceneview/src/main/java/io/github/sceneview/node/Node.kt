@@ -3,10 +3,7 @@ package io.github.sceneview.node
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.view.MotionEvent
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.lifecycleScope
-import com.google.android.filament.Entity
-import com.google.android.filament.EntityInstance
+import com.google.android.filament.*
 import com.google.ar.sceneform.collision.Collider
 import com.google.ar.sceneform.collision.CollisionShape
 import com.google.ar.sceneform.common.TransformProvider
@@ -14,12 +11,12 @@ import com.google.ar.sceneform.math.Matrix
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
 import dev.romainguy.kotlin.math.*
-import io.github.sceneview.*
-import io.github.sceneview.Filament.transformManager
+import io.github.sceneview.SceneView
 import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.gesture.*
 import io.github.sceneview.math.*
 import io.github.sceneview.renderable.Renderable
+import io.github.sceneview.transform.*
 import io.github.sceneview.utils.FrameTime
 import kotlin.reflect.KProperty
 
@@ -52,11 +49,7 @@ private const val defaultTouchSlop = 8
  * @param rotation See [Node.rotation]
  * @param scale See [Node.scale]
  */
-open class Node(
-    position: Position = DEFAULT_POSITION,
-    quaternion: Quaternion = DEFAULT_QUATERNION,
-    scale: Scale = DEFAULT_SCALE
-) : NodeParent, TransformProvider, SceneLifecycleObserver,
+open class Node(val engine: Engine) : NodeParent, TransformProvider,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
     companion object {
@@ -72,27 +65,10 @@ open class Node(
      * A node is part of a scene if its highest level ancestor is a [SceneView]
      */
     protected open val sceneView: SceneView? get() = parent as? SceneView ?: parentNode?.sceneView
+    val transformManager: TransformManager get() = engine.transformManager
 
     // TODO : Remove when every dependent is kotlined
     fun getSceneViewInternal() = sceneView
-    protected open val lifecycle: SceneLifecycle? get() = sceneView?.lifecycle
-    protected val lifecycleScope get() = sceneView?.lifecycleScope
-
-    @Entity
-    open val transformEntity: Int? = null
-    val transformInstance: Int?
-        @EntityInstance
-        get() = transformEntity?.let { transformManager.getInstance(it) }
-
-    @Entity
-    open var sceneEntities: IntArray = intArrayOf()
-        set(value) {
-            field.takeIf { it.isNotEmpty() }?.let { sceneView?.scene?.removeEntities(it) }
-            field = value
-            if (isVisibleInHierarchy) {
-                sceneView?.scene?.addEntities(sceneEntities)
-            }
-        }
 
     /**
      * ### Define your own custom name
@@ -101,11 +77,20 @@ open class Node(
 
     val isAttached get() = sceneView != null
 
+    @Entity
+    open val transformEntity: Int = EntityManager.get().create().apply {
+        transformManager.create(this)
+    }
+
+    val transformInstance: Int
+        @EntityInstance
+        get() = transformManager.getInstance(transformEntity)
+
     /**
-     * ### The node position to locate it within the coordinate system of its parent
+     * Position to locate within the coordinate system the parent.
      *
-     * Default is `Position(x = 0.0f, y = 0.0f, z = 0.0f)`, indicating that the node is placed at
-     * the origin of the parent node's coordinate system.
+     * Default is `Position(x = 0.0f, y = 0.0f, z = 0.0f)`, indicating that the component is placed
+     * at the origin of the parent component's coordinate system.
      *
      * **Horizontal (X):**
      * - left: x < 0.0f
@@ -135,23 +120,65 @@ open class Node(
      * ----/----|---------
      *
      * +z ---- -y --------
+     *
+     * @see transform
      */
-    var position: Position = position
+    var position: Position
+        get() = transform.position
+        set(value) {
+            transform = Transform(value, quaternion, scale)
+        }
 
     /**
-     * TODO: Doc
+     * World-space position.
+     *
+     * The world position of this component (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local position with its parent's world position.
+     *
+     * @see worldTransform
      */
-    var quaternion: Quaternion = quaternion
+    var worldPosition: Position
+        get() = worldTransform.position
+        set(value) {
+            position = worldToParent * value
+        }
 
     /**
-     * ### The node orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`
+     * Quaternion rotation.
+     *
+     * @see transform
+     */
+    var quaternion: Quaternion
+        get() = transform.quaternion
+        set(value) {
+            transform = Transform(position, value, scale)
+        }
+
+    /**
+     * The world-space quaternion.
+     *
+     * The world quaternion of this component (i.e. relative to the [SceneView]).
+     * This is the composition of this component's local quaternion with its parent's world
+     * quaternion.
+     *
+     * @see worldTransform
+     */
+    var worldQuaternion: Quaternion
+        get() = worldTransform.toQuaternion()
+        set(value) {
+            quaternion = worldToParent.toQuaternion() * value
+        }
+
+    /**
+     * Orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`.
      *
      * The three-component rotation vector specifies the direction of the rotation axis in degrees.
-     * Rotation is applied relative to the node's origin property.
+     * Rotation is applied relative to the component's origin property.
      *
      * Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
      *
-     * Note that modifying the individual components of the returned rotation doesn't have any effect.
+     * Note that modifying the individual components of the returned rotation doesn't have any
+     * effect.
      *
      * ------- +y ----- -z
      *
@@ -166,6 +193,8 @@ open class Node(
      * ----/----|---------
      *
      * +z ---- -y --------
+     *
+     * @see transform
      */
     var rotation: Rotation
         get() = quaternion.toEulerAngles()
@@ -174,146 +203,75 @@ open class Node(
         }
 
     /**
-     * ### The node scale on each axis.
-     * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
-     */
-    var scale: Scale = scale
-
-    open var transform: Transform = Transform(position, quaternion, scale)
-        get() = field.takeIf {
-            it.position == position && it.quaternion == quaternion && it.scale == scale
-        } ?: Transform(position, quaternion, scale)
-        set(value) {
-            if (field != value) {
-                field = value
-                position = value.position
-                quaternion = value.quaternion
-                scale = value.scale
-            }
-        }
-
-    /**
-     * ### The node world-space position
+     * World-space rotation.
      *
-     * The world position of this node (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local position with its parent's world
-     * position.
-     *
-     * @see worldTransform
-     */
-    open var worldPosition: Position
-        get() = worldTransform.position
-        set(value) {
-            position = (worldToParent * Float4(value, 1f)).xyz
-        }
-
-    /**
-     * ### The node world-space quaternion
-     *
-     * The world quaternion of this node (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local quaternion with its parent's world
-     * quaternion.
-     *
-     * @see worldTransform
-     */
-    open var worldQuaternion: Quaternion
-        get() = worldTransform.toQuaternion()
-        set(value) {
-            quaternion = worldToParent.toQuaternion() * value
-        }
-
-    /**
-     * ### The node world-space rotation
-     *
-     * The world rotation of this node (i.e. relative to the [SceneView]).
+     * The world rotation of this component (i.e. relative to the [SceneView]).
      * This is the composition of this component's local rotation with its parent's world
      * rotation.
      *
      * @see worldTransform
      */
-    open var worldRotation: Rotation
+    var worldRotation: Rotation
         get() = worldTransform.rotation
         set(value) {
-            quaternion = worldToParent.toQuaternion() * Quaternion.fromEuler(value)
+            worldQuaternion = Quaternion.fromEuler(value)
         }
 
     /**
-     * ### The node world-space scale
+     * Scale on each axis.
      *
-     * The world scale of this node (i.e. relative to the [SceneView]).
+     * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`)
+     *
+     * @see transform
+     */
+    var scale: Scale
+        get() = transform.scale
+        set(value) {
+            transform = Transform(position, quaternion, value)
+        }
+
+    /**
+     * World-space scale.
+     *
+     * The world scale of this component (i.e. relative to the [SceneView]).
      * This is the composition of this component's local scale with its parent's world
      * scale.
      *
      * @see worldTransform
      */
-    open var worldScale: Scale
+    var worldScale: Scale
         get() = worldTransform.scale
         set(value) {
             scale = (worldToParent * scale(value)).scale
         }
 
-    open val worldTransform: Mat4
-        get() = parentNode?.let { it.worldTransform * transform } ?: transform
-
     /**
-     * ### The transform from the world coordinate system to the coordinate system of the parent node
-     */
-    private val worldToParent: Transform
-        get() = parentNode?.let { inverse(it.worldTransform) } ?: Transform()
-
-    /**
-     * ## The smooth position, rotation and scale speed
+     * Local transform of the transform component (i.e. relative to the parent).
      *
-     * This value is used by [smooth]
+     * @see TransformManager.getTransform
+     * @see TransformManager.setTransform
      */
-    var smoothSpeed = 5.0f
-
-    var smoothTransform: Transform? = null
-
-    private var lastFrameTransform: Transform? = null
-    private var lastFrameWorldTransform: Transform? = null
-
-    /**
-     * ### The node can be selected when a touch event happened
-     *
-     * If a not selectable child [Node] is touched, we check the parent hierarchy to find the
-     * closest selectable parent. In this case, the first selectable parent will be the one to have
-     * its [isSelected] value to `true`.
-     */
-    open var isSelectable = false
-
-    /**
-     * ### The visible state of this node.
-     *
-     * Note that a Node may be enabled but still inactive if it isn't part of the scene or if its
-     * parent is inactive.
-     */
-    open var isVisible = true
+    var transform: Transform
+        get() = transformManager.getTransform(transformInstance)
         set(value) {
-            if (field != value) {
-                field = value
-                updateVisibility()
-            }
+            transformManager.setTransform(transformInstance, value)
         }
 
-    open val isVisibleInHierarchy: Boolean
-        get() = isVisible && (parentNode?.isVisibleInHierarchy ?: true)
+    /**
+     * World transform of a transform component (i.e. relative to the root).
+     *
+     * @see TransformManager.getWorldTransform
+     */
+    open val worldTransform: Transform
+        get() = transformManager.getWorldTransform(transformInstance)
 
-    open var isPositionEditable = false
-    open var isRotationEditable = false
-    open var isScaleEditable = false
-    open var isEditable: Boolean
-        get() = isPositionEditable || isRotationEditable || isScaleEditable
-        set(value) {
-            isPositionEditable = value
-            isRotationEditable = value
-            isScaleEditable = value
-        }
-
-    var minEditableScale = 0.1f
-    var maxEditableScale = 10.0f
-
-    var currentEditingTransform: KProperty<*>? = null
+    /**
+     * Transform from the world coordinate system to the coordinate system of the parent.
+     *
+     * @see TransformManager.getWorldTransform
+     */
+    val worldToParent: Transform
+        get() = inverse(parentNode?.worldTransform ?: Transform())
 
     /**
      * ### The [Node] parent if the parent extends [Node]
@@ -350,12 +308,28 @@ open class Node(
                 // Remove from old parent if not already removed
                 field?.removeChild(this)
                 field = value
+                parentEntity = (value as? Node)?.transformEntity
                 // Add to new parent if not already added
                 value?.addChild(this)
                 // Find the new parent SceneView
                 sceneView?.let { attachToScene(it) }
             }
         }
+
+    var parentEntity: Int?
+        @Entity
+        get() = transformManager.getParentOrNull(transformInstance)
+        @Entity
+        set(value) {
+            transformManager.setParent(
+                transformInstance,
+                value?.let { transformManager.getInstance(it) }
+            )
+        }
+
+    val parentInstance: Int?
+        @EntityInstance
+        get() = parentEntity?.let { transformManager.getInstance(it) }
 
     val allParents: List<NodeParent>
         get() = listOfNotNull(parent) + (parentNode?.allParents ?: listOf())
@@ -397,6 +371,8 @@ open class Node(
 
     private var allowDispatchTransformChanged = true
 
+    private val _onAttachedToScene = mutableListOf<(sceneView: SceneView) -> Unit>()
+
     // The first delta is always way off as it contains all delta until threshold to
     // recognize rotate gesture is met
     private var skipFirstRotateEdit = false
@@ -413,18 +389,17 @@ open class Node(
      */
     @JvmOverloads
     constructor(
+        engine: Engine,
         position: Position = DEFAULT_POSITION,
         rotation: Rotation,
         scale: Scale = DEFAULT_SCALE
-    ) : this(position = position, scale = scale) {
-        this.rotation = rotation
+    ) : this(engine) {
+        transform(position, rotation, scale)
     }
 
     open fun attachToScene(sceneView: SceneView) {
-        sceneView.lifecycle.addObserver(this)
-        if (isVisibleInHierarchy) {
-            sceneView.scene.addEntities(sceneEntities)
-        }
+        sceneEntities = _sceneEntities
+
         sceneView.collisionSystem.let { collider?.setAttachedCollisionSystem(it) }
         if (selectionVisualizer == null) {
             selectionVisualizer = sceneView.selectionVisualizer?.invoke()
@@ -434,7 +409,6 @@ open class Node(
     }
 
     open fun detachFromScene(sceneView: SceneView) {
-        sceneView.lifecycle.removeObserver(this)
         sceneView.scene.removeEntities(sceneEntities)
         collider?.setAttachedCollisionSystem(null)
         children.forEach { it.detachFromScene(sceneView) }
@@ -442,11 +416,12 @@ open class Node(
     }
 
     open fun onAttachedToScene(sceneView: SceneView) {
-        onAttachedToScene.toList().forEach { it(sceneView) }
+        _onAttachedToScene.toList().forEach { it(sceneView) }
+        onAttachedToScene?.invoke(sceneView)
     }
 
     open fun onDetachedFromScene(sceneView: SceneView) {
-        onDetachedFromScene.toList().forEach { it(sceneView) }
+        onDetachedFromScene?.invoke(sceneView)
     }
 
     override fun onFrame(frameTime: FrameTime) {
@@ -470,16 +445,10 @@ open class Node(
                 this.smoothTransform = null
             }
         }
-        lastFrameTransform = transform
+        children.forEach { it.onFrame(frameTime) }
+//        lastFrameTransform = transform
 
-        transformInstance?.let {
-            val worldTransform = this.worldTransform
-            if (transformManager.getTransform(it) != worldTransform) {
-                transformManager.setTransform(it, worldTransform)
-            }
-        }
-
-        onFrame.forEach { it(frameTime, this) }
+        onFrame?.invoke(frameTime, this)
     }
 
     override fun onSingleTapConfirmed(e: NodeMotionEvent) {
@@ -603,6 +572,22 @@ open class Node(
     }
 
     /**
+     * Change the node transform
+     */
+    fun transform(
+        transform: Transform,
+        smooth: Boolean = false,
+        smoothSpeed: Float = this.smoothSpeed
+    ) {
+        if (smooth) {
+            smooth(transform, smoothSpeed)
+        } else {
+            this.smoothTransform = null
+            this.transform = transform
+        }
+    }
+
+    /**
      * ## Change the node transform
      *
      * @see position
@@ -615,15 +600,7 @@ open class Node(
         scale: Scale = this.scale,
         smooth: Boolean = false,
         smoothSpeed: Float = this.smoothSpeed
-    ) {
-        if (smooth) {
-            smooth(position, quaternion, scale, smoothSpeed)
-        } else {
-            this.position = position
-            this.quaternion = quaternion
-            this.scale = scale
-        }
-    }
+    ) = transform(Transform(position, quaternion, scale), smooth, smoothSpeed)
 
     /**
      * ## Change the node transform
@@ -855,10 +832,10 @@ open class Node(
             }
         }
 
-    open fun clone() = copy(Node())
+    open fun clone() = copy(Node(engine))
 
     @JvmOverloads
-    open fun copy(toNode: Node = Node()): Node = toNode.apply {
+    open fun copy(toNode: Node = Node(engine)): Node = toNode.apply {
         position = this@Node.position
         quaternion = this@Node.quaternion
         scale = this@Node.scale
@@ -879,9 +856,9 @@ open class Node(
      */
     fun doOnAttachedToScene(action: (scene: SceneView) -> Unit) {
         sceneView?.let(action) ?: run {
-            onAttachedToScene += object : (SceneView) -> Unit {
+            _onAttachedToScene += object : (SceneView) -> Unit {
                 override fun invoke(sceneView: SceneView) {
-                    onAttachedToScene -= this
+                    _onAttachedToScene -= this
                     action(sceneView)
                 }
             }

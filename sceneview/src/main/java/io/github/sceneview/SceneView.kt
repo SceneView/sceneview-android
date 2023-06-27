@@ -21,9 +21,6 @@ import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.Manipulator
 import com.google.ar.sceneform.collision.CollisionSystem
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
-import com.gorisse.thomas.lifecycle.getActivity
-import io.github.sceneview.Filament.engine
-import io.github.sceneview.Filament.transformManager
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.loadEnvironment
 import io.github.sceneview.gesture.CameraGestureDetector
@@ -545,10 +542,18 @@ open class SceneView @JvmOverloads constructor(
     fun removeEntity(@Entity entity: Int) = scene.removeEntity(entity)
 
     /** @see Scene.addEntities */
-    fun addEntities(@Entity entities: IntArray) = scene.addEntities(entities)
+    fun addEntities(@Entity entities: IntArray) {
+        if (entities.isNotEmpty()) {
+            scene.addEntities(entities)
+        }
+    }
 
     /** @see Scene.removeEntities */
-    fun removeEntities(@Entity entities: IntArray) = scene.removeEntities(entities)
+    fun removeEntities(@Entity entities: IntArray) {
+        if (entities.isNotEmpty()) {
+            scene.removeEntities(entities)
+        }
+    }
 
     /** @see Scene.addEntity */
     fun addLight(@Entity light: Light) = scene.addEntity(light)

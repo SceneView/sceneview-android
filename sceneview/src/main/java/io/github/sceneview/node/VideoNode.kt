@@ -3,12 +3,7 @@ package io.github.sceneview.node
 import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.view.Surface
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.coroutineScope
-import com.google.android.filament.Material
-import com.google.android.filament.MaterialInstance
-import com.google.android.filament.Stream
-import com.google.android.filament.Texture
+import com.google.android.filament.*
 import com.google.ar.sceneform.math.Quaternion
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.ExternalTexture
@@ -75,6 +70,7 @@ import io.github.sceneview.utils.colorOf
  * display, change material, texture,...
  */
 open class VideoNode(
+    engine: Engine,
     val player: MediaPlayer,
     val chromaKeyColor: Int? = null,
     scaleToVideoRatio: Boolean = true,
@@ -89,7 +85,7 @@ open class VideoNode(
     val centerOrigin: Position? = null,
     val onError: ((error: Exception) -> Unit)? = null,
     val onLoaded: ((modelInstance: ModelInstance, materialInstance: MaterialInstance) -> Unit)? = null
-) : ModelNode() {
+) : ModelNode(engine) {
 
     /**
      * ### Keep the video aspect ratio.
@@ -163,7 +159,7 @@ open class VideoNode(
             }
         }
         doOnAttachedToScene { sceneView ->
-            sceneView.lifecycle.coroutineScope.launchWhenCreated {
+            sceneView.coroutineScope?.launchWhenCreated {
                 try {
                     loadModelGlb(
                         context = sceneView.context,
@@ -204,8 +200,8 @@ open class VideoNode(
         }
     }
 
-    override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
+    override fun destroy() {
+        super.destroy()
         material.destroy()
         materialInstances.forEach { it.destroy() }
     }

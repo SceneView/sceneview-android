@@ -1,14 +1,12 @@
 package io.github.sceneview.ar.arcore
 
-import androidx.lifecycle.LifecycleOwner
+import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Texture
 import com.google.ar.core.Config
 import com.google.ar.core.LightEstimate
 import dev.romainguy.kotlin.math.max
 import io.github.sceneview.SceneView
-import io.github.sceneview.ar.ArSceneLifecycle
-import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.HDREnvironment
 import io.github.sceneview.light.*
@@ -38,7 +36,7 @@ import java.nio.ByteOrder
  * virtual objects to light them under the same conditions as the scene they're placed in,
  * keeping users grounded and engaged.
  */
-class LightEstimator {
+class LightEstimator(val engine: Engine) {
 
     /**
      * ### Enable reflection cubemap
@@ -131,7 +129,7 @@ class LightEstimator {
     var mainLight: Light? = null
         set(value) {
             if (field != value) {
-                field?.destroyLight()
+                field?.let { engine.destroyLight(it) }
                 field = value
             }
         }
@@ -141,7 +139,7 @@ class LightEstimator {
     var cubeMapBuffer: ByteBuffer? = null
     var cubeMapTexture: Texture? = null
 
-    fun update(sceneView: SceneView, arFrame: ArFrame) : Pair<Environment?, Light?> {
+    fun update(sceneView: SceneView, arFrame: ArFrame): Pair<Environment?, Light?> {
         if (arFrame.session.lightEstimationMode != Config.LightEstimationMode.DISABLED) {
             arFrame.frame.lightEstimate.takeIf {
                 it.state == LightEstimate.State.VALID && it.timestamp != timestamp
@@ -372,7 +370,7 @@ class LightEstimator {
 
     fun destroy() {
         environment?.destroy()
-        mainLight?.destroyLight()
+        mainLight?.let { engine.destroyLight(it) }
     }
 
     companion object {
