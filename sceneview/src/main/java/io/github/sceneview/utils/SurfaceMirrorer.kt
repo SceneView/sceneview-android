@@ -5,15 +5,12 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.SwapChain
 import com.google.android.filament.Viewport
 import io.github.sceneview.Filament
-import io.github.sceneview.SceneLifecycle
-import io.github.sceneview.SceneLifecycleObserver
+import io.github.sceneview.SceneView
 
 /**
  * ### Displays the Camera stream using Filament.
  */
-class SurfaceMirrorer(
-    private val lifecycle: SceneLifecycle
-) : SceneLifecycleObserver {
+class SurfaceMirrorer {
 
     data class SurfaceMirror(
         val surface: Surface,
@@ -23,15 +20,9 @@ class SurfaceMirrorer(
 
     private val surfaceMirrors = mutableListOf<SurfaceMirror>()
 
-    private val sceneView get() = lifecycle.sceneView
+//    private val sceneView get() = lifecycle.sceneView
 
-    init {
-        lifecycle.addObserver(this)
-    }
-
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
-
+    fun onFrame(sceneView: SceneView) {
         surfaceMirrors.forEach { mirror ->
             if (mirror.swapChain != null) {
                 sceneView.renderer.copyFrame(
@@ -70,6 +61,7 @@ class SurfaceMirrorer(
      * surface.
      */
     fun startMirroring(
+        sceneView: SceneView,
         surface: Surface,
         left: Int = 0,
         bottom: Int = 0,
