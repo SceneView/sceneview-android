@@ -251,9 +251,9 @@ interface TransformComponent : Component {
      * @see TransformManager.getWorldTransform
      */
     val worldTransform: Transform
-        get() = transpose(Transform.of(*FloatArray(16).apply {
+        get() = transpose(FloatArray(16).apply {
             transformManager.getWorldTransform(transformInstance, this)
-        }))
+        }.toTransform())
 
     /**
      * Transform from the world coordinate system to the coordinate system of the parent.

@@ -223,7 +223,7 @@ open class ArSceneView @JvmOverloads constructor(
      * - Environment handles a reflections, indirect lighting and skybox.
      * - ARCore will estimate the direction, the intensity and the color of the light
      */
-    var lightEstimator: LightEstimator? = LightEstimator()
+    var lightEstimator: LightEstimator? = LightEstimator(engine)
 
     var mainLightEstimated: Light? = null
         private set(value) {

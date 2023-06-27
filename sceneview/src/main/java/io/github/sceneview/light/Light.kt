@@ -1,5 +1,6 @@
 package io.github.sceneview.light
 
+import com.google.android.filament.Engine
 import com.google.android.filament.EntityInstance
 import com.google.android.filament.LightManager
 import io.github.sceneview.Filament
@@ -140,8 +141,8 @@ fun Light.clone() = LightManager.Builder(type)
 /**
  * Destroys a Light and frees all its associated resources.
  */
-fun Light.destroyLight() {
-    runCatching { Filament.engine.destroyEntity(this) }
-    runCatching { Filament.engine.entityManager.destroy(this) }
-    runCatching { Filament.lightManager.destroy(this) }
+fun Engine.destroyLight(light: Light) {
+    runCatching { destroyEntity(light) }
+    runCatching { entityManager.destroy(light) }
+    runCatching { lightManager.destroy(light) }
 }

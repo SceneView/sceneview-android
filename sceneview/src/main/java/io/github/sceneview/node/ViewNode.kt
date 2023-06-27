@@ -4,16 +4,15 @@ import android.content.Context
 import android.view.View
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
+import com.google.android.filament.Engine
 import com.google.ar.sceneform.PickHitResult
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.RenderableInstance
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.utilities.ChangeId
 import dev.romainguy.kotlin.math.Quaternion
-import io.github.sceneview.Filament
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.Position
-import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.model.await
 import io.github.sceneview.utils.FrameTime
@@ -26,7 +25,7 @@ import io.github.sceneview.utils.FrameTime
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
  */
-open class ViewNode : Node {
+open class ViewNode(engine: Engine) : Node(engine) {
 
     companion object {
         val DEFAULT_POSITION = Position(x = 0.0f, y = 0.0f, z = -0.1f)
@@ -66,22 +65,9 @@ open class ViewNode : Node {
     var onError: ((exception: Exception) -> Unit)? = null
 
     /**
-     * ### Construct a [LightNode] with it Position, Rotation and Scale
-     *
-     * @param position See [Node.position]
-     * @param rotation See [Node.rotation]
-     * @param scale See [Node.scale]
-     */
-    constructor(
-        position: Position = DEFAULT_POSITION,
-        rotation: Rotation = DEFAULT_ROTATION,
-        scale: Scale = DEFAULT_SCALE
-    ) : super(position, rotation, scale)
-
-    /**
      * TODO : Doc
      */
-    constructor(renderableInstance: RenderableInstance) : this() {
+    constructor(engine: Engine, renderableInstance: RenderableInstance) : this(engine) {
         this.renderableInstance = renderableInstance
     }
 
@@ -100,7 +86,7 @@ open class ViewNode : Node {
             }
             renderableInstance?.let { renderableInstance ->
                 renderableInstance.setModelMatrix(
-                    Filament.transformManager,
+                    transformManager,
                     renderableInstance.worldModelMatrix.data
                 )
             }
@@ -218,9 +204,9 @@ open class ViewNode : Node {
         super.destroy()
     }
 
-    override fun clone() = copy(ViewNode())
+    override fun clone() = copy(ViewNode(engine))
 
-    fun copy(toNode: ViewNode = ViewNode()): ViewNode = toNode.apply {
+    fun copy(toNode: ViewNode = ViewNode(engine)): ViewNode = toNode.apply {
         super.copy(toNode)
         setRenderable(this@ViewNode.renderable)
     }

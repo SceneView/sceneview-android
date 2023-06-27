@@ -1,6 +1,7 @@
 package io.github.sceneview.ar.node
 
 import android.graphics.Bitmap
+import com.google.android.filament.Engine
 import com.google.ar.core.AugmentedImage
 import com.google.ar.core.AugmentedImageDatabase
 import io.github.sceneview.SceneView
@@ -49,12 +50,13 @@ import io.github.sceneview.ar.arcore.isTracking
  * @see AugmentedImage.getTrackingMethod
  */
 open class AugmentedImageNode(
+    engine: Engine,
     val imageName: String,
     val bitmap: Bitmap? = null,
     val widthInMeters: Float? = null,
     var onError: ((exception: Exception) -> Unit)? = null,
     var onUpdate: ((node: AugmentedImageNode, augmentedImage: AugmentedImage) -> Unit)? = null
-) : ArNode() {
+) : ArNode(engine) {
 
     /**
      * The augmented image where this node will be placed (anchored)

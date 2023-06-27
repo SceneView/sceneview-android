@@ -1,8 +1,8 @@
 package io.github.sceneview.node
 
 import android.view.MotionEvent
-import androidx.lifecycle.LifecycleOwner
 import com.google.android.filament.Camera
+import com.google.android.filament.Engine
 import com.google.ar.sceneform.collision.Ray
 import com.google.ar.sceneform.math.MathHelper
 import com.google.ar.sceneform.math.Matrix
@@ -10,11 +10,10 @@ import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.utilities.Preconditions
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
-import io.github.sceneview.Filament.engine
-import io.github.sceneview.Filament.entityManager
 import io.github.sceneview.createCamera
 import io.github.sceneview.utils.FrameTime
 import java.util.*
+import kotlin.math.tan
 
 /**
  * Represents a virtual camera, which determines the perspective through which the scene is viewed.
@@ -42,7 +41,7 @@ import java.util.*
  *
  * @param isFixed true to use with AR
  */
-open class CameraNode(val isFixed: Boolean = true) : Node() {
+open class CameraNode(engine: Engine, val isFixed: Boolean = true) : Node(engine) {
 
     val projectionMatrix = Matrix()
     val viewMatrix
@@ -270,9 +269,8 @@ open class CameraNode(val isFixed: Boolean = true) : Node() {
      *
      */
     private fun setPerspective(verticalFov: Float, aspect: Float, near: Float, far: Float) {
-        // TODO: Move to
         val fovInRadians = Math.toRadians(verticalFov.toDouble())
-        val top = Math.tan(fovInRadians * 0.5).toFloat() * near
+        val top = tan(fovInRadians * 0.5).toFloat() * near
         val bottom = -top
         val right = top * aspect
         val left = -right
@@ -328,15 +326,15 @@ open class CameraNode(val isFixed: Boolean = true) : Node() {
         areMatricesInitialized = true
     }
 
-    override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
+    override fun destroy() {
+        super.destroy()
         try {
             engine.destroyCameraComponent(camera.entity)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
         try {
-            entityManager.destroy(camera.entity)
-        } catch (e: Exception) {
+            engine.entityManager.destroy(camera.entity)
+        } catch (_: Exception) {
         }
     }
 

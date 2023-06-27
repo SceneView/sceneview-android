@@ -1,6 +1,7 @@
 package io.github.sceneview.node
 
 import androidx.annotation.IntRange
+import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import dev.romainguy.kotlin.math.*
@@ -18,12 +19,13 @@ import io.github.sceneview.renderable.*
  * another node, or the [SceneView]
  * .
  */
-open class RenderableNode(open val renderables: List<Renderable> = listOf()) : Node() {
+open class RenderableNode(engine: Engine, open val renderables: List<Renderable> = listOf()) :
+    Node(engine) {
 
     val renderable get() = renderables.firstOrNull()
     val materialInstances get() = renderables.map { it.getMaterial() }
 
-    constructor(renderable: Renderable) : this(listOf(renderable))
+    constructor(engine: Engine, renderable: Renderable) : this(engine, listOf(renderable))
 
     /**
      * @see RenderableManager.setPriority

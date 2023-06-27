@@ -1,12 +1,11 @@
 package io.github.sceneview.ar.node
 
+import com.google.android.filament.Engine
 import com.google.ar.core.*
 import com.google.ar.core.Anchor.CloudAnchorState
 import com.google.ar.sceneform.math.Vector3
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.*
-import io.github.sceneview.ar.ArSceneLifecycle
-import io.github.sceneview.ar.ArSceneLifecycleObserver
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.math.Transform
@@ -15,10 +14,9 @@ import io.github.sceneview.node.ModelNode
 /**
  * ### Construct a new placement AR Node
  */
-open class ArNode : ModelNode, ArSceneLifecycleObserver {
+open class ArNode(engine: Engine) : ModelNode(engine) {
 
     override val sceneView: ArSceneView? get() = super.sceneView as? ArSceneView
-    override val lifecycle: ArSceneLifecycle? get() = sceneView?.lifecycle
     protected val arSession: ArSession? get() = sceneView?.arSession
 
     /**
@@ -159,10 +157,7 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
     override val isVisibleInHierarchy: Boolean
         get() = super.isVisibleInHierarchy && isCameraTracking
 
-    constructor() : super() {
-    }
-
-    constructor(anchor: Anchor) : this() {
+    constructor(engine: Engine, anchor: Anchor) : this(engine) {
         this.anchor = anchor
     }
 
@@ -332,9 +327,9 @@ open class ArNode : ModelNode, ArSceneLifecycleObserver {
     /** ### Gets the world-space down direction vector (-y) of this node */
 //    val worldDown get() = localToWorldDirection(Vector3.down())
 
-    override fun clone() = copy(ArNode())
+    override fun clone() = copy(ArNode(engine))
 
-    fun copy(toNode: ArNode = ArNode()) = toNode.apply {
+    fun copy(toNode: ArNode = ArNode(engine)) = toNode.apply {
         super.copy(toNode)
     }
 }

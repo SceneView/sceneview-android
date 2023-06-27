@@ -24,7 +24,7 @@ import io.github.sceneview.model.ModelInstance
  * - [createAnchor] in order to extract a fixed/anchored copy of the actual node.
  * This node will continue following the [com.google.ar.core.Camera]
  */
-open class ArModelNode : ArNode {
+open class ArModelNode(engine: Engine) : ArNode(engine) {
 
     /**
      * ### How/where does the node is positioned in the real world
@@ -212,11 +212,12 @@ open class ArModelNode : ArNode {
      * @param instantAnchor See [instantAnchor]
      */
     constructor(
+        engine: Engine,
         placementMode: PlacementMode = DEFAULT_PLACEMENT_MODE,
         screenPosition: Position = DEFAULT_SCREEN_POSITION,
         followHitPosition: Boolean = true,
         instantAnchor: Boolean = false
-    ) : super() {
+    ) : this(engine) {
         this.placementMode = placementMode
         this.screenPosition = screenPosition
         this.followHitPosition = followHitPosition
@@ -226,7 +227,7 @@ open class ArModelNode : ArNode {
     /**
      * TODO : Doc
      */
-    constructor(hitResult: HitResult) : this() {
+    constructor(engine: Engine, hitResult: HitResult) : this(engine) {
         this.anchor = hitResult.createAnchor()
     }
 
@@ -251,13 +252,14 @@ open class ArModelNode : ArNode {
      * @see loadModelGlb
      */
     constructor(
+        engine: Engine,
         modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
-    ) : this() {
+    ) : this(engine) {
         loadModelGlbAsync(
             modelGlbFileLocation,
             autoAnimate,
@@ -283,16 +285,17 @@ open class ArModelNode : ArNode {
      * - ...
      */
     constructor(
+        engine: Engine,
         modelInstance: ModelInstance,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null
-    ) : this() {
+    ) : this(engine) {
         setModelInstance(modelInstance, autoAnimate, scaleToUnits, centerOrigin)
     }
 
-    override fun onArFrame(arFrame: ArFrame) {
-        super.onArFrame(arFrame)
+    override fun onArFrame(arFrame: ArFrame, isCameraTracking: Boolean) {
+        super.onArFrame(arFrame, isCameraTracking)
 
         if (!isAnchored) {
             // Try to find an anchor if none has been found
@@ -399,9 +402,9 @@ open class ArModelNode : ArNode {
         return hitResult?.createAnchor()
     }
 
-    override fun clone() = copy(ArModelNode())
+    override fun clone() = copy(ArModelNode(engine))
 
-    fun copy(toNode: ArModelNode = ArModelNode()) = toNode.apply {
+    fun copy(toNode: ArModelNode = ArModelNode(engine)) = toNode.apply {
         super.copy(toNode)
 
         placementMode = this@ArModelNode.placementMode

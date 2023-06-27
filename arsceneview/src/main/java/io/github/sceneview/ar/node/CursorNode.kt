@@ -1,5 +1,6 @@
 package io.github.sceneview.ar.node
 
+import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
 import com.google.ar.core.HitResult
 import io.github.sceneview.material.setEmissiveColor
@@ -10,6 +11,7 @@ import io.github.sceneview.utils.colorOf
 import kotlinx.coroutines.delay
 
 open class CursorNode(
+    engine: Engine,
     modelFileLocation: String = "sceneview/models/cursor.glb",
     autoAnimate: Boolean = true,
     scaleToUnits: Float? = null,
@@ -17,6 +19,7 @@ open class CursorNode(
     onError: ((error: Exception) -> Unit)? = null,
     onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
 ) : ArModelNode(
+    engine,
     modelFileLocation,
     autoAnimate,
     scaleToUnits,
@@ -60,6 +63,10 @@ open class CursorNode(
             updateState()
         }
 
+    init {
+        isSmoothPoseEnable = true
+    }
+
     override fun onModelChanged(modelInstance: ModelInstance?) {
         super.onModelChanged(modelInstance)
         updateState()
@@ -75,7 +82,7 @@ open class CursorNode(
 
     fun click() {
         isClicked = true
-        lifecycleScope?.launchWhenCreated {
+        sceneView?.coroutineScope?.launchWhenCreated {
             delay(clickDuration)
             isClicked = false
         }

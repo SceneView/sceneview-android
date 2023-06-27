@@ -85,8 +85,8 @@ open class ModelNode private constructor(
         }
 
         //TODO: Used by Filament ModelViewer, see if it's useful
-        setScreenSpaceContactShadows(false)
-        setCulling(true)
+//        setScreenSpaceContactShadows(false)
+//        setCulling(true)
     }
 
     /**

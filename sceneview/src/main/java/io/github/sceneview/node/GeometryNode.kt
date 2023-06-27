@@ -1,15 +1,11 @@
 package io.github.sceneview.node
 
-import com.google.android.filament.Box
+import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
-import io.github.sceneview.build
 import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.geometries.geometry
-import io.github.sceneview.model.collisionShape
-import io.github.sceneview.model.model
-import io.github.sceneview.renderable.axisAlignedBoundingBox
 import io.github.sceneview.renderable.collisionShape
 
 /**
@@ -38,10 +34,11 @@ import io.github.sceneview.renderable.collisionShape
  * @see Geometry
  */
 open class GeometryNode(
+    engine: Engine,
     geometry: Geometry,
     materials: List<MaterialInstance?> = listOf(),
     apply: RenderableManager.Builder.() -> Unit = {}
-) : RenderableNode(EntityManager.get().create()) {
+) : RenderableNode(engine, EntityManager.get().create()) {
 
     init {
         RenderableManager.Builder(geometry.submeshes.size)
@@ -52,7 +49,7 @@ open class GeometryNode(
                 }
             }
             .apply(apply)
-            .build(renderable!!)
+            .build(engine, renderable!!)
         updateCollisionShape()
     }
 

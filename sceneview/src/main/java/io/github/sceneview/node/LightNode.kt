@@ -1,10 +1,12 @@
 package io.github.sceneview.node
 
+import com.google.android.filament.Engine
 import io.github.sceneview.light.Light
 import io.github.sceneview.light.destroyLight
 import io.github.sceneview.light.direction
 import io.github.sceneview.light.position
-import io.github.sceneview.math.*
+import io.github.sceneview.math.Direction
+import io.github.sceneview.math.lookTowards
 import io.github.sceneview.utils.FrameTime
 
 /**
@@ -15,7 +17,7 @@ import io.github.sceneview.utils.FrameTime
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
  */
-open class LightNode : Node {
+open class LightNode(engine: Engine) : Node(engine) {
 
     var light: Light? = null
         set(value) {
@@ -25,22 +27,9 @@ open class LightNode : Node {
         }
 
     /**
-     * ### Construct a [LightNode] with it Position, Rotation and Scale
-     *
-     * @param position See [Node.position]
-     * @param rotation See [Node.rotation]
-     * @param scale See [Node.scale]
-     */
-    constructor(
-        position: Position = DEFAULT_POSITION,
-        rotation: Rotation = DEFAULT_ROTATION,
-        scale: Scale = DEFAULT_SCALE
-    ) : super(position, rotation, scale)
-
-    /**
      * TODO : Doc
      */
-    constructor(light: Light) : this() {
+    constructor(engine: Engine, light: Light) : this(engine) {
         this.light = light
         worldPosition = light.position
         worldQuaternion = lookTowards(eye = light.position, direction = light.direction)
@@ -66,6 +55,6 @@ open class LightNode : Node {
     /** ### Detach and destroy the node */
     override fun destroy() {
         super.destroy()
-        light?.destroyLight()
+        light?.let { engine.destroyLight(it) }
     }
 }

@@ -1,15 +1,20 @@
 package io.github.sceneview.node
 
 import android.content.Context
-import androidx.lifecycle.coroutineScope
+import com.google.android.filament.Engine
+import com.google.android.filament.Entity
+import com.google.android.filament.EntityInstance
+import com.google.android.filament.TransformManager
 import com.google.android.filament.gltfio.Animator
 import com.google.android.filament.gltfio.FilamentAsset
+import com.google.ar.sceneform.math.Matrix
 import dev.romainguy.kotlin.math.*
 import io.github.sceneview.SceneView
 import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.math.*
 import io.github.sceneview.model.*
 import io.github.sceneview.renderable.Renderable
+import io.github.sceneview.transform.*
 import io.github.sceneview.utils.FrameTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,7 +28,7 @@ import kotlinx.coroutines.withContext
  * another node, or the [SceneView]
  * .
  */
-open class ModelNode : RenderableNode {
+open class ModelNode(engine: Engine) : RenderableNode(engine) {
 
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
@@ -134,35 +139,8 @@ open class ModelNode : RenderableNode {
     private var loadedModel: Model? = null
 
     /**
-     * ### Construct a [ModelNode] with it Position, Rotation and Scale
-     *
-     * @param position See [Node.position]
-     * @param rotation See [Node.rotation]
-     * @param scale See [Node.scale]
-     */
-    @JvmOverloads
-    constructor(
-        position: Position = DEFAULT_POSITION,
-        rotation: Rotation = DEFAULT_ROTATION,
-        scale: Scale = DEFAULT_SCALE
-    ) : super() {
-        this.position = position
-        this.rotation = rotation
-        this.scale = scale
-    }
-
-    /**
      * ### Create the Node and load a monolithic binary glTF and add it to the Node
      *
-     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
-     * it (and its resources) when the lifecycle goes to destroy state.
-     * Passing null means the model loading will be done when the Node is added to the SceneView and
-     * the destroy will be done when the SceneView is detached.
-     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
-     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
-     * [SceneView] is.
-     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
-     * the node is never attached to a [SceneView]
      * @param modelGlbFileLocation the model glb/gltf file location:
      * ```
      * - A relative asset file location *models/mymodel.glb*
@@ -189,13 +167,14 @@ open class ModelNode : RenderableNode {
      * @see loadModel
      */
     constructor(
+        engine: Engine,
         modelGlbFileLocation: String,
         autoAnimate: Boolean = true,
         scaleUnits: Float? = null,
         centerOrigin: Position? = null,
         onError: ((error: Exception) -> Unit)? = null,
         onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
-    ) : this() {
+    ) : this(engine) {
         loadModelGlbAsync(
             modelGlbFileLocation,
             autoAnimate,
@@ -221,18 +200,19 @@ open class ModelNode : RenderableNode {
      * - ...
      */
     constructor(
+        engine: Engine,
         modelInstance: ModelInstance,
         autoAnimate: Boolean = true,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null
-    ) : this() {
+    ) : this(engine) {
         setModelInstance(modelInstance, autoAnimate, scaleToUnits, centerOrigin)
     }
 
     override fun onFrame(frameTime: FrameTime) {
         super.onFrame(frameTime)
 
-        modelInstance?.model?.let { it.popRenderable() }
+        model?.let { it.popRenderable() }
 
         animator?.apply {
             playingAnimations.forEach { (index, animation) ->
@@ -287,15 +267,8 @@ open class ModelNode : RenderableNode {
     }
 
     /**
-     * ### Loads a monolithic binary glTF and add it to the Node
+     * Loads a monolithic binary glTF and add it to the Node
      *
-     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
-     * it (and its resources) when the lifecycle goes to destroy state.
-     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
-     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
-     * [SceneView] is.
-     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
-     * the node is never attached to a [SceneView]
      * @param glbFileLocation the glb file location:
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
@@ -335,15 +308,8 @@ open class ModelNode : RenderableNode {
     }
 
     /**
-     * ### Loads a monolithic binary glTF and add it to the Node
+     * Loads a monolithic binary glTF and add it to the Node
      *
-     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
-     * it (and its resources) when the lifecycle goes to destroy state.
-     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
-     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
-     * [SceneView] is.
-     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
-     * the node is never attached to a [SceneView]
      * @param glbFileLocation the glb file location:
      * - A relative asset file location *models/mymodel.glb*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
@@ -368,7 +334,7 @@ open class ModelNode : RenderableNode {
         onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
     ): ModelNode {
         doOnAttachedToScene { sceneView ->
-            sceneView.lifecycle.coroutineScope.launchWhenCreated {
+            sceneView.coroutineScope?.launchWhenCreated {
                 loadModelGlb(
                     sceneView.context,
                     glbFileLocation,
@@ -385,7 +351,7 @@ open class ModelNode : RenderableNode {
     }
 
     /**
-     * ### Loads a monolithic binary glTF and add it to the Node
+     * Loads a monolithic binary glTF and add it to the Node
      *
      * @param gltfFileLocation the gltf file location:
      * - A relative asset file location *models/mymodel.gltf*
@@ -430,15 +396,8 @@ open class ModelNode : RenderableNode {
     }
 
     /**
-     * ### Loads a monolithic binary glTF and add it to the Node
+     * Loads a monolithic binary glTF and add it to the Node
      *
-     * @param lifecycle Provide your lifecycle in order to load your model instantly and to destroy
-     * it (and its resources) when the lifecycle goes to destroy state.
-     * Otherwise the model loading is done when the parent [SceneView] is attached because it needs
-     * a [kotlinx.coroutines.CoroutineScope] to load and resources will be destroyed when the
-     * [SceneView] is.
-     * You are responsible of manually destroy this [Node] only if you don't provide lifecycle and
-     * the node is never attached to a [SceneView]
      * @param gltfFileLocation the gltf file location:
      * - A relative asset file location *models/mymodel.gltf*
      * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
@@ -467,7 +426,7 @@ open class ModelNode : RenderableNode {
         onLoaded: ((model: Model) -> Unit)? = null
     ): ModelNode {
         doOnAttachedToScene { sceneView ->
-            sceneView.lifecycle.coroutineScope.launchWhenCreated {
+            sceneView.coroutineScope?.launchWhenCreated {
                 loadModelGltf(
                     context,
                     gltfFileLocation,
@@ -579,9 +538,9 @@ open class ModelNode : RenderableNode {
         super.destroy()
     }
 
-    override fun clone() = copy(ModelNode())
+    override fun clone() = copy(ModelNode(engine))
 
-    open fun copy(toNode: ModelNode = ModelNode()): ModelNode = toNode.apply {
+    open fun copy(toNode: ModelNode = ModelNode(engine)): ModelNode = toNode.apply {
         super.copy(toNode)
         setModelInstance(this@ModelNode.modelInstance)
     }

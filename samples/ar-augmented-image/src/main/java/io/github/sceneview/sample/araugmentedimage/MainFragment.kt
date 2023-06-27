@@ -23,6 +23,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         sceneView.addChild(
             AugmentedImageNode(
+                sceneView.engine,
                 imageName = "rabbit",
                 bitmap = requireContext().assets.open("augmentedimages/rabbit.png")
                     .use(BitmapFactory::decodeStream)
@@ -35,6 +36,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         sceneView.addChild(
             AugmentedImageNode(
+                sceneView.engine,
                 imageName = "qrcode",
                 bitmap = requireContext().assets.open("augmentedimages/qrcode.png")
                     .use(BitmapFactory::decodeStream)
@@ -48,6 +50,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         )
 
         sceneView.addChild(AugmentedImageNode(
+            engine = sceneView.engine,
             imageName = "video",
             bitmap = requireContext().assets.open("augmentedimages/video.jpg")
                 .use(BitmapFactory::decodeStream),
@@ -63,7 +66,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 }
             }
         ).apply {
-            videoNode = VideoNode(MediaPlayer().apply {
+            videoNode = VideoNode(sceneView.engine, MediaPlayer().apply {
                 setDataSource(
                     requireContext(),
                     Uri.parse("https://sceneview.github.io/assets/videos/ads/ar_camera_app_ad.mp4")
