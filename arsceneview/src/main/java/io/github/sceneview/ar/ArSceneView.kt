@@ -32,13 +32,15 @@ open class ArSceneView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
-    sessionFeatures: Set<Session.Feature> = setOf(),
-    override val cameraNode: ArCameraNode = ArCameraNode(),
+    engine: Engine = Filament.retain(),
+    val sessionFeatures: Set<Session.Feature> = setOf(),
+    override val cameraNode: ArCameraNode = ArCameraNode(engine),
 ) : SceneView(
     context,
     attrs,
     defStyleAttr,
     defStyleRes,
+    engine,
     cameraNode
 ) {
 

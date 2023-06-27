@@ -6,7 +6,6 @@ import android.view.WindowManager
 import androidx.core.graphics.Insets
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
-import com.gorisse.thomas.lifecycle.doOnActivityAttach
 
 fun Activity.setKeepScreenOn(keepScreenOn: Boolean = true) {
     if (keepScreenOn) {

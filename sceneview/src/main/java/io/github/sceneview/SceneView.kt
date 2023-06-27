@@ -60,7 +60,8 @@ open class SceneView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
-    cameraNode: CameraNode = CameraNode()
+    val engine: Engine = Filament.retain(),
+    cameraNode: CameraNode = CameraNode(engine)
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes),
     SceneLifecycleOwner,
     DefaultLifecycleObserver,
@@ -84,8 +85,6 @@ open class SceneView @JvmOverloads constructor(
          */
         var allowDeselection = true
     }
-
-//    open var frameRate: FrameRate = FrameRate.Full
 
     val scene: Scene
     val view: View
@@ -368,11 +367,9 @@ open class SceneView @JvmOverloads constructor(
     var isDestroyed = false
 
     private var lastTick: Long = 0
-    private val surfaceMirrorer by lazy { SurfaceMirrorer(lifecycle) }
+    private var surfaceMirrorer: SurfaceMirrorer? = null
 
     init {
-        Filament.retain()
-
         renderer = engine.createRenderer()
         scene = engine.createScene()
         view = engine.createView()
@@ -397,6 +394,7 @@ open class SceneView @JvmOverloads constructor(
         view.bloomOptions = view.bloomOptions.apply {
             enabled = false
         }
+
 //        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
 //            enabled = false
 //        }
@@ -467,11 +465,9 @@ open class SceneView @JvmOverloads constructor(
     }
 
     override fun onDetachedFromWindow() {
-        findViewTreeLifecycleOwner()?.lifecycle?.removeObserver(parentLifecycleObserver)
-        if (lifecycle.currentState != Lifecycle.State.DESTROYED) {
-            lifecycle.currentState = Lifecycle.State.DESTROYED
+        if (!isDestroyed) {
+            destroy()
         }
-        destroy()
         super.onDetachedFromWindow()
     }
 
@@ -494,9 +490,10 @@ open class SceneView @JvmOverloads constructor(
         viewAttachmentManager.onPause()
     }
 
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        lifecycle.dispatchEvent<SceneLifecycleObserver> {
-            onSurfaceChanged(width, height)
+    override fun onDestroy(owner: LifecycleOwner) {
+        super.onDestroy(owner)
+        if (!isDestroyed) {
+            destroy()
         }
     }
 
@@ -547,6 +544,8 @@ open class SceneView @JvmOverloads constructor(
                 renderer.endFrame()
             }
         }
+
+        surfaceMirrorer?.onFrame(this)
     }
 
     /** @see Scene.addEntity */
@@ -663,25 +662,28 @@ open class SceneView @JvmOverloads constructor(
         onPickingCompleted(NodeMotionEvent(e, node, renderable))
     }
 
+    fun startMirroring(surface: Surface) {
+        if (surfaceMirrorer == null) {
+            surfaceMirrorer = SurfaceMirrorer()
+        }
+        surfaceMirrorer?.startMirroring(this, surface)
+    }
+
+    fun stopMirroring(surface: Surface) {
+        surfaceMirrorer?.stopMirroring(surface)
+    }
+
     fun startRecording(mediaRecorder: MediaRecorder) {
         mediaRecorder.apply {
             setVideoSource(MediaRecorder.VideoSource.SURFACE)
         }
         mediaRecorder.prepare()
         mediaRecorder.start()
-        surfaceMirrorer.startMirroring(mediaRecorder.surface)
-    }
-
-    fun startMirroring(surface: Surface) {
-        surfaceMirrorer.startMirroring(surface)
-    }
-
-    fun stopMirroring(surface: Surface) {
-        surfaceMirrorer.stopMirroring(surface)
+        startMirroring(mediaRecorder.surface)
     }
 
     fun stopRecording(mediaRecorder: MediaRecorder) {
-        surfaceMirrorer.stopMirroring(mediaRecorder.surface)
+        stopMirroring(mediaRecorder.surface)
         mediaRecorder.stop()
         mediaRecorder.reset()
         mediaRecorder.surface.release()
