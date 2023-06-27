@@ -2,7 +2,6 @@ package io.github.sceneview.sample.arpointcloud
 
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -11,7 +10,7 @@ import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import com.google.android.filament.Engine
 import com.google.ar.core.Config
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
@@ -22,17 +21,16 @@ import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.model.destroy
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.utils.doOnApplyWindowInsets
-import kotlinx.coroutines.launch
 
 const val kMaxPointCloudPerSecond = 10
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
     class PointCloudNode(
+        engine: Engine,
         var id: Int,
-        position: Position,
         var confidence: Float
-    ) : ModelNode(position)
+    ) : ModelNode(engine)
 
     lateinit var sceneView: ArSceneView
 
@@ -161,22 +159,16 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         loadingView = view.findViewById(R.id.loadingView)
     }
 
-    private suspend fun loadPointCloudModelInstances() {
-        isLoading = true
-        GLBLoader.loadInstancedModel(
-            context = requireContext(),
-            glbFileLocation = "models/point_cloud.glb",
-            count = maxPoints
-        )?.let { (model, instances) ->
-            pointCloudModel = model
-            pointCloudModelInstances = instances.filterNotNull().toMutableList()
-        }
-        isLoading = false
-    }
-
-    private suspend fun getPointCloudModelInstance(): ModelInstance? {
+    private fun getPointCloudModelInstance(): ModelInstance? {
         if (pointCloudModelInstances.size == 0) {
-            loadPointCloudModelInstances()
+            GLBLoader.loadInstancedModelSync(
+                context = requireContext(),
+                glbFileLocation = "models/point_cloud.glb",
+                count = maxPoints
+            )?.let { (model, instances) ->
+                pointCloudModel = model
+                pointCloudModelInstances = instances.filterNotNull().toMutableList()
+            }
         }
         return pointCloudModelInstances.removeLastOrNull()
     }
@@ -204,11 +196,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                             pointsBuffer[pointIndex + 2]
                         )
                         val confidence = pointsBuffer.get(pointIndex + 3)
-                        Log.d(
-                            MainFragment::class.simpleName,
-                            "PointCloud : (${position[0]},${position[1]},${position[2]}" +
-                                    " | Confidence: $confidence"
-                        )
                         if (confidence > minConfidence) {
                             addPointCloudNode(id, position, confidence)
                         }
@@ -236,20 +223,20 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     fun addPointCloudNode(id: Int, position: Position, confidence: Float) {
         if (pointCloudNodes.size < maxPoints) {
             val pointCloudNode =
-                PointCloudNode(id, position, confidence).apply {
-                    lifecycleScope.launch {
-                        modelInstance = getPointCloudModelInstance()
-                    }
+                PointCloudNode(sceneView.engine, id, confidence).apply {
+                    this.position = position
+                    this.modelInstance = getPointCloudModelInstance()
                 }
             pointCloudNodes += pointCloudNode
             sceneView.addChild(pointCloudNode)
         } else {
-            pointCloudNodes.first().apply {
+            val pointCloudNode = pointCloudNodes.first().apply {
                 this.id = id
                 this.worldPosition = position
                 this.confidence = confidence
             }
-            pointCloudNodes += pointCloudNodes.removeAt(0)
+            pointCloudNodes.removeFirst()
+            pointCloudNodes.add(pointCloudNode)
         }
     }
 
