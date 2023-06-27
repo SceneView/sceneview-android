@@ -42,7 +42,14 @@ open class ArSceneView @JvmOverloads constructor(
     cameraNode
 ), ArSceneLifecycleOwner, ArSceneLifecycleObserver {
 
-    override val arCore = ARCore(activity, lifecycle, sessionFeatures)
+    open val arCore = ARCore(
+        onSessionCreated = ::onArSessionCreated,
+        onSessionResumed = ::onArSessionResumed,
+        onArSessionFailed = ::onArSessionFailed,
+        onSessionConfigChanged = ::onArSessionConfigChanged,
+    )
+
+    val arSession get() = arCore.session
 
 //    override var frameRate: FrameRate = FrameRate.Half
 
@@ -247,6 +254,7 @@ open class ArSceneView @JvmOverloads constructor(
             }
         }
 
+    private var _onArSessionCreated = mutableListOf<(session: ArSession) -> Unit>()
     var onArSessionCreated: ((session: ArSession) -> Unit)? = null
 
     /**
@@ -313,14 +321,26 @@ open class ArSceneView @JvmOverloads constructor(
     override val cameraGestureDetector = null
     override val cameraManipulator = null
 
-    override fun getLifecycle() =
-        (sceneLifecycle ?: ArSceneLifecycle(this).also {
-            sceneLifecycle = it
-        }) as ArSceneLifecycle
+    override fun onCreate(owner: LifecycleOwner) {
+        super.onCreate(owner)
+        arCore.create(context, activity, sessionFeatures)
+    }
 
-    override fun onArSessionCreated(session: ArSession) {
-        super.onArSessionCreated(session)
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+        arCore.resume(context, activity)
+    }
 
+    override fun onPause(owner: LifecycleOwner) {
+        super.onPause(owner)
+        arCore.pause()
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        arSession?.setDisplayGeometry(display.rotation, width, height)
+    }
+
+    fun onArSessionCreated(session: ArSession) {
         session.setCameraTextureNames(arCameraStream.cameraTextureIds)
 
         session.configure { config ->
@@ -338,18 +358,15 @@ open class ArSceneView @JvmOverloads constructor(
 
         addEntity(arCameraStream.renderable)
 
+        _onArSessionCreated.toList().forEach { it(session) }
         onArSessionCreated?.invoke(session)
     }
 
-    override fun onArSessionFailed(exception: Exception) {
-        super.onArSessionFailed(exception)
-
+    fun onArSessionFailed(exception: Exception) {
         onArSessionFailed?.invoke(exception)
     }
 
-    override fun onArSessionResumed(session: ArSession) {
-        super.onArSessionResumed(session)
-
+    fun onArSessionResumed(session: ArSession) {
         session.configure { config ->
             // FocusMode must be changed after the session resume to work
             config.focusMode = _focusMode
@@ -358,9 +375,7 @@ open class ArSceneView @JvmOverloads constructor(
         onArSessionResumed?.invoke(session)
     }
 
-    override fun onArSessionConfigChanged(session: ArSession, config: Config) {
-        super.onArSessionConfigChanged(session, config)
-
+    fun onArSessionConfigChanged(session: ArSession, config: Config) {
         // Feature config, therefore facing direction, can only be configured once per session.
         isFrontFaceWindingInverted = session.cameraConfig.facingDirection == FacingDirection.FRONT
 
@@ -448,9 +463,12 @@ open class ArSceneView @JvmOverloads constructor(
      * @param applyConfig the apply block for the new config
      */
     fun configureSession(applyConfig: (ArSession, Config) -> Unit) {
-        lifecycle.doOnArSessionCreated { session ->
-            session.configure { config ->
-                applyConfig.invoke(session, config)
+        _onArSessionCreated += object : (ArSession) -> Unit {
+            override fun invoke(session: ArSession) {
+                _onArSessionCreated -= this
+                session.configure { config ->
+                    applyConfig.invoke(session, config)
+                }
             }
         }
     }
@@ -507,7 +525,10 @@ open class ArSceneView @JvmOverloads constructor(
 
     override fun destroy() {
         if (!isDestroyed) {
+            arCore.destroy()
+
             arCameraStream.destroy()
+
             lightEstimator?.destroy()
             planeRenderer.destroy()
         }
