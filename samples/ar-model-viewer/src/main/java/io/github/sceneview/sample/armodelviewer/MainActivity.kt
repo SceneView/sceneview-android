@@ -11,6 +11,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.ar.core.Config
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.getDescription
 import io.github.sceneview.ar.node.ArModelNode
@@ -93,6 +94,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         })
         statusText = findViewById(R.id.statusText)
         sceneView = findViewById<ArSceneView?>(R.id.sceneView).apply {
+            lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+            depthEnabled = true
+            instantPlacementEnabled = true
             onArTrackingFailureChanged = { reason ->
                 statusText.text = reason?.getDescription(context)
                 statusText.isGone = reason == null
@@ -147,7 +151,8 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         }
         val model = models[modelIndex]
         modelIndex = (modelIndex + 1) % models.size
-        modelNode = ArModelNode(model.placementMode).apply {
+        modelNode = ArModelNode(sceneView.engine, model.placementMode).apply {
+            isSmoothPoseEnable = true
             applyPoseRotation = model.applyPoseRotation
             loadModelGlbAsync(
                 glbFileLocation = model.fileLocation,
