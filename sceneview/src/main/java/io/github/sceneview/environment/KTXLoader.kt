@@ -5,16 +5,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
-import com.google.android.filament.utils.KTX1Loader as KTXLoader
-import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.Filament
-import io.github.sceneview.light.destroy
-import io.github.sceneview.scene.destroy
 import io.github.sceneview.utils.fileBuffer
 import io.github.sceneview.utils.localFileBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.Buffer
+import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 
 /**
@@ -32,14 +29,13 @@ import java.nio.Buffer
 @JvmOverloads
 suspend fun KTXLoader.loadEnvironment(
     context: Context,
-    lifecycle: Lifecycle,
     iblKtxFileLocation: String,
     skyboxKtxFileLocation: String? = null
 ): Environment {
     val iblBuffer = context.fileBuffer(iblKtxFileLocation)
     val skyboxBuffer = skyboxKtxFileLocation?.let { context.fileBuffer(it) }
     return withContext(Dispatchers.Main) {
-        createEnvironment(lifecycle, iblBuffer, skyboxBuffer).also {
+        createEnvironment(iblBuffer, skyboxBuffer).also {
             iblBuffer?.clear()
             skyboxBuffer?.clear()
         }
@@ -62,7 +58,7 @@ fun KTXLoader.loadEnvironmentAsync(
     skyboxKtxFileLocation: String? = null,
     result: (Environment?) -> Unit
 ) = lifecycle.coroutineScope.launchWhenCreated {
-    result(loadEnvironment(context, lifecycle, iblKtxFileLocation, skyboxKtxFileLocation))
+    result(loadEnvironment(context, iblKtxFileLocation, skyboxKtxFileLocation))
 }
 
 
@@ -80,7 +76,7 @@ fun KTXLoader.loadEnvironmentSync(
 ): Environment {
     val iblBuffer = context.localFileBuffer(iblKtxFileLocation)
     val skyboxBuffer = skyboxKtxFileLocation?.let { context.localFileBuffer(it) }
-    return createEnvironment(lifecycle, iblBuffer, skyboxBuffer).also {
+    return createEnvironment(iblBuffer, skyboxBuffer).also {
         iblBuffer?.clear()
         skyboxBuffer?.clear()
     }
@@ -109,13 +105,12 @@ fun KTXLoader.loadEnvironmentSync(
  */
 @JvmOverloads
 fun KTXLoader.createEnvironment(
-    lifecycle: Lifecycle,
     iblKtxBuffer: Buffer?,
     skyboxKtxBuffer: Buffer? = null
 ) = KTXEnvironment(
-    indirectLight = iblKtxBuffer?.let { createIndirectLight(lifecycle, it) },
+    indirectLight = iblKtxBuffer?.let { createIndirectLight(it) },
     sphericalHarmonics = iblKtxBuffer?.rewind()?.let { getSphericalHarmonics(it) },
-    skybox = skyboxKtxBuffer?.let { createSkybox(lifecycle, it) }
+    skybox = skyboxKtxBuffer?.let { createSkybox(it) }
 )
 
 /**
@@ -126,17 +121,9 @@ fun KTXLoader.createEnvironment(
  * @return The resulting Filament texture, or null on failure.
  */
 fun KTXLoader.createIndirectLight(
-    lifecycle: Lifecycle,
     buffer: Buffer,
     options: KTXLoader.Options = KTXLoader.Options()
 ) = createIndirectLight(Filament.engine, buffer, options)
-    .also { indirectLight ->
-        lifecycle.observe(onDestroy = {
-            // Prevent double destroy in case of manually destroyed
-            runCatching { indirectLight.destroy() }
-        })
-    }
-
 
 /**
  * ### Consumes the content of a KTX file and produces a [Skybox] object.
@@ -146,13 +133,6 @@ fun KTXLoader.createIndirectLight(
  * @return The resulting Filament texture, or null on failure.
  */
 fun KTXLoader.createSkybox(
-    lifecycle: Lifecycle,
     buffer: Buffer,
     options: KTXLoader.Options = KTXLoader.Options()
 ) = createSkybox(Filament.engine, buffer, options)
-    .also { skybox ->
-        lifecycle.observe(onDestroy = {
-            // Prevent double destroy in case of manually destroyed
-            runCatching { skybox.destroy() }
-        })
-    }
