@@ -1,8 +1,11 @@
 package io.github.sceneview.scene
 
 import com.google.android.filament.Camera
+import com.google.android.filament.Engine
 import com.google.android.filament.utils.pow
-import io.github.sceneview.Filament
+import io.github.sceneview.math.Transform
+import io.github.sceneview.math.toColumnsDoubleArray
+import io.github.sceneview.math.toColumnsFloatArray
 import kotlin.math.log2
 
 /**
@@ -50,6 +53,46 @@ fun Camera.illuminance(ev100: Float) = 2.5f * pow(2.0f, ev100)
 
 val Camera.luminance get() = luminance(ev100)
 fun Camera.luminance(ev100: Float) = pow(2.0f, ev100 - 3.0f)
+
+/**
+ * Sets the camera's model matrix.
+ * <p>
+ * Helper method to set the camera's entity transform component.
+ * Remember that the Camera "looks" towards its -z axis.
+ * <p>
+ * This has the same effect as calling:
+ *
+ * <pre>
+ *  engine.getTransformManager().setTransform(
+ *          engine.getTransformManager().getInstance(camera->getEntity()), modelMatrix);
+ * </pre>
+ *
+ * @param transform The camera position and orientation provided as a <b>rigid transform</b> matrix.
+ */
+fun Camera.setModelTransform(transform: Transform) = setModelMatrix(transform.toColumnsFloatArray())
+
+/**
+ * Sets a custom projection matrix.
+ *
+ * <p>The projection matrix must define an NDC system that must match the OpenGL convention,
+ * that is all 3 axis are mapped to [-1, 1].</p>
+ *
+ * @param transform custom projection matrix for rendering and culling
+ * @param near distance in world units from the camera to the near plane.
+ * The near plane's position in view space is z = -<code>near</code>.
+ * Precondition:
+ * <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+ * <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+ * @param far distance in world units from the camera to the far plane.
+ * The far plane's position in view space is z = -<code>far</code>.
+ * Precondition:
+ * <code>far</code> > <code>near</code>
+ * for {@link Projection#PERSPECTIVE} or
+ * <code>far</code> != <code>near</code>
+ * for Projection.ORTHO.
+ */
+fun Camera.setCustomProjection(transform: Transform, near: Float, far: Float) =
+    setCustomProjection(transform.toColumnsDoubleArray(), near.toDouble(), far.toDouble())
 
 /**
  * Destroys the Camera component associated with the camera entity.
