@@ -3,20 +3,21 @@ package io.github.sceneview.ar.arcore
 import android.content.Context
 import android.view.Display
 import android.view.WindowManager
-import androidx.lifecycle.LifecycleOwner
-import com.google.ar.core.*
-import io.github.sceneview.ar.ArSceneLifecycle
-import io.github.sceneview.ar.ArSceneLifecycleObserver
+import com.google.ar.core.CameraConfig
+import com.google.ar.core.Config
+import com.google.ar.core.Session
 import io.github.sceneview.ar.defaultApproximateDistance
 import io.github.sceneview.utils.FrameTime
 
 class ArSession(
-    val lifecycle: ArSceneLifecycle,
-    features: Set<Feature> = setOf()
-) : Session(lifecycle.context, features), ArSceneLifecycleObserver {
+    context: Context,
+    features: Set<Feature> = setOf(),
+    val onResumed: (session: ArSession) -> Unit,
+    val onConfigChanged: (session: ArSession, config: Config) -> Unit
+) : Session(context, features) {
 
     val display: Display by lazy {
-        (lifecycle.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
+        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
     }
 
     // We use device display sizes by default cause the onSurfaceChanged may be called after the
@@ -52,14 +53,6 @@ class ArSession(
     var currentFrame: ArFrame? = null
         private set
 
-    init {
-        lifecycle.addObserver(this)
-    }
-
-    override fun onResume(owner: LifecycleOwner) {
-        resume()
-    }
-
     override fun resume() {
         isResumed = true
         super.resume()
@@ -68,11 +61,7 @@ class ArSession(
         // the ArCore-Session if for example the permission Dialog is shown on the screen.
         // If we remove this part, the camera is flickering if returned from the permission Dialog.
         setDisplayGeometry(displayRotation, displayWidth, displayHeight)
-        lifecycle.dispatchEvent<ArSceneLifecycleObserver> { onArSessionResumed(this@ArSession) }
-    }
-
-    override fun onPause(owner: LifecycleOwner) {
-        pause()
+        onResumed(this)
     }
 
     override fun pause() {
@@ -81,18 +70,13 @@ class ArSession(
     }
 
     /**
-     * ### Explicitly close the ARCore session to release native resources.
+     * Explicitly close the ARCore session to release native resources.
      *
      * Review the API reference for important considerations before calling close() in apps with
      * more complicated lifecycle requirements: [Session.close]
      */
-    override fun onDestroy(owner: LifecycleOwner) {
+    fun destroy() {
         close()
-        super.onDestroy(owner)
-    }
-
-    override fun onSurfaceChanged(width: Int, height: Int) {
-        setDisplayGeometry(display.rotation, width, height)
     }
 
     fun update(frameTime: FrameTime): ArFrame? {
@@ -142,9 +126,8 @@ class ArSession(
             }
             hasAugmentedImageDatabase = (augmentedImageDatabase?.numImages ?: 0) > 0
         })
-        lifecycle.dispatchEvent<ArSceneLifecycleObserver> {
-            onArSessionConfigChanged(this@ArSession, this@ArSession.config)
-        }
+
+        onConfigChanged(this@ArSession, this@ArSession.config)
     }
 
     var focusMode: Config.FocusMode
