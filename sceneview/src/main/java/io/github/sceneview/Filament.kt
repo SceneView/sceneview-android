@@ -2,16 +2,16 @@ package io.github.sceneview
 
 import android.opengl.EGLContext
 import android.util.Log
-import com.google.android.filament.*
+import com.google.android.filament.Engine
+import com.google.android.filament.Entity
+import com.google.android.filament.EntityManager
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.gltfio.ResourceLoader
 import com.google.android.filament.gltfio.UbershaderProvider
 import com.google.android.filament.utils.Utils
 import io.github.sceneview.environment.IBLPrefilter
-import io.github.sceneview.math.Transform
-import io.github.sceneview.math.toColumnsFloatArray
-import io.github.sceneview.math.toTransform
 import io.github.sceneview.utils.OpenGL
 
 // TODO : Add the lifecycle aware management when filament dependents are all kotlined
@@ -29,11 +29,7 @@ object Filament {
 
     @JvmStatic
     val engine: Engine
-        get() = _engine ?: Engine.create(eglContext ?: OpenGL.createEglContext().also {
-            eglContext = it
-        }).also {
-            _engine = it
-        }
+        get() = _engine!!
 
     @JvmStatic
     val entityManager
@@ -83,12 +79,19 @@ object Filament {
 
     var retainers = 0
 
-    fun retain() {
+    fun retain(): Engine {
+        if (_engine == null) {
+            _engine = Engine.create(eglContext ?: OpenGL.createEglContext().also {
+                eglContext = it
+            })
+        }
         retainers++
+        return _engine!!
     }
 
     fun release() {
         retainers--
+        Log.d("Sceneview", "Filament Retainers: $retainers")
         if (retainers == 0) {
             destroy()
         }
@@ -125,16 +128,10 @@ object Filament {
         }
         eglContext = null
 
-        Log.d("Sceneview", "Filament Engine destroyed")
+        Log.e("Sceneview", "Filament Engine destroyed")
     }
 }
 
 fun Engine.createCamera() = createCamera(entityManager.create())
 
-fun RenderableManager.Builder.build(@Entity entity: Int) = build(Filament.engine, entity)
-
-fun TransformManager.getTransform(@EntityInstance i: Int) =
-    FloatArray(16).apply { getTransform(i, this) }.toTransform()
-
-fun TransformManager.setTransform(@EntityInstance i: Int, worldTransform: Transform) =
-    setTransform(i, worldTransform.toColumnsFloatArray())
+fun RenderableManager.Builder.build(engine: Engine, @Entity entity: Int) = build(engine, entity)
