@@ -270,12 +270,13 @@ open class SceneView @JvmOverloads constructor(
             selectedNodes = listOfNotNull(value)
         }
 
-    open val selectionVisualizer: (() -> Node)? = {
-        ModelNode("sceneview/models/node_selector.glb").apply {
-            isSelectable = false
-            collisionShape = null
-        }
-    }
+    open val selectionVisualizer: (() -> Node)? = null
+//        {
+//            ModelNode("sceneview/models/node_selector.glb").apply {
+//                isSelectable = false
+//                collisionShape = null
+//            }
+//        }
 
     /**
      * ### Invoked when an frame is processed
@@ -315,7 +316,7 @@ open class SceneView @JvmOverloads constructor(
         get() = try {
             findFragment<Fragment>().requireActivity()
         } catch (e: Exception) {
-            context.getActivity()!!
+            context as? ComponentActivity
         }
 
     private val displayHelper = DisplayHelper(context)
