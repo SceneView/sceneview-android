@@ -29,7 +29,23 @@ fun FloatArray.toDirection() = this.let { (x, y, z) -> Direction(x, y, z) }
 fun FloatArray.toQuaternion() = this.let { (x, y, z, w) -> Quaternion(x, y, z, w) }
 fun FloatArray.toSize() = this.let { (x, y, z) -> Size(x, y, z) }
 fun FloatArray.toTransform() = Transform.of(*this)
+/**
+ * Converts a column-major [FloatArray] to a [Transform]
+ */
+fun FloatArray.toTransformTransposed(): Transform {
+    require(size >= 16)
+    return Transform(
+        Float4(this[0], this[1], this[2], this[3]),
+        Float4(this[4], this[5], this[6], this[7]),
+        Float4(this[8], this[9], this[10], this[11]),
+        Float4(this[12], this[13], this[14], this[15])
+    )
+}
 fun DoubleArray.toTransform() = Transform.of(*this.map { it.toFloat() }.toFloatArray())
+/**
+ * Converts a column-major [DoubleArray] to a [Transform]
+ */
+fun DoubleArray.toTransformTransposed() = this.map { it.toFloat() }.toFloatArray().toTransformTransposed()
 fun Mat4.toDoubleArray() : DoubleArray = toFloatArray().map { it.toDouble() }.toDoubleArray()
 val Mat4.quaternion: Quaternion get() = rotation(this).toQuaternion()
 
