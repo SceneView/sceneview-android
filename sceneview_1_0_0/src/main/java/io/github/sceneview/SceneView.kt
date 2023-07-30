@@ -375,8 +375,6 @@ open class SceneView @JvmOverloads constructor(
 
     private var lastTouchEvent: MotionEvent? = null
 
-    internal open val isOpaque get() = (background as? ColorDrawable)?.alpha == 255
-
     val loadingJobs = mutableListOf<Job>()
     internal val cameras = mutableListOf<Camera>()
     internal val indirectLights = mutableListOf<IndirectLight>()
@@ -397,6 +395,7 @@ open class SceneView @JvmOverloads constructor(
         choreographer = Choreographer.getInstance()
 
         val backgroundColor = (background as? ColorDrawable)?.let { Color(it) }
+            ?: Color(android.graphics.Color.BLACK)
 
         if (!isInEditMode) {
             // Setup Filament
@@ -409,7 +408,7 @@ open class SceneView @JvmOverloads constructor(
             renderer = engine.createRenderer()
             renderer.clearOptions = renderer.clearOptions.apply {
                 clear = !uiHelper.isOpaque
-                if (backgroundColor?.a == 1.0f) {
+                if (backgroundColor.a == 1.0f) {
                     clearColor = backgroundColor.toFloatArray()
                 }
             }
@@ -494,11 +493,11 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    private fun setupSurfaceView(backgroundColor: Color?) {
+    private fun setupSurfaceView(backgroundColor: Color) {
         // Setup SurfaceView
         uiHelper.renderCallback = SurfaceCallback()
         // Must be called before attachTo
-        uiHelper.isOpaque = isOpaque || backgroundColor?.a == 1.0f
+        uiHelper.isOpaque = backgroundColor.a == 1.0f
         uiHelper.attachTo(this)
     }
 
