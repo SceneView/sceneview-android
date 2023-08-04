@@ -498,9 +498,9 @@ open class ArSceneView @JvmOverloads constructor(
 
     fun hitTest(
         position: Position,
-        plane: Boolean,
-        depth: Boolean,
-        instant: Boolean
+        plane: Boolean = planeFindingEnabled,
+        depth: Boolean = depthEnabled,
+        instant: Boolean = instantPlacementEnabled,
     ) = currentFrame?.hitTest(position, plane, depth, instant)
 
     /**
@@ -516,11 +516,11 @@ open class ArSceneView @JvmOverloads constructor(
      * @see ArFrame.hitTest
      */
     fun hitTest(
-        xPx: Float,
-        yPx: Float,
-        plane: Boolean,
-        depth: Boolean,
-        instant: Boolean,
+        xPx: Float = width / 2.0f,
+        yPx: Float = height / 2.0f,
+        plane: Boolean = planeFindingEnabled,
+        depth: Boolean = depthEnabled,
+        instant: Boolean = instantPlacementEnabled,
         approximateDistance: Float = 2.0f
     ) = currentFrame?.hitTest(xPx, yPx, plane, depth, instant, approximateDistance)
 
