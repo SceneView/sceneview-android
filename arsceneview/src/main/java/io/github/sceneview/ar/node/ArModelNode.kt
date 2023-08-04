@@ -163,7 +163,7 @@ open class ArModelNode(engine: Engine) : ArNode(engine) {
     open var hitResult: HitResult? = null
         set(value) {
             field = value
-            // Keep the last pose when not tracking result
+            // Keep the last pose when no tracking result
             if (value?.isTracking == true) {
                 lastTrackingHitResult = value
                 pose = value.hitPose
