@@ -80,7 +80,7 @@ open class ArNode(engine: Engine) : ModelNode(engine) {
         set(value) {
             field = value
             if (value != null) {
-                poseTransform = if(applyPosePosition && applyPoseRotation) {
+                poseTransform = if (applyPosePosition && applyPoseRotation) {
                     value.transform
                 } else {
                     Transform(
@@ -119,6 +119,8 @@ open class ArNode(engine: Engine) : ModelNode(engine) {
      */
     val isAnchored get() = anchor != null
 
+    val isAnchorTracking get() = anchor?.isTracking == true
+
     /**
      * ### The current cloud anchor state of the [anchor].
      */
@@ -131,25 +133,21 @@ open class ArNode(engine: Engine) : ModelNode(engine) {
     var cloudAnchorTaskInProgress = false
         private set
 
-    /** ## Deprecated: Use [onPoseChanged] and [isTracking] */
-    @Deprecated(
-        "Replaced by onPoseChanged",
-        replaceWith = ReplaceWith("onPoseChanged"),
-        DeprecationLevel.ERROR
-    )
     var onTrackingChanged: ((isTracking: Boolean) -> Unit)? = null
 
     var onPoseChanged: ((pose: Pose?) -> Unit)? = null
 
     var onAnchorChanged: ((anchor: Anchor?) -> Unit)? = null
 
-    var isCameraTracking = false
+    var isCameraTracking = true
         private set(value) {
             if (field != value) {
                 field = value
                 updateVisibility()
             }
         }
+
+    private var lastFrameAnchorTracking = false
 
     private var onCloudAnchorTaskCompleted: ((anchor: Anchor, success: Boolean) -> Unit)? = null
 
@@ -170,8 +168,10 @@ open class ArNode(engine: Engine) : ModelNode(engine) {
 
         val anchor = anchor ?: return
 
+        val isAnchorTracking = anchor.isTracking
+
         // Update the anchor position if any
-        if (anchor.trackingState == TrackingState.TRACKING) {
+        if (isAnchorTracking) {
             if (updateAnchorPose && (anchorPoseUpdateInterval == null
                         || arFrame.intervalSeconds(anchorUpdatedFrame) >= anchorPoseUpdateInterval!!)
             ) {
@@ -180,6 +180,11 @@ open class ArNode(engine: Engine) : ModelNode(engine) {
                 pose = anchor.pose
                 anchorUpdatedFrame = arFrame
             }
+        }
+
+        if (isAnchorTracking != lastFrameAnchorTracking) {
+            onTrackingChanged?.invoke(isAnchorTracking)
+            lastFrameAnchorTracking = isAnchorTracking
         }
 
         if (cloudAnchorTaskInProgress) {
