@@ -255,8 +255,11 @@ open class Node(val engine: Engine) : NodeParent, TransformProvider,
      *
      * @see TransformManager.getWorldTransform
      */
-    open val worldTransform: Transform
+    open var worldTransform: Transform
         get() = transformManager.getWorldTransform(transformInstance)
+        set(value) {
+            transform = worldToParent * value
+        }
 
     /**
      * Transform from the world coordinate system to the coordinate system of the parent.
