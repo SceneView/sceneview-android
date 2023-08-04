@@ -80,11 +80,15 @@ open class ArNode(engine: Engine) : ModelNode(engine) {
         set(value) {
             field = value
             if (value != null) {
-                poseTransform = Transform(
-                    position = if (applyPosePosition) value.position else position,
-                    quaternion = if (applyPoseRotation) value.quaternion else quaternion,
-                    scale = scale
-                )
+                poseTransform = if(applyPosePosition && applyPoseRotation) {
+                    value.transform
+                } else {
+                    Transform(
+                        position = if (applyPosePosition) value.position else position,
+                        quaternion = if (applyPoseRotation) value.quaternion else quaternion,
+                        scale = scale
+                    )
+                }
             }
             onPoseChanged?.invoke(value)
         }
