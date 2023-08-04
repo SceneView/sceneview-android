@@ -85,6 +85,19 @@ open class ArSceneView @JvmOverloads constructor(
         }
 
     /**
+     * Enable or disable the [Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL]
+     */
+    var planeFindingEnabled: Boolean
+        get() = planeFindingMode != Config.PlaneFindingMode.DISABLED
+        set(value) {
+            planeFindingMode = if (value) {
+                Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+            } else {
+                Config.PlaneFindingMode.DISABLED
+            }
+        }
+
+    /**
      * ### Enable the depth occlusion material
      *
      * This will process the incoming DepthImage to occlude virtual objects behind real world
