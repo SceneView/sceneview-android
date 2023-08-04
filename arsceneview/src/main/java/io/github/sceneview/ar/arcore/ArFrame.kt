@@ -132,9 +132,9 @@ data class ArFrame(
 
     fun hitTest(
         position: Position,
-        plane: Boolean,
-        depth: Boolean,
-        instant: Boolean
+        plane: Boolean = session.planeFindingEnabled,
+        depth: Boolean = session.depthEnabled,
+        instant: Boolean = session.instantPlacementEnabled
     ) = hitTest(
         xPx = session.displayWidth / 2.0f * (1.0f + position.x),
         yPx = session.displayHeight / 2.0f * (1.0f - position.y),
@@ -201,14 +201,16 @@ data class ArFrame(
         depth: Boolean = session.depthEnabled,
         instant: Boolean = session.instantPlacementEnabled,
         approximateDistance: Float = session.approximateDistance
-    ): Anchor? = hitTest(
-        xPx = xPx,
-        yPx = yPx,
-        plane = plane,
-        depth = depth,
-        instant = instant,
-        approximateDistance = approximateDistance
-    )?.createAnchor()
+    ): Anchor? = runCatching {
+        hitTest(
+            xPx = xPx,
+            yPx = yPx,
+            plane = plane,
+            depth = depth,
+            instant = instant,
+            approximateDistance = approximateDistance
+        )?.takeIf { it.isTracking }?.createAnchor()
+    }?.getOrNull()
 
     /**
      * ### Retrieve the frame tracked Planes
@@ -289,9 +291,15 @@ fun Collection<HitResult>.firstValid(
 ): HitResult? {
     return firstOrNull { hitResult ->
         when (val trackable = hitResult.trackable!!) {
-            is Plane -> plane && trackable.isPoseInPolygon(hitResult.hitPose) &&
-                    hitResult.hitPose.calculateDistanceToPlane(camera.pose) > 0.0f
-            is Point -> depth && trackable.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
+            is Plane -> {
+                plane && trackable.isPoseInPolygon(hitResult.hitPose) &&
+                        hitResult.hitPose.calculateDistanceToPlane(camera.pose) > 0.0f
+            }
+
+            is Point -> {
+                depth && trackable.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
+            }
+
             is InstantPlacementPoint -> instantPlacement
             is DepthPoint -> depth
             else -> false
