@@ -1,4 +1,7 @@
 buildscript {
+    ext {
+        compose_ui_version = '1.4.3'
+    }
     ext.kotlin_version = '1.8.20'
     repositories {
         google()
@@ -6,7 +9,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:7.4.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.21"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10"
         // Maven Central Publish
         classpath "com.vanniktech:gradle-maven-publish-plugin:0.18.0"
         // Dokka
