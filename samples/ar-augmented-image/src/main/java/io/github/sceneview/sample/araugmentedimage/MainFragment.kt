@@ -67,9 +67,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
         ).apply {
             videoNode = VideoNode(sceneView.engine, MediaPlayer().apply {
+                val assetFileDescriptor = requireContext().assets.openFd("videos/travel.mp4")
                 setDataSource(
-                    requireContext(),
-                    Uri.parse("https://sceneview.github.io/assets/videos/ads/ar_camera_app_ad.mp4")
+                    assetFileDescriptor.fileDescriptor,
+                    assetFileDescriptor.startOffset,
+                    assetFileDescriptor.length
                 )
                 isLooping = true
                 setOnPreparedListener {
@@ -85,6 +87,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     override fun onDestroy() {
         super.onDestroy()
+        videoNode.player.stop()
+    }
+
+    override fun onPause() {
+        super.onPause()
         videoNode.player.stop()
     }
 }
