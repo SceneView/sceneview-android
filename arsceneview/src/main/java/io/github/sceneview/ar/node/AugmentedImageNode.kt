@@ -93,12 +93,12 @@ open class AugmentedImageNode(
             if (bitmap != null) {
                 sceneView.configureSession { session, config ->
                     try {
-                        config.augmentedImageDatabase = config.augmentedImageDatabase?.takeIf {
+                        config.augmentedImageDatabase = (config.augmentedImageDatabase?.takeIf {
                             // Using the default augmentedImageDatabase even if not null is not
                             // working so we check if it's our AugmentedImageDatabase (if we already
                             // added images)
                             it.numImages > 0
-                        } ?: AugmentedImageDatabase(session).apply {
+                        } ?: AugmentedImageDatabase(session)).apply {
                             if (widthInMeters != null) {
                                 addImage(imageName, bitmap, widthInMeters)
                             } else {
