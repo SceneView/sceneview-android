@@ -14,7 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.sceneview.sample.ecommerce.productdescription.presentation.ProductDescriptionScreen
-import io.github.sceneview.sample.ecommerce.productdescription.presentation.ProductViewModel
+import io.github.sceneview.sample.ecommerce.productdescription.presentation.ProductDescriptionViewModel
 import io.github.sceneview.sample.ecommerce.ui.theme.SceneViewTheme
 import io.github.sceneview.sample.ecommerce.virtualtryon.presentation.VirtualTryOnScreen
 import io.github.sceneview.sample.ecommerce.virtualtryon.presentation.VirtualTryOnViewModel
@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
 
         // Ideally these are injected through dependency injection
         val virtualTryOnViewModel by viewModels<VirtualTryOnViewModel>()
-        val productViewModel by viewModels<ProductViewModel>()
+        val productViewModel by viewModels<ProductDescriptionViewModel>()
 
         super.onCreate(savedInstanceState)
         val productId = 1
@@ -46,8 +46,6 @@ class MainActivity : ComponentActivity() {
                                 productId = productId,
                                 navController = navController,
                                 productViewModel = productViewModel
-
-
                             )
                         }
                         composable(
@@ -56,8 +54,8 @@ class MainActivity : ComponentActivity() {
                                 type = NavType.StringType
                             })
                         ) {
-                            val productId = it.arguments?.getString("productId")
-                            VirtualTryOnScreen(productId?.toInt() ?: 0, virtualTryOnViewModel)
+                            val productIdArg = it.arguments?.getString("productId")
+                            VirtualTryOnScreen(productIdArg?.toInt() ?: 0, virtualTryOnViewModel)
                         }
                     }
                 }

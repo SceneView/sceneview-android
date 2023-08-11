@@ -21,7 +21,7 @@ import com.bumptech.glide.integration.compose.GlideImage
 fun ImageCarousel(images: List<String>) {
     val pageCount = images.size
     val pagerState = rememberPagerState()
-    Box( modifier = Modifier.fillMaxHeight(0.3f) ) {
+    Box(modifier = Modifier.fillMaxHeight(0.3f)) {
         HorizontalPager(
             state = pagerState,
             pageCount = pageCount
