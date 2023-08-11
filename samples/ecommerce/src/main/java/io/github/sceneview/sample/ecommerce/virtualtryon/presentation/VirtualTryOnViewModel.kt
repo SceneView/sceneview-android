@@ -1,16 +1,10 @@
 package io.github.sceneview.sample.ecommerce.virtualtryon.presentation
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.filament.Engine
 import com.google.ar.core.Plane
-import com.google.ar.core.TrackingFailureReason
-import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.sample.ecommerce.virtualtryon.data.ModelAssetRepositoryImpl
 import io.github.sceneview.sample.ecommerce.virtualtryon.domain.ModelAssetRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,6 +14,11 @@ class VirtualTryOnViewModel : ViewModel() {
     private val _state: MutableStateFlow<VirtualTryOnViewState> =
         MutableStateFlow(VirtualTryOnViewState())
     val state: StateFlow<VirtualTryOnViewState> = _state
+
+    private val _uiAction: MutableStateFlow<VirtualTryOnUIAction?> = MutableStateFlow(
+        null
+    )
+    val uiAction: StateFlow<VirtualTryOnUIAction?> = _uiAction
 
     private var remoteAsset: String? = null
 
@@ -31,8 +30,6 @@ class VirtualTryOnViewModel : ViewModel() {
         when (event) {
             is VirtualTryOnUIEvent.ModelPlaced -> onModelPlaced()
             is VirtualTryOnUIEvent.OnPlanesUpdated -> onPlanesUpdated(event.updatedPlanes)
-            is VirtualTryOnUIEvent.OnUserTap -> onUserTap(event.engine)
-            is VirtualTryOnUIEvent.OnTrackingFailure -> onTrackingFailure(event.trackingFailureReason)
             is VirtualTryOnUIEvent.FetchAsset -> onFetchAsset(event.productId)
         }
     }
@@ -41,54 +38,45 @@ class VirtualTryOnViewModel : ViewModel() {
         viewModelScope.launch {
             setState(state.value.copy(downloadingAsset = true))
             remoteAsset = repository.fetchAsset(productId)
-            setState(state.value.copy(downloadingAsset = false))
+            setState(state.value.copy(downloadingAsset = false, modelAsset = remoteAsset))
         }
-    }
-
-    private fun onTrackingFailure(trackingFailureReason: TrackingFailureReason?) {
-        if (trackingFailureReason != TrackingFailureReason.NONE) {
-//            setState(
-//
-//            )
-        }
-    }
-
-    private fun onUserTap(engine: Engine) {
-        setState(
-            state.value.copy(
-                modelNode = ArModelNode(
-                    engine,
-                    PlacementMode.BEST_AVAILABLE
-                ).apply {
-                    remoteAsset?.let {
-                        loadModelGlbAsync(
-                            glbFileLocation = it,
-                        )
-                    }
-                })
-        )
     }
 
     private fun onPlanesUpdated(updatedPlanes: List<Plane>) {
-        setState(
-            state.value.copy(readyToPlaceModel = updatedPlanes.isNotEmpty())
-        )
+        if (!state.value.readyToPlaceModel && updatedPlanes.isNotEmpty()) {
+            // Only update once so that user sees that the model can be placed
+            setState(
+                state.value.copy(readyToPlaceModel = updatedPlanes.isNotEmpty())
+            )
+        }
     }
 
     private fun onModelPlaced() {
-        Log.e("test", "vic: onModelPlaced")
         setState(
             state.value.copy(
                 modelPlaced = true,
-                modelNode = null
             )
         )
+
+        setUiAction(VirtualTryOnUIAction.ShowModalPlaced)
     }
 
 
     private fun setState(newState: VirtualTryOnViewState) {
         viewModelScope.launch {
             _state.emit(newState)
+        }
+    }
+
+    private fun setUiAction(uiAction: VirtualTryOnUIAction) {
+        viewModelScope.launch {
+            _uiAction.emit(uiAction)
+        }
+    }
+
+    fun onConsumedUiAction() {
+        viewModelScope.launch {
+            _uiAction.emit(null)
         }
     }
 }

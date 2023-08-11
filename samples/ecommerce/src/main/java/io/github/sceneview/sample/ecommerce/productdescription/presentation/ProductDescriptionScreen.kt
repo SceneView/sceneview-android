@@ -27,7 +27,7 @@ import java.math.BigDecimal
 fun ProductDescriptionScreen(
     productId: Int,
     navController: NavHostController,
-    productViewModel: ProductViewModel
+    productViewModel: ProductDescriptionViewModel
 ) {
 
     LaunchedEffect(Unit) {
@@ -42,13 +42,13 @@ fun ProductDescriptionScreen(
         is ProductDescriptionUIAction.NavigateToAddToCartScreen -> {
             LaunchedEffect(Unit) {
                 Toast.makeText(context, "Added to cart!", Toast.LENGTH_SHORT).show()
-                productViewModel.dispatchEvent(ProductDescriptionUiEvent.ConsumeUIAction)
+                productViewModel.onConsumeUIAction()
             }
         }
         is ProductDescriptionUIAction.NavigateToVirtualTryOnScreen -> {
             LaunchedEffect(Unit) {
                 navController.navigate("virtual_try_on/$productId")
-                productViewModel.dispatchEvent(ProductDescriptionUiEvent.ConsumeUIAction)
+                productViewModel.onConsumeUIAction()
             }
         }
         null -> {}

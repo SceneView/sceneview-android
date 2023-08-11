@@ -9,14 +9,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class ProductViewModel : ViewModel() {
+class ProductDescriptionViewModel : ViewModel() {
 
     val productRepository: ProductRepository = ProductRepositoryImpl()
 
     private val _state: MutableStateFlow<ProductDescriptionViewState> =
         MutableStateFlow(ProductDescriptionViewState())
     val state: StateFlow<ProductDescriptionViewState> = _state
-    val _uiAction: MutableStateFlow<ProductDescriptionUIAction?> = MutableStateFlow(
+    private val _uiAction: MutableStateFlow<ProductDescriptionUIAction?> = MutableStateFlow(
         null
     )
     val uiAction: StateFlow<ProductDescriptionUIAction?> = _uiAction
@@ -27,7 +27,6 @@ class ProductViewModel : ViewModel() {
             is ProductDescriptionUiEvent.FetchProductData -> onFetchProductData(event.productId)
             is ProductDescriptionUiEvent.OnAddToCartTap -> setUiAction(ProductDescriptionUIAction.NavigateToAddToCartScreen)
             is ProductDescriptionUiEvent.OnVirtualTryOnTap -> setUiAction(ProductDescriptionUIAction.NavigateToVirtualTryOnScreen)
-            is ProductDescriptionUiEvent.ConsumeUIAction -> setUiAction(null)
         }
 
     }
@@ -51,6 +50,12 @@ class ProductViewModel : ViewModel() {
     private fun setUiAction(newUiAction: ProductDescriptionUIAction?) {
         viewModelScope.launch {
             _uiAction.emit(newUiAction)
+        }
+    }
+
+    fun onConsumeUIAction() {
+        viewModelScope.launch {
+            _uiAction.emit(null)
         }
     }
 }
