@@ -35,13 +35,23 @@ fun ProductDescriptionScreen(
     }
     val context = LocalContext.current
     val viewState by productViewModel.state.collectAsState()
-    if (viewState.showAddToCartToast) {
-        Toast.makeText(context, "Added to cart!", Toast.LENGTH_SHORT).show()
-        productViewModel.dispatchEvent(ProductDescriptionUiEvent.ShownAddToCartToast)
-    }
-    if (viewState.goToVirtualTryOnPage) {
-        navController.navigate("virtual_try_on/$productId")
-        productViewModel.dispatchEvent(ProductDescriptionUiEvent.NavigatedToVirtualTryOn)
+    val uiAction by productViewModel.uiAction.collectAsState()
+
+    when (uiAction) {
+        // UI actions must be run once, thus run them in a Launched Effect
+        is ProductDescriptionUIAction.NavigateToAddToCartScreen -> {
+            LaunchedEffect(Unit) {
+                Toast.makeText(context, "Added to cart!", Toast.LENGTH_SHORT).show()
+                productViewModel.dispatchEvent(ProductDescriptionUiEvent.ConsumeUIAction)
+            }
+        }
+        is ProductDescriptionUIAction.NavigateToVirtualTryOnScreen -> {
+            LaunchedEffect(Unit) {
+                navController.navigate("virtual_try_on/$productId")
+                productViewModel.dispatchEvent(ProductDescriptionUiEvent.ConsumeUIAction)
+            }
+        }
+        null -> {}
     }
     viewState.product?.let { product ->
         Box(modifier = Modifier.fillMaxSize()) {

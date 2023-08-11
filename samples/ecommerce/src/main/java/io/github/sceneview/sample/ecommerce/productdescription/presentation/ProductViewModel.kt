@@ -16,15 +16,18 @@ class ProductViewModel : ViewModel() {
     private val _state: MutableStateFlow<ProductDescriptionViewState> =
         MutableStateFlow(ProductDescriptionViewState())
     val state: StateFlow<ProductDescriptionViewState> = _state
+    val _uiAction: MutableStateFlow<ProductDescriptionUIAction?> = MutableStateFlow(
+        null
+    )
+    val uiAction: StateFlow<ProductDescriptionUIAction?> = _uiAction
 
 
     fun dispatchEvent(event: ProductDescriptionUiEvent) {
         when (event) {
             is ProductDescriptionUiEvent.FetchProductData -> onFetchProductData(event.productId)
-            is ProductDescriptionUiEvent.OnAddToCartTap -> setState(state.value.copy(showAddToCartToast = true))
-            is ProductDescriptionUiEvent.OnVirtualTryOnTap -> setState(state.value.copy(goToVirtualTryOnPage = true))
-            is ProductDescriptionUiEvent.ShownAddToCartToast -> setState(state.value.copy(showAddToCartToast = false))
-            is ProductDescriptionUiEvent.NavigatedToVirtualTryOn -> setState(state.value.copy(goToVirtualTryOnPage = false))
+            is ProductDescriptionUiEvent.OnAddToCartTap -> setUiAction(ProductDescriptionUIAction.NavigateToAddToCartScreen)
+            is ProductDescriptionUiEvent.OnVirtualTryOnTap -> setUiAction(ProductDescriptionUIAction.NavigateToVirtualTryOnScreen)
+            is ProductDescriptionUiEvent.ConsumeUIAction -> setUiAction(null)
         }
 
     }
@@ -42,6 +45,12 @@ class ProductViewModel : ViewModel() {
     private fun setState(newState: ProductDescriptionViewState) {
         viewModelScope.launch {
             _state.emit(newState)
+        }
+    }
+
+    private fun setUiAction(newUiAction: ProductDescriptionUIAction?) {
+        viewModelScope.launch {
+            _uiAction.emit(newUiAction)
         }
     }
 }
