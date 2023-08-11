@@ -3,7 +3,6 @@ package io.github.sceneview.sample.ecommerce.productdescription.presentation
 sealed class ProductDescriptionUiEvent {
     object OnAddToCartTap : ProductDescriptionUiEvent()
     object OnVirtualTryOnTap : ProductDescriptionUiEvent()
+    object ConsumeUIAction : ProductDescriptionUiEvent()
     data class FetchProductData(val productId: Int) : ProductDescriptionUiEvent()
-    object ShownAddToCartToast : ProductDescriptionUiEvent()
-    object NavigatedToVirtualTryOn : ProductDescriptionUiEvent()
 }

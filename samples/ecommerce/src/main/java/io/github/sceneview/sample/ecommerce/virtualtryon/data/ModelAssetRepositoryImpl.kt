@@ -6,7 +6,7 @@ import kotlinx.coroutines.delay
 class ModelAssetRepositoryImpl : ModelAssetRepository{
     override suspend fun fetchAsset(productId: Int) : String {
         // return some data
-        delay(1000)
+        delay(2000)
         return "https://storage.googleapis.com/ar-answers-in-search-models/static/GiantPanda/model.glb"
     }
 }

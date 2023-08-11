@@ -28,9 +28,30 @@ fun VirtualTryOnScreen(
     }
     var sceneview by remember { mutableStateOf<ArSceneView?>(null) }
     val viewState by virtualTryOnViewModel.state.collectAsState()
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (viewState.downloadingAsset) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else {
+            if (viewState.readyToPlaceModel) {
+                Box(
+                    modifier = Modifier
+                        .padding(50.dp)
+                        .align(Alignment.Center)
+                        .background(Color.Gray)
+                ) {
+                    Text("Ready to place model!")
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .padding(50.dp)
+                        .align(Alignment.Center)
+                        .background(Color.Gray)
+                ) {
+                    Text("Move your phone to place model")
+                }
+            }
         }
         ARScene(
             modifier = Modifier.fillMaxSize(),
@@ -58,26 +79,6 @@ fun VirtualTryOnScreen(
                 virtualTryOnViewModel.dispatchEvent(VirtualTryOnUIEvent.OnTrackingFailure(trackingFailureReason))
             }
         )
-
-        if (viewState.readyToPlaceModel) {
-            Box(
-                modifier = Modifier
-                    .padding(50.dp)
-                    .align(Alignment.Center)
-                    .background(Color.Gray)
-            ) {
-                Text("Ready to place model!")
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .padding(50.dp)
-                    .align(Alignment.Center)
-                    .background(Color.Gray)
-            ) {
-                Text("Move your phone to place model")
-            }
-        }
 
         viewState.modelNode?.let {
             sceneview?.planeRenderer?.isVisible = true

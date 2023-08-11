@@ -3,7 +3,4 @@ package io.github.sceneview.sample.ecommerce.productdescription.presentation
 import io.github.sceneview.sample.ecommerce.productdescription.data.Product
 
 
-data class ProductDescriptionViewState(val product: Product? = null,
-                                       val showAddToCartToast: Boolean = false,
-                                       val goToVirtualTryOnPage: Boolean = false
-)
+data class ProductDescriptionViewState(val product: Product? = null)

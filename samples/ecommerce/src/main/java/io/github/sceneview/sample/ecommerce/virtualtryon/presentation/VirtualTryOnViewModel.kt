@@ -38,7 +38,7 @@ class VirtualTryOnViewModel : ViewModel() {
     }
 
     private fun onFetchAsset(productId: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             setState(state.value.copy(downloadingAsset = true))
             remoteAsset = repository.fetchAsset(productId)
             setState(state.value.copy(downloadingAsset = false))
