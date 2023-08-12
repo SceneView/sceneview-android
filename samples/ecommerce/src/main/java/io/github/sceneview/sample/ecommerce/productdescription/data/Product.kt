@@ -2,7 +2,6 @@ package io.github.sceneview.sample.ecommerce.productdescription.data
 
 data class Product(
     val images: List<String>,
-    val assetUrl: String,
     val description: String,
     val title: String,
     val color: String,
