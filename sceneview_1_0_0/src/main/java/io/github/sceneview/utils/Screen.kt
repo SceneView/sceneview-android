@@ -6,7 +6,6 @@ import android.view.WindowManager
 import androidx.core.graphics.Insets
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
-import com.gorisse.thomas.lifecycle.doOnActivityAttach
 
 fun Activity.setKeepScreenOn(keepScreenOn: Boolean = true) {
     runOnUiThread {
@@ -32,21 +31,6 @@ fun Fragment.setFullScreen(
         hideSystemBars,
         fitsSystemWindows
     )
-}
-
-fun View.setFullScreen(
-    fullScreen: Boolean = true,
-    hideSystemBars: Boolean = true,
-    fitsSystemWindows: Boolean = true
-) {
-    doOnActivityAttach { activity ->
-        activity.setFullScreen(
-            this,
-            fullScreen,
-            hideSystemBars,
-            fitsSystemWindows
-        )
-    }
 }
 
 fun Activity.setFullScreen(

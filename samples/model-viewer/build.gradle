@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "io.github.sceneview.sample.modelviewer"
         minSdk 28
-        targetSdk 33
+        targetSdk 34
         versionCode 1
         versionName "1.0.0"
     }
@@ -28,6 +28,7 @@ android {
     aaptOptions {
         noCompress 'filamat', 'ktx'
     }
+    namespace 'io.github.sceneview.sample.modelviewer'
 }
 
 dependencies {

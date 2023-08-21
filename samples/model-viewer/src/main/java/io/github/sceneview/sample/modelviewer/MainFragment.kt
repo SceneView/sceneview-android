@@ -5,7 +5,6 @@ import android.view.View
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.gorisse.thomas.lifecycle.lifecycle
 import io.github.sceneview.SceneView
 import io.github.sceneview.loaders.loadHdrIndirectLight
 import io.github.sceneview.loaders.loadHdrSkybox
