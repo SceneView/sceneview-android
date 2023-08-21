@@ -11,14 +11,15 @@ import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import com.google.android.filament.*
 import com.google.android.filament.View.AntiAliasing
 import com.google.android.filament.View.QualityLevel
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.*
-import com.gorisse.thomas.lifecycle.observe
 import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.geometries.destroyGeometry
 import io.github.sceneview.gesture.GestureDetector
@@ -715,7 +716,19 @@ open class SceneView @JvmOverloads constructor(
      * You can also handle it manually by calling the corresponding functions
      */
     fun setLifecycle(lifecycle: Lifecycle) {
-        lifecycle.observe(onResume = { resume() }, onPause = { pause() }, onDestroy = { destroy() })
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onResume(owner: LifecycleOwner) {
+                resume()
+            }
+
+            override fun onPause(owner: LifecycleOwner) {
+                pause()
+            }
+
+            override fun onDestroy(owner: LifecycleOwner) {
+                destroy()
+            }
+        })
     }
 
     open fun updateCameraProjection() {

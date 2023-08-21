@@ -37,12 +37,12 @@ open class GestureDetector(
         }
 
         override fun onScroll(
-            e1: MotionEvent,
+            e1: MotionEvent?,
             e2: MotionEvent,
             distanceX: Float,
             distanceY: Float
         ) = super.onScroll(e1, e2, distanceX, distanceY).also {
-            pickNode(e1) { ne1 ->
+            pickNode(e1 ?: e2) { ne1 ->
                 pickNode(e2) { ne2 ->
                     ne1.node?.onScroll(ne1, ne2, distanceX, distanceY)
                     listener.onScroll(ne1, ne2, distanceX, distanceY)
@@ -53,12 +53,12 @@ open class GestureDetector(
         override fun onLongPress(e: MotionEvent) = pickNode(e, listener::onLongPress)
 
         override fun onFling(
-            e1: MotionEvent,
+            e1: MotionEvent?,
             e2: MotionEvent,
             velocityX: Float,
             velocityY: Float
         ) = super.onFling(e1, e2, velocityX, velocityY).also {
-            pickNode(e1) { ne1 ->
+            pickNode(e1 ?: e2) { ne1 ->
                 pickNode(e2) { ne2 ->
                     ne1.node?.onFling(ne1, ne2, velocityX, velocityY)
                     listener.onFling(ne1, ne2, velocityX, velocityY)
