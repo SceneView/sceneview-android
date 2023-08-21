@@ -1,7 +1,11 @@
 package io.github.sceneview.ar.arcore
 
+import com.google.ar.core.GeospatialPose
 import com.google.ar.core.Pose
+import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
+import dev.romainguy.kotlin.math.rotation
+import dev.romainguy.kotlin.math.translation
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -60,3 +64,12 @@ fun Pose.calculateDistanceToPlane(cameraPose: Pose): Float {
     // Compute dot product of plane's normal with vector from camera to plane center.
     return (cameraX - this.tx()) * normal[0] + (cameraY - this.ty()) * normal[1] + (cameraZ - this.tz()) * normal[2]
 }
+
+val GeospatialPose.transform: Transform
+    get() = translation(
+        Position(
+            latitude.toFloat(),
+            longitude.toFloat(),
+            altitude.toFloat()
+        )
+    ) * rotation(eastUpSouthQuaternion.let { Quaternion(it[0], it[1], it[2], it[3]) })
