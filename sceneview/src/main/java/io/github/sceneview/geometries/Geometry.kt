@@ -1,11 +1,15 @@
 package io.github.sceneview.geometries
 
-import com.google.android.filament.*
+import com.google.android.filament.Box
+import com.google.android.filament.Engine
+import com.google.android.filament.EntityInstance
+import com.google.android.filament.IndexBuffer
+import com.google.android.filament.RenderableManager
+import com.google.android.filament.VertexBuffer
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.max
 import dev.romainguy.kotlin.math.min
 import io.github.sceneview.Filament
-import io.github.sceneview.SceneView
 import io.github.sceneview.math.Box
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
@@ -151,8 +155,8 @@ open class Geometry(
             }.build(engine)
 
             return build(vertexBuffer, indexBuffer).apply {
-                setBufferVertices(engine, vertices)
-                setBufferIndices(engine, submeshes)
+                setBufferVertices(engine, this@BaseBuilder.vertices)
+                setBufferIndices(engine, this@BaseBuilder.submeshes)
             }
         }
 
