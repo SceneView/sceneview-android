@@ -37,7 +37,7 @@ class NodeManager(val engine: Engine) {
     }
 
     fun destroy() {
-        entities.forEach { entity ->
+        entities.toList().forEach { entity ->
             destroyNode(entity)
         }
         entities.clear()

@@ -259,7 +259,7 @@ open class Node(
     }
 
     open fun destroy() {
-        childNodes.forEach {
+        childNodes.toList().forEach {
             removeChildNode(it)
             it.destroy()
         }
