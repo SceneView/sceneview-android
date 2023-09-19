@@ -18,6 +18,7 @@ import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
+import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import io.github.sceneview.ar.arcore.ArSession
 
 /**
@@ -224,16 +225,39 @@ class ARCore(
         })
     }
 
+    /**
+     * Checks if ARCore is already installed or attempts to request an install otherwise.
+     *
+     * @param activity The current activity which will be paused if we request an install
+     * @param installRequested Should be true the first time this is called, and false when we
+     * resume from the previous install attempt
+     * @throws UnavailableDeviceNotCompatibleException if the device does not support ARCore
+     * @return true if ARCore is already installed
+     */
     fun checkInstall(activity: ComponentActivity, installRequested: Boolean): Boolean {
         // Request installation if necessary
         return isInstalled(activity) || !install(activity, installRequested)
     }
 
-    /** Check to see we have the necessary permissions for this app.  */
+    /** Check to see we have the necessary permissions for this app. */
     fun isInstalled(context: Context) =
         ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
 
+    /** Check to see if we're on a device where ARCore can be installed */
+    fun canBeInstalled(context: Context): Boolean {
+        val availability = ArCoreApk.getInstance().checkAvailability(context)
+        return availability == Availability.SUPPORTED_APK_TOO_OLD || availability == Availability.SUPPORTED_NOT_INSTALLED
+    }
+
+    /**
+     * Returns true if we attempted to request an install.
+     *
+     * @throws UnavailableDeviceNotCompatibleException if the device does not support ARCore
+     */
     fun install(activity: ComponentActivity, installRequested: Boolean): Boolean {
+        if (!canBeInstalled(activity)) {
+            throw UnavailableDeviceNotCompatibleException()
+        }
         return ArCoreApk.getInstance().requestInstall(
             activity,
             !installRequested
