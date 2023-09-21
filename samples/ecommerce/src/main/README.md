@@ -64,5 +64,4 @@ To run the app, follow these steps:
 
 1. Clone the repository.
 2. Build and run the app on your Android device or emulator.
-# Ecommerce Jetpack Compose Sample App
 
