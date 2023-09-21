@@ -82,8 +82,8 @@ fun ViewInYourSpaceScreen(
                 """
                  You can also show a tracking failure message if needed
                     
-                 virtualTryOnViewModel.dispatchEvent(
-                      VirtualTryOnUIEvent.OnTrackingFailure(
+                 ViewInYourSpaceViewModel.dispatchEvent(
+                      ViewInYourSpaceUIEvent.OnTrackingFailure(
                             trackingFailureReason
                     )
                  )
