@@ -1,24 +1,24 @@
-package io.github.sceneview.sample.ecommerce.virtualtryon.presentation
+package io.github.sceneview.sample.ecommerce.viewinyourspace.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ar.core.Plane
-import io.github.sceneview.sample.ecommerce.virtualtryon.data.ModelAssetRepositoryImpl
-import io.github.sceneview.sample.ecommerce.virtualtryon.domain.ModelAssetRepository
+import io.github.sceneview.sample.ecommerce.viewinyourspace.data.ModelAssetRepositoryImpl
+import io.github.sceneview.sample.ecommerce.viewinyourspace.domain.ModelAssetRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class VirtualTryOnViewModel : ViewModel() {
+class ViewInYourSpaceViewModel : ViewModel() {
 
-    private val _state: MutableStateFlow<VirtualTryOnViewState> =
-        MutableStateFlow(VirtualTryOnViewState())
-    val state: StateFlow<VirtualTryOnViewState> = _state
+    private val _state: MutableStateFlow<ViewInYourSpaceViewState> =
+        MutableStateFlow(ViewInYourSpaceViewState())
+    val state: StateFlow<ViewInYourSpaceViewState> = _state
 
-    private val _uiAction: MutableStateFlow<VirtualTryOnUIAction?> = MutableStateFlow(
+    private val _uiAction: MutableStateFlow<ViewInYourSpaceUIAction?> = MutableStateFlow(
         null
     )
-    val uiAction: StateFlow<VirtualTryOnUIAction?> = _uiAction
+    val uiAction: StateFlow<ViewInYourSpaceUIAction?> = _uiAction
 
     private var remoteAsset: String? = null
 
@@ -26,11 +26,11 @@ class VirtualTryOnViewModel : ViewModel() {
     private val repository: ModelAssetRepository = ModelAssetRepositoryImpl()
 
 
-    fun dispatchEvent(event: VirtualTryOnUIEvent) {
+    fun dispatchEvent(event: ViewInYourSpaceUIEvent) {
         when (event) {
-            is VirtualTryOnUIEvent.ModelPlaced -> onModelPlaced()
-            is VirtualTryOnUIEvent.OnPlanesUpdated -> onPlanesUpdated(event.updatedPlanes)
-            is VirtualTryOnUIEvent.FetchAsset -> onFetchAsset(event.productId)
+            is ViewInYourSpaceUIEvent.ModelPlaced -> onModelPlaced()
+            is ViewInYourSpaceUIEvent.OnPlanesUpdated -> onPlanesUpdated(event.updatedPlanes)
+            is ViewInYourSpaceUIEvent.FetchAsset -> onFetchAsset(event.productId)
         }
     }
 
@@ -58,17 +58,17 @@ class VirtualTryOnViewModel : ViewModel() {
             )
         )
 
-        setUiAction(VirtualTryOnUIAction.ShowModalPlaced)
+        setUiAction(ViewInYourSpaceUIAction.ShowModalPlaced)
     }
 
 
-    private fun setState(newState: VirtualTryOnViewState) {
+    private fun setState(newState: ViewInYourSpaceViewState) {
         viewModelScope.launch {
             _state.emit(newState)
         }
     }
 
-    private fun setUiAction(uiAction: VirtualTryOnUIAction) {
+    private fun setUiAction(uiAction: ViewInYourSpaceUIAction) {
         viewModelScope.launch {
             _uiAction.emit(uiAction)
         }

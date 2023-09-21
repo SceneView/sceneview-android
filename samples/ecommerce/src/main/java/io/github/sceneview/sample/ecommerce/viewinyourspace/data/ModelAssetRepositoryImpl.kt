@@ -1,6 +1,6 @@
-package io.github.sceneview.sample.ecommerce.virtualtryon.data
+package io.github.sceneview.sample.ecommerce.viewinyourspace.data
 
-import io.github.sceneview.sample.ecommerce.virtualtryon.domain.ModelAssetRepository
+import io.github.sceneview.sample.ecommerce.viewinyourspace.domain.ModelAssetRepository
 import kotlinx.coroutines.delay
 
 class ModelAssetRepositoryImpl : ModelAssetRepository{

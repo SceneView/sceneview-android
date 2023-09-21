@@ -1,6 +1,6 @@
-package io.github.sceneview.sample.ecommerce.virtualtryon.presentation
+package io.github.sceneview.sample.ecommerce.viewinyourspace.presentation
 
-data class VirtualTryOnViewState(
+data class ViewInYourSpaceViewState(
     val modelPlaced: Boolean = false,
     val readyToPlaceModel: Boolean = false,
     val downloadingAsset: Boolean = false,

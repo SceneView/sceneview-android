@@ -1,6 +1,6 @@
 @file:Suppress("UNUSED_EXPRESSION")
 
-package io.github.sceneview.sample.ecommerce.virtualtryon.presentation
+package io.github.sceneview.sample.ecommerce.viewinyourspace.presentation
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -27,27 +27,27 @@ import io.github.sceneview.sample.ecommerce.R
 
 
 @Composable
-fun VirtualTryOnScreen(
+fun ViewInYourSpaceScreen(
     productId: Int,
-    virtualTryOnViewModel: VirtualTryOnViewModel
+    viewInYourSpaceViewModel: ViewInYourSpaceViewModel
 ) {
     val nodes = remember { mutableStateListOf<ArNode>() }
 
     LaunchedEffect(Unit) {
-        virtualTryOnViewModel.dispatchEvent(VirtualTryOnUIEvent.FetchAsset(productId))
+        viewInYourSpaceViewModel.dispatchEvent(ViewInYourSpaceUIEvent.FetchAsset(productId))
     }
 
     val context = LocalContext.current
     var sceneView by remember { mutableStateOf<ArSceneView?>(null) }
-    val viewState by virtualTryOnViewModel.state.collectAsState()
-    val uiAction by virtualTryOnViewModel.uiAction.collectAsState()
+    val viewState by viewInYourSpaceViewModel.state.collectAsState()
+    val uiAction by viewInYourSpaceViewModel.uiAction.collectAsState()
     var modelNode by remember { mutableStateOf<ArModelNode?>(null) }
 
     when (uiAction) {
-        is VirtualTryOnUIAction.ShowModalPlaced -> {
+        is ViewInYourSpaceUIAction.ShowModalPlaced -> {
             LaunchedEffect(Unit) {
                 Toast.makeText(context, "Placed model!", Toast.LENGTH_SHORT).show()
-                virtualTryOnViewModel.onConsumedUiAction()
+                viewInYourSpaceViewModel.onConsumedUiAction()
             }
         }
         null -> {}
@@ -68,7 +68,7 @@ fun VirtualTryOnScreen(
             onFrame = { arFrame ->
                 // Update planes state to determine whether or not to UI message
                 // WARNING: DO NOT PASS ARSceneView/ARFrame TO ViewModel to avoid memory leaks
-                virtualTryOnViewModel.dispatchEvent(VirtualTryOnUIEvent.OnPlanesUpdated(arFrame.updatedPlanes))
+                viewInYourSpaceViewModel.dispatchEvent(ViewInYourSpaceUIEvent.OnPlanesUpdated(arFrame.updatedPlanes))
             },
             onTap = { hitResult ->
                 // User tapped in the AR view
@@ -136,7 +136,7 @@ fun VirtualTryOnScreen(
                     sceneView?.planeRenderer?.isVisible = true
                     sceneView?.addChild(it)
                     sceneView?.selectedNode = it
-                    virtualTryOnViewModel.dispatchEvent(VirtualTryOnUIEvent.ModelPlaced)
+                    viewInYourSpaceViewModel.dispatchEvent(ViewInYourSpaceUIEvent.ModelPlaced)
                 }
             }
             if (viewState.modelPlaced && modelNode != null) {
@@ -165,7 +165,7 @@ fun VirtualTryOnScreen(
 }
 
 
-fun onUserTap(sceneView: ArSceneView, viewState: VirtualTryOnViewState): ArModelNode {
+fun onUserTap(sceneView: ArSceneView, viewState: ViewInYourSpaceViewState): ArModelNode {
     // Try to avoid placing 3d models in ViewModel to avoid memory leaks since ARNodes contains context
     return ArModelNode(
         sceneView.engine,

@@ -16,15 +16,15 @@ import androidx.navigation.navArgument
 import io.github.sceneview.sample.ecommerce.productdescription.presentation.ProductDescriptionScreen
 import io.github.sceneview.sample.ecommerce.productdescription.presentation.ProductDescriptionViewModel
 import io.github.sceneview.sample.ecommerce.ui.theme.SceneViewTheme
-import io.github.sceneview.sample.ecommerce.virtualtryon.presentation.VirtualTryOnScreen
-import io.github.sceneview.sample.ecommerce.virtualtryon.presentation.VirtualTryOnViewModel
+import io.github.sceneview.sample.ecommerce.viewinyourspace.presentation.ViewInYourSpaceScreen
+import io.github.sceneview.sample.ecommerce.viewinyourspace.presentation.ViewInYourSpaceViewModel
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
         // Ideally these are injected through dependency injection
-        val virtualTryOnViewModel by viewModels<VirtualTryOnViewModel>()
+        val viewInYourSpaceViewModel by viewModels<ViewInYourSpaceViewModel>()
         val productViewModel by viewModels<ProductDescriptionViewModel>()
 
         super.onCreate(savedInstanceState)
@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
                             })
                         ) {
                             val productIdArg = it.arguments?.getString("productId")
-                            VirtualTryOnScreen(productIdArg?.toInt() ?: 0, virtualTryOnViewModel)
+                            ViewInYourSpaceScreen(productIdArg?.toInt() ?: 0, viewInYourSpaceViewModel)
                         }
                     }
                 }
