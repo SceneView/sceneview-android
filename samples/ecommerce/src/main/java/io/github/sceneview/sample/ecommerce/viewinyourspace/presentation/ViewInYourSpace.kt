@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.ar.ARScene
@@ -46,7 +47,7 @@ fun ViewInYourSpaceScreen(
     when (uiAction) {
         is ViewInYourSpaceUIAction.ShowModalPlaced -> {
             LaunchedEffect(Unit) {
-                Toast.makeText(context, "Placed model!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getText(R.string.placed_model), Toast.LENGTH_SHORT).show()
                 viewInYourSpaceViewModel.onConsumedUiAction()
             }
         }
@@ -106,7 +107,7 @@ fun ViewInYourSpaceScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Ready to place model!",
+                            stringResource(R.string.ready_to_place_model_hint),
                             modifier = Modifier.padding(16.dp),
                             textAlign = TextAlign.Center,
                             color = Color.White
@@ -122,7 +123,7 @@ fun ViewInYourSpaceScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Move your phone to place model",
+                            stringResource(R.string.move_phone_hint),
                             modifier = Modifier.padding(16.dp),
                             textAlign = TextAlign.Center,
                             color = Color.White
@@ -151,7 +152,7 @@ fun ViewInYourSpaceScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Use one finger to move and two fingers to rotate the handbag!",
+                        stringResource(R.string.rotate_hint),
                         modifier = Modifier.padding(16.dp),
                         textAlign = TextAlign.Center,
                         color = Color.White

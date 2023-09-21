@@ -2,7 +2,14 @@ package io.github.sceneview.sample.ecommerce.productdescription.presentation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,11 +27,14 @@ import com.bumptech.glide.integration.compose.GlideImage
 @Composable
 fun ImageCarousel(images: List<String>) {
     val pageCount = images.size
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        initialPageOffsetFraction = 0f,
+        pageCount = { pageCount }
+    )
     Box(modifier = Modifier.fillMaxHeight(0.3f)) {
         HorizontalPager(
-            state = pagerState,
-            pageCount = pageCount
+            state = pagerState
         ) { page ->
             // Use your favorite image loading library here!
             GlideImage(

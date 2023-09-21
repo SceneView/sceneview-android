@@ -15,7 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.sceneview.sample.ecommerce.productdescription.presentation.ProductDescriptionScreen
 import io.github.sceneview.sample.ecommerce.productdescription.presentation.ProductDescriptionViewModel
-import io.github.sceneview.sample.ecommerce.ui.theme.SceneViewTheme
+import io.github.sceneview.sample.ecommerce.ui.SceneViewTheme
 import io.github.sceneview.sample.ecommerce.viewinyourspace.presentation.ViewInYourSpaceScreen
 import io.github.sceneview.sample.ecommerce.viewinyourspace.presentation.ViewInYourSpaceViewModel
 
@@ -30,7 +30,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val productId = 1
         setContent {
+
             SceneViewTheme {
+
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -55,7 +57,10 @@ class MainActivity : ComponentActivity() {
                             })
                         ) {
                             val productIdArg = it.arguments?.getString("productId")
-                            ViewInYourSpaceScreen(productIdArg?.toInt() ?: 0, viewInYourSpaceViewModel)
+                            ViewInYourSpaceScreen(
+                                productIdArg?.toInt() ?: 0,
+                                viewInYourSpaceViewModel
+                            )
                         }
                     }
                 }

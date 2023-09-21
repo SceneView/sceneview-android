@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">ecommerce</string>
+    <string name="rotate_hint">Use one finger to move and two fingers to rotate the handbag!</string>
+    <string name="move_phone_hint">Move your phone to place model</string>
+    <string name="ready_to_place_model_hint">Ready to place model!</string>
+    <string name="placed_model">Placed model!</string>
+    <string name="view_in_your_space">View in your space</string>
+    <string name="add_to_cart">Add To Cart</string>
+    <string name="added_to_cart">Added to cart!</string>
 </resources>
