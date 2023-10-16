@@ -4,7 +4,7 @@ import android.content.Context
 import android.view.MotionEvent
 
 /**
- * ### Detects scaling transformation gestures using the supplied [MotionEvent]s
+ * Detects scaling transformation gestures using the supplied [MotionEvent]s.
  *
  * The [android.view.ScaleGestureDetector.OnScaleGestureListener] callback will notify users when
  * a particular gesture event has occurred.
@@ -40,13 +40,13 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
 
     lateinit var event: MotionEvent
 
-    override fun onTouchEvent(event: MotionEvent) : Boolean {
+    override fun onTouchEvent(event: MotionEvent): Boolean {
         this.event = event
         return super.onTouchEvent(event)
     }
 
     /**
-     * ### The listener for receiving notifications when gestures occur.
+     * The listener for receiving notifications when gestures occur.
      *
      * If you want to listen for all the different gestures then implement this interface.
      *
@@ -58,7 +58,7 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
      */
     interface OnScaleListener {
         /**
-         * ### Responds to the beginning of a scaling gesture. Reported by new pointers going down.
+         * Responds to the beginning of a scaling gesture. Reported by new pointers going down.
          *
          * @param detector The detector reporting the event - use this to retrieve extended info
          * about event state.
@@ -66,7 +66,9 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
         fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent)
 
         /**
-         * ### Responds to scaling events for a gesture in progress. Reported by pointer motion.
+         * Responds to scaling events for a gesture in progress.
+         *
+         * Reported by pointer motion.
          *
          * @param detector The detector reporting the event - use this to retrieve extended info
          * about event state.
@@ -74,7 +76,7 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
         fun onScale(detector: ScaleGestureDetector, e: MotionEvent)
 
         /**
-         * ### Responds to the end of a scale gesture. Reported by existing pointers going up.
+         * Responds to the end of a scale gesture. Reported by existing pointers going up.
          *
          * Once a scale has ended, [ScaleGestureDetector.getFocusX] and
          * [ScaleGestureDetector.getFocusY] will return focal point of the pointers remaining on

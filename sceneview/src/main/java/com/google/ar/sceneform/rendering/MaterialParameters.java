@@ -6,7 +6,7 @@ import androidx.annotation.Nullable;
 import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.TextureSampler;
 import com.google.android.filament.proguard.UsedByNative;
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 
 import java.util.HashMap;
 import java.util.Optional;

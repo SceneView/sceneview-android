@@ -2,6 +2,7 @@ package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.proguard.UsedByNative;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 
@@ -38,11 +39,11 @@ public class TextureInternalData {
     return sampler;
   }
 
-  public void destroy() {
+  public void destroy(Engine engine) {
     AndroidPreconditions.checkUiThread();
 
     if (filamentTexture != null) {
-      TextureKt.destroy(filamentTexture);
+      engine.destroyTexture(filamentTexture);
     }
     filamentTexture = null;
   }

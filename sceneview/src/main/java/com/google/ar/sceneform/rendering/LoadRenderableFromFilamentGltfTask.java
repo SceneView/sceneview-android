@@ -6,7 +6,7 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Preconditions;
 import com.google.ar.sceneform.utilities.SceneformBufferUtils;
 
 import java.io.InputStream;

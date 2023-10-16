@@ -18,7 +18,7 @@ import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
-import io.github.sceneview.ar.arcore.ArSession
+import io.github.sceneview.ar.arcore.ARSession
 
 /**
  * ### Assumed distance in meters from the device camera to the surface on which user will try to
@@ -31,7 +31,7 @@ import io.github.sceneview.ar.arcore.ArSession
  * where the user will likely be standing and trying to place an object on the ground or floor in
  * front of them.
  */
-const val defaultApproximateDistance = 2.0f
+const val kDefaultHitTestInstantDistance = 2.0f
 
 /**
  * Manages an ARCore Session using the Android Lifecycle API. Before starting a Session, this class
@@ -39,10 +39,10 @@ const val defaultApproximateDistance = 2.0f
  * asks the user for required permissions if necessary.
  */
 class ARCore(
-    val onSessionCreated: (session: ArSession) -> Unit,
-    val onSessionResumed: (session: ArSession) -> Unit,
+    val onSessionCreated: (session: Session) -> Unit,
+    val onSessionResumed: (session: Session) -> Unit,
     val onArSessionFailed: (exception: Exception) -> Unit,
-    val onSessionConfigChanged: (session: ArSession, config: Config) -> Unit
+    val onSessionConfigChanged: (session: Session, config: Config) -> Unit
 ) {
 
     /**
@@ -55,27 +55,13 @@ class ARCore(
      */
     var checkAvailability = true
 
-    // TODO: See if it could be useful
-//    /**
-//     * ### Whether or not your SceneView can be used without ARCore
-//     *
-//     * This can be set to true in order to have a fallback usage when the camera is not available or
-//     * the camera permission result is not granted.
-//     * If set to false, the ArSceneView won't be visible until the user accept the permission ask or
-//     * change the auto-displayed app permissions settings screen.
-//     *
-//     * **Warning:** You should not use this to limit to 3D only usage. Using SceneView instead of
-//     * ArSceneView is a better choice in this case.
-//     */
-//    var isOptional = false
-
     lateinit var features: Set<Session.Feature>
     lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
     private var cameraPermissionRequested = false
     lateinit var appSettingsLauncher: ActivityResultLauncher<Intent>
     private var appSettingsRequested = false
     private var installRequested = false
-    internal var session: ArSession? = null
+    internal var session: ARSession? = null
         private set
 
     fun create(context: Context, activity: ComponentActivity?, features: Set<Session.Feature>) {
@@ -131,7 +117,7 @@ class ARCore(
     fun createSession(context: Context) {
         // Create a session if Google Play Services for AR is installed and up to date.
         try {
-            session = ArSession(
+            session = ARSession(
                 context,
                 features,
                 onResumed = onSessionResumed,
@@ -184,7 +170,7 @@ class ARCore(
      * more complicated lifecycle requirements: [Session.close]
      */
     fun destroy() {
-        session?.destroy()
+        session?.close()
         session = null
     }
 
@@ -251,6 +237,7 @@ fun TrackingFailureReason.getDescription(context: Context) = when (this) {
             R.string.sceneview_insufficient_light_android_s_message
         }
     )
+
     TrackingFailureReason.EXCESSIVE_MOTION -> context.getString(R.string.sceneview_excessive_motion_message)
     TrackingFailureReason.INSUFFICIENT_FEATURES -> context.getString(R.string.sceneview_insufficient_features_message)
     TrackingFailureReason.CAMERA_UNAVAILABLE -> context.getString(R.string.sceneview_camera_unavailable_message)

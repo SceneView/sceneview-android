@@ -2,7 +2,7 @@ package com.google.ar.sceneform.rendering;
 
 import android.view.View;
 
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 
 /**
  * Interface for controlling the size of a {@link ViewRenderable} in the {@link

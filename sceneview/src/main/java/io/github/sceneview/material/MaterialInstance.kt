@@ -8,14 +8,14 @@ import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Mat4
-import io.github.sceneview.Filament
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.TextureSamplerExternal
 import io.github.sceneview.utils.Color
+import io.github.sceneview.utils.colorOf
 
-fun MaterialInstance.destroy() {
-    runCatching { Filament.engine.destroyMaterialInstance(this) }
-}
+const val kMaterialDefaultMetallic = 0.0f
+const val kMaterialDefaultRoughness = 0.4f
+const val kMaterialDefaultReflectance = 0.5f
 
 fun MaterialInstance.setParameter(name: String, value: Float2) =
     setParameter(name, value.x, value.y)
@@ -32,13 +32,57 @@ fun MaterialInstance.setParameter(name: String, value: Float3) =
 fun MaterialInstance.setTexture(
     name: String,
     texture: Texture,
-    textureSampler: TextureSampler = TextureSampler2D()
-) = setParameter(name, texture, textureSampler)
+    sampler: TextureSampler = TextureSampler2D()
+) = setParameter(name, texture, sampler)
 
-fun MaterialInstance.setExternalTexture(
-    name: String,
-    texture: Texture
-) = setTexture(name, texture, TextureSamplerExternal())
+fun MaterialInstance.setExternalTexture(name: String, texture: Texture) =
+    setParameter(name, texture, TextureSamplerExternal())
+
+// **********
+// PBR
+// **********
+
+fun MaterialInstance.setColor(color: Color) = setParameter("color", color)
+fun MaterialInstance.setColor(color: Int) = setColor(colorOf(color))
+
+/**
+ * The metallic property defines whether the surface is a metallic (conductor) or a non-metallic
+ * (dielectric) surface.
+ *
+ * This property should be used as a binary value, set to either 0 or 1.
+ * Intermediate values are only truly useful to create transitions between different types of
+ * surfaces when using textures.
+ *
+ * The default value is 0.
+ */
+fun MaterialInstance.setMetallic(factor: Float) = setParameter("metallic", factor)
+
+/**
+ * The roughness property controls the perceived smoothness of the surface.
+ *
+ * When roughness is set to 0, the surface is perfectly smooth and highly glossy.
+ * The rougher a surface is, the "blurrier" the reflections are.
+ *
+ * The default value is 0.4.
+ */
+fun MaterialInstance.setRoughness(factor: Float) = setParameter("roughness", factor)
+
+/**
+ * The reflectance property only affects non-metallic surfaces.
+ *
+ * This property can be used to control the specular intensity. This value is defined between 0 and
+ * 1 and represents a remapping of a percentage of reflectance.
+ *
+ * The default value is 0.5.
+ */
+fun MaterialInstance.setReflectance(factor: Float) = setParameter("reflectance", factor)
+
+// **********
+// Texture
+// **********
+
+fun MaterialInstance.setTexture(texture: Texture) = setTexture("texture", texture)
+fun MaterialInstance.setExternalTexture(texture: Texture) = setExternalTexture("texture", texture)
 
 // **********
 // Base Color
@@ -47,9 +91,8 @@ fun MaterialInstance.setBaseColorIndex(value: Int) = setParameter("baseColorInde
 fun MaterialInstance.setBaseColor(value: Color) = setParameter("baseColorFactor", value)
 
 fun MaterialInstance.setBaseColorMap(
-    texture: Texture,
-    textureSampler: TextureSampler = TextureSampler2D()
-) = setTexture("baseColorMap", texture, textureSampler)
+    texture: Texture, sampler: TextureSampler = TextureSampler2D()
+) = setParameter("baseColorMap", texture, sampler)
 
 // **********************
 // Metallic-Roughness Map
@@ -60,9 +103,8 @@ fun MaterialInstance.setMetallicRoughnessIndex(value: Int) =
 fun MaterialInstance.setMetallicFactor(value: Float) = setParameter("metallicFactor", value)
 fun MaterialInstance.setRoughnessFactor(value: Float) = setParameter("roughnessFactor", value)
 fun MaterialInstance.setMetallicRoughnessMap(
-    texture: Texture,
-    textureSampler: TextureSampler = TextureSampler2D()
-) = setTexture("metallicRoughnessMap", texture, textureSampler)
+    texture: Texture, sampler: TextureSampler = TextureSampler2D()
+) = setParameter("metallicRoughnessMap", texture, sampler)
 
 // **********
 // Normal Map
@@ -70,9 +112,8 @@ fun MaterialInstance.setMetallicRoughnessMap(
 fun MaterialInstance.setNormalIndex(value: Int) = setParameter("normalIndex", value)
 fun MaterialInstance.setNormalScale(value: Float) = setParameter("normalScale", value)
 fun MaterialInstance.setNormalMap(
-    texture: Texture,
-    textureSampler: TextureSampler = TextureSampler2D()
-) = setTexture("normalMap", texture, textureSampler)
+    texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
+) = setParameter("normalMap", texture, textureSampler)
 
 // *****************
 // Ambient Occlusion
@@ -80,9 +121,8 @@ fun MaterialInstance.setNormalMap(
 fun MaterialInstance.setAoIndex(value: Int) = setParameter("aoIndex", value)
 fun MaterialInstance.setAoStrength(value: Float) = setParameter("aoStrength", value)
 fun MaterialInstance.setOcclusionMap(
-    texture: Texture,
-    textureSampler: TextureSampler = TextureSampler2D()
-) = setTexture("occlusionMap", texture, textureSampler)
+    texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
+) = setParameter("occlusionMap", texture, textureSampler)
 
 // ************
 // Emissive Map
@@ -91,9 +131,8 @@ fun MaterialInstance.setEmissiveIndex(value: Int) = setParameter("emissiveIndex"
 fun MaterialInstance.setEmissiveColor(value: Color) = setParameter("emissiveFactor", value)
 
 fun MaterialInstance.setEmissiveMap(
-    texture: Texture,
-    textureSampler: TextureSampler = TextureSampler2D()
-) = setTexture("emissiveMap", texture, textureSampler)
+    texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
+) = setParameter("emissiveMap", texture, textureSampler)
 
 fun MaterialInstance.setBaseTexture(
     texture: Texture, textureSampler: TextureSampler = TextureSampler2D()

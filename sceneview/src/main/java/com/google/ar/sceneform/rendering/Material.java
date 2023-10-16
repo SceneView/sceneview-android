@@ -8,12 +8,13 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.lifecycle.Lifecycle;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.MaterialInstance;
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.resources.ResourceRegistry;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.LoadHelper;
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Preconditions;
 import com.google.ar.sceneform.utilities.SceneformBufferUtils;
 
 import java.io.InputStream;
@@ -21,8 +22,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-
-import io.github.sceneview.material.MaterialKt;
 
 /**
  * Represents a reference to a material.
@@ -337,7 +336,7 @@ public class Material {
          * specified.
          */
         @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"})
-        public CompletableFuture<Material> build() {
+        public CompletableFuture<Material> build(Engine engine) {
             try {
                 checkPreconditions();
             } catch (Throwable failedPrecondition) {
@@ -360,7 +359,7 @@ public class Material {
             }
 
             if (sourceBuffer != null) {
-                com.google.android.filament.Material filamentMaterial = createFilamentMaterial(sourceBuffer);
+                com.google.android.filament.Material filamentMaterial = createFilamentMaterial(engine, sourceBuffer);
                 Material material = new Material(filamentMaterial);
 
                 // Register the new material in the registry.
@@ -418,7 +417,7 @@ public class Material {
                                     ThreadPools.getThreadPoolExecutor())
                             .thenApplyAsync(
                                     byteBuffer -> {
-                                        return new Material(createFilamentMaterial(byteBuffer));
+                                        return new Material(createFilamentMaterial(engine, byteBuffer));
                                     },
                                     ThreadPools.getMainExecutor());
 
@@ -442,10 +441,11 @@ public class Material {
             return inputStreamCreator != null || sourceBuffer != null || existingMaterial != null;
         }
 
-        private com.google.android.filament.Material createFilamentMaterial(ByteBuffer sourceBuffer) {
+        private com.google.android.filament.Material createFilamentMaterial(Engine engine, ByteBuffer sourceBuffer) {
             try {
-                return MaterialKt.build(new com.google.android.filament.Material.Builder()
-                        .payload(sourceBuffer, sourceBuffer.limit()));
+                return new com.google.android.filament.Material.Builder()
+                        .payload(sourceBuffer, sourceBuffer.limit())
+                        .build(engine);
             } catch (Exception e) {
                 throw new IllegalArgumentException("Unable to create material from source byte buffer.", e);
             }

@@ -16,13 +16,12 @@
             <option value="$PROJECT_DIR$/samples" />
             <option value="$PROJECT_DIR$/samples/ar-augmented-image" />
             <option value="$PROJECT_DIR$/samples/ar-cloud-anchor" />
-            <option value="$PROJECT_DIR$/samples/ar-cursor-placement" />
             <option value="$PROJECT_DIR$/samples/ar-model-viewer" />
             <option value="$PROJECT_DIR$/samples/ar-point-cloud" />
             <option value="$PROJECT_DIR$/samples/common" />
             <option value="$PROJECT_DIR$/samples/model-viewer" />
             <option value="$PROJECT_DIR$/sceneview" />
-            <option value="$PROJECT_DIR$/sceneview_1_0_0" />
+            <option value="$PROJECT_DIR$/sceneview_2_0_0" />
           </set>
         </option>
       </GradleProjectSettings>

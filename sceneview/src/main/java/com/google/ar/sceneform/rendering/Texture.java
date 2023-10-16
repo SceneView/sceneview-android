@@ -8,21 +8,18 @@ import android.os.Build;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.lifecycle.Lifecycle;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.android.TextureHelper;
 import com.google.android.filament.proguard.UsedByNative;
 import com.google.ar.sceneform.resources.ResourceRegistry;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 import com.google.ar.sceneform.utilities.LoadHelper;
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Preconditions;
 
 import java.io.InputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-
-import io.github.sceneview.Filament;
-import io.github.sceneview.texture.TextureKt;
 
 /** Represents a reference to a texture. */
 @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
@@ -266,7 +263,7 @@ public class Texture {
      *
      * @throws IllegalStateException if the builder is not properly set
      */
-    public CompletableFuture<Texture> build(Lifecycle lifecycle) {
+    public CompletableFuture<Texture> build(Engine engine) {
       AndroidPreconditions.checkUiThread();
       Object registryId = this.registryId;
       if (registryId != null) {
@@ -299,7 +296,7 @@ public class Texture {
                 bitmapFuture.thenApplyAsync(
                         loadedBitmap -> {
                           TextureInternalData textureData =
-                                  makeTextureData(lifecycle, loadedBitmap, sampler, usage, MIP_LEVELS_TO_GENERATE);
+                                  makeTextureData(engine, loadedBitmap, sampler, usage, MIP_LEVELS_TO_GENERATE);
                           return new Texture(textureData);
                         },
                         ThreadPools.getMainExecutor());
@@ -346,8 +343,7 @@ public class Texture {
               ThreadPools.getThreadPoolExecutor());
     }
 
-    private static TextureInternalData makeTextureData(Lifecycle lifecycle,
-            Bitmap bitmap, Sampler sampler, Usage usage, int mipLevels) {
+    private static TextureInternalData makeTextureData(Engine engine, Bitmap bitmap, Sampler sampler, Usage usage, int mipLevels) {
       // Due to fun ambiguities between Texture (RenderCore) and Texture (Filament)
       // Texture references must be fully qualified giving rise to the following monstrosity
       // of verbosity.
@@ -357,18 +353,19 @@ public class Texture {
               com.google.android.filament.Texture.Sampler.SAMPLER_2D;
 
       com.google.android.filament.Texture filamentTexture =
-              TextureKt.build(new com.google.android.filament.Texture.Builder()
+              new com.google.android.filament.Texture.Builder()
                               .width(bitmap.getWidth())
                               .height(bitmap.getHeight())
                               .depth(1)
                               .levels(mipLevels)
                               .sampler(textureSampler)
-                              .format(textureInternalFormat));
+                              .format(textureInternalFormat)
+              .build(engine);
 
-      TextureHelper.setBitmap(Filament.getEngine(), filamentTexture, 0, bitmap);
+      TextureHelper.setBitmap(engine, filamentTexture, 0, bitmap);
 
       if (mipLevels > 1) {
-        filamentTexture.generateMipmaps(Filament.getEngine());
+        filamentTexture.generateMipmaps(engine);
       }
 
       return new TextureInternalData(filamentTexture, sampler);

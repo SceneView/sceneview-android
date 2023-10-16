@@ -11,7 +11,7 @@ android {
         minSdk 28
         targetSdk 34
         versionCode 1
-        versionName "1.0.0"
+        versionName "1.1.0"
     }
 
     buildTypes {
@@ -35,6 +35,6 @@ dependencies {
     implementation project(":samples:common")
 
     // SceneView
-    releaseImplementation "io.github.sceneview:sceneview:1.0.12"
-    debugImplementation project(":sceneview_1_0_0")
+    releaseImplementation "io.github.sceneview:sceneview:2.0.0"
+    debugImplementation project(":sceneview_2_0_0")
 }

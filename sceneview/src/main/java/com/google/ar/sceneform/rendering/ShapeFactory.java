@@ -4,9 +4,9 @@ import android.os.Build;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.lifecycle.Lifecycle;
 
-import com.google.ar.sceneform.math.Vector3;
+import com.google.android.filament.Engine;
+import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.rendering.RenderableDefinition.Submesh;
 import com.google.ar.sceneform.rendering.Vertex.UvCoordinate;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
@@ -32,7 +32,7 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeCube(Vector3 size, Vector3 center, Material material) {
+  public static ModelRenderable makeCube(Engine engine, Vector3 size, Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
     Vector3 extents = size.scaled(0.5f);
@@ -110,17 +110,19 @@ public final class ShapeFactory {
       triangleIndices.add(1 + verticesPerSide * i);
     }
 
-    Submesh submesh =
-        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
+    Submesh submesh = Submesh.builder()
+            .setTriangleIndices(triangleIndices)
+            .setMaterial(material.filamentMaterialInstance)
+            .build(engine);
 
-    RenderableDefinition renderableDefinition =
-        RenderableDefinition.builder()
+    RenderableDefinition renderableDefinition = RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build();
+            .build(engine);
 
-    CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build();
+    CompletableFuture<ModelRenderable> future = ModelRenderable.builder()
+            .setSource(renderableDefinition)
+            .build(engine);
 
     @Nullable ModelRenderable result;
     try {
@@ -146,7 +148,7 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeSphere(Lifecycle lifecycle, float radius, Vector3 center, Material material) {
+  public static ModelRenderable makeSphere(Engine engine, float radius, Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
     final int stacks = 24;
@@ -215,16 +217,18 @@ public final class ShapeFactory {
       v += slices + 1;
     }
 
-    Submesh submesh =
-        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
-    RenderableDefinition renderableDefinition =
-        RenderableDefinition.builder()
+    Submesh submesh = Submesh.builder()
+            .setTriangleIndices(triangleIndices)
+            .setMaterial(material.filamentMaterialInstance)
+            .build(engine);
+    RenderableDefinition renderableDefinition = RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build();
+            .build(engine);
 
-    CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build();
+    CompletableFuture<ModelRenderable> future = ModelRenderable.builder()
+            .setSource(renderableDefinition)
+            .build(engine);
 
     @Nullable ModelRenderable result;
     try {
@@ -251,7 +255,7 @@ public final class ShapeFactory {
    */
   @SuppressWarnings("AndroidApiChecker")
   // CompletableFuture requires api level 24
-  public static ModelRenderable makeCylinder(float radius, float height,
+  public static ModelRenderable makeCylinder(Engine engine, float radius, float height,
                                              Vector3 center, Material material) {
     AndroidPreconditions.checkMinAndroidApiLevel();
 
@@ -371,17 +375,19 @@ public final class ShapeFactory {
       triangleIndices.add(upperCenterIndex + side + 1);
     }
 
-    Submesh submesh =
-        Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
+    Submesh submesh = Submesh.builder()
+            .setTriangleIndices(triangleIndices)
+            .setMaterial(material.filamentMaterialInstance)
+            .build(engine);
 
-    RenderableDefinition renderableDefinition =
-        RenderableDefinition.builder()
+    RenderableDefinition renderableDefinition = RenderableDefinition.builder()
             .setVertices(vertices)
             .setSubmeshes(Arrays.asList(submesh))
-            .build();
+            .build(engine);
 
-    CompletableFuture<ModelRenderable> future =
-        ModelRenderable.builder().setSource(renderableDefinition).build();
+    CompletableFuture<ModelRenderable> future = ModelRenderable.builder()
+            .setSource(renderableDefinition)
+            .build(engine);
 
     @Nullable ModelRenderable result;
     try {

@@ -9,13 +9,10 @@ import android.view.Surface;
 import android.view.View;
 import android.widget.FrameLayout;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
 
-import com.google.ar.sceneform.utilities.Preconditions;
+import com.google.android.filament.Engine;
+import io.github.sceneview.collision.Preconditions;
 
 import java.util.ArrayList;
 
@@ -53,11 +50,11 @@ public class RenderViewToExternalTexture extends FrameLayout {
   private final ArrayList<OnViewSizeChangedListener> onViewSizeChangedListeners = new ArrayList<>();
 
   @SuppressWarnings("initialization") // Suppress @UnderInitialization warning.
-  RenderViewToExternalTexture(Context context, View view) {
+  RenderViewToExternalTexture(Engine engine, Context context, View view) {
     super(context);
     Preconditions.checkNotNull(view, "Parameter \"view\" was null.");
 
-    externalTexture = new ExternalTexture();
+    externalTexture = new ExternalTexture(engine);
 
     this.view = view;
     addView(view);

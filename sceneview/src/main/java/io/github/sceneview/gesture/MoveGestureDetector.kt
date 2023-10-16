@@ -2,10 +2,13 @@ package io.github.sceneview.gesture
 
 import android.content.Context
 import android.view.MotionEvent
+import io.github.sceneview.gesture.MoveGestureDetector.OnMoveListener
 import kotlin.math.pow
 
+private const val kMinDragDistance = 1000f
+
 /**
- * ### Detects move transformation gestures using the supplied [MotionEvent]s
+ * Detects move transformation gestures using the supplied [MotionEvent]s
  *
  * The [OnMoveListener] callback will notify users when a particular gesture event has
  * occurred.
@@ -19,15 +22,11 @@ import kotlin.math.pow
  *
  * @param context the application's context
  * @param listener the listener invoked for all the callbacks, this must not be null
- * @param handler the handler to use for running deferred listener events
  */
-
-private const val MIN_DRAG_DISTANCE = 1000f
-
 open class MoveGestureDetector(private val context: Context, private val listener: OnMoveListener) {
 
     /**
-     * ### The listener for receiving notifications when gestures occur
+     * The listener for receiving notifications when gestures occur
      *
      * If you want to listen for the different gestures then implement this interface.
      *
@@ -38,7 +37,7 @@ open class MoveGestureDetector(private val context: Context, private val listene
      */
     interface OnMoveListener {
         /**
-         * ### Responds to moving events for a gesture in progress
+         * Responds to moving events for a gesture in progress
          *
          * Reported by pointer motion.
          *
@@ -52,7 +51,7 @@ open class MoveGestureDetector(private val context: Context, private val listene
         fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean
 
         /**
-         * ### Responds to the beginning of a moving gesture
+         * Responds to the beginning of a moving gesture
          *
          * Reported by new pointers going down.
          *
@@ -65,12 +64,9 @@ open class MoveGestureDetector(private val context: Context, private val listene
         fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent): Boolean
 
         /**
-         * ### Responds to the end of a move gesture
+         * Responds to the end of a move gesture
          *
          * Reported by existing pointers going up.
-         *
-         * Once a scale has ended, [focusX] and [focusY] will return focal point of the pointers
-         * remaining on the screen.
          *
          * @param detector The detector reporting the event - use this to retrieve extended info
          * about event state.
@@ -79,7 +75,7 @@ open class MoveGestureDetector(private val context: Context, private val listene
     }
 
     /**
-     * ### A convenience class to extend when you only want to listen for a subset of
+     * A convenience class to extend when you only want to listen for a subset of
      * move-related events
      *
      * This implements all methods in [OnMoveListener] but does nothing.
@@ -144,7 +140,7 @@ open class MoveGestureDetector(private val context: Context, private val listene
                     if (detectionInProgress) {
                         val distanceSquared =
                             (lastDistanceX ?: 0f).pow(2) + (lastDistanceY ?: 0f).pow(2)
-                        if (distanceSquared >= MIN_DRAG_DISTANCE) {
+                        if (distanceSquared >= kMinDragDistance) {
                             detectionInProgress = false
                             gestureInProgress = true
                             listener.onMoveBegin(this, event)
@@ -155,11 +151,15 @@ open class MoveGestureDetector(private val context: Context, private val listene
                     listener.onMove(this, event)
                     true
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> {
+
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_CANCEL,
+                MotionEvent.ACTION_POINTER_DOWN -> {
                     reset()
                     listener.onMoveEnd(this, event)
                     true
                 }
+
                 else -> false
             }
         } else {
@@ -169,6 +169,7 @@ open class MoveGestureDetector(private val context: Context, private val listene
                     detectionInProgress = true
                     false
                 }
+
                 else -> false
             }
         }

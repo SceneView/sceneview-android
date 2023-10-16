@@ -2,14 +2,11 @@ package io.github.sceneview.geometries
 
 import com.google.android.filament.Box
 import com.google.android.filament.Engine
-import com.google.android.filament.EntityInstance
 import com.google.android.filament.IndexBuffer
-import com.google.android.filament.RenderableManager
 import com.google.android.filament.VertexBuffer
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.max
 import dev.romainguy.kotlin.math.min
-import io.github.sceneview.Filament
 import io.github.sceneview.math.Box
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
@@ -40,10 +37,12 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Sphere
  */
 open class Geometry(
+    protected val engine: Engine,
     val vertexBuffer: VertexBuffer,
-    val indexBuffer: IndexBuffer
+    val indexBuffer: IndexBuffer,
+    vertices: List<Vertex>,
+    submeshes: List<Submesh>,
 ) {
-
     /**
      * Used for constructing renderables dynamically
      *
@@ -66,34 +65,36 @@ open class Geometry(
         constructor(vararg triangleIndices: Int) : this(triangleIndices.toList())
     }
 
-    lateinit var vertices: List<Vertex>
-    lateinit var submeshes: List<Submesh>
+    open class Builder : BaseBuilder<Geometry>() {
 
-    lateinit var boundingBox: Box
-        private set
-    lateinit var offsetsCounts: List<Pair<Int, Int>>
-        private set
+        public override fun vertices(vertices: List<Vertex>) =
+            apply { super.vertices(vertices) }
 
-    open class Builder(
-        vertices: List<Vertex> = listOf(),
-        submeshes: List<Submesh> = listOf()
-    ) : BaseBuilder<Geometry>(vertices, submeshes) {
-        override fun build(
-            vertexBuffer: VertexBuffer,
-            indexBuffer: IndexBuffer
-        ) = Geometry(vertexBuffer, indexBuffer)
+        public override fun submeshes(submeshes: List<Submesh>) =
+            apply { super.submeshes(submeshes) }
+
+        override fun build(engine: Engine) = Geometry(
+            engine,
+            vertexBuilder.build(engine),
+            indexBuilder.build(engine),
+            vertices,
+            submeshes
+        )
     }
 
-    abstract class BaseBuilder<T : Geometry> internal constructor(
-        var vertices: List<Vertex> = listOf(),
+    abstract class BaseBuilder<T : Geometry> internal constructor() {
+
+        var vertices: List<Vertex> = listOf()
+            private set
         var submeshes: List<Submesh> = listOf()
-    ) {
+            private set
 
-        fun vertices(vertices: List<Vertex>) = apply { this.vertices = vertices }
-        fun submeshes(submeshes: List<Submesh>) = apply { this.submeshes = submeshes }
+        protected val vertexBuilder = VertexBuffer.Builder()
+        protected val indexBuilder = IndexBuffer.Builder()
 
-        open fun build(engine: Engine): T {
-            val vertexBuffer = VertexBuffer.Builder().apply {
+        protected open fun vertices(vertices: List<Vertex>) = apply {
+            this.vertices = vertices
+            vertexBuilder.apply {
                 bufferCount(
                     1 + // Position is never null
                             (if (vertices.hasNormals) 1 else 0) +
@@ -146,26 +147,34 @@ open class Geometry(
                     )
                     normalized(VertexBuffer.VertexAttribute.COLOR)
                 }
-            }.build(engine)
-
-            // Determine how many indices there are
-            val indexBuffer = IndexBuffer.Builder().apply {
-                indexCount(submeshes.sumOf { it.triangleIndices.size })
-                    .bufferType(IndexBuffer.Builder.IndexType.UINT)
-            }.build(engine)
-
-            return build(vertexBuffer, indexBuffer).apply {
-                setBufferVertices(engine, this@BaseBuilder.vertices)
-                setBufferIndices(engine, this@BaseBuilder.submeshes)
             }
         }
 
-        fun build() = build(Filament.engine)
+        protected open fun submeshes(submeshes: List<Submesh>) = apply {
+            this.submeshes = submeshes
+            indexBuilder.indexCount(submeshes.sumOf { it.triangleIndices.size })
+                .bufferType(IndexBuffer.Builder.IndexType.UINT)
+        }
 
-        internal abstract fun build(vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer): T
+        abstract fun build(engine: Engine): T
     }
 
-    fun setBufferVertices(engine: Engine, vertices: List<Vertex>) {
+    lateinit var vertices: List<Vertex>
+        private set
+    lateinit var submeshes: List<Submesh>
+        private set
+
+    lateinit var boundingBox: Box
+        private set
+    lateinit var offsetsCounts: List<Pair<Int, Int>>
+        private set
+
+    init {
+        setVertices(vertices)
+        setSubmeshes(submeshes)
+    }
+
+    fun setVertices(vertices: List<Vertex>) {
         this.vertices = vertices
 
         var bufferIndex = 0
@@ -232,7 +241,7 @@ open class Geometry(
         boundingBox = Box(center, halfExtent)
     }
 
-    fun setBufferIndices(engine: Engine, submeshes: List<Submesh>) {
+    fun setSubmeshes(submeshes: List<Submesh>) {
         this.submeshes = submeshes
 
         // Fill the index buffer with the data
@@ -251,72 +260,11 @@ open class Geometry(
     }
 
     fun destroy() {
-        Filament.engine.destroy()
+        engine.destroyVertexBuffer(vertexBuffer)
+        engine.destroyIndexBuffer(indexBuffer)
     }
 }
 
 val List<Geometry.Vertex>.hasNormals get() = any { it.normal != null }
 val List<Geometry.Vertex>.hasUvCoordinates get() = any { it.uvCoordinate != null }
 val List<Geometry.Vertex>.hasColors get() = any { it.color != null }
-
-/**
- * Specifies the geometry data for a primitive.
- *
- * Filament primitives must have an associated [VertexBuffer] and [IndexBuffer].
- * Typically, each primitive is specified with a pair of daisy-chained calls:
- * [geometry] and [RenderableManager.Builder.material].
- * @see Geometry
- * @see Plane
- * @see Cube
- * @see Sphere
- * @see Cylinder
- * @see RenderableManager.setGeometry
- */
-fun RenderableManager.Builder.geometry(geometry: Geometry) = apply {
-    geometry.offsetsCounts.forEachIndexed { primitiveIndex, (offset, count) ->
-        geometry(
-            primitiveIndex,
-            RenderableManager.PrimitiveType.TRIANGLES,
-            geometry.vertexBuffer,
-            geometry.indexBuffer,
-            offset,
-            count
-        )
-    }
-    // Overall bounding box of the renderable
-    boundingBox(geometry.boundingBox)
-}
-
-/**
- * Changes the geometry for the given renderable instance.
- *
- * @see Geometry
- * @see Plane
- * @see Cube
- * @see Sphere
- * @see Cylinder
- * @see RenderableManager.Builder.geometry
- */
-fun RenderableManager.setGeometry(
-    @EntityInstance instance: Int,
-    geometry: Geometry
-) {
-    // Update the geometry and material instances
-    geometry.offsetsCounts.forEachIndexed { primitiveIndex, (offset, count) ->
-        setGeometryAt(
-            instance,
-            primitiveIndex,
-            RenderableManager.PrimitiveType.TRIANGLES,
-            geometry.vertexBuffer,
-            geometry.indexBuffer,
-            offset,
-            count
-        )
-    }
-    setAxisAlignedBoundingBox(instance, geometry.boundingBox)
-}
-
-fun Engine.destroyGeometry(geometry: Geometry) {
-    destroyVertexBuffer(geometry.vertexBuffer)
-    destroyIndexBuffer(geometry.indexBuffer)
-}

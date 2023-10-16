@@ -2,8 +2,8 @@ package com.google.ar.sceneform.rendering;
 
 import android.view.View;
 
-import com.google.ar.sceneform.math.Vector3;
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Vector3;
+import io.github.sceneview.collision.Preconditions;
 
 /**
  * Controls the size of a {@link ViewRenderable} in a {@link com.google.ar.sceneform.Scene} by

@@ -3,36 +3,40 @@ package io.github.sceneview.gesture
 import android.content.Context
 import android.view.GestureDetector
 import android.view.MotionEvent
+import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.node.Node
-import io.github.sceneview.renderable.Renderable
 
 /**
- * ### Responds to Android touch events with listeners and/or camera manipulator
+ * Responds to Android touch events with listeners and/or camera manipulator
  *
  * Camera supports one-touch orbit, two-touch pan, and pinch-to-zoom.
  */
 open class GestureDetector(
     context: Context,
-    pickNode: (MotionEvent, (NodeMotionEvent) -> Unit) -> Unit,
+    collisionSystem: CollisionSystem,
     listener: OnGestureListener
 ) : GestureDetector(context,
     object : GestureDetector.SimpleOnGestureListener() {
+        fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+
         override fun onDown(e: MotionEvent) = super.onDown(e).also {
-            pickNode(e) { ne ->
-                ne.node?.onDown(ne)
-                listener.onDown(ne)
+            hitTest(e).let {
+                it.node?.onDown(it)
+                listener.onDown(it)
             }
         }
 
-        override fun onShowPress(e: MotionEvent) = pickNode(e) { ne ->
-            ne.node?.onShowPress(ne)
-            listener.onShowPress(ne)
+        override fun onShowPress(e: MotionEvent) = super.onShowPress(e).also {
+            hitTest(e).let {
+                it.node?.onShowPress(it)
+                listener.onShowPress(it)
+            }
         }
 
         override fun onSingleTapUp(e: MotionEvent) = super.onSingleTapUp(e).also {
-            pickNode(e) { ne ->
-                ne.node?.onSingleTapUp(ne)
-                listener.onSingleTapUp(ne)
+            hitTest(e).let {
+                it.node?.onSingleTapUp(it)
+                listener.onSingleTapUp(it)
             }
         }
 
@@ -42,15 +46,20 @@ open class GestureDetector(
             distanceX: Float,
             distanceY: Float
         ) = super.onScroll(e1, e2, distanceX, distanceY).also {
-            pickNode(e1 ?: e2) { ne1 ->
-                pickNode(e2) { ne2 ->
+            hitTest(e1 ?: e2).let { ne1 ->
+                hitTest(e2).let { ne2 ->
                     ne1.node?.onScroll(ne1, ne2, distanceX, distanceY)
                     listener.onScroll(ne1, ne2, distanceX, distanceY)
                 }
             }
         }
 
-        override fun onLongPress(e: MotionEvent) = pickNode(e, listener::onLongPress)
+        override fun onLongPress(e: MotionEvent) = super.onLongPress(e).also {
+            hitTest(e).let {
+                it.node?.onLongPress(it)
+                listener.onLongPress(it)
+            }
+        }
 
         override fun onFling(
             e1: MotionEvent?,
@@ -58,8 +67,8 @@ open class GestureDetector(
             velocityX: Float,
             velocityY: Float
         ) = super.onFling(e1, e2, velocityX, velocityY).also {
-            pickNode(e1 ?: e2) { ne1 ->
-                pickNode(e2) { ne2 ->
+            hitTest(e1 ?: e2).let { ne1 ->
+                hitTest(e2).let { ne2 ->
                     ne1.node?.onFling(ne1, ne2, velocityX, velocityY)
                     listener.onFling(ne1, ne2, velocityX, velocityY)
                 }
@@ -67,30 +76,30 @@ open class GestureDetector(
         }
 
         override fun onSingleTapConfirmed(e: MotionEvent) = super.onSingleTapConfirmed(e).also {
-            pickNode(e) { ne ->
-                ne.node?.onSingleTapConfirmed(ne)
-                listener.onSingleTapConfirmed(ne)
+            hitTest(e).let {
+                it.node?.onSingleTapConfirmed(it)
+                listener.onSingleTapConfirmed(it)
             }
         }
 
         override fun onDoubleTap(e: MotionEvent) = super.onDoubleTap(e).also {
-            pickNode(e) { ne ->
-                ne.node?.onDoubleTap(ne)
-                listener.onDoubleTap(ne)
+            hitTest(e).let {
+                it.node?.onDoubleTap(it)
+                listener.onDoubleTap(it)
             }
         }
 
         override fun onDoubleTapEvent(e: MotionEvent) = super.onDoubleTapEvent(e).also {
-            pickNode(e) { ne ->
-                ne.node?.onDoubleTapEvent(ne)
-                listener.onDoubleTapEvent(ne)
+            hitTest(e).let {
+                it.node?.onDoubleTapEvent(it)
+                listener.onDoubleTapEvent(it)
             }
         }
 
-        override fun onContextClick(e: MotionEvent) = super.onDoubleTapEvent(e).also {
-            pickNode(e) { ne ->
-                ne.node?.onContextClick(ne)
-                listener.onContextClick(ne)
+        override fun onContextClick(e: MotionEvent) = super.onContextClick(e).also {
+            hitTest(e).let {
+                it.node?.onContextClick(it)
+                listener.onContextClick(it)
             }
         }
     }) {
@@ -266,25 +275,27 @@ open class GestureDetector(
         object : MoveGestureDetector.SimpleOnMoveListener {
             var moveBeginEvent: NodeMotionEvent? = null
 
+            fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+
             override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent) =
                 super.onMoveBegin(detector, e).also {
-                    pickNode(e) { ne ->
-                        moveBeginEvent = ne
-                        ne.node?.onMoveBegin(detector, ne)
-                        listener.onMoveBegin(detector, ne)
+                    hitTest(e).let {
+                        moveBeginEvent = it
+                        it.node?.onMoveBegin(detector, it)
+                        listener.onMoveBegin(detector, it)
                     }
                 }
 
             override fun onMove(detector: MoveGestureDetector, e: MotionEvent) =
                 super.onMove(detector, e).also {
-                    moveBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                    moveBeginEvent?.let { NodeMotionEvent(e, it.node) }?.let { ne ->
                         ne.node?.onMove(detector, ne)
                         listener.onMove(detector, ne)
                     }
                 }
 
             override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) {
-                moveBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                moveBeginEvent?.let { NodeMotionEvent(e, it.node) }?.let { ne ->
                     ne.node?.onMoveEnd(detector, ne)
                     listener.onMoveEnd(detector, ne)
                 }
@@ -296,18 +307,20 @@ open class GestureDetector(
         object : RotateGestureDetector.SimpleOnRotateListener {
             var rotateBeginEvent: NodeMotionEvent? = null
 
+            fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+
             override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) =
                 super.onRotateBegin(detector, e).also {
-                    pickNode(e) { ne ->
-                        rotateBeginEvent = ne
-                        ne.node?.onRotateBegin(detector, ne)
-                        listener.onRotateBegin(detector, ne)
+                    hitTest(e).let {
+                        rotateBeginEvent = it
+                        it.node?.onRotateBegin(detector, it)
+                        listener.onRotateBegin(detector, it)
                     }
                 }
 
             override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) =
                 super.onRotate(detector, e).also {
-                    rotateBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }
+                    rotateBeginEvent?.let { NodeMotionEvent(e, it.node) }
                         ?.let { ne ->
                             ne.node?.onRotate(detector, ne)
                             listener.onRotate(detector, ne)
@@ -315,7 +328,7 @@ open class GestureDetector(
                 }
 
             override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {
-                rotateBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                rotateBeginEvent?.let { NodeMotionEvent(e, it.node) }?.let { ne ->
                     ne.node?.onRotateEnd(detector, ne)
                     listener.onRotateEnd(detector, ne)
                 }
@@ -327,23 +340,25 @@ open class GestureDetector(
         object : ScaleGestureDetector.OnScaleListener {
             var scaleBeginEvent: NodeMotionEvent? = null
 
+            fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+
             override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) {
-                pickNode(e) { ne ->
-                    scaleBeginEvent = ne
-                    ne.node?.onScaleBegin(detector, ne)
-                    listener.onScaleBegin(detector, ne)
+                hitTest(e).let {
+                    scaleBeginEvent = it
+                    it.node?.onScaleBegin(detector, it)
+                    listener.onScaleBegin(detector, it)
                 }
             }
 
             override fun onScale(detector: ScaleGestureDetector, e: MotionEvent) {
-                scaleBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                scaleBeginEvent?.let { NodeMotionEvent(e, it.node) }?.let { ne ->
                     ne.node?.onScale(detector, ne)
                     listener.onScale(detector, ne)
                 }
             }
 
             override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {
-                scaleBeginEvent?.let { NodeMotionEvent(e, it.node, it.renderable) }?.let { ne ->
+                scaleBeginEvent?.let { NodeMotionEvent(e, it.node) }?.let { ne ->
                     ne.node?.onScaleEnd(detector, ne)
                     listener.onScaleEnd(detector, ne)
                 }
@@ -361,10 +376,16 @@ open class GestureDetector(
             scaleGestureDetector.onTouchEvent(event)
         }
     }
+
+    companion object {
+        fun hitTest(collisionSystem: CollisionSystem, e: MotionEvent) =
+            NodeMotionEvent(e, collisionSystem.hitTest(e).firstOrNull {
+                it.node?.isTouchable == true
+            }?.node)
+    }
 }
 
 data class NodeMotionEvent(
     val motionEvent: MotionEvent,
-    val node: Node? = null,
-    val renderable: Renderable? = null
+    val node: Node? = null
 )

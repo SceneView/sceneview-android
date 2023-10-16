@@ -1,12 +1,15 @@
 package io.github.sceneview.utils
 
-import android.opengl.*
+import android.opengl.EGL14
+import android.opengl.EGLConfig
+import android.opengl.EGLContext
+import android.opengl.GLES11Ext
+import android.opengl.GLES30
 
 /**
- * Convenience class to perform common GL operations
+ * Convenience class to perform common GL operations.
  */
 object OpenGL {
-    private val TAG: String = OpenGL::class.java.simpleName
 
     private const val EGL_OPENGL_ES3_BIT = 0x40
 

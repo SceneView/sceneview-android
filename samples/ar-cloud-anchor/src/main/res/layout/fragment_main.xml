@@ -20,7 +20,7 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_end="0dp" />
 
-    <io.github.sceneview.ar.ArSceneView
+    <io.github.sceneview.ar.ARSceneView
         android:id="@+id/sceneView"
         android:layout_width="0dp"
         android:layout_height="0dp"

@@ -1,7 +1,7 @@
 package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.Nullable;
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 
 /**
  * Represents a Vertex for a {@link RenderableDefinition}. Used for constructing renderables

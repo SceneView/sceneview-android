@@ -4,6 +4,7 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 
+import com.google.android.filament.Engine;
 import com.google.ar.sceneform.resources.ResourceRegistry;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 
@@ -181,7 +182,7 @@ public class ModelRenderable extends Renderable {
 
     /** @hide */
     @Override
-    protected ModelRenderable makeRenderable() {
+    protected ModelRenderable makeRenderable(Engine engine) {
       return new ModelRenderable(this);
     }
 

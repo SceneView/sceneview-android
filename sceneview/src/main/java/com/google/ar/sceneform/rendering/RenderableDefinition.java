@@ -2,18 +2,19 @@ package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.IndexBuffer.Builder.IndexType;
 import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.VertexBuffer;
 import com.google.android.filament.VertexBuffer.VertexAttribute;
-import com.google.ar.sceneform.math.MathHelper;
-import com.google.ar.sceneform.math.Matrix;
-import com.google.ar.sceneform.math.Quaternion;
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.MathHelper;
+import io.github.sceneview.collision.Matrix;
+import io.github.sceneview.collision.Quaternion;
+import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.rendering.Vertex.UvCoordinate;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Preconditions;
 
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -21,8 +22,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
-import io.github.sceneview.renderable.IndexBufferKt;
-import io.github.sceneview.renderable.VertexBufferKt;
+import io.github.sceneview.EngineKt;
 
 /**
  * Represents the visual information of a {@link Renderable}. Can be used to construct and modify
@@ -70,7 +70,7 @@ public class RenderableDefinition {
             return name;
         }
 
-        private Submesh(Builder builder) {
+        private Submesh(Engine engine, Builder builder) {
             triangleIndices = Preconditions.checkNotNull(builder.triangleIndices);
             material = Preconditions.checkNotNull(builder.material);
             name = builder.name;
@@ -106,12 +106,13 @@ public class RenderableDefinition {
                 return this;
             }
 
-            public Submesh build() {
-                return new Submesh(this);
+            public Submesh build(Engine engine) {
+                return new Submesh(engine,this);
             }
         }
     }
 
+    private Engine engine;
     private List<Vertex> vertices;
     private List<Submesh> submeshes;
 
@@ -120,6 +121,10 @@ public class RenderableDefinition {
     private static final int UV_SIZE = 2;
     private static final int TANGENTS_SIZE = 4; // quaternion
     private static final int COLOR_SIZE = 4; // RGBA
+
+    public RenderableDefinition(Engine engine) {
+        this.engine = engine;
+    }
 
     public void setVertices(List<Vertex> vertices) {
         this.vertices = vertices;
@@ -133,7 +138,7 @@ public class RenderableDefinition {
         this.submeshes = submeshes;
     }
 
-    List<Submesh> getSubmeshes() {
+    public List<Submesh> getSubmeshes() {
         return submeshes;
     }
 
@@ -207,17 +212,17 @@ public class RenderableDefinition {
         IndexBuffer indexBuffer = data.getIndexBuffer();
         if (indexBuffer == null || indexBuffer.getIndexCount() < numIndices) {
             if (indexBuffer != null) {
-                IndexBufferKt.destroy(indexBuffer);
+                EngineKt.safeDestroyIndexBuffer(engine, indexBuffer);
             }
 
-            indexBuffer = IndexBufferKt.build(
-                    new IndexBuffer.Builder()
-                            .indexCount(numIndices)
-                            .bufferType(IndexType.UINT));
+            indexBuffer = new IndexBuffer.Builder()
+                    .indexCount(numIndices)
+                    .bufferType(IndexType.UINT)
+                    .build(engine);
             data.setIndexBuffer(indexBuffer);
         }
 
-        IndexBufferKt.setBuffer(indexBuffer, rawIndexBuffer, 0, numIndices);
+        indexBuffer.setBuffer(engine, rawIndexBuffer, 0, numIndices);
     }
 
     private void applyDefinitionToDataVertexBuffer(IRenderableInternalData data) {
@@ -260,12 +265,12 @@ public class RenderableDefinition {
                             || vertexBuffer.getVertexCount() < numVertices;
 
             if (createVertexBuffer) {
-                VertexBufferKt.destroy(vertexBuffer);
+                engine.destroyVertexBuffer(vertexBuffer);
             }
         }
 
         if (createVertexBuffer) {
-            vertexBuffer = createVertexBuffer(numVertices, descriptionAttributes);
+            vertexBuffer = createVertexBuffer(engine, numVertices, descriptionAttributes);
             data.setVertexBuffer(vertexBuffer);
         }
 
@@ -377,28 +382,28 @@ public class RenderableDefinition {
 
         positionBuffer.rewind();
         int bufferIndex = 0;
-        VertexBufferKt.setBufferAt(vertexBuffer, bufferIndex, positionBuffer, 0, numVertices * POSITION_SIZE);
+        vertexBuffer.setBufferAt(engine, bufferIndex, positionBuffer, 0, numVertices * POSITION_SIZE);
 
         if (tangentsBuffer != null) {
             tangentsBuffer.rewind();
             bufferIndex++;
-            VertexBufferKt.setBufferAt(vertexBuffer, bufferIndex, tangentsBuffer, 0, numVertices * TANGENTS_SIZE);
+            vertexBuffer.setBufferAt(engine, bufferIndex, tangentsBuffer, 0, numVertices * TANGENTS_SIZE);
         }
 
         if (uvBuffer != null) {
             uvBuffer.rewind();
             bufferIndex++;
-            VertexBufferKt.setBufferAt(vertexBuffer, bufferIndex, uvBuffer, 0, numVertices * UV_SIZE);
+            vertexBuffer.setBufferAt(engine, bufferIndex, uvBuffer, 0, numVertices * UV_SIZE);
         }
 
         if (colorBuffer != null) {
             colorBuffer.rewind();
             bufferIndex++;
-            VertexBufferKt.setBufferAt(vertexBuffer, bufferIndex, colorBuffer, 0, numVertices * COLOR_SIZE);
+            vertexBuffer.setBufferAt(engine, bufferIndex, colorBuffer, 0, numVertices * COLOR_SIZE);
         }
     }
 
-    private RenderableDefinition(Builder builder) {
+    private RenderableDefinition(Engine engine, Builder builder) {
         vertices = Preconditions.checkNotNull(builder.vertices);
         submeshes = Preconditions.checkNotNull(builder.submeshes);
     }
@@ -407,7 +412,7 @@ public class RenderableDefinition {
         return new Builder();
     }
 
-    private static VertexBuffer createVertexBuffer(int vertexCount, EnumSet<VertexAttribute> attributes) {
+    private static VertexBuffer createVertexBuffer(Engine engine, int vertexCount, EnumSet<VertexAttribute> attributes) {
         VertexBuffer.Builder builder = new VertexBuffer.Builder();
 
         builder.vertexCount(vertexCount).bufferCount(attributes.size());
@@ -455,7 +460,7 @@ public class RenderableDefinition {
         }
 
         // VertexBufferKt destroy manually handled (not lifecycle aware)
-        return VertexBufferKt.build(builder);
+        return builder.build(engine);
     }
 
     private static void addVector3ToBuffer(Vector3 vector3, FloatBuffer buffer) {
@@ -539,8 +544,8 @@ public class RenderableDefinition {
             return this;
         }
 
-        public RenderableDefinition build() {
-            return new RenderableDefinition(this);
+        public RenderableDefinition build(Engine engine) {
+            return new RenderableDefinition(engine, this);
         }
     }
 }

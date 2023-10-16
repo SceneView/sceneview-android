@@ -1,9 +1,10 @@
 package io.github.sceneview.model
 
 import androidx.lifecycle.LifecycleCoroutineScope
+import com.google.android.filament.Engine
 import com.google.android.filament.utils.HDRLoader
 import com.google.ar.sceneform.rendering.Renderable
-import io.github.sceneview.environment.loadEnvironment
+import io.github.sceneview.loaders.loadEnvironment
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.future.asDeferred
@@ -12,7 +13,7 @@ import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 /**
  *
- * ### Load a Renderable in a coroutine scope without blocking a thread
+ * Load a Renderable in a coroutine scope without blocking a thread.
  *
  * This suspending function is cancellable.
  * If the Job of the current coroutine is cancelled or completed while this suspending function
@@ -29,16 +30,17 @@ import com.google.android.filament.utils.KTX1Loader as KTXLoader
  * @see [HDRLoader.loadEnvironment]
  */
 suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.build(
+    engine: Engine,
     coroutineScope: LifecycleCoroutineScope
 ) {
     coroutineScope.launchWhenCreated {
-        await()
+        await(engine)
     }
 }
 
 /**
  *
- * ### Awaits for loading a Renderable with the parameters of the builder without blocking a thread
+ * Awaits for loading a Renderable with the parameters of the builder without blocking a thread.
  *
  * This suspending function is cancellable.
  * If the Job of the current coroutine is cancelled or completed while this suspending function
@@ -54,15 +56,15 @@ suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T,
  * @see [KTXLoader.loadEnvironment]
  * @see [HDRLoader.loadEnvironment]
  */
-suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.await() =
-    build().await()
+suspend fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.await(engine: Engine) =
+    build(engine).await()
 
 /**
- * ### Deferred renderable loading is a non-blocking cancellable future.
+ * Deferred renderable loading is a non-blocking cancellable future.
  *
  * It is a [Job] with a result.
  *
  * @see [Deferred]
  */
-fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.asDeferred() =
-    build().asDeferred()
+fun <T : Renderable, B : Renderable.Builder<T, B>> Renderable.Builder<T, B>.asDeferred(engine: Engine) =
+    build(engine).asDeferred()

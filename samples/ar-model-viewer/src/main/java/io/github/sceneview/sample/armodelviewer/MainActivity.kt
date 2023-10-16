@@ -1,80 +1,118 @@
 package io.github.sceneview.sample.armodelviewer
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isGone
-import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.ar.core.Config
-import io.github.sceneview.ar.ArSceneView
+import com.google.ar.core.Plane
+import com.google.ar.core.TrackingFailureReason
+import io.github.sceneview.ar.ARSceneView
+import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.ar.getDescription
-import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.PlacementMode
+import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.math.Position
-import io.github.sceneview.utils.doOnApplyWindowInsets
-import io.github.sceneview.utils.setFullScreen
+import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.sample.doOnApplyWindowInsets
+import io.github.sceneview.sample.setFullScreen
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
-    lateinit var sceneView: ArSceneView
+    lateinit var sceneView: ARSceneView
     lateinit var loadingView: View
-    lateinit var statusText: TextView
-    lateinit var placeModelButton: ExtendedFloatingActionButton
-    lateinit var newModelButton: ExtendedFloatingActionButton
+    lateinit var instructionText: TextView
+    lateinit var changeModelButton: ExtendedFloatingActionButton
 
-    data class Model(
+    data class ModelAsset(
         val fileLocation: String,
-        val scaleUnits: Float? = null,
-        val placementMode: PlacementMode = PlacementMode.BEST_AVAILABLE,
-        val applyPoseRotation: Boolean = true
+        val scaleUnits: Float? = null
     )
 
-    val models = listOf(
-        Model("models/spiderbot.glb"),
-        Model(
-            fileLocation = "https://storage.googleapis.com/ar-answers-in-search-models/static/Tiger/model.glb",
-            // Display the Tiger with a size of 3 m long
-            scaleUnits = 2.5f,
-            placementMode = PlacementMode.BEST_AVAILABLE,
-            applyPoseRotation = false
-        ),
-        Model(
+    val modelAssets = listOf(
+        ModelAsset(
             fileLocation = "https://sceneview.github.io/assets/models/DamagedHelmet.glb",
-            placementMode = PlacementMode.INSTANT,
             scaleUnits = 0.5f
         ),
-        Model(
+        ModelAsset(
             fileLocation = "https://storage.googleapis.com/ar-answers-in-search-models/static/GiantPanda/model.glb",
-            placementMode = PlacementMode.PLANE_HORIZONTAL,
             // Display the Tiger with a size of 1.5 m height
             scaleUnits = 1.5f
         ),
-        Model(
-            fileLocation = "https://sceneview.github.io/assets/models/Spoons.glb",
-            placementMode = PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL,
-            // Keep original model size
-            scaleUnits = null
-        ),
-        Model(
-            fileLocation = "https://sceneview.github.io/assets/models/Halloween.glb",
-            placementMode = PlacementMode.PLANE_HORIZONTAL,
+        ModelAsset(
+            fileLocation = "https://storage.googleapis.com/ar-answers-in-search-models/static/Tiger/model.glb",
+            // Display the Tiger with a size of 3 m long
             scaleUnits = 2.5f
-        ),
+        )
     )
-    var modelIndex = 0
-    var modelNode: ArModelNode? = null
 
     var isLoading = false
         set(value) {
             field = value
             loadingView.isGone = !value
         }
+
+    var anchorNode: AnchorNode? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                changeModelButton.isGone = value == null
+                updateInstructions()
+            }
+        }
+
+    lateinit var modelNode: ModelNode
+
+    var trackingFailureReason: TrackingFailureReason? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                updateInstructions()
+            }
+        }
+
+    var modelIndex = 0
+        set(value) {
+            field = value
+            modelLoadingJob?.cancel()
+            modelLoadingJob = lifecycleScope.launch {
+                isLoading = true
+                val modelAsset = modelAssets[value]
+                val modelInstance = loadedModels.getOrPut(modelAsset) {
+                    sceneView.modelLoader.loadModelInstance(modelAsset.fileLocation)!!
+                }
+                modelNode.setModelInstance(
+                    modelInstance = modelInstance,
+                    autoAnimate = true,
+                    scaleToUnits = modelAsset.scaleUnits,
+                    // Place the model origin at the bottom center
+                    centerOrigin = Position(y = -1.0f)
+                )
+
+                isLoading = false
+                modelLoadingJob = null
+            }
+        }
+
+    val loadedModels = mutableMapOf<ModelAsset, ModelInstance>()
+    var modelLoadingJob: Job? = null
+
+    fun updateInstructions() {
+        instructionText.text = trackingFailureReason?.let {
+            it.getDescription(this)
+        } ?: if (anchorNode == null) {
+            getString(R.string.point_your_phone_down)
+        } else {
+            null
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,87 +130,48 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
             title = ""
         })
-        statusText = findViewById(R.id.statusText)
-        sceneView = findViewById<ArSceneView?>(R.id.sceneView).apply {
-            lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-            depthEnabled = true
-            instantPlacementEnabled = true
-            onArTrackingFailureChanged = { reason ->
-                statusText.text = reason?.getDescription(context)
-                statusText.isGone = reason == null
-            }
-        }
+        instructionText = findViewById(R.id.instructionText)
         loadingView = findViewById(R.id.loadingView)
-        newModelButton = findViewById<ExtendedFloatingActionButton>(R.id.newModelButton).apply {
-            // Add system bar margins
-            val bottomMargin = (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
-            doOnApplyWindowInsets { systemBarsInsets ->
-                (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
-                    systemBarsInsets.bottom + bottomMargin
+        changeModelButton =
+            findViewById<ExtendedFloatingActionButton>(R.id.changeModelButton).apply {
+                // Add system bar margins
+                val bottomMargin = (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
+                doOnApplyWindowInsets { systemBarsInsets ->
+                    (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
+                        systemBarsInsets.bottom + bottomMargin
+                }
+                setOnClickListener {
+                    modelIndex = ((modelIndex + 1) % modelAssets.size)
+                }
             }
-            setOnClickListener { newModelNode() }
-        }
-        placeModelButton = findViewById<ExtendedFloatingActionButton>(R.id.placeModelButton).apply {
-            setOnClickListener { placeModelNode() }
-        }
-
-        newModelNode()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.activity_main, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        item.isChecked = !item.isChecked
-        modelNode?.detachAnchor()
-        modelNode?.placementMode = when (item.itemId) {
-            R.id.menuPlanePlacement -> PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL
-            R.id.menuInstantPlacement -> PlacementMode.INSTANT
-            R.id.menuDepthPlacement -> PlacementMode.DEPTH
-            R.id.menuBestPlacement -> PlacementMode.BEST_AVAILABLE
-            else -> PlacementMode.DISABLED
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
-    fun placeModelNode() {
-        modelNode?.anchor()
-        placeModelButton.isVisible = false
-        sceneView.planeRenderer.isVisible = false
-    }
-
-    fun newModelNode() {
-        isLoading = true
-        modelNode?.takeIf { !it.isAnchored }?.let {
-            sceneView.removeChild(it)
-            it.destroy()
-        }
-        val model = models[modelIndex]
-        modelIndex = (modelIndex + 1) % models.size
-        modelNode = ArModelNode(sceneView.engine, model.placementMode).apply {
-            isSmoothPoseEnable = true
-            applyPoseRotation = model.applyPoseRotation
-            loadModelGlbAsync(
-                glbFileLocation = model.fileLocation,
-                autoAnimate = true,
-                scaleToUnits = model.scaleUnits,
-                // Place the model origin at the bottom center
-                centerOrigin = Position(y = -1.0f)
-            ) {
-                sceneView.planeRenderer.isVisible = true
-                isLoading = false
+        sceneView = findViewById(R.id.sceneView)
+        sceneView.apply {
+            configureSession { session, config ->
+                config.depthMode = Config.DepthMode.AUTOMATIC
+                config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
+                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             }
-            onAnchorChanged = { anchor ->
-                placeModelButton.isGone = anchor != null
+            modelNode = ModelNode(engine = engine).apply {
+                isEditable = true
             }
-            onHitResult = { node, _ ->
-                placeModelButton.isGone = !node.isTracking
+            modelIndex = 0
+            onSessionUpdated = { _, frame ->
+                if (anchorNode == null) {
+                    frame.getUpdatedPlanes()
+                        .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
+                        ?.let { plane ->
+                            addChildNode(
+                                AnchorNode(engine, plane.createAnchor(plane.centerPose))
+                                    .apply { isEditable = true }
+                                    .also { anchorNode = it }
+                                    .addChildNode(modelNode)
+                            )
+                        }
+                }
+            }
+            onTrackingFailureChanged = { reason ->
+                this@MainActivity.trackingFailureReason = reason
             }
         }
-        sceneView.addChild(modelNode!!)
-        // Select the model node by default (the model node is also selected on tap)
-        sceneView.selectedNode = modelNode
     }
 }

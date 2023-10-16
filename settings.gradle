@@ -9,13 +9,12 @@ dependencyResolutionManagement {
 rootProject.name = "SceneView"
 include ':sceneview'
 include ':arsceneview'
-include ':sceneview_1_0_0'
+include ':sceneview_2_0_0'
 
 // Samples
 include ':samples:common'
 include ':samples:ar-augmented-image'
 include ':samples:ar-cloud-anchor'
-include ':samples:ar-cursor-placement'
 include ':samples:ar-model-viewer'
 include ':samples:ar-point-cloud'
 include ':samples:model-viewer'
