@@ -52,10 +52,14 @@ afterEvaluate {
     }
 }
 
+import com.vanniktech.maven.publish.SonatypeHost
+
 allprojects {
     plugins.withId("com.vanniktech.maven.publish") {
-        mavenPublish {
-            sonatypeHost = "S01"
+        mavenPublishing {
+            publishToMavenCentral(SonatypeHost.S01)
+
+            signAllPublications()
         }
     }
 }
