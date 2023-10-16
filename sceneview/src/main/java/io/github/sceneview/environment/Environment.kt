@@ -1,10 +1,11 @@
 package io.github.sceneview.environment
 
+import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.utils.HDRLoader
-import io.github.sceneview.light.destroy
-import io.github.sceneview.scene.destroy
+import io.github.sceneview.safeDestroyIndirectLight
+import io.github.sceneview.safeDestroySkybox
 import java.io.Closeable
 import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
@@ -47,6 +48,7 @@ const val defaultIndirectLightIntensity = 30_000.0f
  * @see [HDRLoader.loadEnvironment]
  */
 open class Environment(
+    val engine: Engine,
     val indirectLight: IndirectLight? = null,
     val skybox: Skybox? = null,
     val sphericalHarmonics: FloatArray? = null
@@ -59,8 +61,8 @@ open class Environment(
      * at the onDestroy()
      */
     open fun destroy() {
-        indirectLight?.destroy()
-        skybox?.destroy()
+        indirectLight?.let { engine.safeDestroyIndirectLight(it) }
+        skybox?.let { engine.safeDestroySkybox(it) }
     }
 
     override fun close() = destroy()

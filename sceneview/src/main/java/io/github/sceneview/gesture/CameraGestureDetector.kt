@@ -24,7 +24,7 @@ open class CameraGestureDetector(
 
     interface OnCameraGestureListener {
         /**
-         * ### In MAP and ORBIT modes, dollys the camera along the viewing direction
+         * In MAP and ORBIT modes, dollys the camera along the viewing direction
          *
          * In FREE_FLIGHT mode, adjusts the move speed of the camera.
          *
@@ -39,7 +39,7 @@ open class CameraGestureDetector(
         fun onScroll(x: Int, y: Int, scrollDelta: Float)
 
         /**
-         * ### Start of a grabbing session (i.e. the user is dragging around in the viewport).
+         * Start of a grabbing session (i.e. the user is dragging around in the viewport).
          *
          * In MAP mode, this starts a panning session.
          * In ORBIT mode, this starts either rotating or strafing.
@@ -52,14 +52,14 @@ open class CameraGestureDetector(
         fun onGrabBegin(x: Int, y: Int, strafe: Boolean)
 
         /**
-         * ### Updated grabbing session
+         * Updated grabbing session
          *
          * This is called at least once between [onGrabBegin] / [onGrabEnd] to dirty the camera.
          */
         fun onGrabUpdate(x: Int, y: Int)
 
         /**
-         * ### Ends a grabbing session.
+         * Ends a grabbing session.
          */
         fun onGrabEnd()
     }
@@ -166,6 +166,7 @@ open class CameraGestureDetector(
                     return
                 }
             }
+
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
                 endGesture()
             }

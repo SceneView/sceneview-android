@@ -5,15 +5,13 @@ import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.Texture
 import com.google.android.filament.utils.IBLPrefilterContext
-import io.github.sceneview.Filament
-import io.github.sceneview.light.build
-import io.github.sceneview.scene.build
-import io.github.sceneview.texture.destroy
 
 const val defaultSpecularFilter = true
 const val defaultCreateSkybox = true
 
 open class HDREnvironment(
+    engine: Engine,
+    iblPrefilter: IBLPrefilter,
     cubemap: Texture? = null,
     indirectLightIrradiance: FloatArray? = null,
     indirectLightIntensity: Float? = null,
@@ -21,14 +19,15 @@ open class HDREnvironment(
     createSkybox: Boolean = defaultCreateSkybox,
     val sharedCubemap: Boolean = false
 ) : Environment(
+    engine = engine,
     indirectLight = IndirectLight.Builder().apply {
         cubemap?.let { cubemap ->
             reflections(
                 if (indirectLightSpecularFilter) {
                     // TODO: Find a better way to destroy cubemap
-                    Filament.iblPrefilter.specularFilter(cubemap).also {
+                    iblPrefilter.specularFilter(cubemap).also {
                         if (!createSkybox) {
-                            cubemap.destroy()
+                            engine.destroyTexture(cubemap)
                         }
                     }
                 } else {
@@ -42,12 +41,12 @@ open class HDREnvironment(
         indirectLightIntensity?.let {
             intensity(it)
         }
-    }.build(),
+    }.build(engine),
     sphericalHarmonics = indirectLightIrradiance,
     skybox = cubemap?.takeIf { createSkybox }?.let {
-        Skybox.Builder().apply {
-            environment(it)
-        }.build()
+        Skybox.Builder()
+            .environment(it)
+            .build(engine)
     }
 ) {
     var cubemap: Texture? = cubemap
@@ -64,7 +63,7 @@ open class HDREnvironment(
         if (!sharedCubemap) {
             // Use runCatching because it could already be destroyed at Environment creation time
             // in case of no Skybox needed.
-            runCatching { cubemap?.destroy() }
+            cubemap?.let { runCatching { engine.destroyTexture(it) } }
             cubemap = null
         }
 

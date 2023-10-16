@@ -1,5 +1,6 @@
 package io.github.sceneview.geometries
 
+import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.VertexBuffer
 import io.github.sceneview.math.Direction
@@ -7,26 +8,96 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 class Cube private constructor(
+    engine: Engine,
+    center: Position,
+    size: Size,
+    vertexBuffer: VertexBuffer,
+    indexBuffer: IndexBuffer,
+    vertices: List<Vertex>,
+    submeshes: List<Submesh>
+) : Geometry(engine, vertexBuffer, indexBuffer, vertices, submeshes) {
+    /**
+     * Creates a [Geometry] in the shape of a cube with the give specifications.
+     */
+    class Builder : BaseBuilder<Cube>() {
+        /**
+         * The size of the constructed cube
+         */
+        var size: Size = DEFAULT_SIZE
+            private set
+
+        /**
+         * The center of the constructed cube
+         */
+        var center: Position = DEFAULT_CENTER
+            private set
+
+        fun size(size: Size) = apply { this.size = size }
+        fun center(center: Position) = apply { this.center = center }
+
+        init {
+            submeshes(SUBMESHES)
+        }
+
+        override fun build(engine: Engine): Cube {
+            vertices(getVertices(size, center))
+            return Cube(
+                engine,
+                size,
+                center,
+                vertexBuilder.build(engine),
+                indexBuilder.build(engine),
+                vertices,
+                submeshes
+            )
+        }
+    }
+
     /**
      * Size of the constructed cube
      */
-    val center: Position,
+    var center: Position = center
+        private set
+
     /**
      * Center of the constructed cube
      */
-    val size: Size,
-    vertexBuffer: VertexBuffer,
-    indexBuffer: IndexBuffer
-) : Geometry(vertexBuffer, indexBuffer) {
-    /**
-     * Creates a [Geometry] in the shape of a cube with the give specifications.
-     *
-     * @param size the size of the constructed cube
-     * @param center the center of the constructed cube
-     */
-    class Builder(val size: Size = Size(2.0f), val center: Position = Position(0.0f)) :
-        BaseBuilder<Cube>(
-            vertices = mutableListOf<Vertex>().apply {
+    var size: Size = size
+        private set
+
+    fun update(
+        center: Position = this.center,
+        size: Size = this.size,
+    ) {
+        this.center = center
+        this.size = size
+        setVertices(getVertices(size, center))
+    }
+
+    companion object {
+        val DEFAULT_SIZE = Size(1.0f)
+        val DEFAULT_CENTER = Position(0.0f)
+        val SUBMESHES = mutableListOf<Submesh>().apply {
+            val sideCount = 6
+            val verticesPerSide = 4
+            for (i in 0 until sideCount) {
+                add(
+                    Submesh(
+                        // First triangle for this side.
+                        3 + verticesPerSide * i,
+                        1 + verticesPerSide * i,
+                        0 + verticesPerSide * i,
+                        // Second triangle for this side.
+                        3 + verticesPerSide * i,
+                        2 + verticesPerSide * i,
+                        1 + verticesPerSide * i
+                    )
+                )
+            }
+        }.toList()
+
+        fun getVertices(size: Size, center: Position) =
+            mutableListOf<Vertex>().apply {
                 val extents = size * 0.5f
                 val p0 = center + Size(-extents.x, -extents.y, extents.z)
                 val p1 = center + Size(extents.x, -extents.y, extents.z)
@@ -80,29 +151,6 @@ class Cube private constructor(
                         Vertex(position = p4, normal = up, uvCoordinate = uv00)
                     )
                 )
-            },
-            submeshes = mutableListOf<Submesh>().apply {
-                val sideCount = 6
-                val verticesPerSide = 4
-                for (i in 0 until sideCount) {
-                    add(
-                        Submesh(
-                            // First triangle for this side.
-                            3 + verticesPerSide * i,
-                            1 + verticesPerSide * i,
-                            0 + verticesPerSide * i,
-                            // Second triangle for this side.
-                            3 + verticesPerSide * i,
-                            2 + verticesPerSide * i,
-                            1 + verticesPerSide * i
-                        )
-                    )
-                }
-            }
-        ) {
-        override fun build(
-            vertexBuffer: VertexBuffer,
-            indexBuffer: IndexBuffer
-        ) = Cube(size, center, vertexBuffer, indexBuffer)
+            }.toList()
     }
 }

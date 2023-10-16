@@ -3,7 +3,7 @@ material {
 
     "parameters" : [
         {
-           "type" : "float3",
+           "type" : "float4",
            "name" : "color"
         },
         {
@@ -29,7 +29,7 @@ material {
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        material.baseColor.rgb = materialParams.color;
+        material.baseColor.rgb = materialParams.color.rbg;
         material.metallic = materialParams.metallic;
         material.roughness = materialParams.roughness;
         material.reflectance = materialParams.reflectance;

@@ -5,12 +5,10 @@ import android.view.Surface;
 
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.Stream;
 import com.google.android.filament.Texture;
-import com.google.ar.sceneform.utilities.Preconditions;
-
-import io.github.sceneview.texture.StreamKt;
-import io.github.sceneview.texture.TextureKt;
+import io.github.sceneview.collision.Preconditions;
 
 /**
  * Creates an Android {@link SurfaceTexture} and {@link Surface} that can be displayed by Sceneform.
@@ -35,11 +33,14 @@ public class ExternalTexture {
     @Nullable
     private Stream filamentStream;
 
+    private Engine engine;
+
     /**
      * Creates an ExternalTexture with a new Android {@link SurfaceTexture} and {@link Surface}.
      */
     @SuppressWarnings("initialization")
-    public ExternalTexture() {
+    public ExternalTexture(Engine engine) {
+        this.engine = engine;
         SurfaceTexture surfaceTexture = new SurfaceTexture(0);
         surfaceTexture.detachFromGLContext();
         this.surfaceTexture = surfaceTexture;
@@ -50,7 +51,7 @@ public class ExternalTexture {
         // Create the filament stream.
         //TODO : We actually have an issue with stream being destroyed from elsewhere maybe material
         // Fix it whith kotlining here
-        Stream stream = StreamKt.build(new Stream.Builder().stream(surfaceTexture));
+        Stream stream = new Stream.Builder().stream(surfaceTexture).build(engine);
 
         //TODO : We actually have an issue with stream being destroyed from elsewhere maybe material
         // Fix it when kotlining here
@@ -67,11 +68,12 @@ public class ExternalTexture {
         this.filamentStream = filamentStream;
 
         // Create the filament texture.
-        filamentTexture = TextureKt.build(new Texture.Builder()
+        filamentTexture = new Texture.Builder()
                 .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                .format(Texture.InternalFormat.RGB8));
+                .format(Texture.InternalFormat.RGB8)
+                .build(engine);
 
-        TextureKt.setExternalStream(filamentTexture, filamentStream);
+        filamentTexture.setExternalStream(engine, filamentStream);
     }
 
     /**
@@ -98,12 +100,12 @@ public class ExternalTexture {
 
     public void destroy() {
         if (filamentTexture != null) {
-            TextureKt.destroy(filamentTexture);
+            engine.destroyTexture(filamentTexture);
         }
         filamentTexture = null;
 
         if (filamentStream != null) {
-            StreamKt.destroy(filamentStream);
+            engine.destroyStream(filamentStream);
         }
         filamentStream = null;
     }

@@ -4,23 +4,20 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.filament.Box;
+import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.EntityInstance;
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.RenderableManager;
 import com.google.android.filament.VertexBuffer;
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import io.github.sceneview.Filament;
-import io.github.sceneview.FilamentKt;
-
 
 /**
  * Represents the data used by a {@link Renderable} for rendering
@@ -197,11 +194,11 @@ class RenderableInternalData implements IRenderableInternalData {
 
 
   @Override
-  public void buildInstanceData(RenderableInstance instance, @Entity int renderedEntity) {
+  public void buildInstanceData(Engine engine, RenderableInstance instance, @Entity int renderedEntity) {
     Renderable renderable = instance.getRenderable();
     IRenderableInternalData renderableData = renderable.getRenderableData();
     ArrayList<MaterialInstance> materialBindings = renderable.getMaterialBindings();
-    RenderableManager renderableManager = Filament.getRenderableManager();
+    RenderableManager renderableManager = engine.getRenderableManager();
     @EntityInstance int renderableInstance = renderableManager.getInstance(renderedEntity);
 
     // Determine if a new filament Renderable needs to be created.
@@ -224,7 +221,7 @@ class RenderableInternalData implements IRenderableInternalData {
 
       setupSkeleton(builder);
 
-      FilamentKt.build(builder, Filament.getEngine(), renderedEntity);
+      builder.build(engine, renderedEntity);
 
       renderableInstance = renderableManager.getInstance(renderedEntity);
       if (renderableInstance == 0) {

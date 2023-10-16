@@ -13,18 +13,18 @@ import android.widget.FrameLayout;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
-import com.google.android.filament.gltfio.FilamentInstance;
-import com.google.ar.sceneform.collision.Box;
-import com.google.ar.sceneform.collision.Plane;
-import com.google.ar.sceneform.collision.Ray;
-import com.google.ar.sceneform.collision.RayHit;
-import com.google.ar.sceneform.common.TransformProvider;
-import com.google.ar.sceneform.math.Matrix;
-import com.google.ar.sceneform.math.Quaternion;
-import com.google.ar.sceneform.math.Vector3;
+import com.google.android.filament.Engine;
+import io.github.sceneview.collision.Box;
+import io.github.sceneview.collision.Plane;
+import io.github.sceneview.collision.Ray;
+import io.github.sceneview.collision.RayHit;
+import io.github.sceneview.collision.TransformProvider;
+import io.github.sceneview.collision.Matrix;
+import io.github.sceneview.collision.Quaternion;
+import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.resources.ResourceRegistry;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Preconditions;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -36,14 +36,15 @@ import java.util.concurrent.CompletableFuture;
 import dev.romainguy.kotlin.math.Float2;
 import io.github.sceneview.SceneView;
 import io.github.sceneview.material.MaterialInstanceKt;
+import io.github.sceneview.math.MathUtilsKt;
 import io.github.sceneview.node.CameraNode;
-import io.github.sceneview.node.ModelNode;
 import io.github.sceneview.node.Node;
+import io.github.sceneview.node.ViewNode;
 
 /**
- * Renders a 2D Android view in 3D space by attaching it to a {@link Node}
- * with {@link ModelNode#setModelInstance(FilamentInstance)}. By default, the size of the
- * view is 1 meter in the {@link SceneView} per 250dp in the layout. Use a
+ * Renders a 2D Android view in 3D space by attaching it to a {@link Node}.
+ *
+ * By default, the size of the view is 1 meter in the {@link SceneView} per 250dp in the layout. Use a
  * {@link ViewSizer} to control how the size of the view in the {@link
  * SceneView} is calculated.
  *
@@ -91,6 +92,8 @@ public class ViewRenderable extends Renderable {
 //  @Nullable private SceneView sceneView;
   private boolean isInitialized;
 
+  private Engine engine;
+
   @SuppressWarnings({"initialization"})
   private final RenderViewToExternalTexture.OnViewSizeChangedListener onViewSizeChangedListener =
       (int width, int height) -> {
@@ -114,14 +117,16 @@ public class ViewRenderable extends Renderable {
    */
   @Override
   public ViewRenderable makeCopy() {
-    return new ViewRenderable(this);
+    return new ViewRenderable(engine, this);
   }
 
   /** @hide */
   @SuppressWarnings({"initialization"})
   // Suppress @UnderInitialization warning.
-  ViewRenderable(Builder builder, View view) {
+  ViewRenderable(Engine engine, Builder builder, View view) {
     super(builder);
+
+    this.engine = engine;
 
     Preconditions.checkNotNull(view, "Parameter \"view\" was null.");
 
@@ -130,7 +135,7 @@ public class ViewRenderable extends Renderable {
     horizontalAlignment = builder.horizontalAlignment;
     verticalAlignment = builder.verticalAlignment;
     RenderViewToExternalTexture renderView =
-        new RenderViewToExternalTexture(view.getContext(), view);
+        new RenderViewToExternalTexture(engine, view.getContext(), view);
     renderView.addOnViewSizeChangedListener(onViewSizeChangedListener);
     viewRenderableData = new ViewRenderableInternalData(renderView);
 
@@ -139,8 +144,10 @@ public class ViewRenderable extends Renderable {
     collisionShape = new Box(Vector3.zero());
   }
 
-  ViewRenderable(ViewRenderable other) {
+  ViewRenderable(Engine engine, ViewRenderable other) {
     super(other);
+
+    this.engine = engine;
 
     view = other.view;
     viewSizer = other.viewSizer;
@@ -240,7 +247,7 @@ public class ViewRenderable extends Renderable {
   /** @hide */
   @Override
   @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
-  public void prepareForDraw(SceneView sceneView) {
+  public void prepareForDraw(Engine engine) {
     if (getId().isEmpty()) {
       return;
     }
@@ -264,17 +271,21 @@ public class ViewRenderable extends Renderable {
     }
 
     if (!isInitialized) {
-      MaterialInstanceKt.setExternalTexture(getMaterial(), "viewTexture", renderViewToExternalTexture.getExternalTexture().getFilamentTexture());
+      MaterialInstanceKt.setExternalTexture(
+              getMaterial(),
+            "viewTexture",
+              renderViewToExternalTexture.getExternalTexture().getFilamentTexture()
+      );
       updateSuggestedCollisionShape();
 
       isInitialized = true;
     }
 
-    if (sceneView != null && sceneView.isFrontFaceWindingInverted()) {
+//    if (sceneView != null && sceneView.isFrontFaceWindingInverted()) {
       MaterialInstanceKt.setParameter(getMaterial(), "offsetUv", new Float2(1.0f, 0.0f));
-    }
+//    }
 
-    super.prepareForDraw(sceneView);
+    super.prepareForDraw(engine);
   }
 
   public void attachView(ViewAttachmentManager attachmentManager) {
@@ -356,12 +367,7 @@ public class ViewRenderable extends Renderable {
    * Dispatches a touch event to a node's ViewRenderable if that node has a ViewRenderable by
    * converting the touch event into the local coordinate space of the view.
    */
-  public boolean dispatchTouchEventToView(@NotNull Node node, @NotNull MotionEvent motionEvent) {
-    SceneView scene = node.getSceneViewInternal();
-    if (scene == null) {
-      return false;
-    }
-
+  public boolean dispatchTouchEventToView(@NotNull ViewNode node, CameraNode cameraNode, @NotNull MotionEvent motionEvent) {
     int pointerCount = motionEvent.getPointerCount();
 
     MotionEvent.PointerProperties[] pointerProperties =
@@ -369,7 +375,7 @@ public class ViewRenderable extends Renderable {
 
     MotionEvent.PointerCoords[] pointerCoords = new MotionEvent.PointerCoords[pointerCount];
 
-    Matrix nodeTransformMatrix = node.getTransformationMatrix();
+    Matrix nodeTransformMatrix = MathUtilsKt.toMatrix(node.getWorldTransform());
     Vector3 nodePosition = new Vector3();
     nodeTransformMatrix.decomposeTranslation(nodePosition);
     Vector3 nodeScale = new Vector3();
@@ -401,8 +407,7 @@ public class ViewRenderable extends Renderable {
       motionEvent.getPointerProperties(i, props);
       motionEvent.getPointerCoords(i, coords);
 
-      CameraNode camera = scene.getCameraNode();
-      Ray ray = camera.screenPointToRay(coords.x, coords.y);
+      Ray ray = cameraNode.screenPointToRay(coords.x, coords.y);
       if (plane.rayIntersection(ray, rayHit)) {
         Vector3 viewPosition = convertWorldPositionToLocalView(node, rayHit.getPoint());
 
@@ -445,7 +450,7 @@ public class ViewRenderable extends Renderable {
     return getView().dispatchTouchEvent(me);
   }
 
-  public Vector3 convertWorldPositionToLocalView(Node node, Vector3 worldPos) {
+  public Vector3 convertWorldPositionToLocalView(ViewNode node, Vector3 worldPos) {
     Preconditions.checkNotNull(node, "Parameter \"node\" was null.");
     Preconditions.checkNotNull(worldPos, "Parameter \"worldPos\" was null.");
 
@@ -598,7 +603,7 @@ public class ViewRenderable extends Renderable {
 
     @Override
     @SuppressWarnings("AndroidApiChecker") // java.util.concurrent.CompletableFuture
-    public CompletableFuture<ViewRenderable> build() {
+    public CompletableFuture<ViewRenderable> build(Engine engine) {
       if (!hasSource() && context != null) {
         // For ViewRenderables, the registryId must come from the View, not the RCB source.
         // If the source is a View, use that as the registryId. If the view is null, then the source
@@ -607,7 +612,7 @@ public class ViewRenderable extends Renderable {
 
         CompletableFuture<Void> setSourceFuture = Material.builder()
                 .setSource(context, Uri.parse("sceneview/materials/view_renderable.filamat"))
-                .build()
+                .build(engine)
                 .thenAccept(
                         material -> {
                           ArrayList<Vertex> vertices = new ArrayList<>();
@@ -639,27 +644,30 @@ public class ViewRenderable extends Renderable {
                           triangleIndices.add(3);
                           triangleIndices.add(2);
                           RenderableDefinition.Submesh submesh =
-                                  RenderableDefinition.Submesh.builder().setTriangleIndices(triangleIndices).setMaterial(material.filamentMaterialInstance).build();
+                                  RenderableDefinition.Submesh.builder()
+                                          .setTriangleIndices(triangleIndices)
+                                          .setMaterial(material.filamentMaterialInstance)
+                                          .build(engine);
                           setSource(
                                   RenderableDefinition.builder()
                                           .setVertices(vertices)
                                           .setSubmeshes(Arrays.asList(submesh))
-                                          .build()
+                                          .build(engine)
                           );
                         }
                 );
-        return setSourceFuture.thenCompose((Void) -> super.build());
+        return setSourceFuture.thenCompose((Void) -> super.build(engine));
       }
 
-      return super.build();
+      return super.build(engine);
     }
 
     @Override
-    protected ViewRenderable makeRenderable() {
+    protected ViewRenderable makeRenderable(Engine engine) {
       if (this.view != null) {
-        return new ViewRenderable(this, view);
+        return new ViewRenderable(engine, this, view);
       } else {
-        return new ViewRenderable(this, inflateViewFromResourceId());
+        return new ViewRenderable(engine,this, inflateViewFromResourceId());
       }
     }
 

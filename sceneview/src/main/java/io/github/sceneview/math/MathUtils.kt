@@ -1,8 +1,27 @@
 package io.github.sceneview.math
 
 import com.google.android.filament.Box
-import com.google.ar.sceneform.math.Vector3
-import dev.romainguy.kotlin.math.*
+import dev.romainguy.kotlin.math.Float2
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.Float4
+import dev.romainguy.kotlin.math.Mat4
+import dev.romainguy.kotlin.math.Quaternion
+import dev.romainguy.kotlin.math.RotationsOrder
+import dev.romainguy.kotlin.math.clamp
+import dev.romainguy.kotlin.math.cross
+import dev.romainguy.kotlin.math.dot
+import dev.romainguy.kotlin.math.eulerAngles
+import dev.romainguy.kotlin.math.lookAt
+import dev.romainguy.kotlin.math.lookTowards
+import dev.romainguy.kotlin.math.mix
+import dev.romainguy.kotlin.math.normalize
+import dev.romainguy.kotlin.math.pow
+import dev.romainguy.kotlin.math.rotation
+import dev.romainguy.kotlin.math.scale
+import dev.romainguy.kotlin.math.slerp
+import dev.romainguy.kotlin.math.translation
+import io.github.sceneview.collision.Matrix
+import io.github.sceneview.collision.Vector3
 import kotlin.math.absoluteValue
 
 typealias Position = Float3
@@ -12,6 +31,9 @@ typealias Direction = Float3
 typealias Size = Float3
 typealias Transform = Mat4
 
+//operator fun android.util.Size.component1() = width
+//operator fun android.util.Size.component2() = height
+
 fun Transform(position: Position, quaternion: Quaternion, scale: Scale) =
     translation(position) * rotation(quaternion) * scale(scale)
 
@@ -20,6 +42,7 @@ fun Transform(position: Position, rotation: Rotation, scale: Scale) =
 
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }
+fun DoubleArray.toFloat4() = this.map { it.toFloat() }.let { (x, y, z, w) -> Float4(x, y, z, w) }
 fun FloatArray.toPosition() = this.let { (x, y, z) -> Position(x, y, z) }
 fun FloatArray.toRotation() = this.let { (x, y, z) -> Rotation(x, y, z) }
 fun FloatArray.toScale() = this.let { (x, y, z) -> Scale(x, y, z) }
@@ -39,15 +62,19 @@ fun Float3.toVector3() = Vector3(x, y, z)
 fun Vector3.toFloat3() = Float3(x, y, z)
 
 //TODO: Remove when everything use Quaternion
-fun Quaternion.toOldQuaternion() = com.google.ar.sceneform.math.Quaternion(x, y, z, w)
+fun Quaternion.toOldQuaternion() =
+    io.github.sceneview.collision.Quaternion(x, y, z, w)
 
 //TODO: Remove when everything use Quaternion
-fun com.google.ar.sceneform.math.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
+fun io.github.sceneview.collision.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
 
+fun Mat4.toDoubleArray(): DoubleArray = toFloatArray().map { it.toDouble() }.toDoubleArray()
 val Mat4.quaternion: Quaternion
     get() = rotation(this).toQuaternion()
 
 operator fun Mat4.times(v: Float3) = (this * Float4(v, 1f)).xyz
+
+fun Mat4.toMatrix() = Matrix(toColumnsFloatArray())
 
 fun Mat4.toColumnsFloatArray() = floatArrayOf(
     x.x, x.y, x.z, x.w,
@@ -64,6 +91,8 @@ fun FloatArray.toTransform() = Transform(
     z = Float4(this[8], this[9], this[10], this[11]),
     w = Float4(this[12], this[13], this[14], this[15])
 )
+
+fun DoubleArray.toTransform() = Transform.of(*this.map { it.toFloat() }.toFloatArray())
 
 fun lerp(start: Float3, end: Float3, deltaSeconds: Float) = mix(start, end, deltaSeconds)
 
@@ -103,11 +132,15 @@ var Box.size
         halfExtentSize = value / 2.0f
     }
 
-fun Box.toVector3Box(): com.google.ar.sceneform.collision.Box {
+fun Box.toVector3Box(): io.github.sceneview.collision.Box {
     val halfExtent = halfExtent
     val center = center
-    return com.google.ar.sceneform.collision.Box(
-        Vector3(halfExtent[0], halfExtent[1], halfExtent[2]).scaled(2.0f),
+    return io.github.sceneview.collision.Box(
+        Vector3(
+            halfExtent[0],
+            halfExtent[1],
+            halfExtent[2]
+        ).scaled(2.0f),
         Vector3(center[0], center[1], center[2])
     )
 }

@@ -1,12 +1,10 @@
 package io.github.sceneview.ar.node
 
-import android.graphics.Bitmap
 import com.google.android.filament.Engine
 import com.google.ar.core.AugmentedImage
+import com.google.ar.core.AugmentedImage.TrackingMethod
 import com.google.ar.core.AugmentedImageDatabase
-import io.github.sceneview.SceneView
-import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.isTracking
+import com.google.ar.core.TrackingState
 
 /**
  * AR Augmented Image positioned 3D model node
@@ -28,99 +26,72 @@ import io.github.sceneview.ar.arcore.isTracking
  * Only one image database can be active in a session. Any images in the currently active image
  * database that have a TRACKING/PAUSED state will immediately be set to the STOPPED state if a
  * different or null image database is made active in the current session Config
- *
- * @param imageName Name metadata for this image, does not have to be unique.
- * @param bitmap Bitmap containing the image in ARGB_8888 format. The alpha channel is ignored
- * in this bitmap, as only non-transparent images are currently supported.
- * Pass null if you handle the database by yourself using
- * [com.google.ar.core.Config.setAugmentedImageDatabase]
- * @param widthInMeters Width in meters for this image, must be strictly greater than zero.
- * If the physical size of the image is known, use this parameter, to improve image detection
- * time. Null means you don't know the image size in real world
- * @param onError Called on ARCore Augmented image error
- * - Throws [com.google.ar.core.exceptions.ImageInsufficientQualityException]
- * if the image quality is insufficient, e.g. if the image has not enough features.
- * - Throws [java.lang.IllegalArgumentException] if the bitmap is not in ARGB_888 format or the
- * width in meters is less than or equal to zero.
- * @param onUpdate Invoked when the ARCore AugmentedImage TrackingState and/or
- * TrackingMethod is updated. The callback will be invoked on each AugmentedImage update with
- * the given [imageName].
- * @see AugmentedImage.isTracking
- * @see AugmentedImage.getTrackingState
- * @see AugmentedImage.getTrackingMethod
  */
 open class AugmentedImageNode(
     engine: Engine,
-    val imageName: String,
-    val bitmap: Bitmap? = null,
-    val widthInMeters: Float? = null,
-    var onError: ((exception: Exception) -> Unit)? = null,
-    var onUpdate: ((node: AugmentedImageNode, augmentedImage: AugmentedImage) -> Unit)? = null
-) : ArNode(engine) {
+    /**
+     * The augmented image where this node will be placed
+     */
+    val augmentedImage: AugmentedImage,
+    /**
+     * Set the node to be visible only on those tracking methods
+     */
+    val visibleTrackingMethods: Set<TrackingMethod> = setOf(
+        TrackingMethod.FULL_TRACKING, TrackingMethod.LAST_KNOWN_POSE
+    ),
+    onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+    val onTrackingMethodChanged: ((TrackingMethod) -> Unit)? = null,
+    onUpdated: ((AugmentedImage) -> Unit)? = null
+) : TrackableNode<AugmentedImage>(
+    engine = engine,
+    onTrackingStateChanged = onTrackingStateChanged,
+    onUpdated = onUpdated
+) {
 
     /**
-     * The augmented image where this node will be placed (anchored)
+     * Returns the name of this augmented image.
+     *
+     * The image name is not guaranteed to be unique.
      */
-    var augmentedImage: AugmentedImage? = null
-        set(value) {
-            field = value
-            if (value != null) {
-                if (value.isTracking && anchor == null) {
-                    anchor = value.createAnchor(value.centerPose)
-                }
-                onUpdate?.invoke(this, value)
+    val imageName get() = augmentedImage.name
+
+    /**
+     * The TrackingState of this Node.
+     *
+     * Updated on each frame
+     */
+    open var trackingMethod = TrackingMethod.NOT_TRACKING
+        get() = augmentedImage.trackingMethod
+        protected set(value) {
+            if (field != value) {
+                field = value
+                updateVisibility()
+                onTrackingMethodChanged?.invoke(value)
             }
         }
 
-    open val isTracking: Boolean
-        get() = augmentedImage?.isTracking == true
-
-
-    override val isVisibleInHierarchy: Boolean
-        get() = super.isVisibleInHierarchy && isTracking
+    override var isVisible
+        get() = super.isVisible && trackingMethod in visibleTrackingMethods
+        set(value) {
+            super.isVisible = value
+        }
 
     init {
-        onAnchorChanged = {
-            updateVisibility()
-        }
+        trackable = augmentedImage
     }
 
-    override fun onAttachedToScene(sceneView: SceneView) {
-        super.onAttachedToScene(sceneView)
+    override fun update(trackable: AugmentedImage?) {
+        super.update(trackable)
 
-        if (sceneView is ArSceneView) {
-            sceneView.onAugmentedImageUpdate += ::onAugmentedImageUpdate
-            if (bitmap != null) {
-                sceneView.configureSession { session, config ->
-                    try {
-                        config.augmentedImageDatabase = config.augmentedImageDatabase?.takeIf {
-                            // Using the default augmentedImageDatabase even if not null is not
-                            // working so we check if it's our AugmentedImageDatabase (if we already
-                            // added images)
-                            it.numImages > 0
-                        } ?: AugmentedImageDatabase(session).apply {
-                            if (widthInMeters != null) {
-                                addImage(imageName, bitmap, widthInMeters)
-                            } else {
-                                addImage(imageName, bitmap)
-                            }
-                        }
-                    } catch (exception: Exception) {
-                        onError?.invoke(exception)
-                    }
-                }
-            }
-        }
-    }
-
-    override fun onDetachedFromScene(sceneView: SceneView) {
-        super.onDetachedFromScene(sceneView)
-        (sceneView as? ArSceneView)?.let { it.onAugmentedImageUpdate -= ::onAugmentedImageUpdate }
-    }
-
-    private fun onAugmentedImageUpdate(augmentedImage: AugmentedImage) {
-        if (augmentedImage.name == imageName) {
-            this.augmentedImage = augmentedImage
+        trackingMethod = augmentedImage.trackingMethod
+        if (trackingState == TrackingState.TRACKING &&
+            trackingMethod == TrackingMethod.FULL_TRACKING
+        ) {
+            pose = augmentedImage.centerPose
+            scale = scale.copy(
+                x = augmentedImage.extentX,
+                z = augmentedImage.extentZ
+            )
         }
     }
 }

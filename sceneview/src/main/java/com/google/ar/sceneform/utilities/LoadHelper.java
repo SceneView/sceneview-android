@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 
+import io.github.sceneview.collision.Preconditions;
+
 /**
  * Convenience class to parse Uri's.
  *
