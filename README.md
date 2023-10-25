@@ -4,7 +4,6 @@
 
 This is a Sceneform replacement in Kotlin
 
-[![Maven Central - SceneView](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Maven%20Central%20-%20SceneView)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Maven%20Central%20-%20ARSceneView)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
@@ -19,7 +18,7 @@ This is a Sceneform replacement in Kotlin
 ```gradle
 dependencies {
     // 3D only
-    implementation 'io.github.sceneview:sceneview:2.0.0'
+    implementation 'io.github.sceneview:sceneview:1.2.0'
 }
 ```
 
@@ -30,7 +29,7 @@ dependencies {
 ```gradle
 dependencies {
     // 3D and ARCore
-    implementation 'io.github.sceneview:arsceneview:1.1.0'
+    implementation 'io.github.sceneview:arsceneview:1.2.0'
 }
 ```
 
@@ -45,23 +44,113 @@ dependencies {
 ```kotlin
 @Composable
 fun ModelScreen() {
-  val nodes = remember { mutableStateListOf<Node>() }
+    val nodes = rememberNodes()
 
-  Box(modifier = Modifier.fillMaxSize()) {
-    Scene(
-      modifier = Modifier.fillMaxSize(),
-      childNodes = nodes,
-      sharedEngine = null,
-      sharedScene = null,
-      sharedView = null,
-      sharedRenderer = null,
-      sharedModelLoader = null,
-      sharedMaterialLoader = null,
-      onFrame = { frameTimeNanos -> },
-      onTap = { motionEvent, node -> },
-      onCreate = { sceneView -> }
-    )
-  }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier,
+            activity = LocalContext.current as? ComponentActivity,
+            lifecycle = LocalLifecycleOwner.current.lifecycle,
+            /**
+            * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+            */
+            childNodes = nodes,
+            /**
+            * Provide your own instance if you want to share Filament resources between multiple views.
+            */
+            engine = rememberEngine(),
+            /**
+            * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which is
+            * a bundle of Filament textures, vertex buffers, index buffers, etc.
+            *
+            * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and components.
+            */
+            modelLoader = rememberModelLoader(engine),
+            /**
+            * A Filament Material defines the visual appearance of an object.
+            *
+            * Materials function as a templates from which [MaterialInstance]s can be spawned.
+            */
+            materialLoader = rememberMaterialLoader(engine),
+            /**
+            * Provide your own instance if you want to share [Node]s' scene between multiple views.
+            */
+            scene = rememberScene(engine),
+            /**
+             * Encompasses all the state needed for rendering a {@link Scene}.
+             *
+             * [View] instances are heavy objects that internally cache a lot of data needed for
+             * rendering. It is not advised for an application to use many View objects.
+             *
+             * For example, in a game, a [View] could be used for the main scene and another one for the
+             * game's user interface. More <code>View</code> instances could be used for creating special
+             * effects (e.g. a [View] is akin to a rendering pass).
+             */
+            view = rememberView(engine),
+            /**
+            * A [Renderer] instance represents an operating system's window.
+            *
+            * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
+            * commands for the render thread and manages frame latency.
+            */
+            renderer = rememberRenderer(engine),
+            /**
+             * Represents a virtual camera, which determines the perspective through which the scene is
+             * viewed.
+             *
+             * All other functionality in Node is supported. You can access the position and rotation of the
+             * camera, assign a collision shape to it, or add children to it.
+             */
+            camera = rememberCamera(engine),
+            /**
+             * Always add a direct light source since it is required for shadowing.
+             *
+             * We highly recommend adding an [IndirectLight] as well.
+             */
+            mainLight = rememberMainLight(engine),
+            /**
+             * IndirectLight is used to simulate environment lighting.
+             *
+             * Environment lighting has a two components:
+             * - irradiance
+             * - reflections (specular component)
+             *
+             * @see IndirectLight
+             * @see Scene.setIndirectLight
+             */
+            indirectLight = rememberIndirectLight(engine),
+            /**
+             * The Skybox is drawn last and covers all pixels not touched by geometry.
+             *
+             * When added to a [SceneView], the `Skybox` fills all untouched pixels.
+             *
+             * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
+             *
+             * @see Skybox
+             * @see Scene.setSkybox
+             */
+            skybox = rememberSkybox(engine),
+            /**
+             * Invoked when an frame is processed.
+             *
+             * Registers a callback to be invoked when a valid Frame is processing.
+             *
+             * The callback to be invoked once per frame **immediately before the scene is updated.
+             *
+             * The callback will only be invoked if the Frame is considered as valid.
+             */
+            onFrame = null,
+            /**
+             * Invoked when the `SceneView` is tapped.
+             *
+             * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
+             * used to find a touched node. The ID of the Filament renderable can be used to determine what
+             * part of a model is tapped.
+             */
+            onTap = null,
+            onCreate = null
+        )
+    }
 }
 ```
 
@@ -80,32 +169,148 @@ fun ModelScreen() {
 ```kotlin
 @Composable
 fun ARScreen() {
-  val nodes = remember { mutableStateListOf<ArNode>() }
-
-  Box(modifier = Modifier.fillMaxSize()) {
-    ARScene(
-      modifier = Modifier.fillMaxSize(),
-      childNodes = nodes,
-      sharedEngine = null,
-      sharedScene = null,
-      sharedView = null,
-      sharedRenderer = null,
-      sharedModelLoader = null,
-      sharedMaterialLoader = null,
-      sessionFeatures = setOf(),
-      cameraConfig = null,
-      planeRenderer = true,
-      onSessionConfiguration = { session, config -> },
-      onSessionCreated = { session -> },
-      onSessionUpdated = { session, frame -> },
-      onSessionResumed = { session -> },
-      onSessionFailed = { exception -> },
-      onSessionConfigChanged = { session, config -> },
-      onTap = { motionEvent, node -> },
-      onTapAR = { motionEvent, hitResult -> },
-      onCreate = { arSceneView -> },
-    )
-  }
+    val nodes = rememberNodes()
+  
+    Box(modifier = Modifier.fillMaxSize()) {
+        ARScene(
+          modifier = Modifier,
+          activity = LocalContext.current as? ComponentActivity,
+          lifecycle = LocalLifecycleOwner.current.lifecycle,
+          /**
+           * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+           */
+          childNodes = nodes,
+          /**
+           * Provide your own instance if you want to share Filament resources between multiple views.
+           */
+          engine = rememberEngine(),
+          /**
+           * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which is
+           * a bundle of Filament textures, vertex buffers, index buffers, etc.
+           *
+           * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and components.
+           */
+          modelLoader = rememberModelLoader(engine),
+          /**
+           * A Filament Material defines the visual appearance of an object.
+           *
+           * Materials function as a templates from which [MaterialInstance]s can be spawned.
+           */
+          materialLoader = rememberMaterialLoader(engine),
+          /**
+           * Provide your own instance if you want to share [Node]s' scene between multiple views.
+           */
+          scene = rememberScene(engine),
+          /**
+           * Encompasses all the state needed for rendering a {@link Scene}.
+           *
+           * [View] instances are heavy objects that internally cache a lot of data needed for
+           * rendering. It is not advised for an application to use many View objects.
+           *
+           * For example, in a game, a [View] could be used for the main scene and another one for the
+           * game's user interface. More <code>View</code> instances could be used for creating special
+           * effects (e.g. a [View] is akin to a rendering pass).
+           */
+          view = rememberView(engine),
+          /**
+           * A [Renderer] instance represents an operating system's window.
+           *
+           * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
+           * commands for the render thread and manages frame latency.
+           */
+          renderer = rememberRenderer(engine),
+          /**
+           * Represents a virtual camera, which determines the perspective through which the scene is
+           * viewed.
+           *
+           * All other functionality in Node is supported. You can access the position and rotation of the
+           * camera, assign a collision shape to it, or add children to it.
+           */
+          camera = rememberARCamera(engine),
+          /**
+           * Always add a direct light source since it is required for shadowing.
+           *
+           * We highly recommend adding an [IndirectLight] as well.
+           */
+          mainLight = rememberMainLight(engine),
+          /**
+           * IndirectLight is used to simulate environment lighting.
+           *
+           * Environment lighting has a two components:
+           * - irradiance
+           * - reflections (specular component)
+           *
+           * @see IndirectLight
+           * @see Scene.setIndirectLight
+           */
+          indirectLight = rememberIndirectLight(engine),
+          /**
+           * The Skybox is drawn last and covers all pixels not touched by geometry.
+           *
+           * When added to a [SceneView], the `Skybox` fills all untouched pixels.
+           *
+           * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
+           *
+           * @see Skybox
+           * @see Scene.setSkybox
+           */
+          skybox = rememberSkybox(engine),
+          /**
+           * Invoked when an frame is processed.
+           *
+           * Registers a callback to be invoked when a valid Frame is processing.
+           *
+           * The callback to be invoked once per frame **immediately before the scene is updated.
+           *
+           * The callback will only be invoked if the Frame is considered as valid.
+           */
+          sessionFeatures = setOf<Session.Feature>(),
+          cameraConfig = null,
+          planeRenderer = true,
+          /**
+           * The [ARCameraStream] to render the camera texture.
+           *
+           * Use it to control if the occlusion should be enabled or disabled
+           */
+          cameraStream = rememberCameraStream(engine, materialLoader),
+          onSessionConfiguration = null,
+          onSessionCreated = null,
+          /**
+           * Updates of the state of the ARCore system.
+           *
+           * Callback for [onSessionUpdated].
+           *
+           * This includes: receiving a new camera frame, updating the location of the device, updating
+           * the location of tracking anchors, updating detected planes, etc.
+           *
+           * This call may update the pose of all created anchors and detected planes. The set of updated
+           * objects is accessible through [Frame.getUpdatedTrackables].
+           *
+           * Invoked once per [Frame] immediately before the Scene is updated.
+           */
+          onSessionUpdate = null,
+          onSessionResumed = null,
+          /**
+           * Invoked when an ARCore error occurred.
+           *
+           * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+           * ARCore is not available on the device or the camera permission has been denied.
+           */
+          onSessionFailed = null,
+          onSessionConfigChanged = null,
+          onTap = null,
+          /**
+           * Invoked when an ARCore trackable is tapped.
+           *
+           * Depending on the session configuration the [HitResult.getTrackable] can be:
+           * - A [Plane] if [Config.setPlaneFindingMode] is enable.
+           * - An [InstantPlacementPoint] if [Config.setInstantPlacementMode] is enable.
+           * - A [DepthPoint] and [Point] if [Config.setDepthMode] is enable.
+           */
+          onTapAR = null,
+          onCreate = null 
+        )
+    }
 }
 ```
 
@@ -123,8 +328,7 @@ fun ARScreen() {
 
 ```kotlin
 ModelNode(
-  engine = sceneView.engine,
-  modelInstance = modelLoader.loadModelInstance(modelAsset.fileLocation),
+  modelInstance = modelLoader.createModelInstance("myModel.glb"),
   autoAnimate = true,
   scaleToUnits = null,
   centerOrigin = null
