@@ -19,8 +19,6 @@ typealias FilamentCamera = Camera
 
 interface CameraComponent : Component {
 
-    val viewSize: Size
-
     val camera: FilamentCamera get() = engine.getCameraComponent(entity)!!
 
     /**
@@ -217,43 +215,14 @@ interface CameraComponent : Component {
     /**
      * Gets the distance to the near plane
      */
-    var near: Float
-        get() = camera.near
-        set(value) {
-            updateProjection(near = value)
-        }
+    val near: Float get() = camera.near
 
-    var far
-        get() = cullingFar
-        set(value) {
-            cullingFar = value
-        }
+    val far get() = cullingFar
 
     /**
      * Gets the distance to the far plane
      */
-    var cullingFar: Float
-        get() = camera.cullingFar
-        set(value) {
-            updateProjection(far = value)
-        }
-
-    /**
-     * Sets the projection matrix from the focal length.
-     */
-    fun updateProjection(
-        focalLength: Double = this.focalLength,
-        viewSize: Size = this.viewSize,
-        near: Float = this.near,
-        far: Float = this.cullingFar
-    ) {
-        camera.setLensProjection(
-            focalLength,
-            viewSize.width.toDouble() / viewSize.height.toDouble(),
-            near.toDouble(),
-            far.toDouble()
-        )
-    }
+    val cullingFar get() = camera.cullingFar
 
     /**
      * Retrieves the camera's projection matrix. The projection matrix used for rendering always has
@@ -397,11 +366,7 @@ interface CameraComponent : Component {
     /**
      * Gets the focal length in meters
      */
-    var focalLength: Double
-        get() = camera.focalLength
-        set(value) {
-            updateProjection(focalLength = value)
-        }
+    val focalLength get() = camera.focalLength
 
     /**
      * The distance from the camera to the focus plane in world units

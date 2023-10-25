@@ -29,7 +29,7 @@ import io.github.sceneview.node.CameraNode
  * camera, assign a collision shape to the camera, or add children to the camera. Disabling the
  * camera turns off rendering.
  */
-open class ARCameraNode(engine: Engine, viewSize: Size) : CameraNode(engine, viewSize) {
+open class ARCameraNode(engine: Engine) : CameraNode(engine) {
 
     /**
      * The virtual camera pose in world space for rendering AR content onto the latest frame.
