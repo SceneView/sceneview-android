@@ -71,8 +71,8 @@ fun RenderableManager.setGeometry(
     setAxisAlignedBoundingBox(instance, geometry.boundingBox)
 }
 
-fun RenderableManager.Builder.material(materialInstance: MaterialInstance) =
-    material(0, materialInstance)
+fun RenderableManager.Builder.material(index: Int, materialInstance: MaterialInstance) =
+    material(index, materialInstance)
 
 fun RenderableManager.Builder.build(engine: Engine) = EntityManager.get().create().apply {
     build(engine, this)

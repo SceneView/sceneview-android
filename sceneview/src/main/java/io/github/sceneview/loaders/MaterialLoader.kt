@@ -48,25 +48,25 @@ class MaterialLoader(
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
 
-    val opaqueColoredMaterial by lazy {
+    private val opaqueColoredMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/opaque_colored.filamat")
     }
-    val transparentColoredMaterial by lazy {
+    private val transparentColoredMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/transparent_colored.filamat")
     }
-    val opaqueTexturedMaterial by lazy {
+    private val opaqueTexturedMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/opaque_textured.filamat")
     }
-    val transparentTexturedMaterial by lazy {
+    private val transparentTexturedMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/transparent_textured.filamat")
     }
-    val imageTextureMaterial by lazy {
+    private val imageTextureMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/image_texture.filamat")
     }
-    val videoTextureMaterial by lazy {
+    private val videoTextureMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/video_texture.filamat")
     }
-    val videoTextureChromaKeyMaterial by lazy {
+    private val videoTextureChromaKeyMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/video_texture_chroma_key.filamat")
     }
 
