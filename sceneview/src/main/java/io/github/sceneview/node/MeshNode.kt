@@ -7,7 +7,6 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.VertexBuffer
 import io.github.sceneview.geometries.Geometry
-import io.github.sceneview.managers.material
 import io.github.sceneview.math.toVector3Box
 
 /**
@@ -40,9 +39,24 @@ open class MeshNode(
     val vertexBuffer: VertexBuffer,
     val indexBuffer: IndexBuffer,
     val boundingBox: Box? = null,
+    /**
+     * Binds a material instance.
+     *
+     * If no material is specified, Filament will fall back to a basic default material.
+     */
     materialInstance: MaterialInstance? = null,
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null,
     renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : RenderableNode(engine) {
+) : RenderableNode(engine = engine, parent = parent) {
 
     init {
         RenderableManager.Builder(1)
@@ -53,9 +67,11 @@ open class MeshNode(
                 indexBuffer
             )
             .apply {
-                boundingBox?.let { }
+                boundingBox?.let { boundingBox(it) }
                 culling(boundingBox != null)
-                materialInstance?.let { material(it) }
+                materialInstance?.let { materialInstance ->
+                    material(0, materialInstance)
+                }
             }.apply(renderableApply)
             .build(engine, entity)
         updateCollisionShape()
