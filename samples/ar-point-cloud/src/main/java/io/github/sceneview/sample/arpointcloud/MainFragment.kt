@@ -88,7 +88,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 config.lightEstimationMode = Config.LightEstimationMode.DISABLED
             }
             environment = null
-            onSessionUpdated = this@MainFragment::onSessionUpdated
+            onSessionUpdate = this@MainFragment::onSessionUpdated
         }
 
         scoreText = view.findViewById<TextView>(R.id.scoreText).apply {

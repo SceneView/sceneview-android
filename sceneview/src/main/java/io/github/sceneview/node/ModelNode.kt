@@ -1,8 +1,6 @@
 package io.github.sceneview.node
 
 import androidx.annotation.IntRange
-import com.google.android.filament.Box
-import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.gltfio.Animator
@@ -10,7 +8,9 @@ import com.google.android.filament.gltfio.FilamentAsset
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.max
 import io.github.sceneview.Entity
+import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
+import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Scale
@@ -28,13 +28,79 @@ import io.github.sceneview.utils.intervalSeconds
 /**
  * Create the ModelNode from a loaded model instance.
  *
+ * Use your own single [MaterialLoader] instance or the [SceneView.materialLoader] one to load your
+ * gltF form different .glTF/.glb resource locations.
+ *
  * @see ModelLoader
  */
-open class ModelNode(engine: Engine) : Node(engine) {
+open class ModelNode(
+    /**
+     * The [ModelInstance] to add to scene. Usually a renderable 3D model.
+     */
+    val modelInstance: ModelInstance,
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null,
+    /**
+     * Plays the animations automatically if the model has one.
+     */
+    autoAnimate: Boolean = true,
+    /**
+     * Scale the model to fit into a unit (usually meters) cube.
+     *
+     * Default is `null` to keep model original size.
+     */
+    scaleToUnits: Float? = null,
+    /**
+     * Center the model origin to this unit cube position.
+     *
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     */
+    centerOrigin: Position? = null
+) : Node(engine = modelInstance.engine, parent = parent) {
+
+    class RootNode internal constructor(
+        override var modelInstance: ModelInstance, entity: Entity
+    ) : Node(
+        engine = modelInstance.engine, entity = entity
+    ), ChildNode
+
+    class RenderableNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity, parent: Node
+    ) : io.github.sceneview.node.RenderableNode(
+        engine = modelInstance.engine, entity = entity, parent = parent
+    ), ChildNode {
+        override var isTouchable = true
+        override var isEditable = false
+    }
+
+    class LightNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity, parent: Node
+    ) : io.github.sceneview.node.LightNode(
+        engine = modelInstance.engine, entity = entity, parent = parent
+    ), ChildNode
+
+    class CameraNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity, parent: Node
+    ) : io.github.sceneview.node.CameraNode(
+        engine = modelInstance.engine, entity = entity, parent = parent
+    ), ChildNode
 
     interface ChildNode {
         val entity: Entity
         val modelInstance: ModelInstance
+
 
         val model: Model get() = modelInstance.asset
 
@@ -51,92 +117,25 @@ open class ModelNode(engine: Engine) : Node(engine) {
         val morphTargetNames: List<String> get() = model.getMorphTargetNames(entity).toList()
     }
 
-    class RootNode internal constructor(
-        override var modelInstance: ModelInstance,
-        entity: Entity
-    ) : io.github.sceneview.node.RenderableNode(engine = modelInstance.engine, entity = entity),
-        ChildNode
-
-    class RenderableNode internal constructor(
-        override val modelInstance: ModelInstance,
-        entity: Entity
-    ) : io.github.sceneview.node.RenderableNode(
-        engine = modelInstance.engine,
-        entity = entity
-    ), ChildNode {
-        override var isTouchable = true
-        override var isEditable = false
-    }
-
-    class LightNode internal constructor(
-        override val modelInstance: ModelInstance,
-        entity: Entity
-    ) : io.github.sceneview.node.LightNode(
-        engine = modelInstance.engine,
-        entity = entity
-    ), ChildNode
-
-    class CameraNode internal constructor(
-        override val modelInstance: ModelInstance,
-        entity: Entity,
-        override var viewSize: android.util.Size = android.util.Size(0, 0),
-    ) : io.github.sceneview.node.CameraNode(
-        engine = modelInstance.engine,
-        entity = entity,
-        viewSize = viewSize
-    ), ChildNode
-
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
-    /**
-     * The [ModelInstance] to display.
-     *
-     * The renderable is usually a 3D model.
-     * @see ModelLoader
-     */
-    var modelInstance: ModelInstance? = null
-        set(value) {
-            field = value
-            animator = value?.animator
-            collisionShape = value?.model?.collisionShape
-            rootNode = value?.let { RootNode(it, it.root) }
-            renderableNodes =
-                value?.renderableEntities?.map { RenderableNode(value, it) } ?: listOf()
-            lightNodes = value?.lightEntities?.map { LightNode(value, it) } ?: listOf()
-            cameraNodes = value?.camerasEntities?.map { CameraNode(value, it) } ?: listOf()
-            playingAnimations.clear()
-        }
+    val rootNode = RootNode(modelInstance, modelInstance.root).apply {
+        this.parent = this@ModelNode
+    }
+    val renderableNodes = modelInstance.renderableEntities.map {
+        RenderableNode(modelInstance, it, rootNode)
+    }
+    val lightNodes = modelInstance.lightEntities.map {
+        LightNode(modelInstance, it, rootNode)
+    }
+    val cameraNodes = modelInstance.camerasEntities.map {
+        CameraNode(modelInstance, it, rootNode)
+    }
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance].
      */
-    val model get() = modelInstance?.model
-
-    var rootNode: RootNode? = null
-        private set(value) {
-            field?.parent = null
-            field = value
-//            value?.transform = rootTransform
-            value?.parent = this@ModelNode
-        }
-    var renderableNodes = listOf<RenderableNode>()
-        private set(value) {
-            field.forEach { it.parent = null }
-            field = value
-            value.forEach { it.parent = rootNode }
-        }
-    var lightNodes = listOf<LightNode>()
-        private set(value) {
-            field.forEach { it.parent = null }
-            field = value
-            value.forEach { it.parent = rootNode }
-        }
-    var cameraNodes = listOf<CameraNode>()
-        private set(value) {
-            field.forEach { it.parent = null }
-            field = value
-            value.forEach { it.parent = rootNode }
-        }
+    val model get() = modelInstance.model
 
     /**
      * Gets the bounding box computed from the supplied min / max values in glTF accessors.
@@ -144,35 +143,35 @@ open class ModelNode(engine: Engine) : Node(engine) {
      * This does not return a bounding box over all FilamentInstance, it's just a straightforward
      * AAAB that can be determined at load time from the asset data.
      */
-    val boundingBox get() = model?.boundingBox ?: Box()
+    val boundingBox get() = model.boundingBox
 
     /**
      * Retrieves the [Animator] for this instance.
      */
-    var animator: Animator? = null//modelInstance?.animator
+    var animator = modelInstance.animator
 
     /**
      * The number of animation definitions in the glTF asset.
      */
-    val animationCount get() = animator?.animationCount ?: 0
+    val animationCount get() = animator.animationCount
 
     var playingAnimations = mutableMapOf<Int, PlayingAnimation>()
 
     /**
      * Gets the skin count of this instance.
      */
-    val skinCount: Int get() = modelInstance?.skinCount ?: 0
+    val skinCount: Int get() = modelInstance.skinCount
 
     /**
      * Returns the names of all material variants.
      */
     val materialVariantNames: List<String>
-        get() = modelInstance?.materialVariantNames?.toList() ?: listOf()
+        get() = modelInstance.materialVariantNames.toList()
 
     /**
      * Gets the skin name at skin index in this instance.
      */
-    val skinNames: List<String> get() = modelInstance?.skinNames?.toList() ?: listOf()
+    val skinNames: List<String> get() = modelInstance.skinNames.toList()
 
     /**
      * Changes whether or not the renderable casts shadows.
@@ -194,44 +193,10 @@ open class ModelNode(engine: Engine) : Node(engine) {
 
     override var isTouchable = true
 
-    /**
-     * Construct a Model Node with a model instance
-     *
-     * @see setModelInstance
-     */
-    constructor(
-        modelInstance: ModelInstance,
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null
-    ) : this(modelInstance.model.engine) {
-        setModelInstance(modelInstance, autoAnimate, scaleToUnits, centerOrigin)
-    }
+    init {
+        collisionShape = model.collisionShape
 
-    /**
-     * Set the [ModelInstance] to display.
-     *
-     * @param modelInstance The renderable is usually a 3D model.
-     * @param autoAnimate Plays the animations automatically if the model has one.
-     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size.
-     * @param centerOrigin Center the model origin to this unit cube position.
-     *
-     * - `null` = Keep the original model center point
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
-     * - ...
-     */
-    fun setModelInstance(
-        modelInstance: ModelInstance,
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null
-    ) {
-        this.modelInstance = modelInstance
-
-        if (autoAnimate && (animator?.animationCount ?: 0) > 0) {
+        if (autoAnimate && animator.animationCount > 0) {
             playAnimation(0)
         }
         scaleToUnits?.let { scaleModel(it) }
@@ -241,7 +206,7 @@ open class ModelNode(engine: Engine) : Node(engine) {
     override fun onFrame(frameTimeNanos: Long) {
         super.onFrame(frameTimeNanos)
 
-        model?.popRenderable()
+        model.popRenderable()
 
         playingAnimations.forEach { (index, animation) ->
             animator?.let { animator ->
@@ -319,7 +284,7 @@ open class ModelNode(engine: Engine) : Node(engine) {
      * This is a no-op if the given skin index or target is invalid.
      */
     fun attachSkin(target: Node, @IntRange(from = 0) skinIndex: Int = 0) =
-        modelInstance?.attachSkin(skinIndex, target.entity)
+        modelInstance.attachSkin(skinIndex, target.entity)
 
     /**
      * Attaches the given skin to the given node, which must have an associated mesh with
@@ -328,7 +293,7 @@ open class ModelNode(engine: Engine) : Node(engine) {
      * This is a no-op if the given skin index or target is invalid.
      */
     fun detachSkin(target: Node, @IntRange(from = 0) skinIndex: Int = 0) =
-        modelInstance?.detachSkin(skinIndex, target.entity)
+        modelInstance.detachSkin(skinIndex, target.entity)
 
     /**
      * Gets the joint count at skin index in this instance.
@@ -382,8 +347,7 @@ open class ModelNode(engine: Engine) : Node(engine) {
      * @see RenderableComponent.setLayerMask
      */
     fun setLayerMask(
-        @IntRange(from = 0, to = 255) select: Int,
-        @IntRange(from = 0, to = 255) value: Int
+        @IntRange(from = 0, to = 255) select: Int, @IntRange(from = 0, to = 255) value: Int
     ) = renderableNodes.forEach { it.setLayerMask(select, value) }
 
     /**
