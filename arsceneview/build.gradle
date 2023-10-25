@@ -57,7 +57,7 @@ dependencies {
     api project(":sceneview")
 
     // ARCore
-    api "com.google.ar:core:1.39.0"
+    api "com.google.ar:core:1.40.0"
 }
 
 apply plugin: "com.vanniktech.maven.publish"
