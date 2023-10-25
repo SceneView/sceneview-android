@@ -419,14 +419,18 @@ open class SceneView @JvmOverloads constructor(
         )
     }
 
-    protected open val lifecycle: Lifecycle?
-        get() = runCatching { findViewTreeLifecycleOwner()?.lifecycle }.getOrNull()
-
-    protected open val activity: ComponentActivity?
-        get() = try {
+    protected open val activity: ComponentActivity? = sharedActivity
+        get() = field ?: try {
             findFragment<Fragment>().requireActivity()
         } catch (e: Exception) {
             context as? ComponentActivity
+        }
+
+    var lifecycle: Lifecycle? = sharedLifecycle
+        set(value) {
+            field?.removeObserver(this)
+            field = value
+            value?.addObserver(this)
         }
 
     protected open val cameraGestureDetector: CameraGestureDetector? by lazy {
@@ -769,7 +773,9 @@ open class SceneView @JvmOverloads constructor(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
 
-        lifecycle?.addObserver(this)
+        if (lifecycle == null) {
+            lifecycle = runCatching { findViewTreeLifecycleOwner()?.lifecycle }.getOrNull()
+        }
     }
 
     override fun onDetachedFromWindow() {
