@@ -95,9 +95,7 @@ class ARSession(
     fun updateOrNull() = super.update().takeIf {
         // Check if no frame or same timestamp, no drawing.
         it.timestamp != 0L && it.timestamp != frame?.timestamp
-    }
-
-    override fun update() = super.update().also {
+    }.also {
         frame = it
     }
 
