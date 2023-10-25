@@ -7,6 +7,13 @@ typealias Color = Float4
 
 fun colorOf(r: Float = 0.0f, g: Float = 0.0f, b: Float = 0.0f, a: Float = 1.0f) = Color(r, g, b, a)
 fun colorOf(rgb: Float = 0.0f, a: Float = 1.0f) = colorOf(r = rgb, g = rgb, b = rgb, a = a)
+fun colorOf(color: androidx.compose.ui.graphics.Color) = colorOf(
+    r = color.red,
+    g = color.green,
+    b = color.blue,
+    a = color.alpha
+)
+
 fun colorOf(color: Int) = colorOf(
     r = android.graphics.Color.red(color) / 255.0f,
     g = android.graphics.Color.green(color) / 255.0f,

@@ -153,6 +153,22 @@ class MaterialLoader(
      * [MaterialInstance.setReflectance].
      */
     fun createColorMaterial(
+        color: androidx.compose.ui.graphics.Color,
+        metallic: Float = kMaterialDefaultMetallic,
+        roughness: Float = kMaterialDefaultRoughness,
+        reflectance: Float = kMaterialDefaultReflectance
+    ) = createColorMaterial(colorOf(color), metallic, roughness, reflectance)
+
+    /**
+     * Creates an opaque or transparent [Material] depending on the color alpha with the [Color]
+     * passed in.
+     *
+     * The [Color] can be modified by calling [MaterialInstance.setColor].
+     * The metallicness, roughness, and reflectance can be modified using
+     * [MaterialInstance.setMetallic], [MaterialInstance.setRoughness],
+     * [MaterialInstance.setReflectance].
+     */
+    fun createColorMaterial(
         color: Int,
         metallic: Float = kMaterialDefaultMetallic,
         roughness: Float = kMaterialDefaultRoughness,
