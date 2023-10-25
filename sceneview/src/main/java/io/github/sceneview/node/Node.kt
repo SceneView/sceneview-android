@@ -76,7 +76,17 @@ private const val defaultTouchSlop = 8
  */
 open class Node(
     val engine: Engine,
-    @FilamentEntity val entity: Entity = EntityManager.get().create()
+    @FilamentEntity val entity: Entity = EntityManager.get().create(),
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null
 ) : TransformProvider,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
@@ -323,11 +333,11 @@ open class Node(
             }
         }
 
-    var childNodes = setOf<Node>()
+    var childNodes = listOf<Node>()
         set(value) {
             if (field != value) {
-                val removedNodes = field.subtract(value)
-                val addedNodes = value.subtract(field)
+                val removedNodes = field - value.toSet()
+                val addedNodes = value - field.toSet()
                 field = value
                 removedNodes.forEach { child ->
                     if (child.parent == this@Node) {
@@ -410,6 +420,7 @@ open class Node(
         if (!transformManager.hasComponent(entity)) {
             transformManager.create(entity)
         }
+        this.parent = parent
     }
 
     /**

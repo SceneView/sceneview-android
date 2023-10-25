@@ -21,22 +21,36 @@ import io.github.sceneview.components.LightComponent
  */
 open class LightNode(
     engine: Engine,
-    entity: Entity = EntityManager.get().create()
-) : Node(engine, entity), LightComponent {
+    entity: Entity,
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null
+) : Node(engine, entity, parent), LightComponent {
 
     override var isTouchable = false
     override var isEditable = false
 
     constructor(
         engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        builder: LightManager.Builder
+    ) : this(engine, entity) {
+        builder.build(engine, entity)
+    }
+
+    constructor(
+        engine: Engine,
         type: LightManager.Type,
         entity: Entity = EntityManager.get().create(),
         apply: LightManager.Builder.() -> Unit
-    ) : this(engine, entity) {
-        LightManager.Builder(type)
-            .apply(apply)
-            .build(engine, entity)
-    }
+    ) : this(engine, entity, LightManager.Builder(type).apply(apply))
 
     override fun destroy() {
         lightManager.destroy(entity)

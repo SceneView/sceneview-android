@@ -18,8 +18,18 @@ import io.github.sceneview.components.RenderableComponent
  */
 open class RenderableNode(
     engine: Engine,
-    @FilamentEntity entity: Entity = EntityManager.get().create()
-) : Node(engine, entity), RenderableComponent {
+    @FilamentEntity entity: Entity = EntityManager.get().create(),
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null
+) : Node(engine, entity, parent), RenderableComponent {
 
     override fun updateVisibility() {
         super.updateVisibility()
