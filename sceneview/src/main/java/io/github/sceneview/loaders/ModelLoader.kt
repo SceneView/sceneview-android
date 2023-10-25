@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.nio.Buffer
 
 /**
@@ -119,7 +120,7 @@ class ModelLoader(
      *
      * @see createModel
      */
-    suspend fun loadModelAsync(
+    fun loadModelAsync(
         fileLocation: String,
         resourceResolver: (resourceFileName: String) -> String = {
             getFolderPath(fileLocation, it)
@@ -137,7 +138,10 @@ class ModelLoader(
     fun createModelInstance(
         buffer: Buffer,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): ModelInstance = createModel(buffer, resourceResolver).instance
+    ): ModelInstance = createModel(buffer, resourceResolver).also {
+        // Release model since it will not be re-instantiated
+        it.releaseSourceData()
+    }.instance
 
     /**
      * Creates a [Model] from the contents of a GLB or GLTF asset file and get its default instance.
@@ -149,7 +153,10 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = {
             context.assets.readFileBuffer(getFolderPath(assetFileLocation, it))
         }
-    ): ModelInstance = createModel(assetFileLocation, resourceResolver).instance
+    ): ModelInstance = createModel(assetFileLocation, resourceResolver).also {
+        // Release model since it will not be re-instantiated
+        it.releaseSourceData()
+    }.instance
 
     /**
      * Creates a [Model] from the contents of a GLB or GLTF raw file and get its default instance.
@@ -159,7 +166,10 @@ class ModelLoader(
     fun createModelInstance(
         @RawRes rawResId: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): ModelInstance = createModel(rawResId, resourceResolver).instance
+    ): ModelInstance = createModel(rawResId, resourceResolver).also {
+        // Release model since it will not be re-instantiated
+        it.releaseSourceData()
+    }.instance
 
     /**
      * Loads a [Model] from the contents of a GLB or GLTF file  and get its default instance.
@@ -175,7 +185,10 @@ class ModelLoader(
     suspend fun loadModelInstance(
         fileLocation: String,
         resourceResolver: (resourceFileName: String) -> String = { getFolderPath(fileLocation, it) }
-    ): ModelInstance? = loadModel(fileLocation, resourceResolver)?.instance
+    ): ModelInstance? = loadModel(fileLocation, resourceResolver)?.also {
+        // Release model since it will not be re-instantiated
+        it.releaseSourceData()
+    }?.instance
 
     /**
      * Loads a [Model] from the contents of a GLB or GLTF file within a self owned coroutine scope
@@ -188,13 +201,15 @@ class ModelLoader(
      *
      * @see loadModel
      */
-    suspend fun loadModelInstanceAsync(
+    fun loadModelInstanceAsync(
         fileLocation: String,
         resourceResolver: (resourceFileName: String) -> String = {
             getFolderPath(fileLocation, it)
         },
         onResult: (ModelInstance?) -> Unit
     ): Job = loadModelAsync(fileLocation, resourceResolver) {
+        // Release model since it will not be re-instantiated
+        it?.releaseSourceData()
         onResult.invoke(it?.instance)
     }
 
@@ -218,6 +233,8 @@ class ModelLoader(
         assetLoader.createInstancedAsset(buffer, instances)!!.also { model ->
             models += model
             loadResources(model, resourceResolver)
+            // Release model since it will not be re-instantiated
+            model.releaseSourceData()
         } to instances
     }
 
@@ -287,6 +304,8 @@ class ModelLoader(
                 loadResourcesSuspended(model) { resourceFileName: String ->
                     context.loadFileBuffer(resourceResolver(resourceFileName))
                 }
+                // Release model since it will not be re-instantiated
+                model.releaseSourceData()
             } to instances
         }
     }
@@ -306,7 +325,7 @@ class ModelLoader(
      *
      * @see loadInstancedModel
      */
-    suspend fun loadInstancedModelAsync(
+    fun loadInstancedModelAsync(
         fileLocation: String,
         count: Int,
         resourceResolver: (resourceFileName: String) -> String = {
@@ -379,9 +398,15 @@ class ModelLoader(
         resourceResolver: (suspend (String) -> Buffer?)
     ) {
         for (uri in model.resourceUris) {
-            resourceResolver(uri)?.let { resourceLoader.addResourceData(uri, it) }
+            resourceResolver(uri)?.let {
+                withContext(Dispatchers.Main) {
+                    resourceLoader.addResourceData(uri, it)
+                }
+            }
         }
-        resourceLoader.loadResources(model)
+        withContext(Dispatchers.Main) {
+            resourceLoader.loadResources(model)
+        }
 //        resourceLoader.asyncBeginLoad(model)
     }
 
