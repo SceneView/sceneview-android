@@ -2,7 +2,9 @@ package io.github.sceneview.ar;
 
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.MaterialInstance;
+import com.google.android.filament.Scene;
 import com.google.android.filament.TransformManager;
 import com.google.ar.core.Plane;
 import com.google.ar.core.TrackingState;
@@ -17,10 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import io.github.sceneview.SceneView;
 import io.github.sceneview.collision.Matrix;
 import io.github.sceneview.collision.TransformProvider;
 import io.github.sceneview.collision.Vector3;
+import io.github.sceneview.loaders.ModelLoader;
 
 /**
  * Renders a single ARCore Plane.
@@ -28,13 +30,15 @@ import io.github.sceneview.collision.Vector3;
 public class PlaneVisualizer implements TransformProvider {
     private static final String TAG = PlaneVisualizer.class.getSimpleName();
 
-    private final SceneView sceneView;
+    private final Engine engine;
+    private final ModelLoader modelLoader;
+    private final Scene scene;
     private final Plane plane;
 
     private final Matrix planeMatrix = new Matrix();
 
     private boolean isPlaneAddedToScene = false;
-    private boolean isEnabled = false;
+    private boolean isEnabled = true;
     private boolean isShadowReceiver = false;
     private boolean isVisible = false;
 
@@ -80,14 +84,16 @@ public class PlaneVisualizer implements TransformProvider {
         }
     }
 
-    public PlaneVisualizer(SceneView sceneView, Plane plane) {
-        this.sceneView = sceneView;
+    public PlaneVisualizer(Engine engine, ModelLoader modelLoader, Scene scene, Plane plane) {
+        this.engine = engine;
+        this.modelLoader = modelLoader;
+        this.scene = scene;
         this.plane = plane;
 
         renderableDefinition = RenderableDefinition
                 .builder()
                 .setVertices(vertices)
-                .build(sceneView.getEngine());
+                .build(engine);
     }
 
     public void setPlaneMaterial(MaterialInstance materialInstance) {
@@ -95,7 +101,7 @@ public class PlaneVisualizer implements TransformProvider {
             planeSubmesh = Submesh.builder()
                     .setTriangleIndices(triangleIndices)
                     .setMaterial(materialInstance)
-                    .build(sceneView.getEngine());
+                    .build(engine);
         } else {
             planeSubmesh.setMaterial(materialInstance);
         }
@@ -110,7 +116,7 @@ public class PlaneVisualizer implements TransformProvider {
             shadowSubmesh = Submesh.builder()
                     .setTriangleIndices(triangleIndices)
                     .setMaterial(materialInstance)
-                    .build(sceneView.getEngine());
+                    .build(engine);
         } else {
             shadowSubmesh.setMaterial(materialInstance);
         }
@@ -174,7 +180,7 @@ public class PlaneVisualizer implements TransformProvider {
             try {
                 planeRenderable = ModelRenderable.builder()
                         .setSource(renderableDefinition)
-                        .build(sceneView.getEngine())
+                        .build(engine)
                         .get();
                 planeRenderable.setShadowCaster(false);
                 planeRenderable.setShadowReceiver(true);
@@ -182,9 +188,9 @@ public class PlaneVisualizer implements TransformProvider {
             } catch (InterruptedException | ExecutionException ex) {
                 throw new AssertionError("Unable to create plane renderable.");
             }
-            planeRenderableInstance = planeRenderable.createInstance(sceneView.getEngine(),
-                    sceneView.getModelLoader().getAssetLoader(),
-                    sceneView.getModelLoader().getResourceLoader(),
+            planeRenderableInstance = planeRenderable.createInstance(engine,
+                    modelLoader.getAssetLoader(),
+                    modelLoader.getResourceLoader(),
                     this);
         } else {
             planeRenderable.updateFromDefinition(renderableDefinition);
@@ -198,9 +204,9 @@ public class PlaneVisualizer implements TransformProvider {
             planeRenderableInstance.setBlendOrderAt(0, 0); // plane
             planeRenderableInstance.setBlendOrderAt(1, 1); // shadow
         }
-        planeRenderableInstance.prepareForDraw(sceneView.getEngine());
+        planeRenderableInstance.prepareForDraw(engine);
 
-        TransformManager transformManager = sceneView.getEngine().getTransformManager();
+        TransformManager transformManager = engine.getTransformManager();
         int instance = transformManager.getInstance(planeRenderableInstance.getEntity());
         transformManager.setTransform(instance, planeRenderableInstance.getWorldModelMatrix().data);
     }
@@ -218,7 +224,7 @@ public class PlaneVisualizer implements TransformProvider {
         if (isPlaneAddedToScene || planeRenderableInstance == null) {
             return;
         }
-        sceneView.addEntity(planeRenderableInstance.getRenderedEntity());
+        scene.addEntity(planeRenderableInstance.getRenderedEntity());
 
         isPlaneAddedToScene = true;
     }
@@ -228,7 +234,7 @@ public class PlaneVisualizer implements TransformProvider {
             return;
         }
 
-        sceneView.removeEntity(planeRenderableInstance.getRenderedEntity());
+        scene.removeEntity(planeRenderableInstance.getRenderedEntity());
 
         isPlaneAddedToScene = false;
     }

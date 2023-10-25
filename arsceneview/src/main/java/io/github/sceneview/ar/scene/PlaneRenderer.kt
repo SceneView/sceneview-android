@@ -1,12 +1,14 @@
 package io.github.sceneview.ar.scene
 
+import android.util.Size
+import com.google.android.filament.Engine
+import com.google.android.filament.Scene
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
 import com.google.ar.core.Plane
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Float3
-import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.PlaneVisualizer
 import io.github.sceneview.ar.arcore.fps
 import io.github.sceneview.ar.arcore.getUpdatedPlanes
@@ -14,6 +16,8 @@ import io.github.sceneview.ar.arcore.hitTest
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.zDirection
+import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setTexture
 import io.github.sceneview.safeDestroyMaterial
@@ -27,10 +31,14 @@ import io.github.sceneview.utils.Color
  *
  * Used to visualize detected planes and to control whether Renderables cast shadows on them.
  */
-class PlaneRenderer(val sceneView: ARSceneView) {
+class PlaneRenderer(
+    val engine: Engine,
+    private val modelLoader: ModelLoader,
+    materialLoader: MaterialLoader,
+    private val scene: Scene
+) {
 
-    private val engine get() = sceneView.engine
-    private val materialLoader get() = sceneView.materialLoader
+    lateinit var viewSize: Size
 
     private val visualizers = mutableMapOf<Plane, PlaneVisualizer>()
 
@@ -155,8 +163,8 @@ class PlaneRenderer(val sceneView: ARSceneView) {
                         val centerPlane = if (isVisible) {
                             // Don't make the hit test if we don't need to know the center plane
                             frame.hitTest(
-                                xPx = sceneView.width / 2.0f,
-                                yPx = sceneView.height / 2.0f,
+                                xPx = viewSize.width / 2.0f,
+                                yPx = viewSize.height / 2.0f,
                                 plane = true,
                                 depth = false,
                                 instant = false
@@ -182,8 +190,7 @@ class PlaneRenderer(val sceneView: ARSceneView) {
 
                     // Check for not tracking Plane-Trackables and remove them.
                     cleanupOldPlaneVisualizer()
-                } catch (_: Exception) {
-                }
+                } catch (e: Exception) {}
             }
         }
     }
@@ -209,7 +216,7 @@ class PlaneRenderer(val sceneView: ARSceneView) {
         // If not, create a new plane visualizer for this plane.
         if (plane.trackingState == TrackingState.TRACKING || plane.subsumedBy == null) {
             val planeVisualizer = visualizers[plane]
-                ?: PlaneVisualizer(sceneView, plane).apply {
+                ?: PlaneVisualizer(engine, modelLoader, scene, plane).apply {
                     setPlaneMaterial(planeMaterial.createInstance())
                     setShadowMaterial(shadowMaterial.createInstance())
                     setShadowReceiver(isShadowReceiver)
