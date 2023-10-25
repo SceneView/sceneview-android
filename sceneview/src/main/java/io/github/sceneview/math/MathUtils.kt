@@ -34,11 +34,18 @@ typealias Transform = Mat4
 //operator fun android.util.Size.component1() = width
 //operator fun android.util.Size.component2() = height
 
-fun Transform(position: Position, quaternion: Quaternion, scale: Scale) =
+fun Transform(
+    position: Position = Position(),
+    quaternion: Quaternion = Quaternion(),
+    scale: Scale = Scale(1.0f)
+) =
     translation(position) * rotation(quaternion) * scale(scale)
 
-fun Transform(position: Position, rotation: Rotation, scale: Scale) =
-    translation(position) * rotation(rotation.toQuaternion()) * scale(scale)
+fun Transform(
+    position: Position = Position(),
+    rotation: Rotation,
+    scale: Scale = Scale(1.0F)
+) = translation(position) * rotation(rotation.toQuaternion()) * scale(scale)
 
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }
@@ -132,18 +139,11 @@ var Box.size
         halfExtentSize = value / 2.0f
     }
 
-fun Box.toVector3Box(): io.github.sceneview.collision.Box {
-    val halfExtent = halfExtent
-    val center = center
-    return io.github.sceneview.collision.Box(
-        Vector3(
-            halfExtent[0],
-            halfExtent[1],
-            halfExtent[2]
-        ).scaled(2.0f),
-        Vector3(center[0], center[1], center[2])
+fun Box.toVector3Box(): io.github.sceneview.collision.Box =
+    io.github.sceneview.collision.Box(
+        size.toVector3(),
+        centerPosition.toVector3()
     )
-}
 
 /**
  * ### Spherical Linear Interpolate a transform

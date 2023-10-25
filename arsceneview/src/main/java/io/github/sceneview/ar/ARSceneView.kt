@@ -4,11 +4,15 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Size
 import android.view.MotionEvent
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
+import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
+import com.google.android.filament.Skybox
 import com.google.android.filament.View
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfig.FacingDirection
@@ -21,6 +25,7 @@ import com.google.ar.core.Plane
 import com.google.ar.core.Point
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
+import io.github.sceneview.Scene
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.LightEstimator
 import io.github.sceneview.ar.arcore.configure
@@ -34,6 +39,7 @@ import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.utils.setKeepScreenOn
 
@@ -47,83 +53,121 @@ open class ARSceneView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
+    sharedActivity: ComponentActivity? = null,
+    sharedLifecycle: Lifecycle? = null,
+    /**
+     * Provide your own instance if you want to share Filament resources between multiple views.
+     */
     sharedEngine: Engine? = null,
-    sharedScene: Scene? = null,
-    sharedView: View? = null,
-    sharedRenderer: Renderer? = null,
+    /**
+     * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which is
+     * a bundle of Filament textures, vertex buffers, index buffers, etc.
+     *
+     * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and components.
+     */
     sharedModelLoader: ModelLoader? = null,
+    /**
+     * A Filament Material defines the visual appearance of an object.
+     *
+     * Materials function as a templates from which [MaterialInstance]s can be spawned.
+     */
     sharedMaterialLoader: MaterialLoader? = null,
+    /**
+     * Provide your own instance if you want to share [Node]s' scene between multiple views.
+     */
+    sharedScene: Scene? = null,
+    /**
+     * Encompasses all the state needed for rendering a {@link Scene}.
+     *
+     * [View] instances are heavy objects that internally cache a lot of data needed for
+     * rendering. It is not advised for an application to use many View objects.
+     *
+     * For example, in a game, a [View] could be used for the main scene and another one for the
+     * game's user interface. More <code>View</code> instances could be used for creating special
+     * effects (e.g. a [View] is akin to a rendering pass).
+     */
+    sharedView: View? = null,
+    /**
+     * A [Renderer] instance represents an operating system's window.
+     *
+     * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
+     * commands for the render thread and manages frame latency.
+     */
+    sharedRenderer: Renderer? = null,
+    /**
+     * Represents a virtual camera, which determines the perspective through which the scene is
+     * viewed.
+     *
+     * All other functionality in Node is supported. You can access the position and rotation of the
+     * camera, assign a collision shape to it, or add children to it.
+     */
+    sharedCamera: ARCameraNode? = null,
+    /**
+     * Always add a direct light source since it is required for shadowing.
+     *
+     * We highly recommend adding an [IndirectLight] as well.
+     */
+    sharedMainLight: LightNode? = null,
+    /**
+     * IndirectLight is used to simulate environment lighting.
+     *
+     * Environment lighting has a two components:
+     * - irradiance
+     * - reflections (specular component)
+     *
+     * @see IndirectLight
+     * @see Scene.setIndirectLight
+     */
+    sharedIndirectLight: IndirectLight? = null,
+    /**
+     * The Skybox is drawn last and covers all pixels not touched by geometry.
+     *
+     * When added to a [SceneView], the `Skybox` fills all untouched pixels.
+     *
+     * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
+     *
+     * @see Skybox
+     * @see Scene.setSkybox
+     */
+    sharedSkybox: Skybox? = null,
     var sessionFeatures: Set<Session.Feature> = setOf(),
     var cameraConfig: ((Session) -> CameraConfig)? = null,
-    cameraNode: (engine: Engine, viewSize: Size) -> ARCameraNode = { engine, viewSize ->
-        ARCameraNode(engine, viewSize)
-    },
-    var onSessionConfiguration: ((session: Session, Config) -> Unit)? = null,
-    var onSessionCreated: ((session: Session) -> Unit)? = null,
     /**
-     * Updates of the state of the ARCore system.
+     * The [ARCameraStream] to render the camera texture.
      *
-     * Callback for [onSessionUpdated].
-     *
-     * This includes: receiving a new camera frame, updating the location of the device, updating
-     * the location of tracking anchors, updating detected planes, etc.
-     *
-     * This call may update the pose of all created anchors and detected planes. The set of updated
-     * objects is accessible through [Frame.getUpdatedTrackables].
-     *
-     * Invoked once per [Frame] immediately before the Scene is updated.
+     * Use it to control if the occlusion should be enabled or disabled
      */
-    var onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
-    var onSessionResumed: ((session: Session) -> Unit)? = null,
-    /**
-     * Invoked when an ARCore error occurred.
-     *
-     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
-     * ARCore is not available on the device or the camera permission has been denied.
-     */
-    var onSessionFailed: ((exception: Exception) -> Unit)? = null,
-    var onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null,
-    /**
-     * Invoked when the `SceneView` is tapped.
-     *
-     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
-     * used to find a touched node. The ID of the Filament renderable can be used to determine what
-     * part of a model is tapped.
-     */
-    onTap: ((
-        /** The motion event that caused the tap. **/
-        motionEvent: MotionEvent,
-        /** The node that was tapped or `null`. **/
-        node: Node?
-    ) -> Unit)? = null,
-    /**
-     * Invoked when an ARCore trackable is tapped.
-     *
-     * Depending on the session configuration the [HitResult.getTrackable] can be:
-     * - A [Plane] if [Config.setPlaneFindingMode] is enable.
-     * - An [InstantPlacementPoint] if [Config.setInstantPlacementMode] is enable.
-     * - A [DepthPoint] and [Point] if [Config.setDepthMode] is enable.
-     */
-    var onTapAR: ((
-        /** The motion event that caused the tap. */
-        motionEvent: MotionEvent,
-        /** The ARCore hit result for the trackable that was tapped. */
-        hitResult: HitResult
-    ) -> Unit)? = null
+    sharedCameraStream: ARCameraStream? = null
 ) : SceneView(
     context,
     attrs,
     defStyleAttr,
     defStyleRes,
+    sharedActivity,
+    sharedLifecycle,
     sharedEngine,
+    sharedModelLoader,
+    sharedMaterialLoader,
     sharedScene,
     sharedView,
     sharedRenderer,
-    sharedModelLoader,
-    sharedMaterialLoader,
-    cameraNode = cameraNode,
-    onTap = onTap
+    sharedCamera,
+    sharedMainLight,
+    sharedIndirectLight,
+    sharedSkybox
 ) {
+    object Defaults {
+        fun camera(engine: Engine) = ARCameraNode(engine).apply {
+            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+            // Since we define a light that has the same intensity as the sun, it guarantees a
+            // proper exposure
+            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+        }
+
+        fun cameraStream(engine: Engine, materialLoader: MaterialLoader) =
+            ARCameraStream(engine, materialLoader)
+    }
+
     open val arCore = ARCore(
         onSessionCreated = ::onSessionCreated,
         onSessionResumed = ::onSessionResumed,
@@ -134,12 +178,39 @@ open class ARSceneView @JvmOverloads constructor(
     val session get() = arCore.session
     var frame: Frame? = null
 
-    override val cameraNode: ARCameraNode = super.cameraNode as ARCameraNode
+    private var defaultCameraNode: ARCameraNode? = null
 
     /**
-     * The [ARCameraStream] used to control if the occlusion should be enabled or disabled
+     * Represents a virtual camera, which determines the perspective through which the scene is
+     * viewed.
+     *
+     * All other functionality in Node is supported. You can access the position and rotation of the
+     * camera, assign a collision shape to it, or add children to it. Disabling the camera turns off
+     * rendering.
      */
-    val arCameraStream = ARCameraStream(engine, materialLoader)
+    override val cameraNode: ARCameraNode get() = _cameraNode as ARCameraNode
+
+    private var defaultCameraStream: ARCameraStream? = null
+
+    /**
+     * The [ARCameraStream] to render the camera texture.
+     *
+     * Use it to control if the occlusion should be enabled or disabled
+     */
+    var cameraStream: ARCameraStream? =
+        sharedCameraStream ?: Defaults.cameraStream(engine, materialLoader).also {
+            defaultCameraStream = it
+        }
+        set(value) {
+            if (field != value) {
+                field?.let { removeEntity(it.entity) }
+                field = value
+                value?.let {
+                    session?.setCameraTextureNames(it.cameraTextureIds)
+                    addEntity(it.entity)
+                }
+            }
+        }
 
     /**
      * [PlaneRenderer] used to control plane visualization.
@@ -157,13 +228,13 @@ open class ARSceneView @JvmOverloads constructor(
     var lightEstimation: LightEstimator.Estimation? = null
         private set(value) {
             value?.mainLightColorFactor?.let {
-                mainLight?.color = kDefaultMainLightColor * it
+                mainLightNode?.color = kDefaultMainLightColor * it
             }
             value?.mainLightIntensityFactor?.let {
-                mainLight?.intensity = kDefaultMainLightIntensity * it
+                mainLightNode?.intensity = kDefaultMainLightIntensity * it
             }
             value?.mainLightDirection?.let {
-                mainLight?.lightDirection = it
+                mainLightNode?.lightDirection = it
             }
             value?.environment?.let {
                 environment = it
@@ -187,8 +258,10 @@ open class ARSceneView @JvmOverloads constructor(
     override var indirectLight: IndirectLight?
         get() = super.indirectLight
         set(value) {
-            super.indirectLight = value
-            lightEstimator?.setBaseIndirectLight(value)
+            if (super.indirectLight != value) {
+                super.indirectLight = value
+                lightEstimator?.setBaseIndirectLight(value)
+            }
         }
 
     var trackingFailureReason: TrackingFailureReason? = null
@@ -199,6 +272,49 @@ open class ARSceneView @JvmOverloads constructor(
             }
         }
 
+    var onSessionConfiguration: ((session: Session, Config) -> Unit)? = null
+    var onSessionCreated: ((session: Session) -> Unit)? = null
+
+    /**
+     * Updates of the state of the ARCore system.
+     *
+     * Callback for [onSessionUpdate].
+     *
+     * This includes: receiving a new camera frame, updating the location of the device, updating
+     * the location of tracking anchors, updating detected planes, etc.
+     *
+     * This call may update the pose of all created anchors and detected planes. The set of updated
+     * objects is accessible through [Frame.getUpdatedTrackables].
+     *
+     * Invoked once per [Frame] immediately before the Scene is updated.
+     */
+    var onSessionUpdate: ((session: Session, frame: Frame) -> Unit)? = null
+    var onSessionResumed: ((session: Session) -> Unit)? = null
+
+    /**
+     * Invoked when an ARCore error occurred.
+     *
+     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+     * ARCore is not available on the device or the camera permission has been denied.
+     */
+    var onSessionFailed: ((exception: Exception) -> Unit)? = null
+    var onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null
+
+    /**
+     * Invoked when an ARCore trackable is tapped.
+     *
+     * Depending on the session configuration the [HitResult.getTrackable] can be:
+     * - A [Plane] if [Config.setPlaneFindingMode] is enable.
+     * - An [InstantPlacementPoint] if [Config.setInstantPlacementMode] is enable.
+     * - A [DepthPoint] and [Point] if [Config.setDepthMode] is enable.
+     */
+    var onTapAR: ((
+        /** The motion event that caused the tap. */
+        motionEvent: MotionEvent,
+        /** The ARCore hit result for the trackable that was tapped. */
+        hitResult: HitResult
+    ) -> Unit)? = null
+
     private var _onSessionCreated = mutableListOf<(session: Session) -> Unit>()
 
     val onLightEstimationUpdated: ((estimation: LightEstimator.Estimation?) -> Unit)? = null
@@ -208,6 +324,12 @@ open class ARSceneView @JvmOverloads constructor(
 
     override val cameraGestureDetector = null
     override val cameraManipulator = null
+
+    init {
+        setCameraNode(sharedCamera ?: Defaults.camera(engine).also {
+            defaultCameraNode = it
+        })
+    }
 
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)
@@ -323,7 +445,7 @@ open class ARSceneView @JvmOverloads constructor(
             camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
         } else null
 
-        onSessionUpdated?.invoke(session, frame)
+        onSessionUpdate?.invoke(session, frame)
     }
 
     /**
@@ -354,7 +476,7 @@ open class ARSceneView @JvmOverloads constructor(
         super.onTap(motionEvent, node)
 
         if (node == null) {
-            session?.frame?.hitTest(
+            frame?.hitTest(
                 xPx = motionEvent.x,
                 yPx = motionEvent.y
             )?.firstOrNull()?.let { hitResult ->
@@ -414,7 +536,8 @@ open class ARSceneView @JvmOverloads constructor(
         if (!isDestroyed) {
             arCore.destroy()
 
-            arCameraStream.destroy()
+            defaultCameraNode?.destroy()
+            defaultCameraStream?.destroy()
 
             lightEstimator?.destroy()
             planeRenderer.destroy()

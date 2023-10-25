@@ -42,7 +42,10 @@ import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.loaders.loadEnvironment
 import io.github.sceneview.managers.color
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Transform
 import io.github.sceneview.math.toFloat3
+import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
@@ -70,61 +73,183 @@ open class SceneView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
+    sharedActivity: ComponentActivity? = null,
+    sharedLifecycle: Lifecycle? = null,
     /**
      * Provide your own instance if you want to share Filament resources between multiple views.
      */
-    val sharedEngine: Engine? = null,
+    sharedEngine: Engine? = null,
+    /**
+     * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which is
+     * a bundle of Filament textures, vertex buffers, index buffers, etc.
+     *
+     * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and components.
+     */
+    sharedModelLoader: ModelLoader? = null,
+    /**
+     * A Filament Material defines the visual appearance of an object.
+     *
+     * Materials function as a templates from which [MaterialInstance]s can be spawned.
+     */
+    sharedMaterialLoader: MaterialLoader? = null,
     /**
      * Provide your own instance if you want to share [Node]s' scene between multiple views.
      */
-    val sharedScene: Scene? = null,
-    val sharedView: View? = null,
-    val sharedRenderer: Renderer? = null,
-    val sharedModelLoader: ModelLoader? = null,
-    val sharedMaterialLoader: MaterialLoader? = null,
-    cameraNode: (engine: Engine, viewSize: Size) -> CameraNode = { engine, viewSize ->
-        CameraNode(engine = engine, viewSize = viewSize)
-    },
+    sharedScene: Scene? = null,
     /**
-     * Invoked when an frame is processed.
+     * Encompasses all the state needed for rendering a {@link Scene}.
      *
-     * Registers a callback to be invoked when a valid Frame is processing.
+     * [View] instances are heavy objects that internally cache a lot of data needed for
+     * rendering. It is not advised for an application to use many View objects.
      *
-     * The callback to be invoked once per frame **immediately before the scene is updated.
-     *
-     * The callback will only be invoked if the Frame is considered as valid.
+     * For example, in a game, a [View] could be used for the main scene and another one for the
+     * game's user interface. More <code>View</code> instances could be used for creating special
+     * effects (e.g. a [View] is akin to a rendering pass).
      */
-    var onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
+    sharedView: View? = null,
     /**
-     * Invoked when the `SceneView` is tapped.
+     * A [Renderer] instance represents an operating system's window.
      *
-     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
-     * used to find a touched node. The ID of the Filament renderable can be used to determine what
-     * part of a model is tapped.
+     * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
+     * commands for the render thread and manages frame latency.
      */
-    var onTap: ((
-        /** The motion event that caused the tap. **/
-        motionEvent: MotionEvent,
-        /** The node that was tapped or `null`. **/
-        node: Node?
-    ) -> Unit)? = null
+    sharedRenderer: Renderer? = null,
+    /**
+     * Represents a virtual camera, which determines the perspective through which the scene is
+     * viewed.
+     *
+     * All other functionality in Node is supported. You can access the position and rotation of the
+     * camera, assign a collision shape to it, or add children to it.
+     */
+    sharedCamera: CameraNode? = null,
+    /**
+     * Always add a direct light source since it is required for shadowing.
+     *
+     * We highly recommend adding an [IndirectLight] as well.
+     */
+    sharedMainLight: LightNode? = null,
+    /**
+     * IndirectLight is used to simulate environment lighting.
+     *
+     * Environment lighting has a two components:
+     * - irradiance
+     * - reflections (specular component)
+     *
+     * @see IndirectLight
+     * @see Scene.setIndirectLight
+     */
+    sharedIndirectLight: IndirectLight? = null,
+    /**
+     * The Skybox is drawn last and covers all pixels not touched by geometry.
+     *
+     * When added to a [SceneView], the `Skybox` fills all untouched pixels.
+     *
+     * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
+     *
+     * @see Skybox
+     * @see Scene.setSkybox
+     */
+    sharedSkybox: Skybox? = null
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes),
     DefaultLifecycleObserver,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
-    val engine = sharedEngine ?: Engine.create(
-        OpenGL.createEglContext().also { eglContext = it }
-    )
-    val scene = sharedScene ?: engine.createScene()
-    val view = sharedView ?: engine.createView()
-    val renderer = sharedRenderer ?: engine.createRenderer()
-    val modelLoader = sharedModelLoader ?: engine.createModelLoader(context)
-    val materialLoader = sharedMaterialLoader ?: engine.createMaterialLoader(context)
+    object Defaults {
+        init {
+            Gltfio.init()
+            Filament.init()
+            Utils.init()
+        }
+
+        fun eglContext() = OpenGL.createEglContext()
+        fun engine(eglContext: EGLContext = eglContext()) = Engine.create(eglContext)
+
+        fun scene(engine: Engine) = engine.createScene()
+
+        fun view(engine: Engine) =
+            engine.createView().apply {
+                // On mobile, better use lower quality color buffer
+//        view.renderQuality = view.renderQuality.apply {
+//            hdrColorBuffer = QualityLevel.HIGH
+//        }
+//        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+//            enabled = false
+//            quality = QualityLevel.MEDIUM
+//        }
+//        // FXAA is pretty cheap and helps a lot
+//        view.antiAliasing = AntiAliasing.NONE
+//        // Ambient occlusion is the cheapest effect that adds a lot of quality
+//        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+//            enabled = false
+//        }
+//        // Bloom is pretty expensive but adds a fair amount of realism
+//        view.bloomOptions = view.bloomOptions.apply {
+//            enabled = false
+//        }
+//        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example material
+//        // orange 500.
+//        view.colorGrading = ColorGrading.Builder()
+//            .toneMapping(ColorGrading.ToneMapping.FILMIC)
+//            .build(engine)
+                setShadowingEnabled(false)
+            }
+
+        fun renderer(engine: Engine) = engine.createRenderer()
+
+        fun modelLoader(engine: Engine, context: Context) = engine.createModelLoader(context)
+        fun materialLoader(engine: Engine, context: Context) = engine.createMaterialLoader(context)
+
+        fun camera(engine: Engine) = CameraNode(engine).apply {
+            transform = Transform(position = Position(0.0f, 0.0f, 1.0f))
+            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+            // Since we define a light that has the same intensity as the sun, it guarantees a
+            // proper exposure
+            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+        }
+
+        fun mainLight(engine: Engine) = LightNode(
+            engine = engine,
+            type = LightManager.Type.DIRECTIONAL
+        ) {
+            color(kDefaultMainLightColor)
+            intensity(kDefaultMainLightColorIntensity)
+            direction(0.0f, -1.0f, 0.0f)
+            castShadows(true)
+        }
+
+        fun indirectLight(engine: Engine): IndirectLight? = null
+        fun skybox(engine: Engine) = Skybox.Builder()
+            .color(0.0f, 0.0f, 0.0f, 1.0f)
+            .build(engine)
+    }
+
+    private var defaultEngine: Engine? = null
+    val engine = sharedEngine ?: Defaults.eglContext().let {
+        defaultEglContext = it
+        Defaults.engine(it).also { defaultEngine = it }
+    }
+    private var defaultScene: Scene? = null
+    val scene = sharedScene ?: Defaults.scene(engine).also { defaultScene = it }
+    private var defaultView: View? = null
+    val view = sharedView ?: Defaults.view(engine).also { defaultView = it }
+    private var defaultRenderer: Renderer? = null
+    val renderer = sharedRenderer ?: Defaults.renderer(engine).also { defaultRenderer = it }
+    private var defaultModelLoader: ModelLoader? = null
+    val modelLoader = sharedModelLoader ?: Defaults.modelLoader(engine, context).also {
+        defaultModelLoader = it
+    }
+    private var defaultMaterialLoader: MaterialLoader? = null
+    val materialLoader = sharedMaterialLoader ?: Defaults.materialLoader(engine, context).also {
+        defaultMaterialLoader = it
+    }
     val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
         renderCallback = SurfaceCallback()
         attachTo(this@SceneView)
     }
     val iblPrefilter = IBLPrefilter(engine)
+
+    private var defaultCameraNode: CameraNode? = null
+    protected var _cameraNode: CameraNode? = null
 
     /**
      * Represents a virtual camera, which determines the perspective through which the scene is
@@ -136,16 +261,27 @@ open class SceneView @JvmOverloads constructor(
      */
     open val cameraNode: CameraNode get() = _cameraNode!!
 
+    private var defaultMainLight: LightNode? = null
+
     /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    var mainLight: LightNode? = null
+    var mainLightNode: LightNode? = sharedMainLight ?: Defaults.mainLight(engine).also {
+        defaultMainLight = it
+    }
         set(value) {
-            field?.let { removeChildNode(it) }
-            field = value
-            value?.let { addChildNode(value) }
+            if (field != value) {
+                replaceNode(field, value)
+                field = value
+            }
+        }
+
+    private var defaultIndirectLight: IndirectLight? = null
+    private var _indirectLight: IndirectLight? =
+        sharedIndirectLight ?: Defaults.indirectLight(engine).also {
+            defaultIndirectLight = it
         }
 
     /**
@@ -158,11 +294,16 @@ open class SceneView @JvmOverloads constructor(
      * @see IndirectLight
      * @see Scene.setIndirectLight
      */
-    open var indirectLight: IndirectLight? = null
+    open var indirectLight: IndirectLight? = _indirectLight
+        get() = scene.indirectLight
         set(value) {
-            field = value
-            scene.indirectLight = value
+            if (field != value) {
+                field = value
+                scene.indirectLight = value
+            }
         }
+
+    private var defaultSkybox: Skybox? = null
 
     /**
      * The Skybox is drawn last and covers all pixels not touched by geometry.
@@ -174,10 +315,13 @@ open class SceneView @JvmOverloads constructor(
      * @see Skybox
      * @see Scene.setSkybox
      */
-    var skybox: Skybox?
+    var skybox: Skybox? = sharedSkybox ?: Defaults.skybox(engine).also { defaultSkybox = it }
         get() = scene.skybox
         set(value) {
-            scene.skybox = value
+            if (field != value) {
+                field = value
+                scene.skybox = value
+            }
         }
 
     /**
@@ -206,11 +350,11 @@ open class SceneView @JvmOverloads constructor(
             skybox = value?.skybox
         }
 
-    var childNodes = setOf<Node>()
+    var childNodes = listOf<Node>()
         set(value) {
             if (field != value) {
-                field.subtract(value).forEach { removeNode(it) }
-                value.subtract(field).forEach { addNode(it) }
+                (field - value.toSet()).forEach { removeNode(it) }
+                (value - field.toSet()).forEach { addNode(it) }
                 field = value
             }
         }
@@ -235,6 +379,32 @@ open class SceneView @JvmOverloads constructor(
         set(value) {
             view.isFrontFaceWindingInverted = value
         }
+
+    /**
+     * Invoked when an frame is processed.
+     *
+     * Registers a callback to be invoked when a valid Frame is processing.
+     *
+     * The callback to be invoked once per frame **immediately before the scene is updated.
+     *
+     * The callback will only be invoked if the Frame is considered as valid.
+     */
+    var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
+
+    /**
+     * Invoked when the `SceneView` is tapped.
+     *
+     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
+     * used to find a touched node. The ID of the Filament renderable can be used to determine what
+     * part of a model is tapped.
+     */
+
+    var onTap: ((
+        /** The motion event that caused the tap. **/
+        motionEvent: MotionEvent,
+        /** The node that was tapped or `null`. **/
+        node: Node?
+    ) -> Unit)? = null
 
     /**
      * Physics system to handle collision between nodes, hit testing on a model,...
@@ -281,11 +451,9 @@ open class SceneView @JvmOverloads constructor(
 
     protected var isDestroyed = false
 
-    private var eglContext: EGLContext? = null
+    private var defaultEglContext: EGLContext? = null
     private val displayHelper = DisplayHelper(context)
     private var swapChain: SwapChain? = null
-
-    private var _cameraNode: CameraNode? = null
 
     private val frameCallback = object : FrameCallback {
         override fun doFrame(timestamp: Long) {
@@ -310,47 +478,37 @@ open class SceneView @JvmOverloads constructor(
     private var lastFrameTimeNanos: Long? = null
 
     init {
-        // On mobile, better use lower quality color buffer
-//        view.renderQuality = view.renderQuality.apply {
-//            hdrColorBuffer = QualityLevel.HIGH
-//        }
-//        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
-//            enabled = false
-//            quality = QualityLevel.MEDIUM
-//        }
-        view.setShadowingEnabled(false)
-//        // FXAA is pretty cheap and helps a lot
-//        view.antiAliasing = AntiAliasing.NONE
-//        // Ambient occlusion is the cheapest effect that adds a lot of quality
-//        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
-//            enabled = false
-//        }
-//        // Bloom is pretty expensive but adds a fair amount of realism
-//        view.bloomOptions = view.bloomOptions.apply {
-//            enabled = false
-//        }
-//        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example material
-//        // orange 500.
-//        view.colorGrading = ColorGrading.Builder()
-//            .toneMapping(ColorGrading.ToneMapping.FILMIC)
-//            .build(engine)
-
-
         view.scene = scene
 
-        // Taken from Filament ModelViewer
-        mainLight = LightNode(engine, LightManager.Type.DIRECTIONAL) {
-            color(kDefaultMainLightColor)
-            intensity(kDefaultMainLightColorIntensity)
-            direction(0.0f, -1.0f, 0.0f)
-            castShadows(true)
+        mainLightNode?.let { addNode(it) }
+        scene.skybox = skybox
+        scene.indirectLight = _indirectLight
+
+        setCameraNode(sharedCamera ?: Defaults.camera(engine).also {
+            defaultCameraNode = it
+        })
+
+        lifecycle?.addObserver(this)
+    }
+
+    /**
+     * Sets this View's Camera.
+     *
+     * This method associates the specified Camera with this View. A Camera can be associated with
+     * several View instances. To remove an existing association, simply pass null.
+     *
+     * The View does not take ownership of the Scene pointer. Before destroying a Camera, be sure
+     * to remove it from all associated Views.
+     */
+    fun setCameraNode(cameraNode: CameraNode) {
+        if (_cameraNode != cameraNode) {
+            _cameraNode = cameraNode
+            if (width != 0 && height != 0) {
+                cameraNode.viewSize = Size(width, height)
+            }
+            view.camera = cameraNode.camera
+            collisionSystem.cameraNode = cameraNode
         }
-
-        skybox = Skybox.Builder()
-            .color(0.0f, 0.0f, 0.0f, 1.0f)
-            .build(engine)
-
-        setCamera(cameraNode(engine, Size(width, height)))
     }
 
     /**
@@ -375,24 +533,6 @@ open class SceneView @JvmOverloads constructor(
      */
     fun removeChildNode(node: Node) {
         childNodes = childNodes - node
-    }
-
-    /**
-     * Sets this View's Camera.
-     *
-     * This method associates the specified Camera with this View. A Camera can be associated with
-     * several View instances. To remove an existing association, simply pass null.
-     *
-     * The View does not take ownership of the Scene pointer. Before destroying a Camera, be sure
-     * to remove it from all associated Views.
-     */
-    fun setCamera(cameraNode: CameraNode) {
-        _cameraNode?.let { removeNode(it) }
-        _cameraNode = cameraNode
-        cameraNode.viewSize = Size(width, height)
-        addNode(cameraNode)
-        view.camera = cameraNode.camera
-        collisionSystem.cameraNode = cameraNode
     }
 
     /**
@@ -540,28 +680,26 @@ open class SceneView @JvmOverloads constructor(
      */
     open fun destroy() {
         if (!isDestroyed) {
-            lifecycle?.removeObserver(this)
+            lifecycle = null
 
             runCatching { uiHelper.detach() }
 
-            cameraNode.destroy()
-            mainLight?.destroy()
-            indirectLight?.let { engine.safeDestroyIndirectLight(it) }
-            skybox?.let { engine.safeDestroySkybox(it) }
+            defaultCameraNode?.destroy()
+            defaultMainLight?.destroy()
+            defaultIndirectLight?.let { engine.safeDestroyIndirectLight(it) }
+            defaultSkybox?.let { engine.safeDestroySkybox(it) }
 
 //        runCatching { ResourceManager.getInstance().destroyAllResources() }
 
-            renderer.takeIf { it != sharedRenderer }?.let { engine.safeDestroyRenderer(it) }
-            view.takeIf { it != sharedView }?.let { engine.safeDestroyView(it) }
-            scene.takeIf { it != sharedScene }?.let { engine.safeDestroyScene(it) }
+            defaultRenderer?.let { engine.safeDestroyRenderer(it) }
+            defaultView?.let { engine.safeDestroyView(it) }
+            defaultScene?.let { engine.safeDestroyScene(it) }
             iblPrefilter.destroy()
-            materialLoader.takeIf { it != sharedMaterialLoader }
-                ?.let { engine.safeDestroyMaterialLoader(it) }
-            modelLoader.takeIf { it != sharedModelLoader }
-                ?.let { engine.safeDestroyModelLoader(it) }
+            defaultMaterialLoader?.let { engine.safeDestroyMaterialLoader(it) }
+            defaultModelLoader?.let { engine.safeDestroyModelLoader(it) }
 
-            engine.takeIf { it != sharedEngine }?.let { it.safeDestroy() }
-            eglContext?.let { OpenGL.destroyEglContext(it) }
+            defaultEngine?.let { it.safeDestroy() }
+            defaultEglContext?.let { OpenGL.destroyEglContext(it) }
             isDestroyed = true
         }
     }
@@ -641,6 +779,12 @@ open class SceneView @JvmOverloads constructor(
         super.onDetachedFromWindow()
     }
 
+    protected open fun onResized(width: Int, height: Int) {
+        view.viewport = Viewport(0, 0, width, height)
+        cameraManipulator?.setViewport(width, height)
+        cameraNode.viewSize = Size(width, height)
+    }
+
     override fun onDestroy(owner: LifecycleOwner) {
         super.onDestroy(owner)
         if (!isDestroyed) {
@@ -692,6 +836,11 @@ open class SceneView @JvmOverloads constructor(
         node.childNodes.forEach { removeNode(it) }
     }
 
+    internal fun replaceNode(oldNode: Node?, newNode: Node?) {
+        oldNode?.let { removeNode(it) }
+        newNode?.let { addNode(it) }
+    }
+
     fun addEntity(@FilamentEntity entity: Entity) = scene.addEntity(entity)
     fun removeEntity(@FilamentEntity entity: Entity) = scene.removeEntity(entity)
     fun addEntities(@FilamentEntity entities: List<Entity>) {
@@ -729,9 +878,7 @@ open class SceneView @JvmOverloads constructor(
                 wait(Fence.Mode.FLUSH, Fence.WAIT_FOR_EVER)
                 engine.destroyFence(this)
             }
-            view.viewport = Viewport(0, 0, width, height)
-            cameraManipulator?.setViewport(width, height)
-            cameraNode.viewSize = Size(width, height)
+            this@SceneView.onResized(width, height)
         }
     }
 

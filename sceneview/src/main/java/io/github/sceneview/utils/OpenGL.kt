@@ -67,3 +67,5 @@ object OpenGL {
         check(EGL14.eglDestroyContext(display, context)) { "Error destroying GL context." }
     }
 }
+
+fun EGLContext.destroy() = OpenGL.destroyEglContext(this)
