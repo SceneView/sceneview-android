@@ -35,17 +35,17 @@ const val kCameraTextureParameter = "cameraTexture"
 const val kDepthTextureParameter = "depthTexture"
 
 /**
- * ### Displays the Camera stream using Filament.
+ * Displays the Camera stream using Filament.
  */
-class ARCameraStream(
-    override val engine: Engine,
+open class ARCameraStream(
+    final override val engine: Engine,
     private val materialLoader: MaterialLoader,
     standardMaterialFile: String = "sceneview/materials/camera_stream_flat.filamat",
     depthOcclusionMaterialFile: String = "sceneview/materials/camera_stream_depth.filamat",
 ) : RenderableComponent {
 
 //    /**
-//     * ### Changes the coarse-level camera draw ordering
+//     * Changes the coarse-level camera draw ordering
 //     */
 //    var priority: Int = RENDER_PRIORITY_LAST
 //        set(value) {
@@ -53,7 +53,7 @@ class ARCameraStream(
 //            renderable.setPriority(value)
 //        }
 
-    override val entity = EntityManager.get().create()
+    final override val entity = EntityManager.get().create()
 
     /**
      * Passing multiple textures allows for a multithreaded rendering pipeline
