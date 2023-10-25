@@ -24,8 +24,18 @@ import io.github.sceneview.math.Scale
 open class ViewNode(
     engine: Engine,
     val modelLoader: ModelLoader,
-    val viewAttachmentManager: ViewAttachmentManager
-) : Node(engine) {
+    val viewAttachmentManager: ViewAttachmentManager,
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null
+) : Node(engine = engine, parent = parent) {
 
     companion object {
         val DEFAULT_POSITION = Position(x = 0.0f, y = 0.0f, z = -0.1f)

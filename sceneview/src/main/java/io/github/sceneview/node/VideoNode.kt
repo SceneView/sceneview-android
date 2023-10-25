@@ -22,13 +22,24 @@ open class VideoNode(
      * - `false` the video will be stretched to the node scale
      */
     keepAspectRatio: Boolean = true,
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null,
     renderableApply: RenderableManager.Builder.() -> Unit = {}
 ) : PlaneNode(
     engine = videoMaterial.engine,
     size = size,
     center = center,
     normal = normal,
-    materialInstance = videoMaterial.instance,
+    materialInstances = { videoMaterial.instance },
+    parent = parent,
     renderableApply = renderableApply
 ) {
     init {
@@ -60,6 +71,16 @@ open class VideoNode(
         size: Size = Plane.DEFAULT_SIZE,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        /**
+         * The parent node.
+         *
+         * If set to null, this node will not be attached.
+         *
+         * The local position, rotation, and scale of this node will remain the same.
+         * Therefore, the world position, rotation, and scale of this node may be different after the
+         * parent changes.
+         */
+        parent: Node? = null,
         renderableApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         videoMaterial = materialLoader.createVideoMaterial(player, chromaKeyColor),
@@ -69,6 +90,7 @@ open class VideoNode(
         size = size,
         center = center,
         normal = normal,
+        parent = parent,
         renderableApply = renderableApply
     )
 

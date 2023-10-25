@@ -18,13 +18,24 @@ open class ImageNode(
     size: Size = Plane.DEFAULT_SIZE,
     center: Position = Plane.DEFAULT_CENTER,
     normal: Direction = Plane.DEFAULT_NORMAL,
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null,
     renderableApply: RenderableManager.Builder.() -> Unit = {}
 ) : PlaneNode(
     engine = imageMaterial.engine,
     size = size,
     center = center,
     normal = normal,
-    materialInstance = imageMaterial.instance,
+    materialInstances = { imageMaterial.instance },
+    parent = parent,
     renderableApply = renderableApply
 ) {
     constructor(
@@ -34,12 +45,23 @@ open class ImageNode(
         size: Size = Plane.DEFAULT_SIZE,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        /**
+         * The parent node.
+         *
+         * If set to null, this node will not be attached.
+         *
+         * The local position, rotation, and scale of this node will remain the same.
+         * Therefore, the world position, rotation, and scale of this node may be different after the
+         * parent changes.
+         */
+        parent: Node? = null,
         renderableApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         imageMaterial = materialLoader.createImageMaterial(bitmap, type),
         size = size,
         center = center,
         normal = normal,
+        parent = parent,
         renderableApply = renderableApply
     )
 
@@ -51,12 +73,23 @@ open class ImageNode(
         size: Size = Plane.DEFAULT_SIZE,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        /**
+         * The parent node.
+         *
+         * If set to null, this node will not be attached.
+         *
+         * The local position, rotation, and scale of this node will remain the same.
+         * Therefore, the world position, rotation, and scale of this node may be different after the
+         * parent changes.
+         */
+        parent: Node? = null,
         renderableApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         imageMaterial = materialLoader.createImageMaterial(assets, fileLocation, type),
         size = size,
         center = center,
         normal = normal,
+        parent = parent,
         renderableApply = renderableApply
     )
 
@@ -68,12 +101,23 @@ open class ImageNode(
         size: Size = Plane.DEFAULT_SIZE,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        /**
+         * The parent node.
+         *
+         * If set to null, this node will not be attached.
+         *
+         * The local position, rotation, and scale of this node will remain the same.
+         * Therefore, the world position, rotation, and scale of this node may be different after the
+         * parent changes.
+         */
+        parent: Node? = null,
         renderableApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         imageMaterial = materialLoader.createImageMaterial(context, drawableResId, type),
         size = size,
         center = center,
         normal = normal,
+        parent = parent,
         renderableApply = renderableApply
     )
 }
