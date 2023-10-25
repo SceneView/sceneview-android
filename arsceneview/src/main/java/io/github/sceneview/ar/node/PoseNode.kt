@@ -27,7 +27,7 @@ open class PoseNode(
         frame.hitTest(xPx = motionEvent.x, yPx = motionEvent.y, instant = false).firstOrNull()
             ?.takeIf { it.trackable.isTracking }
     },
-    var onPoseChanged: ((Pose) -> Unit)? = null
+    var onPoseChanged: ((Pose) -> Unit)? = null,
 ) : Node(engine) {
 
     /**

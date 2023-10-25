@@ -29,7 +29,7 @@ material {
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        material.baseColor.rgb = materialParams.color.rbg;
+        material.baseColor = materialParams.color;
         material.metallic = materialParams.metallic;
         material.roughness = materialParams.roughness;
         material.reflectance = materialParams.reflectance;
