@@ -380,7 +380,7 @@ open class GestureDetector(
     companion object {
         fun hitTest(collisionSystem: CollisionSystem, e: MotionEvent) =
             NodeMotionEvent(e, collisionSystem.hitTest(e).firstOrNull {
-                it.node?.isTouchable == true
+                it.node?.isTouchable == true// && it.distance <= 0.0f
             }?.node)
     }
 }
