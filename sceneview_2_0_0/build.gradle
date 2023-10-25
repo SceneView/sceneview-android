@@ -2,7 +2,7 @@ plugins {
     id 'com.android.library'
     id 'kotlin-android'
     id 'filament-tools-plugin'
-    id 'org.jetbrains.dokka'
+//    id 'org.jetbrains.dokka'
 }
 // *************************************************************************************************
 // Filament Plugin
@@ -120,4 +120,4 @@ dependencies {
     implementation "com.github.kittinunf.fuel:fuel-coroutines:2.3.1"
 }
 
-apply plugin: "com.vanniktech.maven.publish"
+//apply plugin: "com.vanniktech.maven.publish"
