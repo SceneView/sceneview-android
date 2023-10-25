@@ -5,7 +5,6 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.managers.geometry
-import io.github.sceneview.managers.material
 import io.github.sceneview.math.toVector3Box
 
 /**
@@ -37,7 +36,30 @@ open class GeometryNode(
     engine: Engine,
     vertices: List<Geometry.Vertex> = listOf(),
     submeshes: List<Geometry.Submesh> = listOf(),
+    /**
+     * Binds a material instance to all primitives.
+     */
     materialInstance: MaterialInstance? = null,
+    /**
+     * Binds a material instance to the specified primitive.
+     *
+     * If no material is specified for a given primitive, Filament will fall back to a basic
+     * default material.
+     *
+     * Should return the material to bind for the zero-based index of the primitive, must be less
+     * than the [Geometry.submeshes] size passed to constructor.
+     */
+    materialInstances: (index: Int) -> MaterialInstance? = { materialInstance },
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null,
     renderableApply: RenderableManager.Builder.() -> Unit = {}
 ) : BaseGeometryNode<Geometry>(
     engine = engine,
@@ -46,6 +68,8 @@ open class GeometryNode(
         .submeshes(submeshes)
         .build(engine),
     materialInstance = materialInstance,
+    materialInstances = materialInstances,
+    parent = parent,
     renderableApply = renderableApply
 ) {
     val vertexBuffer get() = geometry.vertexBuffer
@@ -58,15 +82,40 @@ open class GeometryNode(
 open class BaseGeometryNode<T : Geometry>(
     engine: Engine,
     val geometry: T,
+    /**
+     * Binds a material instance to all primitives.
+     */
     materialInstance: MaterialInstance? = null,
+    /**
+     * Binds a material instance to the specified primitive.
+     *
+     * If no material is specified for a given primitive, Filament will fall back to a basic
+     * default material.
+     *
+     * Should return the material to bind for the zero-based index of the primitive, must be less
+     * than the [Geometry.submeshes] size passed to constructor.
+     */
+    materialInstances: (index: Int) -> MaterialInstance? = { materialInstance },
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null,
     renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : RenderableNode(engine) {
+) : RenderableNode(engine = engine, parent = parent) {
 
     init {
         RenderableManager.Builder(geometry.submeshes.size)
             .geometry(geometry)
             .apply {
-                materialInstance?.let { material(it) }
+                geometry.submeshes.forEachIndexed { index, _ ->
+                    materialInstances(index)?.let { material(index, it) }
+                }
             }
             .apply(renderableApply)
             .build(engine, entity)
