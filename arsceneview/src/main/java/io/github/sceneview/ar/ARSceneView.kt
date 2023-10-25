@@ -144,7 +144,7 @@ open class ARSceneView @JvmOverloads constructor(
     /**
      * [PlaneRenderer] used to control plane visualization.
      */
-    val planeRenderer = PlaneRenderer(this)
+    val planeRenderer = PlaneRenderer(engine, modelLoader, materialLoader, scene)
 
     /**
      * The environment and main light that are estimated by AR Core to render the scene.
@@ -229,7 +229,9 @@ open class ARSceneView @JvmOverloads constructor(
     }
 
     fun onSessionCreated(session: Session) {
-        session.setCameraTextureNames(arCameraStream.cameraTextureIds)
+        cameraStream?.let {
+            session.setCameraTextureNames(it.cameraTextureIds)
+        }
 
         cameraConfig?.let { session.cameraConfig = it(session) }
 
@@ -242,7 +244,7 @@ open class ARSceneView @JvmOverloads constructor(
             onSessionConfiguration?.invoke(session, config)
         }
 
-        addEntity(arCameraStream.entity)
+        cameraStream?.let { addEntity(it.entity) }
 
         _onSessionCreated.toList().forEach { it(session) }
         onSessionCreated?.invoke(session)
@@ -306,7 +308,7 @@ open class ARSceneView @JvmOverloads constructor(
         // ...and it's better for your users
         activity?.setKeepScreenOn(isCameraTracking)
 
-        arCameraStream.update(session, frame)
+        cameraStream?.update(session, frame)
         cameraNode.update(session, frame)
 
         lightEstimation = lightEstimator?.update(session, frame, cameraNode.camera)
@@ -371,6 +373,12 @@ open class ARSceneView @JvmOverloads constructor(
      */
     open fun onTapAR(motionEvent: MotionEvent, hitResult: HitResult) {
         onTapAR?.invoke(motionEvent, hitResult)
+    }
+
+    override fun onResized(width: Int, height: Int) {
+        super.onResized(width, height)
+
+        planeRenderer.viewSize = Size(width, height)
     }
 
     /**

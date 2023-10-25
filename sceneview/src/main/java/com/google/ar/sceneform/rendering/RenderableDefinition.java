@@ -8,13 +8,8 @@ import com.google.android.filament.IndexBuffer.Builder.IndexType;
 import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.VertexBuffer;
 import com.google.android.filament.VertexBuffer.VertexAttribute;
-import io.github.sceneview.collision.MathHelper;
-import io.github.sceneview.collision.Matrix;
-import io.github.sceneview.collision.Quaternion;
-import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.rendering.Vertex.UvCoordinate;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
-import io.github.sceneview.collision.Preconditions;
 
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -23,6 +18,11 @@ import java.util.EnumSet;
 import java.util.List;
 
 import io.github.sceneview.EngineKt;
+import io.github.sceneview.collision.MathHelper;
+import io.github.sceneview.collision.Matrix;
+import io.github.sceneview.collision.Preconditions;
+import io.github.sceneview.collision.Quaternion;
+import io.github.sceneview.collision.Vector3;
 
 /**
  * Represents the visual information of a {@link Renderable}. Can be used to construct and modify
@@ -107,7 +107,7 @@ public class RenderableDefinition {
             }
 
             public Submesh build(Engine engine) {
-                return new Submesh(engine,this);
+                return new Submesh(engine, this);
             }
         }
     }
@@ -122,8 +122,10 @@ public class RenderableDefinition {
     private static final int TANGENTS_SIZE = 4; // quaternion
     private static final int COLOR_SIZE = 4; // RGBA
 
-    public RenderableDefinition(Engine engine) {
+    private RenderableDefinition(Engine engine, Builder builder) {
         this.engine = engine;
+        vertices = Preconditions.checkNotNull(builder.vertices);
+        submeshes = Preconditions.checkNotNull(builder.submeshes);
     }
 
     public void setVertices(List<Vertex> vertices) {
@@ -401,11 +403,6 @@ public class RenderableDefinition {
             bufferIndex++;
             vertexBuffer.setBufferAt(engine, bufferIndex, colorBuffer, 0, numVertices * COLOR_SIZE);
         }
-    }
-
-    private RenderableDefinition(Engine engine, Builder builder) {
-        vertices = Preconditions.checkNotNull(builder.vertices);
-        submeshes = Preconditions.checkNotNull(builder.submeshes);
     }
 
     public static Builder builder() {
