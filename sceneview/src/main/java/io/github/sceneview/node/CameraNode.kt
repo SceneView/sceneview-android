@@ -2,10 +2,9 @@ package io.github.sceneview.node
 
 import android.util.Size
 import android.view.MotionEvent
+import com.google.android.filament.Camera
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
-import dev.romainguy.kotlin.math.Float3
-import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.Entity
 import io.github.sceneview.collision.MathHelper
 import io.github.sceneview.collision.Matrix
@@ -16,16 +15,6 @@ import io.github.sceneview.components.CameraComponent
 import io.github.sceneview.math.toMatrix
 import io.github.sceneview.safeDestroyCamera
 
-private const val kFocalLength = 28.0
-private const val kNearPlane = 0.05f     // 5 cm
-private const val kFarPlane = 1000.0f    // 1 km
-private const val kAperture = 16.0f
-private const val kShutterSpeed = 1.0f / 125.0f
-private const val kSensitivity = 100.0f
-
-private const val kFallbackViewWidth = 1920
-private const val kFallbackViewHeight = 1080
-
 /**
  * Represents a virtual camera, which determines the perspective through which the scene is viewed.
  *
@@ -35,33 +24,87 @@ private const val kFallbackViewHeight = 1080
  */
 open class CameraNode(
     engine: Engine,
-    viewSize: Size,
-    entity: Entity = EntityManager.get().create().apply {
-        engine.createCamera(this).apply {
-            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
-            // Since we define a light that has the same intensity as the sun, it guarantees a
-            // proper exposure
-            setExposure(kAperture, kShutterSpeed, kSensitivity)
-        }
-    }
-) : Node(engine, entity), CameraComponent {
+    entity: Entity,
+    /**
+     * The parent node.
+     *
+     * If set to null, this node will not be attached.
+     *
+     * The local position, rotation, and scale of this node will remain the same.
+     * Therefore, the world position, rotation, and scale of this node may be different after the
+     * parent changes.
+     */
+    parent: Node? = null
+) : Node(engine, entity, parent), CameraComponent {
 
-    override var isTouchable = false
+    // No rendered object
+    final override var isTouchable = false
+
+    // Can receive touchable but not editable child events
     override var isEditable = false
 
-    override var viewSize: Size = viewSize
+    private var _focalLength = 28.0
+    override var focalLength: Double
+        get() = super.focalLength
         set(value) {
-            field = value
-            updateProjection(viewSize = viewSize)
+            _focalLength = value
+            updateLensProjection()
         }
 
-    init {
-        transform(position = DEFAULT_POSITION, quaternion = DEFAULT_QUATERNION)
-        updateProjection(
-            focalLength = kFocalLength,
-            viewSize = viewSize,
-            near = kNearPlane,
-            far = kFarPlane
+    // Near = 5 cm
+    private var _near = 0.05f
+    override var near: Float
+        get() = super.near
+        set(value) {
+            _near = value
+            updateLensProjection()
+        }
+
+    // Far = 1 km
+    private var _far = 1000.0f
+    override var far: Float
+        get() = super.far
+        set(value) {
+            _far = value
+            updateLensProjection()
+        }
+
+    var viewSize: Size? = null
+        set(value) {
+            field = value
+            updateLensProjection()
+        }
+
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        /**
+         * The parent node.
+         *
+         * If set to null, this node will not be attached.
+         *
+         * The local position, rotation, and scale of this node will remain the same.
+         * Therefore, the world position, rotation, and scale of this node may be different after the
+         * parent changes.
+         */
+        parent: Node? = null,
+        camera: Camera.() -> Unit = {}
+    ) : this(engine, entity, parent) {
+        engine.createCamera(entity).apply(camera)
+    }
+
+    /**
+     * Sets the projection matrix from the focal length.
+     */
+    fun updateLensProjection() {
+        val viewSize = viewSize ?: return
+
+        val aspect = viewSize.width.toDouble() / viewSize.height.toDouble()
+        camera.setLensProjection(
+            _focalLength,
+            if (!aspect.isNaN()) aspect else 1.0,
+            _near.toDouble(),
+            _far.toDouble()
         )
     }
 
@@ -128,11 +171,11 @@ open class CameraNode(
         screenPoint.y = (screenPoint.y / w + 1.0f) * 0.5f
 
         // To screen space.
-        screenPoint.x = screenPoint.x * viewSize.width
-        screenPoint.y = screenPoint.y * viewSize.height
+        screenPoint.x = screenPoint.x * viewSize!!.width
+        screenPoint.y = screenPoint.y * viewSize!!.height
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        screenPoint.y = viewSize.height - screenPoint.y
+        screenPoint.y = viewSize!!.height - screenPoint.y
         return screenPoint
     }
 
@@ -146,11 +189,11 @@ open class CameraNode(
         Matrix.invert(m, m)
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        y = viewSize.height - y
+        y = viewSize!!.height - y
 
         // Normalize between -1 and 1.
-        x = x / viewSize.width * 2.0f - 1.0f
-        y = y / viewSize.height * 2.0f - 1.0f
+        x = x / viewSize!!.width * 2.0f - 1.0f
+        y = y / viewSize!!.height * 2.0f - 1.0f
         z = 2.0f * z - 1.0f
         var w = 1.0f
         dest.x = x * m.data[0] + y * m.data[4] + z * m.data[8] + w * m.data[12]
@@ -170,13 +213,5 @@ open class CameraNode(
         super.destroy()
 
         engine.safeDestroyCamera(camera)
-    }
-
-    companion object {
-        private val DEFAULT_POSITION = Float3(0.0f, 0.0f, 1.0f)
-        private val DEFAULT_QUATERNION = Quaternion()
-
-        // Default vertical field of view for non-ar camera.
-        private const val DEFAULT_VERTICAL_FOV_DEGREES = 90.0f
     }
 }

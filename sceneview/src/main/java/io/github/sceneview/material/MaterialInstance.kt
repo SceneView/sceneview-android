@@ -1,5 +1,6 @@
 package io.github.sceneview.material
 
+import com.google.android.filament.Colors
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.MaterialInstance.FloatElement
 import com.google.android.filament.Texture
@@ -42,8 +43,19 @@ fun MaterialInstance.setExternalTexture(name: String, texture: Texture) =
 // PBR
 // **********
 
-fun MaterialInstance.setColor(color: Color) = setParameter("color", color)
-fun MaterialInstance.setColor(color: Int) = setColor(colorOf(color))
+
+//fun MaterialInstance.setColor(name: String, type: Colors.RgbaType, value: Float4) =
+//    setParameter(name, type, value.x, value.y, value.z, value.w)
+fun MaterialInstance.setColor(color: Color, type: Colors.RgbaType = Colors.RgbaType.SRGB) =
+    setParameter("color", type, color.r, color.g, color.b, color.a)
+
+fun MaterialInstance.setColor(color: Int, type: Colors.RgbaType = Colors.RgbaType.SRGB) =
+    setColor(colorOf(color), type)
+
+fun MaterialInstance.setColor(
+    color: androidx.compose.ui.graphics.Color,
+    type: Colors.RgbaType = Colors.RgbaType.SRGB
+) = setColor(colorOf(color), type)
 
 /**
  * The metallic property defines whether the surface is a metallic (conductor) or a non-metallic
