@@ -123,8 +123,8 @@ open class CameraNode(
      * @return PickHitResult list for each nodes that was hit sorted by distance.
      * Empty if no nodes were hit.
      */
-    fun updateLensProjection() {
-        val viewSize = viewSize ?: return
+    fun hitTestView(xViewPercent: Float = 0.5f, yViewPercent: Float = 0.5f) =
+        hitTest(viewport.width * xViewPercent, viewport.height * yViewPercent)
 
     /**
      * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
