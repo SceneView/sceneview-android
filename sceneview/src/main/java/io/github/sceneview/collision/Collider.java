@@ -2,7 +2,7 @@ package io.github.sceneview.collision;
 
 import androidx.annotation.Nullable;
 
-import io.github.sceneview.math.MathUtilsKt;
+import io.github.sceneview.math.MathKt;
 import io.github.sceneview.node.Node;
 
 /**
@@ -95,7 +95,7 @@ public class Collider {
     private TransformProvider transformProvider = new TransformProvider() {
         @Override
         public Matrix getTransformationMatrix() {
-            return MathUtilsKt.toMatrix(node.getWorldTransform());
+            return MathKt.toMatrix(node.getWorldTransform());
         }
     };
 

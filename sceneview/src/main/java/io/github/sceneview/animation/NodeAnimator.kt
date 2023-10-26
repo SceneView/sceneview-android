@@ -4,7 +4,11 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import dev.romainguy.kotlin.math.Quaternion
-import io.github.sceneview.math.*
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
+import io.github.sceneview.math.Transform
+import io.github.sceneview.math.quaternion
 import io.github.sceneview.node.Node
 
 object NodeAnimator {

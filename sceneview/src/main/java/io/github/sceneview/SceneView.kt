@@ -9,7 +9,6 @@ import android.opengl.EGLContext
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Size
 import android.view.*
 import android.view.Choreographer.FrameCallback
 import androidx.activity.ComponentActivity
@@ -26,9 +25,7 @@ import com.google.android.filament.utils.HDRLoader
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
-import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.collision.CollisionSystem
-import io.github.sceneview.collision.Ray
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.gesture.CameraGestureDetector
@@ -43,7 +40,6 @@ import io.github.sceneview.loaders.loadEnvironment
 import io.github.sceneview.managers.color
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
-import io.github.sceneview.math.toFloat3
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
@@ -56,9 +52,6 @@ typealias Entity = Int
 typealias EntityInstance = Int
 typealias FilamentEntity = com.google.android.filament.Entity
 typealias FilamentEntityInstance = com.google.android.filament.EntityInstance
-
-private const val kDefaultMainLightColorTemperature = 6_500.0f
-private const val kDefaultMainLightColorIntensity = 100_000.0f
 
 /**
  * A SurfaceView that manages rendering and interactions with the 3D scene.
@@ -121,13 +114,13 @@ open class SceneView @JvmOverloads constructor(
      * All other functionality in Node is supported. You can access the position and rotation of the
      * camera, assign a collision shape to it, or add children to it.
      */
-    sharedCamera: CameraNode? = null,
+    sharedCameraNode: CameraNode? = null,
     /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    sharedMainLight: LightNode? = null,
+    sharedMainLightNode: LightNode? = null,
     /**
      * IndirectLight is used to simulate environment lighting.
      *
@@ -154,92 +147,23 @@ open class SceneView @JvmOverloads constructor(
     DefaultLifecycleObserver,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
-    object Defaults {
-        init {
-            Gltfio.init()
-            Filament.init()
-            Utils.init()
-        }
-
-        fun eglContext() = OpenGL.createEglContext()
-        fun engine(eglContext: EGLContext = eglContext()) = Engine.create(eglContext)
-
-        fun scene(engine: Engine) = engine.createScene()
-
-        fun view(engine: Engine) =
-            engine.createView().apply {
-                // On mobile, better use lower quality color buffer
-//        view.renderQuality = view.renderQuality.apply {
-//            hdrColorBuffer = QualityLevel.HIGH
-//        }
-//        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
-//            enabled = false
-//            quality = QualityLevel.MEDIUM
-//        }
-//        // FXAA is pretty cheap and helps a lot
-//        view.antiAliasing = AntiAliasing.NONE
-//        // Ambient occlusion is the cheapest effect that adds a lot of quality
-//        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
-//            enabled = false
-//        }
-//        // Bloom is pretty expensive but adds a fair amount of realism
-//        view.bloomOptions = view.bloomOptions.apply {
-//            enabled = false
-//        }
-//        // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example material
-//        // orange 500.
-//        view.colorGrading = ColorGrading.Builder()
-//            .toneMapping(ColorGrading.ToneMapping.FILMIC)
-//            .build(engine)
-                setShadowingEnabled(false)
-            }
-
-        fun renderer(engine: Engine) = engine.createRenderer()
-
-        fun modelLoader(engine: Engine, context: Context) = engine.createModelLoader(context)
-        fun materialLoader(engine: Engine, context: Context) = engine.createMaterialLoader(context)
-
-        fun camera(engine: Engine) = CameraNode(engine).apply {
-            transform = Transform(position = Position(0.0f, 0.0f, 1.0f))
-            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
-            // Since we define a light that has the same intensity as the sun, it guarantees a
-            // proper exposure
-            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
-        }
-
-        fun mainLight(engine: Engine) = LightNode(
-            engine = engine,
-            type = LightManager.Type.DIRECTIONAL
-        ) {
-            color(kDefaultMainLightColor)
-            intensity(kDefaultMainLightColorIntensity)
-            direction(0.0f, -1.0f, 0.0f)
-            castShadows(true)
-        }
-
-        fun indirectLight(engine: Engine): IndirectLight? = null
-        fun skybox(engine: Engine) = Skybox.Builder()
-            .color(0.0f, 0.0f, 0.0f, 1.0f)
-            .build(engine)
-    }
-
     private var defaultEngine: Engine? = null
-    val engine = sharedEngine ?: Defaults.eglContext().let {
+    val engine = sharedEngine ?: createEglContext().let {
         defaultEglContext = it
-        Defaults.engine(it).also { defaultEngine = it }
+        createEngine(it).also { defaultEngine = it }
     }
     private var defaultScene: Scene? = null
-    val scene = sharedScene ?: Defaults.scene(engine).also { defaultScene = it }
+    val scene = sharedScene ?: createScene(engine).also { defaultScene = it }
     private var defaultView: View? = null
-    val view = sharedView ?: Defaults.view(engine).also { defaultView = it }
+    val view = sharedView ?: createView(engine).also { defaultView = it }
     private var defaultRenderer: Renderer? = null
-    val renderer = sharedRenderer ?: Defaults.renderer(engine).also { defaultRenderer = it }
+    val renderer = sharedRenderer ?: createRenderer(engine).also { defaultRenderer = it }
     private var defaultModelLoader: ModelLoader? = null
-    val modelLoader = sharedModelLoader ?: Defaults.modelLoader(engine, context).also {
+    val modelLoader = sharedModelLoader ?: createModelLoader(engine, context).also {
         defaultModelLoader = it
     }
     private var defaultMaterialLoader: MaterialLoader? = null
-    val materialLoader = sharedMaterialLoader ?: Defaults.materialLoader(engine, context).also {
+    val materialLoader = sharedMaterialLoader ?: createMaterialLoader(engine, context).also {
         defaultMaterialLoader = it
     }
     val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
@@ -268,7 +192,7 @@ open class SceneView @JvmOverloads constructor(
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    var mainLightNode: LightNode? = sharedMainLight ?: Defaults.mainLight(engine).also {
+    var mainLightNode: LightNode? = sharedMainLightNode ?: createMainLightNode(engine).also {
         defaultMainLight = it
     }
         set(value) {
@@ -280,7 +204,7 @@ open class SceneView @JvmOverloads constructor(
 
     private var defaultIndirectLight: IndirectLight? = null
     private var _indirectLight: IndirectLight? =
-        sharedIndirectLight ?: Defaults.indirectLight(engine).also {
+        sharedIndirectLight ?: createIndirectLight(engine).also {
             defaultIndirectLight = it
         }
 
@@ -315,7 +239,7 @@ open class SceneView @JvmOverloads constructor(
      * @see Skybox
      * @see Scene.setSkybox
      */
-    var skybox: Skybox? = sharedSkybox ?: Defaults.skybox(engine).also { defaultSkybox = it }
+    var skybox: Skybox? = sharedSkybox ?: createSkybox(engine).also { defaultSkybox = it }
         get() = scene.skybox
         set(value) {
             if (field != value) {
@@ -414,7 +338,7 @@ open class SceneView @JvmOverloads constructor(
     val gestureDetector by lazy {
         GestureDetector(
             context = context,
-            collisionSystem = collisionSystem,
+            cameraNode = cameraNode,
             listener = this
         )
     }
@@ -447,7 +371,7 @@ open class SceneView @JvmOverloads constructor(
     protected open val cameraManipulator: Manipulator? by lazy {
         Manipulator.Builder()
             .orbitHomePosition(this.cameraNode.worldPosition)
-            .targetPosition(kDefaultObjectPosition)
+            .targetPosition(DEFAULT_OBJECT_POSITION)
             .viewport(width, height)
             .zoomSpeed(0.05f)
             .build(Manipulator.Mode.ORBIT)
@@ -488,7 +412,7 @@ open class SceneView @JvmOverloads constructor(
         scene.skybox = skybox
         scene.indirectLight = _indirectLight
 
-        setCameraNode(sharedCamera ?: Defaults.camera(engine).also {
+        setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
             defaultCameraNode = it
         })
 
@@ -907,6 +831,34 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
+    class DefaultSkybox {
+        class Builder : Skybox.Builder() {
+            init {
+                color(0.0f, 0.0f, 0.0f, 1.0f)
+            }
+        }
+    }
+
+    class DefaultCameraNode(engine: Engine) : CameraNode(engine) {
+        init {
+            transform = Transform(position = Position(0.0f, 0.0f, 1.0f))
+            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+            // Since we define a light that has the same intensity as the sun, it guarantees a
+            // proper exposure
+            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+        }
+    }
+
+    class DefaultLightNode(engine: Engine) : LightNode(
+        engine = engine,
+        type = LightManager.Type.DIRECTIONAL,
+        apply = {
+            color(SceneView.DEFAULT_MAIN_LIGHT_COLOR)
+            intensity(SceneView.DEFAULT_MAIN_LIGHT_COLOR_INTENSITY)
+            direction(0.0f, -1.0f, 0.0f)
+            castShadows(true)
+        })
+
     companion object {
         init {
             Gltfio.init()
@@ -914,8 +866,57 @@ open class SceneView @JvmOverloads constructor(
             Utils.init()
         }
 
-        val kDefaultObjectPosition = Position(0.0f, 0.0f, -4.0f)
-        val kDefaultMainLightColor = Colors.cct(kDefaultMainLightColorTemperature).toColor()
-        val kDefaultMainLightIntensity = kDefaultMainLightColorIntensity
+        const val DEFAULT_MAIN_LIGHT_COLOR_TEMPERATURE = 6_500.0f
+        const val DEFAULT_MAIN_LIGHT_COLOR_INTENSITY = 100_000.0f
+
+        val DEFAULT_OBJECT_POSITION = Position(0.0f, 0.0f, -4.0f)
+        val DEFAULT_MAIN_LIGHT_COLOR = Colors.cct(DEFAULT_MAIN_LIGHT_COLOR_TEMPERATURE).toColor()
+        val DEFAULT_MAIN_LIGHT_INTENSITY = DEFAULT_MAIN_LIGHT_COLOR_INTENSITY
+
+        fun createEglContext() = OpenGL.createEglContext()
+        fun createEngine(eglContext: EGLContext) = Engine.create(eglContext)
+
+        fun createScene(engine: Engine) = engine.createScene()
+
+        fun createView(engine: Engine) =
+            engine.createView().apply {
+//                // On mobile, better use lower quality color buffer
+//                renderQuality = renderQuality.apply {
+//                    hdrColorBuffer = QualityLevel.HIGH
+//                }
+//                dynamicResolutionOptions = dynamicResolutionOptions.apply {
+//                    enabled = false
+//                    quality = QualityLevel.MEDIUM
+//                }
+//                // FXAA is pretty cheap and helps a lot
+//                antiAliasing = AntiAliasing.NONE
+//                // Ambient occlusion is the cheapest effect that adds a lot of quality
+//                ambientOcclusionOptions = ambientOcclusionOptions.apply {
+//                    enabled = false
+//                }
+//                // Bloom is pretty expensive but adds a fair amount of realism
+//                bloomOptions = bloomOptions.apply {
+//                    enabled = false
+//                }
+//                // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
+//                // material orange 500.
+//                colorGrading = ColorGrading.Builder()
+//                    .toneMapping(ColorGrading.ToneMapping.FILMIC)
+//                    .build(engine)
+                setShadowingEnabled(false)
+            }
+
+        fun createRenderer(engine: Engine) = engine.createRenderer()
+
+        fun createModelLoader(engine: Engine, context: Context) = engine.createModelLoader(context)
+        fun createMaterialLoader(engine: Engine, context: Context) =
+            engine.createMaterialLoader(context)
+
+        fun createCameraNode(engine: Engine): CameraNode = DefaultCameraNode(engine)
+        fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
+
+        fun createIndirectLight(engine: Engine): IndirectLight? = null
+        fun createSkybox(engine: Engine): Skybox = DefaultSkybox.Builder()
+            .build(engine)
     }
 }

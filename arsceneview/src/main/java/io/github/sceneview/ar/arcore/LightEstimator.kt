@@ -10,7 +10,6 @@ import com.google.ar.core.LightEstimate
 import com.google.ar.core.Session
 import dev.romainguy.kotlin.math.max
 import io.github.sceneview.SceneView
-import io.github.sceneview.camera.exposureFactor
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.HDREnvironment
 import io.github.sceneview.environment.IBLPrefilter
@@ -18,6 +17,7 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.toLinearSpace
 import io.github.sceneview.utils.Color
 import io.github.sceneview.utils.colorOf
+import io.github.sceneview.utils.exposureFactor
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

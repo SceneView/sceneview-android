@@ -86,13 +86,13 @@ fun Scene(
      * All other functionality in Node is supported. You can access the position and rotation of the
      * camera, assign a collision shape to it, or add children to it.
      */
-    camera: CameraNode = rememberCamera(engine),
+    cameraNode: CameraNode = rememberCameraNode(engine),
     /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    mainLight: LightNode? = rememberMainLight(engine),
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
     /**
      * IndirectLight is used to simulate environment lighting.
      *
@@ -138,7 +138,8 @@ fun Scene(
         /** The node that was tapped or `null`. **/
         node: Node?
     ) -> Unit)? = null,
-    onCreate: ((SceneView) -> Unit)? = null
+    onViewCreated: (SceneView.() -> Unit)? = null,
+    onViewUpdated: (SceneView.() -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
         ScenePreview(modifier)
@@ -159,8 +160,8 @@ fun Scene(
                     scene,
                     view,
                     renderer,
-                    camera,
-                    mainLight,
+                    cameraNode,
+                    mainLightNode,
                     indirectLight,
                     skybox
                 ).apply {
@@ -169,8 +170,8 @@ fun Scene(
             },
             update = { sceneView ->
                 sceneView.childNodes = childNodes
-                sceneView.setCameraNode(camera)
-                sceneView.mainLightNode = mainLight
+                sceneView.setCameraNode(cameraNode)
+                sceneView.mainLightNode = mainLightNode
                 sceneView.indirectLight = indirectLight
                 sceneView.skybox = skybox
                 sceneView.onFrame = onFrame
@@ -186,8 +187,8 @@ fun Scene(
 
 @Composable
 fun rememberEngine(
-    eglContextCreator: () -> EGLContext = { SceneView.Defaults.eglContext() },
-    engineCreator: (eglContext: EGLContext) -> Engine = { SceneView.Defaults.engine(it) }
+    eglContextCreator: () -> EGLContext = { SceneView.createEglContext() },
+    engineCreator: (eglContext: EGLContext) -> Engine = { SceneView.createEngine(it) }
 ): Engine {
     val eglContext = remember(eglContextCreator)
     val engine = remember(eglContext) { engineCreator(eglContext) }
@@ -222,7 +223,7 @@ fun rememberNodes(creator: MutableList<Node>.() -> Unit = {}) = remember {
 }
 
 @Composable
-fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.Defaults.scene(engine) }) =
+fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.createScene(engine) }) =
     remember(engine, creator).also { scene ->
         DisposableEffect(scene) {
             onDispose {
@@ -232,7 +233,7 @@ fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.Defaults.sc
     }
 
 @Composable
-fun rememberView(engine: Engine, creator: () -> View = { SceneView.Defaults.view(engine) }) =
+fun rememberView(engine: Engine, creator: () -> View = { SceneView.createView(engine) }) =
     remember(engine, creator).also { view ->
         DisposableEffect(view) {
             onDispose {
@@ -244,7 +245,7 @@ fun rememberView(engine: Engine, creator: () -> View = { SceneView.Defaults.view
 @Composable
 fun rememberRenderer(
     engine: Engine,
-    creator: () -> Renderer = { SceneView.Defaults.renderer(engine) }
+    creator: () -> Renderer = { SceneView.createRenderer(engine) }
 ) = remember(engine, creator).also { renderer ->
     DisposableEffect(renderer) {
         onDispose {
@@ -258,7 +259,7 @@ fun rememberModelLoader(
     engine: Engine,
     context: Context = LocalContext.current,
     creator: () -> ModelLoader = {
-        SceneView.Defaults.modelLoader(engine, context)
+        SceneView.createModelLoader(engine, context)
     }
 ) = remember(engine, context, creator).also { modelLoader ->
     DisposableEffect(modelLoader) {
@@ -273,7 +274,7 @@ fun rememberMaterialLoader(
     engine: Engine,
     context: Context = LocalContext.current,
     creator: () -> MaterialLoader = {
-        SceneView.Defaults.materialLoader(engine, context)
+        SceneView.createMaterialLoader(engine, context)
     }
 ) = remember(engine, context, creator).also { materialLoader ->
     DisposableEffect(materialLoader) {
@@ -284,18 +285,18 @@ fun rememberMaterialLoader(
 }
 
 @Composable
-fun rememberCamera(
+fun rememberCameraNode(
     engine: Engine,
     creator: () -> CameraNode = {
-        SceneView.Defaults.camera(engine)
+        SceneView.createCameraNode(engine)
     }
 ) = rememberNode(creator)
 
 @Composable
-fun rememberMainLight(
+fun rememberMainLightNode(
     engine: Engine,
     creator: () -> LightNode = {
-        SceneView.Defaults.mainLight(engine)
+        SceneView.createMainLightNode(engine)
     }
 ) = rememberNode(creator)
 
@@ -303,7 +304,7 @@ fun rememberMainLight(
 fun rememberIndirectLight(
     engine: Engine,
     creator: () -> IndirectLight? = {
-        SceneView.Defaults.indirectLight(engine)
+        SceneView.createIndirectLight(engine)
     }
 ) = remember(engine, creator)?.also { indirectLight ->
     DisposableEffect(indirectLight) {
@@ -317,7 +318,7 @@ fun rememberIndirectLight(
 fun rememberSkybox(
     engine: Engine,
     creator: () -> Skybox = {
-        SceneView.Defaults.skybox(engine)
+        SceneView.createSkybox(engine)
     }
 ) = remember(engine, creator).also { skybox ->
     DisposableEffect(skybox) {

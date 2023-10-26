@@ -1,6 +1,7 @@
 package io.github.sceneview.ar
 
 import android.content.Context
+import android.opengl.EGLContext
 import android.util.AttributeSet
 import android.util.Size
 import android.view.MotionEvent
@@ -101,13 +102,13 @@ open class ARSceneView @JvmOverloads constructor(
      * All other functionality in Node is supported. You can access the position and rotation of the
      * camera, assign a collision shape to it, or add children to it.
      */
-    sharedCamera: ARCameraNode? = null,
+    sharedCameraNode: ARCameraNode? = null,
     /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    sharedMainLight: LightNode? = null,
+    sharedMainLightNode: LightNode? = null,
     /**
      * IndirectLight is used to simulate environment lighting.
      *
@@ -151,23 +152,11 @@ open class ARSceneView @JvmOverloads constructor(
     sharedScene,
     sharedView,
     sharedRenderer,
-    sharedCamera,
-    sharedMainLight,
+    sharedCameraNode,
+    sharedMainLightNode,
     sharedIndirectLight,
     sharedSkybox
 ) {
-    object Defaults {
-        fun camera(engine: Engine) = ARCameraNode(engine).apply {
-            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
-            // Since we define a light that has the same intensity as the sun, it guarantees a
-            // proper exposure
-            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
-        }
-
-        fun cameraStream(engine: Engine, materialLoader: MaterialLoader) =
-            ARCameraStream(engine, materialLoader)
-    }
-
     open val arCore = ARCore(
         onSessionCreated = ::onSessionCreated,
         onSessionResumed = ::onSessionResumed,
@@ -198,7 +187,7 @@ open class ARSceneView @JvmOverloads constructor(
      * Use it to control if the occlusion should be enabled or disabled
      */
     var cameraStream: ARCameraStream? =
-        sharedCameraStream ?: Defaults.cameraStream(engine, materialLoader).also {
+        sharedCameraStream ?: createCameraStream(engine, materialLoader).also {
             defaultCameraStream = it
         }
         set(value) {
@@ -228,10 +217,10 @@ open class ARSceneView @JvmOverloads constructor(
     var lightEstimation: LightEstimator.Estimation? = null
         private set(value) {
             value?.mainLightColorFactor?.let {
-                mainLightNode?.color = kDefaultMainLightColor * it
+                mainLightNode?.color = DEFAULT_MAIN_LIGHT_COLOR * it
             }
             value?.mainLightIntensityFactor?.let {
-                mainLightNode?.intensity = kDefaultMainLightIntensity * it
+                mainLightNode?.intensity = DEFAULT_MAIN_LIGHT_INTENSITY * it
             }
             value?.mainLightDirection?.let {
                 mainLightNode?.lightDirection = it
@@ -326,7 +315,7 @@ open class ARSceneView @JvmOverloads constructor(
     override val cameraManipulator = null
 
     init {
-        setCameraNode(sharedCamera ?: Defaults.camera(engine).also {
+        setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
             defaultCameraNode = it
         })
     }
