@@ -40,7 +40,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                         .use(BitmapFactory::decodeStream)
                 )
             }
-            onSessionUpdate = { session, frame ->
+            onSessionUpdated = { session, frame ->
                 frame.getUpdatedAugmentedImages().forEach { augmentedImage ->
                     if (augmentedImageNodes.none { it.imageName == augmentedImage.name }) {
                         val augmentedImageNode = AugmentedImageNode(engine, augmentedImage).apply {

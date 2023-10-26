@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
                             config.lightEstimationMode =
                                 Config.LightEstimationMode.ENVIRONMENTAL_HDR
                         },
-                        onSessionUpdate = { _, frame ->
+                        onSessionUpdated = { _, frame ->
                             if (childNodes.isEmpty()) {
                                 frame.getUpdatedPlanes()
                                     .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }

@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                 config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
                 config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             }
-            onSessionUpdate = { _, frame ->
+            onSessionUpdated = { _, frame ->
                 if (anchorNode == null) {
                     frame.getUpdatedPlanes()
                         .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }

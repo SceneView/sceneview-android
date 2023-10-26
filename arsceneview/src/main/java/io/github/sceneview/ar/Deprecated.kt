@@ -132,7 +132,7 @@ class Scene {
     )
     fun onRemoveChild(child: Any?) = null
 
-    /** Deprecated: Use [ARSceneView.onSessionUpdate] */
+    /** Deprecated: Use [ARSceneView.onSessionUpdated] */
     @Deprecated(
         "Use ArSceneView.onArFrame",
         replaceWith = ReplaceWith(expression = "onArFrame = { session, frame, camera -> }")
