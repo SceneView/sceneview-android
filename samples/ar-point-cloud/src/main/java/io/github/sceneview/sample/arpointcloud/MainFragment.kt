@@ -16,7 +16,6 @@ import com.google.ar.core.Session
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.fps
 import io.github.sceneview.math.Position
-import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.sample.doOnApplyWindowInsets
@@ -43,7 +42,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     lateinit var loadingView: View
 
-    private var pointCloudModel: Model? = null
     private var pointCloudModelInstances = mutableListOf<ModelInstance>()
     private val pointCloudNodes = mutableListOf<PointCloudNode>()
 
@@ -88,7 +86,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 config.lightEstimationMode = Config.LightEstimationMode.DISABLED
             }
             environment = null
-            onSessionUpdate = this@MainFragment::onSessionUpdated
+            onSessionUpdated = this@MainFragment::onSessionUpdated
         }
 
         scoreText = view.findViewById<TextView>(R.id.scoreText).apply {
@@ -162,13 +160,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     private fun getPointCloudModelInstance(): ModelInstance? {
         if (pointCloudModelInstances.size == 0) {
-            sceneView.modelLoader.createInstancedModel(
+            pointCloudModelInstances = sceneView.modelLoader.createInstancedModel(
                 assetFileLocation = "models/point_cloud.glb",
                 count = maxPoints
-            ).let { (model, instances) ->
-                pointCloudModel = model
-                pointCloudModelInstances = instances.filterNotNull().toMutableList()
-            }
+            ).toMutableList()
         }
         return pointCloudModelInstances.removeLastOrNull()
     }
