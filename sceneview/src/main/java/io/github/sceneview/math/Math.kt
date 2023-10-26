@@ -17,7 +17,6 @@ import dev.romainguy.kotlin.math.mix
 import dev.romainguy.kotlin.math.normalize
 import dev.romainguy.kotlin.math.pow
 import dev.romainguy.kotlin.math.rotation
-import dev.romainguy.kotlin.math.scale
 import dev.romainguy.kotlin.math.slerp
 import dev.romainguy.kotlin.math.translation
 import io.github.sceneview.collision.Matrix
@@ -30,22 +29,22 @@ typealias Scale = Float3
 typealias Direction = Float3
 typealias Size = Float3
 typealias Transform = Mat4
-
-//operator fun android.util.Size.component1() = width
-//operator fun android.util.Size.component2() = height
+typealias ClipSpacePosition = Float4
 
 fun Transform(
     position: Position = Position(),
     quaternion: Quaternion = Quaternion(),
     scale: Scale = Scale(1.0f)
 ) =
-    translation(position) * rotation(quaternion) * scale(scale)
+    translation(position) * rotation(quaternion) * dev.romainguy.kotlin.math.scale(scale)
 
 fun Transform(
     position: Position = Position(),
     rotation: Rotation,
     scale: Scale = Scale(1.0F)
-) = translation(position) * rotation(rotation.toQuaternion()) * scale(scale)
+) = translation(position) * rotation(rotation.toQuaternion()) * dev.romainguy.kotlin.math.scale(
+    scale
+)
 
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }

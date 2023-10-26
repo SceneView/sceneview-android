@@ -43,7 +43,7 @@ import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberIndirectLight
-import io.github.sceneview.rememberMainLight
+import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNode
@@ -108,13 +108,13 @@ fun ARScene(
      * All other functionality in Node is supported. You can access the position and rotation of the
      * camera, assign a collision shape to it, or add children to it.
      */
-    camera: ARCameraNode = rememberARCamera(engine),
+    cameraNode: ARCameraNode = rememberARCamera(engine),
     /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    mainLight: LightNode? = rememberMainLight(engine),
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
     /**
      * IndirectLight is used to simulate environment lighting.
      *
@@ -170,7 +170,7 @@ fun ARScene(
      *
      * Invoked once per [Frame] immediately before the Scene is updated.
      */
-    onSessionUpdate: ((session: Session, frame: Frame) -> Unit)? = null,
+    onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
     onSessionResumed: ((session: Session) -> Unit)? = null,
     /**
      * Invoked when an ARCore error occurred.
@@ -203,7 +203,7 @@ fun ARScene(
     onCreate: ((ARSceneView) -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
-        ArScenePreview(modifier)
+        ARScenePreview(modifier)
     } else {
         AndroidView(
             modifier = modifier,
@@ -221,21 +221,21 @@ fun ARScene(
                     scene,
                     view,
                     renderer,
-                    camera,
-                    mainLight,
+                    cameraNode,
+                    mainLightNode,
                     indirectLight,
                     skybox,
                     sessionFeatures,
                     cameraConfig,
                     cameraStream
-                ).apply {
-                    onCreate?.invoke(this)
+                ).also {
+                    onViewCreated?.invoke(it)
                 }
             },
             update = { sceneView ->
                 sceneView.childNodes = childNodes
-                sceneView.setCameraNode(camera)
-                sceneView.mainLightNode = mainLight
+                sceneView.setCameraNode(cameraNode)
+                sceneView.mainLightNode = mainLightNode
                 sceneView.indirectLight = indirectLight
                 sceneView.skybox = skybox
 
@@ -260,7 +260,7 @@ fun ARScene(
 fun rememberARCamera(
     engine: Engine,
     creator: () -> ARCameraNode = {
-        ARSceneView.Defaults.camera(engine)
+        ARSceneView.createCameraNode(engine)
     }
 ) = rememberNode(creator)
 
@@ -269,7 +269,7 @@ fun rememberCameraStream(
     engine: Engine,
     materialLoader: MaterialLoader,
     creator: () -> ARCameraStream = {
-        ARSceneView.Defaults.cameraStream(engine, materialLoader)
+        ARSceneView.createCameraStream(engine, materialLoader)
     }
 ) = remember(engine, creator).also { cameraStream ->
     DisposableEffect(cameraStream) {
@@ -280,7 +280,7 @@ fun rememberCameraStream(
 }
 
 @Composable
-private fun ArScenePreview(modifier: Modifier) {
+private fun ARScenePreview(modifier: Modifier) {
     Box(
         modifier = modifier
             .background(Color.DarkGray)

@@ -1,7 +1,5 @@
 package io.github.sceneview.collision
 
-import android.view.MotionEvent
-import io.github.sceneview.node.CameraNode
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -125,7 +123,7 @@ class CollisionSystem {
     fun intersects(collider: Collider): Collider? {
         val collisionShape = collider.transformedShape ?: return null
         for (otherCollider in colliders) {
-            if (otherCollider === collider) {
+            if (otherCollider == collider) {
                 continue
             }
             val otherCollisionShape = otherCollider.transformedShape ?: continue
@@ -139,7 +137,7 @@ class CollisionSystem {
     fun intersectsAll(collider: Collider, processResult: Consumer<Collider>) {
         val collisionShape = collider.transformedShape ?: return
         for (otherCollider in colliders) {
-            if (otherCollider === collider) {
+            if (otherCollider == collider) {
                 continue
             }
             val otherCollisionShape = otherCollider.transformedShape ?: continue
