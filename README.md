@@ -4,7 +4,7 @@
 
 This is a Sceneform replacement in Kotlin
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Maven%20Central%20-%20ARSceneView)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Maven%20Central)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 [![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
@@ -322,7 +322,7 @@ fun ARScreen() {
     android:layout_height="match_parent" />
 ```
 
-## 3D Model Viewer
+## 3D - Model Viewer
 
 [![](https://markdown-videos.deta.dev/youtube/GDCy_bUdggg)](https://www.youtube.com/watch?v=GDCy_bUdggg)
 
@@ -335,7 +335,41 @@ ModelNode(
 )
 ```
 
-## AR Cloud Anchors
+## AR - Anchor Node on Tap
+
+```kotlin
+val engine = rememberEngine()
+val modelLoader = rememberModelLoader(engine)
+val childNodes = rememberNodes()
+ARScene(
+    modifier = Modifier.fillMaxSize(),
+    childNodes = childNodes,
+    engine = engine,
+    modelLoader = modelLoader,
+    onTapAR = { motionEvent: MotionEvent, hitResult: HitResult ->
+        childNodes += AnchorNode(
+            engine = engine,
+            anchor = hitResult.createAnchor()
+        ).apply {
+            // Make the anchor node editable for AR moving it
+            isEditable = true
+        }.addChildNode(
+            ModelNode(
+                modelInstance = modelLoader.createModelInstance(rawResId = R.raw.my_model),
+                // Scale to fit in a 0.5 meters cube
+                scaleToUnits = 0.5f,
+                // Bottom origin instead of center so the model base is on the floor
+                centerOrigin = Position(y = -1.0f)
+            ).apply {
+                // Make the node editable for rotation and scale
+                isEditable = true
+            }
+        )
+    }
+)
+```
+
+## AR - Cloud Anchors
 
 [![](https://markdown-videos.deta.dev/youtube/iptk8jsWyw4)](https://www.youtube.com/watch?v=iptk8jsWyw4)
 
