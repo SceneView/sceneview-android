@@ -49,9 +49,6 @@ import io.github.sceneview.math.toMatrix
 import io.github.sceneview.math.toQuaternion
 import io.github.sceneview.utils.intervalSeconds
 
-// This is the default from the ViewConfiguration class.
-private const val defaultTouchSlop = 8
-
 /**
  * A Node represents a transformation within the scene graph's hierarchy.
  *
@@ -302,7 +299,7 @@ open class Node(
     open var worldTransform: Transform
         get() = transformManager.getWorldTransform(transformInstance)
         set(value) {
-            transform = getLocalTransform(value)
+            transform = parent?.getLocalTransform(value) ?: value
         }
 
     var smoothTransform: Transform? = null
@@ -363,17 +360,17 @@ open class Node(
             }
         }
 
+    /**
+     * Transform from the world coordinate system to the coordinate system of this node.
+     */
+    val worldToLocal: Transform get() = inverse(worldTransform)
+
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
     var onSmoothEnd: ((node: Node) -> Unit)? = null
     var onTap: ((motionEvent: MotionEvent) -> Unit)? = null
 
     protected val transformManager get() = engine.transformManager
     protected val transformInstance get() = transformManager.getInstance(entity)
-
-    /**
-     * Transform from the world coordinate system to the coordinate system of the parent.
-     */
-    protected val worldToParent: Transform get() = inverse(parent?.worldTransform ?: Transform())
 
     internal open val sceneEntities = listOf(entity)
     internal val onChildAdded = mutableListOf<(child: Node) -> Unit>()
@@ -391,8 +388,8 @@ open class Node(
     /**
      * The shape to used to detect collisions for this [Node].
      *
-     * If the shape is not set and renderable is set, then [Renderable.getCollisionShape] is used
-     * to detect collisions for this [Node].
+     * If the shape is not set and renderable is set, then [Collider.setShape] is used to detect
+     * collisions for this [Node].
      *
      * [CollisionShape] represents a geometric shape, i.e. sphere, box, convex hull.
      * If null, this node's current collision shape will be removed.
@@ -429,15 +426,15 @@ open class Node(
      * @param worldPosition the position in world-space to convert.
      * @return a new position that represents the world position in local-space.
      */
-    fun getLocalPosition(worldPosition: Position) = worldToParent * worldPosition
+    fun getLocalPosition(worldPosition: Position) = worldToLocal * worldPosition
 
     /**
      * Converts a position in the local-space of this node to world-space.
      *
-     * @param position the position in local-space to convert.
+     * @param localPosition the position in local-space to convert.
      * @return a new position that represents the local position in world-space.
      */
-    fun getWorldPosition(position: Position) = transform * position
+    fun getWorldPosition(localPosition: Position) = worldTransform * localPosition
 
     /**
      * Converts a quaternion in the world-space to a local-space of this node.
@@ -446,7 +443,7 @@ open class Node(
      * @return a new quaternion that represents the world quaternion in local-space.
      */
     fun getLocalQuaternion(worldQuaternion: Quaternion) =
-        worldToParent.toQuaternion() * worldQuaternion
+        worldToLocal.toQuaternion() * worldQuaternion
 
     /**
      * Converts a quaternion in the local-space of this node to world-space.
@@ -454,7 +451,7 @@ open class Node(
      * @param quaternion the quaternion in local-space to convert.
      * @return a new quaternion that represents the local quaternion in world-space.
      */
-    fun getWorldQuaternion(quaternion: Quaternion) = transform.toQuaternion() * quaternion
+    fun getWorldQuaternion(quaternion: Quaternion) = worldTransform.toQuaternion() * quaternion
 
     /**
      * Converts a rotation in the world-space to a local-space of this node.
@@ -480,7 +477,7 @@ open class Node(
      * @param worldScale the transform in world-space to convert.
      * @return a new scale that represents the world scale in local-space.
      */
-    fun getLocalScale(worldScale: Scale) = (worldToParent * scale(worldScale)).scale
+    fun getLocalScale(worldScale: Scale) = (worldToLocal * scale(worldScale)).scale
 
     /**
      * Converts a scale in the local-space of this node to world-space.
@@ -488,7 +485,15 @@ open class Node(
      * @param scale the scale in local-space to convert.
      * @return a new scale that represents the local scale in world-space.
      */
-    fun getWorldScale(scale: Scale) = (transform * scale(scale)).scale
+    fun getWorldScale(scale: Scale) = (worldTransform * scale(scale)).scale
+
+    /**
+     * Converts a node transform in the world-space to a local-space of this node.
+     *
+     * @param node the node in world-space to convert.
+     * @return a new transform that represents the world transform in local-space.
+     */
+    fun getLocalTransform(node: Node) = getLocalTransform(node.worldTransform)
 
     /**
      * Converts a transform in the world-space to a local-space of this node.
@@ -496,15 +501,23 @@ open class Node(
      * @param worldTransform the transform in world-space to convert.
      * @return a new transform that represents the world transform in local-space.
      */
-    fun getLocalTransform(worldTransform: Transform) = worldToParent * worldTransform
+    fun getLocalTransform(worldTransform: Transform) = worldToLocal * worldTransform
+
+    /**
+     * Converts a node transform in the local-space of this node to world-space.
+     *
+     * @param node the node in local-space to convert.
+     * @return a new transform that represents the local transform in world-space.
+     */
+    fun getWorldTransform(node: Node) = getWorldTransform(node.transform)
 
     /**
      * Converts a transform in the local-space of this node to world-space.
      *
-     * @param transform the transform in local-space to convert.
+     * @param localTransform the transform in local-space to convert.
      * @return a new transform that represents the local transform in world-space.
      */
-    fun getWorldTransform(transform: Transform) = transform * worldTransform
+    fun getWorldTransform(localTransform: Transform) = worldTransform * localTransform
 
     /**
      * The node scale.
@@ -540,7 +553,7 @@ open class Node(
         worldTransform: Transform,
         smooth: Boolean = isSmoothTransformEnabled,
         smoothSpeed: Float = smoothTransformSpeed
-    ) = transform(getLocalTransform(worldTransform), smooth, smoothSpeed)
+    ) = transform(parent?.getLocalTransform(worldTransform) ?: worldTransform, smooth, smoothSpeed)
 
     /**
      * Change the node transform.
