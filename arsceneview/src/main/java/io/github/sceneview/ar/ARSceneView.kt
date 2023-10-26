@@ -534,4 +534,41 @@ open class ARSceneView @JvmOverloads constructor(
 
         super.destroy()
     }
+
+    class DefaultARCameraNode(engine: Engine) : ARCameraNode(engine) {
+        init {
+            // Set the exposure on the camera, this exposure follows the sunny f/16 rule
+            // Since we define a light that has the same intensity as the sun, it guarantees a
+            // proper exposure
+            setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+        }
+    }
+
+    companion object {
+        fun createEglContext() = SceneView.createEglContext()
+        fun createEngine(eglContext: EGLContext) = SceneView.createEngine(eglContext)
+        fun createScene(engine: Engine) = SceneView.createScene(engine)
+        fun createView(engine: Engine) = SceneView.createView(engine).apply {
+            // Dynamic resolutions has issues with the AR Camera stream: Lags, green screens,...
+            dynamicResolutionOptions = dynamicResolutionOptions.apply {
+                enabled = false
+            }
+        }
+
+        fun createRenderer(engine: Engine) = SceneView.createRenderer(engine)
+        fun createModelLoader(engine: Engine, context: Context) =
+            SceneView.createModelLoader(engine, context)
+
+        fun createMaterialLoader(engine: Engine, context: Context) =
+            SceneView.createMaterialLoader(engine, context)
+
+        fun createCameraNode(engine: Engine): ARCameraNode = DefaultARCameraNode(engine)
+
+        fun createCameraStream(engine: Engine, materialLoader: MaterialLoader) =
+            ARCameraStream(engine, materialLoader)
+
+        fun createMainLight(engine: Engine): LightNode = SceneView.createMainLightNode(engine)
+        fun createIndirectLight(engine: Engine): IndirectLight? = null
+        fun createSkybox(engine: Engine) = SceneView.createSkybox(engine)
+    }
 }
