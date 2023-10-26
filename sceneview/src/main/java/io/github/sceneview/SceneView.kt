@@ -619,7 +619,7 @@ open class SceneView @JvmOverloads constructor(
     protected open fun onResized(width: Int, height: Int) {
         view.viewport = Viewport(0, 0, width, height)
         cameraManipulator?.setViewport(width, height)
-        cameraNode.viewSize = Size(width, height)
+        cameraNode.updateProjection()
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
