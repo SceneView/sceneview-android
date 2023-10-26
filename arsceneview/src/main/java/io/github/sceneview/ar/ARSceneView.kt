@@ -267,7 +267,7 @@ open class ARSceneView @JvmOverloads constructor(
     /**
      * Updates of the state of the ARCore system.
      *
-     * Callback for [onSessionUpdate].
+     * Callback for [onSessionUpdated].
      *
      * This includes: receiving a new camera frame, updating the location of the device, updating
      * the location of tracking anchors, updating detected planes, etc.
@@ -277,7 +277,7 @@ open class ARSceneView @JvmOverloads constructor(
      *
      * Invoked once per [Frame] immediately before the Scene is updated.
      */
-    var onSessionUpdate: ((session: Session, frame: Frame) -> Unit)? = null
+    var onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null
     var onSessionResumed: ((session: Session) -> Unit)? = null
 
     /**
@@ -434,7 +434,7 @@ open class ARSceneView @JvmOverloads constructor(
             camera.trackingFailureReason.takeIf { it != TrackingFailureReason.NONE }
         } else null
 
-        onSessionUpdate?.invoke(session, frame)
+        onSessionUpdated?.invoke(session, frame)
     }
 
     /**

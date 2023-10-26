@@ -244,7 +244,7 @@ fun ARScene(
 
                 sceneView.onSessionConfiguration = onSessionConfiguration
                 sceneView.onSessionCreated = onSessionCreated
-                sceneView.onSessionUpdate = onSessionUpdate
+                sceneView.onSessionUpdated = onSessionUpdated
                 sceneView.onSessionResumed = onSessionResumed
                 sceneView.onSessionFailed = onSessionFailed
                 sceneView.onSessionConfigChanged = onSessionConfigChanged
