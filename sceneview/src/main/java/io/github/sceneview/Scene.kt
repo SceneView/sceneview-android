@@ -165,7 +165,7 @@ fun Scene(
                     indirectLight,
                     skybox
                 ).apply {
-                    onCreate?.invoke(this)
+                    onViewCreated?.invoke(this)
                 }
             },
             update = { sceneView ->
@@ -176,6 +176,8 @@ fun Scene(
                 sceneView.skybox = skybox
                 sceneView.onFrame = onFrame
                 sceneView.onTap = onTap
+
+                onViewUpdated?.invoke(sceneView)
             },
             onReset = {},
             onRelease = { sceneView ->
