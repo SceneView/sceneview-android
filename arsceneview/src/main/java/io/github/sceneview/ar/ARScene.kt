@@ -200,7 +200,8 @@ fun ARScene(
         /** The ARCore hit result for the trackable that was tapped. */
         hitResult: HitResult
     ) -> Unit)? = null,
-    onCreate: ((ARSceneView) -> Unit)? = null
+    onViewCreated: (ARSceneView.() -> Unit)? = null,
+    onViewUpdated: (ARSceneView.() -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
         ARScenePreview(modifier)
@@ -249,6 +250,7 @@ fun ARScene(
                 sceneView.onSessionConfigChanged = onSessionConfigChanged
                 sceneView.onTap = onTap
                 sceneView.onTapAR = onTapAR
+                onViewUpdated?.invoke(sceneView)
             },
             onReset = {},
             onRelease = { sceneView -> sceneView.destroy() }
