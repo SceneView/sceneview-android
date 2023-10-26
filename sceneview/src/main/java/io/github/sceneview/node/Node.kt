@@ -702,6 +702,29 @@ open class Node(
         }
     }
 
+    /**
+     * Tests to see if this node collision shape overlaps the collision shape of any other nodes in
+     * the scene using [Node.collisionShape].
+     *
+     * @return A node that is overlapping the test node. If no node is overlapping the test node,
+     * then this is null. If multiple nodes are overlapping the test node, then this could be any of
+     * them.
+     */
+    fun overlapTest() = collisionSystem!!.intersects(collider!!)?.node
+
+    /**
+     * Tests to see if a node is overlapping any other nodes within the scene using
+     * [Node.collisionShape].
+     *
+     * @return A list of all nodes that are overlapping this node. If no node is overlapping the
+     * test node, then the list is empty.
+     */
+    fun overlapTestAll() = buildList {
+        collisionSystem!!.intersectsAll(collider!!) {
+            add(it.node)
+        }
+    }
+
     open fun onFrame(frameTimeNanos: Long) {
         smoothTransform?.let { smoothTransform ->
             if (smoothTransform != transform) {
