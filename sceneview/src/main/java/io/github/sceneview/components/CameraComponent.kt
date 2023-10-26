@@ -371,4 +371,31 @@ interface CameraComponent : Component {
      * Gets the sensitivity in ISO
      */
     val sensitivity: Float get() = camera.sensitivity
+
+    /**
+     * @see viewPortToClipSpace
+     * @see viewSpaceToWorld
+     */
+    fun clipSpaceToViewSpace(clipSpacePosition: ClipSpacePosition): Position =
+        camera.clipSpaceToViewSpace(clipSpacePosition)
+
+    /**
+     * @see worldToViewSpace
+     * @see clipSpaceToViewPort
+     */
+    fun viewSpaceToClipSpace(viewSpacePosition: Position): ClipSpacePosition =
+        camera.viewSpaceToClipSpace(viewSpacePosition)
+
+    /**
+     * @see viewPortToClipSpace
+     * @see clipSpaceToViewSpace
+     */
+    fun viewSpaceToWorld(viewSpacePosition: Position): Position =
+        camera.viewSpaceToWorld(viewSpacePosition)
+
+    /**
+     * @see viewSpaceToClipSpace
+     * @see clipSpaceToViewPort
+     */
+    fun worldToViewSpace(worldPosition: Position): Position = viewTransform * worldPosition
 }
