@@ -46,7 +46,7 @@ open class AnchorNode(
         set(value) {
             field = value
             trackingState = value.trackingState
-            value.let { pose = it.pose }
+            pose = value.pose
         }
 
     /**

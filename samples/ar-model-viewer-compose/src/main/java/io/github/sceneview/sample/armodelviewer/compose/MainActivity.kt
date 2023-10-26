@@ -3,16 +3,14 @@ package io.github.sceneview.sample.armodelviewer.compose
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,10 +26,8 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNodes
 import io.github.sceneview.sample.Colors
-import io.github.sceneview.sample.DarkColorPalette
-import io.github.sceneview.sample.LightColorPalette
-import io.github.sceneview.sample.Shapes
-import io.github.sceneview.sample.Typography
+import io.github.sceneview.sample.SceneViewTheme
+import kotlinx.coroutines.launch
 
 private const val kModelFile = "https://sceneview.github.io/assets/models/DamagedHelmet.glb"
 
@@ -51,6 +47,8 @@ class MainActivity : ComponentActivity() {
                     val engine = rememberEngine()
                     val modelLoader = rememberModelLoader(engine)
                     val childNodes = rememberNodes()
+                    val coroutineScope = rememberCoroutineScope()
+
                     ARScene(
                         modifier = Modifier.fillMaxSize(),
                         childNodes = childNodes,
@@ -68,36 +66,37 @@ class MainActivity : ComponentActivity() {
                                 Config.LightEstimationMode.ENVIRONMENTAL_HDR
                         },
                         onSessionUpdated = { _, frame ->
-                            if (childNodes.isEmpty()) {
-                                frame.getUpdatedPlanes()
-                                    .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-                                    ?.let { plane ->
-                                        isLoading = true
-                                        childNodes += AnchorNode(
-                                            engine = engine,
-                                            anchor = plane.createAnchor(plane.centerPose)
-                                        ).apply {
-                                            isEditable = true
-                                            modelLoader.loadModelInstanceAsync(kModelFile) { modelInstance ->
-                                                if (modelInstance != null) {
-                                                    addChildNode(
-                                                        ModelNode(
-                                                            modelInstance = modelInstance,
-                                                            // Scale to fit in a 0.5 meters cube
-                                                            scaleToUnits = 0.5f,
-                                                            // Bottom origin instead of center so the model base is on floor
-                                                            centerOrigin = Position(y = -0.5f)
-                                                        ).apply {
-                                                            isEditable = true
-                                                        }
-                                                    )
-                                                }
-                                                isLoading = false
-                                                planeRenderer = false
+                            if (childNodes.isNotEmpty()) return@ARScene
+
+                            frame.getUpdatedPlanes()
+                                .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
+                                ?.let { plane ->
+                                    isLoading = true
+                                    childNodes += AnchorNode(
+                                        engine = engine,
+                                        anchor = plane.createAnchor(plane.centerPose)
+                                    ).apply {
+                                        isEditable = true
+                                        coroutineScope.launch {
+                                            modelLoader.loadModelInstance(kModelFile)?.let {
+                                                addChildNode(
+                                                    ModelNode(
+                                                        modelInstance = it,
+                                                        // Scale to fit in a 0.5 meters cube
+                                                        scaleToUnits = 0.5f,
+                                                        // Bottom origin instead of center so the
+                                                        // model base is on floor
+                                                        centerOrigin = Position(y = -0.5f)
+                                                    ).apply {
+                                                        isEditable = true
+                                                    }
+                                                )
                                             }
+                                            planeRenderer = false
+                                            isLoading = false
                                         }
                                     }
-                            }
+                                }
                         }
                     )
                     if (isLoading) {
@@ -112,20 +111,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
-
-@Composable
-fun SceneViewTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val colors = if (darkTheme) {
-        DarkColorPalette
-    } else {
-        LightColorPalette
-    }
-
-    MaterialTheme(
-        colors = colors,
-        typography = Typography,
-        shapes = Shapes,
-        content = content
-    )
 }
