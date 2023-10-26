@@ -1,11 +1,12 @@
 package io.github.sceneview.node
 
-import android.util.Size
 import android.view.MotionEvent
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
+import com.google.android.filament.View
 import io.github.sceneview.Entity
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.collision.MathHelper
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.Preconditions
@@ -48,7 +49,7 @@ open class CameraNode(
         get() = super.focalLength
         set(value) {
             _focalLength = value
-            updateLensProjection()
+            updateProjection()
         }
 
     // Near = 5 cm
@@ -57,7 +58,7 @@ open class CameraNode(
         get() = super.near
         set(value) {
             _near = value
-            updateLensProjection()
+            updateProjection()
         }
 
     // Far = 1 km
@@ -66,14 +67,13 @@ open class CameraNode(
         get() = super.far
         set(value) {
             _far = value
-            updateLensProjection()
+            updateProjection()
         }
 
-    var viewSize: Size? = null
-        set(value) {
-            field = value
-            updateLensProjection()
-        }
+    lateinit var view: View
+        private set
+
+    val viewport get() = view.viewport
 
     constructor(
         engine: Engine,
@@ -94,19 +94,67 @@ open class CameraNode(
     }
 
     /**
-     * Sets the projection matrix from the focal length.
+     * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
+     * the scene and returns a list of HitTestResults containing all of the nodes that were hit,
+     * sorted by distance.
+     *
+     * Specify the camera/screen/view position where the hit ray will start from in screen
+     * coordinates.
+     *
+     * @param xPx x view coordinate in pixels
+     * @param yPx y view coordinate in pixels
+     *
+     * @return PickHitResult list for each nodes that was hit sorted by distance.
+     * Empty if no nodes were hit.
+     */
+    fun hitTest(xPx: Float, yPx: Float) = hitTest(screenPointToRay(xPx, yPx))
+
+    /**
+     * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
+     * the scene and returns a list of HitTestResults containing all of the nodes that were hit,
+     * sorted by distance.
+     *
+     * Specify the camera/screen/view position where the hit ray will start from in screen
+     * coordinates.
+     *
+     * @param xViewPercent x view coordinate in percent (0 = left, 0.5 = center, 1 = right)
+     * @param yViewPercent y view coordinate in pixels (0 = top, 0.5 = center, 1 = bottom)
+     *
+     * @return PickHitResult list for each nodes that was hit sorted by distance.
+     * Empty if no nodes were hit.
      */
     fun updateLensProjection() {
         val viewSize = viewSize ?: return
 
-        val aspect = viewSize.width.toDouble() / viewSize.height.toDouble()
-        camera.setLensProjection(
-            _focalLength,
-            if (!aspect.isNaN()) aspect else 1.0,
-            _near.toDouble(),
-            _far.toDouble()
-        )
-    }
+    /**
+     * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
+     * the scene and returns a list of HitTestResults containing all of the nodes that were hit,
+     * sorted by distance.
+     *
+     * Specify the camera/screen/view position where the hit ray will start from in screen
+     * coordinates.
+     *
+     * @param motionEvent view motion event
+     *
+     * @return PickHitResult list for each nodes that was hit sorted by distance.
+     * Empty if no nodes were hit.
+     */
+    fun hitTest(motionEvent: MotionEvent) = hitTest(motionEvent.x, motionEvent.y)
+
+    /**
+     * Tests to see if a ray is hitting any nodes within the scene and returns a list of
+     * HitTestResults containing all of the nodes that were hit, sorted by distance.
+     *
+     * @param ray The ray to use for the test.
+     *
+     * @return PickHitResult list for each nodes that was hit sorted by distance.
+     * Empty if no nodes were hit.
+     */
+    fun hitTest(ray: Ray) = arrayListOf<HitResult>().apply {
+        collisionSystem!!.raycastAll(ray, this, { resultPick, collider ->
+            resultPick.node = collider.node
+        }, { HitResult() })
+    }.toList()
 
     fun motionEventToRay(motionEvent: MotionEvent): Ray {
         Preconditions.checkNotNull(motionEvent, "Parameter \"motionEvent\" was null.")
@@ -171,11 +219,11 @@ open class CameraNode(
         screenPoint.y = (screenPoint.y / w + 1.0f) * 0.5f
 
         // To screen space.
-        screenPoint.x = screenPoint.x * viewSize!!.width
-        screenPoint.y = screenPoint.y * viewSize!!.height
+        screenPoint.x = screenPoint.x * viewport.width
+        screenPoint.y = screenPoint.y * viewport.height
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        screenPoint.y = viewSize!!.height - screenPoint.y
+        screenPoint.y = viewport.height - screenPoint.y
         return screenPoint
     }
 
@@ -189,11 +237,11 @@ open class CameraNode(
         Matrix.invert(m, m)
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        y = viewSize!!.height - y
+        y = viewport.height - y
 
         // Normalize between -1 and 1.
-        x = x / viewSize!!.width * 2.0f - 1.0f
-        y = y / viewSize!!.height * 2.0f - 1.0f
+        x = x / viewport.width * 2.0f - 1.0f
+        y = y / viewport.height * 2.0f - 1.0f
         z = 2.0f * z - 1.0f
         var w = 1.0f
         dest.x = x * m.data[0] + y * m.data[4] + z * m.data[8] + w * m.data[12]
@@ -209,9 +257,29 @@ open class CameraNode(
         return true
     }
 
+    /**
+     * Sets the projection matrix from the focal length.
+     */
+    fun updateProjection() {
+        if (!::view.isInitialized) return
+
+        val aspect = viewport.width.toDouble() / viewport.height.toDouble()
+        camera.setLensProjection(
+            _focalLength,
+            if (!aspect.isNaN()) aspect else 1.0,
+            _near.toDouble(),
+            _far.toDouble()
+        )
+    }
+
     override fun destroy() {
         super.destroy()
 
         engine.safeDestroyCamera(camera)
+    }
+
+    internal fun setView(view: View) {
+        this.view = view
+        updateProjection()
     }
 }

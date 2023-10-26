@@ -7,8 +7,6 @@ import java.util.function.Supplier
 // TODO: Only moved to kotlin without cleaning it
 class CollisionSystem {
 
-    lateinit var cameraNode: CameraNode
-
     private val colliders = mutableListOf<Collider>()
 
     fun addCollider(collider: Collider) {
@@ -18,52 +16,6 @@ class CollisionSystem {
     fun removeCollider(collider: Collider) {
         colliders.remove(collider)
     }
-
-    /**
-     * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
-     * the scene and returns a list of HitTestResults containing all of the nodes that were hit,
-     * sorted by distance.
-     *
-     * Specify the camera/screen/view position where the hit ray will start from in screen
-     * coordinates.
-     *
-     * @param xPx x view coordinate in pixels
-     * @param yPx y view coordinate in pixels
-     *
-     * @return PickHitResult list for each nodes that was hit sorted by distance.
-     * Empty if no nodes were hit.
-     */
-    fun hitTest(xPx: Float, yPx: Float) = hitTest(cameraNode.screenPointToRay(xPx, yPx))
-
-    /**
-     * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
-     * the scene and returns a list of HitTestResults containing all of the nodes that were hit,
-     * sorted by distance.
-     *
-     * Specify the camera/screen/view position where the hit ray will start from in screen
-     * coordinates.
-     *
-     * @param motionEvent view motion event
-     *
-     * @return PickHitResult list for each nodes that was hit sorted by distance.
-     * Empty if no nodes were hit.
-     */
-    fun hitTest(motionEvent: MotionEvent) = hitTest(motionEvent.x, motionEvent.y)
-
-    /**
-     * Tests to see if a ray is hitting any nodes within the scene and returns a list of
-     * HitTestResults containing all of the nodes that were hit, sorted by distance.
-     *
-     * @param ray The ray to use for the test.
-     *
-     * @return PickHitResult list for each nodes that was hit sorted by distance.
-     * Empty if no nodes were hit.
-     */
-    fun hitTest(ray: Ray) = arrayListOf<HitResult>().apply {
-        raycastAll(ray, this, { resultPick, collider ->
-            resultPick.node = collider.node
-        }, { HitResult() })
-    }.toList()
 
     fun raycast(ray: Ray, resultHit: RayHit): Collider? {
         resultHit.reset()
