@@ -229,14 +229,15 @@ class ModelLoader(
         buffer: Buffer,
         count: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ) = arrayOfNulls<ModelInstance>(count).let { instances ->
-        assetLoader.createInstancedAsset(buffer, instances)!!.also { model ->
-            models += model
-            loadResources(model, resourceResolver)
-            // Release model since it will not be re-instantiated
-            model.releaseSourceData()
-        } to instances
-    }
+    ): List<ModelInstance> =
+        arrayOfNulls<ModelInstance>(count).apply {
+            assetLoader.createInstancedAsset(buffer, this)!!.also { model ->
+                models += model
+                loadResources(model, resourceResolver)
+                // Release model since it will not be re-instantiated
+                model.releaseSourceData()
+            }
+        }.filterNotNull()
 
     /**
      * Creates a primary [Model] with one or more [ModelInstance]s from the contents of a GLB or
@@ -254,12 +255,11 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = {
             context.assets.readFileBuffer(getFolderPath(assetFileLocation, it))
         }
-    ): Pair<Model, Array<ModelInstance?>> =
-        createInstancedModel(
-            context.assets.readFileBuffer(assetFileLocation),
-            count,
-            resourceResolver
-        )
+    ) = createInstancedModel(
+        context.assets.readFileBuffer(assetFileLocation),
+        count,
+        resourceResolver
+    )
 
     /**
      * Creates a primary [Model] with one or more [ModelInstance]s from the contents of a GLB or
@@ -275,8 +275,7 @@ class ModelLoader(
         @RawRes rawResId: Int,
         count: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): Pair<Model, Array<ModelInstance?>> =
-        createInstancedModel(context.resources.readFileBuffer(rawResId), count, resourceResolver)
+    ) = createInstancedModel(context.resources.readFileBuffer(rawResId), count, resourceResolver)
 
     /**
      * Loads a primary [Model] with one or more [ModelInstance]s from the contents of a GLB or
@@ -297,18 +296,18 @@ class ModelLoader(
         fileLocation: String,
         count: Int,
         resourceResolver: (resourceFileName: String) -> String = { getFolderPath(fileLocation, it) }
-    ): Pair<Model, Array<ModelInstance?>>? = context.loadFileBuffer(fileLocation)?.let { buffer ->
-        arrayOfNulls<ModelInstance>(count).let { instances ->
-            assetLoader.createInstancedAsset(buffer, instances)!!.also { model ->
+    ): List<ModelInstance> = context.loadFileBuffer(fileLocation)?.let { buffer ->
+        arrayOfNulls<ModelInstance>(count).apply {
+            assetLoader.createInstancedAsset(buffer, this)!!.also { model ->
                 models += model
                 loadResourcesSuspended(model) { resourceFileName: String ->
                     context.loadFileBuffer(resourceResolver(resourceFileName))
                 }
                 // Release model since it will not be re-instantiated
                 model.releaseSourceData()
-            } to instances
-        }
-    }
+            }
+        }.filterNotNull()
+    } ?: listOf()
 
     /**
      * Loads a primary [Model] with one or more [ModelInstance]s from the contents of a GLB or
@@ -331,7 +330,7 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> String = {
             getFolderPath(fileLocation, it)
         },
-        onResult: (Pair<Model, Array<ModelInstance?>>?) -> Unit
+        onResult: (List<ModelInstance>) -> Unit
     ): Job = coroutineScope.launch {
         loadInstancedModel(fileLocation, count, resourceResolver).also(onResult)
     }
