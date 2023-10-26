@@ -3,7 +3,7 @@ package io.github.sceneview.gesture
 import android.content.Context
 import android.view.GestureDetector
 import android.view.MotionEvent
-import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.Node
 
 /**
@@ -13,11 +13,11 @@ import io.github.sceneview.node.Node
  */
 open class GestureDetector(
     context: Context,
-    collisionSystem: CollisionSystem,
+    cameraNode: CameraNode,
     listener: OnGestureListener
 ) : GestureDetector(context,
     object : GestureDetector.SimpleOnGestureListener() {
-        fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+        fun hitTest(e: MotionEvent) = hitTest(cameraNode, e)
 
         override fun onDown(e: MotionEvent) = super.onDown(e).also {
             hitTest(e).let {
@@ -275,7 +275,7 @@ open class GestureDetector(
         object : MoveGestureDetector.SimpleOnMoveListener {
             var moveBeginEvent: NodeMotionEvent? = null
 
-            fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+            fun hitTest(e: MotionEvent) = hitTest(cameraNode, e)
 
             override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent) =
                 super.onMoveBegin(detector, e).also {
@@ -307,7 +307,7 @@ open class GestureDetector(
         object : RotateGestureDetector.SimpleOnRotateListener {
             var rotateBeginEvent: NodeMotionEvent? = null
 
-            fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+            fun hitTest(e: MotionEvent) = hitTest(cameraNode, e)
 
             override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) =
                 super.onRotateBegin(detector, e).also {
@@ -340,7 +340,7 @@ open class GestureDetector(
         object : ScaleGestureDetector.OnScaleListener {
             var scaleBeginEvent: NodeMotionEvent? = null
 
-            fun hitTest(e: MotionEvent) = hitTest(collisionSystem, e)
+            fun hitTest(e: MotionEvent) = hitTest(cameraNode, e)
 
             override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) {
                 hitTest(e).let {
@@ -378,8 +378,8 @@ open class GestureDetector(
     }
 
     companion object {
-        fun hitTest(collisionSystem: CollisionSystem, e: MotionEvent) =
-            NodeMotionEvent(e, collisionSystem.hitTest(e).firstOrNull {
+        fun hitTest(cameraNode: CameraNode, e: MotionEvent) =
+            NodeMotionEvent(e, cameraNode.hitTest(e).firstOrNull {
                 it.node?.isTouchable == true// && it.distance <= 0.0f
             }?.node)
     }

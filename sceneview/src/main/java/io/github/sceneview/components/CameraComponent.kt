@@ -1,19 +1,32 @@
 package io.github.sceneview.components
 
-import android.util.Size
 import com.google.android.filament.Camera
 import com.google.android.filament.Camera.Projection
 import com.google.android.filament.LightManager
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float4
+import io.github.sceneview.math.ClipSpacePosition
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
-import io.github.sceneview.math.toColumnsDoubleArray
-import io.github.sceneview.math.toColumnsFloatArray
-import io.github.sceneview.math.toDirection
-import io.github.sceneview.math.toFloat4
-import io.github.sceneview.math.toTransform
+import io.github.sceneview.math.times
+import io.github.sceneview.utils.clipSpaceToViewPort
+import io.github.sceneview.utils.clipSpaceToViewSpace
+import io.github.sceneview.utils.cullingProjectionTransform
+import io.github.sceneview.utils.forwardDirection
+import io.github.sceneview.utils.leftDirection
+import io.github.sceneview.utils.lookAt
+import io.github.sceneview.utils.modelTransform
+import io.github.sceneview.utils.projectionTransform
+import io.github.sceneview.utils.scaling
+import io.github.sceneview.utils.setCustomProjection
+import io.github.sceneview.utils.setScaling
+import io.github.sceneview.utils.upDirection
+import io.github.sceneview.utils.viewPortToClipSpace
+import io.github.sceneview.utils.viewSpaceToClipSpace
+import io.github.sceneview.utils.viewSpaceToWorld
+import io.github.sceneview.utils.viewTransform
+import io.github.sceneview.utils.worldToViewSpace
 
 typealias FilamentCamera = Camera
 
@@ -139,16 +152,7 @@ interface CameraComponent : Component {
         near: Double = camera.near.toDouble(),
         far: Double = camera.cullingFar.toDouble(),
         inProjectionForCulling: Transform = inProjection
-    ) = if (inProjection != inProjectionForCulling) {
-        camera.setCustomProjection(
-            inProjection.toColumnsDoubleArray(),
-            inProjectionForCulling.toColumnsDoubleArray(),
-            near,
-            far
-        )
-    } else {
-        camera.setCustomProjection(inProjection.toColumnsDoubleArray(), near, far)
-    }
+    ) = camera.setCustomProjection(inProjection, near, far, inProjectionForCulling)
 
     /**
      * Sets an additional matrix that scales the projection matrix.
@@ -175,7 +179,7 @@ interface CameraComponent : Component {
      * @see Camera.setLensProjection
      * @see Camera.setCustomProjection
      */
-    fun setScaling(scaling: Float2) = camera.setScaling(scaling.x.toDouble(), scaling.y.toDouble())
+    fun setScaling(scaling: Float2) = camera.setScaling(scaling)
 
     /**
      * Sets an additional matrix that shifts (translates) the projection matrix.
@@ -200,17 +204,7 @@ interface CameraComponent : Component {
      * @param center position of the point in world space the camera is looking at
      * @param up unit vector denoting the camera's "up" direction
      */
-    fun lookAt(eye: Position, center: Position, up: Direction) = camera.lookAt(
-        eye.x.toDouble(),
-        eye.y.toDouble(),
-        eye.z.toDouble(),
-        center.x.toDouble(),
-        center.y.toDouble(),
-        center.z.toDouble(),
-        up.x.toDouble(),
-        up.y.toDouble(),
-        up.z.toDouble()
-    )
+    fun lookAt(eye: Position, center: Position, up: Direction) = camera.lookAt(eye, center, up)
 
     /**
      * Gets the distance to the near plane
@@ -231,10 +225,10 @@ interface CameraComponent : Component {
      *
      * Transform containing the camera's projection as a column-major matrix.
      */
-    var projectionTransform: Transform
-        get() = DoubleArray(16).apply { camera.getProjectionMatrix(this) }.toTransform()
+    var projectionTransform
+        get() = camera.projectionTransform
         set(value) {
-            setCustomProjection(value)
+            camera.projectionTransform = value
         }
 
     /**
@@ -243,10 +237,7 @@ interface CameraComponent : Component {
      *
      * Transform containing the camera's projection as a column-major matrix.
      */
-    val cullingProjectionTransform: Transform
-        get() = DoubleArray(16).apply {
-            camera.getCullingProjectionMatrix(this)
-        }.toTransform()
+    val cullingProjectionTransform get() = camera.cullingProjectionTransform
 
     /**
      * Returns the scaling amount used to scale the projection matrix.
@@ -255,7 +246,7 @@ interface CameraComponent : Component {
      *
      * @see setScaling
      */
-    val scaling: Float4 get() = DoubleArray(4).apply { camera.getScaling(this) }.toFloat4()
+    val scaling: Float4 get() = camera.scaling
 
     /**
      * The camera's model matrix.
@@ -276,9 +267,9 @@ interface CameraComponent : Component {
      * The camera position and orientation provided as a **rigid transform** matrix.
      */
     var modelTransform: Transform
-        get() = FloatArray(16).apply { camera.getModelMatrix(this) }.toTransform()
+        get() = camera.modelTransform
         set(value) {
-            camera.setModelMatrix(value.toColumnsFloatArray())
+            camera.modelTransform = value
         }
 
     /**
@@ -286,8 +277,7 @@ interface CameraComponent : Component {
      *
      * Transform containing the camera's column-major view matrix.
      */
-    val viewTransform: Transform
-        get() = FloatArray(16).apply { camera.getViewMatrix(this) }.toTransform()
+    val viewTransform: Transform get() = camera.viewTransform
 
     /**
      * Retrieves the camera left unit vector in world space, that is a unit vector that points to
@@ -295,8 +285,7 @@ interface CameraComponent : Component {
      *
      * Float3 Direction containing the camera's left vector in world units.
      */
-    val leftDirection: Direction
-        get() = FloatArray(3).apply { camera.getLeftVector(this) }.toDirection()
+    val leftDirection: Direction get() = camera.leftDirection
 
     /**
      * Retrieves the camera up unit vector in world space, that is a unit vector that points up with
@@ -304,8 +293,7 @@ interface CameraComponent : Component {
      *
      * Float3 Direction containing the camera's up vector in world units.
      */
-    val upDirection: Direction
-        get() = FloatArray(3).apply { camera.getUpVector(this) }.toDirection()
+    val upDirection: Direction get() = camera.upDirection
 
     /**
      * Retrieves the camera forward unit vector in world space, that is a unit vector that points
@@ -313,8 +301,7 @@ interface CameraComponent : Component {
      *
      * Float3 Direction containing the camera's forward vector in world units.
      */
-    val forwardDirection: Direction
-        get() = FloatArray(3).apply { camera.getForwardVector(this) }.toDirection()
+    val forwardDirection: Direction get() = camera.forwardDirection
 
     /**
      * Sets this camera's exposure (default is f/16, 1/125s, 100 ISO)

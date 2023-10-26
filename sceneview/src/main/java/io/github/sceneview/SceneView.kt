@@ -430,12 +430,11 @@ open class SceneView @JvmOverloads constructor(
      */
     fun setCameraNode(cameraNode: CameraNode) {
         if (_cameraNode != cameraNode) {
+            _cameraNode?.collisionSystem = null
             _cameraNode = cameraNode
-            if (width != 0 && height != 0) {
-                cameraNode.viewSize = Size(width, height)
-            }
+            cameraNode.collisionSystem = collisionSystem
+            cameraNode.setView(view)
             view.camera = cameraNode.camera
-            collisionSystem.cameraNode = cameraNode
         }
     }
 
@@ -478,98 +477,6 @@ open class SceneView @JvmOverloads constructor(
                 }
 
             }
-        }
-    }
-
-    /**
-     * Tests to see if a motion event is touching any nodes within the scene, based on a ray hit
-     * test whose origin is the screen position of the motion event.
-     *
-     * @param xPx x view coordinate in pixels
-     * @param yPx y view coordinate in pixels
-     *
-     * @return a list of [HitResult] ordered by distance from the screen
-     */
-    fun hitTest(xPx: Float, yPx: Float) = collisionSystem.hitTest(xPx, yPx)
-
-    /**
-     * Tests to see if a ray is hitting any nodes within the scene and outputs
-     *
-     * @param ray the ray to use for the test
-     *
-     * @return a list of [HitResult] ordered by closest to the ray origin that intersects with the
-     * ray.
-     *
-     * @see CameraNode.screenPointToRay
-     */
-    fun hitTest(ray: Ray) = collisionSystem.hitTest(ray)
-
-    /**
-     * Tests to see if the given node's collision shape overlaps the collision shape of any other
-     * nodes in the scene using [Node.collisionShape].
-     *
-     * The node used for testing does not need to be active.
-     *
-     * @param node The node to use for the test.
-     *
-     * @return A node that is overlapping the test node. If no node is overlapping the test node,
-     * then this is null. If multiple nodes are overlapping the test node, then this could be any of
-     * them.
-     */
-    fun overlapTest(node: Node) = node.collider?.let { collider ->
-        collisionSystem.intersects(collider)?.node
-    }
-
-    /**
-     * Tests to see if a node is overlapping any other nodes within the scene using
-     * [Node.collisionShape].
-     *
-     * The node used for testing does not need to be active.
-     *
-     * @param node The node to use for the test.
-     *
-     * @return A list of all nodes that are overlapping the test node. If no node is overlapping the
-     * test node, then the list is empty.
-     */
-    fun overlapTestAll(node: Node) = listOfNotNull {
-        node.collider?.let { collider ->
-            collisionSystem.intersectsAll(collider) {
-                it.node
-            }
-        }
-    }
-
-    /**
-     * Picks a node at given coordinates
-     *
-     * Filament picking works with a small delay, therefore, a callback is used.
-     * If no node is picked, the callback is invoked with a `null` value instead of a node.
-     *
-     * @param x The x coordinate within the `SceneView`.
-     * @param y The y coordinate within the `SceneView`.
-     * @param onPickingCompleted Called when picking completes.
-     */
-    fun pickNode(
-        x: Int,
-        y: Int,
-        onPickingCompleted: (
-            /** The Renderable Node at the picking query location  */
-            node: Node?,
-            /** The value of the depth buffer at the picking query location  */
-            depth: Float,
-            /** The fragment coordinate in GL convention at the picking query location  */
-            fragCoords: Float3
-        ) -> Unit
-    ) {
-        // Invert the y coordinate since its origin is at the bottom
-        val invertedY = height - 1 - y
-
-        view.pick(x, invertedY, pickingHandler) { result ->
-            onPickingCompleted(
-                childNodes.firstOrNull { it.entity == result.renderable },
-                result.depth,
-                result.fragCoords.toFloat3()
-            )
         }
     }
 
