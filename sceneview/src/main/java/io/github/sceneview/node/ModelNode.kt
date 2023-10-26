@@ -194,31 +194,12 @@ open class ModelNode(
     override var isTouchable = true
 
     init {
-        collisionShape = model.collisionShape
-
         if (autoAnimate && animator.animationCount > 0) {
             playAnimation(0)
         }
-        scaleToUnits?.let { scaleModel(it) }
-        centerOrigin?.let { centerModel(it) }
-    }
-
-    override fun onFrame(frameTimeNanos: Long) {
-        super.onFrame(frameTimeNanos)
-
-        model.popRenderable()
-
-        playingAnimations.forEach { (index, animation) ->
-            animator?.let { animator ->
-                val elapsedTimeSeconds = frameTimeNanos.intervalSeconds(animation.startTime)
-                animator.applyAnimation(index, elapsedTimeSeconds.toFloat())
-
-                if (!animation.loop && elapsedTimeSeconds >= animator.getAnimationDuration(index)) {
-                    playingAnimations.remove(index)
-                }
-            }
-        }
-        animator?.updateBoneMatrices()
+        scaleToUnits?.let { scaleToUnitCube(it) }
+        centerOrigin?.let { centerOrigin(it) }
+        updateCollisionShape()
     }
 
     /**
@@ -226,11 +207,11 @@ open class ModelNode(
      *
      * @param units the number of units of the cube to scale into.
      */
-    fun scaleModel(units: Float = 1.0f) {
+    fun scaleToUnitCube(units: Float = 1.0f) {
         val halfExtent = boundingBox.halfExtent.let { v ->
             Float3(v[0], v[1], v[2])
         }
-        rootNode?.scale = Scale(units / (max(halfExtent) * 2.0f))
+        rootNode.scale = Scale(units / (max(halfExtent) * 2.0f))
     }
 
     /**
@@ -241,10 +222,10 @@ open class ModelNode(
      * - center horizontal | bottom aligned = [0, -1, 0]
      * - left | top aligned: [-1, 1, 0]
      */
-    fun centerModel(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
+    fun centerOrigin(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
         val center = boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
         val halfExtent = boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
-        rootNode?.position = -(center + halfExtent * origin) * (rootNode?.scale ?: Scale(1.0f))
+        rootNode.position = -(center + halfExtent * origin) * rootNode.scale
     }
 
     /**
@@ -266,7 +247,7 @@ open class ModelNode(
      * @see Animator.getAnimationName
      */
     fun playAnimation(animationName: String, loop: Boolean = true) {
-        animator?.getAnimationIndex(animationName)?.let { playAnimation(it, loop) }
+        animator.getAnimationIndex(animationName)?.let { playAnimation(it, loop) }
     }
 
     fun stopAnimation(animationIndex: Int) {
@@ -274,7 +255,7 @@ open class ModelNode(
     }
 
     fun stopAnimation(animationName: String) {
-        animator?.getAnimationIndex(animationName)?.let { stopAnimation(it) }
+        animator.getAnimationIndex(animationName)?.let { stopAnimation(it) }
     }
 
     /**
@@ -299,7 +280,7 @@ open class ModelNode(
      * Gets the joint count at skin index in this instance.
      */
     open fun getJointCount(@IntRange(from = 0) skinIndex: Int = 0): Int =
-        modelInstance?.getJointCountAt(skinIndex) ?: 0
+        modelInstance.getJointCountAt(skinIndex)
 
     /**
      * Changes the material instances binding for the given primitives.
@@ -396,6 +377,28 @@ open class ModelNode(
      */
     fun setGlobalBlendOrderEnabled(enabled: Boolean) {
         renderableNodes.forEach { it.setGlobalBlendOrderEnabled(enabled) }
+    }
+
+    fun updateCollisionShape() {
+        rootNode.collisionShape = model.collisionShape
+    }
+
+    override fun onFrame(frameTimeNanos: Long) {
+        super.onFrame(frameTimeNanos)
+
+        model.popRenderable()
+
+        playingAnimations.forEach { (index, animation) ->
+            animator.let { animator ->
+                val elapsedTimeSeconds = frameTimeNanos.intervalSeconds(animation.startTime)
+                animator.applyAnimation(index, elapsedTimeSeconds.toFloat())
+
+                if (!animation.loop && elapsedTimeSeconds >= animator.getAnimationDuration(index)) {
+                    playingAnimations.remove(index)
+                }
+            }
+        }
+        animator.updateBoneMatrices()
     }
 }
 
