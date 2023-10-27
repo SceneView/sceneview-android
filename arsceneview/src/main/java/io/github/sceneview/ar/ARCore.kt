@@ -51,7 +51,7 @@ class ARCore(
     var checkCameraPermission = true
 
     /**
-     * ### Enable/Disable Google Play Services for AR availability check, auto install and update
+     * Enable/Disable Google Play Services for AR availability check, auto install and update
      */
     var checkAvailability = true
 
@@ -59,6 +59,7 @@ class ARCore(
     lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
     private var cameraPermissionRequested = false
     lateinit var appSettingsLauncher: ActivityResultLauncher<Intent>
+
     private var appSettingsRequested = false
     private var installRequested = false
     internal var session: ARSession? = null
