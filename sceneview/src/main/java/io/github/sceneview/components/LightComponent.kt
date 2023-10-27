@@ -10,10 +10,10 @@ import io.github.sceneview.managers.getQuaternion
 import io.github.sceneview.managers.setDirection
 import io.github.sceneview.managers.setPosition
 import io.github.sceneview.managers.setQuaternion
+import io.github.sceneview.math.Color
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
-import io.github.sceneview.utils.Color
-import io.github.sceneview.utils.toColor
+import io.github.sceneview.math.toColor
 
 interface LightComponent : Component {
 

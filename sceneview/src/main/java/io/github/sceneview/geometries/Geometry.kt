@@ -8,10 +8,10 @@ import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.max
 import dev.romainguy.kotlin.math.min
 import io.github.sceneview.math.Box
+import io.github.sceneview.math.Color
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.normalToTangent
-import io.github.sceneview.utils.Color
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 

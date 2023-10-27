@@ -9,10 +9,10 @@ import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Mat4
+import io.github.sceneview.math.Color
+import io.github.sceneview.math.colorOf
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.TextureSamplerExternal
-import io.github.sceneview.utils.Color
-import io.github.sceneview.utils.colorOf
 
 const val kMaterialDefaultMetallic = 0.0f
 const val kMaterialDefaultRoughness = 0.4f
