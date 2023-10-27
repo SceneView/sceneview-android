@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.util.Size
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import com.google.android.filament.Engine
@@ -318,8 +319,6 @@ open class ARSceneView @JvmOverloads constructor(
         hitResult: HitResult
     ) -> Unit)? = null
 
-    private var _onSessionCreated = mutableListOf<(session: Session) -> Unit>()
-
     val onLightEstimationUpdated: ((estimation: LightEstimator.Estimation?) -> Unit)? = null
 
     var onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? =
@@ -328,25 +327,22 @@ open class ARSceneView @JvmOverloads constructor(
     override val cameraGestureDetector = null
     override val cameraManipulator = null
 
+    private val lifecycleObserver = LifeCycleObserver()
+    override var lifecycle: Lifecycle?
+        get() = super.lifecycle
+        set(value) {
+            super.lifecycle?.removeObserver(lifecycleObserver)
+            super.lifecycle = value
+            value?.addObserver(lifecycleObserver)
+        }
+
+    private var _onSessionCreated = mutableListOf<(session: Session) -> Unit>()
+
     init {
         setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
             defaultCameraNode = it
         })
-    }
-
-    override fun onCreate(owner: LifecycleOwner) {
-        super.onCreate(owner)
-        arCore.create(context, activity, sessionFeatures)
-    }
-
-    override fun onResume(owner: LifecycleOwner) {
-        super.onResume(owner)
-        arCore.resume(context, activity)
-    }
-
-    override fun onPause(owner: LifecycleOwner) {
-        super.onPause(owner)
-        arCore.pause()
+        sharedLifecycle?.addObserver(lifecycleObserver)
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
@@ -555,6 +551,25 @@ open class ARSceneView @JvmOverloads constructor(
             // Since we define a light that has the same intensity as the sun, it guarantees a
             // proper exposure
             setExposure(16.0f, 1.0f / 125.0f, 100.0f)
+        }
+    }
+
+
+    private inner class LifeCycleObserver : DefaultLifecycleObserver {
+        override fun onCreate(owner: LifecycleOwner) {
+            arCore.create(context, activity, sessionFeatures)
+        }
+
+        override fun onResume(owner: LifecycleOwner) {
+            arCore.resume(context, activity)
+        }
+
+        override fun onPause(owner: LifecycleOwner) {
+            arCore.pause()
+        }
+
+        override fun onDestroy(owner: LifecycleOwner) {
+            arCore.destroy()
         }
     }
 

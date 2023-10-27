@@ -8,7 +8,6 @@ import android.media.MediaRecorder
 import android.opengl.EGLContext
 import android.util.AttributeSet
 import android.view.*
-import android.view.Choreographer.FrameCallback
 import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
@@ -144,7 +143,6 @@ open class SceneView @JvmOverloads constructor(
      */
     sharedSkybox: Skybox? = null
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes),
-    DefaultLifecycleObserver,
     GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
 
     private var defaultEngine: Engine? = null
@@ -346,13 +344,6 @@ open class SceneView @JvmOverloads constructor(
             context as? ComponentActivity
         }
 
-    var lifecycle: Lifecycle? = sharedLifecycle
-        set(value) {
-            field?.removeObserver(this)
-            field = value
-            value?.addObserver(this)
-        }
-
     protected open val cameraGestureDetector: CameraGestureDetector? by lazy {
         CameraGestureDetector(this, CameraGestureListener())
     }
@@ -379,14 +370,15 @@ open class SceneView @JvmOverloads constructor(
     private val displayHelper = DisplayHelper(context)
     private var swapChain: SwapChain? = null
 
-    private val frameCallback = object : FrameCallback {
-        override fun doFrame(timestamp: Long) {
-            // Always post the callback for the next frame.
-            Choreographer.getInstance().postFrameCallback(this)
-
-            onFrame(timestamp)
+    private val lifecycleObserver = LifeCycleObserver()
+    open var lifecycle: Lifecycle? = sharedLifecycle
+        set(value) {
+            field?.removeObserver(lifecycleObserver)
+            field = value
+            value?.addObserver(lifecycleObserver)
         }
-    }
+
+    private val frameCallback = FrameCallback()
 
     private var _viewAttachmentManager: ViewAttachmentManager? = null
     protected val viewAttachmentManager
@@ -413,7 +405,7 @@ open class SceneView @JvmOverloads constructor(
             defaultCameraNode = it
         })
 
-        lifecycle?.addObserver(this)
+        sharedLifecycle?.addObserver(lifecycleObserver)
     }
 
     /**
@@ -579,25 +571,6 @@ open class SceneView @JvmOverloads constructor(
         lastFrameTimeNanos = frameTimeNanos
     }
 
-    override fun onResume(owner: LifecycleOwner) {
-        super.onResume(owner)
-
-        _viewAttachmentManager?.onResume()
-
-        // Start the drawing when the renderer is resumed.  Remove and re-add the callback
-        // to avoid getting called twice.
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
-        Choreographer.getInstance().postFrameCallback(frameCallback)
-    }
-
-    override fun onPause(owner: LifecycleOwner) {
-        super.onPause(owner)
-
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
-
-        _viewAttachmentManager?.onPause()
-    }
-
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
 
@@ -617,13 +590,6 @@ open class SceneView @JvmOverloads constructor(
         view.viewport = Viewport(0, 0, width, height)
         cameraManipulator?.setViewport(width, height)
         cameraNode.updateProjection()
-    }
-
-    override fun onDestroy(owner: LifecycleOwner) {
-        super.onDestroy(owner)
-        if (!isDestroyed) {
-            destroy()
-        }
     }
 
     /**
@@ -689,7 +655,37 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    inner class SurfaceCallback : UiHelper.RendererCallback {
+    private inner class LifeCycleObserver : DefaultLifecycleObserver {
+        override fun onResume(owner: LifecycleOwner) {
+            _viewAttachmentManager?.onResume()
+
+            // Start the drawing when the renderer is resumed.  Remove and re-add the callback
+            // to avoid getting called twice.
+            Choreographer.getInstance().removeFrameCallback(frameCallback)
+            Choreographer.getInstance().postFrameCallback(frameCallback)
+        }
+
+        override fun onPause(owner: LifecycleOwner) {
+            Choreographer.getInstance().removeFrameCallback(frameCallback)
+
+            _viewAttachmentManager?.onPause()
+        }
+
+        override fun onDestroy(owner: LifecycleOwner) {
+            destroy()
+        }
+    }
+
+    private inner class FrameCallback : Choreographer.FrameCallback {
+        override fun doFrame(timestamp: Long) {
+            // Always post the callback for the next frame.
+            Choreographer.getInstance().postFrameCallback(this)
+
+            onFrame(timestamp)
+        }
+    }
+
+    private inner class SurfaceCallback : UiHelper.RendererCallback {
         override fun onNativeWindowChanged(surface: Surface) {
             swapChain?.let { runCatching { engine.destroySwapChain(it) } }
             swapChain = engine.createSwapChain(surface)
