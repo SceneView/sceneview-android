@@ -21,11 +21,11 @@ import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setReflectance
 import io.github.sceneview.material.setRoughness
 import io.github.sceneview.material.setTexture
+import io.github.sceneview.math.Color
+import io.github.sceneview.math.colorOf
 import io.github.sceneview.safeDestroyMaterial
 import io.github.sceneview.safeDestroyMaterialInstance
 import io.github.sceneview.texture.ImageTexture
-import io.github.sceneview.utils.Color
-import io.github.sceneview.utils.colorOf
 import io.github.sceneview.utils.loadFileBuffer
 import io.github.sceneview.utils.readFileBuffer
 import kotlinx.coroutines.CoroutineScope

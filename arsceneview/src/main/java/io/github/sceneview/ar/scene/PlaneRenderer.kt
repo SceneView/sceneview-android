@@ -23,7 +23,7 @@ import io.github.sceneview.material.setTexture
 import io.github.sceneview.safeDestroyMaterial
 import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.texture.ImageTexture
-import io.github.sceneview.utils.Color
+import io.github.sceneview.math.Color
 
 /**
  * Control rendering of ARCore planes.

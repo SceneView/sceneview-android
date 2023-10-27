@@ -6,12 +6,12 @@ import com.google.android.filament.LightManager
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.Entity
 import io.github.sceneview.EntityInstance
+import io.github.sceneview.math.Color
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.lookTowards
 import io.github.sceneview.math.toDirection
 import io.github.sceneview.math.toPosition
-import io.github.sceneview.utils.Color
 
 /**
  * The initial position of the light in world space.

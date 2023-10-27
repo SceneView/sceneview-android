@@ -37,7 +37,6 @@ import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.ar.node.PoseNode
 import io.github.sceneview.ar.scene.PlaneRenderer
-import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.node.LightNode
@@ -45,7 +44,7 @@ import io.github.sceneview.node.Node
 import io.github.sceneview.utils.setKeepScreenOn
 
 /**
- * ### A SurfaceView that integrates with ARCore and renders a scene
+ * A SurfaceView that integrates with ARCore and renders a scene
  *
  * @param sessionFeatures Fundamental session features
  */
@@ -206,6 +205,30 @@ open class ARSceneView @JvmOverloads constructor(
      */
     val planeRenderer = PlaneRenderer(engine, modelLoader, materialLoader, scene)
 
+    final override var indirectLight: IndirectLight? = super.indirectLight
+        set(value) {
+            super.indirectLight = value
+            field = value
+        }
+
+    var indirectLightEstimated: IndirectLight?
+        get() = super.indirectLight
+        private set(value) {
+            super.indirectLight = value
+        }
+
+    final override var mainLightNode: LightNode? = super.mainLightNode
+        set(value) {
+            super.mainLightNode = value
+            field = value
+        }
+
+    var mainLightEstimatedNode: LightNode?
+        get() = super.mainLightNode
+        set(value) {
+            super.mainLightNode = value
+        }
+
     /**
      * The environment and main light that are estimated by AR Core to render the scene.
      *
@@ -216,41 +239,32 @@ open class ARSceneView @JvmOverloads constructor(
 
     var lightEstimation: LightEstimator.Estimation? = null
         private set(value) {
-            value?.mainLightColorFactor?.let {
-                mainLightNode?.color = DEFAULT_MAIN_LIGHT_COLOR * it
-            }
-            value?.mainLightIntensityFactor?.let {
-                mainLightNode?.intensity = DEFAULT_MAIN_LIGHT_INTENSITY * it
-            }
-            value?.mainLightDirection?.let {
-                mainLightNode?.lightDirection = it
-            }
-            value?.environment?.let {
-                environment = it
-                // Delete previous environment only in case of new one
-                if (field?.environment != it) {
-                    field?.environment?.destroy()
-                }
-            }
             field = value
+            if (value != null) {
+                mainLightNode?.let { mainLightNode ->
+                    value.mainLightColor?.let {
+                        mainLightEstimatedNode?.color = mainLightNode.color * it
+                    }
+                    value.mainLightIntensity?.let {
+                        mainLightEstimatedNode?.intensity = mainLightNode.intensity * it
+                    }
+                    value.mainLightDirection?.let {
+                        mainLightEstimatedNode?.lightDirection = it
+                    }
+                }
 
-            onLightEstimationUpdated?.invoke(value)
-        }
-
-    override var environment: Environment?
-        get() = super.environment
-        set(value) {
-            super.environment = value
-            lightEstimator?.baseSphericalHarmonics = value?.sphericalHarmonics
-        }
-
-    override var indirectLight: IndirectLight?
-        get() = super.indirectLight
-        set(value) {
-            if (super.indirectLight != value) {
-                super.indirectLight = value
-                lightEstimator?.setBaseIndirectLight(value)
+                indirectLightEstimated = IndirectLight.Builder().apply {
+                    value.irradiance?.let {
+                        irradiance(3, it)
+                    } ?: indirectLight?.irradianceTexture?.let { irradiance(it) }
+                    value.reflections?.let {
+                        reflections(it)
+                    } ?: indirectLight?.reflectionsTexture?.let { reflections(it) }
+                    indirectLight?.intensity?.let { intensity(it) }
+                    indirectLight?.getRotation(null)?.let { rotation(it) }
+                }.build(engine)
             }
+            onLightEstimationUpdated?.invoke(value)
         }
 
     var trackingFailureReason: TrackingFailureReason? = null

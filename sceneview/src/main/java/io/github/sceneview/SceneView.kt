@@ -6,8 +6,6 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.ColorDrawable
 import android.media.MediaRecorder
 import android.opengl.EGLContext
-import android.os.Handler
-import android.os.Looper
 import android.util.AttributeSet
 import android.view.*
 import android.view.Choreographer.FrameCallback
@@ -40,6 +38,8 @@ import io.github.sceneview.loaders.loadEnvironment
 import io.github.sceneview.managers.color
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
+import io.github.sceneview.math.colorOf
+import io.github.sceneview.math.toColor
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
@@ -186,27 +186,25 @@ open class SceneView @JvmOverloads constructor(
     open val cameraNode: CameraNode get() = _cameraNode!!
 
     private var defaultMainLight: LightNode? = null
+    private var _mainLightNode: LightNode? =
+        sharedMainLightNode ?: createMainLightNode(engine).also { defaultMainLight = it }
 
     /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
      */
-    var mainLightNode: LightNode? = sharedMainLightNode ?: createMainLightNode(engine).also {
-        defaultMainLight = it
-    }
+    open var mainLightNode: LightNode?
+        get() = _mainLightNode
         set(value) {
-            if (field != value) {
-                replaceNode(field, value)
-                field = value
+            if (_mainLightNode != value) {
+                _mainLightNode?.let { removeNode(it) }
+                _mainLightNode = value
+                value?.let { addNode(it) }
             }
         }
 
     private var defaultIndirectLight: IndirectLight? = null
-    private var _indirectLight: IndirectLight? =
-        sharedIndirectLight ?: createIndirectLight(engine).also {
-            defaultIndirectLight = it
-        }
 
     /**
      * IndirectLight is used to simulate environment lighting.
@@ -218,11 +216,10 @@ open class SceneView @JvmOverloads constructor(
      * @see IndirectLight
      * @see Scene.setIndirectLight
      */
-    open var indirectLight: IndirectLight? = _indirectLight
+    open var indirectLight: IndirectLight?
         get() = scene.indirectLight
         set(value) {
-            if (field != value) {
-                field = value
+            if (scene.indirectLight != value) {
                 scene.indirectLight = value
             }
         }
@@ -239,11 +236,10 @@ open class SceneView @JvmOverloads constructor(
      * @see Skybox
      * @see Scene.setSkybox
      */
-    var skybox: Skybox? = sharedSkybox ?: createSkybox(engine).also { defaultSkybox = it }
+    var skybox: Skybox?
         get() = scene.skybox
         set(value) {
-            if (field != value) {
-                field = value
+            if (scene.skybox != value) {
                 scene.skybox = value
             }
         }
@@ -399,7 +395,6 @@ open class SceneView @JvmOverloads constructor(
         }
 
     private var lastTouchEvent: MotionEvent? = null
-    private val pickingHandler by lazy { Handler(Looper.getMainLooper()) }
 
     private var surfaceMirrorer: SurfaceMirrorer? = null
 
@@ -408,9 +403,11 @@ open class SceneView @JvmOverloads constructor(
     init {
         view.scene = scene
 
-        mainLightNode?.let { addNode(it) }
-        scene.skybox = skybox
-        scene.indirectLight = _indirectLight
+        _mainLightNode?.let { addNode(it) }
+        scene.skybox = sharedSkybox ?: createSkybox(engine).also { defaultSkybox = it }
+        scene.indirectLight = sharedIndirectLight ?: createIndirectLight(engine).also {
+            defaultIndirectLight = it
+        }
 
         setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
             defaultCameraNode = it
@@ -776,9 +773,10 @@ open class SceneView @JvmOverloads constructor(
         const val DEFAULT_MAIN_LIGHT_COLOR_TEMPERATURE = 6_500.0f
         const val DEFAULT_MAIN_LIGHT_COLOR_INTENSITY = 100_000.0f
 
-        val DEFAULT_OBJECT_POSITION = Position(0.0f, 0.0f, -4.0f)
         val DEFAULT_MAIN_LIGHT_COLOR = Colors.cct(DEFAULT_MAIN_LIGHT_COLOR_TEMPERATURE).toColor()
         val DEFAULT_MAIN_LIGHT_INTENSITY = DEFAULT_MAIN_LIGHT_COLOR_INTENSITY
+
+        val DEFAULT_OBJECT_POSITION = Position(0.0f, 0.0f, -4.0f)
 
         fun createEglContext() = OpenGL.createEglContext()
         fun createEngine(eglContext: EGLContext) = Engine.create(eglContext)
