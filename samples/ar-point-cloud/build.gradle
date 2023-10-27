@@ -11,7 +11,7 @@ android {
         minSdk 28
         targetSdk 34
         versionCode 1
-        versionName "1.2.1"
+        versionName "1.2.2"
     }
 
     buildTypes {
@@ -35,6 +35,6 @@ dependencies {
     implementation project(":samples:common")
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:1.2.1"
+    releaseImplementation "io.github.sceneview:arsceneview:1.2.2"
     debugImplementation project(":arsceneview")
 }
