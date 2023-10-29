@@ -34,7 +34,7 @@ open class ImageNode(
     size = size,
     center = center,
     normal = normal,
-    materialInstances = { imageMaterial.instance },
+    materialInstance = imageMaterial.instance,
     parent = parent,
     renderableApply = renderableApply
 ) {
