@@ -38,7 +38,7 @@ open class VideoNode(
     size = size,
     center = center,
     normal = normal,
-    materialInstances = { videoMaterial.instance },
+    materialInstance = videoMaterial.instance,
     parent = parent,
     renderableApply = renderableApply
 ) {
