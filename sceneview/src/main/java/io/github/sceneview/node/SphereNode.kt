@@ -9,10 +9,10 @@ import io.github.sceneview.math.Position
 
 open class SphereNode(
     engine: Engine,
-    radius: Float,
-    center: Position,
-    stacks: Int,
-    slices: Int,
+    radius: Float = Sphere.DEFAULT_RADIUS,
+    center: Position = Sphere.DEFAULT_CENTER,
+    stacks: Int = Sphere.DEFAULT_STACKS,
+    slices: Int = Sphere.DEFAULT_SLICES,
     /**
      * Binds a material instance to the specified primitive.
      *
@@ -49,10 +49,10 @@ open class SphereNode(
 
     constructor(
         engine: Engine,
-        radius: Float,
-        center: Position,
-        stacks: Int,
-        slices: Int,
+        radius: Float = Sphere.DEFAULT_RADIUS,
+        center: Position = Sphere.DEFAULT_CENTER,
+        stacks: Int = Sphere.DEFAULT_STACKS,
+        slices: Int = Sphere.DEFAULT_SLICES,
         /**
          * Binds a material instance to all primitives.
          */

@@ -9,10 +9,10 @@ import io.github.sceneview.math.Position
 
 open class CylinderNode(
     engine: Engine,
-    radius: Float,
-    height: Float,
-    center: Position,
-    sideCount: Int,
+    radius: Float = Cylinder.DEFAULT_RADIUS,
+    height: Float = Cylinder.DEFAULT_HEIGHT,
+    center: Position = Cylinder.DEFAULT_CENTER,
+    sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
     /**
      * Binds a material instance to the specified primitive.
      *
@@ -49,10 +49,10 @@ open class CylinderNode(
 
     constructor(
         engine: Engine,
-        radius: Float,
-        height: Float,
-        center: Position,
-        sideCount: Int,
+        radius: Float = Cylinder.DEFAULT_RADIUS,
+        height: Float = Cylinder.DEFAULT_HEIGHT,
+        center: Position = Cylinder.DEFAULT_CENTER,
+        sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
         /**
          * Binds a material instance to all primitives.
          */
