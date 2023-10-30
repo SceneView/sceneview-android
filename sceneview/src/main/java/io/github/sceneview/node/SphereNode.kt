@@ -14,10 +14,6 @@ open class SphereNode(
     stacks: Int,
     slices: Int,
     /**
-     * Binds a material instance to all primitives.
-     */
-    materialInstance: MaterialInstance? = null,
-    /**
      * Binds a material instance to the specified primitive.
      *
      * If no material is specified for a given primitive, Filament will fall back to a basic
@@ -26,7 +22,7 @@ open class SphereNode(
      * Should return the material to bind for the zero-based index of the primitive, must be less
      * than the [Geometry.submeshes] size passed to constructor.
      */
-    materialInstances: (index: Int) -> MaterialInstance? = { materialInstance },
+    materialInstances: (index: Int) -> MaterialInstance,
     /**
      * The parent node.
      *
@@ -46,11 +42,34 @@ open class SphereNode(
         .stacks(stacks)
         .slices(slices)
         .build(engine),
-    materialInstance = materialInstance,
     materialInstances = materialInstances,
     parent = parent,
     renderableApply = renderableApply
 ) {
+
+    constructor(
+        engine: Engine,
+        radius: Float,
+        center: Position,
+        stacks: Int,
+        slices: Int,
+        /**
+         * Binds a material instance to all primitives.
+         */
+        materialInstance: MaterialInstance,
+        parent: Node? = null,
+        renderableApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        radius = radius,
+        center = center,
+        stacks = stacks,
+        slices = slices,
+        materialInstances = { materialInstance },
+        parent = parent,
+        renderableApply = renderableApply
+    )
+
     val radius get() = geometry.radius
     val center get() = geometry.center
     val stacks get() = geometry.stacks
