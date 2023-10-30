@@ -45,7 +45,7 @@ open class GeometryNode(
      * Should return the material to bind for the zero-based index of the primitive, must be less
      * than the [Geometry.submeshes] size passed to constructor.
      */
-    materialInstances: (index: Int) -> MaterialInstance,
+    materialInstances: (index: Int) -> MaterialInstance?,
     /**
      * The parent node.
      *
@@ -75,7 +75,7 @@ open class GeometryNode(
         /**
          * Binds a material instance to all primitives.
          */
-        materialInstance: MaterialInstance,
+        materialInstance: MaterialInstance?,
         parent: Node? = null,
         renderableApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
@@ -105,7 +105,7 @@ open class BaseGeometryNode<T : Geometry>(
      * Should return the material to bind for the zero-based index of the primitive, must be less
      * than the [Geometry.submeshes] size passed to constructor.
      */
-    materialInstances: (index: Int) -> MaterialInstance,
+    materialInstances: (index: Int) -> MaterialInstance?,
     /**
      * The parent node.
      *
@@ -125,7 +125,7 @@ open class BaseGeometryNode<T : Geometry>(
         /**
          * Binds a material instance to all primitives.
          */
-        materialInstance: MaterialInstance,
+        materialInstance: MaterialInstance?,
         parent: Node? = null,
         renderableApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
@@ -141,7 +141,7 @@ open class BaseGeometryNode<T : Geometry>(
             .geometry(geometry)
             .apply {
                 geometry.submeshes.forEachIndexed { index, _ ->
-                    material(index, materialInstances(index))
+                    materialInstances(index)?.let { material(index, it) }
                 }
             }
             .apply(renderableApply)

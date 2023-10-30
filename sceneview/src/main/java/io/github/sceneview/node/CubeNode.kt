@@ -21,7 +21,7 @@ open class CubeNode(
      * Should return the material to bind for the zero-based index of the primitive, must be less
      * than the [Geometry.submeshes] size passed to constructor.
      */
-    materialInstances: (index: Int) -> MaterialInstance,
+    materialInstances: (index: Int) -> MaterialInstance?,
     /**
      * The parent node.
      *
@@ -51,7 +51,7 @@ open class CubeNode(
         /**
          * Binds a material instance to all primitives.
          */
-        materialInstance: MaterialInstance,
+        materialInstance: MaterialInstance?,
         parent: Node? = null,
         renderableApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
