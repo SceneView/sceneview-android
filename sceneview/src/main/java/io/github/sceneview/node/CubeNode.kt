@@ -39,7 +39,6 @@ open class CubeNode(
         .size(size)
         .center(center)
         .build(engine),
-    materialInstance = materialInstance,
     materialInstances = materialInstances,
     parent = parent,
     renderableApply = renderableApply
