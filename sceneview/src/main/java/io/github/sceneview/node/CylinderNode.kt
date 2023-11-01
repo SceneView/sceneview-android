@@ -9,14 +9,10 @@ import io.github.sceneview.math.Position
 
 open class CylinderNode(
     engine: Engine,
-    radius: Float,
-    height: Float,
-    center: Position,
-    sideCount: Int,
-    /**
-     * Binds a material instance to all primitives.
-     */
-    materialInstance: MaterialInstance? = null,
+    radius: Float = Cylinder.DEFAULT_RADIUS,
+    height: Float = Cylinder.DEFAULT_HEIGHT,
+    center: Position = Cylinder.DEFAULT_CENTER,
+    sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
     /**
      * Binds a material instance to the specified primitive.
      *
@@ -26,7 +22,7 @@ open class CylinderNode(
      * Should return the material to bind for the zero-based index of the primitive, must be less
      * than the [Geometry.submeshes] size passed to constructor.
      */
-    materialInstances: (index: Int) -> MaterialInstance? = { materialInstance },
+    materialInstances: (index: Int) -> MaterialInstance?,
     /**
      * The parent node.
      *
@@ -46,11 +42,34 @@ open class CylinderNode(
         .center(center)
         .sideCount(sideCount)
         .build(engine),
-    materialInstance = materialInstance,
     materialInstances = materialInstances,
     parent = parent,
     renderableApply = renderableApply
 ) {
+
+    constructor(
+        engine: Engine,
+        radius: Float = Cylinder.DEFAULT_RADIUS,
+        height: Float = Cylinder.DEFAULT_HEIGHT,
+        center: Position = Cylinder.DEFAULT_CENTER,
+        sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
+        /**
+         * Binds a material instance to all primitives.
+         */
+        materialInstance: MaterialInstance?,
+        parent: Node? = null,
+        renderableApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        radius = radius,
+        height = height,
+        center = center,
+        sideCount = sideCount,
+        materialInstances = { materialInstance },
+        parent = parent,
+        renderableApply = renderableApply
+    )
+
     val radius get() = geometry.radius
     val height get() = geometry.height
     val center get() = geometry.center

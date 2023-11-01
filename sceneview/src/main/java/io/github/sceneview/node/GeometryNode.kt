@@ -37,10 +37,6 @@ open class GeometryNode(
     vertices: List<Geometry.Vertex> = listOf(),
     submeshes: List<Geometry.Submesh> = listOf(),
     /**
-     * Binds a material instance to all primitives.
-     */
-    materialInstance: MaterialInstance? = null,
-    /**
      * Binds a material instance to the specified primitive.
      *
      * If no material is specified for a given primitive, Filament will fall back to a basic
@@ -49,7 +45,7 @@ open class GeometryNode(
      * Should return the material to bind for the zero-based index of the primitive, must be less
      * than the [Geometry.submeshes] size passed to constructor.
      */
-    materialInstances: (index: Int) -> MaterialInstance? = { materialInstance },
+    materialInstances: (index: Int) -> MaterialInstance?,
     /**
      * The parent node.
      *
@@ -67,12 +63,30 @@ open class GeometryNode(
         .vertices(vertices)
         .submeshes(submeshes)
         .build(engine),
-    materialInstance = materialInstance,
     materialInstances = materialInstances,
     parent = parent,
     renderableApply = renderableApply
 ) {
-    val vertexBuffer get() = geometry.vertexBuffer
+
+    constructor(
+        engine: Engine,
+        vertices: List<Geometry.Vertex> = listOf(),
+        submeshes: List<Geometry.Submesh> = listOf(),
+        /**
+         * Binds a material instance to all primitives.
+         */
+        materialInstance: MaterialInstance?,
+        parent: Node? = null,
+        renderableApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        vertices = vertices,
+        submeshes = submeshes,
+        materialInstances = { materialInstance },
+        parent = parent,
+        renderableApply = renderableApply
+    )
+
     val indexBuffer get() = geometry.indexBuffer
 
     fun setVertices(vertices: List<Geometry.Vertex>) = geometry.setVertices(vertices)
@@ -83,10 +97,6 @@ open class BaseGeometryNode<T : Geometry>(
     engine: Engine,
     val geometry: T,
     /**
-     * Binds a material instance to all primitives.
-     */
-    materialInstance: MaterialInstance? = null,
-    /**
      * Binds a material instance to the specified primitive.
      *
      * If no material is specified for a given primitive, Filament will fall back to a basic
@@ -95,7 +105,7 @@ open class BaseGeometryNode<T : Geometry>(
      * Should return the material to bind for the zero-based index of the primitive, must be less
      * than the [Geometry.submeshes] size passed to constructor.
      */
-    materialInstances: (index: Int) -> MaterialInstance? = { materialInstance },
+    materialInstances: (index: Int) -> MaterialInstance?,
     /**
      * The parent node.
      *
@@ -108,6 +118,23 @@ open class BaseGeometryNode<T : Geometry>(
     parent: Node? = null,
     renderableApply: RenderableManager.Builder.() -> Unit = {}
 ) : RenderableNode(engine = engine, parent = parent) {
+
+    constructor(
+        engine: Engine,
+        geometry: T,
+        /**
+         * Binds a material instance to all primitives.
+         */
+        materialInstance: MaterialInstance?,
+        parent: Node? = null,
+        renderableApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        geometry = geometry,
+        materialInstances = { materialInstance },
+        parent = parent,
+        renderableApply = renderableApply
+    )
 
     init {
         RenderableManager.Builder(geometry.submeshes.size)
