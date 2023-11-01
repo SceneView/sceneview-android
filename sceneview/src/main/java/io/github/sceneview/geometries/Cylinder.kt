@@ -198,8 +198,8 @@ class Cylinder(
                 val bottomRight = side + 1
                 val topLeft = side + sideCount + 1
                 val topRight = side + sideCount + 2
-                val lowerCenterIndex = 2 * sideCount
-                val upperCenterIndex = lowerCenterIndex + 1 + sideCount
+                val lowerCenterIndex = 2 * (sideCount + 1)
+                val upperCenterIndex = lowerCenterIndex + sideCount + 2
 
                 add(
                     Submesh(
@@ -218,7 +218,7 @@ class Cylinder(
                         // Add top cap triangle
                         upperCenterIndex,
                         upperCenterIndex + side + 2,
-                        lowerCenterIndex + side + 1
+                        upperCenterIndex + side + 1
                     )
                 )
             }
