@@ -228,7 +228,13 @@ fun ARScene(
                     skybox,
                     sessionFeatures,
                     cameraConfig,
-                    cameraStream
+                    cameraStream,
+                    onSessionConfiguration,
+                    onSessionCreated,
+                    onSessionUpdated,
+                    onSessionResumed,
+                    onSessionFailed,
+                    onSessionConfigChanged
                 ).also {
                     onViewCreated?.invoke(it)
                 }
@@ -242,12 +248,6 @@ fun ARScene(
 
                 sceneView.planeRenderer.isEnabled = planeRenderer
 
-                sceneView.onSessionConfiguration = onSessionConfiguration
-                sceneView.onSessionCreated = onSessionCreated
-                sceneView.onSessionUpdated = onSessionUpdated
-                sceneView.onSessionResumed = onSessionResumed
-                sceneView.onSessionFailed = onSessionFailed
-                sceneView.onSessionConfigChanged = onSessionConfigChanged
                 sceneView.onTap = onTap
                 sceneView.onTapAR = onTapAR
                 onViewUpdated?.invoke(sceneView)

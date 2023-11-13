@@ -138,7 +138,35 @@ open class ARSceneView @JvmOverloads constructor(
      *
      * Use it to control if the occlusion should be enabled or disabled
      */
-    sharedCameraStream: ARCameraStream? = null
+    sharedCameraStream: ARCameraStream? = null,
+
+    private var onSessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    private var onSessionCreated: ((session: Session) -> Unit)? = null,
+
+    /**
+     * Updates of the state of the ARCore system.
+     *
+     * Callback for [onSessionUpdated].
+     *
+     * This includes: receiving a new camera frame, updating the location of the device, updating
+     * the location of tracking anchors, updating detected planes, etc.
+     *
+     * This call may update the pose of all created anchors and detected planes. The set of updated
+     * objects is accessible through [Frame.getUpdatedTrackables].
+     *
+     * Invoked once per [Frame] immediately before the Scene is updated.
+     */
+    var onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
+    var onSessionResumed: ((session: Session) -> Unit)? = null,
+
+    /**
+     * Invoked when an ARCore error occurred.
+     *
+     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+     * ARCore is not available on the device or the camera permission has been denied.
+     */
+    private var onSessionFailed: ((exception: Exception) -> Unit)? = null,
+    private var onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null
 ) : SceneView(
     context,
     attrs,
@@ -275,34 +303,6 @@ open class ARSceneView @JvmOverloads constructor(
                 onTrackingFailureChanged?.invoke(value)
             }
         }
-
-    var onSessionConfiguration: ((session: Session, Config) -> Unit)? = null
-    var onSessionCreated: ((session: Session) -> Unit)? = null
-
-    /**
-     * Updates of the state of the ARCore system.
-     *
-     * Callback for [onSessionUpdated].
-     *
-     * This includes: receiving a new camera frame, updating the location of the device, updating
-     * the location of tracking anchors, updating detected planes, etc.
-     *
-     * This call may update the pose of all created anchors and detected planes. The set of updated
-     * objects is accessible through [Frame.getUpdatedTrackables].
-     *
-     * Invoked once per [Frame] immediately before the Scene is updated.
-     */
-    var onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null
-    var onSessionResumed: ((session: Session) -> Unit)? = null
-
-    /**
-     * Invoked when an ARCore error occurred.
-     *
-     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
-     * ARCore is not available on the device or the camera permission has been denied.
-     */
-    var onSessionFailed: ((exception: Exception) -> Unit)? = null
-    var onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null
 
     /**
      * Invoked when an ARCore trackable is tapped.
