@@ -2,13 +2,16 @@ package io.github.sceneview.node
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.view.GestureDetector
+import android.view.GestureDetector.OnContextClickListener
+import android.view.GestureDetector.OnDoubleTapListener
 import android.view.MotionEvent
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.TransformManager
+import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
-import dev.romainguy.kotlin.math.clamp
 import dev.romainguy.kotlin.math.degrees
 import dev.romainguy.kotlin.math.inverse
 import dev.romainguy.kotlin.math.lookAt
@@ -26,9 +29,7 @@ import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.TransformProvider
 import io.github.sceneview.collision.Vector3
-import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
-import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.transform
@@ -48,6 +49,7 @@ import io.github.sceneview.math.times
 import io.github.sceneview.math.toMatrix
 import io.github.sceneview.math.toQuaternion
 import io.github.sceneview.utils.intervalSeconds
+import kotlin.reflect.KProperty1
 
 /**
  * A Node represents a transformation within the scene graph's hierarchy.
@@ -84,13 +86,15 @@ open class Node(
      * parent changes.
      */
     parent: Node? = null
-) : TransformProvider,
-    GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
+) : GestureDetector.OnGestureListener,
+    OnDoubleTapListener,
+    OnContextClickListener,
+    MoveGestureDetector.OnMoveListener,
+    RotateGestureDetector.OnRotateListener,
+    ScaleGestureDetector.OnScaleListener,
+    TransformProvider {
 
-    /**
-     * Define your own custom name.
-     */
-    open var name: String? = null
+    var isHittable: Boolean = true
 
     /**
      * The node can be selected when a touch event happened.
@@ -99,7 +103,14 @@ open class Node(
      * closest touchable parent. In this case, the first selectable parent will be the one to have
      * its [isTouchable] value to `true`.
      */
-    open var isTouchable = true
+    open var isTouchable: Boolean = true
+    open var isEditable: Boolean = false
+    open var isPositionEditable: Boolean = false
+        get() = isEditable && field
+    open var isRotationEditable: Boolean = true
+        get() = isEditable && field
+    open var isScaleEditable: Boolean = true
+        get() = isEditable && field
 
     var editableScaleRange = 0.1f..10.0f
 
@@ -123,7 +134,7 @@ open class Node(
     /**
      * The smooth position, rotation and scale speed.
      *
-     * This value is used by [smooth]
+     * This value is used by [smoothTransform]
      */
     var smoothTransformSpeed = 5.0f
 
@@ -167,7 +178,9 @@ open class Node(
     open var position: Position
         get() = transform.position
         set(value) {
-            transform = Transform(value, quaternion, scale)
+            if (position != value) {
+                transform = Transform(value, quaternion, scale)
+            }
         }
 
     /**
@@ -181,7 +194,9 @@ open class Node(
     open var worldPosition: Position
         get() = worldTransform.position
         set(value) {
-            position = getLocalPosition(value)
+            if (worldPosition != value) {
+                position = getLocalPosition(value)
+            }
         }
 
 
@@ -193,7 +208,9 @@ open class Node(
     open var quaternion: Quaternion
         get() = transform.quaternion
         set(value) {
-            transform = Transform(position, value, scale)
+            if (quaternion != value) {
+                transform = Transform(position, value, scale)
+            }
         }
 
     /**
@@ -208,7 +225,9 @@ open class Node(
     open var worldQuaternion: Quaternion
         get() = worldTransform.toQuaternion()
         set(value) {
-            quaternion = getLocalQuaternion(value)
+            if (worldQuaternion != value) {
+                quaternion = getLocalQuaternion(value)
+            }
         }
 
     /**
@@ -227,7 +246,9 @@ open class Node(
     open var rotation: Rotation
         get() = quaternion.toEulerAngles()
         set(value) {
-            quaternion = Quaternion.fromEuler(value)
+            if (rotation != value) {
+                quaternion = Quaternion.fromEuler(value)
+            }
         }
 
     /**
@@ -241,7 +262,9 @@ open class Node(
     open var worldRotation: Rotation
         get() = worldTransform.rotation
         set(value) {
-            worldQuaternion = Quaternion.fromEuler(value)
+            if (worldRotation != value) {
+                worldQuaternion = Quaternion.fromEuler(value)
+            }
         }
 
     /**
@@ -254,7 +277,9 @@ open class Node(
     open var scale: Scale
         get() = transform.scale
         set(value) {
-            transform = Transform(position, quaternion, value)
+            if (scale != value) {
+                transform = Transform(position, quaternion, value)
+            }
         }
 
     /**
@@ -268,7 +293,9 @@ open class Node(
     open var worldScale: Scale
         get() = worldTransform.scale
         set(value) {
-            scale = getLocalScale(value)
+            if (worldScale != value) {
+                scale = getLocalScale(value)
+            }
         }
 
     /**
@@ -291,10 +318,12 @@ open class Node(
      *
      * @see TransformManager.getWorldTransform
      */
-    open var worldTransform: Transform
+    var worldTransform: Transform
         get() = transformManager.getWorldTransform(transformInstance)
         set(value) {
-            transform = parent?.getLocalTransform(value) ?: value
+            if (worldTransform != value) {
+                transform = parent?.getLocalTransform(value) ?: value
+            }
         }
 
     var smoothTransform: Transform? = null
@@ -370,10 +399,29 @@ open class Node(
 
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
     var onSmoothEnd: ((node: Node) -> Unit)? = null
-    var onTap: ((motionEvent: MotionEvent) -> Unit)? = null
 
-    protected val transformManager get() = engine.transformManager
-    protected val transformInstance get() = transformManager.getInstance(entity)
+    var onDown: ((e: MotionEvent) -> Boolean)? = null
+    var onShowPress: ((e: MotionEvent) -> Unit)? = null
+    var onSingleTapUp: ((e: MotionEvent) -> Boolean)? = null
+    var onScroll: ((e1: MotionEvent?, e2: MotionEvent, distance: Float2) -> Boolean)? = null
+    var onLongPress: ((e: MotionEvent) -> Unit)? = null
+    var onFling: ((e1: MotionEvent?, e2: MotionEvent, velocity: Float2) -> Boolean)? = null
+    var onSingleTapConfirmed: ((e: MotionEvent) -> Boolean)? = null
+    var onDoubleTap: ((e: MotionEvent) -> Boolean)? = null
+    var onDoubleTapEvent: ((e: MotionEvent) -> Boolean)? = null
+    var onContextClick: ((e: MotionEvent) -> Boolean)? = null
+    var onMoveBegin: ((detector: MoveGestureDetector, e: MotionEvent) -> Boolean)? = null
+    var onMove: ((detector: MoveGestureDetector, e: MotionEvent, worldPosition: Position) -> Boolean)? =
+        null
+    var onMoveEnd: ((detector: MoveGestureDetector, e: MotionEvent) -> Unit)? = null
+    var onRotateBegin: ((detector: RotateGestureDetector, e: MotionEvent) -> Boolean)? = null
+    var onRotate: ((detector: RotateGestureDetector, e: MotionEvent, rotationDelta: Quaternion) -> Boolean)? =
+        null
+    var onRotateEnd: ((detector: RotateGestureDetector, e: MotionEvent) -> Unit)? = null
+    var onScaleBegin: ((detector: ScaleGestureDetector, e: MotionEvent) -> Boolean)? = null
+    var onScale: ((detector: ScaleGestureDetector, e: MotionEvent, scaleFactor: Float) -> Boolean)? =
+        null
+    var onScaleEnd: ((detector: ScaleGestureDetector, e: MotionEvent) -> Unit)? = null
 
     var onEditingChanged: ((editingTransforms: Set<KProperty1<Node, Any>?>) -> Unit)? =
         null
@@ -412,6 +460,13 @@ open class Node(
             // that the renderable has changed.
             onTransformChanged()
         }
+
+    protected val transformManager get() = engine.transformManager
+    protected val transformInstance get() = transformManager.getInstance(entity)
+
+    internal open val sceneEntities = listOf(entity)
+    internal val onChildAdded = mutableListOf<(child: Node) -> Unit>()
+    internal val onChildRemoved = mutableListOf<(child: Node) -> Unit>()
 
     private var lastFrameTimeNanos: Long? = null
 
@@ -627,30 +682,18 @@ open class Node(
         smoothTransform = transform
     }
 
-    fun addChildNode(child: Node) = apply {
-        child.parent = this
-    }
-
-    fun removeChildNode(child: Node) = apply {
-        if (child.parent == this) {
-            child.parent = null
-        }
-    }
-
-    fun animatePositions(vararg positions: Position): ObjectAnimator =
-        NodeAnimator.ofPosition(this, *positions)
-
-    fun animateQuaternions(vararg quaternions: Quaternion): ObjectAnimator =
-        NodeAnimator.ofQuaternion(this, *quaternions)
-
-    fun animateRotations(vararg rotations: Rotation): ObjectAnimator =
-        NodeAnimator.ofRotation(this, *rotations)
-
-    fun animateScales(vararg scales: Scale): ObjectAnimator =
-        NodeAnimator.ofScale(this, *scales)
-
-    fun animateTransforms(vararg transforms: Transform): AnimatorSet =
-        NodeAnimator.ofTransform(this, *transforms)
+    /**
+     * Rotates the node to face another node.
+     *
+     * @param targetNode The target node to look at
+     * @param upDirection The up direction will determine the orientation of the node around the direction
+     * @param smooth Whether the rotation should happen smoothly
+     */
+    fun lookAt(
+        targetNode: Node,
+        upDirection: Direction = Direction(y = 1.0f),
+        smooth: Boolean = false
+    ) = lookAt(targetNode.worldPosition, upDirection, smooth)
 
     /**
      * Rotates the node to face a point in world-space.
@@ -675,19 +718,6 @@ open class Node(
             transform(quaternion = newQuaternion)
         }
     }
-
-    /**
-     * Rotates the node to face another node.
-     *
-     * @param targetNode The target node to look at
-     * @param upDirection The up direction will determine the orientation of the node around the direction
-     * @param smooth Whether the rotation should happen smoothly
-     */
-    fun lookAt(
-        targetNode: Node,
-        upDirection: Direction = Direction(y = 1.0f),
-        smooth: Boolean = false
-    ) = lookAt(targetNode.worldPosition, upDirection, smooth)
 
     /**
      * Rotates the node to face a direction in world-space.
@@ -716,6 +746,31 @@ open class Node(
             transform(quaternion = newQuaternion)
         }
     }
+
+    fun addChildNode(child: Node) = apply {
+        child.parent = this
+    }
+
+    fun removeChildNode(child: Node) = apply {
+        if (child.parent == this) {
+            child.parent = null
+        }
+    }
+
+    fun animatePositions(vararg positions: Position): ObjectAnimator =
+        NodeAnimator.ofPosition(this, *positions)
+
+    fun animateQuaternions(vararg quaternions: Quaternion): ObjectAnimator =
+        NodeAnimator.ofQuaternion(this, *quaternions)
+
+    fun animateRotations(vararg rotations: Rotation): ObjectAnimator =
+        NodeAnimator.ofRotation(this, *rotations)
+
+    fun animateScales(vararg scales: Scale): ObjectAnimator =
+        NodeAnimator.ofScale(this, *scales)
+
+    fun animateTransforms(vararg transforms: Transform): AnimatorSet =
+        NodeAnimator.ofTransform(this, *transforms)
 
     /**
      * Tests to see if this node collision shape overlaps the collision shape of any other nodes in
@@ -788,86 +843,155 @@ open class Node(
         childNodes.forEach { it.onWorldTransformChanged() }
     }
 
-    override fun onSingleTapConfirmed(e: NodeMotionEvent) {
-        onTap(e.motionEvent)
+    override fun onDown(e: MotionEvent) = onDown?.invoke(e) ?: false
+    override fun onShowPress(e: MotionEvent) {
+        onShowPress?.invoke(e)
     }
 
-    /**
-     * Invoked when the node is tapped.
-     *
-     * Calls the `onTap` listener if it is available and passes the tap to the parent node.
-     *
-     * @param renderable The the Filament renderable component that was tapped.
-     * @param motionEvent The motion event that caused the tap.
-     */
-    open fun onTap(motionEvent: MotionEvent) {
-        onTap?.invoke(motionEvent)
-        parent?.onTap(motionEvent)
+    override fun onSingleTapUp(e: MotionEvent) = onSingleTapUp?.invoke(e) ?: false
+    override fun onScroll(
+        e1: MotionEvent?,
+        e2: MotionEvent,
+        distanceX: Float,
+        distanceY: Float
+    ) = onScroll?.invoke(e1, e2, Float2(distanceX, distanceY)) ?: false
+
+    override fun onLongPress(e: MotionEvent) {
+        onLongPress?.invoke(e)
     }
 
-    override fun onMoveBegin(detector: MoveGestureDetector, e: NodeMotionEvent) {
-        if (!isEditable || !isPositionEditable) {
-            parent?.onMoveBegin(detector, e)
+    override fun onFling(
+        e1: MotionEvent?,
+        e2: MotionEvent,
+        velocityX: Float,
+        velocityY: Float
+    ) = onFling?.invoke(e1, e2, Float2(velocityX, velocityY)) ?: false
+
+    override fun onSingleTapConfirmed(e: MotionEvent) = onSingleTapConfirmed?.invoke(e) ?: false
+    override fun onDoubleTap(e: MotionEvent) = onDoubleTap?.invoke(e) ?: false
+    override fun onDoubleTapEvent(e: MotionEvent) = onDoubleTapEvent?.invoke(e) ?: false
+    override fun onContextClick(e: MotionEvent) = onContextClick?.invoke(e) ?: false
+
+    override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent): Boolean {
+        return if (isPositionEditable && onMoveBegin?.invoke(detector, e) != false) {
+            editingTransforms = editingTransforms + Node::position
+            true
+        } else {
+            parent?.onMoveBegin(detector, e) ?: false
         }
     }
 
-    override fun onMove(detector: MoveGestureDetector, e: NodeMotionEvent) {
-        if (!isEditable || !isPositionEditable) {
-            parent?.onMove(detector, e)
+    override fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean {
+        return if (isPositionEditable) {
+            collisionSystem?.hitTest(e)?.first { it.node == parent }?.let {
+                onMove(detector, e, it.worldPosition)
+            } ?: false
+        } else {
+            parent?.onMove(detector, e) ?: false
         }
     }
 
-    override fun onMoveEnd(detector: MoveGestureDetector, e: NodeMotionEvent) {
-        if (!isEditable || !isPositionEditable) {
+    open fun onMove(
+        detector: MoveGestureDetector,
+        e: MotionEvent,
+        worldPosition: Position
+    ): Boolean {
+        return if (onMove?.invoke(detector, e, worldPosition) != false) {
+            this.worldPosition = worldPosition
+            true
+        } else {
+            false
+        }
+    }
+
+    override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) {
+        if (isPositionEditable) {
+            editingTransforms = editingTransforms - Node::position
+        } else {
             parent?.onMoveEnd(detector, e)
         }
     }
 
-    override fun onRotateBegin(detector: RotateGestureDetector, e: NodeMotionEvent) {
-        if (!isEditable || !isRotationEditable) {
-            parent?.onRotateBegin(detector, e)
-        }
-    }
-
-    override fun onRotate(detector: RotateGestureDetector, e: NodeMotionEvent) {
-        if (isEditable && isRotationEditable) {
-            val deltaRadians = detector.currentAngle - detector.lastAngle
-            onRotate(e, Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians)))
+    override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent): Boolean {
+        return if (isRotationEditable && onRotateBegin?.invoke(detector, e) != false) {
+            editingTransforms = editingTransforms + Node::quaternion
+            true
         } else {
-            parent?.onRotate(detector, e)
+            parent?.onRotateBegin(detector, e) ?: false
         }
     }
 
-    open fun onRotate(e: NodeMotionEvent, rotationDelta: Quaternion) {
-        quaternion *= rotationDelta
+    override fun onRotate(detector: RotateGestureDetector, e: MotionEvent): Boolean {
+        return if (isRotationEditable) {
+            val deltaRadians = detector.currentAngle - detector.lastAngle
+            onRotate(
+                detector, e,
+                rotationDelta = Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians))
+            )
+        } else {
+            parent?.onRotate(detector, e) ?: false
+        }
     }
 
-    override fun onRotateEnd(detector: RotateGestureDetector, e: NodeMotionEvent) {
-        if (!isEditable || !isRotationEditable) {
+    open fun onRotate(
+        detector: RotateGestureDetector,
+        e: MotionEvent,
+        rotationDelta: Quaternion
+    ): Boolean {
+        return if (onRotate?.invoke(detector, e, rotationDelta) != false) {
+            quaternion *= rotationDelta
+            true
+        } else {
+            false
+        }
+    }
+
+    override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {
+        if (isRotationEditable) {
+            editingTransforms = editingTransforms - Node::quaternion
+        } else {
             parent?.onRotateEnd(detector, e)
         }
     }
 
-    override fun onScaleBegin(detector: ScaleGestureDetector, e: NodeMotionEvent) {
-        if (!isEditable || !isScaleEditable) {
-            parent?.onScaleBegin(detector, e)
-        }
-    }
-
-    override fun onScale(detector: ScaleGestureDetector, e: NodeMotionEvent) {
-        if (isEditable && isScaleEditable) {
-            onScale(e, detector.scaleFactor)
+    override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent): Boolean {
+        return if (isScaleEditable && onScaleBegin?.invoke(detector, e) != false) {
+            true
         } else {
-            parent?.onScale(detector, e)
+            parent?.onScaleBegin(detector, e) ?: false
         }
     }
 
-    open fun onScale(e: NodeMotionEvent, scaleFactor: Float) {
-        scale = clamp(scale * scaleFactor, minEditableScale, maxEditableScale)
+    override fun onScale(detector: ScaleGestureDetector, e: MotionEvent): Boolean {
+        return if (isScaleEditable) {
+            editingTransforms = editingTransforms + Node::scale
+            onScale(detector, e, detector.scaleFactor)
+        } else {
+            parent?.onScale(detector, e) ?: false
+        }
     }
 
-    override fun onScaleEnd(detector: ScaleGestureDetector, e: NodeMotionEvent) {
-        if (!isEditable || !isScaleEditable) {
+    open fun onScale(detector: ScaleGestureDetector, e: MotionEvent, scaleFactor: Float): Boolean {
+        return if (onScale?.invoke(detector, e, scaleFactor) != false) {
+            val newScale = scale * scaleFactor
+            if (newScale.x in editableScaleRange &&
+                newScale.y in editableScaleRange &&
+                newScale.z in editableScaleRange
+            ) {
+                scale = newScale
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {
+        if (isScaleEditable) {
+            editingTransforms = editingTransforms - Node::scale
+        } else {
             parent?.onScaleEnd(detector, e)
         }
     }
