@@ -516,23 +516,18 @@ open class ARSceneView @JvmOverloads constructor(
     fun hitTestAR(
         xPx: Float = width / 2.0f,
         yPx: Float = height / 2.0f,
-        plane: Boolean = true,
-        depth: Boolean = true,
-        instant: Boolean = true,
-        instantDistance: Float = kDefaultHitTestInstantDistance,
+        planeTypes: Set<Plane.Type> = setOf(),
+        point: Boolean = false,
+        depthPoint: Boolean = false,
+        instantPlacementPoint: Boolean = false,
+        trackingStates: Set<TrackingState> = setOf(TrackingState.TRACKING),
+        pointOrientationModes: Set<Point.OrientationMode> = setOf(Point.OrientationMode.ESTIMATED_SURFACE_NORMAL),
         planePoseInPolygon: Boolean = true,
-        minCameraDistance: Float = 0.0f,
-        pointOrientationModes: Set<Point.OrientationMode> = setOf(
-            Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
-        )
-    ) = frame?.hitTest(
-        xPx, yPx, plane = plane,
-        depth = depth,
-        instant = instant,
-        instantDistance = instantDistance,
-        planePoseInPolygon = planePoseInPolygon,
-        minCameraDistance = minCameraDistance,
-        pointOrientationModes = pointOrientationModes
+        minCameraDistance: Pair<Camera, Float>? = null,
+        predicate: ((HitResult) -> Boolean)? = null
+    ) = frame?.hitTest(xPx, yPx)?.firstByTypeOrNull(
+        planeTypes, point, depthPoint, instantPlacementPoint, trackingStates, pointOrientationModes,
+        planePoseInPolygon, minCameraDistance, predicate
     )
 
     override fun destroy() {

@@ -162,13 +162,10 @@ class PlaneRenderer(
 
                         val centerPlane = if (isVisible) {
                             // Don't make the hit test if we don't need to know the center plane
-                            frame.hitTest(
-                                xPx = viewSize.width / 2.0f,
-                                yPx = viewSize.height / 2.0f,
-                                plane = true,
-                                depth = false,
-                                instant = false
-                            ).firstOrNull()?.trackable as? Plane
+                            frame.hitTest(viewSize.width / 2.0f, viewSize.height / 2.0f)
+                                .firstByTypeOrNull(
+                                    planeTypes = setOf(Plane.Type.HORIZONTAL_UPWARD_FACING)
+                                )?.trackable as? Plane
                         } else null
 //                        if (centerPlane != null) {
 //                            // Calculate the focusPoint. It is used to determine the position of
@@ -190,7 +187,8 @@ class PlaneRenderer(
 
                     // Check for not tracking Plane-Trackables and remove them.
                     cleanupOldPlaneVisualizer()
-                } catch (e: Exception) {}
+                } catch (e: Exception) {
+                }
             }
         }
     }

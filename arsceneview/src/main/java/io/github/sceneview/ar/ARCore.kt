@@ -41,6 +41,7 @@ const val kDefaultHitTestInstantDistance = 2.0f
 class ARCore(
     val onSessionCreated: (session: Session) -> Unit,
     val onSessionResumed: (session: Session) -> Unit,
+    val onSessionPaused: (session: Session) -> Unit,
     val onArSessionFailed: (exception: Exception) -> Unit,
     val onSessionConfigChanged: (session: Session, config: Config) -> Unit
 ) {
@@ -122,6 +123,7 @@ class ARCore(
                 context,
                 features,
                 onResumed = onSessionResumed,
+                onPaused = onSessionPaused,
                 onConfigChanged = onSessionConfigChanged
             ).also(onSessionCreated)
         } catch (exception: Exception) {

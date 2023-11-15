@@ -1,14 +1,16 @@
 package io.github.sceneview.ar.node
 
 import com.google.android.filament.Engine
+import com.google.ar.core.Camera
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
+import com.google.ar.core.Plane
 import com.google.ar.core.Point
 import com.google.ar.core.Session
 import com.google.ar.core.Trackable
+import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.ar.arcore.hitTest
-import io.github.sceneview.ar.kDefaultHitTestInstantDistance
+import io.github.sceneview.ar.arcore.firstByTypeOrNull
 
 /**
  * AR real time AR HitTest positioned node.
@@ -57,29 +59,22 @@ open class HitResultNode(
         engine: Engine,
         xPx: Float,
         yPx: Float,
-        plane: Boolean = true,
-        depth: Boolean = true,
-        instant: Boolean = true,
-        instantDistance: Float = kDefaultHitTestInstantDistance,
+        planeTypes: Set<Plane.Type> = Plane.Type.values().toSet(),
+        point: Boolean = true,
+        depthPoint: Boolean = true,
+        instantPlacementPoint: Boolean = true,
+        trackingStates: Set<TrackingState> = setOf(TrackingState.TRACKING),
+        pointOrientationModes: Set<Point.OrientationMode> = setOf(Point.OrientationMode.ESTIMATED_SURFACE_NORMAL),
         planePoseInPolygon: Boolean = true,
-        minCameraDistance: Float = 0.0f,
-        pointOrientationModes: Set<Point.OrientationMode> = setOf(
-            Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
-        )
+        minCameraDistance: Pair<Camera, Float>? = null,
+        predicate: ((HitResult) -> Boolean)? = null
     ) : this(
         engine = engine,
         hitTest = { frame ->
-            frame.hitTest(
-                xPx = xPx,
-                yPx = yPx,
-                plane = plane,
-                depth = depth,
-                instant = instant,
-                instantDistance = instantDistance,
-                planePoseInPolygon = planePoseInPolygon,
-                minCameraDistance = minCameraDistance,
-                pointOrientationModes = pointOrientationModes
-            ).firstOrNull()
+            frame.hitTest(xPx, yPx).firstByTypeOrNull(
+                planeTypes, point, depthPoint, instantPlacementPoint, trackingStates,
+                pointOrientationModes, planePoseInPolygon, minCameraDistance, predicate
+            )
         }
     )
 
