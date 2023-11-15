@@ -75,6 +75,12 @@ open class CameraNode(
 
     val viewport get() = view.viewport
 
+    // No rendered object
+    override var isTouchable = false
+
+    // Can receive touchable but not editable child events
+    override var isEditable = false
+
     constructor(
         engine: Engine,
         entity: Entity = EntityManager.get().create(),
@@ -107,7 +113,11 @@ open class CameraNode(
      * @return PickHitResult list for each nodes that was hit sorted by distance.
      * Empty if no nodes were hit.
      */
-    fun hitTest(xPx: Float, yPx: Float) = hitTest(screenPointToRay(xPx, yPx))
+    @Deprecated(
+        "Use collisionSystem.hitTest(xPx, yPx)",
+        replaceWith = ReplaceWith(expression = "collisionSystem.hitTest(xPx, yPx)")
+    )
+    fun hitTest(xPx: Float, yPx: Float): List<HitResult> = hitTest(screenPointToRay(xPx, yPx))
 
     /**
      * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
@@ -123,6 +133,10 @@ open class CameraNode(
      * @return PickHitResult list for each nodes that was hit sorted by distance.
      * Empty if no nodes were hit.
      */
+    @Deprecated(
+        "Use view.hitTest(viewPosition)",
+        replaceWith = ReplaceWith(expression = "collisionSystem.hitTest(viewPosition)")
+    )
     fun hitTestView(xViewPercent: Float = 0.5f, yViewPercent: Float = 0.5f) =
         hitTest(viewport.width * xViewPercent, viewport.height * yViewPercent)
 
@@ -139,6 +153,10 @@ open class CameraNode(
      * @return PickHitResult list for each nodes that was hit sorted by distance.
      * Empty if no nodes were hit.
      */
+    @Deprecated(
+        "Use view.hitTest(motionEvent)",
+        replaceWith = ReplaceWith(expression = "collisionSystem.hitTest(motionEvent)")
+    )
     fun hitTest(motionEvent: MotionEvent) = hitTest(motionEvent.x, motionEvent.y)
 
     /**
@@ -150,12 +168,20 @@ open class CameraNode(
      * @return PickHitResult list for each nodes that was hit sorted by distance.
      * Empty if no nodes were hit.
      */
+    @Deprecated(
+        "Use collisionSystem.hitTest(ray)",
+        replaceWith = ReplaceWith(expression = "collisionSystem.hitTest(ray)")
+    )
     fun hitTest(ray: Ray) = arrayListOf<HitResult>().apply {
         collisionSystem!!.raycastAll(ray, this, { resultPick, collider ->
             resultPick.node = collider.node
         }, { HitResult() })
     }.toList()
 
+    @Deprecated(
+        "Use view.motionEventToRay(motionEvent)",
+        replaceWith = ReplaceWith(expression = "view.motionEventToRay(motionEvent)")
+    )
     fun motionEventToRay(motionEvent: MotionEvent): Ray {
         Preconditions.checkNotNull(motionEvent, "Parameter \"motionEvent\" was null.")
         val index = motionEvent.actionIndex
@@ -173,6 +199,10 @@ open class CameraNode(
      * @param x X position in device screen coordinates.
      * @param y Y position in device screen coordinates.
      */
+    @Deprecated(
+        message = "Use view.screenToRay(x,y)",
+        replaceWith = ReplaceWith(expression = "view.screenToRay(x,y)")
+    )
     fun screenPointToRay(x: Float, y: Float): Ray {
         val startPoint = Vector3()
         val endPoint = Vector3()
@@ -199,6 +229,10 @@ open class CameraNode(
      * @param point the point in world space to convert
      * @return a new vector that represents the point in screen-space.
      */
+    @Deprecated(
+        "Use view.worldToScreen(point)",
+        replaceWith = ReplaceWith(expression = "view.worldToScreen(point)")
+    )
     fun worldToScreenPoint(point: Vector3): Vector3 {
         // TODO : Move to Kotlin-Math
         val m = Matrix()

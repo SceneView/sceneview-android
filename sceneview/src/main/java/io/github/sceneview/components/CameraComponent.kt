@@ -5,13 +5,9 @@ import com.google.android.filament.Camera.Projection
 import com.google.android.filament.LightManager
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float4
-import io.github.sceneview.math.ClipSpacePosition
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
-import io.github.sceneview.math.times
-import io.github.sceneview.utils.clipSpaceToViewPort
-import io.github.sceneview.utils.clipSpaceToViewSpace
 import io.github.sceneview.utils.cullingProjectionTransform
 import io.github.sceneview.utils.forwardDirection
 import io.github.sceneview.utils.leftDirection
@@ -22,11 +18,10 @@ import io.github.sceneview.utils.scaling
 import io.github.sceneview.utils.setCustomProjection
 import io.github.sceneview.utils.setScaling
 import io.github.sceneview.utils.upDirection
-import io.github.sceneview.utils.viewPortToClipSpace
-import io.github.sceneview.utils.viewSpaceToClipSpace
-import io.github.sceneview.utils.viewSpaceToWorld
+import io.github.sceneview.utils.viewToRay
+import io.github.sceneview.utils.viewToWorld
 import io.github.sceneview.utils.viewTransform
-import io.github.sceneview.utils.worldToViewSpace
+import io.github.sceneview.utils.worldToView
 
 typealias FilamentCamera = Camera
 
@@ -304,6 +299,44 @@ interface CameraComponent : Component {
     val forwardDirection: Direction get() = camera.forwardDirection
 
     /**
+     * Get a world space position from a view space position.
+     *
+     * @param viewPosition normalized view coordinate
+     * x = (0 = left, 0.5 = center, 1 = right)
+     * y = (0 = bottom, 0.5 = center, 1 = top)
+     * @param z Z is used for the depth between 1 and 0
+     * (1 = near, 0 = infinity).
+     *
+     * @return The world position of the point.
+     */
+    fun viewToWorld(viewPosition: Float2, z: Float = 1.0f) = camera.viewToWorld(viewPosition, z)
+
+    /**
+     * Get a view space position from a world position.
+     *
+     * The device coordinate space is unaffected by the orientation of the device
+     *
+     * @param worldPosition The world position to convert.
+     *
+     * @return normalized view coordinate
+     * x = (0 = left, 0.5 = center, 1 = right)
+     * y = (0 = bottom, 0.5 = center, 1 = top)
+     */
+    fun worldToView(worldPosition: Position) = camera.worldToView(worldPosition)
+
+    /**
+     * Calculates a ray in world space going from the near-plane of the camera and through a point in
+     * view space.
+     *
+     * @param viewPosition normalized view coordinate
+     * x = (0 = left, 0.5 = center, 1 = right)
+     * y = (0 = bottom, 0.5 = center, 1 = top)
+     *
+     *  @return A Ray from the camera near to far / infinity
+     */
+    fun viewToRay(viewPosition: Float2) = camera.viewToRay(viewPosition)
+
+    /**
      * Sets this camera's exposure (default is f/16, 1/125s, 100 ISO)
      *
      * The exposure ultimately controls the scene's brightness, just like with a real camera.
@@ -371,31 +404,4 @@ interface CameraComponent : Component {
      * Gets the sensitivity in ISO
      */
     val sensitivity: Float get() = camera.sensitivity
-
-    /**
-     * @see viewPortToClipSpace
-     * @see viewSpaceToWorld
-     */
-    fun clipSpaceToViewSpace(clipSpacePosition: ClipSpacePosition): Position =
-        camera.clipSpaceToViewSpace(clipSpacePosition)
-
-    /**
-     * @see worldToViewSpace
-     * @see clipSpaceToViewPort
-     */
-    fun viewSpaceToClipSpace(viewSpacePosition: Position): ClipSpacePosition =
-        camera.viewSpaceToClipSpace(viewSpacePosition)
-
-    /**
-     * @see viewPortToClipSpace
-     * @see clipSpaceToViewSpace
-     */
-    fun viewSpaceToWorld(viewSpacePosition: Position): Position =
-        camera.viewSpaceToWorld(viewSpacePosition)
-
-    /**
-     * @see viewSpaceToClipSpace
-     * @see clipSpaceToViewPort
-     */
-    fun worldToViewSpace(worldPosition: Position): Position = viewTransform * worldPosition
 }
