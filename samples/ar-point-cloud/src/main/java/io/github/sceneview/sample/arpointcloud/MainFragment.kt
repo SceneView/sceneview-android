@@ -82,7 +82,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         sceneView = view.findViewById<ARSceneView?>(R.id.sceneView).apply {
             planeRenderer.isEnabled = false
-            onSessionConfiguration = { session, config ->
+            sessionConfiguration = { session, config ->
                 config.lightEstimationMode = Config.LightEstimationMode.DISABLED
             }
             environment = null

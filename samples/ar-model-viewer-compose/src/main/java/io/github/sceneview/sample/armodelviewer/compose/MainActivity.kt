@@ -5,31 +5,51 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.google.android.filament.Engine
+import com.google.ar.core.Anchor
 import com.google.ar.core.Config
+import com.google.ar.core.Frame
 import com.google.ar.core.Plane
+import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARScene
+import io.github.sceneview.ar.arcore.createAnchorOrNull
+import io.github.sceneview.ar.arcore.firstByTypeOrNull
 import io.github.sceneview.ar.arcore.getUpdatedPlanes
+import io.github.sceneview.ar.getDescription
 import io.github.sceneview.ar.node.AnchorNode
-import io.github.sceneview.math.Position
+import io.github.sceneview.ar.rememberARCameraNode
+import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.node.CubeNode
 import io.github.sceneview.node.ModelNode
+import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNodes
-import io.github.sceneview.sample.Colors
+import io.github.sceneview.rememberOnGestureListener
+import io.github.sceneview.rememberView
 import io.github.sceneview.sample.SceneViewTheme
-import kotlinx.coroutines.launch
 
-private const val kModelFile = "https://sceneview.github.io/assets/models/DamagedHelmet.glb"
+private const val kModelFile = "models/damaged_helmet.glb"
+private const val kMaxModelInstances = 10
 
 class MainActivity : ComponentActivity() {
 
@@ -42,73 +62,143 @@ class MainActivity : ComponentActivity() {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    var isLoading by remember { mutableStateOf(false) }
-                    var planeRenderer by remember { mutableStateOf(true) }
+                    val childNodes = rememberNodes()
                     val engine = rememberEngine()
                     val modelLoader = rememberModelLoader(engine)
-                    val childNodes = rememberNodes()
-                    val coroutineScope = rememberCoroutineScope()
+                    val materialLoader = rememberMaterialLoader(engine)
+                    val cameraNode = rememberARCameraNode(engine)
+                    val view = rememberView(engine)
+                    val collisionSystem = rememberCollisionSystem(view)
 
+                    var planeRenderer by remember { mutableStateOf(true) }
+
+                    val modelInstances = remember { mutableListOf<ModelInstance>() }
+                    var trackingFailureReason by remember {
+                        mutableStateOf<TrackingFailureReason?>(null)
+                    }
+                    var frame by remember { mutableStateOf<Frame?>(null) }
                     ARScene(
                         modifier = Modifier.fillMaxSize(),
                         childNodes = childNodes,
                         engine = engine,
+                        view = view,
                         modelLoader = modelLoader,
-                        planeRenderer = planeRenderer,
-                        onSessionConfiguration = { session, config ->
+                        collisionSystem = collisionSystem,
+                        sessionConfiguration = { session, config ->
                             config.depthMode =
                                 when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                                     true -> Config.DepthMode.AUTOMATIC
                                     else -> Config.DepthMode.DISABLED
                                 }
-                            config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
+                            config.instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
                             config.lightEstimationMode =
                                 Config.LightEstimationMode.ENVIRONMENTAL_HDR
                         },
-                        onSessionUpdated = { _, frame ->
-                            if (childNodes.isNotEmpty()) return@ARScene
+                        cameraNode = cameraNode,
+                        planeRenderer = planeRenderer,
+                        onTrackingFailureChanged = {
+                            trackingFailureReason = it
+                        },
+                        onSessionUpdated = { session, updatedFrame ->
+                            frame = updatedFrame
 
-                            frame.getUpdatedPlanes()
-                                .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-                                ?.let { plane ->
-                                    isLoading = true
-                                    childNodes += AnchorNode(
-                                        engine = engine,
-                                        anchor = plane.createAnchor(plane.centerPose)
-                                    ).apply {
-                                        isEditable = true
-                                        coroutineScope.launch {
-                                            modelLoader.loadModelInstance(kModelFile)?.let {
-                                                addChildNode(
-                                                    ModelNode(
-                                                        modelInstance = it,
-                                                        // Scale to fit in a 0.5 meters cube
-                                                        scaleToUnits = 0.5f,
-                                                        // Bottom origin instead of center so the
-                                                        // model base is on floor
-                                                        centerOrigin = Position(y = -0.5f)
-                                                    ).apply {
-                                                        isEditable = true
-                                                    }
-                                                )
-                                            }
-                                            planeRenderer = false
-                                            isLoading = false
-                                        }
+                            if (childNodes.isEmpty()) {
+                                updatedFrame.getUpdatedPlanes()
+                                    .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
+                                    ?.let { it.createAnchorOrNull(it.centerPose) }?.let { anchor ->
+                                        childNodes += createAnchorNode(
+                                            engine = engine,
+                                            modelLoader = modelLoader,
+                                            materialLoader = materialLoader,
+                                            modelInstances = modelInstances,
+                                            anchor = anchor
+                                        )
+                                        planeRenderer = false
                                     }
+                            }
+                        },
+                        onGestureListener = rememberOnGestureListener(
+                            onDoubleTap = { motionEvent, node ->
+                                val result1 = cameraNode.hitTest(motionEvent)
+                                val result2 = collisionSystem.hitTest(motionEvent)
+                                println("Sceneview - ray Result1=$result1")
+                                println("Sceneview - ray Result2=$result2")
+                            },
+                            onSingleTapConfirmed = { motionEvent, node ->
+                                if (node == null) {
+                                    frame?.hitTest(motionEvent.x, motionEvent.y)
+                                        ?.firstByTypeOrNull(
+                                            planeTypes = setOf(Plane.Type.HORIZONTAL_UPWARD_FACING)
+                                        )?.createAnchorOrNull()?.let { anchor ->
+                                            childNodes += createAnchorNode(
+                                                engine = engine,
+                                                modelLoader = modelLoader,
+                                                materialLoader = materialLoader,
+                                                modelInstances = modelInstances,
+                                                anchor = anchor
+                                            )
+                                        }
                                 }
+                            })
+                    )
+                    Text(
+                        modifier = Modifier
+                            .systemBarsPadding()
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp, start = 32.dp, end = 32.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = 28.sp,
+                        color = Color.White,
+                        text = trackingFailureReason?.let {
+                            it.getDescription(LocalContext.current)
+                        } ?: if (childNodes.isEmpty()) {
+                            stringResource(R.string.point_your_phone_down)
+                        } else {
+                            stringResource(R.string.tap_anywhere_to_add_model)
                         }
                     )
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .align(Alignment.Center),
-                            color = Colors.Purple700
-                        )
-                    }
                 }
             }
         }
+    }
+
+    fun createAnchorNode(
+        engine: Engine,
+        modelLoader: ModelLoader,
+        materialLoader: MaterialLoader,
+        modelInstances: MutableList<ModelInstance>,
+        anchor: Anchor
+    ): AnchorNode {
+        val anchorNode = AnchorNode(engine = engine, anchor = anchor)
+        val modelNode = ModelNode(
+            modelInstance = modelInstances.apply {
+                if (isEmpty()) {
+                    this += modelLoader.createInstancedModel(kModelFile, kMaxModelInstances)
+                }
+            }.removeLast(),
+            // Scale to fit in a 0.5 meters cube
+            scaleToUnits = 0.5f
+        ).apply {
+            // Model Node needs to be editable for independent rotation from the anchor rotation
+            isEditable = true
+        }
+        val boundingBoxNode = CubeNode(
+            engine,
+            size = modelNode.extents,
+            center = modelNode.center,
+            materialInstance = materialLoader.createColorInstance(Color.White.copy(alpha = 0.5f))
+        ).apply {
+            isVisible = false
+        }
+        modelNode.addChildNode(boundingBoxNode)
+        anchorNode.addChildNode(modelNode)
+
+        listOf(modelNode, anchorNode).forEach {
+            it.onEditingChanged = { editingTransforms ->
+                boundingBoxNode.isVisible = editingTransforms.isNotEmpty()
+            }
+        }
+        return anchorNode
     }
 }
