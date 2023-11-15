@@ -169,7 +169,33 @@ fun ARScene(
      * Use it to control if the occlusion should be enabled or disabled
      */
     cameraStream: ARCameraStream? = rememberCameraStream(engine, materialLoader),
-    onSessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    /**
+     * Fundamental session features that can be requested.
+     * @see Session.Feature
+     */
+    sessionFeatures: Set<Session.Feature> = setOf(),
+    /**
+     * Sets the camera config to use.
+     * The config must be one returned by [Session.getSupportedCameraConfigs].
+     * Provides details of a camera configuration such as size of the CPU image and GPU texture.
+     *
+     * @see Session.setCameraConfig
+     */
+    sessionCameraConfig: ((Session) -> CameraConfig)? = null,
+    /**
+     * Configures the session and verifies that the enabled features in the specified session config
+     * are supported with the currently set camera config.
+     *
+     * @see Session.configure
+     */
+    sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    /**
+     * Enable the plane renderer.
+     */
+    planeRenderer: Boolean = true,
+    /**
+     * The session is ready to be accessed.
+     */
     onSessionCreated: ((session: Session) -> Unit)? = null,
     /**
      * The session has been resumed
@@ -198,12 +224,11 @@ fun ARScene(
      * Invoked once per [Frame] immediately before the Scene is updated.
      */
     onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
-    onSessionResumed: ((session: Session) -> Unit)? = null,
     /**
-     * Invoked when an ARCore error occurred.
+     * Listen for camera tracking failure.
      *
-     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
-     * ARCore is not available on the device or the camera permission has been denied.
+     * The reason that [Camera.getTrackingState] is [TrackingState.PAUSED] or `null` if it is
+     * [TrackingState.TRACKING]
      */
     onSessionFailed: ((exception: Exception) -> Unit)? = null,
     onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null,
@@ -258,14 +283,21 @@ fun ARScene(
                     onGestureListener,
                     cameraStream,
                     sessionFeatures,
-                    cameraConfig,
-                    cameraStream
+                    sessionCameraConfig,
+                    sessionConfiguration,
+                    onSessionCreated,
+                    onSessionResumed,
+                    onSessionPaused,
+                    onSessionFailed,
+                    onTrackingFailureChanged,
+                    onSessionUpdated
                 ).also {
                     onViewCreated?.invoke(it)
                 }
             },
             update = { sceneView ->
                 sceneView.childNodes = childNodes
+                sceneView.scene = scene
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode
                 sceneView.indirectLight = indirectLight

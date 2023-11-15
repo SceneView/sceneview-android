@@ -159,7 +159,65 @@ open class ARSceneView @JvmOverloads constructor(
      *
      * Use it to control if the occlusion should be enabled or disabled
      */
-    sharedCameraStream: ARCameraStream? = null
+    sharedCameraStream: ARCameraStream? = null,
+    /**
+     * Fundamental session features that can be requested.
+     * @see Session.Feature
+     */
+    val sessionFeatures: Set<Session.Feature> = setOf(),
+    /**
+     * Sets the camera config to use.
+     * The config must be one returned by [Session.getSupportedCameraConfigs].
+     * Provides details of a camera configuration such as size of the CPU image and GPU texture.
+     *
+     * @see Session.setCameraConfig
+     */
+    val sessionCameraConfig: ((Session) -> CameraConfig)? = null,
+    /**
+     * Configures the session and verifies that the enabled features in the specified session config
+     * are supported with the currently set camera config.
+     *
+     * @see Session.configure
+     */
+    sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    /**
+     * The session is ready to be accessed.
+     */
+    var onSessionCreated: ((session: Session) -> Unit)? = null,
+    /**
+     * The session has been resumed
+     */
+    var onSessionResumed: ((session: Session) -> Unit)? = null,
+    /**
+     * The session has been paused
+     */
+    var onSessionPaused: ((session: Session) -> Unit)? = null,
+    /**
+     * Invoked when an ARCore error occurred.
+     *
+     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+     * ARCore is not available on the device or the camera permission has been denied.
+     */
+    var onSessionFailed: ((exception: Exception) -> Unit)? = null,
+    /**
+     * Listen for camera tracking failure.
+     *
+     * The reason that [Camera.getTrackingState] is [TrackingState.PAUSED] or `null` if it is
+     * [TrackingState.TRACKING]
+     */
+    var onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
+    /**
+     * Updates of the state of the ARCore system.
+     *
+     * This includes: receiving a new camera frame, updating the location of the device, updating
+     * the location of tracking anchors, updating detected planes, etc.
+     *
+     * This call may update the pose of all created anchors and detected planes. The set of updated
+     * objects is accessible through [Frame.getUpdatedTrackables].
+     *
+     * Invoked once per [Frame] immediately before the Scene is updated.
+     */
+    var onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
 ) : SceneView(
     context,
     attrs,
@@ -192,7 +250,17 @@ open class ARSceneView @JvmOverloads constructor(
     val session get() = arCore.session
     var frame: Frame? = null
 
-    private var defaultCameraNode: ARCameraNode? = null
+    /**
+     * Configures the session and verifies that the enabled features in the specified session config
+     * are supported with the currently set camera config.
+     *
+     * @see Session.configure
+     */
+    var sessionConfiguration: ((session: Session, Config) -> Unit)? = sessionConfiguration
+        set(value) {
+            field = value
+            session?.configure { value }
+        }
 
     /**
      * Represents a virtual camera, which determines the perspective through which the scene is
@@ -203,8 +271,6 @@ open class ARSceneView @JvmOverloads constructor(
      * rendering.
      */
     override val cameraNode: ARCameraNode get() = _cameraNode as ARCameraNode
-
-    private var defaultCameraStream: ARCameraStream? = null
 
     /**
      * The [ARCameraStream] to render the camera texture.
@@ -301,53 +367,9 @@ open class ARSceneView @JvmOverloads constructor(
             }
         }
 
-    var onSessionConfiguration: ((session: Session, Config) -> Unit)? = null
-    var onSessionCreated: ((session: Session) -> Unit)? = null
-
-    /**
-     * Updates of the state of the ARCore system.
-     *
-     * Callback for [onSessionUpdated].
-     *
-     * This includes: receiving a new camera frame, updating the location of the device, updating
-     * the location of tracking anchors, updating detected planes, etc.
-     *
-     * This call may update the pose of all created anchors and detected planes. The set of updated
-     * objects is accessible through [Frame.getUpdatedTrackables].
-     *
-     * Invoked once per [Frame] immediately before the Scene is updated.
-     */
-    var onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null
-    var onSessionResumed: ((session: Session) -> Unit)? = null
-
-    /**
-     * Invoked when an ARCore error occurred.
-     *
-     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
-     * ARCore is not available on the device or the camera permission has been denied.
-     */
-    var onSessionFailed: ((exception: Exception) -> Unit)? = null
     var onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null
 
-    /**
-     * Invoked when an ARCore trackable is tapped.
-     *
-     * Depending on the session configuration the [HitResult.getTrackable] can be:
-     * - A [Plane] if [Config.setPlaneFindingMode] is enable.
-     * - An [InstantPlacementPoint] if [Config.setInstantPlacementMode] is enable.
-     * - A [DepthPoint] and [Point] if [Config.setDepthMode] is enable.
-     */
-    var onTapAR: ((
-        /** The motion event that caused the tap. */
-        motionEvent: MotionEvent,
-        /** The ARCore hit result for the trackable that was tapped. */
-        hitResult: HitResult
-    ) -> Unit)? = null
-
     val onLightEstimationUpdated: ((estimation: LightEstimator.Estimation?) -> Unit)? = null
-
-    var onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? =
-        null
 
     override val cameraGestureDetector = null
     override val cameraManipulator = null
@@ -362,6 +384,9 @@ open class ARSceneView @JvmOverloads constructor(
         }
 
     private var _onSessionCreated = mutableListOf<(session: Session) -> Unit>()
+
+    private var defaultCameraNode: ARCameraNode? = null
+    private var defaultCameraStream: ARCameraStream? = null
 
     init {
         setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
@@ -379,7 +404,7 @@ open class ARSceneView @JvmOverloads constructor(
             session.setCameraTextureNames(it.cameraTextureIds)
         }
 
-        cameraConfig?.let { session.cameraConfig = it(session) }
+        sessionCameraConfig?.let { session.cameraConfig = it(session) }
 
         session.configure { config ->
             // getting ar frame doesn't block and gives last frame
@@ -387,7 +412,7 @@ open class ARSceneView @JvmOverloads constructor(
             // FocusMode must be changed after the session resume to work
 //            config.focusMode = Config.FocusMode.AUTO
 
-            onSessionConfiguration?.invoke(session, config)
+            sessionConfiguration?.invoke(session, config)
         }
 
         cameraStream?.let { addEntity(it.entity) }
@@ -573,30 +598,9 @@ open class ARSceneView @JvmOverloads constructor(
     }
 
     companion object {
-        fun createEglContext() = SceneView.createEglContext()
-        fun createEngine(eglContext: EGLContext) = SceneView.createEngine(eglContext)
-        fun createScene(engine: Engine) = SceneView.createScene(engine)
-        fun createView(engine: Engine) = SceneView.createView(engine).apply {
-            // Dynamic resolutions has issues with the AR Camera stream: Lags, green screens,...
-            dynamicResolutionOptions = dynamicResolutionOptions.apply {
-                enabled = false
-            }
-        }
-
-        fun createRenderer(engine: Engine) = SceneView.createRenderer(engine)
-        fun createModelLoader(engine: Engine, context: Context) =
-            SceneView.createModelLoader(engine, context)
-
-        fun createMaterialLoader(engine: Engine, context: Context) =
-            SceneView.createMaterialLoader(engine, context)
-
         fun createCameraNode(engine: Engine): ARCameraNode = DefaultARCameraNode(engine)
 
         fun createCameraStream(engine: Engine, materialLoader: MaterialLoader) =
             ARCameraStream(engine, materialLoader)
-
-        fun createMainLight(engine: Engine): LightNode = SceneView.createMainLightNode(engine)
-        fun createIndirectLight(engine: Engine): IndirectLight? = null
-        fun createSkybox(engine: Engine) = SceneView.createSkybox(engine)
     }
 }
