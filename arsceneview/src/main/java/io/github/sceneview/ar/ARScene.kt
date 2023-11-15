@@ -133,22 +133,31 @@ fun ARScene(
      *
      * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
      *
+     * @see HDRLoader
+     * @see KTX1Loader
      * @see Skybox
-     * @see Scene.setSkybox
      */
     skybox: Skybox? = rememberSkybox(engine),
     /**
-     * Invoked when an frame is processed.
-     *
-     * Registers a callback to be invoked when a valid Frame is processing.
-     *
-     * The callback to be invoked once per frame **immediately before the scene is updated.
-     *
-     * The callback will only be invoked if the Frame is considered as valid.
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
-    sessionFeatures: Set<Session.Feature> = setOf(),
-    cameraConfig: ((Session) -> CameraConfig)? = null,
-    planeRenderer: Boolean = true,
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    /**
+     * Detects various gestures and events.
+     *
+     * The gesture listener callback will notify users when a particular motion event has occurred.
+     * Responds to Android touch events with listeners.
+     */
+    gestureDetector: GestureDetector = rememberHitTestGestureDetector(
+        LocalContext.current,
+        collisionSystem
+    ),
+    /**
+     * The listener invoked for all the gesture detector callbacks.
+     */
+    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
      * The [ARCameraStream] to render the camera texture.
      *
@@ -239,6 +248,8 @@ fun ARScene(
                 sceneView.mainLightNode = mainLightNode
                 sceneView.indirectLight = indirectLight
                 sceneView.skybox = skybox
+                sceneView.gestureDetector = gestureDetector
+                sceneView.onGestureListener = onGestureListener
 
                 sceneView.planeRenderer.isEnabled = planeRenderer
 
