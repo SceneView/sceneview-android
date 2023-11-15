@@ -34,6 +34,10 @@ open class AugmentedImageNode(
      */
     val augmentedImage: AugmentedImage,
     /**
+     * Should the node scale depending on the image extents
+     */
+    var applyImageScale: Boolean = false,
+    /**
      * Set the node to be visible only on those tracking methods
      */
     val visibleTrackingMethods: Set<TrackingMethod> = setOf(
@@ -88,10 +92,12 @@ open class AugmentedImageNode(
             trackingMethod == TrackingMethod.FULL_TRACKING
         ) {
             pose = augmentedImage.centerPose
-            scale = scale.copy(
-                x = augmentedImage.extentX,
-                z = augmentedImage.extentZ
-            )
+            if (applyImageScale) {
+                scale = scale.copy(
+                    x = augmentedImage.extentX,
+                    z = augmentedImage.extentZ
+                )
+            }
         }
     }
 }
