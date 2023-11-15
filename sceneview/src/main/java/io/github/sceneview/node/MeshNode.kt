@@ -5,9 +5,9 @@ import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer
 import io.github.sceneview.geometries.Geometry
-import io.github.sceneview.math.toVector3Box
 
 /**
  * Mesh are bundles of primitives, each of which has its own geometry and material.
@@ -36,6 +36,7 @@ import io.github.sceneview.math.toVector3Box
  */
 open class MeshNode(
     engine: Engine,
+    primitiveType: PrimitiveType,
     val vertexBuffer: VertexBuffer,
     val indexBuffer: IndexBuffer,
     val boundingBox: Box? = null,
@@ -55,14 +56,14 @@ open class MeshNode(
      * parent changes.
      */
     parent: Node? = null,
-    renderableApply: RenderableManager.Builder.() -> Unit = {}
+    builder: RenderableManager.Builder.() -> Unit = {}
 ) : RenderableNode(engine = engine, parent = parent) {
 
     init {
         RenderableManager.Builder(1)
             .geometry(
                 0,
-                RenderableManager.PrimitiveType.TRIANGLES,
+                primitiveType,
                 vertexBuffer,
                 indexBuffer
             )
@@ -72,12 +73,8 @@ open class MeshNode(
                 materialInstance?.let { materialInstance ->
                     material(0, materialInstance)
                 }
-            }.apply(renderableApply)
+            }.apply(builder)
             .build(engine, entity)
         updateCollisionShape()
-    }
-
-    fun updateCollisionShape() {
-        collisionShape = axisAlignedBoundingBox.toVector3Box()
     }
 }
