@@ -389,6 +389,27 @@ open class ARSceneView @JvmOverloads constructor(
     private var defaultCameraStream: ARCameraStream? = null
 
     init {
+        view.apply {
+            dynamicResolutionOptions = dynamicResolutionOptions.apply {
+                enabled = false
+//                quality = View.QualityLevel.MEDIUM
+            }
+//                // FXAA is pretty cheap and helps a lot
+//                antiAliasing = AntiAliasing.NONE
+//                // Ambient occlusion is the cheapest effect that adds a lot of quality
+//                ambientOcclusionOptions = ambientOcclusionOptions.apply {
+//                    enabled = false
+//                }
+//                // Bloom is pretty expensive but adds a fair amount of realism
+//                bloomOptions = bloomOptions.apply {
+//                    enabled = false
+//                }
+//                // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
+//                // material orange 500.
+//                colorGrading = ColorGrading.Builder()
+//                    .toneMapping(ColorGrading.ToneMapping.FILMIC)
+//                    .build(engine)
+        }
         setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
             defaultCameraNode = it
         })
