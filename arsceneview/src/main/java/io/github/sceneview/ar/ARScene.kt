@@ -230,30 +230,9 @@ fun ARScene(
      * The reason that [Camera.getTrackingState] is [TrackingState.PAUSED] or `null` if it is
      * [TrackingState.TRACKING]
      */
-    onSessionFailed: ((exception: Exception) -> Unit)? = null,
-    onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null,
-    onTap: ((
-        /** The motion event that caused the tap. **/
-        motionEvent: MotionEvent,
-        /** The node that was tapped or `null`. **/
-        node: Node?
-    ) -> Unit)? = null,
-    /**
-     * Invoked when an ARCore trackable is tapped.
-     *
-     * Depending on the session configuration the [HitResult.getTrackable] can be:
-     * - A [Plane] if [Config.setPlaneFindingMode] is enable.
-     * - An [InstantPlacementPoint] if [Config.setInstantPlacementMode] is enable.
-     * - A [DepthPoint] and [Point] if [Config.setDepthMode] is enable.
-     */
-    onTapAR: ((
-        /** The motion event that caused the tap. */
-        motionEvent: MotionEvent,
-        /** The ARCore hit result for the trackable that was tapped. */
-        hitResult: HitResult
-    ) -> Unit)? = null,
-    onViewCreated: (ARSceneView.() -> Unit)? = null,
-    onViewUpdated: (ARSceneView.() -> Unit)? = null
+    onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
+    onViewUpdated: (ARSceneView.() -> Unit)? = null,
+    onViewCreated: (ARSceneView.() -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
         ARScenePreview(modifier)
