@@ -1,7 +1,9 @@
 package io.github.sceneview.geometries
 
+import com.google.android.filament.Box
 import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
+import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer
 import dev.romainguy.kotlin.math.TWO_PI
 import dev.romainguy.kotlin.math.normalize
@@ -13,19 +15,28 @@ import kotlin.math.sin
 
 class Cylinder(
     engine: Engine,
+    primitiveType: PrimitiveType,
+    vertices: List<Vertex>,
+    vertexBuffer: VertexBuffer,
+    indices: List<PrimitiveIndices>,
+    indexBuffer: IndexBuffer,
+    primitivesOffsets: List<IntRange>,
+    boundingBox: Box,
     radius: Float,
     height: Float,
     center: Position,
-    sideCount: Int,
-    vertexBuffer: VertexBuffer,
-    indexBuffer: IndexBuffer,
-    vertices: List<Vertex>,
-    submeshes: List<Submesh>
-) : Geometry(engine, vertexBuffer, indexBuffer, vertices, submeshes) {
-    /**
-     * Creates a [Geometry] in the shape of a cylinder with the give specifications.
-     */
-    class Builder : BaseBuilder<Cylinder>() {
+    sideCount: Int
+) : Geometry(
+    engine,
+    primitiveType,
+    vertices,
+    vertexBuffer,
+    indices,
+    indexBuffer,
+    primitivesOffsets,
+    boundingBox
+) {
+    class Builder : Geometry.Builder(PrimitiveType.TRIANGLES) {
         var radius: Float = DEFAULT_RADIUS
             private set
         var height: Float = DEFAULT_HEIGHT
@@ -42,42 +53,22 @@ class Cylinder(
 
         override fun build(engine: Engine): Cylinder {
             vertices(getVertices(radius, height, center, sideCount))
-            submeshes(getSubmeshes(sideCount))
-            return Cylinder(
-                engine,
-                radius,
-                height,
-                center,
-                sideCount,
-                vertexBuilder.build(engine),
-                indexBuilder.build(engine),
-                vertices,
-                submeshes
-            )
+            indices(getIndices(sideCount))
+            return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
+                Cylinder(
+                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
+                    boundingBox, radius, height, center, sideCount
+                )
+            }
         }
     }
 
-    /**
-     * The radius of the constructed cylinder
-     */
     var radius: Float = radius
         private set
-
-    /**
-     * The height of the constructed cylinder
-     */
     var height: Float = height
         private set
-
-    /**
-     * The center of the constructed cylinder
-     */
     var center: Position = center
         private set
-
-    /**
-     * Number of faces
-     */
     var sideCount: Int = sideCount
         private set
 
@@ -86,14 +77,14 @@ class Cylinder(
         height: Float = this.height,
         center: Position = this.center,
         sideCount: Int = this.sideCount
-    ) {
+    ) = apply {
         this.radius = radius
         this.height = height
         this.center = center
-        setVertices(getVertices(radius, height, center, sideCount))
+        vertices = getVertices(radius, height, center, sideCount)
         if (sideCount != this.sideCount) {
             this.sideCount = sideCount
-            setSubmeshes(getSubmeshes(sideCount))
+            indices = getIndices(sideCount)
         }
     }
 
@@ -104,7 +95,7 @@ class Cylinder(
         val DEFAULT_SIDE_COUNT = 24
 
         fun getVertices(radius: Float, height: Float, center: Position, sideCount: Int) =
-            mutableListOf<Vertex>().apply {
+            buildList {
                 val halfHeight = height / 2
                 val thetaIncrement = TWO_PI / sideCount
                 var theta = 0f
@@ -190,9 +181,9 @@ class Cylinder(
                     )
                 )
                 addAll(upperCapVertices)
-            }.toList()
+            }
 
-        fun getSubmeshes(sideCount: Int) = mutableListOf<Submesh>().apply {
+        fun getIndices(sideCount: Int) = buildList {
             // Create triangles for each side
             for (side in 0 until sideCount) {
                 val bottomRight = side + 1
@@ -202,7 +193,7 @@ class Cylinder(
                 val upperCenterIndex = lowerCenterIndex + sideCount + 2
 
                 add(
-                    Submesh(
+                    PrimitiveIndices(
                         // First triangle of side
                         side,
                         topRight,
@@ -222,6 +213,6 @@ class Cylinder(
                     )
                 )
             }
-        }.toList()
+        }
     }
 }

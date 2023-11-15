@@ -1,80 +1,89 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
-import io.github.sceneview.geometries.Geometry
+import io.github.sceneview.Entity
 import io.github.sceneview.geometries.Plane
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
-open class PlaneNode(
+open class PlaneNode private constructor(
     engine: Engine,
-    size: Size = Plane.DEFAULT_SIZE,
-    center: Position = Plane.DEFAULT_CENTER,
-    normal: Direction = Plane.DEFAULT_NORMAL,
-    /**
-     * Binds a material instance to the specified primitive.
-     *
-     * If no material is specified for a given primitive, Filament will fall back to a basic
-     * default material.
-     *
-     * Should return the material to bind for the zero-based index of the primitive, must be less
-     * than the [Geometry.submeshes] size passed to constructor.
-     */
-    materialInstances: (index: Int) -> MaterialInstance?,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
+    entity: Entity = EntityManager.get().create(),
     parent: Node? = null,
-    renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : BaseGeometryNode<Plane>(
-    engine = engine,
-    geometry = Plane.Builder()
-        .size(size)
-        .center(center)
-        .normal(normal)
-        .build(engine),
-    materialInstances = materialInstances,
-    parent = parent,
-    renderableApply = renderableApply
-) {
+    override val geometry: Plane,
+    materialInstances: List<MaterialInstance?>,
+    primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
+    builder: RenderableManager.Builder.() -> Unit = {}
+) : GeometryNode(engine, entity, parent, geometry, materialInstances, primitivesOffsets, builder) {
 
     constructor(
         engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        geometry: Plane,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = geometry,
+        materialInstances = listOf(materialInstance),
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        builder = builder
+    )
+
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
         size: Size = Plane.DEFAULT_SIZE,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
-        /**
-         * Binds a material instance to all primitives.
-         */
-        materialInstance: MaterialInstance?,
-        parent: Node? = null,
-        renderableApply: RenderableManager.Builder.() -> Unit = {}
+        materialInstances: List<MaterialInstance?>,
+        builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        size = size,
-        center = center,
-        normal = normal,
-        materialInstances = { materialInstance },
+        entity = entity,
         parent = parent,
-        renderableApply = renderableApply
+        geometry = Plane.Builder()
+            .size(size)
+            .center(center)
+            .normal(normal)
+            .build(engine),
+        materialInstances = materialInstances,
+        builder = builder
     )
 
-    val size get() = geometry.size
-    val center get() = geometry.center
-    val normal get() = geometry.normal
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        size: Size = Plane.DEFAULT_SIZE,
+        center: Position = Plane.DEFAULT_CENTER,
+        normal: Direction = Plane.DEFAULT_NORMAL,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = Plane.Builder()
+            .size(size)
+            .center(center)
+            .normal(normal)
+            .build(engine),
+        materialInstance = materialInstance,
+        builder = builder
+    )
 
     fun updateGeometry(
-        size: Size = this.size,
-        center: Position = this.center,
-        normal: Direction = this.normal
-    ) = geometry.update(size, center, normal)
+        size: Size = geometry.size,
+        center: Position = geometry.center,
+        normal: Direction = geometry.normal
+    ) = setGeometry(geometry.update(size, center, normal))
 }

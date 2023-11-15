@@ -1,11 +1,13 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import io.github.sceneview.Entity
 import io.github.sceneview.geometries.Geometry
-import io.github.sceneview.managers.geometry
-import io.github.sceneview.math.toVector3Box
+import io.github.sceneview.geometries.geometry
+import io.github.sceneview.managers.materials
 
 /**
  * Mesh are bundles of primitives, each of which has its own geometry and material.
@@ -34,122 +36,45 @@ import io.github.sceneview.math.toVector3Box
  */
 open class GeometryNode(
     engine: Engine,
-    vertices: List<Geometry.Vertex> = listOf(),
-    submeshes: List<Geometry.Submesh> = listOf(),
-    /**
-     * Binds a material instance to the specified primitive.
-     *
-     * If no material is specified for a given primitive, Filament will fall back to a basic
-     * default material.
-     *
-     * Should return the material to bind for the zero-based index of the primitive, must be less
-     * than the [Geometry.submeshes] size passed to constructor.
-     */
-    materialInstances: (index: Int) -> MaterialInstance?,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
+    entity: Entity = EntityManager.get().create(),
     parent: Node? = null,
-    renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : BaseGeometryNode<Geometry>(
+    open val geometry: Geometry,
+    materialInstances: List<MaterialInstance?>,
+    primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
+    builder: RenderableManager.Builder.() -> Unit = {}
+) : RenderableNode(
     engine = engine,
     geometry = Geometry.Builder()
         .vertices(vertices)
         .submeshes(submeshes)
         .build(engine),
+    materialInstance = materialInstance,
     materialInstances = materialInstances,
     parent = parent,
     renderableApply = renderableApply
 ) {
-
-    constructor(
-        engine: Engine,
-        vertices: List<Geometry.Vertex> = listOf(),
-        submeshes: List<Geometry.Submesh> = listOf(),
-        /**
-         * Binds a material instance to all primitives.
-         */
-        materialInstance: MaterialInstance?,
-        parent: Node? = null,
-        renderableApply: RenderableManager.Builder.() -> Unit = {}
-    ) : this(
-        engine = engine,
-        vertices = vertices,
-        submeshes = submeshes,
-        materialInstances = { materialInstance },
-        parent = parent,
-        renderableApply = renderableApply
-    )
-
+    val vertexBuffer get() = geometry.vertexBuffer
     val indexBuffer get() = geometry.indexBuffer
 
-    fun setVertices(vertices: List<Geometry.Vertex>) = geometry.setVertices(vertices)
-    fun setIndices(submeshes: List<Geometry.Submesh>) = geometry.setSubmeshes(submeshes)
-}
-
-open class BaseGeometryNode<T : Geometry>(
-    engine: Engine,
-    val geometry: T,
-    /**
-     * Binds a material instance to the specified primitive.
-     *
-     * If no material is specified for a given primitive, Filament will fall back to a basic
-     * default material.
-     *
-     * Should return the material to bind for the zero-based index of the primitive, must be less
-     * than the [Geometry.submeshes] size passed to constructor.
-     */
-    materialInstances: (index: Int) -> MaterialInstance?,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
-    parent: Node? = null,
-    renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : RenderableNode(engine = engine, parent = parent) {
-
     constructor(
         engine: Engine,
-        geometry: T,
-        /**
-         * Binds a material instance to all primitives.
-         */
-        materialInstance: MaterialInstance?,
+        entity: Entity = EntityManager.get().create(),
         parent: Node? = null,
-        renderableApply: RenderableManager.Builder.() -> Unit = {}
+        geometry: Geometry,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        geometry = geometry,
-        materialInstances = { materialInstance },
+        entity = entity,
         parent = parent,
-        renderableApply = renderableApply
+        geometry = geometry,
+        materialInstances = listOf(materialInstance),
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        builder = builder
     )
 
-    init {
-        RenderableManager.Builder(geometry.submeshes.size)
-            .geometry(geometry)
-            .apply {
-                geometry.submeshes.forEachIndexed { index, _ ->
-                    materialInstances(index)?.let { material(index, it) }
-                }
-            }
-            .apply(renderableApply)
-            .build(engine, entity)
-        updateCollisionShape()
-    }
-
-    fun updateCollisionShape() {
-        collisionShape = axisAlignedBoundingBox.toVector3Box()
-    }
+    fun updateGeometry(
+        vertices: List<Geometry.Vertex> = geometry.vertices,
+        indices: List<Geometry.PrimitiveIndices> = geometry.indices
+    ) = setGeometry(geometry.update(vertices, indices))
 }
