@@ -1029,3 +1029,16 @@ open class Node(
         val downPosition: Vector3
     )
 }
+
+interface OnNodeGestureListener : GestureDetector.OnGestureListener,
+    OnDoubleTapListener,
+    OnContextClickListener,
+    MoveGestureDetector.OnMoveListener,
+    RotateGestureDetector.OnRotateListener,
+    ScaleGestureDetector.OnScaleListener
+
+open class SimpleOnNodeGestureListener : GestureDetector.SimpleOnGestureListener(),
+    MoveGestureDetector.SimpleOnMoveListener,
+    RotateGestureDetector.SimpleOnRotateListener,
+    ScaleGestureDetector.SimpleOnScaleListener,
+    OnNodeGestureListener

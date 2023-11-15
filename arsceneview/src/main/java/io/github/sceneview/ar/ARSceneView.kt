@@ -1,10 +1,8 @@
 package io.github.sceneview.ar
 
 import android.content.Context
-import android.opengl.EGLContext
 import android.util.AttributeSet
 import android.util.Size
-import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
@@ -16,30 +14,36 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
+import com.google.android.filament.utils.HDRLoader
+import com.google.android.filament.utils.KTX1Loader
+import com.google.ar.core.Camera
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfig.FacingDirection
 import com.google.ar.core.Config
-import com.google.ar.core.DepthPoint
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
-import com.google.ar.core.InstantPlacementPoint
 import com.google.ar.core.Plane
 import com.google.ar.core.Point
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
+import com.google.ar.core.TrackingState
 import io.github.sceneview.Scene
 import io.github.sceneview.SceneView
 import io.github.sceneview.ar.arcore.LightEstimator
 import io.github.sceneview.ar.arcore.configure
+import io.github.sceneview.ar.arcore.firstByTypeOrNull
 import io.github.sceneview.ar.arcore.getUpdatedTrackables
-import io.github.sceneview.ar.arcore.hitTest
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.ar.node.PoseNode
 import io.github.sceneview.ar.scene.PlaneRenderer
+import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.utils.setKeepScreenOn
@@ -131,8 +135,22 @@ open class ARSceneView @JvmOverloads constructor(
      * @see Scene.setSkybox
      */
     sharedSkybox: Skybox? = null,
-    var sessionFeatures: Set<Session.Feature> = setOf(),
-    var cameraConfig: ((Session) -> CameraConfig)? = null,
+    /**
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    sharedCollisionSystem: CollisionSystem? = null,
+    /**
+     * Detects various gestures and events.
+     *
+     * The gesture listener callback will notify users when a particular motion event has occurred.
+     *
+     * Responds to Android touch events with listeners.
+     */
+    sharedGestureDetector: GestureDetector? = null,
+    /**
+     * The listener invoked for all the gesture detector callbacks.
+     */
+    sharedOnGestureListener: GestureDetector.OnGestureListener? = null,
     /**
      * The [ARCameraStream] to render the camera texture.
      *
@@ -155,7 +173,10 @@ open class ARSceneView @JvmOverloads constructor(
     sharedCameraNode,
     sharedMainLightNode,
     sharedIndirectLight,
-    sharedSkybox
+    sharedSkybox,
+    sharedCollisionSystem,
+    sharedGestureDetector,
+    sharedOnGestureListener
 ) {
     open val arCore = ARCore(
         onSessionCreated = ::onSessionCreated,
@@ -469,31 +490,6 @@ open class ARSceneView @JvmOverloads constructor(
                 }
             }
         }
-    }
-
-    override fun onTap(motionEvent: MotionEvent, node: Node?) {
-        super.onTap(motionEvent, node)
-
-        if (node == null) {
-            frame?.hitTest(
-                xPx = motionEvent.x,
-                yPx = motionEvent.y
-            )?.firstOrNull()?.let { hitResult ->
-                onTapAR(motionEvent, hitResult)
-            }
-        }
-    }
-
-    /**
-     * Invoked when an ARCore trackable is tapped.
-     *
-     * Calls the `onTapAr` listener if it is available.
-     *
-     * @param motionEvent The motion event that caused the tap.
-     * @param hitResult The ARCore hit result for the trackable that was tapped.
-     */
-    open fun onTapAR(motionEvent: MotionEvent, hitResult: HitResult) {
-        onTapAR?.invoke(motionEvent, hitResult)
     }
 
     override fun onResized(width: Int, height: Int) {
