@@ -152,8 +152,9 @@ open class RotateGestureDetector(
                         return false
                     }
                     update(event)
-                    if (rotation.absoluteValue > rotationThreshold) {
+                    if (rotation.absoluteValue > rotationThreshold &&
                         listener.onRotateBegin(this, event)
+                    ) {
                         isGestureInProgress = true
                     } else {
                         return false

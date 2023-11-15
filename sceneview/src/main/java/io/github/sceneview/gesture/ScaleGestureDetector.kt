@@ -2,6 +2,7 @@ package io.github.sceneview.gesture
 
 import android.content.Context
 import android.view.MotionEvent
+import io.github.sceneview.gesture.RotateGestureDetector.OnRotateListener
 
 /**
  * Detects scaling transformation gestures using the supplied [MotionEvent]s.
@@ -20,17 +21,13 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
     android.view.ScaleGestureDetector(
         context,
         object : OnScaleGestureListener {
-            override fun onScaleBegin(detector: android.view.ScaleGestureDetector): Boolean {
+            // true means that we always start a gesture
+            override fun onScaleBegin(detector: android.view.ScaleGestureDetector) =
                 (detector as ScaleGestureDetector).let { listener.onScaleBegin(it, it.event) }
-                // true means that we always start a gesture
-                return true
-            }
 
-            override fun onScale(detector: android.view.ScaleGestureDetector): Boolean {
+            // true means that we work with increments rather than an accumulated value
+            override fun onScale(detector: android.view.ScaleGestureDetector) =
                 (detector as ScaleGestureDetector).let { listener.onScale(it, it.event) }
-                // true means that we work with increments rather than an accumulated value
-                return true
-            }
 
             override fun onScaleEnd(detector: android.view.ScaleGestureDetector) {
                 (detector as ScaleGestureDetector).let { listener.onScaleEnd(it, it.event) }
@@ -63,7 +60,7 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
          * @param detector The detector reporting the event - use this to retrieve extended info
          * about event state.
          */
-        fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent)
+        fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent): Boolean
 
         /**
          * Responds to scaling events for a gesture in progress.
@@ -73,7 +70,7 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
          * @param detector The detector reporting the event - use this to retrieve extended info
          * about event state.
          */
-        fun onScale(detector: ScaleGestureDetector, e: MotionEvent)
+        fun onScale(detector: ScaleGestureDetector, e: MotionEvent): Boolean
 
         /**
          * Responds to the end of a scale gesture. Reported by existing pointers going up.
@@ -86,5 +83,20 @@ open class ScaleGestureDetector(context: Context, listener: OnScaleListener) :
          * about event state.
          */
         fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent)
+    }
+
+    /**
+     * A convenience class to extend when you only want to listen for a subset of scale-related
+     * events.
+     *
+     * This implements all methods in [OnScaleListener] but does nothing.
+     * [OnRotateListener.onRotate] returns `false` so that a subclass can retrieve the accumulated
+     * rotation factor in an overridden [OnRotateListener.onRotateEnd].
+     * [OnRotateListener.onRotateBegin] returns `true`.
+     */
+    interface SimpleOnScaleListener : OnScaleListener {
+        override fun onScale(detector: ScaleGestureDetector, e: MotionEvent) = false
+        override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) = true
+        override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {}
     }
 }
