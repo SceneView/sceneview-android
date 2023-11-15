@@ -22,7 +22,6 @@
             <option value="$PROJECT_DIR$/samples/common" />
             <option value="$PROJECT_DIR$/samples/model-viewer" />
             <option value="$PROJECT_DIR$/sceneview" />
-            <option value="$PROJECT_DIR$/sceneview_2_0_0" />
           </set>
         </option>
       </GradleProjectSettings>
