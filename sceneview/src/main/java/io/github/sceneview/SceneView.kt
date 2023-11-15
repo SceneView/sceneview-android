@@ -138,39 +138,65 @@ open class SceneView @JvmOverloads constructor(
      *
      * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
      *
+     * @see HDRLoader
+     * @see KTX1Loader
      * @see Skybox
-     * @see Scene.setSkybox
      */
-    sharedSkybox: Skybox? = null
-) : SurfaceView(context, attrs, defStyleAttr, defStyleRes),
-    GestureDetector.OnGestureListener by GestureDetector.SimpleOnGestureListener() {
+    sharedSkybox: Skybox? = null,
+    /**
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    sharedCollisionSystem: CollisionSystem? = null,
+    /**
+     * Detects various gestures and events.
+     *
+     * The gesture listener callback will notify users when a particular motion event has occurred.
+     *
+     * Responds to Android touch events with listeners.
+     */
+    sharedGestureDetector: GestureDetector? = null,
+    /**
+     * The listener invoked for all the gesture detector callbacks.
+     */
+    sharedOnGestureListener: GestureDetector.OnGestureListener? = null
+) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
 
-    private var defaultEngine: Engine? = null
     val engine = sharedEngine ?: createEglContext().let {
         defaultEglContext = it
         createEngine(it).also { defaultEngine = it }
     }
-    private var defaultScene: Scene? = null
-    val scene = sharedScene ?: createScene(engine).also { defaultScene = it }
-    private var defaultView: View? = null
-    val view = sharedView ?: createView(engine).also { defaultView = it }
-    private var defaultRenderer: Renderer? = null
+
+    val view = (sharedView ?: createView(engine)).also { defaultView = it }.apply {
+        scene = (sharedScene ?: createScene(engine).also { defaultScene = it }).apply {
+            skybox = sharedSkybox ?: createSkybox(engine).also { defaultSkybox = it }
+            indirectLight = sharedIndirectLight ?: createIndirectLight(engine).also {
+                defaultIndirectLight = it
+            }
+        }
+    }
+    var scene
+        get() = view.scene!!
+        set(value) {
+            if (view.scene != value) {
+                view.scene = value
+            }
+        }
     val renderer = sharedRenderer ?: createRenderer(engine).also { defaultRenderer = it }
-    private var defaultModelLoader: ModelLoader? = null
+
     val modelLoader = sharedModelLoader ?: createModelLoader(engine, context).also {
         defaultModelLoader = it
     }
-    private var defaultMaterialLoader: MaterialLoader? = null
     val materialLoader = sharedMaterialLoader ?: createMaterialLoader(engine, context).also {
         defaultMaterialLoader = it
     }
+
     val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
         renderCallback = SurfaceCallback()
         attachTo(this@SceneView)
     }
+
     val iblPrefilter = IBLPrefilter(engine)
 
-    private var defaultCameraNode: CameraNode? = null
     protected var _cameraNode: CameraNode? = null
 
     /**
@@ -183,9 +209,8 @@ open class SceneView @JvmOverloads constructor(
      */
     open val cameraNode: CameraNode get() = _cameraNode!!
 
-    private var defaultMainLight: LightNode? = null
     private var _mainLightNode: LightNode? =
-        sharedMainLightNode ?: createMainLightNode(engine).also { defaultMainLight = it }
+        (sharedMainLightNode ?: createMainLightNode(engine).also { defaultMainLight = it })
 
     /**
      * Always add a direct light source since it is required for shadowing.
@@ -201,8 +226,6 @@ open class SceneView @JvmOverloads constructor(
                 value?.let { addNode(it) }
             }
         }
-
-    private var defaultIndirectLight: IndirectLight? = null
 
     /**
      * IndirectLight is used to simulate environment lighting.
@@ -221,8 +244,6 @@ open class SceneView @JvmOverloads constructor(
                 scene.indirectLight = value
             }
         }
-
-    private var defaultSkybox: Skybox? = null
 
     /**
      * The Skybox is drawn last and covers all pixels not touched by geometry.
@@ -309,33 +330,34 @@ open class SceneView @JvmOverloads constructor(
      */
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
 
+    private var defaultCollisionSystem: CollisionSystem? = null
+
     /**
-     * Invoked when the `SceneView` is tapped.
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    val collisionSystem = (sharedCollisionSystem ?: createCollisionSystem(view).also {
+        defaultCollisionSystem = it
+    })
+
+    /**
+     * Detects various gestures and events.
      *
-     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
-     * used to find a touched node. The ID of the Filament renderable can be used to determine what
-     * part of a model is tapped.
+     * The gesture listener callback will notify users when a particular motion event has occurred.
+     * Responds to Android touch events with listeners.
      */
-
-    var onTap: ((
-        /** The motion event that caused the tap. **/
-        motionEvent: MotionEvent,
-        /** The node that was tapped or `null`. **/
-        node: Node?
-    ) -> Unit)? = null
+    var gestureDetector =
+        (sharedGestureDetector ?: HitTestGestureDetector(context, collisionSystem)).apply {
+            listener = sharedOnGestureListener
+        }
 
     /**
-     * Physics system to handle collision between nodes, hit testing on a model,...
+     * The listener invoked for all the gesture detector callbacks.
      */
-    val collisionSystem = CollisionSystem()
-
-    val gestureDetector by lazy {
-        GestureDetector(
-            context = context,
-            cameraNode = cameraNode,
-            listener = this
-        )
-    }
+    var onGestureListener
+        get() = gestureDetector.listener
+        set(value) {
+            gestureDetector.listener = value
+        }
 
     protected open val activity: ComponentActivity? = sharedActivity
         get() = field ?: try {
@@ -364,13 +386,6 @@ open class SceneView @JvmOverloads constructor(
             .build(Manipulator.Mode.ORBIT)
     }
 
-    protected var isDestroyed = false
-
-    private var defaultEglContext: EGLContext? = null
-    private val displayHelper = DisplayHelper(context)
-    private var swapChain: SwapChain? = null
-
-    private val lifecycleObserver = LifeCycleObserver()
     open var lifecycle: Lifecycle? = sharedLifecycle
         set(value) {
             field?.removeObserver(lifecycleObserver)
@@ -378,28 +393,34 @@ open class SceneView @JvmOverloads constructor(
             value?.addObserver(lifecycleObserver)
         }
 
-    private val frameCallback = FrameCallback()
-
-    private var _viewAttachmentManager: ViewAttachmentManager? = null
+    protected var isDestroyed = false
     protected val viewAttachmentManager
         get() = _viewAttachmentManager ?: ViewAttachmentManager(context, this).also {
             _viewAttachmentManager = it
         }
-
+    private val displayHelper = DisplayHelper(context)
+    private var swapChain: SwapChain? = null
+    private val lifecycleObserver = LifeCycleObserver()
+    private val frameCallback = FrameCallback()
+    private var _viewAttachmentManager: ViewAttachmentManager? = null
     private var lastTouchEvent: MotionEvent? = null
-
     private var surfaceMirrorer: SurfaceMirrorer? = null
-
     private var lastFrameTimeNanos: Long? = null
 
-    init {
-        view.scene = scene
+    private var defaultEglContext: EGLContext? = null
+    private var defaultEngine: Engine? = null
+    private var defaultScene: Scene? = null
+    private var defaultView: View? = null
+    private var defaultRenderer: Renderer? = null
+    private var defaultModelLoader: ModelLoader? = null
+    private var defaultMaterialLoader: MaterialLoader? = null
+    private var defaultCameraNode: CameraNode? = null
+    private var defaultMainLight: LightNode? = null
+    private var defaultIndirectLight: IndirectLight? = null
+    private var defaultSkybox: Skybox? = null
 
+    init {
         _mainLightNode?.let { addNode(it) }
-        scene.skybox = sharedSkybox ?: createSkybox(engine).also { defaultSkybox = it }
-        scene.indirectLight = sharedIndirectLight ?: createIndirectLight(engine).also {
-            defaultIndirectLight = it
-        }
 
         setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
             defaultCameraNode = it
@@ -592,22 +613,6 @@ open class SceneView @JvmOverloads constructor(
         cameraNode.updateProjection()
     }
 
-    /**
-     * Invoked when the `SceneView` is tapped.
-     *
-     * Calls the `onTap` listener if it is available.
-     *
-     * @param node The node that was tapped or `null`.
-     * @param motionEvent The motion event that caused the tap.
-     */
-    open fun onTap(motionEvent: MotionEvent, node: Node?) {
-        onTap?.invoke(motionEvent, node)
-    }
-
-    override fun onSingleTapConfirmed(e: NodeMotionEvent) {
-        onTap(e.motionEvent, e.node)
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
         // This makes sure that the view's onTouchListener is called.
@@ -760,6 +765,7 @@ open class SceneView @JvmOverloads constructor(
         })
 
     companion object {
+
         init {
             Gltfio.init()
             Filament.init()
@@ -819,5 +825,7 @@ open class SceneView @JvmOverloads constructor(
         fun createIndirectLight(engine: Engine): IndirectLight? = null
         fun createSkybox(engine: Engine): Skybox = DefaultSkybox.Builder()
             .build(engine)
+
+        fun createCollisionSystem(view: View): CollisionSystem = CollisionSystem(view)
     }
 }

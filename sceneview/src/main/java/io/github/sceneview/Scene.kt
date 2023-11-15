@@ -24,6 +24,17 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
+import com.google.android.filament.utils.HDRLoader
+import com.google.android.filament.utils.KTX1Loader
+import dev.romainguy.kotlin.math.Float2
+import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.gesture.GestureDetector
+import io.github.sceneview.gesture.HitTestGestureDetector
+import io.github.sceneview.gesture.MoveGestureDetector
+import io.github.sceneview.gesture.PickGestureDetector
+import io.github.sceneview.gesture.RotateGestureDetector
+import io.github.sceneview.gesture.ScaleGestureDetector
+import io.github.sceneview.gesture.SelectedNodeGestureDetector
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.node.CameraNode
@@ -34,8 +45,6 @@ import io.github.sceneview.utils.destroy
 @Composable
 fun Scene(
     modifier: Modifier = Modifier,
-    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
-    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
      * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
      */
@@ -102,6 +111,8 @@ fun Scene(
      *
      * @see IndirectLight
      * @see Scene.setIndirectLight
+     * @see HDRLoader
+     * @see KTX1Loader
      */
     indirectLight: IndirectLight? = rememberIndirectLight(engine),
     /**
@@ -111,10 +122,31 @@ fun Scene(
      *
      * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
      *
+     * @see HDRLoader
+     * @see KTX1Loader
      * @see Skybox
-     * @see Scene.setSkybox
      */
     skybox: Skybox? = rememberSkybox(engine),
+    /**
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    /**
+     * Detects various gestures and events.
+     *
+     * The gesture listener callback will notify users when a particular motion event has occurred.
+     * Responds to Android touch events with listeners.
+     */
+    gestureDetector: GestureDetector = rememberHitTestGestureDetector(
+        LocalContext.current,
+        collisionSystem
+    ),
+    /**
+     * The listener invoked for all the gesture detector callbacks.
+     */
+    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
      * Invoked when an frame is processed.
      *
@@ -125,21 +157,8 @@ fun Scene(
      * The callback will only be invoked if the Frame is considered as valid.
      */
     onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
-    /**
-     * Invoked when the `SceneView` is tapped.
-     *
-     * Only nodes with renderables or their parent nodes can be tapped since Filament picking is
-     * used to find a touched node. The ID of the Filament renderable can be used to determine what
-     * part of a model is tapped.
-     */
-    onTap: ((
-        /** The motion event that caused the tap. **/
-        motionEvent: MotionEvent,
-        /** The node that was tapped or `null`. **/
-        node: Node?
-    ) -> Unit)? = null,
-    onViewCreated: (SceneView.() -> Unit)? = null,
-    onViewUpdated: (SceneView.() -> Unit)? = null
+    onViewUpdated: (SceneView.() -> Unit)? = null,
+    onViewCreated: (SceneView.() -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
         ScenePreview(modifier)
@@ -163,19 +182,24 @@ fun Scene(
                     cameraNode,
                     mainLightNode,
                     indirectLight,
-                    skybox
+                    skybox,
+                    collisionSystem,
+                    gestureDetector,
+                    onGestureListener,
                 ).apply {
                     onViewCreated?.invoke(this)
                 }
             },
             update = { sceneView ->
                 sceneView.childNodes = childNodes
+                sceneView.scene = scene
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode
                 sceneView.indirectLight = indirectLight
                 sceneView.skybox = skybox
+                sceneView.gestureDetector = gestureDetector
+                sceneView.onGestureListener = onGestureListener
                 sceneView.onFrame = onFrame
-                sceneView.onTap = onTap
 
                 onViewUpdated?.invoke(sceneView)
             },
@@ -196,7 +220,7 @@ fun rememberEngine(
     val engine = remember(eglContext) { engineCreator(eglContext) }
     DisposableEffect(eglContext, engine) {
         onDispose {
-            engine.destroy()
+            engine.safeDestroy()
             eglContext.destroy()
         }
     }
@@ -329,6 +353,135 @@ fun rememberSkybox(
         }
     }
 }
+
+
+@Composable
+fun rememberCollisionSystem(
+    view: View,
+    creator: () -> CollisionSystem = {
+        SceneView.createCollisionSystem(view)
+    }
+) = remember(view, creator).also { collisionSystem ->
+    DisposableEffect(collisionSystem) {
+        onDispose {
+            collisionSystem.destroy()
+        }
+    }
+}
+
+@Composable
+fun rememberGestureDetector(
+    context: Context,
+    nodeSelector: (e: MotionEvent, (node: Node?) -> Unit) -> Unit,
+    creator: () -> GestureDetector = {
+        GestureDetector(context, nodeSelector)
+    }
+) = remember(context, nodeSelector, creator)
+
+@Composable
+fun rememberSelectedNodeDetector(
+    context: Context,
+    selectedNode: Node?,
+    creator: () -> GestureDetector = {
+        SelectedNodeGestureDetector(context, selectedNode)
+    }
+) = remember(context, selectedNode, creator)
+
+
+@Composable
+fun rememberHitTestGestureDetector(
+    context: Context,
+    collisionSystem: CollisionSystem,
+    creator: () -> GestureDetector = {
+        HitTestGestureDetector(context, collisionSystem)
+    }
+) = remember(context, collisionSystem, creator)
+
+@Composable
+fun rememberPickGestureDetector(
+    context: Context,
+    view: View,
+    nodes: () -> List<Node>,
+    creator: () -> GestureDetector = {
+        PickGestureDetector(context, view, nodes)
+    }
+) = remember(context, view, nodes, creator)
+
+@Composable
+fun rememberOnGestureListener(
+    onDown: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onShowPress: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onSingleTapUp: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onScroll: (e1: MotionEvent?, e2: MotionEvent, node: Node?, distance: Float2) -> Unit = { _, _, _, _ -> },
+    onLongPress: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onFling: (e1: MotionEvent?, e2: MotionEvent, node: Node?, velocity: Float2) -> Unit = { _, _, _, _ -> },
+    onSingleTapConfirmed: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onDoubleTap: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onDoubleTapEvent: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onContextClick: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+    onMoveBegin: (detector: MoveGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onMove: (detector: MoveGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onMoveEnd: (detector: MoveGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onRotateBegin: (detector: RotateGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onRotate: (detector: RotateGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onRotateEnd: (detector: RotateGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onScaleBegin: (detector: ScaleGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onScale: (detector: ScaleGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    onScaleEnd: (detector: ScaleGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+    creator: () -> GestureDetector.OnGestureListener = {
+        object : GestureDetector.OnGestureListener {
+            override fun onDown(e: MotionEvent, node: Node?) = onDown(e, node)
+            override fun onShowPress(e: MotionEvent, node: Node?) = onShowPress(e, node)
+            override fun onSingleTapUp(e: MotionEvent, node: Node?) = onSingleTapUp(e, node)
+            override fun onScroll(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                node: Node?,
+                distance: Float2
+            ) = onScroll(e1, e2, node, distance)
+
+            override fun onLongPress(e: MotionEvent, node: Node?) = onLongPress(e, node)
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, node: Node?, velocity: Float2) =
+                onFling(e1, e2, node, velocity)
+
+            override fun onSingleTapConfirmed(e: MotionEvent, node: Node?) =
+                onSingleTapConfirmed(e, node)
+
+            override fun onDoubleTap(e: MotionEvent, node: Node?) = onDoubleTap(e, node)
+            override fun onDoubleTapEvent(e: MotionEvent, node: Node?) = onDoubleTapEvent(e, node)
+            override fun onContextClick(e: MotionEvent, node: Node?) = onContextClick(e, node)
+            override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent, node: Node?) =
+                onMoveBegin(detector, e, node)
+
+            override fun onMove(detector: MoveGestureDetector, e: MotionEvent, node: Node?) =
+                onMove(detector, e, node)
+
+            override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent, node: Node?) =
+                onMoveEnd(detector, e, node)
+
+            override fun onRotateBegin(
+                detector: RotateGestureDetector,
+                e: MotionEvent,
+                node: Node?
+            ) = onRotateBegin(detector, e, node)
+
+            override fun onRotate(detector: RotateGestureDetector, e: MotionEvent, node: Node?) =
+                onRotate(detector, e, node)
+
+            override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent, node: Node?) =
+                onRotateEnd(detector, e, node)
+
+            override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) =
+                onScaleBegin(detector, e, node)
+
+            override fun onScale(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) =
+                onScale(detector, e, node)
+
+            override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) =
+                onScaleEnd(detector, e, node)
+        }
+    }
+) = remember(creator)
 
 @Composable
 private fun ScenePreview(modifier: Modifier) {
