@@ -1,8 +1,10 @@
 package io.github.sceneview.texture
 
+import android.graphics.Bitmap
 import com.google.android.filament.Engine
 import com.google.android.filament.Stream
 import com.google.android.filament.Texture
+import com.google.android.filament.android.TextureHelper
 
 class VideoTexture {
     class Builder : Texture.Builder() {
@@ -22,3 +24,11 @@ class VideoTexture {
         }
     }
 }
+
+fun Texture.setStream(engine: Engine, bitmap: Bitmap) =
+    TextureHelper.setBitmap(
+        engine,
+        this,
+        0,
+        bitmap
+    )
