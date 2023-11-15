@@ -1,84 +1,92 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
-import io.github.sceneview.geometries.Geometry
+import io.github.sceneview.Entity
 import io.github.sceneview.geometries.Sphere
 import io.github.sceneview.math.Position
 
-open class SphereNode(
+open class SphereNode private constructor(
     engine: Engine,
-    radius: Float = Sphere.DEFAULT_RADIUS,
-    center: Position = Sphere.DEFAULT_CENTER,
-    stacks: Int = Sphere.DEFAULT_STACKS,
-    slices: Int = Sphere.DEFAULT_SLICES,
-    /**
-     * Binds a material instance to the specified primitive.
-     *
-     * If no material is specified for a given primitive, Filament will fall back to a basic
-     * default material.
-     *
-     * Should return the material to bind for the zero-based index of the primitive, must be less
-     * than the [Geometry.submeshes] size passed to constructor.
-     */
-    materialInstances: (index: Int) -> MaterialInstance?,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
+    entity: Entity = EntityManager.get().create(),
     parent: Node? = null,
-    renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : BaseGeometryNode<Sphere>(
-    engine = engine,
-    geometry = Sphere.Builder()
-        .radius(radius)
-        .center(center)
-        .stacks(stacks)
-        .slices(slices)
-        .build(engine),
-    materialInstances = materialInstances,
-    parent = parent,
-    renderableApply = renderableApply
-) {
+    override val geometry: Sphere,
+    materialInstances: List<MaterialInstance?>,
+    primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
+    builder: RenderableManager.Builder.() -> Unit = {}
+) : GeometryNode(engine, entity, parent, geometry, materialInstances, primitivesOffsets, builder) {
 
     constructor(
         engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        geometry: Sphere,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = geometry,
+        materialInstances = listOf(materialInstance),
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        builder = builder
+    )
+
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
         radius: Float = Sphere.DEFAULT_RADIUS,
         center: Position = Sphere.DEFAULT_CENTER,
         stacks: Int = Sphere.DEFAULT_STACKS,
         slices: Int = Sphere.DEFAULT_SLICES,
-        /**
-         * Binds a material instance to all primitives.
-         */
-        materialInstance: MaterialInstance?,
-        parent: Node? = null,
-        renderableApply: RenderableManager.Builder.() -> Unit = {}
+        materialInstances: List<MaterialInstance?>,
+        builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        radius = radius,
-        center = center,
-        stacks = stacks,
-        slices = slices,
-        materialInstances = { materialInstance },
+        entity = entity,
         parent = parent,
-        renderableApply = renderableApply
+        geometry = Sphere.Builder()
+            .radius(radius)
+            .center(center)
+            .stacks(stacks)
+            .slices(slices)
+            .build(engine),
+        materialInstances = materialInstances,
+        builder = builder
     )
 
-    val radius get() = geometry.radius
-    val center get() = geometry.center
-    val stacks get() = geometry.stacks
-    val slices get() = geometry.slices
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        radius: Float = Sphere.DEFAULT_RADIUS,
+        center: Position = Sphere.DEFAULT_CENTER,
+        stacks: Int = Sphere.DEFAULT_STACKS,
+        slices: Int = Sphere.DEFAULT_SLICES,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = Sphere.Builder()
+            .radius(radius)
+            .center(center)
+            .stacks(stacks)
+            .slices(slices)
+            .build(engine),
+        materialInstance = materialInstance,
+        builder = builder
+    )
 
     fun updateGeometry(
-        radius: Float = this.radius,
-        center: Position = this.center,
-        stacks: Int = this.stacks,
-        slices: Int = this.slices
-    ) = geometry.update(radius, center, stacks, slices)
+        radius: Float = geometry.radius,
+        center: Position = geometry.center,
+        stacks: Int = geometry.stacks,
+        slices: Int = geometry.slices
+    ) = setGeometry(geometry.update(radius, center, stacks, slices))
 }

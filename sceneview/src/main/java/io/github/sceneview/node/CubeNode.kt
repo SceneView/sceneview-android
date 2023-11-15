@@ -1,73 +1,83 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import io.github.sceneview.Entity
 import io.github.sceneview.geometries.Cube
-import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
-open class CubeNode(
+open class CubeNode private constructor(
     engine: Engine,
-    size: Size = Cube.DEFAULT_SIZE,
-    center: Position = Cube.DEFAULT_CENTER,
-    /**
-     * Binds a material instance to the specified primitive.
-     *
-     * If no material is specified for a given primitive, Filament will fall back to a basic
-     * default material.
-     *
-     * Should return the material to bind for the zero-based index of the primitive, must be less
-     * than the [Geometry.submeshes] size passed to constructor.
-     */
-    materialInstances: (index: Int) -> MaterialInstance?,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
+    entity: Entity = EntityManager.get().create(),
     parent: Node? = null,
-    renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : BaseGeometryNode<Cube>(
-    engine = engine,
-    geometry = Cube.Builder()
-        .size(size)
-        .center(center)
-        .build(engine),
-    materialInstances = materialInstances,
-    parent = parent,
-    renderableApply = renderableApply
-) {
+    override val geometry: Cube,
+    materialInstances: List<MaterialInstance?>,
+    primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
+    builder: RenderableManager.Builder.() -> Unit = {}
+) : GeometryNode(engine, entity, parent, geometry, materialInstances, primitivesOffsets, builder) {
 
     constructor(
         engine: Engine,
-        size: Size = Cube.DEFAULT_SIZE,
-        center: Position = Cube.DEFAULT_CENTER,
-        /**
-         * Binds a material instance to all primitives.
-         */
-        materialInstance: MaterialInstance?,
+        entity: Entity = EntityManager.get().create(),
         parent: Node? = null,
-        renderableApply: RenderableManager.Builder.() -> Unit = {}
+        geometry: Cube,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        size = size,
-        center = center,
-        materialInstances = { materialInstance },
+        entity = entity,
         parent = parent,
-        renderableApply = renderableApply
+        geometry = geometry,
+        materialInstances = listOf(materialInstance),
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        builder = builder
     )
 
-    val center get() = geometry.center
-    val size get() = geometry.size
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        size: Size = Cube.DEFAULT_SIZE,
+        center: Position = Cube.DEFAULT_CENTER,
+        materialInstances: List<MaterialInstance?>,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = Cube.Builder()
+            .size(size)
+            .center(center)
+            .build(engine),
+        materialInstances = materialInstances,
+        builder = builder
+    )
+
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        size: Size = Cube.DEFAULT_SIZE,
+        center: Position = Cube.DEFAULT_CENTER,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = Cube.Builder()
+            .size(size)
+            .center(center)
+            .build(engine),
+        materialInstance = materialInstance,
+        builder = builder
+    )
 
     fun updateGeometry(
         center: Position = geometry.center,
         size: Size = geometry.size
-    ) = geometry.update(center, size)
+    ) = setGeometry(geometry.update(center, size))
 }

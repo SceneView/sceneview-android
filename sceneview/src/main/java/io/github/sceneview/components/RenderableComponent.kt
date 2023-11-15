@@ -13,7 +13,7 @@ import io.github.sceneview.geometries.Cylinder
 import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.geometries.Plane
 import io.github.sceneview.geometries.Sphere
-import io.github.sceneview.managers.setGeometry
+import io.github.sceneview.geometries.setGeometry
 import java.nio.Buffer
 
 typealias RenderableInstance = Int

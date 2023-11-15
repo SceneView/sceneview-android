@@ -1,84 +1,92 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import io.github.sceneview.Entity
 import io.github.sceneview.geometries.Cylinder
-import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.math.Position
 
-open class CylinderNode(
+open class CylinderNode private constructor(
     engine: Engine,
-    radius: Float = Cylinder.DEFAULT_RADIUS,
-    height: Float = Cylinder.DEFAULT_HEIGHT,
-    center: Position = Cylinder.DEFAULT_CENTER,
-    sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
-    /**
-     * Binds a material instance to the specified primitive.
-     *
-     * If no material is specified for a given primitive, Filament will fall back to a basic
-     * default material.
-     *
-     * Should return the material to bind for the zero-based index of the primitive, must be less
-     * than the [Geometry.submeshes] size passed to constructor.
-     */
-    materialInstances: (index: Int) -> MaterialInstance?,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
+    entity: Entity = EntityManager.get().create(),
     parent: Node? = null,
-    renderableApply: RenderableManager.Builder.() -> Unit = {}
-) : BaseGeometryNode<Cylinder>(
-    engine = engine,
-    geometry = Cylinder.Builder()
-        .radius(radius)
-        .height(height)
-        .center(center)
-        .sideCount(sideCount)
-        .build(engine),
-    materialInstances = materialInstances,
-    parent = parent,
-    renderableApply = renderableApply
-) {
+    override val geometry: Cylinder,
+    materialInstances: List<MaterialInstance?>,
+    primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
+    builder: RenderableManager.Builder.() -> Unit = {}
+) : GeometryNode(engine, entity, parent, geometry, materialInstances, primitivesOffsets, builder) {
 
     constructor(
         engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        geometry: Cylinder,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = geometry,
+        materialInstances = listOf(materialInstance),
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        builder = builder
+    )
+
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
         radius: Float = Cylinder.DEFAULT_RADIUS,
         height: Float = Cylinder.DEFAULT_HEIGHT,
         center: Position = Cylinder.DEFAULT_CENTER,
         sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
-        /**
-         * Binds a material instance to all primitives.
-         */
-        materialInstance: MaterialInstance?,
-        parent: Node? = null,
-        renderableApply: RenderableManager.Builder.() -> Unit = {}
+        materialInstances: List<MaterialInstance?>,
+        builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        radius = radius,
-        height = height,
-        center = center,
-        sideCount = sideCount,
-        materialInstances = { materialInstance },
+        entity = entity,
         parent = parent,
-        renderableApply = renderableApply
+        geometry = Cylinder.Builder()
+            .radius(radius)
+            .height(height)
+            .center(center)
+            .sideCount(sideCount)
+            .build(engine),
+        materialInstances = materialInstances,
+        builder = builder
     )
 
-    val radius get() = geometry.radius
-    val height get() = geometry.height
-    val center get() = geometry.center
-    val sideCount get() = geometry.sideCount
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        radius: Float = Cylinder.DEFAULT_RADIUS,
+        height: Float = Cylinder.DEFAULT_HEIGHT,
+        center: Position = Cylinder.DEFAULT_CENTER,
+        sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
+        materialInstance: MaterialInstance? = null,
+        builder: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        entity = entity,
+        parent = parent,
+        geometry = Cylinder.Builder()
+            .radius(radius)
+            .height(height)
+            .center(center)
+            .sideCount(sideCount)
+            .build(engine),
+        materialInstance = materialInstance,
+        builder = builder
+    )
 
     fun updateGeometry(
-        radius: Float = this.radius,
-        height: Float = this.height,
-        center: Position = this.center,
-        sideCount: Int = this.sideCount
-    ) = geometry.update(radius, height, center, sideCount)
+        radius: Float = geometry.radius,
+        height: Float = geometry.height,
+        center: Position = geometry.center,
+        sideCount: Int = geometry.sideCount
+    ) = setGeometry(geometry.update(radius, height, center, sideCount))
 }
