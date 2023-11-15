@@ -1,11 +1,15 @@
 package io.github.sceneview.node
 
+import com.google.android.filament.Box
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
+import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import io.github.sceneview.Entity
 import io.github.sceneview.FilamentEntity
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
+import io.github.sceneview.math.toVector3Box
 
 /**
  * A Node represents a transformation within the scene graph's hierarchy.
@@ -31,9 +35,41 @@ open class RenderableNode(
     parent: Node? = null
 ) : Node(engine, entity, parent), RenderableComponent {
 
+    constructor(
+        engine: Engine,
+        @FilamentEntity entity: Entity = EntityManager.get().create(),
+        parent: Node? = null,
+        /**
+         * Count the number of primitives that will be supplied to the builder
+         */
+        primitiveCount: Int,
+        boundingBox: Box,
+        /**
+         * Binds a material instance.
+         *
+         * If no material is specified, Filament will fall back to a basic default material.
+         */
+        materialInstances: List<MaterialInstance?> = listOf(),
+        builder: RenderableManager.Builder.() -> Unit,
+    ) : this(engine, entity, parent) {
+        RenderableManager.Builder(primitiveCount)
+            .boundingBox(boundingBox)
+            .apply {
+                materialInstances.forEachIndexed { index, materialInstance ->
+                    materialInstance?.let { material(index, materialInstance) }
+                }
+            }.apply(builder)
+            .build(engine, entity)
+        updateCollisionShape()
+    }
+
     override fun updateVisibility() {
         super.updateVisibility()
 
         setLayerVisible(isVisible)
+    }
+
+    fun updateCollisionShape() {
+        collisionShape = axisAlignedBoundingBox.toVector3Box()
     }
 }
