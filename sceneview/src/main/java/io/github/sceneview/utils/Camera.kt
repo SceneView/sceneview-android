@@ -4,13 +4,15 @@ import com.google.android.filament.Camera
 import com.google.android.filament.Camera.Projection
 import com.google.android.filament.utils.pow
 import dev.romainguy.kotlin.math.Float2
+import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
+import dev.romainguy.kotlin.math.Ray
 import dev.romainguy.kotlin.math.inverse
-import io.github.sceneview.math.ClipSpacePosition
+import dev.romainguy.kotlin.math.normalize
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
-import io.github.sceneview.math.times
+import io.github.sceneview.math.equals
 import io.github.sceneview.math.toColumnsDoubleArray
 import io.github.sceneview.math.toColumnsFloatArray
 import io.github.sceneview.math.toDirection
@@ -240,33 +242,65 @@ val Camera.forwardDirection: Direction
     get() = FloatArray(3).apply { getForwardVector(this) }.toDirection()
 
 /**
- * @see viewPortToClipSpace
- * @see viewSpaceToWorld
+ * Get a world space position from a view space position.
+ *
+ * @param viewPosition normalized view coordinate
+ * x = (0 = left, 0.5 = center, 1 = right)
+ * y = (0 = bottom, 0.5 = center, 1 = top)
+ * @param z Z is used for the depth between 1 and 0
+ * (1 = near, 0 = infinity).
+ *
+ * @return The world position of the point.
  */
-fun Camera.clipSpaceToViewSpace(clipSpacePosition: ClipSpacePosition): Position =
-    inverse(projectionTransform) * clipSpacePosition.xyz * clipSpacePosition.w
+fun Camera.viewToWorld(viewPosition: Float2, z: Float = 1.0f): Position =
+    Float3(v = viewPosition, z = z).let {
+        inverse(projectionTransform * viewTransform) * Float4(
+            // Normalize between -1 and 1.
+            v = it * 2.0f - 1.0f, w = 1.0f
+        )
+    }.let { position ->
+        position.xyz.apply {
+            if (position.w.equals(0.0f, 1.0E-10f)) {
+                xy = Float2(0.0f)
+            }
+        } * 1.0f / position.w
+    }
 
 /**
- * @see worldToViewSpace
- * @see clipSpaceToViewPort
+ * Get a view space position from a world position.
+ *
+ * The device coordinate space is unaffected by the orientation of the device
+ *
+ * @param worldPosition The world position to convert.
+ *
+ * @return normalized view coordinate
+ * x = (0 = left, 0.5 = center, 1 = right)
+ * y = (0 = bottom, 0.5 = center, 1 = top)
  */
-fun Camera.viewSpaceToClipSpace(viewSpacePosition: Position): ClipSpacePosition {
-    val clipSpacePosition = projectionTransform * ClipSpacePosition(viewSpacePosition.xyz, 1.0f)
-    return ClipSpacePosition(
-        clipSpacePosition.xyz / clipSpacePosition.w,
-        w = clipSpacePosition.w
-    )
+fun Camera.worldToView(worldPosition: Position): Float2 =
+    // Multiply the world point.
+    ((projectionTransform * viewTransform) * Float4(
+        worldPosition, w = 1.0f
+    )).let { position ->
+        // To clipping space.
+        val clipSpacePosition = (position.xy / position.w + 1.0f) * 0.5f
+        // Invert Y because screen Y points down and Filament Y points up.
+        clipSpacePosition.copy(y = 1.0f - clipSpacePosition.y)
+    }.xy
+
+/**
+ * Calculates a ray in world space going from the near-plane of the camera and through a point in
+ * view space.
+ *
+ * @param viewPosition normalized view coordinate
+ * x = (0 = left, 0.5 = center, 1 = right)
+ * y = (0 = bottom, 0.5 = center, 1 = top)
+ *
+ *  @return A Ray from the camera near to far / infinity
+ */
+fun Camera.viewToRay(viewPosition: Float2): Ray {
+    val startPosition = viewToWorld(viewPosition, z = 0.0f)
+    val endPosition = viewToWorld(viewPosition, z = 1.0f)
+    val direction = normalize(endPosition - startPosition)
+    return Ray(origin = startPosition, direction = direction)
 }
-
-/**
- * @see viewPortToClipSpace
- * @see clipSpaceToViewSpace
- */
-fun Camera.viewSpaceToWorld(viewSpacePosition: Position): Position =
-    inverse(viewTransform) * viewSpacePosition
-
-/**
- * @see viewSpaceToClipSpace
- * @see clipSpaceToViewPort
- */
-fun Camera.worldToViewSpace(worldPosition: Position): Position = viewTransform * worldPosition

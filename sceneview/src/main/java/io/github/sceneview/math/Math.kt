@@ -6,6 +6,7 @@ import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Mat4
 import dev.romainguy.kotlin.math.Quaternion
+import dev.romainguy.kotlin.math.Ray
 import dev.romainguy.kotlin.math.RotationsOrder
 import dev.romainguy.kotlin.math.clamp
 import dev.romainguy.kotlin.math.cross
@@ -29,7 +30,6 @@ typealias Scale = Float3
 typealias Direction = Float3
 typealias Size = Float3
 typealias Transform = Mat4
-typealias ClipSpacePosition = Float4
 typealias Color = Float4
 
 fun Transform(
@@ -264,3 +264,6 @@ fun FloatArray.toColor() = Color(this[0], this[1], this[2], this.getOrNull(3) ?:
  * the power 2.2
  */
 fun Color.toLinearSpace() = transform { com.google.android.filament.utils.pow(it, 2.2f) }
+
+fun Ray.toCollisionRay() =
+    io.github.sceneview.collision.Ray(origin.toVector3(), direction.toVector3())
