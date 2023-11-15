@@ -68,22 +68,34 @@ open class ModelNode(
      * - ...
      */
     centerOrigin: Position? = null
-) : Node(engine = modelInstance.engine, parent = parent) {
+) : Node(engine = modelInstance.engine, entity = modelInstance.root, parent = parent) {
 
-    class RootNode internal constructor(
-        override var modelInstance: ModelInstance, entity: Entity
-    ) : Node(
-        engine = modelInstance.engine, entity = entity
-    ), ChildNode
+    interface ChildNode {
+        val entity: Entity
+        val modelInstance: ModelInstance
+        val model get() = modelInstance.asset
+
+        /**
+         * Gets the `NameComponentManager` label for the given node, if it exists.
+         */
+        val name: String? get() = model.getName(entity)
+
+        /**
+         * Gets the glTF extras string for the asset or a specific node.
+         */
+        val extras: String? get() = model.getExtras(entity)
+
+        /**
+         * Gets the names of all morph targets in the given entity.
+         */
+        val morphTargetNames: List<String> get() = model.getMorphTargetNames(entity).toList()
+    }
 
     class RenderableNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity, parent: Node
     ) : io.github.sceneview.node.RenderableNode(
         engine = modelInstance.engine, entity = entity, parent = parent
-    ), ChildNode {
-        override var isTouchable = true
-        override var isEditable = false
-    }
+    ), ChildNode
 
     class LightNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity, parent: Node
@@ -97,40 +109,19 @@ open class ModelNode(
         engine = modelInstance.engine, entity = entity, parent = parent
     ), ChildNode
 
-    interface ChildNode {
-        val entity: Entity
-        val modelInstance: ModelInstance
-
-
-        val model: Model get() = modelInstance.asset
-
-        fun getName() = model.getName(entity)
-
-        /**
-         * Gets the glTF extras string for the asset or a specific node.
-         */
-        val extras: String? get() = model.getExtras(entity)
-
-        /**
-         * Gets the names of all morph targets in the given entity.
-         */
-        val morphTargetNames: List<String> get() = model.getMorphTargetNames(entity).toList()
-    }
-
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
-    val rootNode = RootNode(modelInstance, modelInstance.root).apply {
-        this.parent = this@ModelNode
-    }
     val renderableNodes = modelInstance.renderableEntities.map {
-        RenderableNode(modelInstance, it, rootNode)
+        RenderableNode(modelInstance, it, this)
     }
     val lightNodes = modelInstance.lightEntities.map {
-        LightNode(modelInstance, it, rootNode)
+        LightNode(modelInstance, it, this)
     }
     val cameraNodes = modelInstance.camerasEntities.map {
-        CameraNode(modelInstance, it, rootNode)
+        CameraNode(modelInstance, it, this)
     }
+
+    val nodes = (renderableNodes + lightNodes + cameraNodes).associateBy { it.name }
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance].
@@ -144,6 +135,10 @@ open class ModelNode(
      * AAAB that can be determined at load time from the asset data.
      */
     val boundingBox get() = model.boundingBox
+    val halfExtent get() = boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+    val extents get() = halfExtent * 2.0f
+    val center get() = boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
+    val size get() = extents * scale
 
     /**
      * Retrieves the [Animator] for this instance.
@@ -191,15 +186,13 @@ open class ModelNode(
         get() = renderableNodes.all { it.isShadowReceiver }
         set(value) = renderableNodes.forEach { it.isShadowReceiver = value }
 
-    override var isTouchable = true
-
     init {
         if (autoAnimate && animator.animationCount > 0) {
             playAnimation(0)
         }
         scaleToUnits?.let { scaleToUnitCube(it) }
         centerOrigin?.let { centerOrigin(it) }
-        updateCollisionShape()
+        collisionShape = model.collisionShape
     }
 
     /**
@@ -208,10 +201,8 @@ open class ModelNode(
      * @param units the number of units of the cube to scale into.
      */
     fun scaleToUnitCube(units: Float = 1.0f) {
-        val halfExtent = boundingBox.halfExtent.let { v ->
-            Float3(v[0], v[1], v[2])
-        }
-        rootNode.scale = Scale(units / (max(halfExtent) * 2.0f))
+        val halfExtent = boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+        scale = Scale(units / (max(halfExtent) * 2.0f))
     }
 
     /**
@@ -223,9 +214,7 @@ open class ModelNode(
      * - left | top aligned: [-1, 1, 0]
      */
     fun centerOrigin(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
-        val center = boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
-        val halfExtent = boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
-        rootNode.position = -(center + halfExtent * origin) * rootNode.scale
+        position += origin * size
     }
 
     /**
@@ -379,10 +368,6 @@ open class ModelNode(
         renderableNodes.forEach { it.setGlobalBlendOrderEnabled(enabled) }
     }
 
-    fun updateCollisionShape() {
-        rootNode.collisionShape = model.collisionShape
-    }
-
     override fun onFrame(frameTimeNanos: Long) {
         super.onFrame(frameTimeNanos)
 
@@ -403,4 +388,4 @@ open class ModelNode(
 }
 
 inline operator fun <reified T : ModelNode.ChildNode> List<T>.get(name: String): T? =
-    firstOrNull { it.getName() == name }
+    firstOrNull { it.name == name }

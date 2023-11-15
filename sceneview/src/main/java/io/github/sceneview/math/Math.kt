@@ -136,7 +136,7 @@ var Box.halfExtentSize: Size
 
 fun Box.toVector3Box(): io.github.sceneview.collision.Box =
     io.github.sceneview.collision.Box(
-        halfExtentSize.toVector3(),
+        (halfExtentSize * 2.0f).toVector3(),
         centerPosition.toVector3()
     )
 
