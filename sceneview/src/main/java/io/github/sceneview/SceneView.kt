@@ -19,6 +19,7 @@ import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.utils.HDRLoader
+import com.google.android.filament.utils.KTX1Loader
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
@@ -27,7 +28,7 @@ import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.gesture.NodeMotionEvent
+import io.github.sceneview.gesture.HitTestGestureDetector
 import io.github.sceneview.gesture.orbitHomePosition
 import io.github.sceneview.gesture.targetPosition
 import io.github.sceneview.gesture.transform
@@ -129,6 +130,8 @@ open class SceneView @JvmOverloads constructor(
      *
      * @see IndirectLight
      * @see Scene.setIndirectLight
+     * @see HDRLoader
+     * @see KTX1Loader
      */
     sharedIndirectLight: IndirectLight? = null,
     /**
@@ -290,12 +293,15 @@ open class SceneView @JvmOverloads constructor(
         }
 
     var childNodes = listOf<Node>()
+        @Suppress("ConvertArgumentToSet")
         set(value) {
-            if (field != value) {
-                (field - value.toSet()).forEach { removeNode(it) }
-                (value - field.toSet()).forEach { addNode(it) }
-                field = value
+            (field - value).forEach {
+                removeNode(it)
             }
+            (value - field).forEach {
+                addNode(it)
+            }
+            field = value.toList()
         }
 
     /**
