@@ -44,17 +44,16 @@ open class GeometryNode(
     builder: RenderableManager.Builder.() -> Unit = {}
 ) : RenderableNode(
     engine = engine,
-    geometry = Geometry.Builder()
-        .vertices(vertices)
-        .submeshes(submeshes)
-        .build(engine),
-    materialInstance = materialInstance,
-    materialInstances = materialInstances,
+    entity = entity,
     parent = parent,
-    renderableApply = renderableApply
-) {
-    val vertexBuffer get() = geometry.vertexBuffer
-    val indexBuffer get() = geometry.indexBuffer
+    primitiveCount = primitivesOffsets.size,
+    boundingBox = geometry.boundingBox,
+    materialInstances = materialInstances,
+    builder = {
+        geometry(geometry, primitivesOffsets)
+        materials(materialInstances)
+        apply(builder)
+    }) {
 
     constructor(
         engine: Engine,
