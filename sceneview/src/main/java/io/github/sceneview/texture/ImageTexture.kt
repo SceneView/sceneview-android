@@ -32,7 +32,7 @@ class ImageTexture {
             )
         }
 
-        fun bitmap(bitmap: Bitmap, type: TextureType = TextureType.COLOR) = apply {
+        fun bitmap(bitmap: Bitmap, type: TextureType = DEFAULT_TYPE) = apply {
             width(bitmap.width)
             height(bitmap.height)
             type(type)
@@ -42,13 +42,13 @@ class ImageTexture {
         fun bitmap(
             assets: AssetManager,
             fileLocation: String,
-            type: TextureType = TextureType.COLOR
+            type: TextureType = DEFAULT_TYPE
         ) = bitmap(getBitmap(assets, fileLocation, type), type)
 
         fun bitmap(
             context: Context,
             @DrawableRes drawableResId: Int,
-            type: TextureType = TextureType.COLOR
+            type: TextureType = DEFAULT_TYPE
         ) = bitmap(getBitmap(context, drawableResId, type), type)
 
         override fun build(engine: Engine): Texture = super.build(engine).apply {
@@ -59,10 +59,12 @@ class ImageTexture {
     }
 
     companion object {
+        val DEFAULT_TYPE = TextureType.COLOR
+
         fun getBitmap(
             assets: AssetManager,
             fileLocation: String,
-            type: TextureType = TextureType.COLOR
+            type: TextureType = DEFAULT_TYPE
         ): Bitmap {
             val buffer = assets.readFileBuffer(fileLocation)
             return BitmapFactory.decodeByteArray(
@@ -80,7 +82,7 @@ class ImageTexture {
         fun getBitmap(
             context: Context,
             @DrawableRes drawableResId: Int,
-            type: TextureType = TextureType.COLOR
+            type: TextureType = DEFAULT_TYPE
         ) = BitmapFactory.decodeResource(
             context.resources,
             drawableResId,
@@ -97,7 +99,7 @@ fun Texture.setBitmap(
     engine: Engine,
     assets: AssetManager,
     fileLocation: String,
-    type: TextureType = TextureType.COLOR,
+    type: TextureType = ImageTexture.DEFAULT_TYPE,
     @IntRange(from = 0) level: Int = 0
 ) = setBitmap(engine, ImageTexture.getBitmap(assets, fileLocation, type), level)
 
@@ -105,9 +107,15 @@ fun Texture.setBitmap(
     engine: Engine,
     context: Context,
     @DrawableRes drawableResId: Int,
-    type: TextureType = TextureType.COLOR,
+    type: TextureType = ImageTexture.DEFAULT_TYPE,
     @IntRange(from = 0) level: Int = 0
 ) = setBitmap(engine, ImageTexture.getBitmap(context, drawableResId, type), level)
 
 fun Texture.setBitmap(engine: Engine, bitmap: Bitmap, @IntRange(from = 0) level: Int = 0) =
-    TextureHelper.setBitmap(engine, this, level, bitmap)
+    TextureHelper.setBitmap(
+        engine,
+        this,
+        // This tells Filament to figure out the number of mip levels
+        level,
+        bitmap
+    )
