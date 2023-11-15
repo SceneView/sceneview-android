@@ -38,12 +38,6 @@ open class CameraNode(
     parent: Node? = null
 ) : Node(engine, entity, parent), CameraComponent {
 
-    // No rendered object
-    final override var isTouchable = false
-
-    // Can receive touchable but not editable child events
-    override var isEditable = false
-
     private var _focalLength = 28.0
     override var focalLength: Double
         get() = super.focalLength

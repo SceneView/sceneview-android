@@ -596,7 +596,7 @@ open class Node(
         smoothSpeed: Float = smoothTransformSpeed
     ) {
         if (smooth) {
-            smooth(transform, smoothSpeed)
+            smoothTransform(transform, smoothSpeed)
         } else {
             this.smoothTransform = null
             this.transform = transform
@@ -650,12 +650,12 @@ open class Node(
      * @see scale
      * @see speed
      */
-    fun smooth(
+    fun smoothTransform(
         position: Position = this.position,
         quaternion: Quaternion = this.quaternion,
         scale: Scale = this.scale,
         speed: Float = this.smoothTransformSpeed
-    ) = smooth(Transform(position, quaternion, scale), speed)
+    ) = smoothTransform(Transform(position, quaternion, scale), speed)
 
     /**
      * Smooth move, rotate and scale at a specified speed.
@@ -665,19 +665,19 @@ open class Node(
      * @see scale
      * @see speed
      */
-    fun smooth(
+    fun smoothTransform(
         position: Position = this.position,
         rotation: Rotation = this.rotation,
         scale: Scale = this.scale,
         speed: Float = this.smoothTransformSpeed
-    ) = smooth(Transform(position, rotation, scale), speed)
+    ) = smoothTransform(Transform(position, rotation, scale), speed)
 
     /**
      * Smooth move, rotate and scale at a specified speed.
      *
      * @see transform
      */
-    fun smooth(transform: Transform, speed: Float = smoothTransformSpeed) {
+    fun smoothTransform(transform: Transform, speed: Float = smoothTransformSpeed) {
         smoothTransformSpeed = speed
         smoothTransform = transform
     }
@@ -713,7 +713,7 @@ open class Node(
             upDirection
         ).toQuaternion()
         if (smooth) {
-            smooth(quaternion = newQuaternion)
+            smoothTransform(quaternion = newQuaternion)
         } else {
             transform(quaternion = newQuaternion)
         }
@@ -741,7 +741,7 @@ open class Node(
             upDirection
         ).toQuaternion()
         if (smooth) {
-            smooth(quaternion = newQuaternion)
+            smoothTransform(quaternion = newQuaternion)
         } else {
             transform(quaternion = newQuaternion)
         }
