@@ -1,6 +1,5 @@
 package io.github.sceneview.ar
 
-import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -21,33 +20,39 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
+import com.google.android.filament.utils.HDRLoader
+import com.google.android.filament.utils.KTX1Loader
+import com.google.ar.core.Camera
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.Config
-import com.google.ar.core.DepthPoint
 import com.google.ar.core.Frame
-import com.google.ar.core.HitResult
-import com.google.ar.core.InstantPlacementPoint
-import com.google.ar.core.Plane
-import com.google.ar.core.Point
 import com.google.ar.core.Session
+import com.google.ar.core.TrackingFailureReason
+import com.google.ar.core.TrackingState
 import io.github.sceneview.Scene
 import io.github.sceneview.SceneView
+import io.github.sceneview.ar.arcore.configure
 import io.github.sceneview.ar.arcore.getUpdatedTrackables
 import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.node.ARCameraNode
+import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberHitTestGestureDetector
 import io.github.sceneview.rememberIndirectLight
 import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNode
 import io.github.sceneview.rememberNodes
+import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberScene
 import io.github.sceneview.rememberSkybox
@@ -56,8 +61,6 @@ import io.github.sceneview.rememberView
 @Composable
 fun ARScene(
     modifier: Modifier = Modifier,
-    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
-    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
      * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
      */
@@ -124,6 +127,8 @@ fun ARScene(
      *
      * @see IndirectLight
      * @see Scene.setIndirectLight
+     * @see HDRLoader
+     * @see KTX1Loader
      */
     indirectLight: IndirectLight? = rememberIndirectLight(engine),
     /**
@@ -167,9 +172,22 @@ fun ARScene(
     onSessionConfiguration: ((session: Session, Config) -> Unit)? = null,
     onSessionCreated: ((session: Session) -> Unit)? = null,
     /**
-     * Updates of the state of the ARCore system.
+     * The session has been resumed
+     */
+    onSessionResumed: ((session: Session) -> Unit)? = null,
+    /**
+     * The session has been paused
+     */
+    onSessionPaused: ((session: Session) -> Unit)? = null,
+    /**
+     * Invoked when an ARCore error occurred.
      *
-     * Callback for [onSessionUpdated].
+     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+     * ARCore is not available on the device or the camera permission has been denied.
+     */
+    onSessionFailed: ((exception: Exception) -> Unit)? = null,
+    /**
+     * Updates of the state of the ARCore system.
      *
      * This includes: receiving a new camera frame, updating the location of the device, updating
      * the location of tracking anchors, updating detected planes, etc.
@@ -235,6 +253,10 @@ fun ARScene(
                     mainLightNode,
                     indirectLight,
                     skybox,
+                    collisionSystem,
+                    gestureDetector,
+                    onGestureListener,
+                    cameraStream,
                     sessionFeatures,
                     cameraConfig,
                     cameraStream
@@ -253,14 +275,13 @@ fun ARScene(
 
                 sceneView.planeRenderer.isEnabled = planeRenderer
 
-                sceneView.onSessionConfiguration = onSessionConfiguration
                 sceneView.onSessionCreated = onSessionCreated
-                sceneView.onSessionUpdated = onSessionUpdated
                 sceneView.onSessionResumed = onSessionResumed
+                sceneView.onSessionPaused = onSessionPaused
                 sceneView.onSessionFailed = onSessionFailed
-                sceneView.onSessionConfigChanged = onSessionConfigChanged
-                sceneView.onTap = onTap
-                sceneView.onTapAR = onTapAR
+                sceneView.onTrackingFailureChanged = onTrackingFailureChanged
+                sceneView.onSessionUpdated = onSessionUpdated
+
                 onViewUpdated?.invoke(sceneView)
             },
             onReset = {},

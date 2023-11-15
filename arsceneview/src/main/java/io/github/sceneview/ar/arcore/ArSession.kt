@@ -18,6 +18,7 @@ class ARSession(
     context: Context,
     features: Set<Feature> = setOf(),
     val onResumed: (session: Session) -> Unit,
+    val onPaused: (session: Session) -> Unit,
     val onConfigChanged: (session: Session, config: Config) -> Unit
 ) : Session(context, features) {
 
@@ -79,6 +80,12 @@ class ARSession(
         onResumed(this)
     }
 
+    override fun pause() = super.pause().also {
+        isResumed = false
+
+        onPaused(this)
+    }
+
     /**
      * Updates the state of the ARCore system. This includes: receiving a new camera frame, updating
      * the location of the device, updating the location of tracking anchors, updating detected
@@ -97,10 +104,6 @@ class ARSession(
         it.timestamp != 0L && it.timestamp != frame?.timestamp
     }.also {
         frame = it
-    }
-
-    override fun pause() = super.pause().also {
-        isResumed = false
     }
 
     override fun setDisplayGeometry(rotation: Int, widthPx: Int, heightPx: Int) {
