@@ -1,12 +1,13 @@
 package io.github.sceneview.ar.node
 
+import android.view.MotionEvent
 import com.google.android.filament.Engine
 import com.google.ar.core.Anchor
 import com.google.ar.core.Frame
+import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import io.github.sceneview.gesture.MoveGestureDetector
-import io.github.sceneview.gesture.NodeMotionEvent
 
 /**
  * Construct a new AR placement Node
@@ -15,8 +16,10 @@ open class AnchorNode(
     engine: Engine,
     anchor: Anchor,
     var onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+    onPoseChanged: ((Pose) -> Unit)? = null,
+    var onAnchorChanged: ((Anchor) -> Unit)? = null,
     var onUpdated: ((Anchor) -> Unit)? = null
-) : PoseNode(engine) {
+) : PoseNode(engine = engine, pose = anchor.pose, onPoseChanged = onPoseChanged) {
 
     /**
      * Should the anchor automatically update the anchor new pose
@@ -47,6 +50,7 @@ open class AnchorNode(
             field = value
             trackingState = value.trackingState
             pose = value.pose
+            onAnchorChanged?.invoke(value)
         }
 
     /**
@@ -73,8 +77,10 @@ open class AnchorNode(
             updateVisibility()
         }
 
+    override var isPositionEditable = true
+
     override var isVisible
-        get() = super.isVisible && trackingState in visibleTrackingStates
+        get() = super.isVisible && (trackingState in visibleTrackingStates || isMoving)
         set(value) {
             super.isVisible = value
         }
@@ -82,7 +88,7 @@ open class AnchorNode(
     private var isMoving = false
 
     init {
-        this.anchor = anchor
+        updateVisibility()
     }
 
     override fun update(session: Session, frame: Frame) {
@@ -103,19 +109,20 @@ open class AnchorNode(
         anchor.detach()
     }
 
-    override fun onMoveBegin(detector: MoveGestureDetector, e: NodeMotionEvent) {
+    override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent): Boolean {
         super.onMoveBegin(detector, e)
 
-        if (isEditable && isPositionEditable) {
+        if (isPositionEditable) {
             detachAnchor()
             isMoving = true
         }
+        return true
     }
 
-    override fun onMoveEnd(detector: MoveGestureDetector, e: NodeMotionEvent) {
+    override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) {
         super.onMoveEnd(detector, e)
 
-        if (isEditable && isPositionEditable) {
+        if (isPositionEditable) {
             createAnchor()?.let {
                 anchor = it
             }

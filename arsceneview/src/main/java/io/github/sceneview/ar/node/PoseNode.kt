@@ -11,11 +11,10 @@ import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.arcore.createAnchor
-import io.github.sceneview.ar.arcore.hitTest
 import io.github.sceneview.ar.arcore.isTracking
+import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.transform
 import io.github.sceneview.gesture.MoveGestureDetector
-import io.github.sceneview.gesture.NodeMotionEvent
 import io.github.sceneview.node.Node
 
 /**
@@ -23,10 +22,11 @@ import io.github.sceneview.node.Node
  */
 open class PoseNode(
     engine: Engine,
+    pose: Pose = Pose.IDENTITY,
     var moveHitTest: PoseNode.(Frame, MotionEvent) -> HitResult? = { frame, motionEvent ->
         frame.hitTest(motionEvent).firstOrNull()?.takeIf { it.trackable.isTracking }
     },
-    var onPoseChanged: ((Pose) -> Unit)? = null,
+    var onPoseChanged: ((Pose) -> Unit)? = null
 ) : Node(engine) {
 
     /**
@@ -53,7 +53,7 @@ open class PoseNode(
      * - If you wish to retain the location of this pose beyond the duration of a single frame,
      * create an [Anchor] using [createAnchor] to save the pose in a physically consistent way.
      */
-    open var pose: Pose = Pose.IDENTITY
+    var pose: Pose = pose
         set(value) {
             if (field != value) {
                 field = value
@@ -87,11 +87,7 @@ open class PoseNode(
     var session: Session? = null
     var frame: Frame? = null
 
-    override var isPositionEditable = true
-
-    /**
-     * Rotation edition is disabled by default because retrieved from the pose.
-     */
+    // Rotation edition is disabled by default because retrieved from the pose.
     override var isRotationEditable = false
 
     override var isVisible
@@ -100,6 +96,12 @@ open class PoseNode(
         set(value) {
             super.isVisible = value
         }
+
+    init {
+        worldTransform = pose.transform
+
+        updateVisibility()
+    }
 
     /**
      * Defines a tracked location in the physical world at the actual [pose].
@@ -135,17 +137,29 @@ open class PoseNode(
         updateVisibility()
     }
 
-    override fun onMove(detector: MoveGestureDetector, e: NodeMotionEvent) {
-        super.onMove(detector, e)
-
-        if (isEditable && isPositionEditable) {
+    override fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean {
+        return if (isPositionEditable) {
             frame?.let { frame ->
                 moveHitTest(frame, e)?.let {
                     onMove(detector, e, it.hitPose)
                 }
-            }
+            } ?: false
         } else {
-            parent?.onMove(detector, e)
+            super.onMove(detector, e)
+            parent?.onMove(detector, e) ?: false
+        }
+    }
+
+    open fun onMove(
+        detector: MoveGestureDetector,
+        e: MotionEvent,
+        pose: Pose
+    ): Boolean {
+        return if (onMove?.invoke(detector, e, pose.position) != false) {
+            this.pose = pose
+            true
+        } else {
+            false
         }
     }
 }

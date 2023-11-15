@@ -10,6 +10,7 @@ import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.ar.PlaneVisualizer
+import io.github.sceneview.ar.arcore.firstByTypeOrNull
 import io.github.sceneview.ar.arcore.fps
 import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.ar.arcore.hitTest
@@ -20,10 +21,10 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setTexture
+import io.github.sceneview.math.Color
 import io.github.sceneview.safeDestroyMaterial
 import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.texture.ImageTexture
-import io.github.sceneview.math.Color
 
 /**
  * Control rendering of ARCore planes.
@@ -43,7 +44,7 @@ class PlaneRenderer(
     private val visualizers = mutableMapOf<Plane, PlaneVisualizer>()
 
     val planeTexture = ImageTexture.Builder()
-        .bitmap(materialLoader.context.assets, "sceneview/textures/plane_renderer.png")
+        .bitmap(materialLoader.assets, "sceneview/textures/plane_renderer.png")
         .build(engine)
 
     /**

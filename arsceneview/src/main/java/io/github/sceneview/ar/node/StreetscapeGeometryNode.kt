@@ -4,6 +4,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer
 import com.google.android.filament.VertexBuffer.AttributeType
 import com.google.android.filament.VertexBuffer.VertexAttribute
@@ -28,7 +29,7 @@ open class StreetscapeGeometryNode(
     engine: Engine,
     val streetscapeGeometry: StreetscapeGeometry,
     meshMaterialInstance: MaterialInstance? = null,
-    meshRenderableApply: RenderableManager.Builder.() -> Unit = {},
+    builder: RenderableManager.Builder.() -> Unit = {},
     onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
     onUpdated: ((StreetscapeGeometry) -> Unit)? = null
 ) : TrackableNode<StreetscapeGeometry>(
@@ -38,6 +39,7 @@ open class StreetscapeGeometryNode(
 ) {
     val meshNode = MeshNode(
         engine = engine,
+        primitiveType = PrimitiveType.TRIANGLES,
         vertexBuffer = VertexBuffer.Builder()
             // Position + Normals + UV Coordinates
             .bufferCount(1)
@@ -56,7 +58,7 @@ open class StreetscapeGeometryNode(
                 setBuffer(engine, streetscapeGeometry.mesh.indexList)
             },
         materialInstance = meshMaterialInstance,
-        renderableApply = meshRenderableApply
+        builder = builder
     ).apply { parent = this@StreetscapeGeometryNode }
 
     val type get() = streetscapeGeometry.type
