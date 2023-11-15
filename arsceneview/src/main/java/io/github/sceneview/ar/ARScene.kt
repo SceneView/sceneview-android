@@ -111,7 +111,7 @@ fun ARScene(
      * All other functionality in Node is supported. You can access the position and rotation of the
      * camera, assign a collision shape to it, or add children to it.
      */
-    cameraNode: ARCameraNode = rememberARCamera(engine),
+    cameraNode: ARCameraNode = rememberARCameraNode(engine),
     /**
      * Always add a direct light source since it is required for shadowing.
      *
@@ -291,7 +291,7 @@ fun ARScene(
 }
 
 @Composable
-fun rememberARCamera(
+fun rememberARCameraNode(
     engine: Engine,
     creator: () -> ARCameraNode = {
         ARSceneView.createCameraNode(engine)
