@@ -1,16 +1,10 @@
 package io.github.sceneview.loaders
 
 import android.content.Context
-import android.content.res.AssetManager
-import android.graphics.Bitmap
-import android.media.MediaPlayer
-import androidx.annotation.DrawableRes
 import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Texture
-import com.google.android.filament.utils.TextureType
-import io.github.sceneview.material.ImageMaterial
 import io.github.sceneview.material.VideoMaterial
 import io.github.sceneview.material.kMaterialDefaultMetallic
 import io.github.sceneview.material.kMaterialDefaultReflectance
@@ -25,7 +19,6 @@ import io.github.sceneview.math.Color
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.safeDestroyMaterial
 import io.github.sceneview.safeDestroyMaterialInstance
-import io.github.sceneview.texture.ImageTexture
 import io.github.sceneview.utils.loadFileBuffer
 import io.github.sceneview.utils.readFileBuffer
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +40,8 @@ class MaterialLoader(
     val context: Context,
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
+
+    val assets get() = context.assets
 
     private val opaqueColoredMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/opaque_colored.filamat")
@@ -71,7 +66,6 @@ class MaterialLoader(
     }
 
     private val materials = mutableListOf<Material>()
-    private val imageMaterials = mutableListOf<ImageMaterial>()
     private val videoMaterials = mutableListOf<VideoMaterial>()
     private val materialInstances = mutableListOf<MaterialInstance>()
 
@@ -103,7 +97,7 @@ class MaterialLoader(
      * @see createMaterial
      */
     fun createMaterial(assetFileLocation: String): Material =
-        createMaterial(context.assets.readFileBuffer(assetFileLocation))
+        createMaterial(assets.readFileBuffer(assetFileLocation))
 
     /**
      * Loads a [Material] from the contents of a Filamat file.
@@ -152,12 +146,12 @@ class MaterialLoader(
      * [MaterialInstance.setMetallic], [MaterialInstance.setRoughness],
      * [MaterialInstance.setReflectance].
      */
-    fun createColorMaterial(
+    fun createColorInstance(
         color: androidx.compose.ui.graphics.Color,
         metallic: Float = kMaterialDefaultMetallic,
         roughness: Float = kMaterialDefaultRoughness,
         reflectance: Float = kMaterialDefaultReflectance
-    ) = createColorMaterial(colorOf(color), metallic, roughness, reflectance)
+    ) = createColorInstance(colorOf(color), metallic, roughness, reflectance)
 
     /**
      * Creates an opaque or transparent [Material] depending on the color alpha with the [Color]
@@ -168,12 +162,12 @@ class MaterialLoader(
      * [MaterialInstance.setMetallic], [MaterialInstance.setRoughness],
      * [MaterialInstance.setReflectance].
      */
-    fun createColorMaterial(
+    fun createColorInstance(
         color: Int,
         metallic: Float = kMaterialDefaultMetallic,
         roughness: Float = kMaterialDefaultRoughness,
         reflectance: Float = kMaterialDefaultReflectance
-    ) = createColorMaterial(colorOf(color), metallic, roughness, reflectance)
+    ) = createColorInstance(colorOf(color), metallic, roughness, reflectance)
 
     /**
      * Creates an opaque or transparent [Material] depending on the color alpha with the [Color]
@@ -184,7 +178,7 @@ class MaterialLoader(
      * [MaterialInstance.setMetallic], [MaterialInstance.setRoughness],
      * [MaterialInstance.setReflectance].
      */
-    fun createColorMaterial(
+    fun createColorInstance(
         color: Color,
         metallic: Float = kMaterialDefaultMetallic,
         roughness: Float = kMaterialDefaultRoughness,
@@ -206,7 +200,7 @@ class MaterialLoader(
      * [MaterialInstance.setMetallic], [MaterialInstance.setRoughness],
      * [MaterialInstance.setReflectance].
      */
-    fun createTextureMaterial(
+    fun createTextureInstance(
         texture: Texture,
         isOpaque: Boolean = true,
         metallic: Float = kMaterialDefaultMetallic,
@@ -221,44 +215,22 @@ class MaterialLoader(
                 setReflectance(reflectance)
             }
 
-    fun createImageMaterial(
-        assets: AssetManager,
-        fileLocation: String,
-        type: TextureType = TextureType.COLOR
-    ) = createImageMaterial(
-        bitmap = ImageTexture.getBitmap(assets, fileLocation, type)
-    )
+    fun createImageInstance(imageTexture: Texture) =
+        createInstance(imageTextureMaterial)
+            .apply {
+                setTexture(imageTexture)
+            }
 
-    fun createImageMaterial(
-        context: Context,
-        @DrawableRes drawableResId: Int,
-        type: TextureType = TextureType.COLOR
-    ) = createImageMaterial(
-        bitmap = ImageTexture.getBitmap(context, drawableResId, type)
-    )
-
-    fun createImageMaterial(bitmap: Bitmap, type: TextureType = TextureType.COLOR) = ImageMaterial(
-        engine = engine,
-        instance = createInstance(imageTextureMaterial),
-        bitmap = bitmap,
-        type = type
-    ).also {
-        imageMaterials += it
-    }
-
-    fun createVideoMaterial(mediaPlayer: MediaPlayer, chromaKeyColor: Int? = null) = VideoMaterial(
-        engine = engine,
-        instance = if (chromaKeyColor == null) {
+    fun createVideoInstance(videoTexture: Texture, chromaKeyColor: Int? = null) =
+        if (chromaKeyColor == null) {
             createInstance(videoTextureMaterial)
         } else {
             createInstance(videoTextureChromaKeyMaterial).apply {
                 setParameter("chromaKeyColor", colorOf(chromaKeyColor))
             }
-        },
-        mediaPlayer = mediaPlayer
-    ).also {
-        videoMaterials += it
-    }
+        }.apply {
+            setTexture(videoTexture)
+        }
 
     fun destroyMaterial(material: Material) {
         engine.safeDestroyMaterial(material)
@@ -275,8 +247,6 @@ class MaterialLoader(
 
         materialInstances.toList().forEach { destroyMaterialInstance(it) }
         materialInstances.clear()
-        imageMaterials.toList().forEach { it.destroy() }
-        imageMaterials.clear()
         videoMaterials.toList().forEach { it.destroy() }
         videoMaterials.clear()
         materials.toList().forEach { destroyMaterial(it) }
