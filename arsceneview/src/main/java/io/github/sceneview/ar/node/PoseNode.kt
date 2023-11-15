@@ -24,8 +24,7 @@ import io.github.sceneview.node.Node
 open class PoseNode(
     engine: Engine,
     var moveHitTest: PoseNode.(Frame, MotionEvent) -> HitResult? = { frame, motionEvent ->
-        frame.hitTest(xPx = motionEvent.x, yPx = motionEvent.y, instant = false).firstOrNull()
-            ?.takeIf { it.trackable.isTracking }
+        frame.hitTest(motionEvent).firstOrNull()?.takeIf { it.trackable.isTracking }
     },
     var onPoseChanged: ((Pose) -> Unit)? = null,
 ) : Node(engine) {
@@ -141,8 +140,8 @@ open class PoseNode(
 
         if (isEditable && isPositionEditable) {
             frame?.let { frame ->
-                moveHitTest(frame, e.motionEvent)?.let {
-                    pose = it.hitPose
+                moveHitTest(frame, e)?.let {
+                    onMove(detector, e, it.hitPose)
                 }
             }
         } else {
