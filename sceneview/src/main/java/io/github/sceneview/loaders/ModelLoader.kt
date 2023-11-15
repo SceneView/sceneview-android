@@ -387,6 +387,7 @@ class ModelLoader(
         }
         resourceLoader.loadResources(model)
 //        resourceLoader.asyncBeginLoad(model)
+        resourceLoader.evictResourceData()
     }
 
     /**
