@@ -122,6 +122,8 @@ open class ARSceneView @JvmOverloads constructor(
      *
      * @see IndirectLight
      * @see Scene.setIndirectLight
+     * @see HDRLoader
+     * @see KTX1Loader
      */
     sharedIndirectLight: IndirectLight? = null,
     /**
@@ -131,8 +133,9 @@ open class ARSceneView @JvmOverloads constructor(
      *
      * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
      *
+     * @see HDRLoader
+     * @see KTX1Loader
      * @see Skybox
-     * @see Scene.setSkybox
      */
     sharedSkybox: Skybox? = null,
     /**
@@ -181,6 +184,7 @@ open class ARSceneView @JvmOverloads constructor(
     open val arCore = ARCore(
         onSessionCreated = ::onSessionCreated,
         onSessionResumed = ::onSessionResumed,
+        onSessionPaused = ::onSessionPaused,
         onArSessionFailed = ::onSessionFailed,
         onSessionConfigChanged = ::onSessionConfigChanged,
     )
@@ -403,6 +407,10 @@ open class ARSceneView @JvmOverloads constructor(
         }
 
         onSessionResumed?.invoke(session)
+    }
+
+    fun onSessionPaused(session: Session) {
+        onSessionPaused?.invoke(session)
     }
 
     fun onSessionConfigChanged(session: Session, config: Config) {
