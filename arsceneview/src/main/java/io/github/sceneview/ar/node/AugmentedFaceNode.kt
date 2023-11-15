@@ -4,6 +4,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer
 import com.google.android.filament.VertexBuffer.AttributeType
 import com.google.android.filament.VertexBuffer.VertexAttribute.POSITION
@@ -69,7 +70,7 @@ open class AugmentedFaceNode(
     engine: Engine,
     val augmentedFace: AugmentedFace,
     meshMaterialInstance: MaterialInstance? = null,
-    meshRenderableApply: RenderableManager.Builder.() -> Unit = {},
+    builder: RenderableManager.Builder.() -> Unit = {},
     onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
     onUpdated: ((AugmentedFace) -> Unit)? = null
 ) : TrackableNode<AugmentedFace>(
@@ -92,6 +93,7 @@ open class AugmentedFaceNode(
 
     val meshNode = MeshNode(
         engine = engine,
+        primitiveType = PrimitiveType.TRIANGLES,
         vertexBuffer = VertexBuffer.Builder()
             // Position + Normals + UV Coordinates
             .bufferCount(3)
@@ -112,7 +114,7 @@ open class AugmentedFaceNode(
                 setBuffer(engine, augmentedFace.meshTriangleIndices)
             },
         materialInstance = meshMaterialInstance,
-        renderableApply = meshRenderableApply
+        builder = builder
     ).apply { parent = centerNode }
 
     /**
