@@ -101,12 +101,7 @@ open class Node(
      */
     open var isTouchable = true
 
-    open var isEditable = false
-    open var isPositionEditable = false
-    open var isRotationEditable = true
-    open var isScaleEditable = true
-    var minEditableScale = 0.1f
-    var maxEditableScale = 10.0f
+    var editableScaleRange = 0.1f..10.0f
 
     /**
      * The visible state of this node.
@@ -360,6 +355,14 @@ open class Node(
             }
         }
 
+    var editingTransforms = setOf<KProperty1<Node, Any>>()
+        set(value) {
+            if (field != value) {
+                field = value
+                onEditingChanged?.invoke(value)
+            }
+        }
+
     /**
      * Transform from the world coordinate system to the coordinate system of this node.
      */
@@ -372,9 +375,8 @@ open class Node(
     protected val transformManager get() = engine.transformManager
     protected val transformInstance get() = transformManager.getInstance(entity)
 
-    internal open val sceneEntities = listOf(entity)
-    internal val onChildAdded = mutableListOf<(child: Node) -> Unit>()
-    internal val onChildRemoved = mutableListOf<(child: Node) -> Unit>()
+    var onEditingChanged: ((editingTransforms: Set<KProperty1<Node, Any>?>) -> Unit)? =
+        null
 
     var collider: Collider? = null
         set(value) {
