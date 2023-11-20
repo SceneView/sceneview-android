@@ -253,7 +253,9 @@ open class ARCameraStream(
     }
 
     fun destroy() {
+        materialLoader.destroyMaterialInstance(standardMaterial.defaultInstance)
         materialLoader.destroyMaterial(standardMaterial)
+        materialLoader.destroyMaterialInstance(depthOcclusionMaterial.defaultInstance)
         materialLoader.destroyMaterial(depthOcclusionMaterial)
         engine.safeDestroyVertexBuffer(vertexBuffer)
         renderableManager.safeDestroy(entity)
@@ -261,6 +263,7 @@ open class ARCameraStream(
         engine.safeDestroyTexture(depthTexture)
         uvCoordinates.clear()
         transformedUvCoordinates?.clear()
+        Log.d("Sceneview", "CameraStream destroyed")
     }
 
     companion object {
