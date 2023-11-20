@@ -1,5 +1,6 @@
 package io.github.sceneview.ar.camera
 
+import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.IndexBuffer
@@ -65,7 +66,8 @@ open class ARCameraStream(
      */
     var cameraTextures: Map<Int, Texture> = cameraTextureIds.associateWith { cameraTextureId ->
         Texture.Builder().sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-            .format(Texture.InternalFormat.RGB8).importTexture(cameraTextureId.toLong())
+            .format(Texture.InternalFormat.RGB16F)
+            .importTexture(cameraTextureId.toLong())
             .build(engine)
     }
 
@@ -192,6 +194,10 @@ open class ARCameraStream(
     }
 
     fun update(session: Session, frame: Frame) {
+        cameraTextures[frame.cameraTextureName]?.let {
+            cameraTexture = it
+        }
+
         // Recalculate camera Uvs if necessary.
         if (transformedUvCoordinates == null || frame.hasDisplayGeometryChanged()) {
             val transformedUvCoordinates = transformedUvCoordinates ?: uvCoordinates.clone().also {
@@ -212,10 +218,6 @@ open class ARCameraStream(
                 transformedUvCoordinates.put(i, 1.0f - transformedUvCoordinates[i])
             }
             vertexBuffer.setBufferAt(engine, UV_BUFFER_INDEX, transformedUvCoordinates)
-        }
-
-        cameraTextures[frame.cameraTextureName]?.let {
-            cameraTexture = it
         }
 
         if (isDepthOcclusionEnabled) {
