@@ -233,6 +233,7 @@ class MaterialLoader(
         }
 
     fun destroyMaterial(material: Material) {
+        engine.safeDestroyMaterialInstance(material.defaultInstance)
         engine.safeDestroyMaterial(material)
         materials -= material
     }
