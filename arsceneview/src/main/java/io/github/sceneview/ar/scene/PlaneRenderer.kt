@@ -2,6 +2,7 @@ package io.github.sceneview.ar.scene
 
 import android.util.Size
 import com.google.android.filament.Engine
+import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Scene
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
@@ -23,6 +24,7 @@ import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setTexture
 import io.github.sceneview.math.Color
 import io.github.sceneview.safeDestroyMaterial
+import io.github.sceneview.safeDestroyMaterialInstance
 import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.texture.ImageTexture
 
@@ -66,6 +68,8 @@ class PlaneRenderer(
             setParameter(MATERIAL_SPOTLIGHT_RADIUS, SPOTLIGHT_RADIUS)
         }
     }
+
+    private val materialInstances = mutableListOf<MaterialInstance>()
 
     // TODO: Remove when it isn't used in PlaneVisualizer
     private var shadowMaterial = materialLoader.createMaterial(
@@ -197,8 +201,12 @@ class PlaneRenderer(
     fun destroy() {
         visualizers.forEach { (_, planeVisualizer) -> planeVisualizer.destroy() }
 
+        // TODO: Clean
+        materialInstances.forEach { engine.safeDestroyMaterialInstance(it) }
+        engine.safeDestroyMaterialInstance(planeMaterial.defaultInstance)
         engine.safeDestroyMaterial(planeMaterial)
         engine.safeDestroyTexture(planeTexture)
+        engine.safeDestroyMaterialInstance(shadowMaterial.defaultInstance)
         engine.safeDestroyMaterial(shadowMaterial)
     }
 
@@ -216,8 +224,12 @@ class PlaneRenderer(
         if (plane.trackingState == TrackingState.TRACKING || plane.subsumedBy == null) {
             val planeVisualizer = visualizers[plane]
                 ?: PlaneVisualizer(engine, modelLoader, scene, plane).apply {
-                    setPlaneMaterial(planeMaterial.createInstance())
-                    setShadowMaterial(shadowMaterial.createInstance())
+                    setPlaneMaterial(planeMaterial.createInstance().also {
+                        materialInstances += it
+                    })
+                    setShadowMaterial(shadowMaterial.createInstance().also {
+                        materialInstances += it
+                    })
                     setShadowReceiver(isShadowReceiver)
                     setVisible(isVisible && visible)
                     setEnabled(isEnabled && isCameraTracking)
