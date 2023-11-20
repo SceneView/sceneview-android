@@ -113,4 +113,6 @@ fun HitResult.isValid(
  *
  * @return `null` if an exception was thrown during anchor creation.
  */
-fun HitResult.createAnchorOrNull(): Anchor? = runCatching { createAnchor() }.getOrNull()
+fun HitResult.createAnchorOrNull(): Anchor? = runCatching {
+    createAnchor()
+}.getOrNull()
