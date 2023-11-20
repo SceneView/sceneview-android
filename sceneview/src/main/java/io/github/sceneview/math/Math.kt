@@ -18,6 +18,7 @@ import dev.romainguy.kotlin.math.mix
 import dev.romainguy.kotlin.math.normalize
 import dev.romainguy.kotlin.math.pow
 import dev.romainguy.kotlin.math.rotation
+import dev.romainguy.kotlin.math.scale
 import dev.romainguy.kotlin.math.slerp
 import dev.romainguy.kotlin.math.translation
 import io.github.sceneview.collision.Matrix
@@ -36,16 +37,13 @@ fun Transform(
     position: Position = Position(),
     quaternion: Quaternion = Quaternion(),
     scale: Scale = Scale(1.0f)
-) =
-    translation(position) * rotation(quaternion) * dev.romainguy.kotlin.math.scale(scale)
+) = translation(position) * rotation(quaternion) * scale(scale)
 
 fun Transform(
     position: Position = Position(),
     rotation: Rotation,
     scale: Scale = Scale(1.0F)
-) = translation(position) * rotation(rotation.toQuaternion()) * dev.romainguy.kotlin.math.scale(
-    scale
-)
+) = translation(position) * rotation(rotation.toQuaternion()) * scale(scale)
 
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }
@@ -75,7 +73,9 @@ fun Quaternion.toOldQuaternion() =
 //TODO: Remove when everything use Quaternion
 fun io.github.sceneview.collision.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
 
-fun Mat4.toDoubleArray(): DoubleArray = toFloatArray().map { it.toDouble() }.toDoubleArray()
+fun Mat4.toColumnsDoubleArray(): DoubleArray =
+    toColumnsFloatArray().map { it.toDouble() }.toDoubleArray()
+
 val Mat4.quaternion: Quaternion
     get() = rotation(this).toQuaternion()
 
@@ -90,8 +90,6 @@ fun Mat4.toColumnsFloatArray() = floatArrayOf(
     w.x, w.y, w.z, w.w
 )
 
-fun Mat4.toColumnsDoubleArray() = toColumnsFloatArray().map { it.toDouble() }.toDoubleArray()
-
 fun FloatArray.toTransform() = Transform(
     x = Float4(this[0], this[1], this[2], this[3]),
     y = Float4(this[4], this[5], this[6], this[7]),
@@ -99,7 +97,7 @@ fun FloatArray.toTransform() = Transform(
     w = Float4(this[12], this[13], this[14], this[15])
 )
 
-fun DoubleArray.toTransform() = Transform.of(*this.map { it.toFloat() }.toFloatArray())
+fun DoubleArray.toTransform() = this.map { it.toFloat() }.toFloatArray().toTransform()
 
 fun lerp(start: Float3, end: Float3, deltaSeconds: Float) = mix(start, end, deltaSeconds)
 
