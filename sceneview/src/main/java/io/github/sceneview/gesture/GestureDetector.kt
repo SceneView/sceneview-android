@@ -43,7 +43,7 @@ open class GestureDetector(
         fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent, node: Node?)
     }
 
-    class SimpleOnGestureListener : OnGestureListener {
+    open class SimpleOnGestureListener : OnGestureListener {
         override fun onDown(e: MotionEvent, node: Node?) {}
         override fun onShowPress(e: MotionEvent, node: Node?) {}
         override fun onSingleTapUp(e: MotionEvent, node: Node?) {}
