@@ -1,6 +1,5 @@
 package io.github.sceneview.ar.node
 
-import android.util.Size
 import com.google.android.filament.Engine
 import com.google.ar.core.Camera
 import com.google.ar.core.Frame
