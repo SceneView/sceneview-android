@@ -118,16 +118,10 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onGestureListener = rememberOnGestureListener(
-                            onDoubleTap = { motionEvent, node ->
-                                val result1 = cameraNode.hitTest(motionEvent)
-                                val result2 = collisionSystem.hitTest(motionEvent)
-                                println("Sceneview - ray Result1=$result1")
-                                println("Sceneview - ray Result2=$result2")
-                            },
                             onSingleTapConfirmed = { motionEvent, node ->
                                 if (node == null) {
-                                    frame?.hitTest(motionEvent.x, motionEvent.y)
-                                        ?.firstByTypeOrNull(
+                                    val hitResults = frame?.hitTest(motionEvent.x, motionEvent.y)
+                                    hitResults?.firstByTypeOrNull(
                                             planeTypes = setOf(Plane.Type.HORIZONTAL_UPWARD_FACING)
                                         )?.createAnchorOrNull()?.let { anchor ->
                                             childNodes += createAnchorNode(
