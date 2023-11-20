@@ -1,6 +1,7 @@
 package io.github.sceneview
 
 import android.content.Context
+import android.util.Log
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
@@ -29,7 +30,10 @@ fun AssetLoader.safeDestroyModel(model: Model) {
     runCatching { destroyAsset(model) }
 }
 
-fun Engine.safeDestroy() = runCatching { destroy() }
+fun Engine.safeDestroy() = runCatching {
+    destroy()
+    Log.d("Sceneview", "Engine destroyed")
+}
 
 fun Engine.safeDestroyEntity(entity: Entity) = runCatching { destroyEntity(entity) }
 
