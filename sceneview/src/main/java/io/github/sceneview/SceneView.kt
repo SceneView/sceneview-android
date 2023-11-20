@@ -663,6 +663,80 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
+    fun setOnGestureListener(
+        onDown: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onShowPress: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onSingleTapUp: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onScroll: (e1: MotionEvent?, e2: MotionEvent, node: Node?, distance: Float2) -> Unit = { _, _, _, _ -> },
+        onLongPress: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onFling: (e1: MotionEvent?, e2: MotionEvent, node: Node?, velocity: Float2) -> Unit = { _, _, _, _ -> },
+        onSingleTapConfirmed: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onDoubleTap: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onDoubleTapEvent: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onContextClick: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
+        onMoveBegin: (detector: MoveGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onMove: (detector: MoveGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onMoveEnd: (detector: MoveGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onRotateBegin: (detector: RotateGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onRotate: (detector: RotateGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onRotateEnd: (detector: RotateGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onScaleBegin: (detector: ScaleGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onScale: (detector: ScaleGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> },
+        onScaleEnd: (detector: ScaleGestureDetector, e: MotionEvent, node: Node?) -> Unit = { _, _, _ -> }
+    ) {
+        onGestureListener = object : GestureDetector.OnGestureListener {
+            override fun onDown(e: MotionEvent, node: Node?) = onDown(e, node)
+            override fun onShowPress(e: MotionEvent, node: Node?) = onShowPress(e, node)
+            override fun onSingleTapUp(e: MotionEvent, node: Node?) = onSingleTapUp(e, node)
+            override fun onScroll(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                node: Node?,
+                distance: Float2
+            ) = onScroll(e1, e2, node, distance)
+
+            override fun onLongPress(e: MotionEvent, node: Node?) = onLongPress(e, node)
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, node: Node?, velocity: Float2) =
+                onFling(e1, e2, node, velocity)
+
+            override fun onSingleTapConfirmed(e: MotionEvent, node: Node?) =
+                onSingleTapConfirmed(e, node)
+
+            override fun onDoubleTap(e: MotionEvent, node: Node?) = onDoubleTap(e, node)
+            override fun onDoubleTapEvent(e: MotionEvent, node: Node?) = onDoubleTapEvent(e, node)
+            override fun onContextClick(e: MotionEvent, node: Node?) = onContextClick(e, node)
+            override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent, node: Node?) =
+                onMoveBegin(detector, e, node)
+
+            override fun onMove(detector: MoveGestureDetector, e: MotionEvent, node: Node?) =
+                onMove(detector, e, node)
+
+            override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent, node: Node?) =
+                onMoveEnd(detector, e, node)
+
+            override fun onRotateBegin(
+                detector: RotateGestureDetector,
+                e: MotionEvent,
+                node: Node?
+            ) = onRotateBegin(detector, e, node)
+
+            override fun onRotate(detector: RotateGestureDetector, e: MotionEvent, node: Node?) =
+                onRotate(detector, e, node)
+
+            override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent, node: Node?) =
+                onRotateEnd(detector, e, node)
+
+            override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) =
+                onScaleBegin(detector, e, node)
+
+            override fun onScale(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) =
+                onScale(detector, e, node)
+
+            override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) =
+                onScaleEnd(detector, e, node)
+        }
+    }
+
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
             _viewAttachmentManager?.onResume()
