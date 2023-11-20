@@ -568,9 +568,6 @@ open class SceneView @JvmOverloads constructor(
         childNodes.forEach { it.onFrame(frameTimeNanos) }
 
         if (uiHelper.isReadyToRender) {
-            // Allow the resource loader to finalize textures that have become ready.
-//        resourceLoader.asyncUpdateLoad()
-
 //            transformManager.openLocalTransformTransaction()
 
             // Only update the camera manipulator if a touch has been made
