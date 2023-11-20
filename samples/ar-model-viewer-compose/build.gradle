@@ -5,6 +5,7 @@ plugins {
 
 android {
     namespace "io.github.sceneview.sample.armodelviewer.compose"
+
     compileSdk 34
 
     defaultConfig {
@@ -26,9 +27,6 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17
     }
-    aaptOptions {
-        noCompress 'filamat', 'ktx'
-    }
     buildFeatures {
         compose true
     }
@@ -39,6 +37,9 @@ android {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
+    }
+    androidResources {
+        noCompress 'filamat', 'ktx'
     }
 }
 
