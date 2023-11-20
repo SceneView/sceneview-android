@@ -11,6 +11,7 @@ import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Mat4
 import io.github.sceneview.math.Color
 import io.github.sceneview.math.colorOf
+import io.github.sceneview.math.toColumnsFloatArray
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.TextureSamplerExternal
 
@@ -25,7 +26,7 @@ fun MaterialInstance.setParameter(name: String, value: Float4) =
     setParameter(name, value.x, value.y, value.z, value.w)
 
 fun MaterialInstance.setParameter(name: String, value: Mat4) =
-    setParameter(name, FloatElement.FLOAT4, value.toFloatArray(), 0, 4)
+    setParameter(name, FloatElement.FLOAT4, value.toColumnsFloatArray(), 0, 4)
 
 fun MaterialInstance.setParameter(name: String, value: Float3) =
     setParameter(name, value.x, value.y, value.z)
@@ -46,16 +47,23 @@ fun MaterialInstance.setExternalTexture(name: String, texture: Texture) =
 
 //fun MaterialInstance.setColor(name: String, type: Colors.RgbaType, value: Float4) =
 //    setParameter(name, type, value.x, value.y, value.z, value.w)
-fun MaterialInstance.setColor(color: Color, type: Colors.RgbaType = Colors.RgbaType.SRGB) =
-    setParameter("color", type, color.r, color.g, color.b, color.a)
+fun MaterialInstance.setColor(
+    color: Color,
+    parameterName: String = "color",
+    type: Colors.RgbaType = Colors.RgbaType.SRGB
+) = setParameter(parameterName, type, color.r, color.g, color.b, color.a)
 
-fun MaterialInstance.setColor(color: Int, type: Colors.RgbaType = Colors.RgbaType.SRGB) =
-    setColor(colorOf(color), type)
+fun MaterialInstance.setColor(
+    color: Int,
+    parameterName: String = "color",
+    type: Colors.RgbaType = Colors.RgbaType.SRGB
+) = setColor(colorOf(color), parameterName, type)
 
 fun MaterialInstance.setColor(
     color: androidx.compose.ui.graphics.Color,
+    parameterName: String = "color",
     type: Colors.RgbaType = Colors.RgbaType.SRGB
-) = setColor(colorOf(color), type)
+) = setColor(colorOf(color), parameterName, type)
 
 /**
  * The metallic property defines whether the surface is a metallic (conductor) or a non-metallic
