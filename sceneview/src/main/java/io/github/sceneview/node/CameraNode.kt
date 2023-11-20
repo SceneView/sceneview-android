@@ -47,7 +47,7 @@ open class CameraNode(
         }
 
     // Near = 5 cm
-    private var _near = 0.05f
+    private var _near = 0.01f//0.05f
     override var near: Float
         get() = super.near
         set(value) {
@@ -56,7 +56,7 @@ open class CameraNode(
         }
 
     // Far = 1 km
-    private var _far = 1000.0f
+    private var _far = 30.0f//1000.0f
     override var far: Float
         get() = super.far
         set(value) {
