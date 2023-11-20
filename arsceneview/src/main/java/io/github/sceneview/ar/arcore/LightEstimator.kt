@@ -36,7 +36,7 @@ class LightEstimator(
     val iblPrefilter: IBLPrefilter
 ) {
 
-    class Estimation(
+    data class Estimation(
         var mainLightColor: Color? = null,
         var mainLightIntensity: Float? = null,
         var mainLightDirection: Direction? = null,

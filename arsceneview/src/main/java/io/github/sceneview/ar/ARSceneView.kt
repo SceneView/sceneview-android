@@ -331,32 +331,34 @@ open class ARSceneView @JvmOverloads constructor(
 
     var lightEstimation: LightEstimator.Estimation? = null
         private set(value) {
-            field = value
-            if (value != null) {
-                mainLightNode?.let { mainLightNode ->
-                    value.mainLightColor?.let {
-                        mainLightEstimatedNode?.color = mainLightNode.color * it
+            if (field != value) {
+                field = value
+                if (value != null) {
+                    mainLightNode?.let { mainLightNode ->
+                        value.mainLightColor?.let {
+                            mainLightEstimatedNode?.color = mainLightNode.color * it
+                        }
+                        value.mainLightIntensity?.let {
+                            mainLightEstimatedNode?.intensity = mainLightNode.intensity * it
+                        }
+                        value.mainLightDirection?.let {
+                            mainLightEstimatedNode?.lightDirection = it
+                        }
                     }
-                    value.mainLightIntensity?.let {
-                        mainLightEstimatedNode?.intensity = mainLightNode.intensity * it
-                    }
-                    value.mainLightDirection?.let {
-                        mainLightEstimatedNode?.lightDirection = it
-                    }
-                }
 
-                indirectLightEstimated = IndirectLight.Builder().apply {
-                    value.irradiance?.let {
-                        irradiance(3, it)
-                    } ?: indirectLight?.irradianceTexture?.let { irradiance(it) }
-                    value.reflections?.let {
-                        reflections(it)
-                    } ?: indirectLight?.reflectionsTexture?.let { reflections(it) }
-                    indirectLight?.intensity?.let { intensity(it) }
-                    indirectLight?.getRotation(null)?.let { rotation(it) }
-                }.build(engine)
+                    indirectLightEstimated = IndirectLight.Builder().apply {
+                        value.irradiance?.let {
+                            irradiance(3, it)
+                        } ?: indirectLight?.irradianceTexture?.let { irradiance(it) }
+                        value.reflections?.let {
+                            reflections(it)
+                        } ?: indirectLight?.reflectionsTexture?.let { reflections(it) }
+                        indirectLight?.intensity?.let { intensity(it) }
+                        indirectLight?.getRotation(null)?.let { rotation(it) }
+                    }.build(engine)
+                }
+                onLightEstimationUpdated?.invoke(value)
             }
-            onLightEstimationUpdated?.invoke(value)
         }
 
     var trackingFailureReason: TrackingFailureReason? = null
