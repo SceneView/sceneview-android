@@ -4,15 +4,13 @@ import com.google.android.filament.Camera
 import com.google.android.filament.Camera.Projection
 import com.google.android.filament.utils.pow
 import dev.romainguy.kotlin.math.Float2
-import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Ray
 import dev.romainguy.kotlin.math.inverse
-import dev.romainguy.kotlin.math.normalize
+import io.github.sceneview.collision.MathHelper
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
-import io.github.sceneview.math.equals
 import io.github.sceneview.math.toColumnsDoubleArray
 import io.github.sceneview.math.toColumnsFloatArray
 import io.github.sceneview.math.toDirection
@@ -252,19 +250,21 @@ val Camera.forwardDirection: Direction
  *
  * @return The world position of the point.
  */
-fun Camera.viewToWorld(viewPosition: Float2, z: Float = 1.0f): Position =
-    Float3(v = viewPosition, z = z).let {
-        inverse(projectionTransform * viewTransform) * Float4(
-            // Normalize between -1 and 1.
-            v = it * 2.0f - 1.0f, w = 1.0f
-        )
-    }.let { position ->
-        position.xyz.apply {
-            if (position.w.equals(0.0f, 1.0E-10f)) {
-                xy = Float2(0.0f)
-            }
-        } * 1.0f / position.w
+fun Camera.viewToWorld(viewPosition: Float2, z: Float = 1.0f): Position {
+    // Normalize between -1 and 1.
+    val clipSpacePosition = Float4(
+        x = viewPosition.x * 2.0f - 1.0f,
+        y = viewPosition.y * 2.0f - 1.0f,
+        z = 2.0f * z - 1.0f,
+        w = 1.0f
+    )
+    val result = inverse(projectionTransform * viewTransform) * clipSpacePosition
+    val w = 1.0F / result.w
+    if (MathHelper.almostEqualRelativeAndAbs(result.w, 0.0f)) {
+        result.xy = Float2(0.0f)
     }
+    return result.xyz * w
+}
 
 /**
  * Get a view space position from a world position.
@@ -301,6 +301,6 @@ fun Camera.worldToView(worldPosition: Position): Float2 =
 fun Camera.viewToRay(viewPosition: Float2): Ray {
     val startPosition = viewToWorld(viewPosition, z = 0.0f)
     val endPosition = viewToWorld(viewPosition, z = 1.0f)
-    val direction = normalize(endPosition - startPosition)
+    val direction = endPosition - startPosition
     return Ray(origin = startPosition, direction = direction)
 }
