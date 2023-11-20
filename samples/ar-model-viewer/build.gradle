@@ -4,6 +4,8 @@ plugins {
 }
 
 android {
+    namespace "io.github.sceneview.sample.armodelviewer"
+
     compileSdk 34
 
     defaultConfig {
@@ -25,10 +27,9 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17
     }
-    aaptOptions {
+    androidResources {
         noCompress 'filamat', 'ktx'
     }
-    namespace 'io.github.sceneview.sample.armodelviewer'
 }
 
 dependencies {

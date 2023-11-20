@@ -45,7 +45,6 @@ android {
     namespace 'io.github.sceneview'
 
     compileSdk 34
-    compileSdkVersion 34
 
     defaultConfig {
         minSdk 24
