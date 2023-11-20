@@ -23,12 +23,16 @@ import com.google.android.filament.utils.KTX1Loader
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
+import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.HitTestGestureDetector
+import io.github.sceneview.gesture.MoveGestureDetector
+import io.github.sceneview.gesture.RotateGestureDetector
+import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.orbitHomePosition
 import io.github.sceneview.gesture.targetPosition
 import io.github.sceneview.gesture.transform
@@ -868,20 +872,16 @@ open class SceneView @JvmOverloads constructor(
 
         fun createView(engine: Engine) =
             engine.createView().apply {
-//                // On mobile, better use lower quality color buffer
-//                renderQuality = renderQuality.apply {
-//                    hdrColorBuffer = QualityLevel.HIGH
-//                }
-//                dynamicResolutionOptions = dynamicResolutionOptions.apply {
-//                    enabled = false
-//                    quality = QualityLevel.MEDIUM
-//                }
-//                // FXAA is pretty cheap and helps a lot
-//                antiAliasing = AntiAliasing.NONE
-//                // Ambient occlusion is the cheapest effect that adds a lot of quality
-//                ambientOcclusionOptions = ambientOcclusionOptions.apply {
-//                    enabled = false
-//                }
+                dynamicResolutionOptions = dynamicResolutionOptions.apply {
+                    enabled = false
+                    quality = QualityLevel.HIGH
+                }
+                // FXAA is pretty cheap and helps a lot
+                antiAliasing = AntiAliasing.NONE
+                // ambient occlusion is the cheapest effect that adds a lot of quality
+                ambientOcclusionOptions = ambientOcclusionOptions.apply {
+                    enabled = true
+                }
 //                // Bloom is pretty expensive but adds a fair amount of realism
 //                bloomOptions = bloomOptions.apply {
 //                    enabled = false
