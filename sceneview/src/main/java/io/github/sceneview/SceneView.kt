@@ -745,12 +745,16 @@ open class SceneView @JvmOverloads constructor(
             // to avoid getting called twice.
             Choreographer.getInstance().removeFrameCallback(frameCallback)
             Choreographer.getInstance().postFrameCallback(frameCallback)
+
+            activity?.setKeepScreenOn(true)
         }
 
         override fun onPause(owner: LifecycleOwner) {
             Choreographer.getInstance().removeFrameCallback(frameCallback)
 
             _viewAttachmentManager?.onPause()
+
+            activity?.setKeepScreenOn(false)
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
