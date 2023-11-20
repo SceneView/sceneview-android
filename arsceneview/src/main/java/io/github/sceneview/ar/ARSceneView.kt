@@ -46,7 +46,6 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.utils.setKeepScreenOn
 
 /**
  * A SurfaceView that integrates with ARCore and renders a scene
@@ -391,27 +390,6 @@ open class ARSceneView @JvmOverloads constructor(
     private var defaultCameraStream: ARCameraStream? = null
 
     init {
-        view.apply {
-            dynamicResolutionOptions = dynamicResolutionOptions.apply {
-                enabled = false
-//                quality = View.QualityLevel.MEDIUM
-            }
-//                // FXAA is pretty cheap and helps a lot
-//                antiAliasing = AntiAliasing.NONE
-//                // Ambient occlusion is the cheapest effect that adds a lot of quality
-//                ambientOcclusionOptions = ambientOcclusionOptions.apply {
-//                    enabled = false
-//                }
-//                // Bloom is pretty expensive but adds a fair amount of realism
-//                bloomOptions = bloomOptions.apply {
-//                    enabled = false
-//                }
-//                // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
-//                // material orange 500.
-//                colorGrading = ColorGrading.Builder()
-//                    .toneMapping(ColorGrading.ToneMapping.FILMIC)
-//                    .build(engine)
-        }
         setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
             defaultCameraNode = it
         })
@@ -501,16 +479,14 @@ open class ARSceneView @JvmOverloads constructor(
         val camera = frame.camera
         val isCameraTracking = camera.isTracking
 
-        // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
-        // You will say thanks when still have battery after a long day debugging an AR app.
-        // ...and it's better for your users
-        activity?.setKeepScreenOn(isCameraTracking)
+//        // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
+//        // You will say thanks when still have battery after a long day debugging an AR app.
+//        // ...and it's better for your users
+//        activity?.setKeepScreenOn(isCameraTracking)
 
         cameraStream?.update(session, frame)
         cameraNode.update(session, frame)
-
         lightEstimation = lightEstimator?.update(session, frame, cameraNode.camera)
-
         planeRenderer.update(session, frame)
 
         childNodes.filterIsInstance<PoseNode>().forEach { poseNode ->
