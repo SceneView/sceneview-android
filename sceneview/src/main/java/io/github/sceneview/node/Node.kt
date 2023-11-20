@@ -17,7 +17,6 @@ import dev.romainguy.kotlin.math.inverse
 import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.lookTowards
 import dev.romainguy.kotlin.math.quaternion
-import dev.romainguy.kotlin.math.scale
 import dev.romainguy.kotlin.math.transform
 import io.github.sceneview.Entity
 import io.github.sceneview.FilamentEntity
@@ -178,9 +177,7 @@ open class Node(
     open var position: Position
         get() = transform.position
         set(value) {
-            if (position != value) {
-                transform = Transform(value, quaternion, scale)
-            }
+            transform = Transform(value, quaternion, scale)
         }
 
     /**
@@ -194,11 +191,8 @@ open class Node(
     open var worldPosition: Position
         get() = worldTransform.position
         set(value) {
-            if (worldPosition != value) {
-                position = getLocalPosition(value)
-            }
+            position = parent?.getLocalPosition(value) ?: value
         }
-
 
     /**
      * Quaternion rotation.
@@ -208,9 +202,7 @@ open class Node(
     open var quaternion: Quaternion
         get() = transform.quaternion
         set(value) {
-            if (quaternion != value) {
-                transform = Transform(position, value, scale)
-            }
+            transform = Transform(position, value, scale)
         }
 
     /**
@@ -225,9 +217,7 @@ open class Node(
     open var worldQuaternion: Quaternion
         get() = worldTransform.toQuaternion()
         set(value) {
-            if (worldQuaternion != value) {
-                quaternion = getLocalQuaternion(value)
-            }
+            quaternion = parent?.getLocalQuaternion(value) ?: value
         }
 
     /**
@@ -246,9 +236,7 @@ open class Node(
     open var rotation: Rotation
         get() = quaternion.toEulerAngles()
         set(value) {
-            if (rotation != value) {
-                quaternion = Quaternion.fromEuler(value)
-            }
+            quaternion = Quaternion.fromEuler(value)
         }
 
     /**
@@ -262,9 +250,7 @@ open class Node(
     open var worldRotation: Rotation
         get() = worldTransform.rotation
         set(value) {
-            if (worldRotation != value) {
-                worldQuaternion = Quaternion.fromEuler(value)
-            }
+            worldQuaternion = Quaternion.fromEuler(value)
         }
 
     /**
@@ -277,9 +263,7 @@ open class Node(
     open var scale: Scale
         get() = transform.scale
         set(value) {
-            if (scale != value) {
-                transform = Transform(position, quaternion, value)
-            }
+            transform = Transform(position, quaternion, value)
         }
 
     /**
@@ -293,9 +277,7 @@ open class Node(
     open var worldScale: Scale
         get() = worldTransform.scale
         set(value) {
-            if (worldScale != value) {
-                scale = getLocalScale(value)
-            }
+            scale = parent?.getLocalScale(value) ?: value
         }
 
     /**
@@ -307,10 +289,8 @@ open class Node(
     open var transform: Transform
         get() = transformManager.getTransform(transformInstance)
         set(value) {
-            if (transform != value) {
-                transformManager.setTransform(transformInstance, value)
-                onTransformChanged()
-            }
+            transformManager.setTransform(transformInstance, value)
+            onTransformChanged()
         }
 
     /**
@@ -321,9 +301,7 @@ open class Node(
     var worldTransform: Transform
         get() = transformManager.getWorldTransform(transformInstance)
         set(value) {
-            if (worldTransform != value) {
-                transform = parent?.getLocalTransform(value) ?: value
-            }
+            transform = parent?.getLocalTransform(value) ?: value
         }
 
     var smoothTransform: Transform? = null
@@ -534,7 +512,9 @@ open class Node(
      * @param worldScale the transform in world-space to convert.
      * @return a new scale that represents the world scale in local-space.
      */
-    fun getLocalScale(worldScale: Scale) = (worldToLocal * scale(worldScale)).scale
+//    fun getLocalScale(worldScale: Scale) = scale(worldToLocal) * worldScale
+//    fun getLocalScale(worldScale: Scale) = (worldToLocal * scale(worldScale)).scale
+    fun getLocalScale(worldScale: Scale) = worldToLocal * worldScale
 
     /**
      * Converts a scale in the local-space of this node to world-space.
@@ -542,7 +522,9 @@ open class Node(
      * @param scale the scale in local-space to convert.
      * @return a new scale that represents the local scale in world-space.
      */
-    fun getWorldScale(scale: Scale) = (worldTransform * scale(scale)).scale
+//    fun getWorldScale(scale: Scale) = (worldTransform * scale(scale)).scale
+//    fun getWorldScale(scale: Scale) = scale(worldTransform) * scale
+    fun getWorldScale(scale: Scale) = worldTransform * scale
 
     /**
      * Converts a node transform in the world-space to a local-space of this node.
@@ -636,7 +618,7 @@ open class Node(
      */
     fun transform(
         position: Position = this.position,
-        rotation: Rotation = this.rotation,
+        rotation: Rotation,
         scale: Scale = this.scale,
         smooth: Boolean = isSmoothTransformEnabled,
         smoothSpeed: Float = smoothTransformSpeed

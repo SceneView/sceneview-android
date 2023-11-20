@@ -117,7 +117,7 @@ fun View.screenToRay(xPx: Float, yPx: Float): Ray = camera!!.viewToRay(
  *
  * @return A Ray from the camera to far / infinity
  */
-fun View.motionEventToRay(motionEvent: MotionEvent): dev.romainguy.kotlin.math.Ray =
+fun View.motionEventToRay(motionEvent: MotionEvent): Ray =
     screenToRay(xPx = motionEvent.x, yPx = motionEvent.y)
 
 /**
