@@ -140,7 +140,7 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
     ): ModelInstance = createModel(buffer, resourceResolver).also {
         // Release model since it will not be re-instantiated
-        it.releaseSourceData()
+//        it.releaseSourceData()
     }.instance
 
     /**
@@ -155,7 +155,7 @@ class ModelLoader(
         }
     ): ModelInstance = createModel(assetFileLocation, resourceResolver).also {
         // Release model since it will not be re-instantiated
-        it.releaseSourceData()
+//        it.releaseSourceData()
     }.instance
 
     /**
@@ -168,7 +168,7 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
     ): ModelInstance = createModel(rawResId, resourceResolver).also {
         // Release model since it will not be re-instantiated
-        it.releaseSourceData()
+//        it.releaseSourceData()
     }.instance
 
     /**
@@ -187,7 +187,7 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> String = { getFolderPath(fileLocation, it) }
     ): ModelInstance? = loadModel(fileLocation, resourceResolver)?.also {
         // Release model since it will not be re-instantiated
-        it.releaseSourceData()
+//        it.releaseSourceData()
     }?.instance
 
     /**
@@ -209,7 +209,7 @@ class ModelLoader(
         onResult: (ModelInstance?) -> Unit
     ): Job = loadModelAsync(fileLocation, resourceResolver) {
         // Release model since it will not be re-instantiated
-        it?.releaseSourceData()
+//        it?.releaseSourceData()
         onResult.invoke(it?.instance)
     }
 
@@ -235,7 +235,7 @@ class ModelLoader(
                 models += model
                 loadResources(model, resourceResolver)
                 // Release model since it will not be re-instantiated
-                model.releaseSourceData()
+//                model.releaseSourceData()
             }
         }.filterNotNull()
 
@@ -304,7 +304,7 @@ class ModelLoader(
                     context.loadFileBuffer(resourceResolver(resourceFileName))
                 }
                 // Release model since it will not be re-instantiated
-                model.releaseSourceData()
+//                model.releaseSourceData()
             }
         }.filterNotNull()
     } ?: listOf()
