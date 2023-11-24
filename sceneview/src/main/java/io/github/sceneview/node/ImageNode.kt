@@ -2,42 +2,42 @@ package io.github.sceneview.node
 
 import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
-import com.google.android.filament.Engine
-import com.google.android.filament.EntityManager
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.Texture
+import com.google.android.filament.TextureSampler
 import com.google.android.filament.utils.TextureType
 import dev.romainguy.kotlin.math.normalize
-import io.github.sceneview.Entity
 import io.github.sceneview.geometries.Plane
+import io.github.sceneview.geometries.UvScale
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.texture.ImageTexture
+import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.setBitmap
 
 open class ImageNode private constructor(
-    engine: Engine,
     val materialLoader: MaterialLoader,
-    entity: Entity = EntityManager.get().create(),
-    parent: Node? = null,
     bitmap: Bitmap,
     val texture: Texture,
+    textureSampler: TextureSampler = TextureSampler2D(),
     /**
      * `null` to adjust size on the normalized image size
      */
     val size: Size? = null,
     center: Position = Plane.DEFAULT_CENTER,
     normal: Direction = Plane.DEFAULT_NORMAL,
+    uvScale: UvScale = UvScale(1.0f),
+    parent: Node? = null,
     builder: RenderableManager.Builder.() -> Unit = {}
 ) : PlaneNode(
-    engine, entity, parent,
+    materialLoader.engine,
     size ?: normalize(Size(bitmap.width.toFloat(), bitmap.height.toFloat())),
-    center, normal,
-    materialLoader.createImageInstance(texture),
-    builder
+    center, normal, uvScale,
+    materialLoader.createImageInstance(texture, textureSampler),
+    parent, builder
 ) {
     var bitmap = bitmap
         set(value) {
@@ -51,10 +51,7 @@ open class ImageNode private constructor(
         }
 
     constructor(
-        engine: Engine,
         materialLoader: MaterialLoader,
-        entity: Entity = EntityManager.get().create(),
-        parent: Node? = null,
         bitmap: Bitmap,
         /**
          * `null` to adjust size on the normalized image size
@@ -62,60 +59,62 @@ open class ImageNode private constructor(
         size: Size? = null,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        uvScale: UvScale = UvScale(1.0f),
         type: TextureType = ImageTexture.DEFAULT_TYPE,
+        textureSampler: TextureSampler = TextureSampler2D(),
+        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {},
         textureBuilder: ImageTexture.Builder.() -> Unit = {}
     ) : this(
-        engine, materialLoader, entity, parent,
-        bitmap,
+        materialLoader, bitmap,
         ImageTexture.Builder()
             .bitmap(bitmap)
             .type(type)
             .apply(textureBuilder)
-            .build(engine),
-        size, center, normal, builder
+            .build(materialLoader.engine),
+        textureSampler, size, center, normal, uvScale, parent, builder
     )
 
     constructor(
-        engine: Engine,
         materialLoader: MaterialLoader,
-        entity: Entity = EntityManager.get().create(),
-        parent: Node? = null,
         /**
          * `null` to adjust size on the normalized image size
          */
         size: Size? = null,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        uvScale: UvScale = UvScale(1.0f),
         imageFileLocation: String,
         type: TextureType = ImageTexture.DEFAULT_TYPE,
+        textureSampler: TextureSampler = TextureSampler2D(),
+        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {},
         textureBuilder: ImageTexture.Builder.() -> Unit = {}
     ) : this(
-        engine, materialLoader, entity, parent,
+        materialLoader,
         ImageTexture.getBitmap(materialLoader.assets, imageFileLocation),
-        size, center, normal, type, builder, textureBuilder
+        size, center, normal, uvScale, type, textureSampler, parent, builder, textureBuilder
     )
 
     constructor(
-        engine: Engine,
         materialLoader: MaterialLoader,
-        entity: Entity = EntityManager.get().create(),
-        parent: Node? = null,
         /**
          * `null` to adjust size on the normalized image size
          */
         size: Size? = null,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        uvScale: UvScale = UvScale(1.0f),
         @DrawableRes imageResId: Int,
         type: TextureType = ImageTexture.DEFAULT_TYPE,
+        textureSampler: TextureSampler = TextureSampler2D(),
+        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {},
         textureBuilder: ImageTexture.Builder.() -> Unit = {}
     ) : this(
-        engine, materialLoader, entity, parent,
+        materialLoader,
         ImageTexture.getBitmap(materialLoader.context, imageResId),
-        size, center, normal, type, builder, textureBuilder
+        size, center, normal, uvScale, type, textureSampler, parent, builder, textureBuilder
     )
 
     fun setBitmap(fileLocation: String, type: TextureType = ImageTexture.DEFAULT_TYPE) {

@@ -19,6 +19,7 @@ import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
 typealias UvCoordinate = Float2
+typealias UvScale = Float2
 
 private const val kPositionSize = 3 // x, y, z
 private const val kTangentSize = 4 // Quaternion: x, y, z, w
@@ -268,7 +269,7 @@ fun VertexBuffer.setVertices(engine: Engine, vertices: List<Geometry.Vertex>): B
         maxPosition = max(maxPosition, vertex.position)
     }
 
-    val halfExtent = (maxPosition - minPosition) * 0.5f
+    val halfExtent = (maxPosition - minPosition) / 2.0f
     val center = minPosition + halfExtent
     return Box(center, halfExtent)
 }
