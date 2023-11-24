@@ -872,13 +872,26 @@ open class SceneView @JvmOverloads constructor(
 
         fun createView(engine: Engine) =
             engine.createView().apply {
-                dynamicResolutionOptions = dynamicResolutionOptions.apply {
-                    enabled = false
-                    quality = QualityLevel.HIGH
+                // On mobile, better use lower quality color buffer
+                renderQuality = renderQuality.apply {
+                    hdrColorBuffer = QualityLevel.MEDIUM
                 }
+                // Dynamic resolution often helps a lot
+                dynamicResolutionOptions = dynamicResolutionOptions.apply {
+                    // Disabled cause generating some camera stream wrong scaling ratio
+                    enabled = true
+                    homogeneousScaling = true
+                    quality = QualityLevel.MEDIUM
+                }
+
+                // MSAA is needed with dynamic resolution MEDIUM
+                multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
+                    enabled = false
+                }
+
                 // FXAA is pretty cheap and helps a lot
-                antiAliasing = AntiAliasing.NONE
-                // ambient occlusion is the cheapest effect that adds a lot of quality
+                antiAliasing = AntiAliasing.FXAA
+                // Ambient occlusion is the cheapest effect that adds a lot of quality
                 ambientOcclusionOptions = ambientOcclusionOptions.apply {
                     enabled = true
                 }
