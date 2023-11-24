@@ -20,7 +20,8 @@ class Plane private constructor(
     boundingBox: Box,
     size: Size,
     center: Position,
-    normal: Direction
+    normal: Direction,
+    uvScale: UvScale
 ) : Geometry(
     engine,
     primitiveType,
@@ -32,35 +33,48 @@ class Plane private constructor(
     boundingBox
 ) {
     class Builder : Geometry.Builder(PrimitiveType.TRIANGLES) {
+        var size: Size = DEFAULT_SIZE
+            private set
+
+        var center: Position = DEFAULT_CENTER
+            private set
+
+        var normal: Direction = DEFAULT_NORMAL
+            private set
+
+        var uvScale: UvScale = UvScale(1.0f)
+            private set
+
         /**
          * Size of the constructed plane
          */
-        var size: Size = DEFAULT_SIZE
-            private set
+        fun size(size: Size) = apply { this.size = size }
 
         /**
          * Center of the constructed plane
          */
-        var center: Position = DEFAULT_CENTER
-            private set
+        fun center(center: Position) = apply { this.center = center }
 
         /**
          * Looking at direction
          */
-        var normal: Direction = DEFAULT_NORMAL
-            private set
-
-        fun size(size: Size) = apply { this.size = size }
-        fun center(center: Position) = apply { this.center = center }
         fun normal(normal: Direction) = apply { this.normal = normal }
 
+        /**
+         * UVs coordinates
+         *
+         * One way to tile the texture is by adjusting the UV coordinates of your model to extend
+         * beyond 0 to 1 and setting the TextureSampler's WrapMode to REPEAT.
+         */
+        fun uvScale(uvScale: UvScale) = apply { this.uvScale = uvScale }
+
         override fun build(engine: Engine): Plane {
-            vertices(getVertices(size, center, normal))
+            vertices(getVertices(size, center, normal, uvScale))
             indices(INDICES)
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Plane(
                     engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
-                    boundingBox, size, center, normal
+                    boundingBox, size, center, normal, uvScale
                 )
             }
         }
@@ -84,21 +98,53 @@ class Plane private constructor(
     var normal: Direction = normal
         private set
 
+    /**
+     * UVs coordinates
+     *
+     * One way to tile the texture is by adjusting the UV coordinates of your model to extend
+     * beyond 0 to 1 and setting the TextureSampler's WrapMode to REPEAT.
+     */
+    var uvScale: UvScale = uvScale
+        private set
+
+    /**
+     * Update the geometry
+     *
+     * @param size Size of the constructed plane
+     * @param center Center of the constructed plane
+     * @param normal Looking at direction
+     * @param uvs UVs coordinates
+     *
+     * One way to tile the texture is by adjusting the UV coordinates of your model to extend
+     * beyond 0 to 1 and setting the TextureSampler's WrapMode to REPEAT.
+     */
     fun update(
         size: Size = this.size,
         center: Position = this.center,
-        normal: Direction = this.normal
+        normal: Direction = this.normal,
+        uvScale: UvScale = this.uvScale,
     ) = apply {
         this.size = size
         this.center = center
         this.normal = normal
-        vertices = getVertices(size, center, normal)
+        this.uvScale = uvScale
+        vertices = getVertices(size, center, normal, uvScale)
     }
 
     companion object {
         val DEFAULT_SIZE = Size(x = 1.0f, y = 1.0f)
         val DEFAULT_CENTER = Position(0.0f)
         val DEFAULT_NORMAL = Direction(y = 1.0f) // Looking upper
+        val UV_COORDINATES = listOf(
+            // uv00
+            UvCoordinate(0.0f, 0.0f),
+            // uv01
+            UvCoordinate(0.0f, 1.0f),
+            // uv11
+            UvCoordinate(1.0f, 1.0f),
+            // uv10
+            UvCoordinate(1.0f, 0.0f)
+        )
 
         val INDICES = listOf(
             PrimitiveIndices(
@@ -109,24 +155,35 @@ class Plane private constructor(
             )
         )
 
-        fun getVertices(size: Size, center: Position, normal: Direction) =
-            buildList {
-                val extents = size / 2.0f
-
-                val p0 = center + Size(x = -extents.x, -extents.y, extents.z)
-                val p1 = center + Size(x = -extents.x, extents.y, -extents.z)
-                val p2 = center + Size(x = extents.x, extents.y, -extents.z)
-                val p3 = center + Size(x = extents.x, -extents.y, extents.z)
-
-                val uv00 = UvCoordinate(x = 0.0f, y = 0.0f)
-                val uv10 = UvCoordinate(1.0f, 0.0f)
-                val uv01 = UvCoordinate(0.0f, 1.0f)
-                val uv11 = UvCoordinate(1.0f, 1.0f)
-
-                add(Vertex(position = p0, normal = normal, uvCoordinate = uv00))
-                add(Vertex(position = p1, normal = normal, uvCoordinate = uv01))
-                add(Vertex(position = p2, normal = normal, uvCoordinate = uv11))
-                add(Vertex(position = p3, normal = normal, uvCoordinate = uv10))
-            }
+        fun getVertices(
+            size: Size,
+            center: Position,
+            normal: Direction,
+            uvScale: UvScale = UvScale(1.0f),
+        ): List<Vertex> {
+            val extents = size / 2.0f
+            return listOf(
+                Vertex(
+                    position = center + Size(x = -extents.x, -extents.y, extents.z),
+                    normal = normal,
+                    uvCoordinate = UV_COORDINATES[0] * uvScale
+                ),
+                Vertex(
+                    position = center + Size(x = -extents.x, extents.y, -extents.z),
+                    normal = normal,
+                    uvCoordinate = UV_COORDINATES[1] * uvScale
+                ),
+                Vertex(
+                    position = center + Size(x = extents.x, extents.y, -extents.z),
+                    normal = normal,
+                    uvCoordinate = UV_COORDINATES[2] * uvScale
+                ),
+                Vertex(
+                    position = center + Size(x = extents.x, -extents.y, extents.z),
+                    normal = normal,
+                    uvCoordinate = UV_COORDINATES[3] * uvScale
+                )
+            )
+        }
     }
 }
