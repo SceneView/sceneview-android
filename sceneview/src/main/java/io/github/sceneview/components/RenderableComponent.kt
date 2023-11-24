@@ -139,9 +139,6 @@ interface RenderableComponent : Component {
      */
     var axisAlignedBoundingBox: Box
         get() = Box().apply {
-            Geometry.Builder().apply {
-                vertices(listOf<Geometry.Vertex>())
-            }
             renderableManager.getAxisAlignedBoundingBox(renderableInstance, this)
         }
         set(value) = renderableManager.setAxisAlignedBoundingBox(renderableInstance, value)
