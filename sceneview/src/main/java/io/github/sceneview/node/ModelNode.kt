@@ -387,5 +387,14 @@ open class ModelNode(
     }
 }
 
-inline operator fun <reified T : ModelNode.ChildNode> List<T>.get(name: String): T? =
+inline operator fun <reified T : ModelNode.ChildNode> List<T>.get(name: String): T =
+    first { it.name == name }
+
+inline fun <reified T : ModelNode.ChildNode> List<T>.getOrNull(name: String): T? =
+    firstOrNull { it.name == name }
+
+inline operator fun <reified T : MaterialInstance> List<T>.get(name: String): T =
+    first { it.name == name }
+
+inline fun <reified T : MaterialInstance> List<T>.getOrNull(name: String): T? =
     firstOrNull { it.name == name }
