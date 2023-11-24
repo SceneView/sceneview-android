@@ -29,8 +29,8 @@ import com.google.ar.core.Plane
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARScene
 import io.github.sceneview.ar.arcore.createAnchorOrNull
-import io.github.sceneview.ar.arcore.firstByTypeOrNull
 import io.github.sceneview.ar.arcore.getUpdatedPlanes
+import io.github.sceneview.ar.arcore.isValid
 import io.github.sceneview.ar.getDescription
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.ar.rememberARCameraNode
@@ -121,9 +121,13 @@ class MainActivity : ComponentActivity() {
                             onSingleTapConfirmed = { motionEvent, node ->
                                 if (node == null) {
                                     val hitResults = frame?.hitTest(motionEvent.x, motionEvent.y)
-                                    hitResults?.firstByTypeOrNull(
-                                            planeTypes = setOf(Plane.Type.HORIZONTAL_UPWARD_FACING)
-                                        )?.createAnchorOrNull()?.let { anchor ->
+                                    hitResults?.firstOrNull {
+                                        it.isValid(
+                                            depthPoint = false,
+                                            point = false
+                                        )
+                                    }?.createAnchorOrNull()
+                                        ?.let { anchor ->
                                             childNodes += createAnchorNode(
                                                 engine = engine,
                                                 modelLoader = modelLoader,
