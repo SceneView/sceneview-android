@@ -5,6 +5,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Texture
+import com.google.android.filament.TextureSampler
 import io.github.sceneview.material.VideoMaterial
 import io.github.sceneview.material.kMaterialDefaultMetallic
 import io.github.sceneview.material.kMaterialDefaultReflectance
@@ -19,6 +20,7 @@ import io.github.sceneview.math.Color
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.safeDestroyMaterial
 import io.github.sceneview.safeDestroyMaterialInstance
+import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.utils.loadFileBuffer
 import io.github.sceneview.utils.readFileBuffer
 import kotlinx.coroutines.CoroutineScope
@@ -215,10 +217,10 @@ class MaterialLoader(
                 setReflectance(reflectance)
             }
 
-    fun createImageInstance(imageTexture: Texture) =
+    fun createImageInstance(imageTexture: Texture, sampler: TextureSampler = TextureSampler2D()) =
         createInstance(imageTextureMaterial)
             .apply {
-                setTexture(imageTexture)
+                setTexture(imageTexture, sampler)
             }
 
     fun createVideoInstance(videoTexture: Texture, chromaKeyColor: Int? = null) =

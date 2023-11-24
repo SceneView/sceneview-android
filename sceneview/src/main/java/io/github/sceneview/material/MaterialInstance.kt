@@ -101,7 +101,9 @@ fun MaterialInstance.setReflectance(factor: Float) = setParameter("reflectance",
 // Texture
 // **********
 
-fun MaterialInstance.setTexture(texture: Texture) = setTexture("texture", texture)
+fun MaterialInstance.setTexture(texture: Texture, sampler: TextureSampler = TextureSampler2D()) =
+    setTexture("texture", texture, sampler)
+
 fun MaterialInstance.setExternalTexture(texture: Texture) = setExternalTexture("texture", texture)
 
 // **********

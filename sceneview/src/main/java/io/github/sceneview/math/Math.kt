@@ -25,6 +25,7 @@ import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.Vector3
 import kotlin.math.absoluteValue
 
+typealias Position2 = Float2
 typealias Position = Float3
 typealias Rotation = Float3
 typealias Scale = Float3
@@ -175,6 +176,8 @@ fun lookAt(eye: Position, target: Position): Mat4 {
 fun lookTowards(eye: Position, direction: Direction) =
     lookTowards(eye, direction, Direction(y = 1.0f)).toQuaternion()
 
+fun List<Position2>.getCenter() = reduce { total, position -> total + position } / size.toFloat()
+fun List<Position>.getCenter() = reduce { total, position -> total + position } / size.toFloat()
 
 // TODO: Integrated in Kotlin-math 1.34.1 remove this when published.
 /////////////////////////////////////////////////////////////////////
