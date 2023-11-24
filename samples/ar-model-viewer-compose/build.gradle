@@ -13,7 +13,7 @@ android {
         minSdk 28
         targetSdk 34
         versionCode 1
-        versionName "1.2.4"
+        versionName "1.0.0"
     }
 
     buildTypes {
@@ -55,6 +55,6 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-tooling:1.5.3"
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:1.2.4"
+    releaseImplementation "io.github.sceneview:arsceneview:1.2.5"
     debugImplementation project(":arsceneview")
 }
