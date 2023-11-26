@@ -46,14 +46,14 @@ class PlaneRenderer(
     private val visualizers = mutableMapOf<Plane, PlaneVisualizer>()
 
     val planeTexture = ImageTexture.Builder()
-        .bitmap(materialLoader.assets, "sceneview/textures/plane_renderer.png")
+        .bitmap(materialLoader.assets, "textures/plane_renderer.png")
         .build(engine)
 
     /**
      * Default material instance used to render the planes.
      */
     val planeMaterial = materialLoader.createMaterial(
-        "sceneview/materials/plane_renderer.filamat"
+        "materials/plane_renderer.filamat"
     ).apply {
         defaultInstance.apply {
             setTexture(MATERIAL_TEXTURE, planeTexture)
@@ -73,7 +73,7 @@ class PlaneRenderer(
 
     // TODO: Remove when it isn't used in PlaneVisualizer
     private var shadowMaterial = materialLoader.createMaterial(
-        "sceneview/materials/plane_renderer_shadow.filamat"
+        "materials/plane_renderer_shadow.filamat"
     )
 
     /**

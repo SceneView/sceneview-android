@@ -628,7 +628,7 @@ public class ViewRenderable extends Renderable {
                 registryId = view;
 
                 CompletableFuture<Void> setSourceFuture = Material.builder()
-                        .setSource(context, Uri.parse("sceneview/materials/view_renderable.filamat"))
+                        .setSource(context, Uri.parse("materials/view_renderable.filamat"))
                         .build(engine)
                         .thenAccept(
                                 material -> {

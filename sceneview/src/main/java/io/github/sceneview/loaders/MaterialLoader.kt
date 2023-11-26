@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.Buffer
 
-private const val kMaterialsAssetFolder = "sceneview/materials"
+private const val kMaterialsAssetFolder = "materials"
 
 /**
  * A Filament Material defines the visual appearance of an object.
