@@ -99,11 +99,15 @@ class ARSession(
      * @throws SessionPausedException if the session is currently paused.
      * @throws MissingGlContextException if there is no OpenGL context available.
      */
-    fun updateOrNull() = super.update().takeIf {
-        // Check if no frame or same timestamp, no drawing.
-        it.timestamp != 0L //&& it.timestamp != frame?.timestamp
-    }.also {
-        frame = it
+    fun updateOrNull() = if(isResumed) {
+        super.update().takeIf {
+            // Check if no frame or same timestamp, no drawing.
+            it.timestamp != 0L //&& it.timestamp != frame?.timestamp
+        }.also {
+            frame = it
+        }
+    } else {
+        null
     }
 
     override fun setDisplayGeometry(rotation: Int, widthPx: Int, heightPx: Int) {
