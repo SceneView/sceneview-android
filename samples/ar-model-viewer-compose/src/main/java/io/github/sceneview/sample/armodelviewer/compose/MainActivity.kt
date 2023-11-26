@@ -113,7 +113,6 @@ class MainActivity : ComponentActivity() {
                                             modelInstances = modelInstances,
                                             anchor = anchor
                                         )
-                                        planeRenderer = false
                                     }
                             }
                         },
@@ -128,6 +127,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }?.createAnchorOrNull()
                                         ?.let { anchor ->
+                                            planeRenderer = false
                                             childNodes += createAnchorNode(
                                                 engine = engine,
                                                 modelLoader = modelLoader,
