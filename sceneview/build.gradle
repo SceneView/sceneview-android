@@ -5,7 +5,6 @@ plugins {
     id 'org.jetbrains.dokka'
 }
 
-
 // *************************************************************************************************
 // Filament Plugin
 // *************************************************************************************************
@@ -23,23 +22,20 @@ plugins {
 if (project.properties['filamentPluginEnabled']?.toBoolean()) {
     filamentTools {
         // Material generation: .mat -> .filamat
-        materialInputDir = project.layout.projectDirectory.dir("../assets/materials")
-        materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/materials")
+        materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+        materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
         // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
-        iblInputDir = project.layout.projectDirectory.dir("../assets/environments")
-        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/environments")
+        iblInputDir = project.layout.projectDirectory.dir("src/main/environments")
+        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/environments")
         iblFormat = "ktx"
     }
 
     clean.doFirst {
-        delete "src/main/assets/sceneview/materials"
-        delete "src/main/assets/sceneview/environments"
+        delete "src/main/assets/materials"
+        delete "src/main/assets/environments"
     }
 }
 // *************************************************************************************************
-
-group = GROUP
-version = VERSION_NAME
 
 android {
     namespace 'io.github.sceneview'

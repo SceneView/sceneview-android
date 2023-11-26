@@ -41,8 +41,8 @@ const val kDepthTextureParameter = "depthTexture"
 open class ARCameraStream(
     final override val engine: Engine,
     private val materialLoader: MaterialLoader,
-    standardMaterialFile: String = "sceneview/materials/camera_stream_flat.filamat",
-    depthOcclusionMaterialFile: String = "sceneview/materials/camera_stream_depth.filamat",
+    standardMaterialFile: String = "materials/camera_stream_flat.filamat",
+    depthOcclusionMaterialFile: String = "materials/camera_stream_depth.filamat",
 ) : RenderableComponent {
 
 //    /**
