@@ -358,14 +358,18 @@ class ModelLoader(
         models -= model
     }
 
-    fun destroy() {
-        coroutineScope.cancel()
+    fun clear() {
+        runCatching { coroutineScope.cancel() }
 
         resourceLoader.asyncCancelLoad()
         resourceLoader.evictResourceData()
 
         models.toList().forEach { destroyModel(it) }
         models.clear()
+    }
+
+    fun destroy() {
+        clear()
 
         assetLoader.destroy()
         materialProvider.destroyMaterials()
