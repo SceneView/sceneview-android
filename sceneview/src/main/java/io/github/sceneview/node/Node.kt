@@ -332,11 +332,11 @@ open class Node(
             }
         }
 
-    var childNodes = listOf<Node>()
+    var childNodes = setOf<Node>()
         set(value) {
             if (field != value) {
-                val removedNodes = field - value.toSet()
-                val addedNodes = value - field.toSet()
+                val removedNodes = field - value
+                val addedNodes = value - field
                 field = value
                 removedNodes.forEach { child ->
                     if (child.parent == this@Node) {
