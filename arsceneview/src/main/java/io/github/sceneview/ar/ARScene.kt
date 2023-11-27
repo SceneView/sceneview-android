@@ -275,7 +275,7 @@ fun ARScene(
                 }
             },
             update = { sceneView ->
-                sceneView.childNodes = childNodes
+                sceneView.childNodes = childNodes.toSet()
                 sceneView.scene = scene
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode
