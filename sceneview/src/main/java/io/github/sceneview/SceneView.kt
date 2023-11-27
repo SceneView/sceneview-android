@@ -296,8 +296,7 @@ open class SceneView @JvmOverloads constructor(
             skybox = value?.skybox
         }
 
-    var childNodes = listOf<Node>()
-        @Suppress("ConvertArgumentToSet")
+    var childNodes = setOf<Node>()
         set(value) {
             (field - value).forEach {
                 removeNode(it)
@@ -305,7 +304,7 @@ open class SceneView @JvmOverloads constructor(
             (value - field).forEach {
                 addNode(it)
             }
-            field = value.toList()
+            field = value
         }
 
     /**
@@ -459,7 +458,7 @@ open class SceneView @JvmOverloads constructor(
     }
 
     /**
-     * Add a node to the scene as a direct child.
+     * Add a node to the [Scene] as a direct child.
      *
      * If the node is already in the scene, no change is made.
      *
@@ -472,14 +471,45 @@ open class SceneView @JvmOverloads constructor(
     }
 
     /**
-     * Removes a node from the children of this NodeParent.
+     * Add multiple nodes to the [Scene] as a direct child.
+     *
+     * If the nodes are already in the scene, no change is made.
+     *
+     * @param nodes the nodes to add as children
+     * @throws IllegalArgumentException if the child is the same object as the parent, or if the
+     * parent is a descendant of the child
+     */
+    fun addChildNodes(nodes: List<Node>) {
+        childNodes = childNodes + nodes
+    }
+
+    /**
+     * Removes a node from the children of this [Scene].
      *
      * If the node is not in the scene, no change is made.
      *
-     * @param child the node to remove from the children
+     * @param node the node to remove from the children
      */
     fun removeChildNode(node: Node) {
         childNodes = childNodes - node
+    }
+
+    /**
+     * Removes multiple nodes from the children of this [Scene].
+     *
+     * If the nodes are not in the scene, no change is made.
+     *
+     * @param nodes the nodes to remove from the children
+     */
+    fun removeChildNodes(nodes: List<Node>) {
+        childNodes = childNodes - nodes
+    }
+
+    /**
+     * Removes all nodes from the children of this [Scene].
+     */
+    fun clearChildNodes() {
+        childNodes = setOf()
     }
 
     /**

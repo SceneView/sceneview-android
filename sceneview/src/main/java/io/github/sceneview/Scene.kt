@@ -48,7 +48,7 @@ fun Scene(
     /**
      * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
      */
-    childNodes: List<Node> = listOf(),
+    childNodes: List<Node> = rememberNodes(),
     /**
      * Provide your own instance if you want to share Filament resources between multiple views.
      */
@@ -191,7 +191,7 @@ fun Scene(
                 }
             },
             update = { sceneView ->
-                sceneView.childNodes = childNodes
+                sceneView.childNodes = childNodes.toSet()
                 sceneView.scene = scene
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode
