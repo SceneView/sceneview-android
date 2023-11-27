@@ -729,15 +729,11 @@ open class Node(
         }
     }
 
-    fun addChildNode(child: Node) = apply {
-        child.parent = this
-    }
-
-    fun removeChildNode(child: Node) = apply {
-        if (child.parent == this) {
-            child.parent = null
-        }
-    }
+    fun addChildNode(node: Node) = apply { childNodes += node }
+    fun addChildNodes(nodes: Set<Node>) = apply { childNodes += nodes }
+    fun removeChildNode(node: Node) = apply { childNodes -= node }
+    fun removeChildNodes(nodes: Set<Node>) = apply { childNodes = childNodes - nodes }
+    fun clearChildNodes() = apply { childNodes = setOf() }
 
     fun animatePositions(vararg positions: Position): ObjectAnimator =
         NodeAnimator.ofPosition(this, *positions)
