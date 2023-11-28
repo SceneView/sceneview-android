@@ -1,10 +1,13 @@
-# SceneView Android
+# ![logo](https://github.com/SceneView/sceneview-android/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05)
 
-### 3D and AR Android Composable and View with Google Filament and ARCore
+### 3D and AR Android `@Composable` and layout view with Google Filament and ARCore
 
-This is a Sceneform replacement in Kotlin
+This is a Sceneform replacement in Kotlin and Jetpack Compose
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Maven%20Central)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
+[![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Sceneview%20-%20Maven%20Central&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
+
+[![Filament](https://img.shields.io/badge/Filament-1.45.0-yellow)](https://github.com/google/filament)
+[![Maven Central](https://img.shields.io/badge/ARCore-1.40.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 [![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
@@ -13,27 +16,27 @@ This is a Sceneform replacement in Kotlin
 
 *app/build.gradle*
 
-- 3D (Filament included)
-
-```gradle
-dependencies {
-    // 3D only
-    implementation 'io.github.sceneview:sceneview:1.2.6'
-}
-```
-
-[API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
-
-- AR (Filament + ARCore included)
+#### AR (Filament + ARCore included)
 
 ```gradle
 dependencies {
     // 3D and ARCore
-    implementation 'io.github.sceneview:arsceneview:1.2.6'
+    implementation 'io.github.sceneview:arsceneview:1.2.5'
 }
 ```
 
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
+
+#### 3D only (Filament included)
+
+```gradle
+dependencies {
+    // 3D only
+    implementation 'io.github.sceneview:sceneview:1.2.5'
+}
+```
+
+[API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
 ## Usage
 
@@ -528,4 +531,3 @@ operations too.
 - [Contribute $9.99](https://opencollective.com/sceneview/contribute/say-thank-you-ask-a-question-ask-for-features-and-fixes-33651)
 
 [![Open Collective](https://user-images.githubusercontent.com/6597529/229289721-bdecf986-1b83-46bd-92cb-433114f03429.png)](https://opencollective.com/sceneview)
-
