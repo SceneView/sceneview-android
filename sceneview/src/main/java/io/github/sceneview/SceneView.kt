@@ -536,7 +536,7 @@ open class SceneView @JvmOverloads constructor(
         bottom: Int = 0,
         width: Int = this.width,
         height: Int = this.height
-    ){
+    ) {
         if (surfaceMirrorer == null) {
             surfaceMirrorer = SurfaceMirrorer()
         }
