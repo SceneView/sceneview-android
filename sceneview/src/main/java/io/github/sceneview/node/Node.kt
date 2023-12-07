@@ -8,46 +8,28 @@ import android.view.GestureDetector.OnDoubleTapListener
 import android.view.MotionEvent
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
-import com.google.android.filament.TransformManager
+import com.google.android.filament.Scene
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.degrees
-import dev.romainguy.kotlin.math.inverse
-import dev.romainguy.kotlin.math.lookAt
-import dev.romainguy.kotlin.math.lookTowards
-import dev.romainguy.kotlin.math.quaternion
-import dev.romainguy.kotlin.math.transform
 import io.github.sceneview.Entity
 import io.github.sceneview.FilamentEntity
-import io.github.sceneview.SceneView
 import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.collision.Collider
 import io.github.sceneview.collision.CollisionShape
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.TransformProvider
-import io.github.sceneview.collision.Vector3
+import io.github.sceneview.components.TransformComponent
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
-import io.github.sceneview.gesture.transform
-import io.github.sceneview.managers.getTransform
-import io.github.sceneview.managers.getWorldTransform
-import io.github.sceneview.managers.setParent
-import io.github.sceneview.managers.setTransform
-import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Transform
-import io.github.sceneview.math.equals
-import io.github.sceneview.math.quaternion
-import io.github.sceneview.math.slerp
-import io.github.sceneview.math.times
 import io.github.sceneview.math.toMatrix
-import io.github.sceneview.math.toQuaternion
-import io.github.sceneview.utils.intervalSeconds
 import kotlin.reflect.KProperty1
 
 /**
@@ -73,8 +55,8 @@ import kotlin.reflect.KProperty1
  * +z ---- -y --------
  */
 open class Node(
-    val engine: Engine,
-    @FilamentEntity val entity: Entity = EntityManager.get().create(),
+    final override val engine: Engine,
+    @FilamentEntity final override val entity: Entity = EntityManager.get().create(),
     /**
      * The parent node.
      *
@@ -85,7 +67,8 @@ open class Node(
      * parent changes.
      */
     parent: Node? = null
-) : GestureDetector.OnGestureListener,
+) : TransformComponent,
+    GestureDetector.OnGestureListener,
     OnDoubleTapListener,
     OnContextClickListener,
     MoveGestureDetector.OnMoveListener,
@@ -128,184 +111,6 @@ open class Node(
             }
         }
 
-    var isSmoothTransformEnabled = false
-
-    /**
-     * The smooth position, rotation and scale speed.
-     *
-     * This value is used by [smoothTransform]
-     */
-    var smoothTransformSpeed = 5.0f
-
-    /**
-     * Position to locate within the coordinate system the parent.
-     *
-     * Default is `Position(x = 0.0f, y = 0.0f, z = 0.0f)`, indicating that the component is placed
-     * at the origin of the parent component's coordinate system.
-     *
-     * **Horizontal (X):**
-     * - left: x < 0.0f
-     * - center horizontal: x = 0.0f
-     * - right: x > 0.0f
-     *
-     * **Vertical (Y):**
-     * - top: y > 0.0f
-     * - center vertical : y = 0.0f
-     * - bottom: y < 0.0f
-     *
-     * **Depth (Z):**
-     * - forward: z < 0.0f
-     * - origin/camera position: z = 0.0f
-     * - backward: z > 0.0f
-     *
-     * ------- +y ----- -z
-     *
-     * ---------|----/----
-     *
-     * ---------|--/------
-     *
-     * -x - - - 0 - - - +x
-     *
-     * ------/--|---------
-     *
-     * ----/----|---------
-     *
-     * +z ---- -y --------
-     *
-     * @see transform
-     */
-    open var position: Position
-        get() = transform.position
-        set(value) {
-            transform = Transform(value, quaternion, scale)
-        }
-
-    /**
-     * World-space position.
-     *
-     * The world position of this component (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local position with its parent's world position.
-     *
-     * @see worldTransform
-     */
-    open var worldPosition: Position
-        get() = worldTransform.position
-        set(value) {
-            position = parent?.getLocalPosition(value) ?: value
-        }
-
-    /**
-     * Quaternion rotation.
-     *
-     * @see transform
-     */
-    open var quaternion: Quaternion
-        get() = transform.quaternion
-        set(value) {
-            transform = Transform(position, value, scale)
-        }
-
-    /**
-     * The world-space quaternion.
-     *
-     * The world quaternion of this component (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local quaternion with its parent's world
-     * quaternion.
-     *
-     * @see worldTransform
-     */
-    open var worldQuaternion: Quaternion
-        get() = worldTransform.toQuaternion()
-        set(value) {
-            quaternion = parent?.getLocalQuaternion(value) ?: value
-        }
-
-    /**
-     * Orientation in Euler Angles Degrees per axis from `0.0f` to `360.0f`.
-     *
-     * The three-component rotation vector specifies the direction of the rotation axis in degrees.
-     * Rotation is applied relative to the component's origin property.
-     *
-     * Default is `Rotation(x = 0.0f, y = 0.0f, z = 0.0f)`, specifying no rotation.
-     *
-     * Note that modifying the individual components of the returned rotation doesn't have any
-     * effect.
-     *
-     * @see transform
-     */
-    open var rotation: Rotation
-        get() = quaternion.toEulerAngles()
-        set(value) {
-            quaternion = Quaternion.fromEuler(value)
-        }
-
-    /**
-     * World-space rotation.
-     *
-     * The world rotation of this component (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local rotation with its parent's world rotation.
-     *
-     * @see worldTransform
-     */
-    open var worldRotation: Rotation
-        get() = worldTransform.rotation
-        set(value) {
-            worldQuaternion = Quaternion.fromEuler(value)
-        }
-
-    /**
-     * Scale on each axis.
-     *
-     * Reduce (`scale < 1.0f`) / Increase (`scale > 1.0f`).
-     *
-     * @see transform
-     */
-    open var scale: Scale
-        get() = transform.scale
-        set(value) {
-            transform = Transform(position, quaternion, value)
-        }
-
-    /**
-     * World-space scale.
-     *
-     * The world scale of this component (i.e. relative to the [SceneView]).
-     * This is the composition of this component's local scale with its parent's world scale.
-     *
-     * @see worldTransform
-     */
-    open var worldScale: Scale
-        get() = worldTransform.scale
-        set(value) {
-            scale = parent?.getLocalScale(value) ?: value
-        }
-
-    /**
-     * Local transform of the transform component (i.e. relative to the parent).
-     *
-     * @see TransformManager.getTransform
-     * @see TransformManager.setTransform
-     */
-    open var transform: Transform
-        get() = transformManager.getTransform(transformInstance)
-        set(value) {
-            transformManager.setTransform(transformInstance, value)
-            onTransformChanged()
-        }
-
-    /**
-     * World transform of a transform component (i.e. relative to the root).
-     *
-     * @see TransformManager.getWorldTransform
-     */
-    var worldTransform: Transform
-        get() = transformManager.getWorldTransform(transformInstance)
-        set(value) {
-            transform = parent?.getLocalTransform(value) ?: value
-        }
-
-    var smoothTransform: Transform? = null
-
     /**
      * Changes the parent node.
      *
@@ -326,9 +131,9 @@ open class Node(
             if (field != value) {
                 val oldParent = field
                 field = value
-                oldParent?.let { it.childNodes = it.childNodes - this }
-                value?.let { it.childNodes = it.childNodes + this }
-                transformManager.setParent(transformInstance, value?.transformInstance)
+                parentComponent = value
+                oldParent?.removeChildNode(this)
+                value?.addChildNode(this)
             }
         }
 
@@ -339,18 +144,14 @@ open class Node(
                 val addedNodes = value - field
                 field = value
                 removedNodes.forEach { child ->
-                    if (child.parent == this@Node) {
-                        child.parent = null
-                    }
+                    child.parent = null
                     onChildRemoved.forEach { it(child) }
                 }
                 addedNodes.forEach { child ->
-                    if (child.parent != this@Node) {
-                        child.parent = this@Node
-                    }
+                    child.parent = this
                     onChildAdded.forEach { it(child) }
                 }
-                onTransformChanged()
+                childComponents = value
             }
         }
 
@@ -370,13 +171,9 @@ open class Node(
             }
         }
 
-    /**
-     * Transform from the world coordinate system to the coordinate system of this node.
-     */
-    val worldToLocal: Transform get() = inverse(worldTransform)
-
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
-    var onSmoothEnd: ((node: Node) -> Unit)? = null
+    var onAddedToScene:  ((scene: Scene) -> Unit)? = null
+    var onRemovedFromScene:  ((scene: Scene) -> Unit)? = null
 
     var onDown: ((e: MotionEvent) -> Boolean)? = null
     var onShowPress: ((e: MotionEvent) -> Unit)? = null
@@ -439,294 +236,18 @@ open class Node(
             onTransformChanged()
         }
 
-    protected val transformManager get() = engine.transformManager
-    protected val transformInstance get() = transformManager.getInstance(entity)
-
     internal open val sceneEntities = listOf(entity)
     internal val onChildAdded = mutableListOf<(child: Node) -> Unit>()
     internal val onChildRemoved = mutableListOf<(child: Node) -> Unit>()
 
-    private var lastFrameTimeNanos: Long? = null
+    final override fun hasTransformComponent() = super.hasTransformComponent()
+    final override fun createTransformComponent() = super.createTransformComponent()
 
     init {
-        if (!transformManager.hasComponent(entity)) {
-            transformManager.create(entity)
+        if (!hasTransformComponent()) {
+            createTransformComponent()
         }
         this.parent = parent
-    }
-
-    /**
-     * Converts a position in the world-space to a local-space of this node.
-     *
-     * @param worldPosition the position in world-space to convert.
-     * @return a new position that represents the world position in local-space.
-     */
-    fun getLocalPosition(worldPosition: Position) = worldToLocal * worldPosition
-
-    /**
-     * Converts a position in the local-space of this node to world-space.
-     *
-     * @param localPosition the position in local-space to convert.
-     * @return a new position that represents the local position in world-space.
-     */
-    fun getWorldPosition(localPosition: Position) = worldTransform * localPosition
-
-    /**
-     * Converts a quaternion in the world-space to a local-space of this node.
-     *
-     * @param worldQuaternion the quaternion in world-space to convert.
-     * @return a new quaternion that represents the world quaternion in local-space.
-     */
-    fun getLocalQuaternion(worldQuaternion: Quaternion) =
-        worldToLocal.toQuaternion() * worldQuaternion
-
-    /**
-     * Converts a quaternion in the local-space of this node to world-space.
-     *
-     * @param quaternion the quaternion in local-space to convert.
-     * @return a new quaternion that represents the local quaternion in world-space.
-     */
-    fun getWorldQuaternion(quaternion: Quaternion) = worldTransform.toQuaternion() * quaternion
-
-    /**
-     * Converts a rotation in the world-space to a local-space of this node.
-     *
-     * @param worldRotation the rotation in world-space to convert.
-     * @return a new rotation that represents the world rotation in local-space.
-     */
-    fun getLocalRotation(worldRotation: Rotation) =
-        getLocalQuaternion(Quaternion.fromEuler(worldRotation)).toEulerAngles()
-
-    /**
-     * Converts a rotation in the local-space of this node to world-space.
-     *
-     * @param rotation the rotation in local-space to convert.
-     * @return a new rotation that represents the local rotation in world-space.
-     */
-    fun getWorldRotation(rotation: Rotation) =
-        getWorldQuaternion(Quaternion.fromEuler(rotation)).toEulerAngles()
-
-    /**
-     * Converts a scale in the world-space to a local-space of this node.
-     *
-     * @param worldScale the transform in world-space to convert.
-     * @return a new scale that represents the world scale in local-space.
-     */
-//    fun getLocalScale(worldScale: Scale) = scale(worldToLocal) * worldScale
-//    fun getLocalScale(worldScale: Scale) = (worldToLocal * scale(worldScale)).scale
-    fun getLocalScale(worldScale: Scale) = worldToLocal * worldScale
-
-    /**
-     * Converts a scale in the local-space of this node to world-space.
-     *
-     * @param scale the scale in local-space to convert.
-     * @return a new scale that represents the local scale in world-space.
-     */
-//    fun getWorldScale(scale: Scale) = (worldTransform * scale(scale)).scale
-//    fun getWorldScale(scale: Scale) = scale(worldTransform) * scale
-    fun getWorldScale(scale: Scale) = worldTransform * scale
-
-    /**
-     * Converts a node transform in the world-space to a local-space of this node.
-     *
-     * @param node the node in world-space to convert.
-     * @return a new transform that represents the world transform in local-space.
-     */
-    fun getLocalTransform(node: Node) = getLocalTransform(node.worldTransform)
-
-    /**
-     * Converts a transform in the world-space to a local-space of this node.
-     *
-     * @param worldTransform the transform in world-space to convert.
-     * @return a new transform that represents the world transform in local-space.
-     */
-    fun getLocalTransform(worldTransform: Transform) = worldToLocal * worldTransform
-
-    /**
-     * Converts a node transform in the local-space of this node to world-space.
-     *
-     * @param node the node in local-space to convert.
-     * @return a new transform that represents the local transform in world-space.
-     */
-    fun getWorldTransform(node: Node) = getWorldTransform(node.transform)
-
-    /**
-     * Converts a transform in the local-space of this node to world-space.
-     *
-     * @param localTransform the transform in local-space to convert.
-     * @return a new transform that represents the local transform in world-space.
-     */
-    fun getWorldTransform(localTransform: Transform) = worldTransform * localTransform
-
-    /**
-     * The node scale.
-     *
-     * - reduce size: scale < 1.0f
-     * - same size: scale = 1.0f
-     * - increase size: scale > 1.0f
-     */
-    fun setScale(scale: Float) {
-        this.scale.xyz = Scale(scale)
-    }
-
-    /**
-     * Change the node transform.
-     */
-    open fun transform(
-        transform: Transform,
-        smooth: Boolean = isSmoothTransformEnabled,
-        smoothSpeed: Float = smoothTransformSpeed
-    ) {
-        if (smooth) {
-            smoothTransform(transform, smoothSpeed)
-        } else {
-            this.smoothTransform = null
-            this.transform = transform
-        }
-    }
-
-    /**
-     * Change the node world transform.
-     */
-    open fun worldTransform(
-        worldTransform: Transform,
-        smooth: Boolean = isSmoothTransformEnabled,
-        smoothSpeed: Float = smoothTransformSpeed
-    ) = transform(parent?.getLocalTransform(worldTransform) ?: worldTransform, smooth, smoothSpeed)
-
-    /**
-     * Change the node transform.
-     *
-     * @see position
-     * @see quaternion
-     * @see scale
-     */
-    fun transform(
-        position: Position = this.position,
-        quaternion: Quaternion = this.quaternion,
-        scale: Scale = this.scale,
-        smooth: Boolean = isSmoothTransformEnabled,
-        smoothSpeed: Float = smoothTransformSpeed
-    ) = transform(Transform(position, quaternion, scale), smooth, smoothSpeed)
-
-    /**
-     * Change the node transform.
-     *
-     * @see position
-     * @see rotation
-     * @see scale
-     */
-    fun transform(
-        position: Position = this.position,
-        rotation: Rotation,
-        scale: Scale = this.scale,
-        smooth: Boolean = isSmoothTransformEnabled,
-        smoothSpeed: Float = smoothTransformSpeed
-    ) = transform(position, rotation.toQuaternion(), scale, smooth, smoothSpeed)
-
-    /**
-     * Smooth move, rotate and scale at a specified speed.
-     *
-     * @see position
-     * @see quaternion
-     * @see scale
-     * @see speed
-     */
-    fun smoothTransform(
-        position: Position = this.position,
-        quaternion: Quaternion = this.quaternion,
-        scale: Scale = this.scale,
-        speed: Float = this.smoothTransformSpeed
-    ) = smoothTransform(Transform(position, quaternion, scale), speed)
-
-    /**
-     * Smooth move, rotate and scale at a specified speed.
-     *
-     * @see position
-     * @see quaternion
-     * @see scale
-     * @see speed
-     */
-    fun smoothTransform(
-        position: Position = this.position,
-        rotation: Rotation = this.rotation,
-        scale: Scale = this.scale,
-        speed: Float = this.smoothTransformSpeed
-    ) = smoothTransform(Transform(position, rotation, scale), speed)
-
-    /**
-     * Smooth move, rotate and scale at a specified speed.
-     *
-     * @see transform
-     */
-    fun smoothTransform(transform: Transform, speed: Float = smoothTransformSpeed) {
-        smoothTransformSpeed = speed
-        smoothTransform = transform
-    }
-
-    /**
-     * Rotates the node to face another node.
-     *
-     * @param targetNode The target node to look at
-     * @param upDirection The up direction will determine the orientation of the node around the direction
-     * @param smooth Whether the rotation should happen smoothly
-     */
-    fun lookAt(
-        targetNode: Node,
-        upDirection: Direction = Direction(y = 1.0f),
-        smooth: Boolean = false
-    ) = lookAt(targetNode.worldPosition, upDirection, smooth)
-
-    /**
-     * Rotates the node to face a point in world-space.
-     *
-     * @param targetPosition The target position to look at in world space
-     * @param upDirection The up direction will determine the orientation of the node around the direction
-     * @param smooth Whether the rotation should happen smoothly
-     */
-    fun lookAt(
-        targetPosition: Position,
-        upDirection: Direction = Direction(y = 1.0f),
-        smooth: Boolean = false
-    ) {
-        val newQuaternion = lookAt(
-            targetPosition,
-            worldPosition,
-            upDirection
-        ).toQuaternion()
-        if (smooth) {
-            smoothTransform(quaternion = newQuaternion)
-        } else {
-            transform(quaternion = newQuaternion)
-        }
-    }
-
-    /**
-     * Rotates the node to face a direction in world-space.
-     *
-     * The look direction and up direction cannot be coincident (parallel) or the orientation will
-     * be invalid.
-     *
-     * @param lookDirection The desired look direction in world-space.
-     * @param upDirection The up direction will determine the orientation of the node around the
-     * look direction.
-     * @param smooth Whether the rotation should happen smoothly.
-     */
-    fun lookTowards(
-        lookDirection: Direction,
-        upDirection: Direction = Direction(y = 1.0f),
-        smooth: Boolean = false
-    ) {
-        val newQuaternion = lookTowards(
-            worldPosition,
-            -lookDirection,
-            upDirection
-        ).toQuaternion()
-        if (smooth) {
-            smoothTransform(quaternion = newQuaternion)
-        } else {
-            transform(quaternion = newQuaternion)
-        }
     }
 
     fun addChildNode(node: Node) = apply { childNodes += node }
@@ -774,30 +295,16 @@ open class Node(
     }
 
     open fun onFrame(frameTimeNanos: Long) {
-        smoothTransform?.let { smoothTransform ->
-            if (smoothTransform != transform) {
-                val slerpTransform = slerp(
-                    start = transform,
-                    end = smoothTransform,
-                    deltaSeconds = frameTimeNanos.intervalSeconds(lastFrameTimeNanos),
-                    speed = smoothTransformSpeed
-                )
-                if (!slerpTransform.equals(this.transform, delta = 0.001f)) {
-                    this.transform = slerpTransform
-                } else {
-                    this.transform = smoothTransform
-                    this.smoothTransform = null
-                    onSmoothEnd?.invoke(this)
-                }
-            } else {
-                this.smoothTransform = null
-            }
-        }
         childNodes.forEach { it.onFrame(frameTimeNanos) }
-
         onFrame?.invoke(frameTimeNanos)
+    }
 
-        lastFrameTimeNanos = frameTimeNanos
+    open fun onAddedToScene(scene: Scene) {
+        onAddedToScene?.invoke(scene)
+    }
+
+    open fun onRemovedFromScene(scene: Scene) {
+        onRemovedFromScene?.invoke(scene)
     }
 
     /**
@@ -806,17 +313,7 @@ open class Node(
      * If node's position is changed, then that will trigger [onWorldTransformChanged] to be called
      * for all of it's descendants.
      */
-    open fun onTransformChanged() {
-        onWorldTransformChanged()
-    }
-
-    /**
-     * The transformation (position, rotation or scale) of the [Node] has changed.
-     *
-     * If node's position is changed, then that will trigger [onWorldTransformChanged] to be called
-     * for all of it's descendants.
-     */
-    open fun onWorldTransformChanged() {
+    override fun onWorldTransformChanged() {
         collider?.markWorldShapeDirty()
         childNodes.forEach { it.onWorldTransformChanged() }
     }
@@ -993,19 +490,10 @@ open class Node(
     /**
      * Detach and destroy the node and all its children.
      */
-    open fun destroy() {
-        transformManager.destroy(entity)
+    override fun destroy() {
+        parent = null
+        super.destroy()
     }
-
-    /**
-     * Used to keep track of data for detecting if a tap gesture has occurred on this node.
-     */
-    private data class TapTrackingData(
-        // The node that was being touched when ACTION_DOWN occurred.
-        val downNode: Node,
-        // The screen-space position that was being touched when ACTION_DOWN occurred.
-        val downPosition: Vector3
-    )
 }
 
 interface OnNodeGestureListener : GestureDetector.OnGestureListener,

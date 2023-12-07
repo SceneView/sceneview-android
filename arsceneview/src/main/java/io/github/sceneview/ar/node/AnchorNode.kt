@@ -19,7 +19,7 @@ open class AnchorNode(
     onPoseChanged: ((Pose) -> Unit)? = null,
     var onAnchorChanged: ((Anchor) -> Unit)? = null,
     var onUpdated: ((Anchor) -> Unit)? = null
-) : PoseNode(engine = engine, pose = anchor.pose, onPoseChanged = onPoseChanged) {
+) : PoseNode(engine = engine, onPoseChanged = onPoseChanged) {
 
     /**
      * Should the anchor automatically update the anchor new pose
@@ -88,6 +88,7 @@ open class AnchorNode(
     private var isMoving = false
 
     init {
+        pose = anchor.pose
         updateVisibility()
     }
 

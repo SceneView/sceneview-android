@@ -14,6 +14,7 @@ import io.github.sceneview.ar.arcore.createAnchor
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.transform
+import io.github.sceneview.ar.components.PoseComponent
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.node.Node
 
@@ -22,12 +23,11 @@ import io.github.sceneview.node.Node
  */
 open class PoseNode(
     engine: Engine,
-    pose: Pose = Pose.IDENTITY,
     var moveHitTest: PoseNode.(Frame, MotionEvent) -> HitResult? = { frame, motionEvent ->
         frame.hitTest(motionEvent).firstOrNull()?.takeIf { it.trackable.isTracking }
-    },
+    }
     var onPoseChanged: ((Pose) -> Unit)? = null
-) : Node(engine) {
+) : Node(engine), PoseComponent {
 
     /**
      * The position of the intersection between a ray and detected real-world geometry.
@@ -53,88 +53,66 @@ open class PoseNode(
      * - If you wish to retain the location of this pose beyond the duration of a single frame,
      * create an [Anchor] using [createAnchor] to save the pose in a physically consistent way.
      */
-    var pose: Pose = pose
+    final override var pose: Pose = Pose.IDENTITY
         set(value) {
             if (field != value) {
                 field = value
-                worldTransform(pose.transform)
-                onPoseChanged?.invoke(value)
+                setPose(value)
             }
         }
 
-    /**
-     * Is the AR camera tracking.
-     *
-     * Used for visibility update.
-     */
-    open var cameraTrackingState = TrackingState.TRACKING
-        protected set(value) {
-            if (field != value) {
-                field = value
-                onCameraTrackingChanged(value)
-            }
-        }
+//    /**
+//     * Is the AR camera tracking.
+//     *
+//     * Used for visibility update.
+//     */
+//    open var cameraTrackingState = TrackingState.TRACKING
+//        protected set(value) {
+//            if (field != value) {
+//                field = value
+//                onCameraTrackingChanged(value)
+//            }
+//        }
+//
+//    /**
+//     * Set the node to be visible only on those camera tracking states
+//     */
+//    var visibleCameraTrackingStates = setOf(TrackingState.TRACKING)
+//        set(value) {
+//            field = value
+//            updateVisibility()
+//        }
 
-    /**
-     * Set the node to be visible only on those camera tracking states
-     */
-    var visibleCameraTrackingStates = setOf(TrackingState.TRACKING)
-        set(value) {
-            field = value
-            updateVisibility()
-        }
-
-    var session: Session? = null
-    var frame: Frame? = null
+//    var session: Session? = null
+//    var frame: Frame? = null
 
     // Rotation edition is disabled by default because retrieved from the pose.
     override var isRotationEditable = false
 
     override var isVisible
-        get() = super.isVisible &&
-                cameraTrackingState in visibleCameraTrackingStates
+        get() = super.isVisible
+//                && cameraTrackingState in visibleCameraTrackingStates
         set(value) {
             super.isVisible = value
         }
 
     init {
-        worldTransform = pose.transform
-
         updateVisibility()
     }
 
-    /**
-     * Defines a tracked location in the physical world at the actual [pose].
-     *
-     * See [Anchor] for more details.
-     *
-     * Anchors incur ongoing processing overhead within ARCore. To release unneeded anchors use
-     * [Anchor.detach].
-     *
-     * @return the created anchor or null is it couldn't be created
-     */
-    open fun createAnchor() = runCatching { session?.createAnchor(pose) }.getOrNull()
+    var frame: Frame?= null
 
-    /**
-     * Defines a tracked [AnchorNode] in the physical world at the actual [pose].
-     *
-     * See [Anchor] for more details.
-     *
-     * Anchors incur ongoing processing overhead within ARCore. To release unneeded anchors use
-     * [Anchor.detach].
-     *
-     * @return the created anchor or null is it couldn't be created
-     */
-    open fun createAnchorNode() = createAnchor()?.let { AnchorNode(engine, it) }
-
-    open fun update(session: Session, frame: Frame) {
-        this.session = session
+    override fun update(session: Session, frame: Frame) {
         this.frame = frame
-        this.cameraTrackingState = frame.camera.trackingState
+//        this.cameraTrackingState = frame.camera.trackingState
     }
 
     open fun onCameraTrackingChanged(trackingState: TrackingState) {
         updateVisibility()
+    }
+
+    override fun onPoseChanged(pose: Pose) {
+        onPoseChanged?.invoke(pose)
     }
 
     override fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean {

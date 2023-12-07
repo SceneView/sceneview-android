@@ -25,7 +25,7 @@ const val PRIORITY_LAST = 7
 interface RenderableComponent : Component {
 
     val renderableManager get() = engine.renderableManager
-    val renderableInstance: RenderableInstance get() = renderableManager.getInstance(entity)
+    val renderableInstance get() = renderableManager.getInstance(entity)
 
     /**
      * Associates a [SkinningBuffer] to a renderable instance.

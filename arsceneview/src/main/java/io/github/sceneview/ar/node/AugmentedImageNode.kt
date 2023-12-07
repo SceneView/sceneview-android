@@ -4,6 +4,7 @@ import com.google.android.filament.Engine
 import com.google.ar.core.AugmentedImage
 import com.google.ar.core.AugmentedImage.TrackingMethod
 import com.google.ar.core.AugmentedImageDatabase
+import com.google.ar.core.Pose
 import com.google.ar.core.TrackingState
 
 /**
@@ -33,10 +34,6 @@ open class AugmentedImageNode(
      * The augmented image where this node will be placed
      */
     val augmentedImage: AugmentedImage,
-    /**
-     * Should the node scale depending on the image extents
-     */
-    var applyImageScale: Boolean = false,
     /**
      * Set the node to be visible only on those tracking methods
      */
