@@ -1004,18 +1004,9 @@ open class Node(
      * Detach and destroy the node and all its children.
      */
     open fun destroy() {
+        parent = null
         transformManager.destroy(entity)
     }
-
-    /**
-     * Used to keep track of data for detecting if a tap gesture has occurred on this node.
-     */
-    private data class TapTrackingData(
-        // The node that was being touched when ACTION_DOWN occurred.
-        val downNode: Node,
-        // The screen-space position that was being touched when ACTION_DOWN occurred.
-        val downPosition: Vector3
-    )
 }
 
 interface OnNodeGestureListener : GestureDetector.OnGestureListener,
