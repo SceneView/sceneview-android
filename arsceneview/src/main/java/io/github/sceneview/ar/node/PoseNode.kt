@@ -58,14 +58,14 @@ open class PoseNode(
             if (field != value) {
                 field = value
                 worldTransform(pose.transform)
-                onPoseChanged?.invoke(value)
+                onPoseChanged(value)
             }
         }
 
     /**
      * Is the AR camera tracking.
      *
-     * Used for visibility update.
+     * Used for visibility update.`
      */
     open var cameraTrackingState = TrackingState.TRACKING
         protected set(value) {
@@ -135,6 +135,10 @@ open class PoseNode(
 
     open fun onCameraTrackingChanged(trackingState: TrackingState) {
         updateVisibility()
+    }
+
+    open fun onPoseChanged(pose: Pose) {
+        onPoseChanged?.invoke(pose)
     }
 
     override fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean {
