@@ -8,6 +8,7 @@ import android.view.GestureDetector.OnDoubleTapListener
 import android.view.MotionEvent
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
+import com.google.android.filament.Scene
 import com.google.android.filament.TransformManager
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
@@ -27,7 +28,6 @@ import io.github.sceneview.collision.CollisionShape
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.TransformProvider
-import io.github.sceneview.collision.Vector3
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
@@ -377,6 +377,8 @@ open class Node(
 
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
     var onSmoothEnd: ((node: Node) -> Unit)? = null
+    var onAddedToScene: ((scene: Scene) -> Unit)? = null
+    var onRemovedFromScene: ((scene: Scene) -> Unit)? = null
 
     var onDown: ((e: MotionEvent) -> Boolean)? = null
     var onShowPress: ((e: MotionEvent) -> Unit)? = null
@@ -808,6 +810,14 @@ open class Node(
      */
     open fun onTransformChanged() {
         onWorldTransformChanged()
+    }
+
+    open fun onAddedToScene(scene: Scene) {
+        onAddedToScene?.invoke(scene)
+    }
+
+    open fun onRemovedFromScene(scene: Scene) {
+        onRemovedFromScene?.invoke(scene)
     }
 
     /**

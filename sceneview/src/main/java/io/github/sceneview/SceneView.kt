@@ -667,6 +667,7 @@ open class SceneView @JvmOverloads constructor(
         addEntities(node.sceneEntities)
         node.onChildAdded += ::addNode
         node.onChildRemoved += ::removeNode
+        node.onAddedToScene(scene)
         node.childNodes.forEach { addNode(it) }
     }
 
@@ -675,6 +676,7 @@ open class SceneView @JvmOverloads constructor(
         removeEntities(node.sceneEntities)
         node.onChildAdded -= ::addNode
         node.onChildRemoved -= ::removeNode
+        node.onRemovedFromScene(scene)
         node.childNodes.forEach { removeNode(it) }
     }
 
