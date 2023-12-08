@@ -8,12 +8,10 @@ import com.google.android.filament.gltfio.FilamentAsset
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.max
 import io.github.sceneview.Entity
-import io.github.sceneview.EntityInstance
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
-import io.github.sceneview.managers.getParentOrNull
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Scale
 import io.github.sceneview.model.Model
@@ -83,37 +81,35 @@ open class ModelNode(
         val morphTargetNames: List<String> get() = model.getMorphTargetNames(entity).toList()
     }
 
-    class RenderableNode internal constructor(
-        override val modelInstance: ModelInstance, entity: Entity, parent: Node
-    ) : io.github.sceneview.node.RenderableNode(
-        engine = modelInstance.engine, entity = entity, parent = parent
-    ), ChildNode
+    inner class RenderableNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity
+    ) : io.github.sceneview.node.RenderableNode(engine = modelInstance.engine, entity = entity),
+        ChildNode
 
-    class LightNode internal constructor(
-        override val modelInstance: ModelInstance, entity: Entity, parent: Node
-    ) : io.github.sceneview.node.LightNode(
-        engine = modelInstance.engine, entity = entity, parent = parent
-    ), ChildNode
+    inner class LightNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity
+    ) : io.github.sceneview.node.LightNode(engine = modelInstance.engine, entity = entity),
+        ChildNode
 
-    class CameraNode internal constructor(
-        override val modelInstance: ModelInstance, entity: Entity, parent: Node
-    ) : io.github.sceneview.node.CameraNode(
-        engine = modelInstance.engine, entity = entity, parent = parent
-    ), ChildNode
+    inner class CameraNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity
+    ) : io.github.sceneview.node.CameraNode(engine = modelInstance.engine, entity = entity),
+        ChildNode
 
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
     val renderableNodes = modelInstance.renderableEntities.map {
-        RenderableNode(modelInstance, it, this)
+        RenderableNode(modelInstance, it)
     }
     val lightNodes = modelInstance.lightEntities.map {
-        LightNode(modelInstance, it, this)
+        LightNode(modelInstance, it).apply { parent = this }
     }
     val cameraNodes = modelInstance.camerasEntities.map {
-        CameraNode(modelInstance, it, this)
+        CameraNode(modelInstance, it).apply { parent = this }
     }
 
-    val nodes = (renderableNodes + lightNodes + cameraNodes).associateBy { it.name }
+    val nodes: Map<String, Node> =
+        (renderableNodes + lightNodes + cameraNodes).associateBy { it.name }
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance].
