@@ -23,22 +23,11 @@ import io.github.sceneview.math.toVector3Box
 open class RenderableNode(
     engine: Engine,
     @FilamentEntity entity: Entity = EntityManager.get().create(),
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
-    parent: Node? = null
-) : Node(engine, entity, parent), RenderableComponent {
+) : Node(engine, entity), RenderableComponent {
 
     constructor(
         engine: Engine,
         @FilamentEntity entity: Entity = EntityManager.get().create(),
-        parent: Node? = null,
         /**
          * Count the number of primitives that will be supplied to the builder
          */
@@ -51,7 +40,7 @@ open class RenderableNode(
          */
         materialInstances: List<MaterialInstance?> = listOf(),
         builder: RenderableManager.Builder.() -> Unit,
-    ) : this(engine, entity, parent) {
+    ) : this(engine, entity) {
         RenderableManager.Builder(primitiveCount)
             .boundingBox(boundingBox)
             .apply {

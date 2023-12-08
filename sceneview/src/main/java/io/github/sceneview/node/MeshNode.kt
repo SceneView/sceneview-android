@@ -46,18 +46,8 @@ open class MeshNode(
      * If no material is specified, Filament will fall back to a basic default material.
      */
     materialInstance: MaterialInstance? = null,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
-    parent: Node? = null,
     builder: RenderableManager.Builder.() -> Unit = {}
-) : RenderableNode(engine = engine, parent = parent) {
+) : RenderableNode(engine) {
 
     init {
         RenderableManager.Builder(1)

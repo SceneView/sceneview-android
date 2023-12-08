@@ -23,20 +23,7 @@ import io.github.sceneview.safeDestroyCamera
  * camera, assign a collision shape to it, or add children to it. Disabling the camera turns off
  * rendering.
  */
-open class CameraNode(
-    engine: Engine,
-    entity: Entity,
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
-    parent: Node? = null
-) : Node(engine, entity, parent), CameraComponent {
+open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), CameraComponent {
 
     private var _focalLength = 28.0
     override var focalLength: Double
@@ -75,21 +62,10 @@ open class CameraNode(
     // Can receive touchable but not editable child events
     override var isEditable = false
 
-    constructor(
-        engine: Engine,
-        entity: Entity = EntityManager.get().create(),
-        /**
-         * The parent node.
-         *
-         * If set to null, this node will not be attached.
-         *
-         * The local position, rotation, and scale of this node will remain the same.
-         * Therefore, the world position, rotation, and scale of this node may be different after the
-         * parent changes.
-         */
-        parent: Node? = null,
-        camera: Camera.() -> Unit = {}
-    ) : this(engine, entity, parent) {
+    constructor(engine: Engine, camera: Camera.() -> Unit = {}) : this(
+        engine = engine,
+        entity = EntityManager.get().create()
+    ) {
         engine.createCamera(entity).apply(camera)
     }
 

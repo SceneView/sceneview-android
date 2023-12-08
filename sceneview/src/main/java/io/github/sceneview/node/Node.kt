@@ -75,16 +75,6 @@ import kotlin.reflect.KProperty1
 open class Node(
     val engine: Engine,
     @FilamentEntity val entity: Entity = EntityManager.get().create(),
-    /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
-    parent: Node? = null
 ) : GestureDetector.OnGestureListener,
     OnDoubleTapListener,
     OnContextClickListener,
@@ -321,7 +311,7 @@ open class Node(
      * - Recursively update the node's transformation to reflect the change in parent.
      * - Recursively update the scene field to match the new parent's scene field.
      */
-    var parent: Node? = null
+    open var parent: Node? = null
         set(value) {
             if (field != value) {
                 val oldParent = field
@@ -454,7 +444,6 @@ open class Node(
         if (!transformManager.hasComponent(entity)) {
             transformManager.create(entity)
         }
-        this.parent = parent
     }
 
     /**

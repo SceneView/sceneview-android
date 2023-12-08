@@ -8,10 +8,12 @@ import com.google.android.filament.gltfio.FilamentAsset
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.max
 import io.github.sceneview.Entity
+import io.github.sceneview.EntityInstance
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.managers.getParentOrNull
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Scale
 import io.github.sceneview.model.Model
@@ -39,16 +41,6 @@ open class ModelNode(
      */
     val modelInstance: ModelInstance,
     /**
-     * The parent node.
-     *
-     * If set to null, this node will not be attached.
-     *
-     * The local position, rotation, and scale of this node will remain the same.
-     * Therefore, the world position, rotation, and scale of this node may be different after the
-     * parent changes.
-     */
-    parent: Node? = null,
-    /**
      * Plays the animations automatically if the model has one.
      */
     autoAnimate: Boolean = true,
@@ -68,7 +60,7 @@ open class ModelNode(
      * - ...
      */
     centerOrigin: Position? = null
-) : Node(engine = modelInstance.engine, entity = modelInstance.root, parent = parent) {
+) : Node(engine = modelInstance.engine, entity = modelInstance.root) {
 
     interface ChildNode {
         val entity: Entity
@@ -78,7 +70,7 @@ open class ModelNode(
         /**
          * Gets the `NameComponentManager` label for the given node, if it exists.
          */
-        val name: String? get() = model.getName(entity)
+        val name: String get() = model.getName(entity) ?: "$entity"
 
         /**
          * Gets the glTF extras string for the asset or a specific node.

@@ -1,7 +1,6 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
-import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Plane
@@ -15,12 +14,9 @@ open class PlaneNode private constructor(
     override val geometry: Plane,
     primitivesOffsets: List<IntRange>,
     materialInstances: List<MaterialInstance?>,
-    parent: Node? = null,
     builder: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
     engine,
-    EntityManager.get().create(),
-    parent,
     geometry,
     materialInstances,
     primitivesOffsets,
@@ -30,20 +26,18 @@ open class PlaneNode private constructor(
         engine: Engine,
         geometry: Plane,
         materialInstance: MaterialInstance? = null,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine, geometry, listOf(0..geometry.primitivesOffsets.last().last),
-        listOf(materialInstance), parent, builder
+        listOf(materialInstance), builder
     )
 
     constructor(
         engine: Engine,
         geometry: Plane,
         materialInstances: List<MaterialInstance?>,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
-    ) : this(engine, geometry, geometry.primitivesOffsets, materialInstances, parent, builder)
+    ) : this(engine, geometry, geometry.primitivesOffsets, materialInstances, builder)
 
     constructor(
         engine: Engine,
@@ -52,7 +46,6 @@ open class PlaneNode private constructor(
         normal: Direction = Plane.DEFAULT_NORMAL,
         uvScale: UvScale = UvScale(1.0f),
         materialInstances: List<MaterialInstance?>,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine,
@@ -62,7 +55,7 @@ open class PlaneNode private constructor(
             .normal(normal)
             .uvScale(uvScale)
             .build(engine),
-        materialInstances, parent, builder
+        materialInstances, builder
     )
 
     constructor(
@@ -72,7 +65,6 @@ open class PlaneNode private constructor(
         normal: Direction = Plane.DEFAULT_NORMAL,
         uvScale: UvScale = UvScale(1.0f),
         materialInstance: MaterialInstance? = null,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine,
@@ -82,7 +74,7 @@ open class PlaneNode private constructor(
             .normal(normal)
             .uvScale(uvScale)
             .build(engine),
-        materialInstance, parent, builder
+        materialInstance, builder
     )
 
     fun updateGeometry(
