@@ -530,11 +530,17 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    fun startMirroring(surface: Surface) {
+    fun startMirroring(
+        surface: Surface,
+        left: Int = 0,
+        bottom: Int = 0,
+        width: Int = this.width,
+        height: Int = this.height
+    ) {
         if (surfaceMirrorer == null) {
             surfaceMirrorer = SurfaceMirrorer()
         }
-        surfaceMirrorer?.startMirroring(this, surface)
+        surfaceMirrorer?.startMirroring(this, surface, left, bottom, width, height)
     }
 
     fun stopMirroring(surface: Surface) {
@@ -620,11 +626,10 @@ open class SceneView @JvmOverloads constructor(
             // Render the scene, unless the renderer wants to skip the frame.
             if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
                 renderer.render(view)
+                surfaceMirrorer?.onFrame(this)
                 renderer.endFrame()
             }
         }
-
-        surfaceMirrorer?.onFrame(this)
 
         lastFrameTimeNanos = frameTimeNanos
     }
