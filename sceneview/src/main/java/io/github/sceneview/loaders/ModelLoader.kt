@@ -12,13 +12,14 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.safeDestroyModel
 import io.github.sceneview.utils.loadFileBuffer
-import io.github.sceneview.utils.readFileBuffer
+import io.github.sceneview.utils.readBuffer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.nio.Buffer
 
 /**
@@ -71,10 +72,10 @@ class ModelLoader(
      */
     fun createModel(
         assetFileLocation: String,
-        resourceResolver: (resourceFileName: String) -> Buffer? = {
-            context.assets.readFileBuffer(getFolderPath(assetFileLocation, it))
+        resourceResolver: (resourceFileName: String) -> Buffer? = { resourceFile ->
+            context.assets.readBuffer(getFolderPath(assetFileLocation, resourceFile))
         }
-    ): Model = createModel(context.assets.readFileBuffer(assetFileLocation), resourceResolver)
+    ): Model = createModel(context.assets.readBuffer(assetFileLocation), resourceResolver)
 
     /**
      * Creates a [Model] from the contents of a GLB or GLTF raw file.
@@ -84,7 +85,19 @@ class ModelLoader(
     fun createModel(
         @RawRes rawResId: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): Model = createModel(context.resources.readFileBuffer(rawResId), resourceResolver)
+    ): Model = createModel(context.resources.readBuffer(rawResId), resourceResolver)
+
+    /**
+     * Creates a [Model] from the contents of a GLB or GLTF asset file.
+     *
+     * @see createModel
+     */
+    fun createModel(
+        file: File,
+        resourceResolver: (resourceFileName: String) -> Buffer? = { resourceFile ->
+            File(file.parent, resourceFile).readBuffer()
+        }
+    ): Model = createModel(file.readBuffer(), resourceResolver)
 
     /**
      * Loads a [Model] from the contents of a GLB or GLTF file.
@@ -151,7 +164,7 @@ class ModelLoader(
     fun createModelInstance(
         assetFileLocation: String,
         resourceResolver: (resourceFileName: String) -> Buffer? = {
-            context.assets.readFileBuffer(getFolderPath(assetFileLocation, it))
+            context.assets.readBuffer(getFolderPath(assetFileLocation, it))
         }
     ): ModelInstance = createModel(assetFileLocation, resourceResolver).also {
         // Release model since it will not be re-instantiated
@@ -167,6 +180,19 @@ class ModelLoader(
         @RawRes rawResId: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
     ): ModelInstance = createModel(rawResId, resourceResolver).also {
+        // Release model since it will not be re-instantiated
+//        it.releaseSourceData()
+    }.instance
+
+    /**
+     * Creates a [Model] from the contents of a GLB or GLTF raw file and get its default instance.
+     *
+     * @see createModel
+     */
+    fun createModelInstance(
+        file: File,
+        resourceResolver: (resourceFileName: String) -> Buffer? = { null }
+    ): ModelInstance = createModel(file, resourceResolver).also {
         // Release model since it will not be re-instantiated
 //        it.releaseSourceData()
     }.instance
@@ -253,10 +279,10 @@ class ModelLoader(
         assetFileLocation: String,
         count: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = {
-            context.assets.readFileBuffer(getFolderPath(assetFileLocation, it))
+            context.assets.readBuffer(getFolderPath(assetFileLocation, it))
         }
     ) = createInstancedModel(
-        context.assets.readFileBuffer(assetFileLocation),
+        context.assets.readBuffer(assetFileLocation),
         count,
         resourceResolver
     )
@@ -275,7 +301,26 @@ class ModelLoader(
         @RawRes rawResId: Int,
         count: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ) = createInstancedModel(context.resources.readFileBuffer(rawResId), count, resourceResolver)
+    ) = createInstancedModel(context.resources.readBuffer(rawResId), count, resourceResolver)
+
+
+    /**
+     * Creates a primary [Model] with one or more [ModelInstance]s from the contents of a GLB or
+     * GLTF file.
+     *
+     * @param count must be sized to the desired number of instances. If successful, this method
+     * will populate the array with secondary instances whose resources are shared with the primary
+     * asset.
+     *
+     * @see createInstancedModel
+     */
+    fun createInstancedModel(
+        file: File,
+        count: Int,
+        resourceResolver: (resourceFileName: String) -> Buffer? = { resourceFile ->
+            File(file.parent, resourceFile).readBuffer()
+        }
+    ) = createInstancedModel(file.readBuffer(), count, resourceResolver)
 
     /**
      * Loads a primary [Model] with one or more [ModelInstance]s from the contents of a GLB or

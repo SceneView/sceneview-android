@@ -8,7 +8,7 @@ import com.google.android.filament.Skybox
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.environment.KTXEnvironment
 import io.github.sceneview.utils.loadFileBuffer
-import io.github.sceneview.utils.readFileBuffer
+import io.github.sceneview.utils.readBuffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.Buffer
@@ -44,8 +44,8 @@ fun KTXLoader.createEnvironment(
     iblKtxFileLocation: String,
     skyboxKtxFileLocation: String? = null
 ): Environment {
-    val iblBuffer = assets.readFileBuffer(iblKtxFileLocation)
-    val skyboxBuffer = skyboxKtxFileLocation?.let { assets.readFileBuffer(it) }
+    val iblBuffer = assets.readBuffer(iblKtxFileLocation)
+    val skyboxBuffer = skyboxKtxFileLocation?.let { assets.readBuffer(it) }
     return createEnvironment(engine, iblBuffer, skyboxBuffer).also {
         iblBuffer.clear()
         skyboxBuffer?.clear()

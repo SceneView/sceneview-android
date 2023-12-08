@@ -13,7 +13,7 @@ import io.github.sceneview.math.Size
 import kotlin.math.cos
 import kotlin.math.sin
 
-class Cylinder(
+class Cylinder private constructor(
     engine: Engine,
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,

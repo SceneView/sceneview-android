@@ -97,13 +97,11 @@ object FileLoader {
 suspend fun Context.loadFileBuffer(fileLocation: String): ByteBuffer? =
     FileLoader.loadFileBuffer(this, fileLocation)
 
-fun AssetManager.readFileBuffer(fileLocation: String): ByteBuffer =
-    open(fileLocation).readFileBuffer()
+fun AssetManager.readBuffer(fileLocation: String): ByteBuffer = open(fileLocation).readBuffer()
+fun Resources.readBuffer(@RawRes rawResId: Int): ByteBuffer = openRawResource(rawResId).readBuffer()
+fun File.readBuffer(): ByteBuffer = inputStream().use { it.readBuffer() }
 
-fun Resources.readFileBuffer(@RawRes rawResId: Int): ByteBuffer =
-    openRawResource(rawResId).readFileBuffer()
-
-fun InputStream.readFileBuffer(): ByteBuffer = toByteArray().let {
+fun InputStream.readBuffer(): ByteBuffer = toByteArray().let {
     ByteBuffer.wrap(it)
 }
 

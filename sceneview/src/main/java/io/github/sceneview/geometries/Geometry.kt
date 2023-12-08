@@ -40,7 +40,7 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Plane
  * @see Sphere
  */
-open class Geometry(
+open class Geometry internal constructor(
     protected val engine: Engine,
     val primitiveType: PrimitiveType,
     vertices: List<Vertex>,

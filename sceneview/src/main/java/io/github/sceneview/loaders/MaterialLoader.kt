@@ -22,7 +22,7 @@ import io.github.sceneview.safeDestroyMaterial
 import io.github.sceneview.safeDestroyMaterialInstance
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.utils.loadFileBuffer
-import io.github.sceneview.utils.readFileBuffer
+import io.github.sceneview.utils.readBuffer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -99,7 +99,7 @@ class MaterialLoader(
      * @see createMaterial
      */
     fun createMaterial(assetFileLocation: String): Material =
-        createMaterial(assets.readFileBuffer(assetFileLocation))
+        createMaterial(assets.readBuffer(assetFileLocation))
 
     /**
      * Loads a [Material] from the contents of a Filamat file.
