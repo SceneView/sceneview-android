@@ -17,7 +17,7 @@ class Sphere private constructor(
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
-    indices: List<PrimitiveIndices>,
+    indices: List<List<Int>>,
     indexBuffer: IndexBuffer,
     primitivesOffsets: List<IntRange>,
     boundingBox: Box,
@@ -52,7 +52,7 @@ class Sphere private constructor(
 
         override fun build(engine: Engine): Sphere {
             vertices(getVertices(radius, center, stacks, slices))
-            indices(getIndices(stacks, slices))
+            primitivesIndices(getIndices(stacks, slices))
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Sphere(
                     engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
@@ -83,7 +83,7 @@ class Sphere private constructor(
         if (stacks != this.stacks || slices != this.slices) {
             this.stacks = stacks
             this.slices = slices
-            indices = getIndices(stacks, slices)
+            primitivesIndices = getIndices(stacks, slices)
         }
     }
 
@@ -138,7 +138,7 @@ class Sphere private constructor(
                         triangleIndices.add(v + slice + slices + 1)
                     }
                 }
-                add(PrimitiveIndices(triangleIndices))
+                add(triangleIndices)
                 v += slices + 1
             }
         }

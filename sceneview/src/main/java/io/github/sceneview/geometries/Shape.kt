@@ -17,7 +17,7 @@ class Shape private constructor(
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
-    indices: List<PrimitiveIndices>,
+    indices: List<List<Int>>,
     indexBuffer: IndexBuffer,
     primitivesOffsets: List<IntRange>,
     boundingBox: Box,
@@ -66,7 +66,7 @@ class Shape private constructor(
 
         override fun build(engine: Engine): Shape {
             vertices(getVertices(polygonPath + delaunayPoints))
-            indices(
+            primitivesIndices(
                 getPolygonIndices(
                     polygonPath,
                     polygonHoles
@@ -121,7 +121,8 @@ class Shape private constructor(
         this.uvScale = uvScale
         this.color = color
         vertices = getVertices(polygonPath + delaunayPoints)
-        indices = getPolygonIndices(polygonPath, polygonHoles) + getDelaunayIndices(delaunayPoints)
+        primitivesIndices =
+            getPolygonIndices(polygonPath, polygonHoles) + getDelaunayIndices(delaunayPoints)
     }
 
     companion object {
@@ -136,15 +137,15 @@ class Shape private constructor(
 
         fun getPolygonIndices(positions: List<Position2>, holes: List<Int> = listOf()) =
             if (positions.isNotEmpty()) {
-                listOf(PrimitiveIndices(Earcut.triangulate(positions.map { it.xy }, holes)))
+                listOf(Earcut.triangulate(positions.map { it.xy }, holes))
             } else {
                 listOf()
             }
 
         fun getDelaunayIndices(positions: List<Position2>) = if (positions.isNotEmpty()) {
-            listOf(PrimitiveIndices(Delaunator(positions.map {
+            listOf(Delaunator(positions.map {
                 Delaunator.Point(it.x.toDouble(), it.y.toDouble())
-            }).triangles.toList()))
+            }).triangles.toList())
         } else {
             listOf()
         }

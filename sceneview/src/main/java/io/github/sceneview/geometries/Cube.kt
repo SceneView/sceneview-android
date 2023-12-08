@@ -14,18 +14,18 @@ class Cube private constructor(
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
-    indices: List<PrimitiveIndices>,
+    primitivesIndices: List<List<Int>>,
     indexBuffer: IndexBuffer,
     primitivesOffsets: List<IntRange>,
     boundingBox: Box,
     size: Size,
     center: Position
 ) : Geometry(
-    engine,
-    primitiveType,
-    vertices,
-    vertexBuffer,
-    indices,
+    engine = engine,
+    primitiveType = primitiveType,
+    vertices = vertices,
+    vertexBuffer = vertexBuffer,
+    primitivesIndices = primitivesIndices,
     indexBuffer,
     primitivesOffsets,
     boundingBox
@@ -41,7 +41,7 @@ class Cube private constructor(
 
         override fun build(engine: Engine): Cube {
             vertices(getVertices(size, center))
-            indices(INDICES)
+            primitivesIndices(INDICES)
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Cube(
                     engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
@@ -74,7 +74,7 @@ class Cube private constructor(
             val verticesPerSide = 4
             for (i in 0 until sideCount) {
                 add(
-                    PrimitiveIndices(
+                    listOf(
                         // First triangle for this side.
                         3 + verticesPerSide * i,
                         1 + verticesPerSide * i,

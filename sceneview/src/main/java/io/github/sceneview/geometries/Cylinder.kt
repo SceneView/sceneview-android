@@ -18,7 +18,7 @@ class Cylinder private constructor(
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
-    indices: List<PrimitiveIndices>,
+    indices: List<List<Int>>,
     indexBuffer: IndexBuffer,
     primitivesOffsets: List<IntRange>,
     boundingBox: Box,
@@ -53,7 +53,7 @@ class Cylinder private constructor(
 
         override fun build(engine: Engine): Cylinder {
             vertices(getVertices(radius, height, center, sideCount))
-            indices(getIndices(sideCount))
+            primitivesIndices(getIndices(sideCount))
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Cylinder(
                     engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
@@ -84,7 +84,7 @@ class Cylinder private constructor(
         vertices = getVertices(radius, height, center, sideCount)
         if (sideCount != this.sideCount) {
             this.sideCount = sideCount
-            indices = getIndices(sideCount)
+            primitivesIndices = getIndices(sideCount)
         }
     }
 
@@ -193,7 +193,7 @@ class Cylinder private constructor(
                 val upperCenterIndex = lowerCenterIndex + sideCount + 2
 
                 add(
-                    PrimitiveIndices(
+                    listOf(
                         // First triangle of side
                         side,
                         topRight,

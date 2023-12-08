@@ -1,6 +1,5 @@
 package io.github.sceneview.node
 
-import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Geometry
@@ -33,37 +32,34 @@ import io.github.sceneview.managers.materials
  * @see Geometry
  */
 open class GeometryNode(
-    engine: Engine,
     open val geometry: Geometry,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
-    builder: RenderableManager.Builder.() -> Unit = {}
+    builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : RenderableNode(
-    engine = engine,
+    engine = geometry.engine,
     primitiveCount = primitivesOffsets.size,
     boundingBox = geometry.boundingBox,
     materialInstances = materialInstances,
     builder = {
         geometry(geometry, primitivesOffsets)
         materials(materialInstances)
-        apply(builder)
+        apply(builderApply)
     }) {
 
     constructor(
-        engine: Engine,
         geometry: Geometry,
         materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine = engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
-        builder = builder
+        builderApply = builderApply
     )
 
     fun updateGeometry(
         vertices: List<Geometry.Vertex> = geometry.vertices,
-        indices: List<Geometry.PrimitiveIndices> = geometry.indices
+        indices: List<List<Int>> = geometry.primitivesIndices
     ) = setGeometry(geometry.update(vertices, indices))
 }

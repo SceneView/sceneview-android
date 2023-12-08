@@ -7,24 +7,26 @@ import io.github.sceneview.geometries.Cylinder
 import io.github.sceneview.math.Position
 
 open class CylinderNode private constructor(
-    engine: Engine,
     override val geometry: Cylinder,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
-    builder: RenderableManager.Builder.() -> Unit = {}
-) : GeometryNode(engine, geometry, materialInstances, primitivesOffsets, builder) {
+    builderApply: RenderableManager.Builder.() -> Unit = {}
+) : GeometryNode(
+    geometry = geometry,
+    materialInstances = materialInstances,
+    primitivesOffsets = primitivesOffsets,
+    builderApply = builderApply
+) {
 
     constructor(
-        engine: Engine,
         geometry: Cylinder,
         materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine = engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
-        builder = builder
+        builderApply = builderApply
     )
 
     constructor(
@@ -34,9 +36,8 @@ open class CylinderNode private constructor(
         center: Position = Cylinder.DEFAULT_CENTER,
         sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
         materialInstances: List<MaterialInstance?>,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine = engine,
         geometry = Cylinder.Builder()
             .radius(radius)
             .height(height)
@@ -44,7 +45,7 @@ open class CylinderNode private constructor(
             .sideCount(sideCount)
             .build(engine),
         materialInstances = materialInstances,
-        builder = builder
+        builderApply = builderApply
     )
 
     constructor(
@@ -54,9 +55,8 @@ open class CylinderNode private constructor(
         center: Position = Cylinder.DEFAULT_CENTER,
         sideCount: Int = Cylinder.DEFAULT_SIDE_COUNT,
         materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine = engine,
         geometry = Cylinder.Builder()
             .radius(radius)
             .height(height)
@@ -64,7 +64,7 @@ open class CylinderNode private constructor(
             .sideCount(sideCount)
             .build(engine),
         materialInstance = materialInstance,
-        builder = builder
+        builderApply = builderApply
     )
 
     fun updateGeometry(

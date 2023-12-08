@@ -10,60 +10,36 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position2
 
 open class ShapeNode private constructor(
-    engine: Engine,
     override val geometry: Shape,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange>,
-    builder: RenderableManager.Builder.() -> Unit = {}
+    builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
-    engine,
-    geometry,
-    materialInstances,
-    primitivesOffsets,
-    builder
+    geometry = geometry,
+    materialInstances = materialInstances,
+    primitivesOffsets = primitivesOffsets,
+    builderApply = builderApply
 ) {
-
     constructor(
-        engine: Engine,
         geometry: Shape,
         materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine,
-        geometry,
-        listOf(materialInstance),
-        listOf(0..geometry.primitivesOffsets.last().last),
-        builder
+        geometry = geometry,
+        materialInstances = listOf(materialInstance),
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        builderApply = builderApply
     )
 
     constructor(
-        engine: Engine,
         geometry: Shape,
         materialInstances: List<MaterialInstance?>,
-        builder: RenderableManager.Builder.() -> Unit = {}
-    ) : this(engine, geometry, materialInstances, geometry.primitivesOffsets, builder)
-
-    constructor(
-        engine: Engine,
-        polygonPath: List<Position2> = listOf(),
-        polygonHoles: List<Int> = listOf(),
-        delaunayPoints: List<Position2> = listOf(),
-        normal: Direction = Shape.DEFAULT_NORMAL,
-        uvScale: UvScale = UvScale(1.0f),
-        color: Color? = null,
-        materialInstances: List<MaterialInstance?>,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine,
-        Shape.Builder()
-            .polygonPath(polygonPath, polygonHoles)
-            .delaunayPoints(delaunayPoints)
-            .normal(normal)
-            .uvScale(uvScale)
-            .color(color)
-            .build(engine),
-        materialInstances,
-        builder
+        geometry = geometry,
+        materialInstances = materialInstances,
+        primitivesOffsets = geometry.primitivesOffsets,
+        builderApply = builderApply
     )
 
     constructor(
@@ -74,19 +50,40 @@ open class ShapeNode private constructor(
         normal: Direction = Shape.DEFAULT_NORMAL,
         uvScale: UvScale = UvScale(1.0f),
         color: Color? = null,
-        materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        materialInstances: List<MaterialInstance?>,
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine,
-        Shape.Builder()
+        geometry = Shape.Builder()
             .polygonPath(polygonPath, polygonHoles)
             .delaunayPoints(delaunayPoints)
             .normal(normal)
             .uvScale(uvScale)
             .color(color)
             .build(engine),
-        materialInstance,
-        builder
+        materialInstances = materialInstances,
+        builderApply = builderApply
+    )
+
+    constructor(
+        engine: Engine,
+        polygonPath: List<Position2> = listOf(),
+        polygonHoles: List<Int> = listOf(),
+        delaunayPoints: List<Position2> = listOf(),
+        normal: Direction = Shape.DEFAULT_NORMAL,
+        uvScale: UvScale = UvScale(1.0f),
+        color: Color? = null,
+        materialInstance: MaterialInstance? = null,
+        builderApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        geometry = Shape.Builder()
+            .polygonPath(polygonPath, polygonHoles)
+            .delaunayPoints(delaunayPoints)
+            .normal(normal)
+            .uvScale(uvScale)
+            .color(color)
+            .build(engine),
+        materialInstance = materialInstance,
+        builderApply = builderApply
     )
 
     fun updateGeometry(

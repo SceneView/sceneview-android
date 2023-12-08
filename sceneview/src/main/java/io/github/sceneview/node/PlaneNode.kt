@@ -10,52 +10,36 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 open class PlaneNode private constructor(
-    engine: Engine,
     override val geometry: Plane,
     primitivesOffsets: List<IntRange>,
     materialInstances: List<MaterialInstance?>,
-    builder: RenderableManager.Builder.() -> Unit = {}
+    builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
-    engine,
-    geometry,
-    materialInstances,
-    primitivesOffsets,
-    builder
+    geometry = geometry,
+    materialInstances = materialInstances,
+    primitivesOffsets = primitivesOffsets,
+    builderApply = builderApply
 ) {
     constructor(
-        engine: Engine,
         geometry: Plane,
         materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine, geometry, listOf(0..geometry.primitivesOffsets.last().last),
-        listOf(materialInstance), builder
+        geometry = geometry,
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        materialInstances = listOf(materialInstance),
+        builderApply = builderApply
     )
 
     constructor(
-        engine: Engine,
         geometry: Plane,
         materialInstances: List<MaterialInstance?>,
-        builder: RenderableManager.Builder.() -> Unit = {}
-    ) : this(engine, geometry, geometry.primitivesOffsets, materialInstances, builder)
-
-    constructor(
-        engine: Engine,
-        size: Size = Plane.DEFAULT_SIZE,
-        center: Position = Plane.DEFAULT_CENTER,
-        normal: Direction = Plane.DEFAULT_NORMAL,
-        uvScale: UvScale = UvScale(1.0f),
-        materialInstances: List<MaterialInstance?>,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine,
-        Plane.Builder()
-            .size(size)
-            .center(center)
-            .normal(normal)
-            .uvScale(uvScale)
-            .build(engine),
-        materialInstances, builder
+        geometry = geometry,
+        primitivesOffsets = geometry.primitivesOffsets,
+        materialInstances = materialInstances,
+        builderApply = builderApply
     )
 
     constructor(
@@ -64,17 +48,36 @@ open class PlaneNode private constructor(
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
         uvScale: UvScale = UvScale(1.0f),
-        materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        materialInstances: List<MaterialInstance?>,
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine,
-        Plane.Builder()
+        geometry = Plane.Builder()
             .size(size)
             .center(center)
             .normal(normal)
             .uvScale(uvScale)
             .build(engine),
-        materialInstance, builder
+        materialInstances = materialInstances,
+        builderApply = builderApply
+    )
+
+    constructor(
+        engine: Engine,
+        size: Size = Plane.DEFAULT_SIZE,
+        center: Position = Plane.DEFAULT_CENTER,
+        normal: Direction = Plane.DEFAULT_NORMAL,
+        uvScale: UvScale = UvScale(1.0f),
+        materialInstance: MaterialInstance? = null,
+        builderApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        geometry = Plane.Builder()
+            .size(size)
+            .center(center)
+            .normal(normal)
+            .uvScale(uvScale)
+            .build(engine),
+        materialInstance = materialInstance,
+        builderApply = builderApply
     )
 
     fun updateGeometry(
