@@ -12,7 +12,7 @@ import io.github.sceneview.math.Position
 import kotlin.math.cos
 import kotlin.math.sin
 
-class Sphere(
+class Sphere private constructor(
     engine: Engine,
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,

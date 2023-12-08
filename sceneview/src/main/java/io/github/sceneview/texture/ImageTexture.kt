@@ -10,7 +10,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Texture
 import com.google.android.filament.android.TextureHelper
 import com.google.android.filament.utils.TextureType
-import io.github.sceneview.utils.readFileBuffer
+import io.github.sceneview.utils.readBuffer
 
 class ImageTexture {
     class Builder : Texture.Builder() {
@@ -66,7 +66,7 @@ class ImageTexture {
             fileLocation: String,
             type: TextureType = DEFAULT_TYPE
         ): Bitmap {
-            val buffer = assets.readFileBuffer(fileLocation)
+            val buffer = assets.readBuffer(fileLocation)
             return BitmapFactory.decodeByteArray(
                 buffer.array(),
                 0,
