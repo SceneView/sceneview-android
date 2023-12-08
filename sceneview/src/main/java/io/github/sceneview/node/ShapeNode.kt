@@ -1,7 +1,6 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
-import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Shape
@@ -15,12 +14,9 @@ open class ShapeNode private constructor(
     override val geometry: Shape,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange>,
-    parent: Node? = null,
     builder: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
     engine,
-    EntityManager.get().create(),
-    parent,
     geometry,
     materialInstances,
     primitivesOffsets,
@@ -31,14 +27,12 @@ open class ShapeNode private constructor(
         engine: Engine,
         geometry: Shape,
         materialInstance: MaterialInstance? = null,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine,
         geometry,
         listOf(materialInstance),
         listOf(0..geometry.primitivesOffsets.last().last),
-        parent,
         builder
     )
 
@@ -46,9 +40,8 @@ open class ShapeNode private constructor(
         engine: Engine,
         geometry: Shape,
         materialInstances: List<MaterialInstance?>,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
-    ) : this(engine, geometry, materialInstances, geometry.primitivesOffsets, parent, builder)
+    ) : this(engine, geometry, materialInstances, geometry.primitivesOffsets, builder)
 
     constructor(
         engine: Engine,
@@ -59,7 +52,6 @@ open class ShapeNode private constructor(
         uvScale: UvScale = UvScale(1.0f),
         color: Color? = null,
         materialInstances: List<MaterialInstance?>,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine,
@@ -71,7 +63,6 @@ open class ShapeNode private constructor(
             .color(color)
             .build(engine),
         materialInstances,
-        parent,
         builder
     )
 
@@ -84,7 +75,6 @@ open class ShapeNode private constructor(
         uvScale: UvScale = UvScale(1.0f),
         color: Color? = null,
         materialInstance: MaterialInstance? = null,
-        parent: Node? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine,
@@ -96,7 +86,6 @@ open class ShapeNode private constructor(
             .color(color)
             .build(engine),
         materialInstance,
-        parent,
         builder
     )
 

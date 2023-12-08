@@ -1,34 +1,26 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
-import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
-import io.github.sceneview.Entity
 import io.github.sceneview.geometries.Sphere
 import io.github.sceneview.math.Position
 
 open class SphereNode private constructor(
     engine: Engine,
-    entity: Entity = EntityManager.get().create(),
-    parent: Node? = null,
     override val geometry: Sphere,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
     builder: RenderableManager.Builder.() -> Unit = {}
-) : GeometryNode(engine, entity, parent, geometry, materialInstances, primitivesOffsets, builder) {
+) : GeometryNode(engine, geometry, materialInstances, primitivesOffsets, builder) {
 
     constructor(
         engine: Engine,
-        entity: Entity = EntityManager.get().create(),
-        parent: Node? = null,
         geometry: Sphere,
         materialInstance: MaterialInstance? = null,
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        entity = entity,
-        parent = parent,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
@@ -37,8 +29,6 @@ open class SphereNode private constructor(
 
     constructor(
         engine: Engine,
-        entity: Entity = EntityManager.get().create(),
-        parent: Node? = null,
         radius: Float = Sphere.DEFAULT_RADIUS,
         center: Position = Sphere.DEFAULT_CENTER,
         stacks: Int = Sphere.DEFAULT_STACKS,
@@ -47,8 +37,6 @@ open class SphereNode private constructor(
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        entity = entity,
-        parent = parent,
         geometry = Sphere.Builder()
             .radius(radius)
             .center(center)
@@ -61,8 +49,6 @@ open class SphereNode private constructor(
 
     constructor(
         engine: Engine,
-        entity: Entity = EntityManager.get().create(),
-        parent: Node? = null,
         radius: Float = Sphere.DEFAULT_RADIUS,
         center: Position = Sphere.DEFAULT_CENTER,
         stacks: Int = Sphere.DEFAULT_STACKS,
@@ -71,8 +57,6 @@ open class SphereNode private constructor(
         builder: RenderableManager.Builder.() -> Unit = {}
     ) : this(
         engine = engine,
-        entity = entity,
-        parent = parent,
         geometry = Sphere.Builder()
             .radius(radius)
             .center(center)
