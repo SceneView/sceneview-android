@@ -30,11 +30,15 @@ open class ImageNode private constructor(
     center: Position = Plane.DEFAULT_CENTER,
     normal: Direction = Plane.DEFAULT_NORMAL,
     uvScale: UvScale = UvScale(1.0f),
-    builder: RenderableManager.Builder.() -> Unit = {}
+    builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : PlaneNode(
-    materialLoader.engine,
-    size ?: normalize(Size(bitmap.width.toFloat(), bitmap.height.toFloat())),
-    center, normal, uvScale, materialLoader.createImageInstance(texture, textureSampler), builder
+    engine = materialLoader.engine,
+    size = size ?: normalize(Size(bitmap.width.toFloat(), bitmap.height.toFloat())),
+    center = center,
+    normal = normal,
+    uvScale = uvScale,
+    materialInstance = materialLoader.createImageInstance(texture, textureSampler),
+    builderApply = builderApply
 ) {
     var bitmap = bitmap
         set(value) {
@@ -59,16 +63,22 @@ open class ImageNode private constructor(
         uvScale: UvScale = UvScale(1.0f),
         type: TextureType = ImageTexture.DEFAULT_TYPE,
         textureSampler: TextureSampler = TextureSampler2D(),
-        builder: RenderableManager.Builder.() -> Unit = {},
-        textureBuilder: ImageTexture.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {},
+        textureBuilderApply: ImageTexture.Builder.() -> Unit = {}
     ) : this(
-        materialLoader, bitmap,
-        ImageTexture.Builder()
+        materialLoader = materialLoader,
+        bitmap = bitmap,
+        texture = ImageTexture.Builder()
             .bitmap(bitmap)
             .type(type)
-            .apply(textureBuilder)
+            .apply(textureBuilderApply)
             .build(materialLoader.engine),
-        textureSampler, size, center, normal, uvScale, builder
+        textureSampler = textureSampler,
+        size = size,
+        center = center,
+        normal = normal,
+        uvScale = uvScale,
+        builderApply = builderApply
     )
 
     constructor(
@@ -83,12 +93,19 @@ open class ImageNode private constructor(
         imageFileLocation: String,
         type: TextureType = ImageTexture.DEFAULT_TYPE,
         textureSampler: TextureSampler = TextureSampler2D(),
-        builder: RenderableManager.Builder.() -> Unit = {},
-        textureBuilder: ImageTexture.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {},
+        textureBuilderApply: ImageTexture.Builder.() -> Unit = {}
     ) : this(
-        materialLoader,
-        ImageTexture.getBitmap(materialLoader.assets, imageFileLocation),
-        size, center, normal, uvScale, type, textureSampler, builder, textureBuilder
+        materialLoader = materialLoader,
+        bitmap = ImageTexture.getBitmap(materialLoader.assets, imageFileLocation),
+        size = size,
+        center = center,
+        normal = normal,
+        uvScale = uvScale,
+        type = type,
+        textureSampler = textureSampler,
+        builderApply = builderApply,
+        textureBuilderApply = textureBuilderApply
     )
 
     constructor(
@@ -103,12 +120,19 @@ open class ImageNode private constructor(
         @DrawableRes imageResId: Int,
         type: TextureType = ImageTexture.DEFAULT_TYPE,
         textureSampler: TextureSampler = TextureSampler2D(),
-        builder: RenderableManager.Builder.() -> Unit = {},
-        textureBuilder: ImageTexture.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {},
+        textureBuilderApply: ImageTexture.Builder.() -> Unit = {}
     ) : this(
-        materialLoader,
-        ImageTexture.getBitmap(materialLoader.context, imageResId),
-        size, center, normal, uvScale, type, textureSampler, builder, textureBuilder
+        materialLoader = materialLoader,
+        bitmap = ImageTexture.getBitmap(materialLoader.context, imageResId),
+        size = size,
+        center = center,
+        normal = normal,
+        uvScale = uvScale,
+        type = type,
+        textureSampler = textureSampler,
+        builderApply = builderApply,
+        textureBuilderApply = textureBuilderApply
     )
 
     fun setBitmap(fileLocation: String, type: TextureType = ImageTexture.DEFAULT_TYPE) {

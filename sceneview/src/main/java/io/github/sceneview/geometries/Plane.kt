@@ -14,7 +14,7 @@ class Plane private constructor(
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
-    indices: List<PrimitiveIndices>,
+    indices: List<List<Int>>,
     indexBuffer: IndexBuffer,
     primitivesOffsets: List<IntRange>,
     boundingBox: Box,
@@ -70,7 +70,7 @@ class Plane private constructor(
 
         override fun build(engine: Engine): Plane {
             vertices(getVertices(size, center, normal, uvScale))
-            indices(INDICES)
+            primitivesIndices(INDICES)
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Plane(
                     engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
@@ -147,7 +147,7 @@ class Plane private constructor(
         )
 
         val INDICES = listOf(
-            PrimitiveIndices(
+            listOf(
                 // First triangle for this side.
                 3, 1, 0,
                 // Second triangle for this side.

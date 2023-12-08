@@ -8,24 +8,26 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 open class CubeNode private constructor(
-    engine: Engine,
     override val geometry: Cube,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
-    builder: RenderableManager.Builder.() -> Unit = {}
-) : GeometryNode(engine, geometry, materialInstances, primitivesOffsets, builder) {
+    builderApply: RenderableManager.Builder.() -> Unit = {}
+) : GeometryNode(
+    geometry = geometry,
+    materialInstances = materialInstances,
+    primitivesOffsets = primitivesOffsets,
+    builderApply = builderApply
+) {
 
     constructor(
-        engine: Engine,
         geometry: Cube,
         materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine = engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
-        builder = builder
+        builderApply = builderApply
     )
 
     constructor(
@@ -33,15 +35,14 @@ open class CubeNode private constructor(
         size: Size = Cube.DEFAULT_SIZE,
         center: Position = Cube.DEFAULT_CENTER,
         materialInstances: List<MaterialInstance?>,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine = engine,
         geometry = Cube.Builder()
             .size(size)
             .center(center)
             .build(engine),
         materialInstances = materialInstances,
-        builder = builder
+        builderApply = builderApply
     )
 
     constructor(
@@ -49,15 +50,14 @@ open class CubeNode private constructor(
         size: Size = Cube.DEFAULT_SIZE,
         center: Position = Cube.DEFAULT_CENTER,
         materialInstance: MaterialInstance? = null,
-        builder: RenderableManager.Builder.() -> Unit = {}
+        builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
-        engine = engine,
         geometry = Cube.Builder()
             .size(size)
             .center(center)
             .build(engine),
         materialInstance = materialInstance,
-        builder = builder
+        builderApply = builderApply
     )
 
     fun updateGeometry(

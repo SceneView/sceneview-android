@@ -41,11 +41,11 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Sphere
  */
 open class Geometry internal constructor(
-    protected val engine: Engine,
+    internal val engine: Engine,
     val primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     val vertexBuffer: VertexBuffer,
-    indices: List<PrimitiveIndices>,
+    primitivesIndices: List<List<Int>>,
     val indexBuffer: IndexBuffer,
     var primitivesOffsets: List<IntRange>,
     var boundingBox: Box
@@ -63,21 +63,21 @@ open class Geometry internal constructor(
         val color: Color? = null
     )
 
-    /**
-     * Represents a Submesh for a Geometry.
-     *
-     * Each Geometry may have multiple Submeshes.
-     */
-    data class PrimitiveIndices(val indices: List<Int>) {
-        constructor(vararg indices: Int) : this(indices.toList())
-    }
+//    /**
+//     * Represents a Submesh for a Geometry.
+//     *
+//     * Each Geometry may have multiple Submeshes.
+//     */
+//    data class PrimitiveIndices(val indices: List<Int>) {
+//        constructor(vararg indices: Int) : this(indices.toList())
+//    }
 
     open class Builder(val primitiveType: PrimitiveType = PrimitiveType.TRIANGLES) {
         protected val vertexBuilder = VertexBuffer.Builder()
         protected val indexBuilder = IndexBuffer.Builder()
 
         protected var vertices: List<Vertex> = listOf()
-        protected var indices: List<PrimitiveIndices> = listOf()
+        protected var indices: List<List<Int>> = listOf()
 
         fun vertices(vertices: List<Vertex>) = apply {
             vertexBuilder.bufferCount(
@@ -135,11 +135,13 @@ open class Geometry internal constructor(
             this.vertices = vertices
         }
 
-        fun indices(indices: List<PrimitiveIndices>) = apply {
-            indexBuilder.indexCount(indices.sumOf { it.indices.size })
+        fun primitivesIndices(indices: List<List<Int>>) = apply {
+            indexBuilder.indexCount(indices.sumOf { it.size })
                 .bufferType(IndexBuffer.Builder.IndexType.UINT)
             this.indices = indices
         }
+
+        fun indices(indices: List<Int>) = primitivesIndices(listOf(indices))
 
         fun <T : Geometry> build(
             engine: Engine,
@@ -180,22 +182,28 @@ open class Geometry internal constructor(
             }
         }
 
-    var indices: List<PrimitiveIndices> = indices
+    var primitivesIndices: List<List<Int>> = primitivesIndices
         set(value) {
             if (field != value) {
                 field = value
-                indexBuffer.setIndices(engine, indices.flatMap { it.indices }).also {
-                    primitivesOffsets = indices.getOffsets()
+                indexBuffer.setIndices(engine, primitivesIndices.flatMap { it.indices }).also {
+                    primitivesOffsets = primitivesIndices.getOffsets()
                 }
             }
         }
 
+    var indices: List<Int>
+        get() = primitivesIndices.flatten()
+        set(value) {
+            primitivesIndices = listOf(value)
+        }
+
     fun update(
         vertices: List<Vertex> = this.vertices,
-        indices: List<PrimitiveIndices> = this.indices
+        indices: List<List<Int>> = this.primitivesIndices
     ) = apply {
         this.vertices = vertices
-        this.indices = indices
+        this.primitivesIndices = indices
     }
 
     fun destroy() {
@@ -287,11 +295,11 @@ fun IndexBuffer.setIndices(
 }
 
 
-fun List<Geometry.PrimitiveIndices>.getOffsets(): List<IntRange> {
+fun List<List<Int>>.getOffsets(): List<IntRange> {
     var indexStart = 0
-    return map { primitive ->
-        (indexStart until indexStart + primitive.indices.size).also {
-            indexStart += primitive.indices.size
+    return map { primitiveIndices ->
+        (indexStart until indexStart + primitiveIndices.size).also {
+            indexStart += primitiveIndices.size
         }
     }
 }
