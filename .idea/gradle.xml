@@ -21,6 +21,7 @@
             <option value="$PROJECT_DIR$/samples/ar-point-cloud" />
             <option value="$PROJECT_DIR$/samples/common" />
             <option value="$PROJECT_DIR$/samples/model-viewer" />
+            <option value="$PROJECT_DIR$/samples/model-viewer-compose" />
             <option value="$PROJECT_DIR$/sceneview" />
           </set>
         </option>
