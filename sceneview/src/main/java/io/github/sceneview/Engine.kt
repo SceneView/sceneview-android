@@ -16,12 +16,14 @@ import com.google.android.filament.Texture
 import com.google.android.filament.VertexBuffer
 import com.google.android.filament.View
 import com.google.android.filament.gltfio.AssetLoader
+import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.model.Model
 
 fun Engine.createModelLoader(context: Context) = ModelLoader(this, context)
 fun Engine.createMaterialLoader(context: Context) = MaterialLoader(this, context)
+fun Engine.createEnvironmentLoader(context: Context) = EnvironmentLoader(this, context)
 
 fun Engine.createCamera() = createCamera(entityManager.create())
 

@@ -1,4 +1,4 @@
-package io.github.sceneview.ar.arcore
+package io.github.sceneview.ar.light
 
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
@@ -8,7 +8,7 @@ import com.google.ar.core.Frame
 import com.google.ar.core.LightEstimate
 import com.google.ar.core.Session
 import dev.romainguy.kotlin.math.max
-import io.github.sceneview.environment.IBLPrefilter
+import io.github.sceneview.loaders.IBLPrefilter
 import io.github.sceneview.math.Color
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.toLinearSpace

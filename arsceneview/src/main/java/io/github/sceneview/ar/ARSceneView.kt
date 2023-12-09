@@ -14,8 +14,6 @@ import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
-import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.KTX1Loader
 import com.google.ar.core.Camera
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfig.FacingDirection
@@ -27,21 +25,23 @@ import com.google.ar.core.Point
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
-import io.github.sceneview.Scene
 import io.github.sceneview.SceneView
-import io.github.sceneview.ar.arcore.LightEstimator
 import io.github.sceneview.ar.arcore.configure
 import io.github.sceneview.ar.arcore.firstByTypeOrNull
 import io.github.sceneview.ar.arcore.getUpdatedTrackables
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.camera.ARCameraStream
+import io.github.sceneview.ar.light.LightEstimator
 import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.ar.node.PoseNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.gesture.GestureDetector
+import io.github.sceneview.loaders.Environment
+import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.math.colorOf
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
@@ -76,6 +76,14 @@ open class ARSceneView @JvmOverloads constructor(
      * Materials function as a templates from which [MaterialInstance]s can be spawned.
      */
     sharedMaterialLoader: MaterialLoader? = null,
+    /**
+     * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
+     * IBLs, and sky boxes.
+     *
+     * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
+     * into a single file.
+     */
+    sharedEnvironmentLoader: EnvironmentLoader? = null,
     /**
      * Provide your own instance if you want to share [Node]s' scene between multiple views.
      */
@@ -113,30 +121,24 @@ open class ARSceneView @JvmOverloads constructor(
      */
     sharedMainLightNode: LightNode? = null,
     /**
-     * IndirectLight is used to simulate environment lighting.
+     * Defines the lighting environment and the skybox of the scene.
      *
-     * Environment lighting has a two components:
-     * - irradiance
-     * - reflections (specular component)
+     * Environments are usually captured as high-resolution HDR equirectangular images and processed
+     * by the cmgen tool to generate the data needed by IndirectLight.
      *
-     * @see IndirectLight
-     * @see Scene.setIndirectLight
-     * @see HDRLoader
-     * @see KTX1Loader
+     * You can also process an hdr at runtime but this is more consuming.
+     *
+     * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
+     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
+     * mountains.
+     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
+     * future.
+     *
+     * - When added to a Scene, the Skybox fills all untouched pixels.
+     *
+     * @see [EnvironmentLoader]
      */
-    sharedIndirectLight: IndirectLight? = null,
-    /**
-     * The Skybox is drawn last and covers all pixels not touched by geometry.
-     *
-     * When added to a [SceneView], the `Skybox` fills all untouched pixels.
-     *
-     * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
-     *
-     * @see HDRLoader
-     * @see KTX1Loader
-     * @see Skybox
-     */
-    sharedSkybox: Skybox? = null,
+    sharedEnvironment: Environment? = null,
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
@@ -227,13 +229,13 @@ open class ARSceneView @JvmOverloads constructor(
     sharedEngine,
     sharedModelLoader,
     sharedMaterialLoader,
+    sharedEnvironmentLoader,
     sharedScene,
     sharedView,
     sharedRenderer,
     sharedCameraNode,
     sharedMainLightNode,
-    sharedIndirectLight,
-    sharedSkybox,
+    sharedEnvironment,
     sharedCollisionSystem,
     sharedGestureDetector,
     sharedOnGestureListener
@@ -326,7 +328,7 @@ open class ARSceneView @JvmOverloads constructor(
      * - Environment handles a reflections, indirect lighting and skybox.
      * - ARCore will estimate the direction, the intensity and the color of the light
      */
-    var lightEstimator: LightEstimator? = LightEstimator(engine, iblPrefilter)
+    var lightEstimator: LightEstimator? = LightEstimator(engine, environmentLoader.iblPrefilter)
 
     var lightEstimation: LightEstimator.Estimation? = null
         private set(value) {
@@ -390,9 +392,10 @@ open class ARSceneView @JvmOverloads constructor(
     private var defaultCameraStream: ARCameraStream? = null
 
     init {
-        setCameraNode(sharedCameraNode ?: createCameraNode(engine).also {
+        setCameraNode(sharedCameraNode ?: createARCameraNode(engine).also {
             defaultCameraNode = it
         })
+        environment = sharedEnvironment ?: createAREnvironment(environmentLoader)
         sharedLifecycle?.addObserver(lifecycleObserver)
     }
 
@@ -577,7 +580,6 @@ open class ARSceneView @JvmOverloads constructor(
         }
     }
 
-
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
         override fun onCreate(owner: LifecycleOwner) {
             arCore.create(context, activity, sessionFeatures)
@@ -597,9 +599,19 @@ open class ARSceneView @JvmOverloads constructor(
     }
 
     companion object {
-        fun createCameraNode(engine: Engine): ARCameraNode = DefaultARCameraNode(engine)
+        fun createARCameraNode(engine: Engine): ARCameraNode = DefaultARCameraNode(engine)
 
-        fun createCameraStream(engine: Engine, materialLoader: MaterialLoader) =
-            ARCameraStream(engine, materialLoader)
+        fun createARCameraStream(materialLoader: MaterialLoader) = ARCameraStream(materialLoader)
+
+        fun createAREnvironment(environmentLoader: EnvironmentLoader) =
+//            indirectLight = IndirectLight.Builder()
+//                .intensity(100_0000.0f)
+//                .irradiance(1, colorOf(rgb = 1.0f).toFloatArray())
+//                .build(environmentLoader.engine),
+            createEnvironment(environmentLoader).copy(
+                skybox = Skybox.Builder()
+                    .color(colorOf(rgb = 0.0f).toFloatArray())
+                    .build(environmentLoader.engine)
+            )
     }
 }
