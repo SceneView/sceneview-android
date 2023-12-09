@@ -168,7 +168,7 @@ fun ARScene(
      *
      * Use it to control if the occlusion should be enabled or disabled
      */
-    cameraStream: ARCameraStream? = rememberCameraStream(engine, materialLoader),
+    cameraStream: ARCameraStream? = rememberCameraStream(materialLoader),
     /**
      * Fundamental session features that can be requested.
      * @see Session.Feature
@@ -311,12 +311,11 @@ fun rememberARCameraNode(
 
 @Composable
 fun rememberCameraStream(
-    engine: Engine,
     materialLoader: MaterialLoader,
     creator: () -> ARCameraStream = {
-        ARSceneView.createCameraStream(engine, materialLoader)
+        ARSceneView.createARCameraStream(materialLoader)
     }
-) = remember(engine, creator).also { cameraStream ->
+) = remember(materialLoader, creator).also { cameraStream ->
     DisposableEffect(cameraStream) {
         onDispose {
             cameraStream.destroy()

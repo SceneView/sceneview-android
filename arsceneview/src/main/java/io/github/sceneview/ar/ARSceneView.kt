@@ -277,7 +277,7 @@ open class ARSceneView @JvmOverloads constructor(
      * Use it to control if the occlusion should be enabled or disabled
      */
     var cameraStream: ARCameraStream? =
-        sharedCameraStream ?: createCameraStream(engine, materialLoader).also {
+        sharedCameraStream ?: createARCameraStream(materialLoader).also {
             defaultCameraStream = it
         }
         set(value) {

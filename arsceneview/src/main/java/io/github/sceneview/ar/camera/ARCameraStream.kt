@@ -39,11 +39,12 @@ const val kDepthTextureParameter = "depthTexture"
  * Displays the Camera stream using Filament.
  */
 open class ARCameraStream(
-    final override val engine: Engine,
     private val materialLoader: MaterialLoader,
     standardMaterialFile: String = "materials/camera_stream_flat.filamat",
     depthOcclusionMaterialFile: String = "materials/camera_stream_depth.filamat",
 ) : RenderableComponent {
+
+    final override val engine: Engine = materialLoader.engine
 
 //    /**
 //     * Changes the coarse-level camera draw ordering
