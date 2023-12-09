@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AR Model Viewer Compose</string>
+    <string name="point_your_phone_down">Point your phone down at an empty space, and move it around slowly</string>
+    <string name="tap_anywhere_to_add_model">Tap anywhere to add model</string>
+</resources>
