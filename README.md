@@ -16,7 +16,7 @@ A Sceneform replacement in Kotlin and Jetpack Compose
 
 *app/build.gradle*
 
-#### 3D (Filament included)
+### 3D (Filament included)
 
 ```gradle
 dependencies {
@@ -26,7 +26,7 @@ dependencies {
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
-#### AR (Filament + ARCore included)
+### AR (Filament + ARCore included)
 
 ```gradle
 dependencies {
