@@ -38,11 +38,9 @@ dependencies {
 
 ## Usage
 
-### 3D ModelViewer
+### 3D Model Viewer
 
 ```kotlin
-// The destroy calls are automatically made when their disposable effect leaves
-// the composition or its key changes.
 val engine = rememberEngine()
 val modelLoader = rememberModelLoader(engine)
 val environmentLoader = rememberEnvironmentLoader(engine)
@@ -61,38 +59,20 @@ Scene(
 ```
 [Sample](https://github.com/SceneView/sceneview-android/tree/main/samples/model-viewer-compose)
 
-### AR ModelViewer
+### AR Model Viewer
 
 ```kotlin
-// The destroy calls are automatically made when their disposable effect leaves
-// the composition or its key changes.
 val engine = rememberEngine()
 val modelLoader = rememberModelLoader(engine)
 val model = modelLoader.createModel("model.glb")
-val childNodes = rememberNodes()
 var frame by remember { mutableStateOf<Frame?>(null) }
-var trackingFailureReason by remember {
-    mutableStateOf<TrackingFailureReason?>(null)
-}
+val childNodes = rememberNodes()
 ARScene(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
-    sessionConfiguration = { session, config ->
-        config.depthMode =
-        when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-            true -> Config.DepthMode.AUTOMATIC
-            else -> Config.DepthMode.DISABLED
-        }
-        config.instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
-        config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-    },
-    planeRenderer = true,
     onSessionUpdated = { session, updatedFrame ->
         frame = updatedFrame
-    },
-    onTrackingFailureChanged = {
-        trackingFailureReason = it
     },
     onGestureListener = rememberOnGestureListener(
         onSingleTapConfirmed = { motionEvent, node ->
@@ -102,20 +82,11 @@ ARScene(
             }?.createAnchorOrNull()
 
             if (anchor != null) {
-                childNodes += AnchorNode(
-                    engine = engine,
-                    anchor = anchor
-                ).apply {
-                    addChildNode(ModelNode(
-                        modelInstance = modelLoader.createInstance(model)!!,
-                        // Scale to fit in a 0.5 meters cube
-                        scaleToUnits = 0.5f
-                    ).apply {
-                        // Model Node needs to be editable for independent rotation from the anchor
-                        // rotation
-                        isEditable = true
-                    } )
-                }
+                val anchorNode = AnchorNode(engine = engine, anchor = anchor)
+                anchorNode.addChildNode(
+                    ModelNode(modelInstance = modelLoader.createInstance(model)!!)
+                )
+                childNodes += anchorNode
             }
         }
     )
