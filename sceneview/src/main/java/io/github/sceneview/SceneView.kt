@@ -18,15 +18,11 @@ import com.google.android.filament.View.*
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.Gltfio
-import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.KTX1Loader
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
-import io.github.sceneview.environment.Environment
-import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.HitTestGestureDetector
@@ -36,9 +32,10 @@ import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.orbitHomePosition
 import io.github.sceneview.gesture.targetPosition
 import io.github.sceneview.gesture.transform
+import io.github.sceneview.loaders.Environment
+import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
-import io.github.sceneview.loaders.loadEnvironment
 import io.github.sceneview.managers.color
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
@@ -50,7 +47,6 @@ import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.utils.*
-import com.google.android.filament.utils.KTX1Loader as KTXLoader
 
 typealias Entity = Int
 typealias EntityInstance = Int
@@ -90,6 +86,14 @@ open class SceneView @JvmOverloads constructor(
      */
     sharedMaterialLoader: MaterialLoader? = null,
     /**
+     * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
+     * IBLs, and sky boxes.
+     *
+     * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
+     * into a single file.
+     */
+    sharedEnvironmentLoader: EnvironmentLoader? = null,
+    /**
      * Provide your own instance if you want to share [Node]s' scene between multiple views.
      */
     sharedScene: Scene? = null,
@@ -126,30 +130,24 @@ open class SceneView @JvmOverloads constructor(
      */
     sharedMainLightNode: LightNode? = null,
     /**
-     * IndirectLight is used to simulate environment lighting.
+     * Defines the lighting environment and the skybox of the scene.
      *
-     * Environment lighting has a two components:
-     * - irradiance
-     * - reflections (specular component)
+     * Environments are usually captured as high-resolution HDR equirectangular images and processed
+     * by the cmgen tool to generate the data needed by IndirectLight.
      *
-     * @see IndirectLight
-     * @see Scene.setIndirectLight
-     * @see HDRLoader
-     * @see KTX1Loader
+     * You can also process an hdr at runtime but this is more consuming.
+     *
+     * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
+     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
+     * mountains.
+     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
+     * future.
+     *
+     * - When added to a Scene, the Skybox fills all untouched pixels.
+     *
+     * @see [EnvironmentLoader]
      */
-    sharedIndirectLight: IndirectLight? = null,
-    /**
-     * The Skybox is drawn last and covers all pixels not touched by geometry.
-     *
-     * When added to a [SceneView], the `Skybox` fills all untouched pixels.
-     *
-     * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
-     *
-     * @see HDRLoader
-     * @see KTX1Loader
-     * @see Skybox
-     */
-    sharedSkybox: Skybox? = null,
+    sharedEnvironment: Environment? = null,
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
@@ -173,12 +171,54 @@ open class SceneView @JvmOverloads constructor(
         createEngine(it).also { defaultEngine = it }
     }
 
+    val modelLoader = sharedModelLoader ?: createModelLoader(engine, context).also {
+        defaultModelLoader = it
+    }
+    val materialLoader = sharedMaterialLoader ?: createMaterialLoader(engine, context).also {
+        defaultMaterialLoader = it
+    }
+
+    /**
+     * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
+     * IBLs, and sky boxes.
+     *
+     * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
+     * into a single file.
+     */
+    val environmentLoader = sharedEnvironmentLoader
+        ?: createEnvironmentLoader(engine, context).also { defaultEnvironmentLoader = it }
+
+    /**
+     * Defines the lighting environment and the skybox of the scene.
+     *
+     * Environments are usually captured as high-resolution HDR equirectangular images and processed
+     * by the cmgen tool to generate the data needed by IndirectLight.
+     *
+     * You can also process an hdr at runtime but this is more consuming.
+     *
+     * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
+     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
+     * mountains.
+     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
+     * future.
+     *
+     * - When added to a Scene, the Skybox fills all untouched pixels.
+     *
+     * @see [EnvironmentLoader]
+     */
+    var environment = sharedEnvironment ?: createEnvironment(environmentLoader)
+        set(value) {
+            if (field != value) {
+                field = value
+                indirectLight = environment.indirectLight
+                skybox = environment.skybox
+            }
+        }
+
     val view = (sharedView ?: createView(engine)).also { defaultView = it }.apply {
         scene = (sharedScene ?: createScene(engine).also { defaultScene = it }).apply {
-            skybox = sharedSkybox ?: createSkybox(engine).also { defaultSkybox = it }
-            indirectLight = sharedIndirectLight ?: createIndirectLight(engine).also {
-                defaultIndirectLight = it
-            }
+            skybox = environment.skybox
+            indirectLight = environment.indirectLight
         }
     }
     var scene
@@ -190,19 +230,12 @@ open class SceneView @JvmOverloads constructor(
         }
     val renderer = sharedRenderer ?: createRenderer(engine).also { defaultRenderer = it }
 
-    val modelLoader = sharedModelLoader ?: createModelLoader(engine, context).also {
-        defaultModelLoader = it
-    }
-    val materialLoader = sharedMaterialLoader ?: createMaterialLoader(engine, context).also {
-        defaultMaterialLoader = it
-    }
+    private var defaultEnvironmentLoader: EnvironmentLoader? = null
 
     val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
         renderCallback = SurfaceCallback()
         attachTo(this@SceneView)
     }
-
-    val iblPrefilter = IBLPrefilter(engine)
 
     protected var _cameraNode: CameraNode? = null
 
@@ -241,8 +274,8 @@ open class SceneView @JvmOverloads constructor(
      * - irradiance
      * - reflections (specular component)
      *
-     * @see IndirectLight
-     * @see Scene.setIndirectLight
+     * @see IndirectLight.Builder
+     * @see EnvironmentLoader
      */
     open var indirectLight: IndirectLight?
         get() = scene.indirectLight
@@ -259,8 +292,8 @@ open class SceneView @JvmOverloads constructor(
      *
      * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
      *
-     * @see Skybox
-     * @see Scene.setSkybox
+     * @see Skybox.Builder
+     * @see ModelLoader
      */
     var skybox: Skybox?
         get() = scene.skybox
@@ -268,32 +301,6 @@ open class SceneView @JvmOverloads constructor(
             if (scene.skybox != value) {
                 scene.skybox = value
             }
-        }
-
-    /**
-     * Defines the lighting environment and the skybox of the scene.
-     *
-     * Environments are usually captured as high-resolution HDR equirectangular images and processed
-     * by the cmgen tool to generate the data needed by IndirectLight.
-     *
-     * You can also process an hdr at runtime but this is more consuming.
-     *
-     * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
-     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
-     * mountains.
-     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
-     * future.
-     *
-     * - When added to a Scene, the Skybox fills all untouched pixels.
-     *
-     * @see [KTXLoader.loadEnvironment]
-     * @see [HDRLoader.loadEnvironment]
-     */
-    open var environment: Environment? = null
-        set(value) {
-            field = value
-            indirectLight = value?.indirectLight
-            skybox = value?.skybox
         }
 
     var childNodes = setOf<Node>()
@@ -425,8 +432,6 @@ open class SceneView @JvmOverloads constructor(
     private var defaultMaterialLoader: MaterialLoader? = null
     private var defaultCameraNode: CameraNode? = null
     private var defaultMainLight: LightNode? = null
-    private var defaultIndirectLight: IndirectLight? = null
-    private var defaultSkybox: Skybox? = null
 
     init {
         _mainLightNode?.let { addNode(it) }
@@ -577,15 +582,13 @@ open class SceneView @JvmOverloads constructor(
 
             defaultCameraNode?.destroy()
             defaultMainLight?.destroy()
-            defaultIndirectLight?.let { engine.safeDestroyIndirectLight(it) }
-            defaultSkybox?.let { engine.safeDestroySkybox(it) }
 
 //        runCatching { ResourceManager.getInstance().destroyAllResources() }
 
             defaultRenderer?.let { engine.safeDestroyRenderer(it) }
             defaultView?.let { engine.safeDestroyView(it) }
             defaultScene?.let { engine.safeDestroyScene(it) }
-            iblPrefilter.destroy()
+            defaultEnvironmentLoader?.destroy()
             defaultMaterialLoader?.let { engine.safeDestroyMaterialLoader(it) }
             defaultModelLoader?.let { engine.safeDestroyModelLoader(it) }
 
@@ -858,14 +861,6 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    class DefaultSkybox {
-        class Builder : Skybox.Builder() {
-            init {
-                color(0.0f, 0.0f, 0.0f, 1.0f)
-            }
-        }
-    }
-
     class DefaultCameraNode(engine: Engine) : CameraNode(engine) {
         init {
             transform = Transform(position = Position(0.0f, 0.0f, 1.0f))
@@ -950,13 +945,18 @@ open class SceneView @JvmOverloads constructor(
         fun createMaterialLoader(engine: Engine, context: Context) =
             engine.createMaterialLoader(context)
 
+        fun createEnvironmentLoader(engine: Engine, context: Context) =
+            engine.createEnvironmentLoader(context)
+
         fun createCameraNode(engine: Engine): CameraNode = DefaultCameraNode(engine)
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
 
-        fun createIndirectLight(engine: Engine): IndirectLight? = null
-        fun createSkybox(engine: Engine): Skybox = DefaultSkybox.Builder()
-            .build(engine)
+        fun createEnvironment(environmentLoader: EnvironmentLoader) =
+            environmentLoader.createKTX1Environment(
+                iblAssetFile = "environments/neutral/neutral_ibl.ktx",
+                skyboxAssetFile = "environments/neutral/neutral_skybox.ktx"
+            )
 
-        fun createCollisionSystem(view: View): CollisionSystem = CollisionSystem(view)
+        fun createCollisionSystem(view: View) = CollisionSystem(view)
     }
 }

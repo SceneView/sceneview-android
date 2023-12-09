@@ -85,7 +85,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             sessionConfiguration = { session, config ->
                 config.lightEstimationMode = Config.LightEstimationMode.DISABLED
             }
-            environment = null
             onSessionUpdated = this@MainFragment::onSessionUpdated
         }
 

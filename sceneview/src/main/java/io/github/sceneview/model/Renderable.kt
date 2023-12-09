@@ -4,7 +4,6 @@ import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.filament.Engine
 import com.google.android.filament.utils.HDRLoader
 import com.google.ar.sceneform.rendering.Renderable
-import io.github.sceneview.loaders.loadEnvironment
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.future.asDeferred

@@ -22,10 +22,7 @@ import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
-import com.google.android.filament.Skybox
 import com.google.android.filament.View
-import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.KTX1Loader
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.gesture.GestureDetector
@@ -35,8 +32,12 @@ import io.github.sceneview.gesture.PickGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.SelectedNodeGestureDetector
+import io.github.sceneview.loaders.Environment
+import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
@@ -45,10 +46,6 @@ import io.github.sceneview.utils.destroy
 @Composable
 fun Scene(
     modifier: Modifier = Modifier,
-    /**
-     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
-     */
-    childNodes: List<Node> = rememberNodes(),
     /**
      * Provide your own instance if you want to share Filament resources between multiple views.
      */
@@ -66,6 +63,51 @@ fun Scene(
      * Materials function as a templates from which [MaterialInstance]s can be spawned.
      */
     materialLoader: MaterialLoader = rememberMaterialLoader(engine),
+    /**
+     * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
+     * IBLs, and sky boxes.
+     *
+     * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
+     * into a single file.
+     */
+    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
+    /**
+     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+     */
+    childNodes: List<Node> = rememberNodes(),
+    /**
+     * Represents a virtual camera, which determines the perspective through which the scene is
+     * viewed.
+     *
+     * All other functionality in Node is supported. You can access the position and rotation of the
+     * camera, assign a collision shape to it, or add children to it.
+     */
+    cameraNode: CameraNode = rememberCameraNode(engine),
+    /**
+     * Always add a direct light source since it is required for shadowing.
+     *
+     * We highly recommend adding an [IndirectLight] as well.
+     */
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    /**
+     * Defines the lighting environment and the skybox of the scene.
+     *
+     * Environments are usually captured as high-resolution HDR equirectangular images and processed
+     * by the cmgen tool to generate the data needed by IndirectLight.
+     *
+     * You can also process an hdr at runtime but this is more consuming.
+     *
+     * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
+     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
+     * mountains.
+     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
+     * future.
+     *
+     * - When added to a Scene, the Skybox fills all untouched pixels.
+     *
+     * @see [EnvironmentLoader]
+     */
+    environment: Environment = rememberEnvironment(environmentLoader),
     /**
      * Provide your own instance if you want to share [Node]s' scene between multiple views.
      */
@@ -88,45 +130,6 @@ fun Scene(
      * commands for the render thread and manages frame latency.
      */
     renderer: Renderer = rememberRenderer(engine),
-    /**
-     * Represents a virtual camera, which determines the perspective through which the scene is
-     * viewed.
-     *
-     * All other functionality in Node is supported. You can access the position and rotation of the
-     * camera, assign a collision shape to it, or add children to it.
-     */
-    cameraNode: CameraNode = rememberCameraNode(engine),
-    /**
-     * Always add a direct light source since it is required for shadowing.
-     *
-     * We highly recommend adding an [IndirectLight] as well.
-     */
-    mainLightNode: LightNode? = rememberMainLightNode(engine),
-    /**
-     * IndirectLight is used to simulate environment lighting.
-     *
-     * Environment lighting has a two components:
-     * - irradiance
-     * - reflections (specular component)
-     *
-     * @see IndirectLight
-     * @see Scene.setIndirectLight
-     * @see HDRLoader
-     * @see KTX1Loader
-     */
-    indirectLight: IndirectLight? = rememberIndirectLight(engine),
-    /**
-     * The Skybox is drawn last and covers all pixels not touched by geometry.
-     *
-     * When added to a [SceneView], the `Skybox` fills all untouched pixels.
-     *
-     * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
-     *
-     * @see HDRLoader
-     * @see KTX1Loader
-     * @see Skybox
-     */
-    skybox: Skybox? = rememberSkybox(engine),
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
@@ -176,13 +179,13 @@ fun Scene(
                     engine,
                     modelLoader,
                     materialLoader,
+                    environmentLoader,
                     scene,
                     view,
                     renderer,
                     cameraNode,
                     mainLightNode,
-                    indirectLight,
-                    skybox,
+                    environment,
                     collisionSystem,
                     gestureDetector,
                     onGestureListener,
@@ -195,8 +198,7 @@ fun Scene(
                 sceneView.scene = scene
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode
-                sceneView.indirectLight = indirectLight
-                sceneView.skybox = skybox
+                sceneView.environment = environment
                 sceneView.gestureDetector = gestureDetector
                 sceneView.onGestureListener = onGestureListener
                 sceneView.onFrame = onFrame
@@ -311,6 +313,21 @@ fun rememberMaterialLoader(
 }
 
 @Composable
+fun rememberEnvironmentLoader(
+    engine: Engine,
+    context: Context = LocalContext.current,
+    creator: () -> EnvironmentLoader = {
+        SceneView.createEnvironmentLoader(engine, context)
+    }
+) = remember(engine, context, creator).also { environmentLoader ->
+    DisposableEffect(environmentLoader) {
+        onDispose {
+            environmentLoader.destroy()
+        }
+    }
+}
+
+@Composable
 fun rememberCameraNode(
     engine: Engine,
     creator: () -> CameraNode = {
@@ -327,33 +344,18 @@ fun rememberMainLightNode(
 ) = rememberNode(creator)
 
 @Composable
-fun rememberIndirectLight(
-    engine: Engine,
-    creator: () -> IndirectLight? = {
-        SceneView.createIndirectLight(engine)
+fun rememberEnvironment(
+    environmentLoader: EnvironmentLoader,
+    creator: () -> Environment = {
+        SceneView.createEnvironment(environmentLoader)
     }
-) = remember(engine, creator)?.also { indirectLight ->
-    DisposableEffect(indirectLight) {
+) = remember(environmentLoader, creator).also { environment ->
+    DisposableEffect(environment) {
         onDispose {
-            engine.safeDestroyIndirectLight(indirectLight)
+            environmentLoader.destroyEnvironment(environment)
         }
     }
 }
-
-@Composable
-fun rememberSkybox(
-    engine: Engine,
-    creator: () -> Skybox = {
-        SceneView.createSkybox(engine)
-    }
-) = remember(engine, creator).also { skybox ->
-    DisposableEffect(skybox) {
-        onDispose {
-            engine.safeDestroySkybox(skybox)
-        }
-    }
-}
-
 
 @Composable
 fun rememberCollisionSystem(

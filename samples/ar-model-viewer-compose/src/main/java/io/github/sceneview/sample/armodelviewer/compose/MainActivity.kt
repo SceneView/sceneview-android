@@ -62,11 +62,13 @@ class MainActivity : ComponentActivity() {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    val childNodes = rememberNodes()
+                    // The destroy calls are automatically made when their disposable effect leaves
+                    // the composition or its key changes.
                     val engine = rememberEngine()
                     val modelLoader = rememberModelLoader(engine)
                     val materialLoader = rememberMaterialLoader(engine)
                     val cameraNode = rememberARCameraNode(engine)
+                    val childNodes = rememberNodes()
                     val view = rememberView(engine)
                     val collisionSystem = rememberCollisionSystem(view)
 
