@@ -2,12 +2,12 @@
 
 ### 3D and AR Android `@Composable` and layout view with Google Filament and ARCore
 
-This is a Sceneform replacement in Kotlin and Jetpack Compose
+A Sceneform replacement in Kotlin and Jetpack Compose
 
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Sceneview%20-%20Maven%20Central&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
 
-[![Filament](https://img.shields.io/badge/Filament-1.45.0-yellow)](https://github.com/google/filament)
-[![Maven Central](https://img.shields.io/badge/ARCore-1.40.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
+[![Filament](https://img.shields.io/badge/Filament-v1.45.0-yellow)](https://github.com/google/filament)
+[![ARCore](https://img.shields.io/badge/ARCore-v1.40.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 [![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
@@ -16,31 +16,29 @@ This is a Sceneform replacement in Kotlin and Jetpack Compose
 
 *app/build.gradle*
 
+#### 3D (Filament included)
+
+```gradle
+dependencies {
+    // Sceneview
+    implementation 'io.github.sceneview:sceneview:1.2.5'
+}
+```
+[API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
+
 #### AR (Filament + ARCore included)
 
 ```gradle
 dependencies {
-    // 3D and ARCore
+    // ARSceneview
     implementation 'io.github.sceneview:arsceneview:1.2.5'
 }
 ```
-
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
-
-#### 3D only (Filament included)
-
-```gradle
-dependencies {
-    // 3D only
-    implementation 'io.github.sceneview:sceneview:1.2.5'
-}
-```
-
-[API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
 ## Usage
 
-### 3D
+### 3D ModelViewer
 
 - Compose
 
