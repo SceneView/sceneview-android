@@ -25,6 +25,7 @@ import com.google.android.filament.Scene
 import com.google.android.filament.View
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.HitTestGestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
@@ -32,7 +33,6 @@ import io.github.sceneview.gesture.PickGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.SelectedNodeGestureDetector
-import io.github.sceneview.loaders.Environment
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -194,7 +194,7 @@ fun Scene(
                 }
             },
             update = { sceneView ->
-                sceneView.childNodes = childNodes.toSet()
+                sceneView.childNodes = childNodes
                 sceneView.scene = scene
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode

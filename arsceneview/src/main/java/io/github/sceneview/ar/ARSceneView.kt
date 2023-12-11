@@ -37,7 +37,7 @@ import io.github.sceneview.ar.node.PoseNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.loaders.Environment
+import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader

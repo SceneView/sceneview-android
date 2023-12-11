@@ -32,7 +32,7 @@ import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.loaders.Environment
+import io.github.sceneview.environment.Environment
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -273,7 +273,7 @@ fun ARScene(
                 }
             },
             update = { sceneView ->
-                sceneView.childNodes = childNodes.toSet()
+                sceneView.childNodes = childNodes
                 sceneView.scene = scene
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode
