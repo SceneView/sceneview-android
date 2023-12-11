@@ -8,6 +8,7 @@ import com.google.android.filament.TextureSampler
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
+import dev.romainguy.kotlin.math.Mat3
 import dev.romainguy.kotlin.math.Mat4
 import io.github.sceneview.math.Color
 import io.github.sceneview.math.colorOf
@@ -25,11 +26,36 @@ fun MaterialInstance.setParameter(name: String, value: Float2) =
 fun MaterialInstance.setParameter(name: String, value: Float4) =
     setParameter(name, value.x, value.y, value.z, value.w)
 
+fun MaterialInstance.setParameter(name: String, value: Mat3) =
+    setParameter(name, FloatElement.FLOAT4, value.toColumnsFloatArray(), 0, 4)
+
 fun MaterialInstance.setParameter(name: String, value: Mat4) =
     setParameter(name, FloatElement.FLOAT4, value.toColumnsFloatArray(), 0, 4)
 
 fun MaterialInstance.setParameter(name: String, value: Float3) =
     setParameter(name, value.x, value.y, value.z)
+
+fun MaterialInstance.setColor(
+    name: String,
+    color: Color,
+    type: Colors.RgbaType = Colors.RgbaType.SRGB
+) = setParameter(name, type, color.r, color.g, color.b, color.a)
+
+fun MaterialInstance.setColor(
+    name: String,
+    color: Int,
+    type: Colors.RgbaType = Colors.RgbaType.SRGB
+) = setColor(name, colorOf(color), type)
+
+fun MaterialInstance.setColor(
+    name: String,
+    color: androidx.compose.ui.graphics.Color,
+    type: Colors.RgbaType = Colors.RgbaType.SRGB
+) = setColor(name, colorOf(color), type)
+
+///////////
+// Texture
+///////////
 
 fun MaterialInstance.setTexture(
     name: String,
@@ -40,30 +66,20 @@ fun MaterialInstance.setTexture(
 fun MaterialInstance.setExternalTexture(name: String, texture: Texture) =
     setParameter(name, texture, TextureSamplerExternal())
 
-// **********
+///////
 // PBR
-// **********
+///////
 
+fun MaterialInstance.setColor(color: Color, type: Colors.RgbaType = Colors.RgbaType.SRGB) =
+    setColor("color", color, type)
 
-//fun MaterialInstance.setColor(name: String, type: Colors.RgbaType, value: Float4) =
-//    setParameter(name, type, value.x, value.y, value.z, value.w)
-fun MaterialInstance.setColor(
-    color: Color,
-    parameterName: String = "color",
-    type: Colors.RgbaType = Colors.RgbaType.SRGB
-) = setParameter(parameterName, type, color.r, color.g, color.b, color.a)
-
-fun MaterialInstance.setColor(
-    color: Int,
-    parameterName: String = "color",
-    type: Colors.RgbaType = Colors.RgbaType.SRGB
-) = setColor(colorOf(color), parameterName, type)
+fun MaterialInstance.setColor(color: Int, type: Colors.RgbaType = Colors.RgbaType.SRGB) =
+    setColor(colorOf(color), type)
 
 fun MaterialInstance.setColor(
     color: androidx.compose.ui.graphics.Color,
-    parameterName: String = "color",
     type: Colors.RgbaType = Colors.RgbaType.SRGB
-) = setColor(colorOf(color), parameterName, type)
+) = setColor(colorOf(color), type)
 
 /**
  * The metallic property defines whether the surface is a metallic (conductor) or a non-metallic
@@ -97,65 +113,7 @@ fun MaterialInstance.setRoughness(factor: Float) = setParameter("roughness", fac
  */
 fun MaterialInstance.setReflectance(factor: Float) = setParameter("reflectance", factor)
 
-// **********
-// Texture
-// **********
-
 fun MaterialInstance.setTexture(texture: Texture, sampler: TextureSampler = TextureSampler2D()) =
     setTexture("texture", texture, sampler)
 
 fun MaterialInstance.setExternalTexture(texture: Texture) = setExternalTexture("texture", texture)
-
-// **********
-// Base Color
-// **********
-fun MaterialInstance.setBaseColorIndex(value: Int) = setParameter("baseColorIndex", value)
-fun MaterialInstance.setBaseColor(value: Color) = setParameter("baseColorFactor", value)
-
-fun MaterialInstance.setBaseColorMap(
-    texture: Texture, sampler: TextureSampler = TextureSampler2D()
-) = setParameter("baseColorMap", texture, sampler)
-
-// **********************
-// Metallic-Roughness Map
-// **********************
-fun MaterialInstance.setMetallicRoughnessIndex(value: Int) =
-    setParameter("metallicRoughnessIndex", value)
-
-fun MaterialInstance.setMetallicFactor(value: Float) = setParameter("metallicFactor", value)
-fun MaterialInstance.setRoughnessFactor(value: Float) = setParameter("roughnessFactor", value)
-fun MaterialInstance.setMetallicRoughnessMap(
-    texture: Texture, sampler: TextureSampler = TextureSampler2D()
-) = setParameter("metallicRoughnessMap", texture, sampler)
-
-// **********
-// Normal Map
-// **********
-fun MaterialInstance.setNormalIndex(value: Int) = setParameter("normalIndex", value)
-fun MaterialInstance.setNormalScale(value: Float) = setParameter("normalScale", value)
-fun MaterialInstance.setNormalMap(
-    texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
-) = setParameter("normalMap", texture, textureSampler)
-
-// *****************
-// Ambient Occlusion
-// *****************
-fun MaterialInstance.setAoIndex(value: Int) = setParameter("aoIndex", value)
-fun MaterialInstance.setAoStrength(value: Float) = setParameter("aoStrength", value)
-fun MaterialInstance.setOcclusionMap(
-    texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
-) = setParameter("occlusionMap", texture, textureSampler)
-
-// ************
-// Emissive Map
-// ************
-fun MaterialInstance.setEmissiveIndex(value: Int) = setParameter("emissiveIndex", value)
-fun MaterialInstance.setEmissiveColor(value: Color) = setParameter("emissiveFactor", value)
-
-fun MaterialInstance.setEmissiveMap(
-    texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
-) = setParameter("emissiveMap", texture, textureSampler)
-
-fun MaterialInstance.setBaseTexture(
-    texture: Texture, textureSampler: TextureSampler = TextureSampler2D()
-) = setBaseColorMap(texture, textureSampler)

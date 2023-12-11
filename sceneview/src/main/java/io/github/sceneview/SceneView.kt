@@ -955,9 +955,20 @@ open class SceneView @JvmOverloads constructor(
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
 
         fun createEnvironment(environmentLoader: EnvironmentLoader) =
-            environmentLoader.createKTX1Environment(
-                iblAssetFile = "environments/neutral/neutral_ibl.ktx",
-                skyboxAssetFile = "environments/neutral/neutral_skybox.ktx"
+            environmentLoader.createEnvironment(
+                indirectLight = KTX1Loader.createIndirectLight(
+                    environmentLoader.engine,
+                    environmentLoader.context.assets.readBuffer(
+                        fileLocation = "environments/neutral/neutral_ibl.ktx"
+                    ),
+                ),
+//                indirectLight = IndirectLight.Builder()
+//                    .intensity(30_0000.0f)
+//                    .irradiance(1, colorOf(rgb = 1.0f).toFloatArray())
+//                    .build(environmentLoader.engine),
+                skybox = Skybox.Builder()
+                    .color(colorOf(rgb = 0.0f).toFloatArray())
+                    .build(environmentLoader.engine)
             )
 
         fun createCollisionSystem(view: View) = CollisionSystem(view)

@@ -6,6 +6,8 @@ import com.google.android.filament.Material
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
+import com.google.android.filament.gltfio.MaterialProvider.MaterialKey
+import com.google.android.filament.gltfio.UbershaderProvider
 import io.github.sceneview.material.VideoMaterial
 import io.github.sceneview.material.kMaterialDefaultMetallic
 import io.github.sceneview.material.kMaterialDefaultReflectance
@@ -43,7 +45,11 @@ class MaterialLoader(
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
 
+    data class UvCoordinate(val x: Int, val y: Int)
+
     val assets get() = context.assets
+
+    val ubershaderProvider = UbershaderProvider(engine)
 
     private val opaqueColoredMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/opaque_colored.filamat")
@@ -87,9 +93,54 @@ class MaterialLoader(
     fun createMaterial(payload: Buffer): Material =
         Material.Builder()
             .payload(payload, payload.remaining())
-            .build(engine).also { material ->
-                materials += material
+            .build(engine)
+            .also {
+                materials += it
             }
+
+    fun getUbershaderMaterial(
+        config: MaterialKey,
+        uvMap: List<UvCoordinate> = listOf(
+            // uv00
+            UvCoordinate(0, 0),
+            // uv01
+            UvCoordinate(0, 1),
+            // uv11
+            UvCoordinate(1, 1),
+            // uv10
+            UvCoordinate(1, 0)
+        ),
+        label: String? = null
+    ): Material? = ubershaderProvider.getMaterial(
+        config,
+        uvMap.flatMap { listOf(it.x, it.y) }.toIntArray(),
+        label
+    )?.also {
+        materials += it
+    }
+
+    fun createUbershaderInstance(
+        config: MaterialKey,
+        uvMap: List<UvCoordinate> = listOf(
+            // uv00
+            UvCoordinate(0, 0),
+            // uv01
+            UvCoordinate(0, 1),
+            // uv11
+            UvCoordinate(1, 1),
+            // uv10
+            UvCoordinate(1, 0)
+        ),
+        label: String? = null,
+        extras: String? = null
+    ): MaterialInstance? = ubershaderProvider.createMaterialInstance(
+        config,
+        uvMap.flatMap { listOf(it.x, it.y) }.toIntArray(),
+        label,
+        extras
+    )?.also {
+        materialInstances += it
+    }
 
     /**
      * Creates and returns a [Material] object from Filamat asset file.

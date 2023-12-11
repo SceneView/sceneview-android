@@ -4,6 +4,7 @@ import com.google.android.filament.Box
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
+import dev.romainguy.kotlin.math.Mat3
 import dev.romainguy.kotlin.math.Mat4
 import dev.romainguy.kotlin.math.Quaternion
 import dev.romainguy.kotlin.math.Ray
@@ -73,6 +74,12 @@ fun Quaternion.toOldQuaternion() =
 
 //TODO: Remove when everything use Quaternion
 fun io.github.sceneview.collision.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
+
+fun Mat3.toColumnsFloatArray() = floatArrayOf(
+    x.x, x.y, x.z,
+    y.x, y.y, y.z,
+    z.x, z.y, z.z
+)
 
 fun Mat4.toColumnsDoubleArray(): DoubleArray =
     toColumnsFloatArray().map { it.toDouble() }.toDoubleArray()
