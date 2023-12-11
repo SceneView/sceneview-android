@@ -46,7 +46,7 @@ import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNodes
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberView
-import io.github.sceneview.sample.SceneViewTheme
+import io.github.sceneview.sample.SceneviewTheme
 
 private const val kModelFile = "models/damaged_helmet.glb"
 private const val kMaxModelInstances = 10
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            SceneViewTheme {
+            SceneviewTheme {
                 // A surface container using the 'background' color from the theme
                 Box(
                     modifier = Modifier.fillMaxSize(),
