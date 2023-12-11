@@ -16,41 +16,41 @@ buildscript {
 
 apply plugin: 'org.jetbrains.dokka'
 
-afterEvaluate {
-    if (tasks.findByName('dokkaGfmPartial') == null) {
-        // If dokka isn't enabled on this module, skip
-        return
-    }
-    tasks.named('dokkaGfmPartial') {
-        dokkaSourceSets.configureEach {
-            reportUndocumented.set(true)
-            skipEmptyPackages.set(true)
-            skipDeprecated.set(true)
-            jdkVersion.set(8)
-
-            // Add Android SDK packages
-            noAndroidSdkLink.set(false)
-
-            // AndroidX + Compose docs
-            externalDocumentationLink {
-                url.set(new URL("https://developer.android.com/reference/"))
-                packageListUrl.set(new URL("https://developer.android.com/reference/androidx/package-list"))
-            }
-            externalDocumentationLink {
-                url.set(new URL("https://developer.android.com/reference/kotlin/"))
-                packageListUrl.set(new URL("https://developer.android.com/reference/kotlin/androidx/package-list"))
-            }
-
-            sourceLink {
-                localDirectory.set(project.file("src/main/kotlin"))
-                // URL showing where the source code can be accessed through the web browser
-                remoteUrl.set(new URL("https://github.com/sceneview/sceneview-android/blob/main/${project.name}/src/main/kotlin"))
-                // Suffix which is used to append the line number to the URL. Use #L for GitHub
-                remoteLineSuffix.set("#L")
-            }
-        }
-    }
-}
+//afterEvaluate {
+//    if (tasks.findByName('dokkaGfmPartial') == null) {
+//        // If dokka isn't enabled on this module, skip
+//        return
+//    }
+//    tasks.named('dokkaGfmPartial') {
+//        dokkaSourceSets.configureEach {
+//            reportUndocumented.set(true)
+//            skipEmptyPackages.set(true)
+//            skipDeprecated.set(true)
+//            jdkVersion.set(8)
+//
+//            // Add Android SDK packages
+//            noAndroidSdkLink.set(false)
+//
+//            // AndroidX + Compose docs
+//            externalDocumentationLink {
+//                url.set(new URL("https://developer.android.com/reference/"))
+//                packageListUrl.set(new URL("https://developer.android.com/reference/androidx/package-list"))
+//            }
+//            externalDocumentationLink {
+//                url.set(new URL("https://developer.android.com/reference/kotlin/"))
+//                packageListUrl.set(new URL("https://developer.android.com/reference/kotlin/androidx/package-list"))
+//            }
+//
+//            sourceLink {
+//                localDirectory.set(project.file("src/main/kotlin"))
+//                // URL showing where the source code can be accessed through the web browser
+//                remoteUrl.set(new URL("https://github.com/sceneview/sceneview-android/blob/main/${project.name}/src/main/kotlin"))
+//                // Suffix which is used to append the line number to the URL. Use #L for GitHub
+//                remoteLineSuffix.set("#L")
+//            }
+//        }
+//    }
+//}
 
 import com.vanniktech.maven.publish.SonatypeHost
 
