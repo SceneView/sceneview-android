@@ -7,8 +7,9 @@ import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.Texture
 import com.google.android.filament.utils.HDRLoader
-import com.google.android.filament.utils.IBLPrefilterContext
 import com.google.android.filament.utils.KTX1Loader
+import io.github.sceneview.environment.Environment
+import io.github.sceneview.environment.IBLPrefilter
 import io.github.sceneview.safeDestroyIndirectLight
 import io.github.sceneview.safeDestroySkybox
 import io.github.sceneview.safeDestroyTexture
@@ -35,7 +36,7 @@ import java.nio.Buffer
  */
 class EnvironmentLoader(
     val engine: Engine,
-    private val context: Context,
+    internal val context: Context,
     private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
 
@@ -76,7 +77,7 @@ class EnvironmentLoader(
         indirectLightSpecularFilter: Boolean = true,
         indirectLightApply: IndirectLight.Builder.() -> Unit = {},
         textureOptions: HDRLoader.Options = HDRLoader.Options(),
-        createSkybox: Boolean = true,
+        createSkybox: Boolean = true
     ): Environment? {
         // Since we directly destroy the texture we call the `use` function and so don't pass lifecycle
         // to createTexture because it can be destroyed immediately.
@@ -398,179 +399,3 @@ class EnvironmentLoader(
         iblPrefilter.destroy()
     }
 }
-
-
-/**
- *
- * Indirect light and skybox environment for a scene
- *
- * Environments are usually captured as high-resolution HDR equirectangular images and processed by
- * the cmgen tool to generate the data needed by IndirectLight.
- *
- * You can also process an hdr at runtime but this is more consuming.
- *
- * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
- * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
- * mountains.
- * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the future.
- *
- * - When added to a Scene, the Skybox fills all untouched pixels.
- *
- * Defines the lighting environment and the skybox for the scene
- *
- *
- * @property indirectLight ### IndirectLight is used to simulate environment lighting.
- * Environment lighting has a two components:
- * - irradiance
- * - reflections (specular component)
- *
- * @property sphericalHarmonics ### Array of 9 * 3 floats
- *
- * @property skybox ### The Skybox is drawn last and covers all pixels not touched by geometry.
- * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
- *
- * @see [IndirectLight]
- * @see [EnvironmentLoader]
- * @see [HDRLoader.loadEnvironment]
- */
-data class Environment(
-    val indirectLight: IndirectLight? = null,
-    val skybox: Skybox? = null,
-    val sphericalHarmonics: List<Float>? = null
-)
-
-/**
- * IBLPrefilter creates and initializes GPU state common to all environment map filters.
- * Typically, only one instance per filament Engine of this object needs to exist.
- *
- * @see [IBLPrefilterContext]
- */
-class IBLPrefilter(engine: Engine) {
-
-    /**
-     * Created IBLPrefilterContext, keeping it around if several cubemap will be processed.
-     */
-    val context by lazy { IBLPrefilterContext(engine) }
-
-    /**
-     * EquirectangularToCubemap is use to convert an equirectangluar image to a cubemap.
-     *
-     * Creates a EquirectangularToCubemap processor.
-     */
-    private val equirectangularToCubemap by lazy {
-        IBLPrefilterContext.EquirectangularToCubemap(
-            context
-        )
-    }
-
-    /**
-     * Converts an equirectangular image to a cubemap.
-     *
-     * @param equirect Texture to convert to a cubemap.
-     * - Can't be null.
-     * - Must be a 2d texture
-     * - Must have equirectangular geometry, that is width == 2*height.
-     * - Must be allocated with all mip levels.
-     * - Must be SAMPLEABLE
-     *
-     * @return the cubemap texture
-     *
-     * @see [EquirectangularToCubemap]
-     */
-    fun equirectangularToCubemap(equirect: Texture): Texture =
-        equirectangularToCubemap.run(equirect)
-
-    /**
-     * Created specular (reflections) filter. This operation generates the kernel, so it's
-     * important to keep it around if it will be reused for several cubemaps.
-     * An instance of SpecularFilter is needed per filter configuration. A filter configuration
-     * contains the filter's kernel and sample count.
-     */
-    private val specularFilter by lazy { IBLPrefilterContext.SpecularFilter(context) }
-
-    /**
-     * Generates a prefiltered cubemap.
-     *
-     * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-     *
-     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
-     *
-     * @param skybox Environment cubemap.
-     * This cubemap is SAMPLED and have all its levels allocated.
-     *
-     * @return the reflections texture
-     */
-    fun specularFilter(skybox: Texture) = specularFilter.run(skybox)
-
-    fun destroy() {
-        runCatching { specularFilter.destroy() }
-        runCatching { equirectangularToCubemap.destroy() }
-        runCatching { context.destroy() }
-    }
-}
-
-//open class HDREnvironment(
-//    engine: Engine,
-//    iblPrefilter: IBLPrefilter,
-//    cubemap: Texture? = null,
-//    indirectLightIrradiance: FloatArray? = null,
-//    indirectLightIntensity: Float? = null,
-//    /**
-//     * Generates a prefiltered indirect light cubemap.
-//     *
-//     * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-//     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
-//     */
-//    indirectLightSpecularFilter: Boolean = defaultSpecularFilter,
-//    createSkybox: Boolean = defaultCreateSkybox,
-//    val sharedCubemap: Boolean = false
-//) : Environment(
-//    indirectLight = IndirectLight.Builder().apply {
-//        cubemap?.let { cubemap ->
-//            reflections(
-//                if (indirectLightSpecularFilter) {
-//                    iblPrefilter.specularFilter(cubemap).also {
-//                        if (!createSkybox) {
-//                            engine.safeDestroyTexture(cubemap)
-//                        }
-//                    }
-//                } else {
-//                    cubemap
-//                }
-//            )
-//        }
-//        indirectLightIrradiance?.let {
-//            irradiance(3, it)
-//        }
-//        indirectLightIntensity?.let {
-//            intensity(it)
-//        }
-//    }.build(engine),
-//    sphericalHarmonics = indirectLightIrradiance,
-//    skybox = cubemap?.takeIf { createSkybox }?.let {
-//        Skybox.Builder()
-//            .environment(it)
-//            .build(engine)
-//    }
-//) {
-//    var cubemap: Texture? = cubemap
-//        internal set
-//    var indirectLightIntensity: Float? = indirectLightIntensity
-//        private set
-//
-//    /**
-//     * ### Destroys the EnvironmentLights and frees all its associated resources.
-//     */
-//    override fun destroy() {
-//        super.destroy()
-//
-//        if (!sharedCubemap) {
-//            // Use runCatching because it could already be destroyed at Environment creation time
-//            // in case of no Skybox needed.
-//            cubemap?.let { runCatching { engine.destroyTexture(it) } }
-//            cubemap = null
-//        }
-//
-//        indirectLightIntensity = null
-//    }
-//}
