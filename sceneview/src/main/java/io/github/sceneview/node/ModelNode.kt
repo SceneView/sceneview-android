@@ -175,6 +175,12 @@ open class ModelNode(
         set(value) = renderableNodes.forEach { it.isShadowReceiver = value }
 
     init {
+        nodes.values.forEach { node ->
+            node.parent = when (val parentEntity = node.parentEntity) {
+                this.entity -> this
+                else -> nodes.values.first { it.entity == parentEntity }
+            }
+        }
         if (autoAnimate && animator.animationCount > 0) {
             playAnimation(0)
         }
