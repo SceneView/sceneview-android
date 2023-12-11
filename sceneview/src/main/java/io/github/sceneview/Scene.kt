@@ -240,15 +240,22 @@ inline fun <reified T : Node> rememberNode(crossinline creator: () -> T) =
     }
 
 @Composable
+fun rememberNode(engine: Engine) = rememberNode { Node(engine) }
+
+@Composable
 fun rememberNodes(creator: MutableList<Node>.() -> Unit = {}) = remember {
     buildList(creator).toMutableStateList()
 }.also { nodes ->
     DisposableEffect(nodes) {
         onDispose {
             nodes.forEach { it.destroy() }
+            nodes.clear()
         }
     }
 }
+
+@Composable
+fun rememberNodes(vararg nodes:Node) = rememberNodes { addAll(nodes) }
 
 @Composable
 fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.createScene(engine) }) =
