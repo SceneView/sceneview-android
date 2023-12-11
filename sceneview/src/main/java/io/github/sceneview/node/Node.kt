@@ -583,23 +583,15 @@ open class Node(
         transform: Transform,
         smooth: Boolean = isSmoothTransformEnabled,
         smoothSpeed: Float = smoothTransformSpeed
-    ) {
+    ) = apply {
         if (smooth) {
-            smoothTransform(transform, smoothSpeed)
+            this.smoothTransformSpeed = smoothSpeed
+            this.smoothTransform = transform
         } else {
             this.smoothTransform = null
             this.transform = transform
         }
     }
-
-    /**
-     * Change the node world transform.
-     */
-    open fun worldTransform(
-        worldTransform: Transform,
-        smooth: Boolean = isSmoothTransformEnabled,
-        smoothSpeed: Float = smoothTransformSpeed
-    ) = transform(parent?.getLocalTransform(worldTransform) ?: worldTransform, smooth, smoothSpeed)
 
     /**
      * Change the node transform.
@@ -632,44 +624,43 @@ open class Node(
     ) = transform(position, rotation.toQuaternion(), scale, smooth, smoothSpeed)
 
     /**
-     * Smooth move, rotate and scale at a specified speed.
+     * Change the node world transform.
+     */
+    open fun worldTransform(
+        worldTransform: Transform,
+        smooth: Boolean = isSmoothTransformEnabled,
+        smoothSpeed: Float = smoothTransformSpeed
+    ) = transform(parent?.getLocalTransform(worldTransform) ?: worldTransform, smooth, smoothSpeed)
+
+    /**
+     * Change the node world transform.
      *
      * @see position
      * @see quaternion
      * @see scale
-     * @see speed
      */
-    fun smoothTransform(
-        position: Position = this.position,
-        quaternion: Quaternion = this.quaternion,
-        scale: Scale = this.scale,
-        speed: Float = this.smoothTransformSpeed
-    ) = smoothTransform(Transform(position, quaternion, scale), speed)
+    fun worldTransform(
+        position: Position = this.worldPosition,
+        quaternion: Quaternion = this.worldQuaternion,
+        scale: Scale = this.worldScale,
+        smooth: Boolean = isSmoothTransformEnabled,
+        smoothSpeed: Float = smoothTransformSpeed
+    ) = worldTransform(Transform(position, quaternion, scale), smooth, smoothSpeed)
 
     /**
-     * Smooth move, rotate and scale at a specified speed.
+     * Change the node world transform.
      *
      * @see position
-     * @see quaternion
+     * @see rotation
      * @see scale
-     * @see speed
      */
-    fun smoothTransform(
-        position: Position = this.position,
-        rotation: Rotation = this.rotation,
-        scale: Scale = this.scale,
-        speed: Float = this.smoothTransformSpeed
-    ) = smoothTransform(Transform(position, rotation, scale), speed)
-
-    /**
-     * Smooth move, rotate and scale at a specified speed.
-     *
-     * @see transform
-     */
-    fun smoothTransform(transform: Transform, speed: Float = smoothTransformSpeed) {
-        smoothTransformSpeed = speed
-        smoothTransform = transform
-    }
+    fun worldTransform(
+        position: Position = this.worldPosition,
+        rotation: Rotation,
+        scale: Scale = this.worldScale,
+        smooth: Boolean = isSmoothTransformEnabled,
+        smoothSpeed: Float = smoothTransformSpeed
+    ) = worldTransform(Transform(position, rotation.toQuaternion(), scale), smooth, smoothSpeed)
 
     /**
      * Rotates the node to face another node.
