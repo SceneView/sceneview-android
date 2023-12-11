@@ -15,6 +15,6 @@
     <style name="Theme.SceneViewSample.Toolbar" parent="ThemeOverlay.MaterialComponents.ActionBar">
         <item name="android:background">@android:color/transparent</item>
         <item name="android:textColor">@android:color/white</item>
-        <item name="logo">@drawable/logo</item>
+        <item name="logo">@drawable/logo_small</item>
     </style>
 </resources>
