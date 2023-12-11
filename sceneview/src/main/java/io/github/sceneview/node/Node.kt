@@ -296,6 +296,22 @@ open class Node(
 
     var smoothTransform: Transform? = null
 
+    var parentEntity: Entity?
+        get() = transformManager.getParentOrNull(transformInstance)
+        set(value) {
+            if (parentEntity != value) {
+                parentInstance = value?.let { transformManager.getInstance(it) }
+            }
+        }
+
+    var parentInstance: EntityInstance?
+        get() = parentEntity?.let { transformManager.getInstance(it) }
+        set(value) {
+            if (parentInstance != value) {
+                transformManager.setParent(transformInstance, value ?: 0)
+            }
+        }
+
     /**
      * Changes the parent node.
      *
@@ -318,7 +334,7 @@ open class Node(
                 field = value
                 oldParent?.let { it.childNodes = it.childNodes - this }
                 value?.let { it.childNodes = it.childNodes + this }
-                transformManager.setParent(transformInstance, value?.transformInstance)
+                parentEntity = value?.entity
             }
         }
 
@@ -431,8 +447,8 @@ open class Node(
             onTransformChanged()
         }
 
-    protected val transformManager get() = engine.transformManager
-    protected val transformInstance get() = transformManager.getInstance(entity)
+    val transformManager get() = engine.transformManager
+    val transformInstance get() = transformManager.getInstance(entity)
 
     internal open val sceneEntities = listOf(entity)
     internal val onChildAdded = mutableListOf<(child: Node) -> Unit>()

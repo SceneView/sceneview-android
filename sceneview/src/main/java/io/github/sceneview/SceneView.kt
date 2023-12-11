@@ -18,11 +18,13 @@ import com.google.android.filament.View.*
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.Gltfio
+import com.google.android.filament.utils.KTX1Loader
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.Utils
 import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.HitTestGestureDetector
@@ -32,7 +34,6 @@ import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.orbitHomePosition
 import io.github.sceneview.gesture.targetPosition
 import io.github.sceneview.gesture.transform
-import io.github.sceneview.loaders.Environment
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -303,15 +304,17 @@ open class SceneView @JvmOverloads constructor(
             }
         }
 
-    var childNodes = setOf<Node>()
+    var childNodes = listOf<Node>()
         set(value) {
-            (field - value).forEach {
+            val removedNodes = (field - value.toSet())
+            val addedNodes = (value - field.toSet())
+            field = value.toList()
+            removedNodes.forEach {
                 removeNode(it)
             }
-            (value - field).forEach {
+            addedNodes.forEach {
                 addNode(it)
             }
-            field = value
         }
 
     /**
@@ -514,7 +517,7 @@ open class SceneView @JvmOverloads constructor(
      * Removes all nodes from the children of this [Scene].
      */
     fun clearChildNodes() {
-        childNodes = setOf()
+        childNodes = listOf()
     }
 
     /**
