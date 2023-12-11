@@ -4,7 +4,8 @@
 
 A Sceneform replacement in Kotlin and Jetpack Compose
 
-[![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=Sceneview%20-%20Maven%20Central&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
+[![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
+[![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
 
 [![Filament](https://img.shields.io/badge/Filament-v1.45.0-yellow)](https://github.com/google/filament)
 [![ARCore](https://img.shields.io/badge/ARCore-v1.40.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
@@ -21,7 +22,7 @@ A Sceneform replacement in Kotlin and Jetpack Compose
 ```gradle
 dependencies {
     // Sceneview
-    implementation 'io.github.sceneview:sceneview:1.2.7'
+    implementation 'io.github.sceneview:sceneview:2.0.1'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
@@ -31,7 +32,7 @@ dependencies {
 ```gradle
 dependencies {
     // ARSceneview
-    implementation 'io.github.sceneview:arsceneview:1.2.7'
+    implementation 'io.github.sceneview:arsceneview:2.0.1'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
@@ -95,8 +96,6 @@ ARScene(
 [Sample](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-model-viewer-compose)
 
 ## AR - Cloud Anchors
-
-[![](https://markdown-videos.deta.dev/youtube/iptk8jsWyw4)](https://www.youtube.com/watch?v=iptk8jsWyw4)
 
 [Sources](https://github.com/Gebort/FESTU.Navigator)
 
