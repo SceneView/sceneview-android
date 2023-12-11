@@ -17,9 +17,9 @@ import dev.romainguy.kotlin.math.degrees
 import dev.romainguy.kotlin.math.inverse
 import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.lookTowards
-import dev.romainguy.kotlin.math.quaternion
 import dev.romainguy.kotlin.math.transform
 import io.github.sceneview.Entity
+import io.github.sceneview.EntityInstance
 import io.github.sceneview.FilamentEntity
 import io.github.sceneview.SceneView
 import io.github.sceneview.animation.NodeAnimator
@@ -32,9 +32,9 @@ import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.transform
+import io.github.sceneview.managers.getParentOrNull
 import io.github.sceneview.managers.getTransform
 import io.github.sceneview.managers.getWorldTransform
-import io.github.sceneview.managers.setParent
 import io.github.sceneview.managers.setTransform
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
@@ -672,32 +672,36 @@ open class Node(
     fun lookAt(
         targetNode: Node,
         upDirection: Direction = Direction(y = 1.0f),
-        smooth: Boolean = false
-    ) = lookAt(targetNode.worldPosition, upDirection, smooth)
+        smooth: Boolean = isSmoothTransformEnabled,
+        smoothSpeed: Float = smoothTransformSpeed
+    ) = lookAt(
+        targetWorldPosition = targetNode.worldPosition,
+        upDirection = upDirection,
+        smooth = smooth,
+        smoothSpeed = smoothSpeed
+    )
 
     /**
      * Rotates the node to face a point in world-space.
      *
-     * @param targetPosition The target position to look at in world space
+     * @param targetWorldPosition The target position to look at in world space
      * @param upDirection The up direction will determine the orientation of the node around the direction
      * @param smooth Whether the rotation should happen smoothly
      */
     fun lookAt(
-        targetPosition: Position,
+        targetWorldPosition: Position,
         upDirection: Direction = Direction(y = 1.0f),
-        smooth: Boolean = false
-    ) {
-        val newQuaternion = lookAt(
-            targetPosition,
-            worldPosition,
-            upDirection
-        ).toQuaternion()
-        if (smooth) {
-            smoothTransform(quaternion = newQuaternion)
-        } else {
-            transform(quaternion = newQuaternion)
-        }
-    }
+        smooth: Boolean = isSmoothTransformEnabled,
+        smoothSpeed: Float = smoothTransformSpeed
+    ) = worldTransform(
+        quaternion = lookAt(
+            eye = worldPosition,
+            target = targetWorldPosition,
+            up = upDirection
+        ).toQuaternion(),
+        smooth = smooth,
+        smoothSpeed = smoothSpeed
+    )
 
     /**
      * Rotates the node to face a direction in world-space.
@@ -713,19 +717,18 @@ open class Node(
     fun lookTowards(
         lookDirection: Direction,
         upDirection: Direction = Direction(y = 1.0f),
-        smooth: Boolean = false
-    ) {
-        val newQuaternion = lookTowards(
-            worldPosition,
-            -lookDirection,
-            upDirection
-        ).toQuaternion()
-        if (smooth) {
-            smoothTransform(quaternion = newQuaternion)
-        } else {
-            transform(quaternion = newQuaternion)
-        }
-    }
+        smooth: Boolean = isSmoothTransformEnabled,
+        smoothSpeed: Float = smoothTransformSpeed
+    ) = worldTransform(
+        quaternion = lookTowards(
+            eye = worldPosition,
+//            forward = -lookDirection,
+            forward = lookDirection,
+            up = upDirection
+        ).toQuaternion(),
+        smooth = smooth,
+        smoothSpeed = smoothSpeed
+    )
 
     fun addChildNode(node: Node) = apply { childNodes += node }
     fun addChildNodes(nodes: Set<Node>) = apply { childNodes += nodes }
