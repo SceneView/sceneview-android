@@ -178,7 +178,7 @@ open class ModelNode(
         nodes.values.forEach { node ->
             node.parent = when (val parentEntity = node.parentEntity) {
                 this.entity -> this
-                else -> nodes.values.first { it.entity == parentEntity }
+                else -> nodes.values.firstOrNull { it.entity == parentEntity } ?: this
             }
         }
         if (autoAnimate && animator.animationCount > 0) {
