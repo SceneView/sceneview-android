@@ -65,8 +65,6 @@ open class SceneView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0,
-    sharedActivity: ComponentActivity? = null,
-    sharedLifecycle: Lifecycle? = null,
     /**
      * Provide your own instance if you want to share Filament resources between multiple views.
      */
@@ -167,8 +165,10 @@ open class SceneView @JvmOverloads constructor(
     /**
      * The listener invoked for all the gesture detector callbacks.
      */
-    sharedOnGestureListener: GestureDetector.OnGestureListener? = null
-) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
+    sharedOnGestureListener: GestureDetector.OnGestureListener? = null,
+    sharedActivity: ComponentActivity? = null,
+    sharedLifecycle: Lifecycle? = null,
+) : TextureView(context, attrs, defStyleAttr, defStyleRes) {
 
     val engine = sharedEngine ?: createEglContext().let {
         defaultEglContext = it
