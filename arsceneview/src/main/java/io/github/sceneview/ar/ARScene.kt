@@ -31,8 +31,8 @@ import io.github.sceneview.ar.arcore.getUpdatedTrackables
 import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.collision.CollisionSystem
-import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.environment.Environment
+import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -75,57 +75,13 @@ fun ARScene(
      */
     materialLoader: MaterialLoader = rememberMaterialLoader(engine),
     /**
-     * Configures the session and verifies that the enabled features in the specified session config
-     * are supported with the currently set camera config.
+     * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
+     * IBLs, and sky boxes.
      *
-     * @see Session.configure
+     * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
+     * into a single file.
      */
-    sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
-    /**
-     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
-     */
-    childNodes: List<Node> = rememberNodes(),
-    /**
-     * Enable the plane renderer.
-     */
-    planeRenderer: Boolean = true,
-    /**
-     * The listener invoked for all the gesture detector callbacks.
-     */
-    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
-    /**
-     * Updates of the state of the ARCore system.
-     *
-     * This includes: receiving a new camera frame, updating the location of the device, updating
-     * the location of tracking anchors, updating detected planes, etc.
-     *
-     * This call may update the pose of all created anchors and detected planes. The set of updated
-     * objects is accessible through [Frame.getUpdatedTrackables].
-     *
-     * Invoked once per [Frame] immediately before the Scene is updated.
-     */
-    onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
-    /**
-     * Listen for camera tracking failure.
-     *
-     * The reason that [Camera.getTrackingState] is [TrackingState.PAUSED] or `null` if it is
-     * [TrackingState.TRACKING]
-     */
-    onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
-    /**
-     * Represents a virtual camera, which determines the perspective through which the scene is
-     * viewed.
-     *
-     * All other functionality in Node is supported. You can access the position and rotation of the
-     * camera, assign a collision shape to it, or add children to it.
-     */
-    cameraNode: ARCameraNode = rememberARCameraNode(engine),
-    /**
-     * The [ARCameraStream] to render the camera texture.
-     *
-     * Use it to control if the occlusion should be enabled or disabled
-     */
-    cameraStream: ARCameraStream? = rememberCameraStream(materialLoader),
+    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
     /**
      * Fundamental session features that can be requested.
      * @see Session.Feature
@@ -140,24 +96,22 @@ fun ARScene(
      */
     sessionCameraConfig: ((Session) -> CameraConfig)? = null,
     /**
-     * The session is ready to be accessed.
-     */
-    onSessionCreated: ((session: Session) -> Unit)? = null,
-    /**
-     * The session has been resumed
-     */
-    onSessionResumed: ((session: Session) -> Unit)? = null,
-    /**
-     * The session has been paused
-     */
-    onSessionPaused: ((session: Session) -> Unit)? = null,
-    /**
-     * Invoked when an ARCore error occurred.
+     * Configures the session and verifies that the enabled features in the specified session config
+     * are supported with the currently set camera config.
      *
-     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
-     * ARCore is not available on the device or the camera permission has been denied.
+     * @see Session.configure
      */
-    onSessionFailed: ((exception: Exception) -> Unit)? = null,
+    sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    /**
+     * Enable the plane renderer.
+     */
+    planeRenderer: Boolean = true,
+    /**
+     * The [ARCameraStream] to render the camera texture.
+     *
+     * Use it to control if the occlusion should be enabled or disabled
+     */
+    cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
     /**
      * Encompasses all the state needed for rendering a {@link Scene}.
      *
@@ -195,20 +149,6 @@ fun ARScene(
      */
     scene: Scene = rememberScene(engine),
     /**
-     * Always add a direct light source since it is required for shadowing.
-     *
-     * We highly recommend adding an [IndirectLight] as well.
-     */
-    mainLightNode: LightNode? = rememberMainLightNode(engine),
-    /**
-     * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
-     * IBLs, and sky boxes.
-     *
-     * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
-     * into a single file.
-     */
-    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
-    /**
      * Defines the lighting environment and the skybox of the scene.
      *
      * Environments are usually captured as high-resolution HDR equirectangular images and processed
@@ -227,6 +167,80 @@ fun ARScene(
      * @see [EnvironmentLoader]
      */
     environment: Environment = rememberAREnvironment(environmentLoader),
+    /**
+     * Always add a direct light source since it is required for shadowing.
+     *
+     * We highly recommend adding an [IndirectLight] as well.
+     */
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    cameraNode: ARCameraNode = rememberARCameraNode(engine),
+    /**
+     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+     */
+    childNodes: List<Node> = rememberNodes(),
+    /**
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    /**
+     * Detects various gestures and events.
+     *
+     * The gesture listener callback will notify users when a particular motion event has occurred.
+     * Responds to Android touch events with listeners.
+     */
+    gestureDetector: GestureDetector = rememberHitTestGestureDetector(
+        LocalContext.current,
+        collisionSystem
+    ),
+    /**
+     * The session is ready to be accessed.
+     */
+    onSessionCreated: ((session: Session) -> Unit)? = null,
+    /**
+     * The session has been resumed
+     */
+    onSessionResumed: ((session: Session) -> Unit)? = null,
+    /**
+     * The session has been paused
+     */
+    onSessionPaused: ((session: Session) -> Unit)? = null,
+    /**
+     * Invoked when an ARCore error occurred.
+     *
+     * Registers a callback to be invoked when the ARCore Session cannot be initialized because
+     * ARCore is not available on the device or the camera permission has been denied.
+     */
+    onSessionFailed: ((exception: Exception) -> Unit)? = null,
+    /**
+     * Updates of the state of the ARCore system.
+     *
+     * This includes: receiving a new camera frame, updating the location of the device, updating
+     * the location of tracking anchors, updating detected planes, etc.
+     *
+     * This call may update the pose of all created anchors and detected planes. The set of updated
+     * objects is accessible through [Frame.getUpdatedTrackables].
+     *
+     * Invoked once per [Frame] immediately before the Scene is updated.
+     */
+    onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
+    /**
+     * Listen for camera tracking failure.
+     *
+     * The reason that [Camera.getTrackingState] is [TrackingState.PAUSED] or `null` if it is
+     * [TrackingState.TRACKING]
+     */
+    onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
+    /**
+     * Represents a virtual camera, which determines the perspective through which the scene is
+     * viewed.
+     *
+     * All other functionality in Node is supported. You can access the position and rotation of the
+     * camera, assign a collision shape to it, or add children to it.
+     */
+    /**
+     * The listener invoked for all the gesture detector callbacks.
+     */
+    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
     activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     onViewUpdated: (ARSceneView.() -> Unit)? = null,
@@ -307,7 +321,7 @@ fun rememberARCameraNode(
 ) = rememberNode(creator)
 
 @Composable
-fun rememberCameraStream(
+fun rememberARCameraStream(
     materialLoader: MaterialLoader,
     creator: () -> ARCameraStream = {
         ARSceneView.createARCameraStream(materialLoader)
