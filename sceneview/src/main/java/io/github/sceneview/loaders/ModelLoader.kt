@@ -191,7 +191,9 @@ class ModelLoader(
      */
     fun createModelInstance(
         file: File,
-        resourceResolver: (resourceFileName: String) -> Buffer? = { null }
+        resourceResolver: (resourceFileName: String) -> Buffer? = { resourceFile ->
+            File(file.parent, resourceFile).readBuffer()
+        }
     ): ModelInstance = createModel(file, resourceResolver).also {
         // Release model since it will not be re-instantiated
 //        it.releaseSourceData()
