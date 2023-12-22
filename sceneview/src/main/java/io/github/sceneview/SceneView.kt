@@ -548,6 +548,7 @@ open class SceneView @JvmOverloads constructor(
 
     fun stopMirroring(surface: Surface) {
         surfaceMirrorer?.stopMirroring(this, surface)
+        surfaceMirrorer = null
     }
 
     fun startRecording(mediaRecorder: MediaRecorder) {
