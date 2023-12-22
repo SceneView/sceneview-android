@@ -2,6 +2,7 @@ package io.github.sceneview.node
 
 import android.view.MotionEvent
 import com.google.android.filament.Camera
+import com.google.android.filament.Camera.Projection
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.View
@@ -30,7 +31,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         get() = super.focalLength
         set(value) {
             _focalLength = value
-            updateProjection()
+            updateLensProjection(focalLength = value)
         }
 
     // Near = 5 cm
@@ -39,7 +40,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         get() = super.near
         set(value) {
             _near = value
-            updateProjection()
+            updateLensProjection()
         }
 
     // Far = 1 km
@@ -48,13 +49,16 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         get() = super.far
         set(value) {
             _far = value
-            updateProjection()
+            updateLensProjection()
         }
 
-    lateinit var view: View
+    var view: View? = null
         private set
-
-    val viewport get() = view.viewport
+    val viewport get() = view?.viewport
+    val aspect
+        get() =
+            viewport?.let { (it.width.toDouble() / it.height.toDouble()) }?.takeIf { !it.isNaN() }
+                ?: 1.0
 
     // No rendered object
     override var isTouchable = false
@@ -108,7 +112,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         replaceWith = ReplaceWith(expression = "collisionSystem.hitTest(viewPosition)")
     )
     fun hitTestView(xViewPercent: Float = 0.5f, yViewPercent: Float = 0.5f) =
-        hitTest(viewport.width * xViewPercent, viewport.height * yViewPercent)
+        hitTest(viewport!!.width * xViewPercent, viewport!!.height * yViewPercent)
 
     /**
      * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
@@ -223,11 +227,11 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         screenPoint.y = (screenPoint.y / w + 1.0f) * 0.5f
 
         // To screen space.
-        screenPoint.x = screenPoint.x * viewport.width
-        screenPoint.y = screenPoint.y * viewport.height
+        screenPoint.x = screenPoint.x * viewport!!.width
+        screenPoint.y = screenPoint.y * viewport!!.height
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        screenPoint.y = viewport.height - screenPoint.y
+        screenPoint.y = viewport!!.height - screenPoint.y
         return screenPoint
     }
 
@@ -241,11 +245,11 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         Matrix.invert(m, m)
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        y = viewport.height - y
+        y = viewport!!.height - y
 
         // Normalize between -1 and 1.
-        x = x / viewport.width * 2.0f - 1.0f
-        y = y / viewport.height * 2.0f - 1.0f
+        x = x / viewport!!.width * 2.0f - 1.0f
+        y = y / viewport!!.height * 2.0f - 1.0f
         z = 2.0f * z - 1.0f
         var w = 1.0f
         dest.x = x * m.data[0] + y * m.data[4] + z * m.data[8] + w * m.data[12]
@@ -263,17 +267,65 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
 
     /**
      * Sets the projection matrix from the focal length.
+     *
+     * @param focalLength lens's focal length in millimeters. `focalLength` > 0
+     * @param aspect aspect ratio width/height. `aspect` > 0
+     * @param near distance in world units from the camera to the near plane.
+     * The near plane's position in view space is z = -`near`.
+     * Precondition:
+     * `near` > 0 for [Projection.PERSPECTIVE] or
+     * `near` != `far` for [Projection.ORTHO].
+     * @param far distance in world units from the camera to the far plane.
+     * The far plane's position in view space is z = -`far`.
+     * Precondition:
+     * `far` > `near`
+     * for [Projection.PERSPECTIVE] or
+     * `far` != `near`
+     * for [Projection.ORTHO].
      */
-    fun updateProjection() {
-        if (!::view.isInitialized) return
+    fun updateLensProjection(
+        focalLength: Double = _focalLength,
+        aspect: Double = this.aspect,
+        near: Float = _near,
+        far: Float = _far
+    ) {
+        if (view != null) {
+            setLensProjection(focalLength, aspect, near.toDouble(), far.toDouble())
+        }
+    }
 
-        val aspect = viewport.width.toDouble() / viewport.height.toDouble()
-        camera.setLensProjection(
-            _focalLength,
-            if (!aspect.isNaN()) aspect else 1.0,
-            _near.toDouble(),
-            _far.toDouble()
-        )
+    /**
+     * Sets the projection matrix from the field-of-view.
+     *
+     * @param fovInDegrees full field-of-view in degrees.
+     * 0 < `fovInDegrees` < 180
+     * @param aspect aspect ratio width/height. `aspect` > 0
+     * @param near distance in world units from the camera to the near plane.
+     * The near plane's position in view space is z = -`near`.
+     * Precondition:
+     * `near` > 0 for [Projection.PERSPECTIVE] or
+     * `near` != `far` for [Projection.ORTHO].
+     * @param far distance in world units from the camera to the far plane.
+     * The far plane's position in view space is z = -`far`.
+     * Precondition:
+     * `far` > `near`
+     * for [Projection.PERSPECTIVE] or
+     * `far` != `near`
+     * for [Projection.ORTHO].
+     * @param direction direction of the field-of-view parameter.
+     *
+     * These parameters are silently modified to meet the preconditions above.
+     */
+    fun setProjection(
+        fovInDegrees: Double,
+        aspect: Double = this.aspect,
+        near: Float = _near,
+        far: Float = _far,
+        direction: Camera.Fov = Camera.Fov.VERTICAL
+    ) {
+        if (view != null) {
+            super.setProjection(fovInDegrees, aspect, near.toDouble(), far.toDouble(), direction)
+        }
     }
 
     override fun destroy() {
@@ -284,6 +336,6 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
 
     internal fun setView(view: View) {
         this.view = view
-        updateProjection()
+        updateLensProjection()
     }
 }

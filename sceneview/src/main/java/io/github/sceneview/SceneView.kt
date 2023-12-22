@@ -653,7 +653,7 @@ open class SceneView @JvmOverloads constructor(
     protected open fun onResized(width: Int, height: Int) {
         view.viewport = Viewport(0, 0, width, height)
         cameraManipulator?.setViewport(width, height)
-        cameraNode.updateProjection()
+        cameraNode.updateLensProjection()
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -949,7 +949,7 @@ open class SceneView @JvmOverloads constructor(
         fun createCameraNode(engine: Engine): CameraNode = DefaultCameraNode(engine)
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
 
-        fun createEnvironment(environmentLoader: EnvironmentLoader) =
+        fun createEnvironment(environmentLoader: EnvironmentLoader, isOpaque: Boolean) =
             environmentLoader.createEnvironment(
                 indirectLight = KTX1Loader.createIndirectLight(
                     environmentLoader.engine,
@@ -957,12 +957,8 @@ open class SceneView @JvmOverloads constructor(
                         fileLocation = "environments/neutral/neutral_ibl.ktx"
                     ),
                 ),
-//                indirectLight = IndirectLight.Builder()
-//                    .intensity(30_0000.0f)
-//                    .irradiance(1, colorOf(rgb = 1.0f).toFloatArray())
-//                    .build(environmentLoader.engine),
                 skybox = Skybox.Builder()
-                    .color(colorOf(rgb = 0.0f).toFloatArray())
+                    .color(colorOf(rgb = 0.0f, a = if (isOpaque) 1.0f else 0.0f).toFloatArray())
                     .build(environmentLoader.engine)
             )
 
