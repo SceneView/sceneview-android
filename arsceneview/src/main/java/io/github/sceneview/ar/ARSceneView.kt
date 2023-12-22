@@ -12,7 +12,6 @@ import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
-import com.google.android.filament.Skybox
 import com.google.android.filament.View
 import com.google.ar.core.Camera
 import com.google.ar.core.CameraConfig
@@ -36,12 +35,11 @@ import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.ar.node.PoseNode
 import io.github.sceneview.ar.scene.PlaneRenderer
 import io.github.sceneview.collision.CollisionSystem
-import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.environment.Environment
+import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
-import io.github.sceneview.math.colorOf
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
@@ -609,15 +607,9 @@ open class ARSceneView @JvmOverloads constructor(
 
         fun createARCameraStream(materialLoader: MaterialLoader) = ARCameraStream(materialLoader)
 
-        fun createAREnvironment(environmentLoader: EnvironmentLoader) =
-//            indirectLight = IndirectLight.Builder()
-//                .intensity(100_0000.0f)
-//                .irradiance(1, colorOf(rgb = 1.0f).toFloatArray())
-//                .build(environmentLoader.engine),
-            createEnvironment(environmentLoader).copy(
-                skybox = Skybox.Builder()
-                    .color(colorOf(rgb = 0.0f).toFloatArray())
-                    .build(environmentLoader.engine)
+        fun createAREnvironment(environmentLoader: EnvironmentLoader, isOpaque: Boolean = true) =
+            createEnvironment(environmentLoader, isOpaque = true).copy(
+                skybox = null
             )
     }
 }
