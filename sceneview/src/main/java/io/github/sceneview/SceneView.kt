@@ -2,8 +2,6 @@ package io.github.sceneview
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.PixelFormat
-import android.graphics.drawable.ColorDrawable
 import android.media.MediaRecorder
 import android.opengl.EGLContext
 import android.util.AttributeSet
@@ -150,6 +148,11 @@ open class SceneView @JvmOverloads constructor(
      */
     sharedEnvironment: Environment? = null,
     /**
+     * Controls whether the render target (SurfaceView) is opaque or not.
+     * The render target is considered opaque by default.
+     */
+    isOpaque: Boolean = true,
+    /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
     sharedCollisionSystem: CollisionSystem? = null,
@@ -207,7 +210,7 @@ open class SceneView @JvmOverloads constructor(
      *
      * @see [EnvironmentLoader]
      */
-    var environment = sharedEnvironment ?: createEnvironment(environmentLoader)
+    var environment = sharedEnvironment ?: createEnvironment(environmentLoader, isOpaque)
         set(value) {
             if (field != value) {
                 field = value
@@ -216,10 +219,12 @@ open class SceneView @JvmOverloads constructor(
             }
         }
 
-    val view = (sharedView ?: createView(engine)).also { defaultView = it }.apply {
-        scene = (sharedScene ?: createScene(engine).also { defaultScene = it }).apply {
-            skybox = environment.skybox
-            indirectLight = environment.indirectLight
+    val view = (sharedView ?: createView(engine).also { defaultView = it }).also { view ->
+        setOpaque(isOpaque)
+        view.blendMode = if (isOpaque) BlendMode.OPAQUE else BlendMode.TRANSLUCENT
+        view.scene = (sharedScene ?: createScene(engine).also { defaultScene = it }).also { scene ->
+            scene.indirectLight = environment.indirectLight
+            scene.skybox = environment.skybox
         }
     }
     var scene
@@ -229,13 +234,21 @@ open class SceneView @JvmOverloads constructor(
                 view.scene = value
             }
         }
-    val renderer = sharedRenderer ?: createRenderer(engine).also { defaultRenderer = it }
+    val renderer =
+        (sharedRenderer ?: createRenderer(engine).also { defaultRenderer = it }).also { renderer ->
+            if (!isOpaque) {
+                // clear the swapchain with transparent pixels
+                renderer.clearOptions = renderer.clearOptions.apply {
+                    clear = !isOpaque
+                }
+            }
+        }
 
-    private var defaultEnvironmentLoader: EnvironmentLoader? = null
-
-    val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
-        renderCallback = SurfaceCallback()
-        attachTo(this@SceneView)
+    val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).also { uiHelper ->
+        uiHelper.renderCallback = SurfaceCallback()
+        uiHelper.isOpaque = isOpaque
+        // Make the render target transparent
+        uiHelper.attachTo(this@SceneView)
     }
 
     protected var _cameraNode: CameraNode? = null
@@ -349,8 +362,6 @@ open class SceneView @JvmOverloads constructor(
      */
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
 
-    private var defaultCollisionSystem: CollisionSystem? = null
-
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
@@ -433,6 +444,8 @@ open class SceneView @JvmOverloads constructor(
     private var defaultRenderer: Renderer? = null
     private var defaultModelLoader: ModelLoader? = null
     private var defaultMaterialLoader: MaterialLoader? = null
+    private var defaultEnvironmentLoader: EnvironmentLoader? = null
+    private var defaultCollisionSystem: CollisionSystem? = null
     private var defaultCameraNode: CameraNode? = null
     private var defaultMainLight: LightNode? = null
 
@@ -518,24 +531,6 @@ open class SceneView @JvmOverloads constructor(
      */
     fun clearChildNodes() {
         childNodes = listOf()
-    }
-
-    /**
-     * Set the background to transparent.
-     */
-    fun setTranslucent(translucent: Boolean) {
-        holder.setFormat(if (translucent) PixelFormat.TRANSLUCENT else PixelFormat.OPAQUE)
-        view.blendMode = if (translucent) BlendMode.TRANSLUCENT else BlendMode.OPAQUE
-        setZOrderOnTop(translucent)
-        renderer.clearOptions = Renderer.ClearOptions().apply {
-            clear = translucent
-            if (!translucent) {
-                (background as? ColorDrawable)?.color?.let { backgroundColor ->
-                    clearColor = colorOf(backgroundColor).toFloatArray()
-                }
-
-            }
-        }
     }
 
     fun startMirroring(

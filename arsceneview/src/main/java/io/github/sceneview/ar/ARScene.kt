@@ -124,19 +124,10 @@ fun ARScene(
      */
     view: View = rememberView(engine),
     /**
-     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     * Controls whether the render target (SurfaceView) is opaque or not.
+     * The render target is considered opaque by default.
      */
-    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
-    /**
-     * Detects various gestures and events.
-     *
-     * The gesture listener callback will notify users when a particular motion event has occurred.
-     * Responds to Android touch events with listeners.
-     */
-    gestureDetector: GestureDetector = rememberHitTestGestureDetector(
-        LocalContext.current,
-        collisionSystem
-    ),
+    isOpaque: Boolean = true,
     /**
      * A [Renderer] instance represents an operating system's window.
      *
@@ -269,6 +260,7 @@ fun ARScene(
                     cameraNode,
                     mainLightNode,
                     environment,
+                    isOpaque,
                     collisionSystem,
                     gestureDetector,
                     onGestureListener,

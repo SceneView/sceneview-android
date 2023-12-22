@@ -83,13 +83,10 @@ fun Scene(
      */
     view: View = rememberView(engine),
     /**
-     * Represents a virtual camera, which determines the perspective through which the scene is
-     * viewed.
-     *
-     * All other functionality in Node is supported. You can access the position and rotation of the
-     * camera, assign a collision shape to it, or add children to it.
+     * Controls whether the render target (SurfaceView) is opaque or not.
+     * The render target is considered opaque by default.
      */
-    cameraNode: CameraNode = rememberCameraNode(engine),
+    isOpaque: Boolean = true,
     /**
      * A [Renderer] instance represents an operating system's window.
      *
@@ -192,6 +189,7 @@ fun Scene(
                     cameraNode,
                     mainLightNode,
                     environment,
+                    isOpaque,
                     collisionSystem,
                     gestureDetector,
                     onGestureListener,
@@ -358,10 +356,11 @@ fun rememberMainLightNode(
 @Composable
 fun rememberEnvironment(
     environmentLoader: EnvironmentLoader,
+    isOpaque: Boolean = true,
     creator: () -> Environment = {
-        SceneView.createEnvironment(environmentLoader)
+        SceneView.createEnvironment(environmentLoader, isOpaque)
     }
-) = remember(environmentLoader, creator).also { environment ->
+) = remember(environmentLoader, isOpaque, creator).also { environment ->
     DisposableEffect(environment) {
         onDispose {
             environmentLoader.destroyEnvironment(environment)
