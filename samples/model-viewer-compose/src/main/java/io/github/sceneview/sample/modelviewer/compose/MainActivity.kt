@@ -34,7 +34,6 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNode
-import io.github.sceneview.rememberNodes
 import io.github.sceneview.sample.SceneviewTheme
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit.MILLISECONDS
@@ -71,15 +70,15 @@ class MainActivity : ComponentActivity() {
                         engine = engine,
                         modelLoader = modelLoader,
                         cameraNode = cameraNode,
-                        childNodes = rememberNodes(
-                            centerNode,
-                            ModelNode(
-                                modelInstance = modelLoader.createModelInstance(
-                                    assetFileLocation = "models/damaged_helmet.glb"
-                                ),
-                                scaleToUnits = 1.0f
-                            )
-                        ),
+                        childNodes = listOf(centerNode,
+                            rememberNode {
+                                ModelNode(
+                                    modelInstance = modelLoader.createModelInstance(
+                                        assetFileLocation = "models/damaged_helmet.glb"
+                                    ),
+                                    scaleToUnits = 1.0f
+                                )
+                            }),
                         environment = environmentLoader.createHDREnvironment(
                             assetFileLocation = "environments/sky_2k.hdr"
                         )!!,
