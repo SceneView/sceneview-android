@@ -140,6 +140,11 @@ open class ARSceneView @JvmOverloads constructor(
      */
     sharedEnvironment: Environment? = null,
     /**
+     * Controls whether the render target (SurfaceView) is opaque or not.
+     * The render target is considered opaque by default.
+     */
+    isOpaque: Boolean = true,
+    /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
     sharedCollisionSystem: CollisionSystem? = null,
@@ -224,8 +229,6 @@ open class ARSceneView @JvmOverloads constructor(
     attrs,
     defStyleAttr,
     defStyleRes,
-    sharedActivity,
-    sharedLifecycle,
     sharedEngine,
     sharedModelLoader,
     sharedMaterialLoader,
@@ -236,9 +239,12 @@ open class ARSceneView @JvmOverloads constructor(
     sharedCameraNode,
     sharedMainLightNode,
     sharedEnvironment,
+    isOpaque,
     sharedCollisionSystem,
     sharedGestureDetector,
-    sharedOnGestureListener
+    sharedOnGestureListener,
+    sharedActivity,
+    sharedLifecycle
 ) {
     open val arCore = ARCore(
         onSessionCreated = ::onSessionCreated,
