@@ -72,9 +72,16 @@ fun Scene(
      */
     environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
     /**
-     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+     * Encompasses all the state needed for rendering a {@link Scene}.
+     *
+     * [View] instances are heavy objects that internally cache a lot of data needed for
+     * rendering. It is not advised for an application to use many View objects.
+     *
+     * For example, in a game, a [View] could be used for the main scene and another one for the
+     * game's user interface. More <code>View</code> instances could be used for creating special
+     * effects (e.g. a [View] is akin to a rendering pass).
      */
-    childNodes: List<Node> = rememberNodes(),
+    view: View = rememberView(engine),
     /**
      * Represents a virtual camera, which determines the perspective through which the scene is
      * viewed.
@@ -84,11 +91,16 @@ fun Scene(
      */
     cameraNode: CameraNode = rememberCameraNode(engine),
     /**
-     * Always add a direct light source since it is required for shadowing.
+     * A [Renderer] instance represents an operating system's window.
      *
-     * We highly recommend adding an [IndirectLight] as well.
+     * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
+     * commands for the render thread and manages frame latency.
      */
-    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    renderer: Renderer = rememberRenderer(engine),
+    /**
+     * Provide your own instance if you want to share [Node]s' scene between multiple views.
+     */
+    scene: Scene = rememberScene(engine),
     /**
      * Defines the lighting environment and the skybox of the scene.
      *
@@ -107,29 +119,25 @@ fun Scene(
      *
      * @see [EnvironmentLoader]
      */
-    environment: Environment = rememberEnvironment(environmentLoader),
+    environment: Environment = rememberEnvironment(environmentLoader, isOpaque = isOpaque),
     /**
-     * Provide your own instance if you want to share [Node]s' scene between multiple views.
+     * Always add a direct light source since it is required for shadowing.
+     *
+     * We highly recommend adding an [IndirectLight] as well.
      */
-    scene: Scene = rememberScene(engine),
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
     /**
-     * Encompasses all the state needed for rendering a {@link Scene}.
+     * Represents a virtual camera, which determines the perspective through which the scene is
+     * viewed.
      *
-     * [View] instances are heavy objects that internally cache a lot of data needed for
-     * rendering. It is not advised for an application to use many View objects.
-     *
-     * For example, in a game, a [View] could be used for the main scene and another one for the
-     * game's user interface. More <code>View</code> instances could be used for creating special
-     * effects (e.g. a [View] is akin to a rendering pass).
+     * All other functionality in Node is supported. You can access the position and rotation of the
+     * camera, assign a collision shape to it, or add children to it.
      */
-    view: View = rememberView(engine),
+    cameraNode: CameraNode = rememberCameraNode(engine),
     /**
-     * A [Renderer] instance represents an operating system's window.
-     *
-     * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
-     * commands for the render thread and manages frame latency.
+     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
      */
-    renderer: Renderer = rememberRenderer(engine),
+    childNodes: List<Node> = rememberNodes(),
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
@@ -174,8 +182,6 @@ fun Scene(
                     null,
                     0,
                     0,
-                    activity,
-                    lifecycle,
                     engine,
                     modelLoader,
                     materialLoader,
@@ -189,16 +195,18 @@ fun Scene(
                     collisionSystem,
                     gestureDetector,
                     onGestureListener,
+                    activity,
+                    lifecycle,
                 ).apply {
                     onViewCreated?.invoke(this)
                 }
             },
             update = { sceneView ->
-                sceneView.childNodes = childNodes
                 sceneView.scene = scene
-                sceneView.setCameraNode(cameraNode)
-                sceneView.mainLightNode = mainLightNode
                 sceneView.environment = environment
+                sceneView.mainLightNode = mainLightNode
+                sceneView.setCameraNode(cameraNode)
+                sceneView.childNodes = childNodes
                 sceneView.gestureDetector = gestureDetector
                 sceneView.onGestureListener = onGestureListener
                 sceneView.onFrame = onFrame
@@ -253,9 +261,6 @@ fun rememberNodes(creator: MutableList<Node>.() -> Unit = {}) = remember {
         }
     }
 }
-
-@Composable
-fun rememberNodes(vararg nodes:Node) = rememberNodes { addAll(nodes) }
 
 @Composable
 fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.createScene(engine) }) =
