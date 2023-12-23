@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -26,10 +26,10 @@ public final class KeyVariantPairDef extends Table {
   public Table value(Table obj) { int o = __offset(10); return o != 0 ? __union(obj, o) : null; }
 
   public static int createKeyVariantPairDef(FlatBufferBuilder builder,
-      int keyOffset,
-      long hash_key,
-      byte value_type,
-      int valueOffset) {
+                                            int keyOffset,
+                                            long hash_key,
+                                            byte value_type,
+                                            int valueOffset) {
     builder.startObject(4);
     KeyVariantPairDef.addValue(builder, valueOffset);
     KeyVariantPairDef.addHashKey(builder, hash_key);

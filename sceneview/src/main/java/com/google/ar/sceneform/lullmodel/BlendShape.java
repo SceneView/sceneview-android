@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -71,13 +71,13 @@ public final class BlendShape extends Table {
   public ByteBuffer tangentIndices16InByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 16, 2); }
 
   public static int createBlendShape(FlatBufferBuilder builder,
-      long name,
-      int vertex_dataOffset,
-      int vertex_indices32Offset,
-      int vertex_indices16Offset,
-      int tangent_dataOffset,
-      int tangent_indices32Offset,
-      int tangent_indices16Offset) {
+                                     long name,
+                                     int vertex_dataOffset,
+                                     int vertex_indices32Offset,
+                                     int vertex_indices16Offset,
+                                     int tangent_dataOffset,
+                                     int tangent_indices32Offset,
+                                     int tangent_indices16Offset) {
     builder.startObject(7);
     BlendShape.addTangentIndices16(builder, tangent_indices16Offset);
     BlendShape.addTangentIndices32(builder, tangent_indices32Offset);

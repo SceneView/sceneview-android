@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -99,22 +99,22 @@ public final class ModelPipelineImportDef extends Table {
   public boolean mergeMaterials() { int o = __offset(34); return o != 0 ? 0!=bb.get(o + bb_pos) : true; }
 
   public static int createModelPipelineImportDef(FlatBufferBuilder builder,
-      int nameOffset,
-      int fileOffset,
-      boolean recenter,
-      float scale,
-      int axis_system,
-      float smoothing_angle,
-      int max_bone_weights,
-      boolean report_errors_to_stdout,
-      boolean flip_texture_coordinates,
-      boolean flatten_hierarchy_and_transform_vertices_to_root_space,
-      boolean use_specular_glossiness_textures_if_present,
-      boolean fix_infacing_normals,
-      boolean ensure_vertex_orientation_w_not_zero,
-      float cm_per_unit,
-      int target_meshesOffset,
-      boolean merge_materials) {
+                                                 int nameOffset,
+                                                 int fileOffset,
+                                                 boolean recenter,
+                                                 float scale,
+                                                 int axis_system,
+                                                 float smoothing_angle,
+                                                 int max_bone_weights,
+                                                 boolean report_errors_to_stdout,
+                                                 boolean flip_texture_coordinates,
+                                                 boolean flatten_hierarchy_and_transform_vertices_to_root_space,
+                                                 boolean use_specular_glossiness_textures_if_present,
+                                                 boolean fix_infacing_normals,
+                                                 boolean ensure_vertex_orientation_w_not_zero,
+                                                 float cm_per_unit,
+                                                 int target_meshesOffset,
+                                                 boolean merge_materials) {
     builder.startObject(16);
     ModelPipelineImportDef.addTargetMeshes(builder, target_meshesOffset);
     ModelPipelineImportDef.addCmPerUnit(builder, cm_per_unit);

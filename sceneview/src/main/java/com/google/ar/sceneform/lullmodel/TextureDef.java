@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 public final class TextureDef extends Table {
@@ -35,18 +35,18 @@ public final class TextureDef extends Table {
   public boolean isRgbm() { int o = __offset(26); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createTextureDef(FlatBufferBuilder builder,
-      int nameOffset,
-      int fileOffset,
-      int dataOffset,
-      boolean generate_mipmaps,
-      boolean premultiply_alpha,
-      int min_filter,
-      int mag_filter,
-      int wrap_s,
-      int wrap_t,
-      int wrap_r,
-      int target_type,
-      boolean is_rgbm) {
+                                     int nameOffset,
+                                     int fileOffset,
+                                     int dataOffset,
+                                     boolean generate_mipmaps,
+                                     boolean premultiply_alpha,
+                                     int min_filter,
+                                     int mag_filter,
+                                     int wrap_s,
+                                     int wrap_t,
+                                     int wrap_r,
+                                     int target_type,
+                                     boolean is_rgbm) {
     builder.startObject(12);
     TextureDef.addData(builder, dataOffset);
     TextureDef.addFile(builder, fileOffset);

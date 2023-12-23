@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -41,9 +41,9 @@ public final class SkeletonDef extends Table {
   public int boneTransformsLength() { int o = __offset(8); return o != 0 ? __vector_len(o) : 0; }
 
   public static int createSkeletonDef(FlatBufferBuilder builder,
-      int bone_namesOffset,
-      int bone_parentsOffset,
-      int bone_transformsOffset) {
+                                      int bone_namesOffset,
+                                      int bone_parentsOffset,
+                                      int bone_transformsOffset) {
     builder.startObject(5);
     SkeletonDef.addBoneTransforms(builder, bone_transformsOffset);
     SkeletonDef.addBoneParents(builder, bone_parentsOffset);
