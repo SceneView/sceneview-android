@@ -153,7 +153,7 @@ open class Geometry internal constructor(
             val vertexBuffer = vertexBuilder.build(engine)
             val boundingBox = vertexBuffer.setVertices(engine, vertices)
             val indexBuffer = indexBuilder.build(engine).apply {
-                setIndices(engine, indices.flatMap { it.indices })
+                setIndices(engine, indices.flatten())
             }
             return constructor(
                 vertexBuffer,
