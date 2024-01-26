@@ -55,6 +55,6 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-tooling:1.5.4"
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:sceneview:2.0.2"
+    releaseImplementation "io.github.sceneview:sceneview:2.0.3"
     debugImplementation project(":sceneview")
 }
