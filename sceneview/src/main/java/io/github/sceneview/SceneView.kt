@@ -23,14 +23,12 @@ import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.environment.Environment
-import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.HitTestGestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.gesture.orbitHomePosition
-import io.github.sceneview.gesture.targetPosition
 import io.github.sceneview.gesture.transform
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
@@ -877,8 +875,8 @@ open class SceneView @JvmOverloads constructor(
         engine = engine,
         type = LightManager.Type.DIRECTIONAL,
         apply = {
-            color(SceneView.DEFAULT_MAIN_LIGHT_COLOR)
-            intensity(SceneView.DEFAULT_MAIN_LIGHT_COLOR_INTENSITY)
+            color(DEFAULT_MAIN_LIGHT_COLOR)
+            intensity(DEFAULT_MAIN_LIGHT_COLOR_INTENSITY)
             direction(0.0f, -1.0f, 0.0f)
             castShadows(true)
         })
@@ -913,7 +911,7 @@ open class SceneView @JvmOverloads constructor(
                 // Dynamic resolution often helps a lot
                 dynamicResolutionOptions = dynamicResolutionOptions.apply {
                     // Disabled cause generating some camera stream wrong scaling ratio
-                    enabled = true
+                    enabled = false
                     homogeneousScaling = true
                     quality = QualityLevel.MEDIUM
                 }
@@ -927,11 +925,11 @@ open class SceneView @JvmOverloads constructor(
                 antiAliasing = AntiAliasing.FXAA
                 // Ambient occlusion is the cheapest effect that adds a lot of quality
                 ambientOcclusionOptions = ambientOcclusionOptions.apply {
-                    enabled = true
+                    enabled = false
                 }
-//                // Bloom is pretty expensive but adds a fair amount of realism
+                // Bloom is pretty expensive but adds a fair amount of realism
 //                bloomOptions = bloomOptions.apply {
-//                    enabled = false
+//                    enabled = true
 //                }
 //                // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
 //                // material orange 500.
