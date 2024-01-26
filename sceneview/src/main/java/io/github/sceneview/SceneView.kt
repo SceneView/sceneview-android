@@ -931,11 +931,11 @@ open class SceneView @JvmOverloads constructor(
 //                bloomOptions = bloomOptions.apply {
 //                    enabled = true
 //                }
-//                // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
-//                // material orange 500.
-//                colorGrading = ColorGrading.Builder()
-//                    .toneMapping(ColorGrading.ToneMapping.FILMIC)
-//                    .build(engine)
+                // Change the ToneMapper to FILMIC to avoid some over saturated colors, for example
+                // material orange 500.
+                colorGrading = ColorGrading.Builder()
+                    .toneMapper(ToneMapper.Filmic())
+                    .build(engine)
                 setShadowingEnabled(false)
             }
 
