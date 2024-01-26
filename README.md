@@ -7,7 +7,7 @@ A Sceneform replacement in Kotlin and Jetpack Compose
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
 
-[![Filament](https://img.shields.io/badge/Filament-v1.49.0-yellow)](https://github.com/google/filament)
+[![Filament](https://img.shields.io/badge/Filament-v1.49.3-yellow)](https://github.com/google/filament)
 [![ARCore](https://img.shields.io/badge/ARCore-v1.40.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
