@@ -46,6 +46,8 @@ import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.utils.*
+import kotlin.math.min
+import com.google.android.filament.utils.GestureDetector as CameraGestureDetector
 
 typealias Entity = Int
 typealias EntityInstance = Int
@@ -183,7 +185,7 @@ open class SceneView @JvmOverloads constructor(
     sharedOnGestureListener: GestureDetector.OnGestureListener? = null,
     sharedActivity: ComponentActivity? = null,
     sharedLifecycle: Lifecycle? = null,
-) : TextureView(context, attrs, defStyleAttr, defStyleRes) {
+) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
 
     val engine = sharedEngine ?: createEglContext().let {
         defaultEglContext = it
@@ -235,7 +237,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
     val view = (sharedView ?: createView(engine).also { defaultView = it }).also { view ->
-        setOpaque(isOpaque)
+//        setOpaque(isOpaque)
         view.blendMode = if (isOpaque) BlendMode.OPAQUE else BlendMode.TRANSLUCENT
         view.scene = (sharedScene ?: createScene(engine).also { defaultScene = it }).also { scene ->
             scene.indirectLight = environment.indirectLight
