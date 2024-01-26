@@ -397,7 +397,7 @@ open class ARSceneView @JvmOverloads constructor(
         setCameraNode(sharedCameraNode ?: createARCameraNode(engine).also {
             defaultCameraNode = it
         })
-        environment = sharedEnvironment ?: createAREnvironment(environmentLoader)
+        environment = sharedEnvironment ?: createAREnvironment(engine)
         sharedLifecycle?.addObserver(lifecycleObserver)
     }
 
@@ -605,9 +605,6 @@ open class ARSceneView @JvmOverloads constructor(
 
         fun createARCameraStream(materialLoader: MaterialLoader) = ARCameraStream(materialLoader)
 
-        fun createAREnvironment(environmentLoader: EnvironmentLoader, isOpaque: Boolean = true) =
-            createEnvironment(environmentLoader, isOpaque = true).copy(
-                skybox = null
-            )
+        fun createAREnvironment(engine: Engine) = createEnvironment(engine, isOpaque = true, skybox = null)
     }
 }
