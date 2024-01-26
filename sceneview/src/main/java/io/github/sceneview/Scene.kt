@@ -357,13 +357,13 @@ fun rememberMainLightNode(
 fun rememberEnvironment(
     environmentLoader: EnvironmentLoader,
     isOpaque: Boolean = true,
-    creator: () -> Environment = {
+    environment: () -> Environment = {
         SceneView.createEnvironment(environmentLoader, isOpaque)
     }
-) = remember(environmentLoader, isOpaque, creator).also { environment ->
-    DisposableEffect(environment) {
+) = remember(environmentLoader, isOpaque, environment).also {
+    DisposableEffect(it) {
         onDispose {
-            environmentLoader.destroyEnvironment(environment)
+            environmentLoader.destroyEnvironment(it)
         }
     }
 }

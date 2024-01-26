@@ -957,11 +957,18 @@ open class SceneView @JvmOverloads constructor(
                     environmentLoader.context.assets.readBuffer(
                         fileLocation = "environments/neutral/neutral_ibl.ktx"
                     ),
-                ),
-                skybox = Skybox.Builder()
-                    .color(colorOf(rgb = 0.0f, a = if (isOpaque) 1.0f else 0.0f).toFloatArray())
-                    .build(environmentLoader.engine)
+                )
             )
+
+        fun createEnvironment(
+            engine: Engine,
+            isOpaque: Boolean = true,
+            indirectLight: IndirectLight? = null,
+            skybox: Skybox? = Skybox.Builder()
+                .color(colorOf(rgb = 0.0f, a = if (isOpaque) 1.0f else 0.0f).toFloatArray())
+                .build(engine),
+            sphericalHarmonics: List<Float>? = null
+        ) = Environment(indirectLight, skybox, sphericalHarmonics)
 
         fun createCollisionSystem(view: View) = CollisionSystem(view)
     }
