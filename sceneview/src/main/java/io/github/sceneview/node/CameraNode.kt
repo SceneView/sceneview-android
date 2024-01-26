@@ -31,7 +31,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         get() = super.focalLength
         set(value) {
             _focalLength = value
-            updateLensProjection(focalLength = value)
+            updateProjection(focalLength = value)
         }
 
     // Near = 5 cm
@@ -40,7 +40,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         get() = super.near
         set(value) {
             _near = value
-            updateLensProjection()
+            updateProjection(near = value)
         }
 
     // Far = 1 km
@@ -49,7 +49,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         get() = super.far
         set(value) {
             _far = value
-            updateLensProjection()
+            updateProjection(far = value)
         }
 
     var view: View? = null
@@ -279,11 +279,11 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
      * `far` != `near`
      * for [Projection.ORTHO].
      */
-    fun updateLensProjection(
+    open fun updateProjection(
         focalLength: Double = _focalLength,
-        aspect: Double = this.aspect,
         near: Float = _near,
-        far: Float = _far
+        far: Float = _far,
+        aspect: Double = getViewPortAspect()
     ) {
         if (view != null) {
             setLensProjection(focalLength, aspect, near.toDouble(), far.toDouble())
@@ -314,10 +314,10 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
      */
     fun setProjection(
         fovInDegrees: Double,
-        aspect: Double = this.aspect,
         near: Float = _near,
         far: Float = _far,
-        direction: Camera.Fov = Camera.Fov.VERTICAL
+        direction: Camera.Fov = Camera.Fov.VERTICAL,
+        aspect: Double = getViewPortAspect(),
     ) {
         if (view != null) {
             super.setProjection(fovInDegrees, aspect, near.toDouble(), far.toDouble(), direction)
@@ -332,7 +332,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
 
     internal fun setView(view: View) {
         this.view = view
-        updateLensProjection()
+        updateProjection()
     }
 
     private fun getViewPortAspect() =
