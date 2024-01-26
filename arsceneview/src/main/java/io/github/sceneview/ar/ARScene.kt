@@ -157,7 +157,7 @@ fun ARScene(
      *
      * @see [EnvironmentLoader]
      */
-    environment: Environment = rememberAREnvironment(environmentLoader),
+    environment: Environment = rememberAREnvironment(engine),
     /**
      * Always add a direct light source since it is required for shadowing.
      *
@@ -328,14 +328,14 @@ fun rememberARCameraStream(
 
 @Composable
 fun rememberAREnvironment(
-    environmentLoader: EnvironmentLoader,
-    creator: () -> Environment = {
-        ARSceneView.createAREnvironment(environmentLoader)
-    }
-) = remember(environmentLoader, creator).also { environment ->
+    engine: Engine,
+    apply: Environment.() -> Unit = {}
+) = remember(engine) {
+    ARSceneView.createAREnvironment(engine).apply(apply)
+}.also { environment ->
     DisposableEffect(environment) {
         onDispose {
-            environmentLoader.destroyEnvironment(environment)
+            engine.safeDestroyEnvironment(environment)
         }
     }
 }
