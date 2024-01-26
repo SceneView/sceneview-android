@@ -121,6 +121,21 @@ open class SceneView @JvmOverloads constructor(
      */
     sharedCameraNode: CameraNode? = null,
     /**
+     * Helper that enables camera interaction similar to sketchfab or Google Maps.
+     *
+     * Needs to be a callable function because it can be reinitialized in case of viewport change
+     * or camera node manual position changed.
+     *
+     * The first onTouch event will make the first manipulator build. So you can change the camera
+     * position before any user gesture.
+     *
+     * Clients notify the camera manipulator of various mouse or touch events, then periodically
+     * call its getLookAt() method so that they can adjust their camera(s). Three modes are
+     * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
+     * is passed into the create method.
+     */
+    val cameraManipulator: ((View, CameraNode) -> Manipulator)? = defaultCameraManipulator,
+    /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
@@ -396,26 +411,6 @@ open class SceneView @JvmOverloads constructor(
             context as? ComponentActivity
         }
 
-    protected open val cameraGestureDetector: CameraGestureDetector? by lazy {
-        CameraGestureDetector(this, CameraGestureListener())
-    }
-
-    // TODO: Ask Filament to add a startPosition and startRotation in order to handle previous
-    //  possible programmatic camera transforms.
-    //  Better would be that we don't have to create a new Manipulator and just update  it when
-    //  the camera is programmatically updated so it don't come back to  initial position.
-    //  Return field for now will use the default node position target or maybe just don't let the
-    //  user enable manipulator until the camera position is not anymore at its default
-    //  targetPosition
-    protected open val cameraManipulator: Manipulator? by lazy {
-        Manipulator.Builder()
-            .orbitHomePosition(this.cameraNode.worldPosition)
-            .targetPosition(DEFAULT_OBJECT_POSITION)
-            .viewport(width, height)
-            .zoomSpeed(0.05f)
-            .build(Manipulator.Mode.ORBIT)
-    }
-
     open var lifecycle: Lifecycle? = sharedLifecycle
         set(value) {
             field?.removeObserver(lifecycleObserver)
@@ -428,11 +423,14 @@ open class SceneView @JvmOverloads constructor(
         get() = _viewAttachmentManager ?: ViewAttachmentManager(context, this).also {
             _viewAttachmentManager = it
         }
+
     private val displayHelper = DisplayHelper(context)
     private var swapChain: SwapChain? = null
     private val lifecycleObserver = LifeCycleObserver()
     private val frameCallback = FrameCallback()
     private var _viewAttachmentManager: ViewAttachmentManager? = null
+    private var cameraGestureDetector: CameraGestureDetector? = null
+    private var _cameraManipulator: Manipulator? = null
     private var lastTouchEvent: MotionEvent? = null
     private var surfaceMirrorer: SurfaceMirrorer? = null
     private var lastFrameTimeNanos: Long? = null
@@ -613,12 +611,10 @@ open class SceneView @JvmOverloads constructor(
 //            transformManager.openLocalTransformTransaction()
 
             // Only update the camera manipulator if a touch has been made
-            if (lastTouchEvent != null) {
-                cameraManipulator?.let { manipulator ->
-                    manipulator.update(frameTimeNanos.intervalSeconds(lastFrameTimeNanos).toFloat())
-                    // Extract the camera basis from the helper and push it to the Filament camera.
-                    cameraNode.transform = manipulator.transform
-                }
+            _cameraManipulator?.let { manipulator ->
+                manipulator.update(frameTimeNanos.intervalSeconds(lastFrameTimeNanos).toFloat())
+                // Extract the camera basis from the helper and push it to the Filament camera.
+                cameraNode.transform = manipulator.transform
             }
 
             onFrame?.invoke(frameTimeNanos)
@@ -653,8 +649,8 @@ open class SceneView @JvmOverloads constructor(
 
     protected open fun onResized(width: Int, height: Int) {
         view.viewport = Viewport(0, 0, width, height)
-        cameraManipulator?.setViewport(width, height)
-        cameraNode.updateLensProjection()
+        cameraNode.updateProjection()
+        updateCameraManipulator()
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -780,6 +776,11 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
+    fun updateCameraManipulator() {
+        _cameraManipulator = cameraManipulator?.invoke(view, cameraNode)
+        cameraGestureDetector = _cameraManipulator?.let { CameraGestureDetector(this, it) }
+    }
+
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
             _viewAttachmentManager?.onResume()
@@ -841,24 +842,24 @@ open class SceneView @JvmOverloads constructor(
         }
     }
 
-    inner class CameraGestureListener : CameraGestureDetector.OnCameraGestureListener {
-
-        override fun onScroll(x: Int, y: Int, scrollDelta: Float) {
-            cameraManipulator?.scroll(x, y, scrollDelta)
-        }
-
-        override fun onGrabBegin(x: Int, y: Int, strafe: Boolean) {
-            cameraManipulator?.grabBegin(x, y, strafe)
-        }
-
-        override fun onGrabUpdate(x: Int, y: Int) {
-            cameraManipulator?.grabUpdate(x, y)
-        }
-
-        override fun onGrabEnd() {
-            cameraManipulator?.grabEnd()
-        }
-    }
+//    inner class CameraGestureListener : CameraGestureDetector.OnCameraGestureListener {
+//
+//        override fun onScroll(x: Int, y: Int, scrollDelta: Float) {
+//            cameraManipulator?.scroll(x, y, scrollDelta)
+//        }
+//
+//        override fun onGrabBegin(x: Int, y: Int, strafe: Boolean) {
+//            cameraManipulator?.grabBegin(x, y, strafe)
+//        }
+//
+//        override fun onGrabUpdate(x: Int, y: Int) {
+//            cameraManipulator?.grabUpdate(x, y)
+//        }
+//
+//        override fun onGrabEnd() {
+//            cameraManipulator?.grabEnd()
+//        }
+//    }
 
     class DefaultCameraNode(engine: Engine) : CameraNode(engine) {
         init {
@@ -948,10 +949,24 @@ open class SceneView @JvmOverloads constructor(
             engine.createEnvironmentLoader(context)
 
         fun createCameraNode(engine: Engine): CameraNode = DefaultCameraNode(engine)
+
+        val defaultCameraManipulator: ((View, CameraNode) -> Manipulator) = { view, cameraNode ->
+            Manipulator.Builder()
+                .orbitHomePosition(cameraNode.worldPosition)
+                .viewport(min(view.viewport.width, 1), min(view.viewport.height, 1))
+                .farPlane(cameraNode.far)
+                .farPlane(cameraNode.near)
+                .orbitSpeed(0.005f, 0.005f)
+                .zoomSpeed(0.05f)
+                .build(Manipulator.Mode.ORBIT)
+        }
+
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
 
-        fun createEnvironment(environmentLoader: EnvironmentLoader, isOpaque: Boolean) =
-            environmentLoader.createEnvironment(
+        fun createEnvironment(environmentLoader: EnvironmentLoader, isOpaque: Boolean = true) =
+            createEnvironment(
+                engine = environmentLoader.engine,
+                isOpaque = isOpaque,
                 indirectLight = KTX1Loader.createIndirectLight(
                     environmentLoader.engine,
                     environmentLoader.context.assets.readBuffer(

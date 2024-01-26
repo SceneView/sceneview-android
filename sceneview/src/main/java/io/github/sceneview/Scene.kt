@@ -132,6 +132,21 @@ fun Scene(
      */
     cameraNode: CameraNode = rememberCameraNode(engine),
     /**
+     * Helper that enables camera interaction similar to sketchfab or Google Maps.
+     *
+     * Needs to be a callable function because it can be reinitialized in case of viewport change
+     * or camera node manual position changed.
+     *
+     * The first onTouch event will make the first manipulator build. So you can change the camera
+     * position before any user gesture.
+     *
+     * Clients notify the camera manipulator of various mouse or touch events, then periodically
+     * call its getLookAt() method so that they can adjust their camera(s). Three modes are
+     * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
+     * is passed into the create method.
+     */
+    cameraManipulator: ((View, CameraNode) -> Manipulator)? = SceneView.defaultCameraManipulator,
+    /**
      * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
      */
     childNodes: List<Node> = rememberNodes(),
@@ -187,6 +202,7 @@ fun Scene(
                     view,
                     renderer,
                     cameraNode,
+                    cameraManipulator,
                     mainLightNode,
                     environment,
                     isOpaque,
@@ -364,6 +380,21 @@ fun rememberEnvironment(
     DisposableEffect(it) {
         onDispose {
             environmentLoader.destroyEnvironment(it)
+        }
+    }
+}
+
+@Composable
+fun rememberEnvironment(
+    engine: Engine,
+    isOpaque: Boolean = true,
+    environment: () -> Environment = {
+        SceneView.createEnvironment(engine, isOpaque)
+    }
+) = remember(engine, isOpaque, environment).also {
+    DisposableEffect(it) {
+        onDispose {
+            engine.safeDestroyEnvironment(it)
         }
     }
 }
