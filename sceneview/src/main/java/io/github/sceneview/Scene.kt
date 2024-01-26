@@ -23,6 +23,7 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
+import com.google.android.filament.utils.Manipulator
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.environment.Environment

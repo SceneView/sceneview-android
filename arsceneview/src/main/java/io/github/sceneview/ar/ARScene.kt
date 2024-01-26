@@ -53,6 +53,7 @@ import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberScene
 import io.github.sceneview.rememberView
+import io.github.sceneview.safeDestroyEnvironment
 
 @Composable
 fun ARScene(
