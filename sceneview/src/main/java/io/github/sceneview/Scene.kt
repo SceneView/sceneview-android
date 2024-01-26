@@ -340,18 +340,18 @@ fun rememberEnvironmentLoader(
 @Composable
 fun rememberCameraNode(
     engine: Engine,
-    creator: () -> CameraNode = {
-        SceneView.createCameraNode(engine)
-    }
-) = rememberNode(creator)
+    apply: CameraNode.() -> Unit = {},
+) = rememberNode {
+    SceneView.createCameraNode(engine).apply(apply)
+}
 
 @Composable
 fun rememberMainLightNode(
     engine: Engine,
-    creator: () -> LightNode = {
-        SceneView.createMainLightNode(engine)
-    }
-) = rememberNode(creator)
+    apply: LightNode.() -> Unit = {}
+) = rememberNode {
+    SceneView.createMainLightNode(engine).apply(apply)
+}
 
 @Composable
 fun rememberEnvironment(
