@@ -55,10 +55,6 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
     var view: View? = null
         private set
     val viewport get() = view?.viewport
-    val aspect
-        get() =
-            viewport?.let { (it.width.toDouble() / it.height.toDouble()) }?.takeIf { !it.isNaN() }
-                ?: 1.0
 
     // No rendered object
     override var isTouchable = false
@@ -338,4 +334,8 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         this.view = view
         updateLensProjection()
     }
+
+    private fun getViewPortAspect() =
+        viewport?.let { (it.width.toDouble() / it.height.toDouble()) }?.takeIf { !it.isNaN() }
+            ?: 1.0
 }

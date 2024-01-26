@@ -235,6 +235,7 @@ open class ARSceneView @JvmOverloads constructor(
     sharedView,
     sharedRenderer,
     sharedCameraNode,
+    null,
     sharedMainLightNode,
     sharedEnvironment,
     isOpaque,
@@ -377,9 +378,6 @@ open class ARSceneView @JvmOverloads constructor(
     var onSessionConfigChanged: ((session: Session, config: Config) -> Unit)? = null
 
     val onLightEstimationUpdated: ((estimation: LightEstimator.Estimation?) -> Unit)? = null
-
-    override val cameraGestureDetector = null
-    override val cameraManipulator = null
 
     private val lifecycleObserver = LifeCycleObserver()
     override var lifecycle: Lifecycle?
