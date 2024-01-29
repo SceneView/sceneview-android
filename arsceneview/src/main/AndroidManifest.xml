@@ -3,7 +3,6 @@
 
     <!-- Always needed for AR. -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application>
         <!-- Indicates that this app requires Google Play Services for AR ("AR Required") and causes
