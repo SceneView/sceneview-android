@@ -5,8 +5,8 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.commit
-import io.github.sceneview.utils.doOnApplyWindowInsets
-import io.github.sceneview.utils.setFullScreen
+import io.github.sceneview.sample.doOnApplyWindowInsets
+import io.github.sceneview.sample.setFullScreen
 
 class Activity : AppCompatActivity(R.layout.activity) {
 
