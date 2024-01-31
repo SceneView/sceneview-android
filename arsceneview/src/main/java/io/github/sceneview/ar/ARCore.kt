@@ -19,7 +19,7 @@ import com.google.ar.core.Config
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
-import io.github.sceneview.ar.arcore.ArSession
+import io.github.sceneview.ar.arcore.ARSession
 
 /**
  * ### Assumed distance in meters from the device camera to the surface on which user will try to
