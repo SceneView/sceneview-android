@@ -6,9 +6,10 @@ import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.VertexBuffer;
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.rendering.RenderableInternalData.MeshData;
 
 import java.nio.Buffer;
@@ -204,6 +205,6 @@ public class RenderableInternalFilamentAssetData implements IRenderableInternalD
 
 
   @Override
-  public void buildInstanceData(RenderableInstance instance, int renderedEntity) {
+  public void buildInstanceData(Engine engine, RenderableInstance instance, int renderedEntity) {
   }
 }

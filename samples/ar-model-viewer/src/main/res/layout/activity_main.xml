@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context="io.github.sceneview.sample.armodelviewer.MainActivity">
 
-    <io.github.sceneview.ar.ArSceneView
+    <io.github.sceneview.ar.ARSceneView
         android:id="@+id/sceneView"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -14,38 +14,6 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/newModelButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
-        android:backgroundTint="@color/translucent"
-        android:gravity="center_vertical|left"
-        android:text="@string/new_object"
-        android:textColor="@android:color/white"
-        app:icon="@drawable/ic_add"
-        app:iconGravity="textStart"
-        app:iconTint="@android:color/white"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
-
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/placeModelButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:backgroundTint="@color/translucent"
-        android:gravity="center_vertical|left"
-        android:text="@string/place_object"
-        android:textColor="@android:color/white"
-        app:icon="@drawable/ic_anchor"
-        app:iconGravity="textStart"
-        app:iconTint="@android:color/white"
-        app:layout_constraintBottom_toTopOf="@id/newModelButton"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
 
     <FrameLayout
         android:id="@+id/loadingView"
@@ -68,16 +36,19 @@
     </FrameLayout>
 
     <TextView
-        android:id="@+id/statusText"
+        android:id="@+id/instructionText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:background="@android:color/white"
-        android:backgroundTint="@color/translucent"
         android:gravity="center"
-        android:padding="16dp"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
+        android:shadowColor="@android:color/black"
+        android:shadowRadius="8"
+        android:text="@string/point_your_phone_down"
         android:textColor="@android:color/white"
-        android:visibility="gone"
+        android:textSize="28sp"
+        android:visibility="visible"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />

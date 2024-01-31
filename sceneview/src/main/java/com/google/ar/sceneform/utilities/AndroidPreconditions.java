@@ -5,6 +5,8 @@ import android.os.Build.VERSION_CODES;
 import android.os.Looper;
 import androidx.annotation.VisibleForTesting;
 
+import io.github.sceneview.collision.Preconditions;
+
 /**
  * Helper class for common android specific preconditions used inside of RenderCore.
  *

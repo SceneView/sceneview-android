@@ -10,29 +10,27 @@ import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
 import androidx.core.view.isGone
 import androidx.fragment.app.Fragment
-import com.google.android.filament.Engine
 import com.google.ar.core.Config
-import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.ArFrame
+import com.google.ar.core.Frame
+import com.google.ar.core.Session
+import io.github.sceneview.ar.ARSceneView
+import io.github.sceneview.ar.arcore.fps
 import io.github.sceneview.math.Position
-import io.github.sceneview.model.GLBLoader
-import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
-import io.github.sceneview.model.destroy
 import io.github.sceneview.node.ModelNode
-import io.github.sceneview.utils.doOnApplyWindowInsets
+import io.github.sceneview.sample.doOnApplyWindowInsets
 
 const val kMaxPointCloudPerSecond = 10
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
     class PointCloudNode(
-        engine: Engine,
+        modelInstance: ModelInstance,
         var id: Int,
         var confidence: Float
-    ) : ModelNode(engine)
+    ) : ModelNode(modelInstance)
 
-    lateinit var sceneView: ArSceneView
+    lateinit var sceneView: ARSceneView
 
     lateinit var scoreText: TextView
 
@@ -44,12 +42,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     lateinit var loadingView: View
 
-    private var pointCloudModel: Model? = null
     private var pointCloudModelInstances = mutableListOf<ModelInstance>()
     private val pointCloudNodes = mutableListOf<PointCloudNode>()
 
     private var lastPointCloudTimestamp: Long? = null
-    private var lastPointCloudFrame: ArFrame? = null
+    private var lastPointCloudFrame: Frame? = null
 
     var isLoading = false
         set(value) {
@@ -63,7 +60,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 field = value
                 confidenceText.text = getString(R.string.min_confidence, value)
                 pointCloudNodes.filter { it.confidence < value }
-                    .forEach { sceneView.removeChild(it) }
+                    .forEach { sceneView.removeChildNode(it) }
             }
         }
 
@@ -83,11 +80,12 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        sceneView = view.findViewById<ArSceneView?>(R.id.sceneView).apply {
+        sceneView = view.findViewById<ARSceneView?>(R.id.sceneView).apply {
             planeRenderer.isEnabled = false
-            lightEstimationMode = Config.LightEstimationMode.DISABLED
-            environment = null
-            onArFrame = this@MainFragment::onArFrame
+            sessionConfiguration = { session, config ->
+                config.lightEstimationMode = Config.LightEstimationMode.DISABLED
+            }
+            onSessionUpdated = this@MainFragment::onSessionUpdated
         }
 
         scoreText = view.findViewById<TextView>(R.id.scoreText).apply {
@@ -161,25 +159,22 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     private fun getPointCloudModelInstance(): ModelInstance? {
         if (pointCloudModelInstances.size == 0) {
-            GLBLoader.loadInstancedModelSync(
-                context = requireContext(),
-                glbFileLocation = "models/point_cloud.glb",
+            pointCloudModelInstances = sceneView.modelLoader.createInstancedModel(
+                assetFileLocation = "models/point_cloud.glb",
                 count = maxPoints
-            )?.let { (model, instances) ->
-                pointCloudModel = model
-                pointCloudModelInstances = instances.filterNotNull().toMutableList()
-            }
+            ).toMutableList()
         }
         return pointCloudModelInstances.removeLastOrNull()
     }
 
-    fun onArFrame(arFrame: ArFrame) {
-        arFrame.takeIf { it.fps(lastPointCloudFrame) < kMaxPointCloudPerSecond }?.frame?.acquirePointCloud()
+    fun onSessionUpdated(session: Session, frame: Frame) {
+        frame.takeIf { it.fps(lastPointCloudFrame) < kMaxPointCloudPerSecond }
+            ?.acquirePointCloud()
             ?.takeIf { it.timestamp != lastPointCloudTimestamp }
             ?.use { pointCloud ->
                 if (pointCloud.ids == null) return
 
-                lastPointCloudFrame = arFrame
+                lastPointCloudFrame = frame
                 lastPointCloudTimestamp = pointCloud.timestamp
                 val idsBuffer = pointCloud.ids
                 val pointsSize = idsBuffer.limit()
@@ -210,11 +205,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        pointCloudModel?.destroy()
-    }
-
     override fun onPause() {
         super.onPause()
         pointCloudNodes.toList().forEach { removePointCloudNode(it) }
@@ -222,13 +212,13 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     fun addPointCloudNode(id: Int, position: Position, confidence: Float) {
         if (pointCloudNodes.size < maxPoints) {
-            val pointCloudNode =
-                PointCloudNode(sceneView.engine, id, confidence).apply {
+            getPointCloudModelInstance()?.let { modelInstance ->
+                val pointCloudNode = PointCloudNode(modelInstance, id, confidence).apply {
                     this.position = position
-                    this.modelInstance = getPointCloudModelInstance()
                 }
-            pointCloudNodes += pointCloudNode
-            sceneView.addChild(pointCloudNode)
+                pointCloudNodes += pointCloudNode
+                sceneView.addChildNode(pointCloudNode)
+            }
         } else {
             val pointCloudNode = pointCloudNodes.first().apply {
                 this.id = id
@@ -242,7 +232,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     fun removePointCloudNode(pointCloudNode: PointCloudNode) {
         pointCloudNodes -= pointCloudNode
-        sceneView.removeChild(pointCloudNode)
+        sceneView.removeChildNode(pointCloudNode)
         pointCloudNode.destroy()
     }
 }

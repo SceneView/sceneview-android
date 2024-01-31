@@ -1,60 +1,49 @@
 package io.github.sceneview.node
 
 import com.google.android.filament.Engine
-import io.github.sceneview.light.Light
-import io.github.sceneview.light.destroyLight
-import io.github.sceneview.light.direction
-import io.github.sceneview.light.position
-import io.github.sceneview.math.Direction
-import io.github.sceneview.math.lookTowards
-import io.github.sceneview.utils.FrameTime
+import com.google.android.filament.EntityManager
+import com.google.android.filament.LightManager
+import com.google.android.filament.Material
+import io.github.sceneview.Entity
+import io.github.sceneview.components.LightComponent
 
 /**
- * ### A Node represents a transformation within the scene graph's hierarchy.
+ * Light source [Node] in the scene such as a sun or street lights.
  *
- * This node contains a light for the rendering engine to render.
+ * At least one light must be added to a scene in order to see anything (unless the
+ * [Material.Shading.UNLIT] is used).
  *
- * Each node can have an arbitrary number of child nodes and one parent. The parent may be
- * another node, or the scene.
+ * Creation and destruction:
+ * - A Light component is created using the [LightManager.Builder] and destroyed by calling
+ * [LightManager.destroy].
+ *
+ * @see LightManager
  */
-open class LightNode(engine: Engine) : Node(engine) {
+open class LightNode(
+    engine: Engine,
+    entity: Entity
+) : Node(engine, entity), LightComponent {
 
-    var light: Light? = null
-        set(value) {
-//            field?.destroyLight()
-            field = value
-            sceneEntities = value?.let { intArrayOf(it) } ?: intArrayOf()
-        }
+    override var isTouchable = false
+    override var isEditable = false
 
-    /**
-     * TODO : Doc
-     */
-    constructor(engine: Engine, light: Light) : this(engine) {
-        this.light = light
-        worldPosition = light.position
-        worldQuaternion = lookTowards(eye = light.position, direction = light.direction)
+    constructor(
+        engine: Engine,
+        entity: Entity = EntityManager.get().create(),
+        builder: LightManager.Builder
+    ) : this(engine, entity) {
+        builder.build(engine, entity)
     }
 
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
+    constructor(
+        engine: Engine,
+        type: LightManager.Type,
+        entity: Entity = EntityManager.get().create(),
+        apply: LightManager.Builder.() -> Unit
+    ) : this(engine, entity, LightManager.Builder(type).apply(apply))
 
-        if (isAttached) {
-            light?.let { light ->
-                if (light.position != worldPosition) {
-                    light.position = worldPosition
-                }
-                //TODO: Check that
-                val worldDirection = worldQuaternion * Direction(y = 1.0f)
-                if (light.direction != worldDirection) {
-                    light.direction = worldDirection
-                }
-            }
-        }
-    }
-
-    /** ### Detach and destroy the node */
     override fun destroy() {
+        lightManager.destroy(entity)
         super.destroy()
-        light?.let { engine.destroyLight(it) }
     }
 }

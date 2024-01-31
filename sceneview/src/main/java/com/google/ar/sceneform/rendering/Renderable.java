@@ -7,17 +7,19 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.MaterialInstance;
-import com.google.android.filament.gltfio.FilamentInstance;
-import com.google.ar.sceneform.collision.Box;
-import com.google.ar.sceneform.collision.CollisionShape;
-import com.google.ar.sceneform.common.TransformProvider;
-import com.google.ar.sceneform.math.Matrix;
+import com.google.android.filament.gltfio.AssetLoader;
+import com.google.android.filament.gltfio.ResourceLoader;
+import io.github.sceneview.collision.Box;
+import io.github.sceneview.collision.CollisionShape;
+import io.github.sceneview.collision.TransformProvider;
+import io.github.sceneview.collision.Matrix;
 import com.google.ar.sceneform.resources.ResourceRegistry;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
-import com.google.ar.sceneform.utilities.ChangeId;
+import io.github.sceneview.collision.ChangeId;
 import com.google.ar.sceneform.utilities.LoadHelper;
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Preconditions;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -27,8 +29,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-
-import io.github.sceneview.SceneView;
 
 /*###########!!!!!!!!!!!!!!!!################
 /*###########!!!!!!!!!!!!!!!!################
@@ -51,8 +51,7 @@ import io.github.sceneview.SceneView;
 */
 
 /**
- * Base class for rendering in 3D space by attaching to a {@link io.github.sceneview.node.Node} with
- * {@link io.github.sceneview.node.ModelNode#setModelInstance(FilamentInstance)}.
+ * Base class for rendering in 3D space by attaching to a {@link io.github.sceneview.node.Node}.
  */
 @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored"}) // CompletableFuture
 public abstract class Renderable {
@@ -275,8 +274,8 @@ public abstract class Renderable {
     /**
      * @hide
      */
-    public RenderableInstance createInstance(TransformProvider transformProvider) {
-        return new RenderableInstance(transformProvider, this);
+    public RenderableInstance createInstance(Engine engine, AssetLoader assetLoader, ResourceLoader resourceLoader, TransformProvider transformProvider) {
+        return new RenderableInstance(engine, assetLoader, resourceLoader, transformProvider, this);
     }
 
     public void updateFromDefinition(RenderableDefinition definition) {
@@ -315,7 +314,7 @@ public abstract class Renderable {
      * until the view has been successfully drawn to an external texture, and initializing material
      * parameters.
      */
-    public void prepareForDraw(SceneView sceneView) {
+    public void prepareForDraw(Engine engine) {
     }
 
     /**
@@ -473,7 +472,7 @@ public abstract class Renderable {
          *
          * @return the constructed {@link Renderable}
          */
-        public CompletableFuture<T> build() {
+        public CompletableFuture<T> build(Engine engine) {
             try {
                 checkPreconditions();
             } catch (Throwable failedPrecondition) {
@@ -498,7 +497,7 @@ public abstract class Renderable {
                 }
             }
 
-            T renderable = makeRenderable();
+            T renderable = makeRenderable(engine);
 
             if (definition != null) {
                 return CompletableFuture.completedFuture(renderable);
@@ -591,7 +590,7 @@ public abstract class Renderable {
             return;
         }
 
-        protected abstract T makeRenderable();
+        protected abstract T makeRenderable(Engine engine);
 
         protected abstract Class<T> getRenderableClass();
 

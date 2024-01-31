@@ -5,7 +5,6 @@ plugins {
     id 'org.jetbrains.dokka'
 }
 
-
 // *************************************************************************************************
 // Filament Plugin
 // *************************************************************************************************
@@ -23,29 +22,25 @@ plugins {
 if (project.properties['filamentPluginEnabled']?.toBoolean()) {
     filamentTools {
         // Material generation: .mat -> .filamat
-        materialInputDir = project.layout.projectDirectory.dir("../assets/materials")
-        materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/materials")
+        materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+        materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
         // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
-        iblInputDir = project.layout.projectDirectory.dir("../assets/environments")
-        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/sceneview/environments")
+        iblInputDir = project.layout.projectDirectory.dir("src/main/environments")
+        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/environments")
         iblFormat = "ktx"
     }
 
     clean.doFirst {
-        delete "src/main/assets/sceneview/materials"
-        delete "src/main/assets/sceneview/environments"
+        delete "src/main/assets/materials"
+        delete "src/main/assets/environments"
     }
 }
 // *************************************************************************************************
-
-group = GROUP
-version = VERSION_NAME
 
 android {
     namespace 'io.github.sceneview'
 
     compileSdk 34
-    compileSdkVersion 34
 
     defaultConfig {
         minSdk 24
@@ -78,7 +73,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.0-alpha02"
+        kotlinCompilerExtensionVersion = "1.4.8"
     }
     // Preserve compression of filament files
     androidResources {
@@ -92,33 +87,34 @@ dependencies {
 
     // Kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.4"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.6.4"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.2"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.2"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.2"
+
+    // AndroidX
+    implementation "androidx.annotation:annotation:1.7.0"
+    api "androidx.lifecycle:lifecycle-common-java8:2.6.2"
+    api "androidx.lifecycle:lifecycle-extensions:2.2.0"
+
+    // Android KTX
+    api "androidx.core:core-ktx:1.12.0"
+    api "androidx.fragment:fragment-ktx:1.6.2"
+    api "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0-beta01"
+
+    // Compose
+    implementation "androidx.compose.ui:ui:1.5.4"
+    implementation "androidx.compose.foundation:foundation:1.5.4"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:2.7.0-beta01"
 
     // kotlin-math
     api 'dev.romainguy:kotlin-math:1.5.3'
 
     // Filament
-    def filament_version = '1.36.0'
+    def filament_version = '1.49.3'
     api "com.google.android.filament:filament-android:$filament_version"
     api "com.google.android.filament:gltfio-android:$filament_version"
     api "com.google.android.filament:filament-utils-android:$filament_version"
-
-    // AndroidX
-    implementation "androidx.annotation:annotation:1.6.0"
-    api "androidx.lifecycle:lifecycle-common-java8:2.6.1"
-    api "androidx.lifecycle:lifecycle-extensions:2.2.0"
-
-    // Compose
-    implementation "androidx.compose.ui:ui:1.5.0"
-    implementation "androidx.compose.foundation:foundation:1.5.0"
-
-    // Android KTX
-    api "androidx.core:core-ktx:1.10.1"
-    api "androidx.fragment:fragment-ktx:1.6.1"
-    api "androidx.lifecycle:lifecycle-runtime-ktx:2.6.1"
 
     // Fuel
     implementation "com.github.kittinunf.fuel:fuel:2.3.1"

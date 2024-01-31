@@ -2,12 +2,14 @@ package com.google.ar.sceneform.rendering;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.IndexBuffer;
 import com.google.android.filament.VertexBuffer;
 
 
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.rendering.RenderableInternalData.MeshData;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -89,5 +91,5 @@ interface IRenderableInternalData {
 
 
 
-  void buildInstanceData(RenderableInstance instance, @Entity int renderedEntity);
+  void buildInstanceData(Engine engine, RenderableInstance instance, @Entity int renderedEntity);
 }

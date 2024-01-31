@@ -1,22 +1,28 @@
 package io.github.sceneview.ar.arcore
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.view.Display
 import android.view.WindowManager
+import com.google.ar.core.AugmentedImageDatabase
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.Config
+import com.google.ar.core.Frame
 import com.google.ar.core.Session
-import io.github.sceneview.ar.defaultApproximateDistance
-import io.github.sceneview.utils.FrameTime
+import com.google.ar.core.exceptions.CameraNotAvailableException
+import com.google.ar.core.exceptions.MissingGlContextException
+import com.google.ar.core.exceptions.SessionPausedException
+import io.github.sceneview.ar.node.ARCameraNode
 
-class ArSession(
+class ARSession(
     context: Context,
     features: Set<Feature> = setOf(),
-    val onResumed: (session: ArSession) -> Unit,
-    val onConfigChanged: (session: ArSession, config: Config) -> Unit
+    val onResumed: (session: Session) -> Unit,
+    val onPaused: (session: Session) -> Unit,
+    val onConfigChanged: (session: Session, config: Config) -> Unit
 ) : Session(context, features) {
 
-    val display: Display by lazy {
+    private val display: Display by lazy {
         (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
     }
 
@@ -30,28 +36,37 @@ class ArSession(
 
     var isResumed = false
 
-    // TODO: See if it really has a performance impact
-//    private var _config: Config? = null
-
     var hasAugmentedImageDatabase = false
 
     /**
-     * ### The distance at which to create an InstantPlacementPoint in meters
-     *
-     * This is only used while the tracking method for the returned point is
-     * InstantPlacementPoint.TrackingMethod#SCREENSPACE_WITH_APPROXIMATE_DISTANCE.
-     */
-    val approximateDistance = defaultApproximateDistance
-
-    /**
-     * ### The most recent ARCore Frame if it is available
+     * The most recent ARCore Frame if it is available
      *
      * The frame is updated at the beginning of each drawing frame.
      * Callers of this method should not retain a reference to the return value, since it will be
      * invalid to use the ARCore frame starting with the next frame.
      */
-    var currentFrame: ArFrame? = null
+    var frame: Frame? = null
         private set
+
+    override fun configure(config: Config) {
+        super.configure(config)
+
+        if (config.depthMode != Config.DepthMode.DISABLED &&
+            !isDepthModeSupported(config.depthMode)
+        ) {
+            config.depthMode = Config.DepthMode.DISABLED
+        }
+
+        // Light estimation is not usable with front camera
+        if (cameraConfig.facingDirection == CameraConfig.FacingDirection.FRONT
+            && config.lightEstimationMode != Config.LightEstimationMode.DISABLED
+        ) {
+            config.lightEstimationMode = Config.LightEstimationMode.DISABLED
+        }
+        hasAugmentedImageDatabase = (config.augmentedImageDatabase.numImages ?: 0) > 0
+
+        onConfigChanged(this, config)
+    }
 
     override fun resume() {
         isResumed = true
@@ -61,31 +76,38 @@ class ArSession(
         // the ArCore-Session if for example the permission Dialog is shown on the screen.
         // If we remove this part, the camera is flickering if returned from the permission Dialog.
         setDisplayGeometry(displayRotation, displayWidth, displayHeight)
+
         onResumed(this)
     }
 
-    override fun pause() {
+    override fun pause() = super.pause().also {
         isResumed = false
-        super.pause()
+
+        onPaused(this)
     }
 
     /**
-     * Explicitly close the ARCore session to release native resources.
+     * Updates the state of the ARCore system. This includes: receiving a new camera frame, updating
+     * the location of the device, updating the location of tracking anchors, updating detected
+     * planes, etc.
      *
-     * Review the API reference for important considerations before calling close() in apps with
-     * more complicated lifecycle requirements: [Session.close]
+     * This call may update the pose of all created anchors and detected planes. The set of updated
+     * objects is accessible through [Frame.getUpdatedTrackables].
+     *
+     * @return The most recent Frame received
+     * @throws CameraNotAvailableException if the camera could not be opened.
+     * @throws SessionPausedException if the session is currently paused.
+     * @throws MissingGlContextException if there is no OpenGL context available.
      */
-    fun destroy() {
-        close()
-    }
-
-    fun update(frameTime: FrameTime): ArFrame? {
-        // Check if no frame or same timestamp, no drawing.
-        return super.update()?.let { frame ->
-            ArFrame(this, frameTime, frame).also {
-                currentFrame = it
-            }
+    fun updateOrNull() = if(isResumed) {
+        super.update().takeIf {
+            // Check if no frame or same timestamp, no drawing.
+            it.timestamp != 0L //&& it.timestamp != frame?.timestamp
+        }.also {
+            frame = it
         }
+    } else {
+        null
     }
 
     override fun setDisplayGeometry(rotation: Int, widthPx: Int, heightPx: Int) {
@@ -96,165 +118,68 @@ class ArSession(
             super.setDisplayGeometry(displayRotation, widthPx, heightPx)
         }
     }
-
-    /**
-     * ### Define the session config used by ARCore
-     *
-     * Prefer calling this method before the global (Activity or Fragment) onResume() cause the session
-     * base configuration in made there.
-     * Any later calls (after onSessionResumed()) to this function are not completely sure be taken in
-     * account by ARCore (even if most of them will work)
-     *
-     * Please check that all your Session Config parameters are taken in account by ARCore at
-     * runtime.
-     *
-     * @param config the apply block for the new config
-     */
-    fun configure(config: (Config) -> Unit) {
-        super.configure(this.config.apply {
-            config(this)
-
-            if (depthMode != Config.DepthMode.DISABLED && !isDepthModeSupported(depthMode)) {
-                depthMode = Config.DepthMode.DISABLED
-            }
-
-            // Light estimation is not usable with front camera
-            if (cameraConfig.facingDirection == CameraConfig.FacingDirection.FRONT
-                && lightEstimationMode != Config.LightEstimationMode.DISABLED
-            ) {
-                lightEstimationMode = Config.LightEstimationMode.DISABLED
-            }
-            hasAugmentedImageDatabase = (augmentedImageDatabase?.numImages ?: 0) > 0
-        })
-
-        onConfigChanged(this@ArSession, this@ArSession.config)
-    }
-
-    var focusMode: Config.FocusMode
-        get() = config.focusMode
-        set(value) {
-            if (focusMode != value) {
-                configure {
-                    it.focusMode = value
-                }
-            }
-        }
-
-    var planeFindingEnabled: Boolean
-        get() = config.planeFindingEnabled
-        set(value) {
-            if (planeFindingEnabled != value) {
-                configure {
-                    it.planeFindingEnabled = value
-                }
-            }
-        }
-
-    var planeFindingMode: Config.PlaneFindingMode
-        get() = config.planeFindingMode
-        set(value) {
-            if (planeFindingMode != value) {
-                configure {
-                    it.planeFindingMode = value
-                }
-            }
-        }
-
-    val depthEnabled get() = depthMode != Config.DepthMode.DISABLED
-
-    var depthMode: Config.DepthMode
-        get() = config.depthMode
-        set(value) {
-            if (depthMode != value) {
-                configure {
-                    it.depthMode = value
-                }
-            }
-        }
-
-    var instantPlacementEnabled: Boolean
-        get() = config.instantPlacementEnabled
-        set(value) {
-            if (instantPlacementEnabled != value) {
-                configure {
-                    it.instantPlacementEnabled = value
-                }
-            }
-        }
-
-    var cloudAnchorEnabled: Boolean
-        get() = config.cloudAnchorEnabled
-        set(value) {
-            if (cloudAnchorEnabled != value) {
-                configure {
-                    it.cloudAnchorEnabled = value
-                }
-            }
-        }
-
-    var geospatialEnabled: Boolean
-        get() = config.geospatialEnabled
-        set(value) {
-            if (geospatialEnabled != value) {
-                configure {
-                    it.geospatialEnabled = value
-                }
-            }
-        }
-
-    /**
-     * ### The behavior of the lighting estimation subsystem
-     *
-     * These modes consist of separate APIs that allow for granular and realistic lighting
-     * estimation for directional lighting, shadows, specular highlights, and reflections.
-     */
-    var lightEstimationMode: Config.LightEstimationMode
-        get() = config.lightEstimationMode
-        set(value) {
-            if (lightEstimationMode != value) {
-                configure {
-                    it.lightEstimationMode = value
-                }
-            }
-        }
 }
 
-var Config.planeFindingEnabled
-    get() = planeFindingMode != Config.PlaneFindingMode.DISABLED
-    set(value) {
-        planeFindingMode = if (value) {
-            Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-        } else {
-            Config.PlaneFindingMode.DISABLED
-        }
-    }
+/**
+ * Define the session config used by ARCore
+ *
+ * Prefer calling this method before the global (Activity or Fragment) onResume() cause the session
+ * base configuration in made there.
+ * Any later calls (after onSessionResumed()) to this function are not completely sure be taken in
+ * account by ARCore (even if most of them will work)
+ *
+ * Please check that all your Session Config parameters are taken in account by ARCore at
+ * runtime.
+ *
+ * @param config the apply block for the new config
+ */
+fun Session.configure(config: (Config) -> Unit) = configure(this.config.apply(config))
 
-var Config.instantPlacementEnabled
-    get() = instantPlacementMode != Config.InstantPlacementMode.DISABLED
-    set(value) {
-        instantPlacementMode = if (value) {
-            Config.InstantPlacementMode.LOCAL_Y_UP
-        } else {
-            Config.InstantPlacementMode.DISABLED
-        }
-    }
+fun Session.canHostCloudAnchor(cameraNode: ARCameraNode) =
+    estimateFeatureMapQualityForHosting(cameraNode.pose) != Session.FeatureMapQuality.INSUFFICIENT
 
-var Config.cloudAnchorEnabled
-    get() = cloudAnchorMode != Config.CloudAnchorMode.DISABLED
-    set(value) {
-        cloudAnchorMode = if (value) {
-            Config.CloudAnchorMode.ENABLED
-        } else {
-            Config.CloudAnchorMode.DISABLED
-        }
-    }
+/**
+ * Adds a single named image with known physical size to the augmented image database from an
+ * Android bitmap, with a specified physical width in meters.
+ *
+ * Returns the zero-based positional index of the image within the database.
+ *
+ * For images added via this method, ARCore can estimate the pose of the physical image at
+ * runtime as soon as ARCore detects the physical image, without requiring the user to move the
+ * device to view the physical image from different viewpoints. Note that ARCore will refine the
+ * estimated size and pose of the physical image as it is viewed from different viewpoints.
+ *
+ * This method takes time to perform non-trivial image processing (20ms - 30ms), and should be
+ * run on a background thread to avoid blocking the UI thread.
+ *
+ * @param name Name metadata for this image, does not have to be unique.
+ * @param bitmap Bitmap containing the image in ARGB_8888 format. The alpha channel is ignored in
+ *     this bitmap, as only non-transparent images are currently supported.
+ * @param widthInMeters Width in meters for this image, must be strictly greater than zero.
+ * `null` indicates the physical size of the image is not known, at the expense of an increased
+ * image detection time.
+ * @throws com.google.ar.core.exceptions.ImageInsufficientQualityException if the image quality is
+ *     image is insufficient, e.g. if the image has not enough features.
+ * @throws java.lang.IllegalArgumentException if the bitmap is not in ARGB_888 format or the width
+ *     in meters is less than or equal to zero.
+ */
+fun Config.addAugmentedImage(
+    session: Session,
+    name: String,
+    bitmap: Bitmap,
+    widthInMeters: Float? = null
+) {
+    val augmentedImageDatabase = augmentedImageDatabase.takeIf {
+        // Using the default augmentedImageDatabase even if not null is not
+        // working so we check if it's our AugmentedImageDatabase (if we already
+        // added images)
+        it.numImages > 0
+    } ?: AugmentedImageDatabase(session)
 
-var Config.geospatialEnabled
-    get() = geospatialMode != Config.GeospatialMode.DISABLED
-    set(value) {
-        geospatialMode = if (value) {
-            Config.GeospatialMode.ENABLED
-        } else {
-            Config.GeospatialMode.DISABLED
-        }
+    if (widthInMeters != null) {
+        augmentedImageDatabase.addImage(name, bitmap, widthInMeters)
+    } else {
+        augmentedImageDatabase.addImage(name, bitmap)
     }
+    this.augmentedImageDatabase = augmentedImageDatabase
+}

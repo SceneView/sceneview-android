@@ -2,20 +2,11 @@ package io.github.sceneview.environment
 
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
-import com.google.android.filament.utils.HDRLoader
-import io.github.sceneview.light.destroy
-import io.github.sceneview.scene.destroy
-import java.io.Closeable
-import com.google.android.filament.utils.KTX1Loader as KTXLoader
-
-/**
- * Default Filament indirect light intensity for default camera exposure
- */
-const val defaultIndirectLightIntensity = 30_000.0f
+import io.github.sceneview.loaders.EnvironmentLoader
 
 /**
  *
- * ### Indirect light and skybox environment for a scene
+ * Indirect light and skybox environment for a [Scene]
  *
  * Environments are usually captured as high-resolution HDR equirectangular images and processed by
  * the cmgen tool to generate the data needed by IndirectLight.
@@ -24,44 +15,35 @@ const val defaultIndirectLightIntensity = 30_000.0f
  *
  * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
  * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
- * mountains.
- * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the future.
- *
+ * mountains. Only a single IndirectLight can be used in a Scene. This limitation will be lifted in
+ * the future.
  * - When added to a Scene, the Skybox fills all untouched pixels.
  *
- * Defines the lighting environment and the skybox for the scene
- *
- *
- * @property indirectLight ### IndirectLight is used to simulate environment lighting.
- * Environment lighting has a two components:
- * - irradiance
- * - reflections (specular component)
- *
- * @property sphericalHarmonics ### Array of 9 * 3 floats
- *
- * @property skybox ### The Skybox is drawn last and covers all pixels not touched by geometry.
- * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
- *
- * @see [IndirectLight]
- * @see [KTXLoader.loadEnvironment]
- * @see [HDRLoader.loadEnvironment]
+ * @see [EnvironmentLoader]
+ * @see [IndirectLight.Builder]
+ * @see [Skybox.Builder]
  */
-open class Environment(
-    val indirectLight: IndirectLight? = null,
-    val skybox: Skybox? = null,
-    val sphericalHarmonics: FloatArray? = null
-) : Closeable {
-
+data class Environment(
     /**
-     * ### Destroys the EnvironmentLights and frees all its associated resources.
+     * IndirectLight is used to simulate environment lighting.
      *
-     * You shouldn't have to call it if you used lifecycle, since each entity is destroyed
-     * at the onDestroy()
+     *  Environment lighting has a two components:
+     *  - irradiance
+     *  - reflections (specular component)
+     *
+     *  `null` to unset the IndirectLight.
      */
-    open fun destroy() {
-        indirectLight?.destroy()
-        skybox?.destroy()
-    }
-
-    override fun close() = destroy()
-}
+    val indirectLight: IndirectLight? = null,
+    /**
+     * The Skybox is drawn last and covers all pixels not touched by geometry.
+     *
+     * `null` to unset the Skybox.
+     */
+    val skybox: Skybox? = null,
+    /**
+     * Spherical harmonics from the content of a KTX file.
+     *
+     * Array of 9 * 3 floats, or null on failure.
+     */
+    val sphericalHarmonics: List<Float>? = null
+)

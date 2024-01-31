@@ -2,7 +2,7 @@ package com.google.ar.sceneform.resources;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.Nullable;
-import com.google.ar.sceneform.utilities.Preconditions;
+import io.github.sceneview.collision.Preconditions;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Iterator;

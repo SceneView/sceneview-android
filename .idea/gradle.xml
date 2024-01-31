@@ -4,10 +4,19 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
-        <option name="testRunner" value="GRADLE" />
-        <option name="distributionType" value="DEFAULT_WRAPPED" />
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$PROJECT_DIR$/buildSrc" name="buildSrc">
+                <projects>
+                  <project path="$PROJECT_DIR$/buildSrc" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleJvm" value="jbr-17" />
+        <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
@@ -16,15 +25,16 @@
             <option value="$PROJECT_DIR$/samples" />
             <option value="$PROJECT_DIR$/samples/ar-augmented-image" />
             <option value="$PROJECT_DIR$/samples/ar-cloud-anchor" />
-            <option value="$PROJECT_DIR$/samples/ar-cursor-placement" />
             <option value="$PROJECT_DIR$/samples/ar-model-viewer" />
+            <option value="$PROJECT_DIR$/samples/ar-model-viewer-compose" />
             <option value="$PROJECT_DIR$/samples/ar-point-cloud" />
             <option value="$PROJECT_DIR$/samples/common" />
             <option value="$PROJECT_DIR$/samples/model-viewer" />
+            <option value="$PROJECT_DIR$/samples/model-viewer-compose" />
             <option value="$PROJECT_DIR$/sceneview" />
-            <option value="$PROJECT_DIR$/sceneview_1_0_0" />
           </set>
         </option>
+        <option name="resolveExternalAnnotations" value="false" />
       </GradleProjectSettings>
     </option>
   </component>

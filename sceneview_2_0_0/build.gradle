@@ -1,0 +1,123 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'filament-tools-plugin'
+//    id 'org.jetbrains.dokka'
+}
+// *************************************************************************************************
+// Filament Plugin
+// *************************************************************************************************
+//
+// Needed if you want to generate Materials, Indirect Light (IBL) and Skyboxes.
+//
+// 1) Copy/paste the /buildSrc dir into your project root folder
+// 2) Copy/paste the plugins line above (plugins: { id 'filament-tools-plugin' }) and bellow into
+// your app/module build.gradle
+// 3) Download the Filament tools release archive for your development desktop:
+// Filament release download: https://github.com/google/filament/releases
+// (Choose the corresponding version to the filament_version bellow)
+// 4) Copy/paste the Filament Plugin part from the gradle.properties file to your project
+// 5) Sync Gradle and clean your project
+if (project.properties['filamentPluginEnabled']?.toBoolean()) {
+    filamentTools {
+        // Material generation: .mat -> .filamat
+        materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+        materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+        // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
+        iblInputDir = project.layout.projectDirectory.dir("src/main/environments")
+        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/environments")
+        iblFormat = "ktx"
+    }
+
+    clean.doFirst {
+        delete "src/main/assets/materials"
+        delete "src/main/assets/environments"
+    }
+}
+// *************************************************************************************************
+
+group = GROUP
+version = VERSION_NAME
+
+android {
+    namespace 'io.github.sceneview'
+
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 28
+        targetSdk 34
+
+        consumerProguardFiles 'consumer-rules.pro'
+
+        buildConfigField 'String', 'VERSION_NAME', "\"${project.properties['VERSION_NAME']}\""
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.4.8"
+    }
+    // Preserve compression of filament files
+    androidResources {
+        noCompress 'filamat', 'ktx'
+    }
+}
+
+dependencies {
+
+    // Kotlin
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.2"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.2"
+
+    // kotlin-math
+    api 'dev.romainguy:kotlin-math:1.5.3'
+
+    // Filament
+    def filament_version = '1.44.0'
+    api "com.google.android.filament:filament-android:$filament_version"
+    api "com.google.android.filament:gltfio-android:$filament_version"
+    api "com.google.android.filament:filament-utils-android:$filament_version"
+
+    // AndroidX
+    implementation "androidx.annotation:annotation:1.7.0"
+    api "androidx.lifecycle:lifecycle-common-java8:2.6.2"
+    api "androidx.lifecycle:lifecycle-extensions:2.2.0"
+
+    // Compose
+    implementation "androidx.compose.ui:ui:1.5.3"
+    implementation "androidx.compose.foundation:foundation:1.5.3"
+
+    // Android KTX
+    api "androidx.core:core-ktx:1.12.0"
+    api "androidx.fragment:fragment-ktx:1.6.1"
+    api "androidx.lifecycle:lifecycle-runtime-ktx:2.6.2"
+
+    // Fuel (Http)
+    implementation "com.github.kittinunf.fuel:fuel:2.3.1"
+    implementation "com.github.kittinunf.fuel:fuel-android:2.3.1"
+    implementation "com.github.kittinunf.fuel:fuel-coroutines:2.3.1"
+}
+
+//apply plugin: "com.vanniktech.maven.publish"

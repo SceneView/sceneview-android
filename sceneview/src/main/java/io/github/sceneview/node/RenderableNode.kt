@@ -1,17 +1,18 @@
 package io.github.sceneview.node
 
-import androidx.annotation.IntRange
+import com.google.android.filament.Box
 import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
-import dev.romainguy.kotlin.math.*
+import io.github.sceneview.Entity
+import io.github.sceneview.FilamentEntity
 import io.github.sceneview.SceneView
-import io.github.sceneview.math.*
-import io.github.sceneview.model.*
-import io.github.sceneview.renderable.*
+import io.github.sceneview.components.RenderableComponent
+import io.github.sceneview.math.toVector3Box
 
 /**
- * ### A Node represents a transformation within the scene graph's hierarchy.
+ * A Node represents a transformation within the scene graph's hierarchy.
  *
  * This node contains a renderable model for the rendering engine to render.
  *
@@ -19,62 +20,45 @@ import io.github.sceneview.renderable.*
  * another node, or the [SceneView]
  * .
  */
-open class RenderableNode(engine: Engine, open val renderables: List<Renderable> = listOf()) :
-    Node(engine) {
+open class RenderableNode(
+    engine: Engine,
+    @FilamentEntity entity: Entity = EntityManager.get().create(),
+) : Node(engine, entity), RenderableComponent {
 
-    val renderable get() = renderables.firstOrNull()
-    val materialInstances get() = renderables.map { it.getMaterial() }
+    constructor(
+        engine: Engine,
+        @FilamentEntity entity: Entity = EntityManager.get().create(),
+        /**
+         * Count the number of primitives that will be supplied to the builder
+         */
+        primitiveCount: Int,
+        boundingBox: Box,
+        /**
+         * Binds a material instance.
+         *
+         * If no material is specified, Filament will fall back to a basic default material.
+         */
+        materialInstances: List<MaterialInstance?> = listOf(),
+        builder: RenderableManager.Builder.() -> Unit,
+    ) : this(engine, entity) {
+        RenderableManager.Builder(primitiveCount)
+            .boundingBox(boundingBox)
+            .apply {
+                materialInstances.forEachIndexed { index, materialInstance ->
+                    materialInstance?.let { material(index, materialInstance) }
+                }
+            }.apply(builder)
+            .build(engine, entity)
+        updateCollisionShape()
+    }
 
-    constructor(engine: Engine, renderable: Renderable) : this(engine, listOf(renderable))
+    override fun updateVisibility() {
+        super.updateVisibility()
 
-    /**
-     * @see RenderableManager.setPriority
-     */
-    fun setPriority(@IntRange(from = 0, to = 7) priority: Int) =
-        renderables.forEach { it.setPriority(priority) }
+        setLayerVisible(isVisible)
+    }
 
-    /**
-     * @see RenderableManager.setMaterialInstanceAt
-     */
-    fun setMaterialInstance(
-        materialInstance: MaterialInstance,
-        @IntRange(from = 0) primitiveIndex: Int = 0
-    ) = renderables.forEach { it.setMaterialInstance(materialInstance, primitiveIndex) }
-
-    /**
-     * @see RenderableManager.setCastShadows
-     */
-    fun setCastShadows(enabled: Boolean) = renderables.forEach { it.setCastShadows(enabled) }
-
-    /**
-     * @see RenderableManager.setReceiveShadows
-     */
-    fun setReceiveShadows(enabled: Boolean) = renderables.forEach { it.setReceiveShadows(enabled) }
-
-    /**
-     * @see RenderableManager.setCulling
-     */
-    fun setCulling(enabled: Boolean) = renderables.forEach { it.setCulling(enabled) }
-
-    /**
-     * @see RenderableManager.setBlendOrder
-     */
-    fun setBlendOrder(
-        @IntRange(from = 0, to = 65535) blendOrder: Int,
-        @IntRange(from = 0) primitiveIndex: Int = 0
-    ) = renderables.forEach { it.setBlendOrder(blendOrder, primitiveIndex) }
-
-    /**
-     * @see RenderableManager.setGlobalBlendOrderEnabledAt
-     */
-    fun setGlobalBlendOrderEnabled(enabled: Boolean, @IntRange(from = 0) primitiveIndex: Int = 0) =
-        renderables.forEach { it.setGlobalBlendOrderEnabled(enabled, primitiveIndex) }
-
-    /**
-     * @see RenderableManager.setScreenSpaceContactShadows
-     */
-    fun setScreenSpaceContactShadows(enabled: Boolean) =
-        renderables.forEach {
-            it.setScreenSpaceContactShadows(enabled)
-        }
+    fun updateCollisionShape() {
+        collisionShape = axisAlignedBoundingBox.toVector3Box()
+    }
 }

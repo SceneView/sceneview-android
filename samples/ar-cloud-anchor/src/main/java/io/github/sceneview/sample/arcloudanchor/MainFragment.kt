@@ -1,7 +1,8 @@
 package io.github.sceneview.sample.arcloudanchor
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -13,31 +14,88 @@ import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-import com.google.ar.core.Anchor
-import com.google.ar.core.Session
-import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.PlacementMode
-import io.github.sceneview.utils.doOnApplyWindowInsets
+import com.google.ar.core.Anchor.CloudAnchorState
+import com.google.ar.core.Config
+import io.github.sceneview.ar.ARSceneView
+import io.github.sceneview.ar.arcore.canHostCloudAnchor
+import io.github.sceneview.ar.node.CloudAnchorNode
+import io.github.sceneview.ar.node.HitResultNode
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.sample.doOnApplyWindowInsets
+import kotlinx.coroutines.Job
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
-    private lateinit var sceneView: ArSceneView
+    private lateinit var sceneView: ARSceneView
     private lateinit var loadingView: View
     private lateinit var editText: EditText
     private lateinit var hostButton: Button
     private lateinit var resolveButton: Button
     private lateinit var actionButton: ExtendedFloatingActionButton
 
-    private lateinit var cloudAnchorNode: ArModelNode
+    private lateinit var cursorNode: HitResultNode
+    private lateinit var modelNode: ModelNode
+    private lateinit var cloudAnchorNode: CloudAnchorNode
+
+    private var cloudAnchorResolveJob: Job? = null
 
     private var mode = Mode.HOME
+        set(value) {
+            field = value
+            when (value) {
+                Mode.HOME -> {
+                    editText.isVisible = false
+                    hostButton.isVisible = true
+                    resolveButton.isVisible = true
+                    actionButton.isVisible = false
+                    cloudAnchorNode.isVisible = false
+                }
+
+                Mode.HOST -> {
+                    hostButton.isVisible = false
+                    resolveButton.isVisible = false
+                    actionButton.apply {
+                        setIconResource(R.drawable.ic_host)
+                        setText(R.string.host)
+                        isVisible = true
+                        isEnabled = true
+                    }
+                    cloudAnchorNode.isVisible = true
+                }
+
+                Mode.RESOLVE -> {
+                    editText.isVisible = true
+                    hostButton.isVisible = false
+                    resolveButton.isVisible = false
+                    actionButton.apply {
+                        setIconResource(R.drawable.ic_resolve)
+                        setText(R.string.resolve)
+                        isVisible = true
+                        isEnabled = editText.text.isNotEmpty()
+                    }
+                }
+
+                Mode.RESET -> {
+                    editText.isVisible = true
+                    actionButton.apply {
+                        setIconResource(R.drawable.ic_reset)
+                        setText(R.string.reset)
+                        isEnabled = true
+                    }
+                }
+            }
+        }
 
     private var isLoading = false
         set(value) {
             field = value
             loadingView.isGone = !value
         }
+
+    var cloudAnchorId by requireContext().getSharedPreferences("preferences", Context.MODE_PRIVATE)
+        .string(defaultValue = null)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -55,97 +113,90 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             bottomGuideline.setGuidelineEnd(systemBarsInsets.bottom)
         }
 
-        sceneView = view.findViewById(R.id.sceneView)
-        sceneView.apply {
-            cloudAnchorEnabled = true
+        sceneView = view.findViewById<ARSceneView>(R.id.sceneView).apply {
+            configureSession { _, config ->
+                config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
+            }
+            cursorNode = HitResultNode(
+                engine = engine,
+                xPx = width / 2.0f,
+                yPx = height / 2.0f
+            ).apply {
+                modelNode = ModelNode(
+                    modelLoader.createModelInstance("models/spiderbot.glb")
+                )
+                addChildNode(modelNode)
+            }
+            addChildNode(cursorNode)
         }
 
         loadingView = view.findViewById(R.id.loadingView)
 
-        actionButton = view.findViewById(R.id.actionButton)
-        actionButton.setOnClickListener {
-            actionButtonClicked()
-        }
-
-        editText = view.findViewById(R.id.editText)
-        editText.addTextChangedListener {
-            actionButton.isEnabled = !it.isNullOrBlank()
-        }
-
-        hostButton = view.findViewById(R.id.hostButton)
-        hostButton.setOnClickListener {
-            selectMode(Mode.HOST)
-        }
-
-        resolveButton = view.findViewById(R.id.resolveButton)
-        resolveButton.setOnClickListener {
-            selectMode(Mode.RESOLVE)
-        }
-
-        isLoading = true
-        cloudAnchorNode =
-            ArModelNode(
-                engine = sceneView.engine,
-                placementMode = PlacementMode.PLANE_HORIZONTAL
-            ).apply {
-                parent = sceneView
-                isSmoothPoseEnable = false
-                isVisible = false
-                loadModelGlbAsync(
-                    glbFileLocation = "models/spiderbot.glb"
-                ) {
-                    isLoading = false
-                }
+        actionButton = view.findViewById<ExtendedFloatingActionButton>(R.id.actionButton).apply {
+            setOnClickListener {
+                actionButtonClicked()
             }
+        }
+
+        editText = view.findViewById<EditText>(R.id.editText).apply {
+            addTextChangedListener {
+                actionButton.isEnabled = !it.isNullOrBlank()
+            }
+            setText(cloudAnchorId ?: "")
+        }
+
+        hostButton = view.findViewById<Button?>(R.id.hostButton).apply {
+            setOnClickListener { mode = Mode.HOST }
+        }
+
+        resolveButton = view.findViewById<Button?>(R.id.resolveButton).apply {
+            setOnClickListener { mode = Mode.RESOLVE }
+        }
     }
 
     private fun actionButtonClicked() {
         when (mode) {
             Mode.HOME -> {}
             Mode.HOST -> {
-                val frame = sceneView.currentFrame ?: return
-
-                if (!cloudAnchorNode.isAnchored) {
-                    cloudAnchorNode.anchor()
-                }
-
-                if (sceneView.arSession?.estimateFeatureMapQualityForHosting(frame.camera.pose) == Session.FeatureMapQuality.INSUFFICIENT) {
+                val session = sceneView.session ?: return
+                if (!session.canHostCloudAnchor(sceneView.cameraNode)) {
                     Toast.makeText(context, R.string.insufficient_visual_data, Toast.LENGTH_LONG)
                         .show()
                     return
                 }
+                val anchor = cursorNode.createAnchor() ?: return
 
-                cloudAnchorNode.hostCloudAnchor { anchor: Anchor, success: Boolean ->
-                    if (success) {
-                        editText.setText(anchor.cloudAnchorId)
-                        selectMode(Mode.RESET)
-                    } else {
-                        Toast.makeText(context, R.string.error_occurred, Toast.LENGTH_LONG).show()
-                        Log.d(
-                            TAG,
-                            "Unable to host the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}"
-                        )
-                        selectMode(Mode.HOST)
+                sceneView.addChildNode(CloudAnchorNode(sceneView.engine, anchor).apply {
+                    host(session) { cloudAnchorId, state ->
+                        mode = if (state == CloudAnchorState.SUCCESS && cloudAnchorId != null) {
+                            editText.setText(cloudAnchorId)
+                            Mode.RESET
+                        } else {
+                            Toast.makeText(context, R.string.error_occurred, Toast.LENGTH_LONG)
+                                .show()
+                            Mode.HOST
+                        }
                     }
-                }
-
+                })
                 actionButton.apply {
                     setText(R.string.hosting)
                     isEnabled = true
                 }
             }
+
             Mode.RESOLVE -> {
-                cloudAnchorNode.resolveCloudAnchor(editText.text.toString()) { anchor: Anchor, success: Boolean ->
-                    if (success) {
-                        cloudAnchorNode.isVisible = true
-                        selectMode(Mode.RESET)
+                val session = sceneView.session ?: return
+                CloudAnchorNode.resolve(
+                    sceneView.engine,
+                    session,
+                    editText.text.toString()
+                ) { state, node ->
+                    mode = if (!state.isError && node != null) {
+                        sceneView.addChildNode(node)
+                        Mode.RESET
                     } else {
                         Toast.makeText(context, R.string.error_occurred, Toast.LENGTH_LONG).show()
-                        Log.d(
-                            TAG,
-                            "Unable to resolve the Cloud Anchor. The Cloud Anchor state is ${anchor.cloudAnchorState}"
-                        )
-                        selectMode(Mode.RESOLVE)
+                        Mode.RESOLVE
                     }
                 }
 
@@ -154,53 +205,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                     isEnabled = false
                 }
             }
+
             Mode.RESET -> {
                 cloudAnchorNode.detachAnchor()
-                selectMode(Mode.HOME)
-            }
-        }
-    }
-
-    private fun selectMode(mode: Mode) {
-        this.mode = mode
-
-        when (mode) {
-            Mode.HOME -> {
-                editText.isVisible = false
-                hostButton.isVisible = true
-                resolveButton.isVisible = true
-                actionButton.isVisible = false
-                cloudAnchorNode.isVisible = false
-            }
-            Mode.HOST -> {
-                hostButton.isVisible = false
-                resolveButton.isVisible = false
-                actionButton.apply {
-                    setIconResource(R.drawable.ic_host)
-                    setText(R.string.host)
-                    isVisible = true
-                    isEnabled = true
-                }
-                cloudAnchorNode.isVisible = true
-            }
-            Mode.RESOLVE -> {
-                editText.isVisible = true
-                hostButton.isVisible = false
-                resolveButton.isVisible = false
-                actionButton.apply {
-                    setIconResource(R.drawable.ic_resolve)
-                    setText(R.string.resolve)
-                    isVisible = true
-                    isEnabled = editText.text.isNotEmpty()
-                }
-            }
-            Mode.RESET -> {
-                editText.isVisible = true
-                actionButton.apply {
-                    setIconResource(R.drawable.ic_reset)
-                    setText(R.string.reset)
-                    isEnabled = true
-                }
+                mode = Mode.HOME
             }
         }
     }
@@ -212,4 +220,21 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     companion object {
         private const val TAG = "MainFragment"
     }
+}
+
+fun SharedPreferences.string(
+    key: (KProperty<*>) -> String = KProperty<*>::name,
+    defaultValue: String? = null
+): ReadWriteProperty<Any, String?> = object : ReadWriteProperty<Any, String?> {
+    override fun setValue(thisRef: Any, property: KProperty<*>, value: String?) = edit().apply {
+        val propertyKey = key(property)
+        if (value != null) {
+            putString(propertyKey, value)
+        } else {
+            remove(propertyKey)
+        }
+    }.apply()
+
+    override fun getValue(thisRef: Any, property: KProperty<*>): String? =
+        getString(key(property), defaultValue)
 }

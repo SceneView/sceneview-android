@@ -1,80 +1,64 @@
 package io.github.sceneview.sample.armodelviewer
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isGone
-import androidx.core.view.isVisible
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import androidx.lifecycle.lifecycleScope
+import com.google.ar.core.Anchor
 import com.google.ar.core.Config
-import io.github.sceneview.ar.ArSceneView
+import com.google.ar.core.Plane
+import com.google.ar.core.TrackingFailureReason
+import io.github.sceneview.ar.ARSceneView
+import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.ar.getDescription
-import io.github.sceneview.ar.node.ArModelNode
-import io.github.sceneview.ar.node.PlacementMode
+import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.math.Position
-import io.github.sceneview.utils.doOnApplyWindowInsets
-import io.github.sceneview.utils.setFullScreen
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.sample.doOnApplyWindowInsets
+import io.github.sceneview.sample.setFullScreen
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
-    lateinit var sceneView: ArSceneView
+    lateinit var sceneView: ARSceneView
     lateinit var loadingView: View
-    lateinit var statusText: TextView
-    lateinit var placeModelButton: ExtendedFloatingActionButton
-    lateinit var newModelButton: ExtendedFloatingActionButton
-
-    data class Model(
-        val fileLocation: String,
-        val scaleUnits: Float? = null,
-        val placementMode: PlacementMode = PlacementMode.BEST_AVAILABLE,
-        val applyPoseRotation: Boolean = true
-    )
-
-    val models = listOf(
-        Model("models/spiderbot.glb"),
-        Model(
-            fileLocation = "https://storage.googleapis.com/ar-answers-in-search-models/static/Tiger/model.glb",
-            // Display the Tiger with a size of 3 m long
-            scaleUnits = 2.5f,
-            placementMode = PlacementMode.BEST_AVAILABLE,
-            applyPoseRotation = false
-        ),
-        Model(
-            fileLocation = "https://sceneview.github.io/assets/models/DamagedHelmet.glb",
-            placementMode = PlacementMode.INSTANT,
-            scaleUnits = 0.5f
-        ),
-        Model(
-            fileLocation = "https://storage.googleapis.com/ar-answers-in-search-models/static/GiantPanda/model.glb",
-            placementMode = PlacementMode.PLANE_HORIZONTAL,
-            // Display the Tiger with a size of 1.5 m height
-            scaleUnits = 1.5f
-        ),
-        Model(
-            fileLocation = "https://sceneview.github.io/assets/models/Spoons.glb",
-            placementMode = PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL,
-            // Keep original model size
-            scaleUnits = null
-        ),
-        Model(
-            fileLocation = "https://sceneview.github.io/assets/models/Halloween.glb",
-            placementMode = PlacementMode.PLANE_HORIZONTAL,
-            scaleUnits = 2.5f
-        ),
-    )
-    var modelIndex = 0
-    var modelNode: ArModelNode? = null
+    lateinit var instructionText: TextView
 
     var isLoading = false
         set(value) {
             field = value
             loadingView.isGone = !value
         }
+
+    var anchorNode: AnchorNode? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                updateInstructions()
+            }
+        }
+
+    var trackingFailureReason: TrackingFailureReason? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                updateInstructions()
+            }
+        }
+
+    fun updateInstructions() {
+        instructionText.text = trackingFailureReason?.let {
+            it.getDescription(this)
+        } ?: if (anchorNode == null) {
+            getString(R.string.point_your_phone_down)
+        } else {
+            null
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,87 +76,59 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
             title = ""
         })
-        statusText = findViewById(R.id.statusText)
-        sceneView = findViewById<ArSceneView?>(R.id.sceneView).apply {
-            lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-            depthEnabled = true
-            instantPlacementEnabled = true
-            onArTrackingFailureChanged = { reason ->
-                statusText.text = reason?.getDescription(context)
-                statusText.isGone = reason == null
-            }
-        }
+        instructionText = findViewById(R.id.instructionText)
         loadingView = findViewById(R.id.loadingView)
-        newModelButton = findViewById<ExtendedFloatingActionButton>(R.id.newModelButton).apply {
-            // Add system bar margins
-            val bottomMargin = (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
-            doOnApplyWindowInsets { systemBarsInsets ->
-                (layoutParams as ViewGroup.MarginLayoutParams).bottomMargin =
-                    systemBarsInsets.bottom + bottomMargin
+        sceneView = findViewById<ARSceneView?>(R.id.sceneView).apply {
+            planeRenderer.isEnabled = true
+            configureSession { session, config ->
+                config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                    true -> Config.DepthMode.AUTOMATIC
+                    else -> Config.DepthMode.DISABLED
+                }
+                config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
+                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             }
-            setOnClickListener { newModelNode() }
-        }
-        placeModelButton = findViewById<ExtendedFloatingActionButton>(R.id.placeModelButton).apply {
-            setOnClickListener { placeModelNode() }
-        }
-
-        newModelNode()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.activity_main, menu)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        item.isChecked = !item.isChecked
-        modelNode?.detachAnchor()
-        modelNode?.placementMode = when (item.itemId) {
-            R.id.menuPlanePlacement -> PlacementMode.PLANE_HORIZONTAL_AND_VERTICAL
-            R.id.menuInstantPlacement -> PlacementMode.INSTANT
-            R.id.menuDepthPlacement -> PlacementMode.DEPTH
-            R.id.menuBestPlacement -> PlacementMode.BEST_AVAILABLE
-            else -> PlacementMode.DISABLED
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
-    fun placeModelNode() {
-        modelNode?.anchor()
-        placeModelButton.isVisible = false
-        sceneView.planeRenderer.isVisible = false
-    }
-
-    fun newModelNode() {
-        isLoading = true
-        modelNode?.takeIf { !it.isAnchored }?.let {
-            sceneView.removeChild(it)
-            it.destroy()
-        }
-        val model = models[modelIndex]
-        modelIndex = (modelIndex + 1) % models.size
-        modelNode = ArModelNode(sceneView.engine, model.placementMode).apply {
-            isSmoothPoseEnable = true
-            applyPoseRotation = model.applyPoseRotation
-            loadModelGlbAsync(
-                glbFileLocation = model.fileLocation,
-                autoAnimate = true,
-                scaleToUnits = model.scaleUnits,
-                // Place the model origin at the bottom center
-                centerOrigin = Position(y = -1.0f)
-            ) {
-                sceneView.planeRenderer.isVisible = true
-                isLoading = false
+            onSessionUpdated = { _, frame ->
+                if (anchorNode == null) {
+                    frame.getUpdatedPlanes()
+                        .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
+                        ?.let { plane ->
+                            addAnchorNode(plane.createAnchor(plane.centerPose))
+                        }
+                }
             }
-            onAnchorChanged = { anchor ->
-                placeModelButton.isGone = anchor != null
-            }
-            onHitResult = { node, _ ->
-                placeModelButton.isGone = !node.isTracking
+            onTrackingFailureChanged = { reason ->
+                this@MainActivity.trackingFailureReason = reason
             }
         }
-        sceneView.addChild(modelNode!!)
-        // Select the model node by default (the model node is also selected on tap)
-        sceneView.selectedNode = modelNode
+    }
+
+    fun addAnchorNode(anchor: Anchor) {
+        sceneView.addChildNode(
+            AnchorNode(sceneView.engine, anchor)
+                .apply {
+                    isEditable = true
+                    lifecycleScope.launch {
+                        isLoading = true
+                        sceneView.modelLoader.loadModelInstance(
+                            "https://sceneview.github.io/assets/models/DamagedHelmet.glb"
+                        )?.let { modelInstance ->
+                            addChildNode(
+                                ModelNode(
+                                    modelInstance = modelInstance,
+                                    // Scale to fit in a 0.5 meters cube
+                                    scaleToUnits = 0.5f,
+                                    // Bottom origin instead of center so the model base is on floor
+                                    centerOrigin = Position(y = -0.5f)
+                                ).apply {
+                                    isEditable = true
+                                }
+                            )
+                        }
+                        isLoading = false
+                    }
+                    anchorNode = this
+                }
+        )
     }
 }

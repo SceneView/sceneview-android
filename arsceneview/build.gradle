@@ -1,8 +1,41 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
+    id 'filament-tools-plugin'
     id 'org.jetbrains.dokka'
 }
+
+// *************************************************************************************************
+// Filament Plugin
+// *************************************************************************************************
+//
+// Needed if you want to generate Materials, Indirect Light (IBL) and Skyboxes.
+//
+// 1) Copy/paste the /buildSrc dir into your project root folder
+// 2) Copy/paste the plugins line above (plugins: { id 'filament-tools-plugin' }) and bellow into
+// your app/module build.gradle
+// 3) Download the Filament tools release archive for your development desktop:
+// Filament release download: https://github.com/google/filament/releases
+// (Choose the corresponding version to the filament_version bellow)
+// 4) Copy/paste the Filament Plugin part from the gradle.properties file to your project
+// 5) Sync Gradle and clean your project
+if (project.properties['filamentPluginEnabled']?.toBoolean()) {
+    filamentTools {
+        // Material generation: .mat -> .filamat
+        materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+        materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+        // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
+        iblInputDir = project.layout.projectDirectory.dir("src/main/environments")
+        iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/environments")
+        iblFormat = "ktx"
+    }
+
+    clean.doFirst {
+        delete "src/main/assets/materials"
+        delete "src/main/assets/environments"
+    }
+}
+// *************************************************************************************************
 
 android {
     namespace 'io.github.sceneview.ar'
@@ -37,7 +70,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.0-alpha02"
+        kotlinCompilerExtensionVersion = "1.4.8"
     }
     // Preserve compression of filament files
     androidResources {
@@ -46,18 +79,18 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.10.1'
+    implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
 
     // Compose
-    implementation "androidx.compose.ui:ui:1.5.0"
-    implementation "androidx.compose.foundation:foundation:1.5.0"
+    implementation "androidx.compose.ui:ui:1.5.3"
+    implementation "androidx.compose.foundation:foundation:1.5.3"
 
     // SceneView
     api project(":sceneview")
 
     // ARCore
-    api "com.google.ar:core:1.39.0"
+    api "com.google.ar:core:1.40.0"
 }
 
 apply plugin: "com.vanniktech.maven.publish"

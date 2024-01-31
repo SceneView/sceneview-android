@@ -1,16 +1,16 @@
 package com.google.ar.sceneform.rendering;
 
+import androidx.annotation.Nullable;
+
+import com.google.android.filament.Engine;
 import com.google.android.filament.MaterialInstance;
-import com.google.ar.sceneform.math.Vector3;
+import io.github.sceneview.collision.Vector3;
 import com.google.ar.sceneform.utilities.AndroidPreconditions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import androidx.annotation.Nullable;
-import androidx.lifecycle.Lifecycle;
 
 public class PlaneFactory {
     private static final int COORDS_PER_TRIANGLE = 3;
@@ -25,7 +25,7 @@ public class PlaneFactory {
      */
     @SuppressWarnings("AndroidApiChecker")
     // CompletableFuture requires api level 24
-    public static ModelRenderable makePlane(Vector3 size, Vector3 center, MaterialInstance material) {
+    public static ModelRenderable makePlane(Engine engine, Vector3 size, Vector3 center, MaterialInstance material) {
         AndroidPreconditions.checkMinAndroidApiLevel();
 
         Vector3 extents = size.scaled(0.5f);
@@ -67,16 +67,16 @@ public class PlaneFactory {
         RenderableDefinition.Submesh submesh = RenderableDefinition.Submesh.builder()
                 .setTriangleIndices(triangleIndices)
                 .setMaterial(material)
-                .build();
+                .build(engine);
 
         RenderableDefinition renderableDefinition = RenderableDefinition.builder()
                 .setVertices(vertices)
                 .setSubmeshes(Arrays.asList(submesh))
-                .build();
+                .build(engine);
 
         CompletableFuture<ModelRenderable> future = ModelRenderable.builder()
                 .setSource(renderableDefinition)
-                .build();
+                .build(engine);
 
         @Nullable ModelRenderable result;
         try {

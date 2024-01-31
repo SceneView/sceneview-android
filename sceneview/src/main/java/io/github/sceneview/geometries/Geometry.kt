@@ -2,23 +2,24 @@ package io.github.sceneview.geometries
 
 import com.google.android.filament.Box
 import com.google.android.filament.Engine
-import com.google.android.filament.EntityInstance
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.RenderableManager
+import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.max
 import dev.romainguy.kotlin.math.min
-import io.github.sceneview.Filament
+import io.github.sceneview.EntityInstance
 import io.github.sceneview.math.Box
+import io.github.sceneview.math.Color
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.normalToTangent
-import io.github.sceneview.utils.Color
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
 typealias UvCoordinate = Float2
+typealias UvScale = Float2
 
 private const val kPositionSize = 3 // x, y, z
 private const val kTangentSize = 4 // Quaternion: x, y, z, w
@@ -39,11 +40,16 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Plane
  * @see Sphere
  */
-open class Geometry(
+open class Geometry internal constructor(
+    internal val engine: Engine,
+    val primitiveType: PrimitiveType,
+    vertices: List<Vertex>,
     val vertexBuffer: VertexBuffer,
-    val indexBuffer: IndexBuffer
+    primitivesIndices: List<List<Int>>,
+    val indexBuffer: IndexBuffer,
+    var primitivesOffsets: List<IntRange>,
+    var boundingBox: Box
 ) {
-
     /**
      * Used for constructing renderables dynamically
      *
@@ -57,207 +63,246 @@ open class Geometry(
         val color: Color? = null
     )
 
-    /**
-     * Represents a Submesh for a Geometry.
-     *
-     * Each Geometry may have multiple Submeshes.
-     */
-    data class Submesh(val triangleIndices: List<Int>) {
-        constructor(vararg triangleIndices: Int) : this(triangleIndices.toList())
-    }
+//    /**
+//     * Represents a Submesh for a Geometry.
+//     *
+//     * Each Geometry may have multiple Submeshes.
+//     */
+//    data class PrimitiveIndices(val indices: List<Int>) {
+//        constructor(vararg indices: Int) : this(indices.toList())
+//    }
 
-    lateinit var vertices: List<Vertex>
-    lateinit var submeshes: List<Submesh>
+    open class Builder(val primitiveType: PrimitiveType = PrimitiveType.TRIANGLES) {
+        protected val vertexBuilder = VertexBuffer.Builder()
+        protected val indexBuilder = IndexBuffer.Builder()
 
-    lateinit var boundingBox: Box
-        private set
-    lateinit var offsetsCounts: List<Pair<Int, Int>>
-        private set
+        protected var vertices: List<Vertex> = listOf()
+        protected var indices: List<List<Int>> = listOf()
 
-    open class Builder(
-        vertices: List<Vertex> = listOf(),
-        submeshes: List<Submesh> = listOf()
-    ) : BaseBuilder<Geometry>(vertices, submeshes) {
-        override fun build(
-            vertexBuffer: VertexBuffer,
-            indexBuffer: IndexBuffer
-        ) = Geometry(vertexBuffer, indexBuffer)
-    }
+        fun vertices(vertices: List<Vertex>) = apply {
+            vertexBuilder.bufferCount(
+                1 + // Position is never null
+                        (if (vertices.hasNormals) 1 else 0) +
+                        (if (vertices.hasUvCoordinates) 1 else 0) +
+                        (if (vertices.hasColors) 1 else 0)
+            )
+            vertexBuilder.vertexCount(vertices.size)
 
-    abstract class BaseBuilder<T : Geometry> internal constructor(
-        var vertices: List<Vertex> = listOf(),
-        var submeshes: List<Submesh> = listOf()
-    ) {
-
-        fun vertices(vertices: List<Vertex>) = apply { this.vertices = vertices }
-        fun submeshes(submeshes: List<Submesh>) = apply { this.submeshes = submeshes }
-
-        open fun build(engine: Engine): T {
-            val vertexBuffer = VertexBuffer.Builder().apply {
-                bufferCount(
-                    1 + // Position is never null
-                            (if (vertices.hasNormals) 1 else 0) +
-                            (if (vertices.hasUvCoordinates) 1 else 0) +
-                            (if (vertices.hasColors) 1 else 0)
-                )
-                vertexCount(vertices.size)
-
-                // Position Attribute
-                var bufferIndex = 0
-                attribute(
-                    VertexBuffer.VertexAttribute.POSITION,
+            // Position Attribute
+            var bufferIndex = 0
+            vertexBuilder.attribute(
+                VertexBuffer.VertexAttribute.POSITION,
+                bufferIndex,
+                VertexBuffer.AttributeType.FLOAT3,
+                0,
+                kPositionSize * Float.SIZE_BYTES
+            )
+            // Tangents Attribute
+            if (vertices.hasNormals) {
+                bufferIndex++
+                vertexBuilder.attribute(
+                    VertexBuffer.VertexAttribute.TANGENTS,
                     bufferIndex,
-                    VertexBuffer.AttributeType.FLOAT3,
+                    VertexBuffer.AttributeType.FLOAT4,
                     0,
-                    kPositionSize * Float.SIZE_BYTES
+                    kTangentSize * Float.SIZE_BYTES
                 )
-                // Tangents Attribute
-                if (vertices.hasNormals) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.TANGENTS,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT4,
-                        0,
-                        kTangentSize * Float.SIZE_BYTES
-                    )
-                    normalized(VertexBuffer.VertexAttribute.TANGENTS)
-                }
-                // Uv Attribute
-                if (vertices.hasUvCoordinates) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.UV0,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT2,
-                        0,
-                        kUVSize * Float.SIZE_BYTES
-                    )
-                }
-                // Color Attribute
-                if (vertices.hasColors) {
-                    bufferIndex++
-                    attribute(
-                        VertexBuffer.VertexAttribute.COLOR,
-                        bufferIndex,
-                        VertexBuffer.AttributeType.FLOAT4,
-                        0,
-                        kColorSize * Float.SIZE_BYTES
-                    )
-                    normalized(VertexBuffer.VertexAttribute.COLOR)
-                }
-            }.build(engine)
+                vertexBuilder.normalized(VertexBuffer.VertexAttribute.TANGENTS)
+            }
+            // Uv Attribute
+            if (vertices.hasUvCoordinates) {
+                bufferIndex++
+                vertexBuilder.attribute(
+                    VertexBuffer.VertexAttribute.UV0,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT2,
+                    0,
+                    kUVSize * Float.SIZE_BYTES
+                )
+            }
+            // Color Attribute
+            if (vertices.hasColors) {
+                bufferIndex++
+                vertexBuilder.attribute(
+                    VertexBuffer.VertexAttribute.COLOR,
+                    bufferIndex,
+                    VertexBuffer.AttributeType.FLOAT4,
+                    0,
+                    kColorSize * Float.SIZE_BYTES
+                )
+                vertexBuilder.normalized(VertexBuffer.VertexAttribute.COLOR)
+            }
+            this.vertices = vertices
+        }
 
-            // Determine how many indices there are
-            val indexBuffer = IndexBuffer.Builder().apply {
-                indexCount(submeshes.sumOf { it.triangleIndices.size })
-                    .bufferType(IndexBuffer.Builder.IndexType.UINT)
-            }.build(engine)
+        fun primitivesIndices(indices: List<List<Int>>) = apply {
+            indexBuilder.indexCount(indices.sumOf { it.size })
+                .bufferType(IndexBuffer.Builder.IndexType.UINT)
+            this.indices = indices
+        }
 
-            return build(vertexBuffer, indexBuffer).apply {
-                setBufferVertices(engine, this@BaseBuilder.vertices)
-                setBufferIndices(engine, this@BaseBuilder.submeshes)
+        fun indices(indices: List<Int>) = primitivesIndices(listOf(indices))
+
+        fun <T : Geometry> build(
+            engine: Engine,
+            constructor: (
+                vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer,
+                offsets: List<IntRange>, boundingBox: Box
+            ) -> T
+        ): T {
+            val vertexBuffer = vertexBuilder.build(engine)
+            val boundingBox = vertexBuffer.setVertices(engine, vertices)
+            val indexBuffer = indexBuilder.build(engine).apply {
+                setIndices(engine, indices.flatten())
+            }
+            return constructor(
+                vertexBuffer,
+                indexBuffer,
+                indices.getOffsets(),
+                boundingBox
+            )
+        }
+
+        open fun build(engine: Engine) =
+            build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
+                Geometry(
+                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer,
+                    offsets, boundingBox
+                )
+            }
+    }
+
+    var vertices: List<Vertex> = vertices
+        set(value) {
+            if (field != value) {
+                field = value
+                vertexBuffer.setVertices(engine, vertices).also {
+                    boundingBox = it
+                }
             }
         }
 
-        fun build() = build(Filament.engine)
+    var primitivesIndices: List<List<Int>> = primitivesIndices
+        set(value) {
+            if (field != value) {
+                field = value
+                indexBuffer.setIndices(engine, primitivesIndices.flatMap { it.indices }).also {
+                    primitivesOffsets = primitivesIndices.getOffsets()
+                }
+            }
+        }
 
-        internal abstract fun build(vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer): T
-    }
+    var indices: List<Int>
+        get() = primitivesIndices.flatten()
+        set(value) {
+            primitivesIndices = listOf(value)
+        }
 
-    fun setBufferVertices(engine: Engine, vertices: List<Vertex>) {
+    fun update(
+        vertices: List<Vertex> = this.vertices,
+        indices: List<List<Int>> = this.primitivesIndices
+    ) = apply {
         this.vertices = vertices
-
-        var bufferIndex = 0
-
-        // Create position Buffer
-        vertexBuffer.setBufferAt(
-            engine, bufferIndex,
-            FloatBuffer.allocate(vertices.size * kPositionSize).apply {
-                vertices.forEach { put(it.position.toFloatArray()) }
-                // Make sure the cursor is pointing in the right place in the byte buffer
-                flip()
-            }, 0,
-            vertices.size * kPositionSize
-        )
-
-        // Create tangents Buffer
-        if (vertices.hasNormals) {
-            bufferIndex++
-            vertexBuffer.setBufferAt(
-                engine, bufferIndex,
-                FloatBuffer.allocate(vertices.size * kTangentSize).apply {
-                    vertices.forEach { put(normalToTangent(it.normal!!).toFloatArray()) }
-                    flip()
-                }, 0,
-                vertices.size * kTangentSize
-            )
-        }
-
-        // Create UV Buffer
-        if (vertices.hasUvCoordinates) {
-            bufferIndex++
-            vertexBuffer.setBufferAt(
-                engine, bufferIndex,
-                FloatBuffer.allocate(vertices.size * kUVSize).apply {
-                    vertices.forEach { put(it.uvCoordinate!!.toFloatArray()) }
-                    rewind()
-                }, 0,
-                vertices.size * kUVSize
-            )
-        }
-
-        // Create color Buffer
-        if (vertices.hasColors) {
-            bufferIndex++
-            vertexBuffer.setBufferAt(
-                engine, bufferIndex,
-                FloatBuffer.allocate(vertices.size * kColorSize).apply {
-                    vertices.forEach { put(it.color!!.toFloatArray()) }
-                    rewind()
-                }, 0,
-                vertices.size * kColorSize
-            )
-        }
-
-        // Calculate the Aabb in one pass through the vertices.
-        var minPosition = Position(vertices.first().position)
-        var maxPosition = Position(vertices.first().position)
-        vertices.forEach { vertex ->
-            minPosition = min(minPosition, vertex.position)
-            maxPosition = max(maxPosition, vertex.position)
-        }
-        val halfExtent = (maxPosition - minPosition) * 0.5f
-        val center = minPosition + halfExtent
-        boundingBox = Box(center, halfExtent)
-    }
-
-    fun setBufferIndices(engine: Engine, submeshes: List<Submesh>) {
-        this.submeshes = submeshes
-
-        // Fill the index buffer with the data
-        indexBuffer.setBuffer(engine,
-            IntBuffer.allocate(submeshes.sumOf { it.triangleIndices.size }).apply {
-                submeshes.flatMap { it.triangleIndices }.forEach { put(it) }
-                flip()
-            })
-
-        var indexStart = 0
-        offsetsCounts = submeshes.map { submesh ->
-            (indexStart to submesh.triangleIndices.size).also {
-                indexStart += submesh.triangleIndices.size
-            }
-        }
+        this.primitivesIndices = indices
     }
 
     fun destroy() {
-        Filament.engine.destroy()
+        engine.destroyVertexBuffer(vertexBuffer)
+        engine.destroyIndexBuffer(indexBuffer)
     }
 }
 
 val List<Geometry.Vertex>.hasNormals get() = any { it.normal != null }
 val List<Geometry.Vertex>.hasUvCoordinates get() = any { it.uvCoordinate != null }
 val List<Geometry.Vertex>.hasColors get() = any { it.color != null }
+
+fun VertexBuffer.setVertices(engine: Engine, vertices: List<Geometry.Vertex>): Box {
+    var bufferIndex = 0
+
+    // Create position Buffer
+    setBufferAt(
+        engine, bufferIndex,
+        FloatBuffer.allocate(vertices.size * kPositionSize).apply {
+            vertices.forEach { put(it.position.toFloatArray()) }
+            // Make sure the cursor is pointing in the right place in the byte buffer
+            flip()
+        }, 0,
+        vertices.size * kPositionSize
+    )
+
+    // Create tangents Buffer
+    if (vertices.hasNormals) {
+        bufferIndex++
+        setBufferAt(
+            engine, bufferIndex,
+            FloatBuffer.allocate(vertices.size * kTangentSize).apply {
+                vertices.forEach { put(normalToTangent(it.normal!!).toFloatArray()) }
+                flip()
+            }, 0,
+            vertices.size * kTangentSize
+        )
+    }
+
+    // Create UV Buffer
+    if (vertices.hasUvCoordinates) {
+        bufferIndex++
+        setBufferAt(
+            engine, bufferIndex,
+            FloatBuffer.allocate(vertices.size * kUVSize).apply {
+                vertices.forEach { put(it.uvCoordinate!!.toFloatArray()) }
+                rewind()
+            }, 0,
+            vertices.size * kUVSize
+        )
+    }
+
+    // Create color Buffer
+    if (vertices.hasColors) {
+        bufferIndex++
+        setBufferAt(
+            engine, bufferIndex,
+            FloatBuffer.allocate(vertices.size * kColorSize).apply {
+                vertices.forEach { put(it.color!!.toFloatArray()) }
+                rewind()
+            }, 0,
+            vertices.size * kColorSize
+        )
+    }
+
+    // Calculate the Aabb in one pass through the vertices.
+    var minPosition = Position(vertices.first().position)
+    var maxPosition = Position(vertices.first().position)
+    vertices.forEach { vertex ->
+        minPosition = min(minPosition, vertex.position)
+        maxPosition = max(maxPosition, vertex.position)
+    }
+
+    val halfExtent = (maxPosition - minPosition) / 2.0f
+    val center = minPosition + halfExtent
+    return Box(center, halfExtent)
+}
+
+fun IndexBuffer.setIndices(
+    engine: Engine,
+    indices: List<Int>
+) {
+    // Fill the index buffer with the data
+    setBuffer(engine,
+        IntBuffer.allocate(indices.size).apply {
+            indices.forEach { put(it) }
+            flip()
+        })
+}
+
+
+fun List<List<Int>>.getOffsets(): List<IntRange> {
+    var indexStart = 0
+    return map { primitiveIndices ->
+        (indexStart until indexStart + primitiveIndices.size).also {
+            indexStart += primitiveIndices.size
+        }
+    }
+}
 
 /**
  * Specifies the geometry data for a primitive.
@@ -272,15 +317,18 @@ val List<Geometry.Vertex>.hasColors get() = any { it.color != null }
  * @see Cylinder
  * @see RenderableManager.setGeometry
  */
-fun RenderableManager.Builder.geometry(geometry: Geometry) = apply {
-    geometry.offsetsCounts.forEachIndexed { primitiveIndex, (offset, count) ->
+fun RenderableManager.Builder.geometry(
+    geometry: Geometry,
+    offsets: List<IntRange> = geometry.primitivesOffsets
+) = apply {
+    offsets.forEachIndexed { primitiveIndex, offset ->
         geometry(
             primitiveIndex,
-            RenderableManager.PrimitiveType.TRIANGLES,
+            geometry.primitiveType,
             geometry.vertexBuffer,
             geometry.indexBuffer,
-            offset,
-            count
+            offset.first,
+            offset.count()
         )
     }
     // Overall bounding box of the renderable
@@ -298,25 +346,21 @@ fun RenderableManager.Builder.geometry(geometry: Geometry) = apply {
  * @see RenderableManager.Builder.geometry
  */
 fun RenderableManager.setGeometry(
-    @EntityInstance instance: Int,
-    geometry: Geometry
+    instance: EntityInstance,
+    geometry: Geometry,
+    offsets: List<IntRange> = geometry.primitivesOffsets
 ) {
-    // Update the geometry and material instances
-    geometry.offsetsCounts.forEachIndexed { primitiveIndex, (offset, count) ->
+    offsets.forEachIndexed { primitiveIndex, offset ->
         setGeometryAt(
             instance,
             primitiveIndex,
-            RenderableManager.PrimitiveType.TRIANGLES,
+            geometry.primitiveType,
             geometry.vertexBuffer,
             geometry.indexBuffer,
-            offset,
-            count
+            offset.first,
+            offset.count()
         )
     }
+    // Overall bounding box of the renderable
     setAxisAlignedBoundingBox(instance, geometry.boundingBox)
-}
-
-fun Engine.destroyGeometry(geometry: Geometry) {
-    destroyVertexBuffer(geometry.vertexBuffer)
-    destroyIndexBuffer(geometry.indexBuffer)
 }

@@ -4,6 +4,8 @@ plugins {
 }
 
 android {
+    namespace "io.github.sceneview.sample.modelviewer"
+
     compileSdk 34
 
     defaultConfig {
@@ -25,16 +27,16 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17
     }
-    aaptOptions {
+    androidResources {
         noCompress 'filamat', 'ktx'
     }
-    namespace 'io.github.sceneview.sample.modelviewer'
 }
 
 dependencies {
     implementation project(":samples:common")
 
     // SceneView
-    releaseImplementation "io.github.sceneview:sceneview:1.0.12"
-    debugImplementation project(":sceneview_1_0_0")
+//    releaseImplementation "io.github.sceneview:sceneview:2.0.0"
+//    debugImplementation project(":sceneview_2_0_0")
+    implementation "io.github.sceneview:sceneview:2.0.0"
 }

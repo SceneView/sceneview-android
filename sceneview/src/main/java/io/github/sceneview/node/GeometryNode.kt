@@ -1,12 +1,10 @@
 package io.github.sceneview.node
 
-import com.google.android.filament.Engine
-import com.google.android.filament.EntityManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.geometries.geometry
-import io.github.sceneview.renderable.collisionShape
+import io.github.sceneview.managers.materials
 
 /**
  * Mesh are bundles of primitives, each of which has its own geometry and material.
@@ -26,34 +24,42 @@ import io.github.sceneview.renderable.collisionShape
  * scene.addEntity(renderable)
  * ```
  *
- * To modify the state of an existing renderable, clients should first use RenderableManager
- * to get a temporary handle called an <em>instance</em>. The instance can then be used to get or
- * set the renderable's state. Please note that instances are ephemeral; clients should store
- * entities, not instances.
+ * To modify the state of an existing renderable, clients should first use RenderableManager to get
+ * a temporary handle called an <em>instance</em>. The instance can then be used to get or set the
+ * renderable's state. Please note that instances are ephemeral; clients should store entities,
+ * not instances.
  *
  * @see Geometry
  */
 open class GeometryNode(
-    engine: Engine,
-    geometry: Geometry,
-    materials: List<MaterialInstance?> = listOf(),
-    apply: RenderableManager.Builder.() -> Unit = {}
-) : RenderableNode(engine, EntityManager.get().create()) {
+    open val geometry: Geometry,
+    materialInstances: List<MaterialInstance?>,
+    primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
+    builderApply: RenderableManager.Builder.() -> Unit = {}
+) : RenderableNode(
+    engine = geometry.engine,
+    primitiveCount = primitivesOffsets.size,
+    boundingBox = geometry.boundingBox,
+    materialInstances = materialInstances,
+    builder = {
+        geometry(geometry, primitivesOffsets)
+        materials(materialInstances)
+        apply(builderApply)
+    }) {
 
-    init {
-        RenderableManager.Builder(geometry.submeshes.size)
-            .geometry(geometry)
-            .apply {
-                materials.forEachIndexed { index, material ->
-                    material?.let { material(index, it) }
-                }
-            }
-            .apply(apply)
-            .build(engine, renderable!!)
-        updateCollisionShape()
-    }
+    constructor(
+        geometry: Geometry,
+        materialInstance: MaterialInstance? = null,
+        builderApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        geometry = geometry,
+        materialInstances = listOf(materialInstance),
+        primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
+        builderApply = builderApply
+    )
 
-    fun updateCollisionShape() {
-        collisionShape = renderable?.collisionShape
-    }
+    fun updateGeometry(
+        vertices: List<Geometry.Vertex> = geometry.vertices,
+        indices: List<List<Int>> = geometry.primitivesIndices
+    ) = setGeometry(geometry.update(vertices, indices))
 }

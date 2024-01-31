@@ -1,548 +1,218 @@
 package io.github.sceneview.node
 
-import android.content.Context
-import com.google.android.filament.Engine
-import com.google.android.filament.Entity
-import com.google.android.filament.EntityInstance
-import com.google.android.filament.TransformManager
+import androidx.annotation.IntRange
+import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.gltfio.Animator
 import com.google.android.filament.gltfio.FilamentAsset
-import com.google.ar.sceneform.math.Matrix
-import dev.romainguy.kotlin.math.*
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.max
+import io.github.sceneview.Entity
 import io.github.sceneview.SceneView
-import io.github.sceneview.gesture.NodeMotionEvent
-import io.github.sceneview.math.*
-import io.github.sceneview.model.*
-import io.github.sceneview.renderable.Renderable
-import io.github.sceneview.transform.*
-import io.github.sceneview.utils.FrameTime
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import io.github.sceneview.components.RenderableComponent
+import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Scale
+import io.github.sceneview.model.Model
+import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.model.camerasEntities
+import io.github.sceneview.model.collisionShape
+import io.github.sceneview.model.engine
+import io.github.sceneview.model.getAnimationIndex
+import io.github.sceneview.model.lightEntities
+import io.github.sceneview.model.model
+import io.github.sceneview.model.renderableEntities
+import io.github.sceneview.utils.intervalSeconds
 
 /**
- * ### A Node represents a transformation within the scene graph's hierarchy.
+ * Create the ModelNode from a loaded model instance.
  *
- * This node contains a renderable model for the rendering engine to render.
+ * Use your own single [MaterialLoader] instance or the [SceneView.materialLoader] one to load your
+ * gltF form different .glTF/.glb resource locations.
  *
- * Each node can have an arbitrary number of child nodes and one parent. The parent may be
- * another node, or the [SceneView]
- * .
+ * @see ModelLoader
  */
-open class ModelNode(engine: Engine) : RenderableNode(engine) {
+open class ModelNode(
+    /**
+     * The [ModelInstance] to add to scene. Usually a renderable 3D model.
+     */
+    val modelInstance: ModelInstance,
+    /**
+     * Plays the animations automatically if the model has one.
+     */
+    autoAnimate: Boolean = true,
+    /**
+     * Scale the model to fit into a unit (usually meters) cube.
+     *
+     * Default is `null` to keep model original size.
+     */
+    scaleToUnits: Float? = null,
+    /**
+     * Center the model origin to this unit cube position.
+     *
+     * - `null` = Keep the original model center point
+     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
+     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
+     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
+     * - ...
+     */
+    centerOrigin: Position? = null
+) : Node(engine = modelInstance.engine, entity = modelInstance.root) {
+
+    interface ChildNode {
+        val entity: Entity
+        val modelInstance: ModelInstance
+        val model get() = modelInstance.asset
+
+        /**
+         * Gets the `NameComponentManager` label for the given node, if it exists.
+         */
+        val name: String get() = model.getName(entity) ?: "$entity"
+
+        /**
+         * Gets the glTF extras string for the asset or a specific node.
+         */
+        val extras: String? get() = model.getExtras(entity)
+
+        /**
+         * Gets the names of all morph targets in the given entity.
+         */
+        val morphTargetNames: List<String> get() = model.getMorphTargetNames(entity).toList()
+    }
+
+    inner class RenderableNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity
+    ) : io.github.sceneview.node.RenderableNode(engine = modelInstance.engine, entity = entity),
+        ChildNode
+
+    inner class LightNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity
+    ) : io.github.sceneview.node.LightNode(engine = modelInstance.engine, entity = entity),
+        ChildNode
+
+    inner class CameraNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity
+    ) : io.github.sceneview.node.CameraNode(engine = modelInstance.engine, entity = entity),
+        ChildNode
 
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
-    open var modelRootEntity: Int? = null
-        @Entity
-        set(value) {
-            modelRootInstance?.let {
-                if (transformManager.getParentOrNull(it) == transformEntity) {
-                    transformManager.setParent(it, null)
-                }
-            }
-            field = value
-            modelRootInstance?.let {
-                transformManager.setParent(it, transformInstance)
-            }
-            modelTransform = _modelTransform
-        }
+    val renderableNodes = modelInstance.renderableEntities.map {
+        RenderableNode(modelInstance, it)
+    }
+    val lightNodes = modelInstance.lightEntities.map {
+        LightNode(modelInstance, it).apply { parent = this }
+    }
+    val cameraNodes = modelInstance.camerasEntities.map {
+        CameraNode(modelInstance, it).apply { parent = this }
+    }
 
-    val modelRootInstance: Int?
-        @EntityInstance
-        get() = modelRootEntity?.let { transformManager.getInstance(it) }
+    val nodes: Map<String, Node> =
+        (renderableNodes + lightNodes + cameraNodes).associateBy { it.name }
 
     /**
-     * The node model origin (center)
-     *
-     * A node's content origin is the transformation between its coordinate space and that used by
-     * its [position]. The default origin is zero vector, specifying that the node's position
-     * locates the origin of its coordinate system relatively to that center point.
-     *
-     * Changing the origin transform alters these behaviors in many useful ways.
-     * You can offset the node's contents relative to its position.
-     * For example, by setting the pivot to a translation transform you can position a node
-     * containing a sphere geometry relative to where the sphere would rest on a floor instead of
-     * relative to its center.
+     * The source [Model] ([FilamentAsset]) from the [ModelInstance].
      */
-    open var modelPosition: Position
-        get() = modelTransform.position
-        set(value) {
-            modelTransform = Transform(value, modelQuaternion, modelScale)
-        }
+    val model get() = modelInstance.model
 
     /**
-     * Model quaternion rotation.
+     * Gets the bounding box computed from the supplied min / max values in glTF accessors.
      *
-     * @see modelTransform
+     * This does not return a bounding box over all FilamentInstance, it's just a straightforward
+     * AAAB that can be determined at load time from the asset data.
      */
-    var modelQuaternion: Quaternion
-        get() = modelTransform.quaternion
-        set(value) {
-            modelTransform = Transform(modelPosition, value, modelScale)
-        }
+    val boundingBox get() = model.boundingBox
+    val halfExtent get() = boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+    val extents get() = halfExtent * 2.0f
+    val center get() = boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
+    val size get() = extents * scale
 
     /**
-     * The node model orientation
-     *
-     * A node's content origin is the transformation between its coordinate space and that used by
-     * its [quaternion]. The default origin is zero vector, specifying that the node's orientation
-     * locates the origin of its rotation relatively to that center point.
-     *
-     * `[0..360]`
-     *
-     * Changing the origin transform alters these behaviors in many useful ways.
-     * You can move the node's axis of rotation.
-     * For example, with a translation transform you can cause a node to revolve around a faraway
-     * point instead of rotating around its center, and with a rotation transform you can tilt the
-     * axis of rotation.
+     * Retrieves the [Animator] for this instance.
      */
-    open var modelRotation: Rotation
-        get() = modelQuaternion.toEulerAngles()
-        set(value) {
-            modelQuaternion = Quaternion.fromEuler(value)
-        }
+    var animator = modelInstance.animator
 
     /**
-     * The model scale
+     * The number of animation definitions in the glTF asset.
      */
-    open var modelScale: Scale
-        get() = modelTransform.scale
-        set(value) {
-            modelTransform = Transform(modelPosition, modelQuaternion, value)
-        }
+    val animationCount get() = animator.animationCount
 
-    private var _modelTransform = Transform()
-
-    /**
-     * Local transform of the model transform component (i.e. relative to the parent).
-     *
-     * @see TransformManager.getTransform
-     * @see TransformManager.setTransform
-     */
-    var modelTransform: Transform
-        get() = _modelTransform
-        set(value) {
-            _modelTransform = value
-            modelRootInstance?.let {
-                transformManager.setTransform(it, value)
-            }
-        }
-
-    val modelWorldTransform: Transform
-        get() = modelRootInstance?.let {
-            transformManager.getWorldTransform(it)
-        } ?: worldTransform
-
-    /**
-     * The source [Model] ([FilamentAsset]) from the [ModelInstance] [ModelInstance]
-     */
-    open val model get() = modelInstance?.model
-
-    /**
-     * The [ModelInstance] to display.
-     *
-     * The renderable is usually a 3D model.
-     * If null, this node's current renderable will be removed.
-     */
-    open var modelInstance: ModelInstance? = null
-        set(value) {
-            if (field != value) {
-//                field?.destroy()
-                field = value
-                animator = value?.animator
-                modelRootEntity = value?.root
-                sceneEntities = value?.entities ?: intArrayOf()
-
-                onModelChanged(modelInstance)
-            }
-        }
-
-    var animator: Animator? = null
     var playingAnimations = mutableMapOf<Int, PlayingAnimation>()
 
-    var onModelLoaded = mutableListOf<(modelInstance: ModelInstance) -> Unit>()
-    var onModelChanged = mutableListOf<() -> Unit>()
-    var onModelError: ((exception: Exception) -> Unit)? = null
-
-    override val renderables: List<Renderable>
-        get() = modelInstance?.renderables?.toList() ?: listOf()
-
-    val lights: List<Renderable>
-        get() = modelInstance?.lights?.toList() ?: listOf()
-
-    val renderableNames: List<String>
-        get() = modelInstance?.model?.renderableNames?.toList() ?: listOf()
-
-    private var loadedModel: Model? = null
+    /**
+     * Gets the skin count of this instance.
+     */
+    val skinCount: Int get() = modelInstance.skinCount
 
     /**
-     * ### Create the Node and load a monolithic binary glTF and add it to the Node
-     *
-     * @param modelGlbFileLocation the model glb/gltf file location:
-     * ```
-     * - A relative asset file location *models/mymodel.glb*
-     * - An Android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
-     * ```
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param scaleUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size
-     * @param centerOrigin Center point origin position within the model:
-     * Float cube position values between -1.0 and 1.0 corresponding to percents from
-     * model sizes.
-     * - `null` = Keep the origin point where it was at the model export time
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top
-     * - ...
-     * ```
-     * @param onError An exception has been thrown during model loading
-     * @param onLoaded Called when the model loading finished so you can change its properties
-     * (material, texture,...)
-     *
-     * @see loadModel
+     * Returns the names of all material variants.
      */
-    constructor(
-        engine: Engine,
-        modelGlbFileLocation: String,
-        autoAnimate: Boolean = true,
-        scaleUnits: Float? = null,
-        centerOrigin: Position? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
-    ) : this(engine) {
-        loadModelGlbAsync(
-            modelGlbFileLocation,
-            autoAnimate,
-            scaleUnits,
-            centerOrigin,
-            onError,
-            onLoaded
-        )
-    }
+    val materialVariantNames: List<String>
+        get() = modelInstance.materialVariantNames.toList()
 
     /**
-     * ### Create the Node and load a monolithic binary glTF and add it to the Node
-     *
-     * @param modelInstance the model instance
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - `null` = Keep the original model center point
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
-     * - ...
+     * Gets the skin name at skin index in this instance.
      */
-    constructor(
-        engine: Engine,
-        modelInstance: ModelInstance,
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null
-    ) : this(engine) {
-        setModelInstance(modelInstance, autoAnimate, scaleToUnits, centerOrigin)
-    }
+    val skinNames: List<String> get() = modelInstance.skinNames.toList()
 
-    override fun onFrame(frameTime: FrameTime) {
-        super.onFrame(frameTime)
+    /**
+     * Changes whether or not the renderable casts shadows.
+     *
+     * @see RenderableComponent.isShadowCaster
+     */
+    var isShadowCaster: Boolean
+        get() = renderableNodes.all { it.isShadowCaster }
+        set(value) = renderableNodes.forEach { it.isShadowCaster = value }
 
-        model?.let { it.popRenderable() }
+    /**
+     * Changes whether or not the renderable can receive shadows.
+     *
+     * @see RenderableComponent.isShadowReceiver
+     */
+    var isShadowReceiver: Boolean
+        get() = renderableNodes.all { it.isShadowReceiver }
+        set(value) = renderableNodes.forEach { it.isShadowReceiver = value }
 
-        animator?.apply {
-            playingAnimations.forEach { (index, animation) ->
-                val elapsedTimeSeconds = frameTime.intervalSeconds(animation.startTime)
-                applyAnimation(index, elapsedTimeSeconds.toFloat())
-
-                if (!animation.loop && elapsedTimeSeconds >= getAnimationDuration(index)) {
-                    playingAnimations.remove(index)
-                }
-            }
-            updateBoneMatrices()
-        }
-    }
-
-    open fun onModelLoaded(modelInstance: ModelInstance) {
-        onModelLoaded.forEach { it(modelInstance) }
-    }
-
-    open fun onModelChanged(modelInstance: ModelInstance?) {
-        collisionShape = modelInstance?.model?.collisionShape
-
-        // Refresh the collider to ensure it is using the correct collision shape now
-        // that the renderable has changed.
-        onTransformChanged()
-
-        onModelChanged.forEach { it() }
-    }
-
-    open fun onModelError(exception: Exception) {
-        onModelError?.invoke(exception)
-    }
-
-    override fun onRotate(e: NodeMotionEvent, rotationDelta: Quaternion) {
-        modelQuaternion *= rotationDelta
-    }
-
-    override fun onScale(e: NodeMotionEvent, scaleFactor: Float) {
-        modelScale = clamp(modelScale * scaleFactor, minEditableScale, maxEditableScale)
-    }
-
-    fun doOnModelLoaded(action: (modelInstance: ModelInstance) -> Unit) {
-        if (modelInstance != null) {
-            action(modelInstance!!)
-        } else {
-            onModelLoaded += object : (ModelInstance) -> Unit {
-                override fun invoke(modelInstance: ModelInstance) {
-                    onModelLoaded -= this
-                    action(modelInstance)
-                }
+    init {
+        nodes.values.forEach { node ->
+            node.parent = when (val parentEntity = node.parentEntity) {
+                this.entity -> this
+                else -> nodes.values.firstOrNull { it.entity == parentEntity } ?: this
             }
         }
-    }
-
-    /**
-     * Loads a monolithic binary glTF and add it to the Node
-     *
-     * @param glbFileLocation the glb file location:
-     * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - `null` = Keep the original model center point
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
-     * - ...
-     */
-    suspend fun loadModelGlb(
-        context: Context,
-        glbFileLocation: String,
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null,
-        onError: ((error: Exception) -> Unit)? = null
-    ): ModelInstance? {
-        return try {
-            GLBLoader.loadModel(context, glbFileLocation)?.also { model ->
-                loadedModel = model
-                withContext(Dispatchers.Main) {
-                    setModelInstance(model.instance, autoAnimate, scaleToUnits, centerOrigin)
-                    onModelLoaded(model.instance)
-                }
-            }?.instance
-        } catch (error: Exception) {
-            onModelError(error)
-            onError?.invoke(error)
-            null
+        if (autoAnimate && animator.animationCount > 0) {
+            playAnimation(0)
         }
+        scaleToUnits?.let { scaleToUnitCube(it) }
+        centerOrigin?.let { centerOrigin(it) }
+        collisionShape = model.collisionShape
     }
 
     /**
-     * Loads a monolithic binary glTF and add it to the Node
-     *
-     * @param glbFileLocation the glb file location:
-     * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - `null` = Keep the original model center point
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
-     * - ...
-     */
-    fun loadModelGlbAsync(
-        glbFileLocation: String,
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        onLoaded: ((modelInstance: ModelInstance) -> Unit)? = null
-    ): ModelNode {
-        doOnAttachedToScene { sceneView ->
-            sceneView.coroutineScope?.launchWhenCreated {
-                loadModelGlb(
-                    sceneView.context,
-                    glbFileLocation,
-                    autoAnimate,
-                    scaleToUnits,
-                    centerOrigin,
-                    onError
-                )?.also {
-                    onLoaded?.invoke(it)
-                }
-            }
-        }
-        return this
-    }
-
-    /**
-     * Loads a monolithic binary glTF and add it to the Node
-     *
-     * @param gltfFileLocation the gltf file location:
-     * - A relative asset file location *models/mymodel.gltf*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.gltf*
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - `null` = Keep the original model center point
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
-     * - ...
-     */
-    suspend fun loadModelGltf(
-        context: Context,
-        gltfFileLocation: String,
-        resourceLocationResolver: (String) -> String = { resourceFileName: String ->
-            "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
-        },
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null,
-        onError: ((error: Exception) -> Unit)? = null
-    ): Model? {
-        return try {
-            GLTFLoader.loadModel(context, gltfFileLocation, resourceLocationResolver)
-                ?.also { model ->
-                    loadedModel = model
-                    withContext(Dispatchers.Main) {
-                        setModelInstance(model.instance, autoAnimate, scaleToUnits, centerOrigin)
-                        onModelLoaded(model.instance)
-                    }
-                }
-        } catch (error: Exception) {
-            onModelError(error)
-            onError?.invoke(error)
-            null
-        }
-    }
-
-    /**
-     * Loads a monolithic binary glTF and add it to the Node
-     *
-     * @param gltfFileLocation the gltf file location:
-     * - A relative asset file location *models/mymodel.gltf*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.gltf*
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - `null` = Keep the original model center point
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
-     * - ...
-     */
-    fun loadModelGltfAsync(
-        context: Context,
-        gltfFileLocation: String,
-        resourceLocationResolver: (String) -> String = { resourceFileName: String ->
-            "${gltfFileLocation.substringBeforeLast("/")}/$resourceFileName"
-        },
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null,
-        onError: ((error: Exception) -> Unit)? = null,
-        onLoaded: ((model: Model) -> Unit)? = null
-    ): ModelNode {
-        doOnAttachedToScene { sceneView ->
-            sceneView.coroutineScope?.launchWhenCreated {
-                loadModelGltf(
-                    context,
-                    gltfFileLocation,
-                    resourceLocationResolver,
-                    autoAnimate,
-                    scaleToUnits,
-                    centerOrigin,
-                    onError
-                )?.also {
-                    onLoaded?.invoke(it)
-                }
-            }
-        }
-        return this
-    }
-
-    /**
-     * ### Set the node model
-     *
-     * @param autoAnimate Plays the animations automatically if the model has one
-     * @param scaleToUnits Scale the model to fit a unit cube. Default `null` to keep model original
-     * size
-     * @param centerOrigin Center the model origin to this unit cube position
-     * - `null` = Keep the original model center point
-     * - `Position(x = 0.0f, y = 0.0f, z = 0.0f)` = Center the model horizontally and vertically
-     * - `Position(x = 0.0f, y = -1.0f, z = 0.0f)` = center horizontal | bottom aligned
-     * - `Position(x = -1.0f, y = 1.0f, z = 0.0f)` = left | top aligned
-     * - ...
-     */
-    open fun setModelInstance(
-        modelInstance: ModelInstance?,
-        autoAnimate: Boolean = true,
-        scaleToUnits: Float? = null,
-        centerOrigin: Position? = null,
-    ) {
-        this.modelInstance = modelInstance
-        if (modelInstance != null) {
-            if (autoAnimate && modelInstance.animator.animationCount > 0) {
-                playAnimation(0)
-            }
-            scaleToUnits?.let { scaleModel(it) }
-            centerOrigin?.let { centerModel(it) }
-        }
-    }
-
-    /**
-     * ### Sets up a root transform on the current model to make it fit into a unit cube
+     * Sets up a root transform on the current model to make it fit into a unit cube.
      *
      * @param units the number of units of the cube to scale into.
      */
-    fun scaleModel(units: Float = 1.0f) {
-        doOnModelLoaded { modelInstance ->
-            val halfExtent = modelInstance.model.boundingBox.halfExtent.let { v ->
-                Float3(v[0], v[1], v[2])
-            }
-            modelScale = Scale(units / (max(halfExtent) * 2.0f))
-        }
+    fun scaleToUnitCube(units: Float = 1.0f) {
+        val halfExtent = boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
+        scale = Scale(units / (max(halfExtent) * 2.0f))
     }
 
     /**
-     * ### Sets up a root transform on the current model to make it centered
+     * Sets up a root transform on the current model to make it centered.
      *
      * @param origin Coordinate inside the model unit cube from where it is centered
      * - defaults to [0, 0, 0] will center the model on its center
      * - center horizontal | bottom aligned = [0, -1, 0]
      * - left | top aligned: [-1, 1, 0]
      */
-    fun centerModel(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
-        doOnModelLoaded { modelInstance ->
-            val center =
-                modelInstance.model.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
-            val halfExtent =
-                modelInstance.model.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
-            modelPosition = -(center + halfExtent * origin) * modelScale
-        }
+    fun centerOrigin(origin: Position = Position(x = 0.0f, y = 0.0f, z = 0.0f)) {
+        position += origin * size
     }
 
     /**
-     * ### Applies rotation, translation, and scale to entities that have been targeted by the given
+     * Applies rotation, translation, and scale to entities that have been targeted by the given
      * animation definition. Uses `TransformManager`.
      *
      * @param animationIndex Zero-based index for the `animation` of interest.
@@ -550,7 +220,9 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
      * @see Animator.getAnimationCount
      */
     fun playAnimation(animationIndex: Int, loop: Boolean = true) {
-        playingAnimations[animationIndex] = PlayingAnimation(loop = loop)
+        if (animationIndex < animationCount) {
+            playingAnimations[animationIndex] = PlayingAnimation(loop = loop)
+        }
     }
 
     /**
@@ -558,7 +230,7 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
      * @see Animator.getAnimationName
      */
     fun playAnimation(animationName: String, loop: Boolean = true) {
-        animator?.getAnimationIndex(animationName)?.let { playAnimation(it, loop) }
+        animator.getAnimationIndex(animationName)?.let { playAnimation(it, loop) }
     }
 
     fun stopAnimation(animationIndex: Int) {
@@ -566,23 +238,157 @@ open class ModelNode(engine: Engine) : RenderableNode(engine) {
     }
 
     fun stopAnimation(animationName: String) {
-        animator?.getAnimationIndex(animationName)?.let { stopAnimation(it) }
+        animator.getAnimationIndex(animationName)?.let { stopAnimation(it) }
     }
 
-    override fun getTransformationMatrix(): Matrix {
-        return Matrix(modelWorldTransform.toColumnsFloatArray())
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    fun attachSkin(target: Node, @IntRange(from = 0) skinIndex: Int = 0) =
+        modelInstance.attachSkin(skinIndex, target.entity)
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    fun detachSkin(target: Node, @IntRange(from = 0) skinIndex: Int = 0) =
+        modelInstance.detachSkin(skinIndex, target.entity)
+
+    /**
+     * Gets the joint count at skin index in this instance.
+     */
+    open fun getJointCount(@IntRange(from = 0) skinIndex: Int = 0): Int =
+        modelInstance.getJointCountAt(skinIndex)
+
+    /**
+     * Changes the material instances binding for the given primitives.
+     *
+     * @see RenderableComponent.materialInstances
+     */
+    var materialInstances: List<List<MaterialInstance>>
+        get() = renderableNodes.map { it.materialInstances }
+        set(value) {
+            value.forEachIndexed { index, materialInstances ->
+                renderableNodes[index].materialInstances = materialInstances
+            }
+        }
+
+    /**
+     * Changes the material instance binding for all primitives.
+     *
+     * @see RenderableComponent.setMaterialInstances
+     */
+    fun setMaterialInstance(materialInstance: MaterialInstance) {
+        renderableNodes.forEach { it.setMaterialInstances(materialInstance) }
     }
 
-    /** ### Detach and destroy the node */
-    override fun destroy() {
-        loadedModel?.destroy()
-        super.destroy()
+    /**
+     * Updates the vertex morphing weights on a renderable, all zeroes by default.
+     *
+     * The renderable must be built with morphing enabled. In legacy morphing mode, only the first
+     * 4 weights are considered.
+     *
+     * @see RenderableComponent.setMorphWeights
+     */
+    fun setMorphWeights(weights: FloatArray, @IntRange(from = 0) offset: Int = weights.size) =
+        renderableNodes.forEach { it.setMorphWeights(weights, offset) }
+
+    /**
+     * Changes the visibility.
+     *
+     * @see RenderableManager.setLayerMask
+     */
+    fun setLayerVisible(visible: Boolean) = renderableNodes.forEach { it.setLayerVisible(visible) }
+
+    /**
+     * Changes the visibility bits.
+     *
+     * @see RenderableComponent.setLayerMask
+     */
+    fun setLayerMask(
+        @IntRange(from = 0, to = 255) select: Int, @IntRange(from = 0, to = 255) value: Int
+    ) = renderableNodes.forEach { it.setLayerMask(select, value) }
+
+    /**
+     * Changes the coarse-level draw ordering.
+     *
+     * @see RenderableComponent.setPriority
+     */
+    fun setPriority(@IntRange(from = 0, to = 7) priority: Int) =
+        renderableNodes.forEach { it.setPriority(priority) }
+
+    /**
+     * Changes whether or not frustum culling is on.
+     *
+     * @see RenderableComponent.setCulling
+     */
+    fun setCulling(enabled: Boolean) = renderableNodes.forEach { it.setCulling(enabled) }
+
+    /**
+     * Changes whether or not the renderable can use screen-space contact shadows.
+     *
+     * @see RenderableComponent.setScreenSpaceContactShadows
+     */
+    fun setScreenSpaceContactShadows(enabled: Boolean) =
+        renderableNodes.forEach { it.setScreenSpaceContactShadows(enabled) }
+
+    /**
+     * Changes the drawing order for blended primitives.
+     *
+     * The drawing order is either global or local (default) to this Renderable.
+     * In either case, the Renderable priority takes precedence.
+     *
+     * @param blendOrder draw order number (0 by default). Only the lowest 15 bits are used.
+     *
+     * @see RenderableComponent.setBlendOrder
+     */
+    fun setBlendOrder(@IntRange(from = 0, to = 65535) blendOrder: Int) {
+        renderableNodes.forEach { it.setBlendOrder(blendOrder) }
     }
 
-    override fun clone() = copy(ModelNode(engine))
+    /**
+     * Changes whether the blend order is global or local to this Renderable (by default).
+     *
+     * @param enabled true for global, false for local blend ordering.
+     *
+     * @see RenderableComponent.setGlobalBlendOrderEnabled
+     */
+    fun setGlobalBlendOrderEnabled(enabled: Boolean) {
+        renderableNodes.forEach { it.setGlobalBlendOrderEnabled(enabled) }
+    }
 
-    open fun copy(toNode: ModelNode = ModelNode(engine)): ModelNode = toNode.apply {
-        super.copy(toNode)
-        setModelInstance(this@ModelNode.modelInstance)
+    override fun onFrame(frameTimeNanos: Long) {
+        super.onFrame(frameTimeNanos)
+
+        model.popRenderable()
+
+        playingAnimations.forEach { (index, animation) ->
+            animator.let { animator ->
+                val elapsedTimeSeconds = frameTimeNanos.intervalSeconds(animation.startTime)
+                animator.applyAnimation(index, elapsedTimeSeconds.toFloat())
+
+                if (!animation.loop && elapsedTimeSeconds >= animator.getAnimationDuration(index)) {
+                    playingAnimations.remove(index)
+                }
+            }
+        }
+        animator.updateBoneMatrices()
     }
 }
+
+inline operator fun <reified T : ModelNode.ChildNode> List<T>.get(name: String): T =
+    first { it.name == name }
+
+inline fun <reified T : ModelNode.ChildNode> List<T>.getOrNull(name: String): T? =
+    firstOrNull { it.name == name }
+
+inline operator fun <reified T : MaterialInstance> List<T>.get(name: String): T =
+    first { it.name == name }
+
+inline fun <reified T : MaterialInstance> List<T>.getOrNull(name: String): T? =
+    firstOrNull { it.name == name }

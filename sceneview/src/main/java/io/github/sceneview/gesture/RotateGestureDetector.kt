@@ -9,7 +9,16 @@ import kotlin.math.atan2
 import kotlin.math.sqrt
 
 /**
- * ### Detects rotation transformation gestures using the supplied [MotionEvent]s
+ * This value is the threshold ratio between our previous combined pressure and the current combined
+ * pressure. We will only fire an onRotate event if the computed ratio between the current and
+ * previous event pressures is greater than this value. When pressure decreases rapidly between
+ * events the position values can often be imprecise, as it usually indicates that the user is in
+ * the process of lifting a pointer off of the device. Its value was tuned experimentally.
+ */
+private const val kPressureThreshold = 0.67f
+
+/**
+ * Detects rotation transformation gestures using the supplied [MotionEvent]s.
  *
  * The [OnRotateListener] callback will notify users when a particular gesture event has
  * occurred.
@@ -41,13 +50,13 @@ open class RotateGestureDetector(
     private var currentPressure = 0f
 
     /**
-     * ### `true` if a rotate gesture is in progress.
+     * `true` if a rotate gesture is in progress.
      */
     var isGestureInProgress: Boolean = false
         private set
 
     /**
-     * ### The X coordinate of the current gesture's focal point in pixels
+     * The X coordinate of the current gesture's focal point in pixels.
      *
      * If a gesture is in progress, the focal point is between each of the pointers forming the
      * gesture.
@@ -58,7 +67,7 @@ open class RotateGestureDetector(
         private set
 
     /**
-     * ### The Y coordinate of the current gesture's focal point in pixels
+     * The Y coordinate of the current gesture's focal point in pixels.
      *
      * If a gesture is in progress, the focal point is between each of the pointers forming the
      * gesture.
@@ -69,20 +78,20 @@ open class RotateGestureDetector(
         private set
 
     /**
-     * ### The current distance in pixels between the two pointers forming the gesture in progress
+     * The current distance in pixels between the two pointers forming the gesture in progress.
      */
     var currentSpan = 0f
         private set
 
     /**
-     * ### The previous distance in pixels between the two pointers forming the gesture in progress
+     * The previous distance in pixels between the two pointers forming the gesture in progress.
      */
     var previousSpan = 0f
         private set
 
     /**
-     * ### The average angle in radians between each of the pointers forming the gesture in progress
-     * through the focal point
+     * The average angle in radians between each of the pointers forming the gesture in progress
+     * through the focal point.
      */
     var currentAngle = 0f
         private set(value) {
@@ -91,7 +100,7 @@ open class RotateGestureDetector(
         }
 
     /**
-     * ### The previous average angle in radians between each of the pointers forming the gesture in
+     * The previous average angle in radians between each of the pointers forming the gesture in
      * progress through the focal point.
      */
     var previousAngle = 0f
@@ -100,7 +109,7 @@ open class RotateGestureDetector(
     var lastAngle = 0.0f
 
     /**
-     * ### The rotation factor in degrees from the previous rotation event to the current event
+     * The rotation factor in degrees from the previous rotation event to the current event.
      *
      * This value is defined as ([currentAngle] / [previousAngle]).
      */
@@ -108,26 +117,25 @@ open class RotateGestureDetector(
         private set
 
     /**
-     * ### The initial rotation threshold in degrees for detecting a gesture
+     * The initial rotation threshold in degrees for detecting a gesture.
      *
      * This value is selected to avoid conflicts with the [android.view.ScaleGestureDetector]
      */
     var rotationThreshold = 2f
 
     /**
-     * ### The time difference in milliseconds between the previous accepted GestureDetector event
-     * and the current GestureDetector event
+     * The time difference in milliseconds between the previous accepted GestureDetector event and
+     * the current GestureDetector event
      */
     var timeDelta = 0L
         private set
 
     /**
-     * ### Accepts MotionEvents and dispatches events to a [OnRotateListener] when
-     * appropriate
+     * Accepts MotionEvents and dispatches events to a [OnRotateListener] when appropriate.
      *
      * Applications should pass a complete and consistent event stream to this method.
-     * A complete and consistent event stream involves all MotionEvents from the initial
-     * ACTION_DOWN to the final ACTION_UP or ACTION_CANCEL.
+     * A complete and consistent event stream involves all MotionEvents from the initial ACTION_DOWN
+     * to the final ACTION_UP or ACTION_CANCEL.
      *
      * @param event The event to process
      * @return `true` if the event was processed and the detector wants to receive the rest of the
@@ -144,13 +152,15 @@ open class RotateGestureDetector(
                         return false
                     }
                     update(event)
-                    if (rotation.absoluteValue > rotationThreshold) {
+                    if (rotation.absoluteValue > rotationThreshold &&
                         listener.onRotateBegin(this, event)
+                    ) {
                         isGestureInProgress = true
                     } else {
                         return false
                     }
                 }
+
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> reset()
             }
         } else {
@@ -167,11 +177,13 @@ open class RotateGestureDetector(
                     listener.onRotateEnd(this, event)
                     reset()
                 }
+
                 MotionEvent.ACTION_CANCEL -> {
                     lastAngle = 0f
                     listener.onRotateEnd(this, event)
                     reset()
                 }
+
                 MotionEvent.ACTION_MOVE -> {
                     if (event.pointerCount > 2) {
                         lastAngle = 0f
@@ -184,7 +196,7 @@ open class RotateGestureDetector(
                     // Only accept the event if our relative pressure is within
                     // a certain limit. This can help filter shaky data as a
                     // finger is lifted.
-                    if (currentPressure / previousPressure > PRESSURE_THRESHOLD) {
+                    if (currentPressure / previousPressure > kPressureThreshold) {
                         val updatePrevious = listener.onRotate(this, event)
                         if (updatePrevious) {
                             previousEvent?.recycle()
@@ -240,7 +252,7 @@ open class RotateGestureDetector(
     }
 
     /**
-     * ### The listener for receiving notifications when gestures occur
+     * The listener for receiving notifications when gestures occur.
      *
      * If you want to listen for the different gestures then implement this interface.
      *
@@ -251,7 +263,7 @@ open class RotateGestureDetector(
      */
     interface OnRotateListener {
         /**
-         * ### Responds to rotating events for a gesture in progress
+         * Responds to rotating events for a gesture in progress.
          *
          * Reported by pointer motion.
          *
@@ -265,7 +277,7 @@ open class RotateGestureDetector(
         fun onRotate(detector: RotateGestureDetector, e: MotionEvent): Boolean
 
         /**
-         * ### Responds to the beginning of a scaling gesture
+         * Responds to the beginning of a scaling gesture.
          *
          * Reported by new pointers going down.
          *
@@ -278,7 +290,7 @@ open class RotateGestureDetector(
         fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent): Boolean
 
         /**
-         * ### Responds to the end of a scale gesture
+         * Responds to the end of a scale gesture.
          *
          * Reported by existing pointers going up.
          *
@@ -292,8 +304,8 @@ open class RotateGestureDetector(
     }
 
     /**
-     * ### A convenience class to extend when you only want to listen for a subset of
-     * rotation-related events
+     * A convenience class to extend when you only want to listen for a subset of rotation-related
+     * events.
      *
      * This implements all methods in [OnRotateListener] but does nothing.
      * [OnRotateListener.onRotate] returns `false` so that a subclass can retrieve the accumulated
@@ -304,17 +316,5 @@ open class RotateGestureDetector(
         override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) = false
         override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) = true
         override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {}
-    }
-
-    companion object {
-        /**
-         * This value is the threshold ratio between our previous combined pressure and the current
-         * combined pressure. We will only fire an onRotate event if the computed ratio between the
-         * current and previous event pressures is greater than this value. When pressure decreases
-         * rapidly between events the position values can often be imprecise, as it usually
-         * indicates that the user is in the process of lifting a pointer off of the device.
-         * Its value was tuned experimentally.
-         */
-        private const val PRESSURE_THRESHOLD = 0.67f
     }
 }
