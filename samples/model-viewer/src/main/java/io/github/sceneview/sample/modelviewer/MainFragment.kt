@@ -25,19 +25,22 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             val hdrFile = "environments/studio_small_09_2k.hdr"
-            sceneView.environmentLoader.loadHDREnvironment(hdrFile)
+
+            sceneView.environmentLoader.loadHDREnvironment(hdrFile).apply {
+                sceneView.indirectLight = this?.indirectLight
+                sceneView.skybox = this?.skybox
+            }
+            sceneView.cameraNode.apply {
+                position = Position(z = 4.0f)
+            }
             val modelFile = "models/MaterialSuite.glb"
             val modelInstance = sceneView.modelLoader.createModelInstance(modelFile)
 
             val modelNode = ModelNode(
                 modelInstance = modelInstance,
                 scaleToUnits = 2.0f,
-            ).apply {
-                transform(
-                    position = Position(z = -4.0f),
-                    rotation = Rotation(x = 15.0f)
-                )
-            }
+            )
+            modelNode.scale = Scale(0.05f)
             sceneView.addChildNode(modelNode)
             loadingView.isGone = true
         }
