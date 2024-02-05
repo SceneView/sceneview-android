@@ -565,7 +565,7 @@ open class ARSceneView @JvmOverloads constructor(
 
     override fun destroy() {
         if (!isDestroyed) {
-            destroyAr()
+            destroyARCore()
 
             defaultCameraNode?.destroy()
             defaultCameraStream?.destroy()
@@ -577,7 +577,7 @@ open class ARSceneView @JvmOverloads constructor(
         super.destroy()
     }
 
-    fun destroyAr() {
+    fun destroyARCore() {
         val scope = lifecycle?.coroutineScope ?: CoroutineScope(Dispatchers.IO)
         scope.launch(Dispatchers.IO) {
             // destroy should be called off the main thread since it hangs for many seconds
@@ -608,7 +608,7 @@ open class ARSceneView @JvmOverloads constructor(
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
-            destroyAr()
+            destroyARCore()
         }
     }
 
