@@ -22,7 +22,7 @@ A Sceneform replacement in Kotlin and Jetpack Compose
 ```gradle
 dependencies {
     // Sceneview
-    implementation 'io.github.sceneview:sceneview:2.0.3'
+    implementation 'io.github.sceneview:sceneview:2.0.4'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
@@ -32,7 +32,7 @@ dependencies {
 ```gradle
 dependencies {
     // ARSceneview
-    implementation 'io.github.sceneview:arsceneview:2.0.3'
+    implementation 'io.github.sceneview:arsceneview:2.0.4'
 }
 ```
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
