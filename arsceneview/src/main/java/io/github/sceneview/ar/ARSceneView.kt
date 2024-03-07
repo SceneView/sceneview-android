@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.coroutineScope
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
@@ -45,9 +44,7 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import java.util.concurrent.Executors
 
 /**
  * A SurfaceView that integrates with ARCore and renders a scene
@@ -565,8 +562,6 @@ open class ARSceneView @JvmOverloads constructor(
 
     override fun destroy() {
         if (!isDestroyed) {
-            destroyARCore()
-
             defaultCameraNode?.destroy()
             defaultCameraStream?.destroy()
 
@@ -575,14 +570,6 @@ open class ARSceneView @JvmOverloads constructor(
         }
 
         super.destroy()
-    }
-
-    fun destroyARCore() {
-        val scope = lifecycle?.coroutineScope ?: CoroutineScope(Dispatchers.IO)
-        scope.launch(Dispatchers.IO) {
-            // destroy should be called off the main thread since it hangs for many seconds
-            arCore.destroy()
-        }
     }
 
     class DefaultARCameraNode(engine: Engine) : ARCameraNode(engine) {
@@ -608,7 +595,10 @@ open class ARSceneView @JvmOverloads constructor(
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
-            destroyARCore()
+            Executors.newSingleThreadExecutor().execute {
+                // destroy should be called off the main thread since it hangs for many seconds
+                arCore.destroy()
+            }
         }
     }
 
