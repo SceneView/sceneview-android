@@ -86,6 +86,11 @@ open class Node(
     var isHittable: Boolean = true
 
     /**
+     * ### Define your own custom name
+     */
+    var name: String? = null
+
+    /**
      * The node can be selected when a touch event happened.
      *
      * If a not touchable child [Node] is touched, we check the parent hierarchy to find the
