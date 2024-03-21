@@ -567,9 +567,17 @@ open class ARSceneView @JvmOverloads constructor(
 
             lightEstimator?.destroy()
             planeRenderer.destroy()
+            destroyArCore()
         }
 
         super.destroy()
+    }
+
+    private fun destroyArCore() {
+        Executors.newSingleThreadExecutor().execute {
+            // destroy should be called off the main thread since it hangs for many seconds
+            arCore.destroy()
+        }
     }
 
     class DefaultARCameraNode(engine: Engine) : ARCameraNode(engine) {
@@ -595,10 +603,7 @@ open class ARSceneView @JvmOverloads constructor(
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
-            Executors.newSingleThreadExecutor().execute {
-                // destroy should be called off the main thread since it hangs for many seconds
-                arCore.destroy()
-            }
+            destroyArCore()
         }
     }
 
