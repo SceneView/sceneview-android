@@ -79,14 +79,12 @@ open class ARCameraNode(engine: Engine) : CameraNode(engine) {
      * its estimate of the world.
      */
     open fun onCameraUpdated(camera: Camera) {
-        val trackingState = camera.trackingState
-        this.trackingState = trackingState
-        if (trackingState == TrackingState.TRACKING) {
-            // Update the node's transformation properties to match the tracked pose
-            pose = camera.displayOrientedPose
-            // Update the projection matrix.
-            projectionTransform = camera.getProjectionTransform(near, far)
-        }
+        trackingState = camera.trackingState
+
+        // Update the node's transformation properties to match the tracked pose
+        pose = camera.displayOrientedPose
+        // Update the projection matrix.
+        projectionTransform = camera.getProjectionTransform(near, far)
     }
 
     open fun onTrackingStateChanged(trackingState: TrackingState) {
