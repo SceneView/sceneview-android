@@ -2,8 +2,11 @@ package io.github.sceneview
 
 import android.content.Context
 import android.opengl.EGLContext
+import android.os.Build
 import android.view.MotionEvent
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -20,20 +23,19 @@ import androidx.lifecycle.Lifecycle
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
 import com.google.android.filament.utils.Manipulator
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.gesture.HitTestGestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
-import io.github.sceneview.gesture.PickGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
-import io.github.sceneview.gesture.SelectedNodeGestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -179,14 +181,8 @@ fun Scene(
      * The gesture listener callback will notify users when a particular motion event has occurred.
      * Responds to Android touch events with listeners.
      */
-    gestureDetector: GestureDetector = rememberHitTestGestureDetector(
-        LocalContext.current,
-        collisionSystem
-    ),
-    /**
-     * The listener invoked for all the gesture detector callbacks.
-     */
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
@@ -229,6 +225,7 @@ fun Scene(
                     cameraManipulator,
                     viewNodeWindowManager,
                     onGestureListener,
+                    onTouchEvent,
                     activity,
                     lifecycle,
                 ).also {
@@ -244,6 +241,7 @@ fun Scene(
                 sceneView.cameraManipulator = cameraManipulator
                 sceneView.viewNodeWindowManager = viewNodeWindowManager
                 sceneView.onGestureListener = onGestureListener
+                sceneView.onTouchEvent = onTouchEvent
                 sceneView.onFrame = onFrame
 
                 onViewUpdated?.invoke(sceneView)
