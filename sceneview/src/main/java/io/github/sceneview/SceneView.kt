@@ -438,7 +438,7 @@ open class SceneView @JvmOverloads constructor(
     var cameraManipulator: Manipulator?
         get() = cameraGestureDetector?.manipulator
         set(value) {
-            gestureDetector.listener = value
+            cameraGestureDetector?.manipulator = value
         }
 
     protected open val activity: ComponentActivity? = sharedActivity
@@ -804,6 +804,11 @@ open class SceneView @JvmOverloads constructor(
                 onScaleEnd(detector, e, node)
         }
     }
+
+//    fun updateCameraManipulator() {
+//        _cameraManipulator = cameraManipulator?.invoke(view, cameraNode)
+//        cameraGestureDetector = _cameraManipulator?.let { CameraGestureDetector(this, it) }
+//    }
 
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
