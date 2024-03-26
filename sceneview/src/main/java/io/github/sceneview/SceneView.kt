@@ -720,7 +720,9 @@ open class SceneView @JvmOverloads constructor(
 
     internal fun addNode(node: Node) {
         node.collisionSystem = collisionSystem
-        addEntities(node.sceneEntities)
+        if (node.sceneEntities.isNotEmpty()) {
+            scene.addEntities(node.sceneEntities.toIntArray())
+        }
         node.onChildAdded += ::addNode
         node.onChildRemoved += ::removeNode
         node.onAddedToScene(scene)
@@ -729,7 +731,9 @@ open class SceneView @JvmOverloads constructor(
 
     internal fun removeNode(node: Node) {
         node.collisionSystem = null
-        removeEntities(node.sceneEntities)
+        if (node.sceneEntities.isNotEmpty()) {
+            scene.removeEntities(node.sceneEntities.toIntArray())
+        }
         node.onChildAdded -= ::addNode
         node.onChildRemoved -= ::removeNode
         node.onRemovedFromScene(scene)
@@ -739,20 +743,6 @@ open class SceneView @JvmOverloads constructor(
     internal fun replaceNode(oldNode: Node?, newNode: Node?) {
         oldNode?.let { removeNode(it) }
         newNode?.let { addNode(it) }
-    }
-
-    fun addEntity(@FilamentEntity entity: Entity) = scene.addEntity(entity)
-    fun removeEntity(@FilamentEntity entity: Entity) = scene.removeEntity(entity)
-    fun addEntities(@FilamentEntity entities: List<Entity>) {
-        if (entities.isNotEmpty()) {
-            scene.addEntities(entities.toIntArray())
-        }
-    }
-
-    fun removeEntities(@FilamentEntity entities: List<Entity>) {
-        if (entities.isNotEmpty()) {
-            scene.removeEntities(entities.toIntArray())
-        }
     }
 
     fun setOnGestureListener(

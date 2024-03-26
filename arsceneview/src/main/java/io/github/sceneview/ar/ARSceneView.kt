@@ -306,11 +306,11 @@ open class ARSceneView @JvmOverloads constructor(
         }
         set(value) {
             if (field != value) {
-                field?.let { removeEntity(it.entity) }
+                field?.let { scene.removeEntity(it.entity) }
                 field = value
                 value?.let {
                     session?.setCameraTextureNames(it.cameraTextureIds)
-                    addEntity(it.entity)
+                    scene.addEntity(it.entity)
                 }
             }
         }
@@ -438,7 +438,7 @@ open class ARSceneView @JvmOverloads constructor(
             sessionConfiguration?.invoke(session, config)
         }
 
-        cameraStream?.let { addEntity(it.entity) }
+        cameraStream?.let { scene.addEntity(it.entity) }
 
         _onSessionCreated.toList().forEach { it(session) }
         onSessionCreated?.invoke(session)
