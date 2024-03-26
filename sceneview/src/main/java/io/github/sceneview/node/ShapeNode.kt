@@ -10,21 +10,25 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position2
 
 open class ShapeNode private constructor(
+    engine: Engine,
     override val geometry: Shape,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange>,
     builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
+    engine = engine,
     geometry = geometry,
     materialInstances = materialInstances,
     primitivesOffsets = primitivesOffsets,
     builderApply = builderApply
 ) {
     constructor(
+        engine: Engine,
         geometry: Shape,
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
@@ -32,10 +36,12 @@ open class ShapeNode private constructor(
     )
 
     constructor(
+        engine: Engine,
         geometry: Shape,
         materialInstances: List<MaterialInstance?>,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = geometry,
         materialInstances = materialInstances,
         primitivesOffsets = geometry.primitivesOffsets,
@@ -53,6 +59,7 @@ open class ShapeNode private constructor(
         materialInstances: List<MaterialInstance?>,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Shape.Builder()
             .polygonPath(polygonPath, polygonHoles)
             .delaunayPoints(delaunayPoints)
@@ -75,6 +82,7 @@ open class ShapeNode private constructor(
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Shape.Builder()
             .polygonPath(polygonPath, polygonHoles)
             .delaunayPoints(delaunayPoints)
@@ -94,6 +102,6 @@ open class ShapeNode private constructor(
         uvScale: UvScale = geometry.uvScale,
         color: Color? = geometry.color
     ) = setGeometry(
-        geometry.update(polygonPath, polygonHoles, delaunayPoints, normal, uvScale, color)
+        geometry.update(engine, polygonPath, polygonHoles, delaunayPoints, normal, uvScale, color)
     )
 }

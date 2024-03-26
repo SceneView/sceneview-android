@@ -2,11 +2,9 @@ package io.github.sceneview.gesture
 
 import android.content.Context
 import android.view.MotionEvent
-import com.google.android.filament.View
 import dev.romainguy.kotlin.math.Float2
-import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.node.Node
-import io.github.sceneview.utils.pickNode
 
 /**
  * Detects various gestures and events using the supplied {@link MotionEvent}s.
@@ -17,10 +15,7 @@ import io.github.sceneview.utils.pickNode
  *
  * Responds to Android touch events with listeners.
  */
-open class GestureDetector(
-    context: Context,
-    var nodeSelector: (e: MotionEvent, (node: Node?) -> Unit) -> Unit
-) {
+open class GestureDetector(context: Context, var listener: OnGestureListener?) {
     interface OnGestureListener {
         fun onDown(e: MotionEvent, node: Node?)
         fun onShowPress(e: MotionEvent, node: Node?)
@@ -65,7 +60,6 @@ open class GestureDetector(
         override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) {}
     }
 
-    var listener: OnGestureListener? = null
     var touchedNode: Node? = null
 
     private var lastTouchEvent: MotionEvent? = null
@@ -221,39 +215,13 @@ open class GestureDetector(
         }
     )
 
-    fun onTouchEvent(event: MotionEvent): Boolean {
+    fun onTouchEvent(event: MotionEvent, hitResult: HitResult?) {
         lastTouchEvent = event
-        nodeSelector(event) { node ->
-            touchedNode = node
-            gestureDetector.onTouchEvent(event)
-            moveGestureDetector.onTouchEvent(event)
-            rotateGestureDetector.onTouchEvent(event)
-            scaleGestureDetector.onTouchEvent(event)
-        }
-        return true
+        touchedNode = hitResult?.node
+
+        gestureDetector.onTouchEvent(event)
+        moveGestureDetector.onTouchEvent(event)
+        rotateGestureDetector.onTouchEvent(event)
+        scaleGestureDetector.onTouchEvent(event)
     }
 }
-
-open class SelectedNodeGestureDetector(
-    context: Context,
-    var selectedNode: Node?
-) : GestureDetector(context, { _, onCompleted ->
-    onCompleted(selectedNode)
-})
-
-open class HitTestGestureDetector(
-    context: Context,
-    collisionSystem: CollisionSystem
-) : GestureDetector(context, { e, onCompleted ->
-    onCompleted(collisionSystem.hitTest(e).firstOrNull { it.node.isTouchable }?.node)
-})
-
-open class PickGestureDetector(
-    context: Context,
-    view: View,
-    nodes: () -> List<Node>
-) : GestureDetector(context, { e, onCompleted ->
-    view.pickNode(e, nodes()) { node, _, _ ->
-        onCompleted(node?.takeIf { it.isTouchable })
-    }
-})

@@ -10,7 +10,6 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 class Plane private constructor(
-    engine: Engine,
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
@@ -23,7 +22,6 @@ class Plane private constructor(
     normal: Direction,
     uvScale: UvScale
 ) : Geometry(
-    engine,
     primitiveType,
     vertices,
     vertexBuffer,
@@ -73,7 +71,7 @@ class Plane private constructor(
             primitivesIndices(INDICES)
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Plane(
-                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
+                    primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
                     boundingBox, size, center, normal, uvScale
                 )
             }
@@ -113,22 +111,24 @@ class Plane private constructor(
      * @param size Size of the constructed plane
      * @param center Center of the constructed plane
      * @param normal Looking at direction
-     * @param uvs UVs coordinates
+     * @param uvScale UVs coordinates
      *
      * One way to tile the texture is by adjusting the UV coordinates of your model to extend
      * beyond 0 to 1 and setting the TextureSampler's WrapMode to REPEAT.
      */
     fun update(
+        engine: Engine,
         size: Size = this.size,
         center: Position = this.center,
         normal: Direction = this.normal,
         uvScale: UvScale = this.uvScale,
     ) = apply {
+        update(engine = engine, vertices = getVertices(size, center, normal, uvScale))
+
         this.size = size
         this.center = center
         this.normal = normal
         this.uvScale = uvScale
-        vertices = getVertices(size, center, normal, uvScale)
     }
 
     companion object {

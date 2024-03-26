@@ -41,7 +41,6 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Sphere
  */
 open class Geometry internal constructor(
-    internal val engine: Engine,
     val primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     val vertexBuffer: VertexBuffer,
@@ -166,49 +165,43 @@ open class Geometry internal constructor(
         open fun build(engine: Engine) =
             build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Geometry(
-                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer,
+                    primitiveType, vertices, vertexBuffer, indices, indexBuffer,
                     offsets, boundingBox
                 )
             }
     }
 
     var vertices: List<Vertex> = vertices
-        set(value) {
-            if (field != value) {
-                field = value
-                vertexBuffer.setVertices(engine, vertices).also {
-                    boundingBox = it
-                }
-            }
-        }
+        private set
 
     var primitivesIndices: List<List<Int>> = primitivesIndices
-        set(value) {
-            if (field != value) {
-                field = value
-                indexBuffer.setIndices(engine, primitivesIndices.flatMap { it.indices }).also {
-                    primitivesOffsets = primitivesIndices.getOffsets()
-                }
-            }
-        }
+        private set
 
-    var indices: List<Int>
+    val indices: List<Int>
         get() = primitivesIndices.flatten()
-        set(value) {
-            primitivesIndices = listOf(value)
-        }
 
-    fun update(
-        vertices: List<Vertex> = this.vertices,
-        indices: List<List<Int>> = this.primitivesIndices
-    ) = apply {
+    fun setVertices(engine: Engine, vertices: List<Vertex>) {
         this.vertices = vertices
-        this.primitivesIndices = indices
+        boundingBox = vertexBuffer.setVertices(engine, vertices)
     }
 
-    fun destroy() {
-        engine.destroyVertexBuffer(vertexBuffer)
-        engine.destroyIndexBuffer(indexBuffer)
+    fun setPrimitivesIndices(engine: Engine, primitivesIndices: List<List<Int>>) {
+        this.primitivesIndices = primitivesIndices
+        primitivesOffsets = primitivesIndices.getOffsets()
+        indexBuffer.setIndices(engine, primitivesIndices.flatMap { it.indices })
+    }
+
+    fun update(
+        engine: Engine,
+        vertices: List<Vertex> = this.vertices,
+        primitivesIndices: List<List<Int>> = this.primitivesIndices
+    ) = apply {
+        if (this.vertices != vertices) {
+            setVertices(engine, vertices)
+        }
+        if (this.primitivesIndices != primitivesIndices) {
+            setPrimitivesIndices(engine, primitivesIndices)
+        }
     }
 }
 

@@ -14,7 +14,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 class Cylinder private constructor(
-    engine: Engine,
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
@@ -27,7 +26,6 @@ class Cylinder private constructor(
     center: Position,
     sideCount: Int
 ) : Geometry(
-    engine,
     primitiveType,
     vertices,
     vertexBuffer,
@@ -56,7 +54,7 @@ class Cylinder private constructor(
             primitivesIndices(getIndices(sideCount))
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Cylinder(
-                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
+                    primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
                     boundingBox, radius, height, center, sideCount
                 )
             }
@@ -73,19 +71,26 @@ class Cylinder private constructor(
         private set
 
     fun update(
+        engine: Engine,
         radius: Float = this.radius,
         height: Float = this.height,
         center: Position = this.center,
         sideCount: Int = this.sideCount
     ) = apply {
+        update(
+            engine = engine,
+            vertices = getVertices(radius, height, center, sideCount),
+            primitivesIndices = if (sideCount != this.sideCount) {
+                getIndices(sideCount)
+            } else {
+                primitivesIndices
+            }
+        )
+
         this.radius = radius
         this.height = height
         this.center = center
-        vertices = getVertices(radius, height, center, sideCount)
-        if (sideCount != this.sideCount) {
-            this.sideCount = sideCount
-            primitivesIndices = getIndices(sideCount)
-        }
+        this.sideCount = sideCount
     }
 
     companion object {

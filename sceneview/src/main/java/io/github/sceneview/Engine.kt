@@ -17,6 +17,7 @@ import com.google.android.filament.VertexBuffer
 import com.google.android.filament.View
 import com.google.android.filament.gltfio.AssetLoader
 import io.github.sceneview.environment.Environment
+import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -40,10 +41,11 @@ fun Engine.safeDestroy() = runCatching {
 
 fun Engine.safeDestroyEntity(entity: Entity) = runCatching { destroyEntity(entity) }
 
-fun Engine.safeDestroyCamera(camera: Camera) {
-    runCatching { destroyCameraComponent(camera.entity) }
-    safeDestroyEntity(camera.entity)
-}
+fun Engine.destroyTransformable(@FilamentEntity entity: Entity) = transformManager.destroy(entity)
+fun Engine.safeDestroyTransformable(@FilamentEntity entity: Entity) =
+    runCatching { destroyTransformable(entity) }
+
+fun Engine.safeDestroyCamera(camera: Camera) = runCatching { destroyCameraComponent(camera.entity) }
 
 fun Engine.safeDestroyEnvironment(environment: Environment) {
     environment.indirectLight?.let { safeDestroyIndirectLight(it) }
@@ -62,6 +64,21 @@ fun Engine.safeDestroyMaterialInstance(materialInstance: MaterialInstance) =
 fun Engine.safeDestroyTexture(texture: Texture) = runCatching { destroyTexture(texture) }
 
 fun Engine.safeDestroyStream(stream: Stream) = runCatching { destroyStream(stream) }
+
+fun Engine.destroyRenderable(@FilamentEntity entity: Entity) = renderableManager.destroy(entity)
+
+fun Engine.safeDestroyRenderable(@FilamentEntity entity: Entity) =
+    runCatching { destroyRenderable(entity) }
+
+fun Engine.destroyGeometry(geometry: Geometry) {
+    destroyVertexBuffer(geometry.vertexBuffer)
+    destroyIndexBuffer(geometry.indexBuffer)
+}
+
+fun Engine.safeDestroyGeometry(geometry: Geometry) {
+    safeDestroyVertexBuffer(geometry.vertexBuffer)
+    safeDestroyIndexBuffer(geometry.indexBuffer)
+}
 
 fun Engine.safeDestroyVertexBuffer(vertexBuffer: VertexBuffer) =
     runCatching { destroyVertexBuffer(vertexBuffer) }

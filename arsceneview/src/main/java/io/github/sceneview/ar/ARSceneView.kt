@@ -3,6 +3,8 @@ package io.github.sceneview.ar
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Size
+import android.view.MotionEvent
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
@@ -10,6 +12,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
@@ -44,6 +47,8 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.node.ViewNode.WindowManager
+import java.util.concurrent.Executors
 
 /**
  * A SurfaceView that integrates with ARCore and renders a scene
@@ -147,18 +152,6 @@ open class ARSceneView @JvmOverloads constructor(
      */
     sharedCollisionSystem: CollisionSystem? = null,
     /**
-     * Detects various gestures and events.
-     *
-     * The gesture listener callback will notify users when a particular motion event has occurred.
-     *
-     * Responds to Android touch events with listeners.
-     */
-    sharedGestureDetector: GestureDetector? = null,
-    /**
-     * The listener invoked for all the gesture detector callbacks.
-     */
-    sharedOnGestureListener: GestureDetector.OnGestureListener? = null,
-    /**
      * The [ARCameraStream] to render the camera texture.
      *
      * Use it to control if the occlusion should be enabled or disabled
@@ -184,6 +177,22 @@ open class ARSceneView @JvmOverloads constructor(
      * @see Session.configure
      */
     sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    /**
+     * Used for Node's that can display an Android [View]
+     *
+     * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
+     * added and removed from.
+     *
+     * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
+     * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
+     * views can be added to as children. This allows us to safely and correctly draw the [View]
+     * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
+     * isolated from the rest of the activities View hierarchy.
+     *
+     * Additionally, this manages the lifecycle of the window to help ensure that the window is
+     * added/removed from the WindowManager at the appropriate times.
+     */
+    viewNodeWindowManager: WindowManager? = null,
     /**
      * The session is ready to be accessed.
      */
@@ -211,6 +220,13 @@ open class ARSceneView @JvmOverloads constructor(
      */
     var onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
     /**
+     * The listener invoked for all the gesture detector callbacks.
+     *
+     * Responds to Android touch events with listeners.
+     */
+    onGestureListener: GestureDetector.OnGestureListener? = null,
+    onTouchEvent: ((e: MotionEvent, hitResult: io.github.sceneview.collision.HitResult?) -> Boolean)? = null,
+    /**
      * Updates of the state of the ARCore system.
      *
      * This includes: receiving a new camera frame, updating the location of the device, updating
@@ -235,13 +251,14 @@ open class ARSceneView @JvmOverloads constructor(
     sharedView,
     sharedRenderer,
     sharedCameraNode,
-    null,
     sharedMainLightNode,
     sharedEnvironment,
     isOpaque,
     sharedCollisionSystem,
-    sharedGestureDetector,
-    sharedOnGestureListener,
+    null,
+    viewNodeWindowManager,
+    onGestureListener,
+    onTouchEvent,
     sharedActivity,
     sharedLifecycle
 ) {
@@ -289,11 +306,11 @@ open class ARSceneView @JvmOverloads constructor(
         }
         set(value) {
             if (field != value) {
-                field?.let { removeEntity(it.entity) }
+                field?.let { scene.removeEntity(it.entity) }
                 field = value
                 value?.let {
                     session?.setCameraTextureNames(it.cameraTextureIds)
-                    addEntity(it.entity)
+                    scene.addEntity(it.entity)
                 }
             }
         }
@@ -421,7 +438,7 @@ open class ARSceneView @JvmOverloads constructor(
             sessionConfiguration?.invoke(session, config)
         }
 
-        cameraStream?.let { addEntity(it.entity) }
+        cameraStream?.let { scene.addEntity(it.entity) }
 
         _onSessionCreated.toList().forEach { it(session) }
         onSessionCreated?.invoke(session)
@@ -561,16 +578,22 @@ open class ARSceneView @JvmOverloads constructor(
 
     override fun destroy() {
         if (!isDestroyed) {
-            arCore.destroy()
-
             defaultCameraNode?.destroy()
             defaultCameraStream?.destroy()
 
             lightEstimator?.destroy()
             planeRenderer.destroy()
+            destroyArCore()
         }
 
         super.destroy()
+    }
+
+    private fun destroyArCore() {
+        Executors.newSingleThreadExecutor().execute {
+            // destroy should be called off the main thread since it hangs for many seconds
+            arCore.destroy()
+        }
     }
 
     class DefaultARCameraNode(engine: Engine) : ARCameraNode(engine) {
@@ -596,7 +619,7 @@ open class ARSceneView @JvmOverloads constructor(
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
-            arCore.destroy()
+            destroyArCore()
         }
     }
 
@@ -605,6 +628,7 @@ open class ARSceneView @JvmOverloads constructor(
 
         fun createARCameraStream(materialLoader: MaterialLoader) = ARCameraStream(materialLoader)
 
-        fun createAREnvironment(engine: Engine) = createEnvironment(engine, isOpaque = true, skybox = null)
+        fun createAREnvironment(engine: Engine) =
+            createEnvironment(engine, isOpaque = true, skybox = null)
     }
 }

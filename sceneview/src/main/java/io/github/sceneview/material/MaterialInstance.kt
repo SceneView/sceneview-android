@@ -117,3 +117,8 @@ fun MaterialInstance.setTexture(texture: Texture, sampler: TextureSampler = Text
     setTexture("texture", texture, sampler)
 
 fun MaterialInstance.setExternalTexture(texture: Texture) = setExternalTexture("texture", texture)
+
+fun MaterialInstance.setInvertFrontFaceWinding(
+    invert: Boolean,
+    uvOffsetParamName: String = "uvOffset"
+) = setParameter(uvOffsetParamName, if (invert) Float2(1.0f, 0.0f) else Float2(0.0f))

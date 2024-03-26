@@ -1,10 +1,12 @@
 package io.github.sceneview.node
 
+import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Geometry
 import io.github.sceneview.geometries.geometry
 import io.github.sceneview.managers.materials
+import io.github.sceneview.safeDestroyGeometry
 
 /**
  * Mesh are bundles of primitives, each of which has its own geometry and material.
@@ -32,12 +34,13 @@ import io.github.sceneview.managers.materials
  * @see Geometry
  */
 open class GeometryNode(
+    engine: Engine,
     open val geometry: Geometry,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
     builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : RenderableNode(
-    engine = geometry.engine,
+    engine = engine,
     primitiveCount = primitivesOffsets.size,
     boundingBox = geometry.boundingBox,
     materialInstances = materialInstances,
@@ -48,10 +51,12 @@ open class GeometryNode(
     }) {
 
     constructor(
+        engine: Engine,
         geometry: Geometry,
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
@@ -61,5 +66,10 @@ open class GeometryNode(
     fun updateGeometry(
         vertices: List<Geometry.Vertex> = geometry.vertices,
         indices: List<List<Int>> = geometry.primitivesIndices
-    ) = setGeometry(geometry.update(vertices, indices))
+    ) = setGeometry(geometry.update(engine, vertices, indices))
+
+    override fun destroy() {
+        super.destroy()
+        engine.safeDestroyGeometry(geometry)
+    }
 }

@@ -2,8 +2,11 @@ package io.github.sceneview
 
 import android.content.Context
 import android.opengl.EGLContext
+import android.os.Build
 import android.view.MotionEvent
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -20,20 +23,19 @@ import androidx.lifecycle.Lifecycle
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
 import com.google.android.filament.utils.Manipulator
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.gesture.HitTestGestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
-import io.github.sceneview.gesture.PickGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
-import io.github.sceneview.gesture.SelectedNodeGestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -42,6 +44,7 @@ import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.destroy
 
 @Composable
@@ -133,6 +136,14 @@ fun Scene(
      */
     cameraNode: CameraNode = rememberCameraNode(engine),
     /**
+     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+     */
+    childNodes: List<Node> = rememberNodes(),
+    /**
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    /**
      * Helper that enables camera interaction similar to sketchfab or Google Maps.
      *
      * Needs to be a callable function because it can be reinitialized in case of viewport change
@@ -146,29 +157,32 @@ fun Scene(
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
      */
-    cameraManipulator: ((View, CameraNode) -> Manipulator)? = SceneView.defaultCameraManipulator,
+    cameraManipulator: Manipulator? = rememberCameraManipulator(),
     /**
-     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
-     */
-    childNodes: List<Node> = rememberNodes(),
-    /**
-     * Physics system to handle collision between nodes, hit testing on a nodes,...
-     */
-    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
-    /**
-     * Detects various gestures and events.
+     * Used for Node's that can display an Android [View]
      *
+     * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
+     * added and removed from.
+     *
+     * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
+     * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
+     * views can be added to as children. This allows us to safely and correctly draw the [View]
+     * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
+     * isolated from the rest of the activities View hierarchy.
+     *
+     * Additionally, this manages the lifecycle of the window to help ensure that the window is
+     * added/removed from the WindowManager at the appropriate times.
+     */
+    viewNodeWindowManager: ViewNode.WindowManager? = null,
+    /**
+     * The listener invoked for all the gesture detector callbacks.
+     *
+     * Detects various gestures and events.
      * The gesture listener callback will notify users when a particular motion event has occurred.
      * Responds to Android touch events with listeners.
      */
-    gestureDetector: GestureDetector = rememberHitTestGestureDetector(
-        LocalContext.current,
-        collisionSystem
-    ),
-    /**
-     * The listener invoked for all the gesture detector callbacks.
-     */
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
@@ -181,8 +195,8 @@ fun Scene(
      * The callback will only be invoked if the Frame is considered as valid.
      */
     onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
-    onViewUpdated: (SceneView.() -> Unit)? = null,
-    onViewCreated: (SceneView.() -> Unit)? = null
+    onViewCreated: (SceneView.() -> Unit)? = null,
+    onViewUpdated: (SceneView.() -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
         ScenePreview(modifier)
@@ -203,17 +217,18 @@ fun Scene(
                     view,
                     renderer,
                     cameraNode,
-                    cameraManipulator,
                     mainLightNode,
                     environment,
                     isOpaque,
                     collisionSystem,
-                    gestureDetector,
+                    cameraManipulator,
+                    viewNodeWindowManager,
                     onGestureListener,
+                    onTouchEvent,
                     activity,
                     lifecycle,
-                ).apply {
-                    onViewCreated?.invoke(this)
+                ).also {
+                    onViewCreated?.invoke(it)
                 }
             },
             update = { sceneView ->
@@ -222,8 +237,10 @@ fun Scene(
                 sceneView.mainLightNode = mainLightNode
                 sceneView.setCameraNode(cameraNode)
                 sceneView.childNodes = childNodes
-                sceneView.gestureDetector = gestureDetector
+                sceneView.cameraManipulator = cameraManipulator
+                sceneView.viewNodeWindowManager = viewNodeWindowManager
                 sceneView.onGestureListener = onGestureListener
+                sceneView.onTouchEvent = onTouchEvent
                 sceneView.onFrame = onFrame
 
                 onViewUpdated?.invoke(sceneView)
@@ -415,44 +432,6 @@ fun rememberCollisionSystem(
 }
 
 @Composable
-fun rememberGestureDetector(
-    context: Context,
-    nodeSelector: (e: MotionEvent, (node: Node?) -> Unit) -> Unit,
-    creator: () -> GestureDetector = {
-        GestureDetector(context, nodeSelector)
-    }
-) = remember(context, nodeSelector, creator)
-
-@Composable
-fun rememberSelectedNodeDetector(
-    context: Context,
-    selectedNode: Node?,
-    creator: () -> GestureDetector = {
-        SelectedNodeGestureDetector(context, selectedNode)
-    }
-) = remember(context, selectedNode, creator)
-
-
-@Composable
-fun rememberHitTestGestureDetector(
-    context: Context,
-    collisionSystem: CollisionSystem,
-    creator: () -> GestureDetector = {
-        HitTestGestureDetector(context, collisionSystem)
-    }
-) = remember(context, collisionSystem, creator)
-
-@Composable
-fun rememberPickGestureDetector(
-    context: Context,
-    view: View,
-    nodes: () -> List<Node>,
-    creator: () -> GestureDetector = {
-        PickGestureDetector(context, view, nodes)
-    }
-) = remember(context, view, nodes, creator)
-
-@Composable
 fun rememberOnGestureListener(
     onDown: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
     onShowPress: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
@@ -527,6 +506,33 @@ fun rememberOnGestureListener(
         }
     }
 ) = remember(creator)
+
+@Composable
+fun rememberCameraManipulator(
+    creator: () -> Manipulator = {
+        SceneView.createCameraManipulator()
+    }
+) = remember(creator).also { collisionSystem ->
+    DisposableEffect(collisionSystem) {
+        onDispose {
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.P)
+@Composable
+fun rememberViewNodeManager(
+    context: Context = LocalContext.current,
+    creator: () -> ViewNode.WindowManager = {
+        SceneView.createViewNodeManager(context)
+    }
+) = remember(context, creator).also {
+    DisposableEffect(it) {
+        onDispose {
+            it.destroy()
+        }
+    }
+}
 
 @Composable
 private fun ScenePreview(modifier: Modifier) {
