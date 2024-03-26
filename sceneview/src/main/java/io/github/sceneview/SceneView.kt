@@ -122,21 +122,6 @@ open class SceneView @JvmOverloads constructor(
      */
     sharedCameraNode: CameraNode? = null,
     /**
-     * Helper that enables camera interaction similar to sketchfab or Google Maps.
-     *
-     * Needs to be a callable function because it can be reinitialized in case of viewport change
-     * or camera node manual position changed.
-     *
-     * The first onTouch event will make the first manipulator build. So you can change the camera
-     * position before any user gesture.
-     *
-     * Clients notify the camera manipulator of various mouse or touch events, then periodically
-     * call its getLookAt() method so that they can adjust their camera(s). Three modes are
-     * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
-     * is passed into the create method.
-     */
-    val cameraManipulator: ((View, CameraNode) -> Manipulator)? = defaultCameraManipulator,
-    /**
      * Always add a direct light source since it is required for shadowing.
      *
      * We highly recommend adding an [IndirectLight] as well.
@@ -657,7 +642,7 @@ open class SceneView @JvmOverloads constructor(
 //            transformManager.openLocalTransformTransaction()
 
             // Only update the camera manipulator if a touch has been made
-            _cameraManipulator?.let { manipulator ->
+            cameraManipulator?.let { manipulator ->
                 manipulator.update(frameTimeNanos.intervalSeconds(lastFrameTimeNanos).toFloat())
                 // Extract the camera basis from the helper and push it to the Filament camera.
                 cameraNode.transform = manipulator.transform
@@ -715,6 +700,7 @@ open class SceneView @JvmOverloads constructor(
 
     protected open fun onResized(width: Int, height: Int) {
         view.viewport = Viewport(0, 0, width, height)
+        cameraManipulator?.setViewport(width, height)
         cameraNode.updateProjection()
     }
 
@@ -817,11 +803,6 @@ open class SceneView @JvmOverloads constructor(
             override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) =
                 onScaleEnd(detector, e, node)
         }
-    }
-
-    fun updateCameraManipulator() {
-        _cameraManipulator = cameraManipulator?.invoke(view, cameraNode)
-        cameraGestureDetector = _cameraManipulator?.let { CameraGestureDetector(this, it) }
     }
 
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
@@ -1001,12 +982,10 @@ open class SceneView @JvmOverloads constructor(
 
         fun createCameraNode(engine: Engine): CameraNode = DefaultCameraNode(engine)
 
-        val defaultCameraManipulator: ((View, CameraNode) -> Manipulator) = { view, cameraNode ->
+        fun createCameraManipulator() =
             Manipulator.Builder()
-                .orbitHomePosition(cameraNode.worldPosition)
-                .viewport(min(view.viewport.width, 1), min(view.viewport.height, 1))
-                .farPlane(cameraNode.far)
-                .farPlane(cameraNode.near)
+//                .orbitHomePosition(cameraNode.worldPosition)
+//                .viewport(min(width, 1), min(height, 1))
                 .orbitSpeed(0.005f, 0.005f)
                 .zoomSpeed(0.05f)
                 .build(Manipulator.Mode.ORBIT)

@@ -157,7 +157,7 @@ fun Scene(
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
      */
-    cameraManipulator: ((View, CameraNode) -> Manipulator)? = SceneView.defaultCameraManipulator,
+    cameraManipulator: Manipulator? = rememberCameraManipulator(),
     /**
      * Used for Node's that can display an Android [View]
      *
@@ -217,7 +217,6 @@ fun Scene(
                     view,
                     renderer,
                     cameraNode,
-                    cameraManipulator,
                     mainLightNode,
                     environment,
                     isOpaque,
