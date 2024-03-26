@@ -148,9 +148,21 @@ fun Scene(
      */
     cameraManipulator: ((View, CameraNode) -> Manipulator)? = SceneView.defaultCameraManipulator,
     /**
-     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+     * Used for Node's that can display an Android [View]
+     *
+     * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
+     * added and removed from.
+     *
+     * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
+     * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
+     * views can be added to as children. This allows us to safely and correctly draw the [View]
+     * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
+     * isolated from the rest of the activities View hierarchy.
+     *
+     * Additionally, this manages the lifecycle of the window to help ensure that the window is
+     * added/removed from the WindowManager at the appropriate times.
      */
-    childNodes: List<Node> = rememberNodes(),
+    viewNodeWindowManager: ViewNode.WindowManager? = null,
     /**
      * Physics system to handle collision between nodes, hit testing on a nodes,...
      */
@@ -208,12 +220,13 @@ fun Scene(
                     environment,
                     isOpaque,
                     collisionSystem,
-                    gestureDetector,
+                    cameraManipulator,
+                    viewNodeWindowManager,
                     onGestureListener,
                     activity,
                     lifecycle,
-                ).apply {
-                    onViewCreated?.invoke(this)
+                ).also {
+                    onViewCreated?.invoke(it)
                 }
             },
             update = { sceneView ->
@@ -222,7 +235,8 @@ fun Scene(
                 sceneView.mainLightNode = mainLightNode
                 sceneView.setCameraNode(cameraNode)
                 sceneView.childNodes = childNodes
-                sceneView.gestureDetector = gestureDetector
+                sceneView.cameraManipulator = cameraManipulator
+                sceneView.viewNodeWindowManager = viewNodeWindowManager
                 sceneView.onGestureListener = onGestureListener
                 sceneView.onFrame = onFrame
 
@@ -527,6 +541,33 @@ fun rememberOnGestureListener(
         }
     }
 ) = remember(creator)
+
+@Composable
+fun rememberCameraManipulator(
+    creator: () -> Manipulator = {
+        SceneView.createCameraManipulator()
+    }
+) = remember(creator).also { collisionSystem ->
+    DisposableEffect(collisionSystem) {
+        onDispose {
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.P)
+@Composable
+fun rememberViewNodeManager(
+    context: Context = LocalContext.current,
+    creator: () -> ViewNode.WindowManager = {
+        SceneView.createViewNodeManager(context)
+    }
+) = remember(context, creator).also {
+    DisposableEffect(it) {
+        onDispose {
+            it.destroy()
+        }
+    }
+}
 
 @Composable
 private fun ScenePreview(modifier: Modifier) {

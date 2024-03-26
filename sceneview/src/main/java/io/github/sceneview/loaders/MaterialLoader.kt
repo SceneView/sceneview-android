@@ -13,6 +13,8 @@ import io.github.sceneview.material.kMaterialDefaultMetallic
 import io.github.sceneview.material.kMaterialDefaultReflectance
 import io.github.sceneview.material.kMaterialDefaultRoughness
 import io.github.sceneview.material.setColor
+import io.github.sceneview.material.setExternalTexture
+import io.github.sceneview.material.setInvertFrontFaceWinding
 import io.github.sceneview.material.setMetallic
 import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setReflectance
@@ -71,6 +73,13 @@ class MaterialLoader(
     }
     private val videoTextureChromaKeyMaterial by lazy {
         createMaterial("$kMaterialsAssetFolder/video_texture_chroma_key.filamat")
+    }
+
+    private val viewTextureLitMaterial by lazy {
+        createMaterial("$kMaterialsAssetFolder/view_texture_lit.filamat")
+    }
+    private val viewTextureUnlitMaterial by lazy {
+        createMaterial("$kMaterialsAssetFolder/view_texture_unlit.filamat")
     }
 
     private val materials = mutableListOf<Material>()
@@ -282,8 +291,17 @@ class MaterialLoader(
                 setParameter("chromaKeyColor", colorOf(chromaKeyColor))
             }
         }.apply {
-            setTexture(videoTexture)
+            setExternalTexture(videoTexture)
         }
+
+    fun createViewInstance(
+        viewTexture: Texture,
+        unlit: Boolean = false,
+        invertFrontFaceWinding: Boolean = false
+    ) = createInstance(if (unlit) viewTextureUnlitMaterial else viewTextureLitMaterial).apply {
+        setExternalTexture(viewTexture)
+        setInvertFrontFaceWinding(invertFrontFaceWinding)
+    }
 
     fun destroyMaterial(material: Material) {
         engine.safeDestroyMaterialInstance(material.defaultInstance)
