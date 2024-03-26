@@ -1,5 +1,7 @@
 package io.github.sceneview.ar
 
+import android.view.MotionEvent
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -32,6 +34,7 @@ import io.github.sceneview.ar.arcore.getUpdatedTrackables
 import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
@@ -233,6 +236,7 @@ fun ARScene(
      * The listener invoked for all the gesture detector callbacks.
      */
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     onViewUpdated: (ARSceneView.() -> Unit)? = null,
@@ -263,8 +267,6 @@ fun ARScene(
                     environment,
                     isOpaque,
                     collisionSystem,
-                    gestureDetector,
-                    onGestureListener,
                     cameraStream,
                     sessionFeatures,
                     sessionCameraConfig,
@@ -275,6 +277,8 @@ fun ARScene(
                     onSessionPaused,
                     onSessionFailed,
                     onTrackingFailureChanged,
+                    onGestureListener,
+                    onTouchEvent,
                     onSessionUpdated
                 ).also {
                     onViewCreated?.invoke(it)
@@ -288,6 +292,7 @@ fun ARScene(
                 sceneView.environment = environment
                 sceneView.viewNodeWindowManager = viewNodeWindowManager
                 sceneView.onGestureListener = onGestureListener
+                sceneView.onTouchEvent = onTouchEvent
 
                 sceneView.planeRenderer.isEnabled = planeRenderer
 

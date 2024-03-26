@@ -26,6 +26,7 @@ import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.collision.Collider
 import io.github.sceneview.collision.CollisionShape
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.TransformProvider
 import io.github.sceneview.gesture.MoveGestureDetector
@@ -47,6 +48,8 @@ import io.github.sceneview.math.slerp
 import io.github.sceneview.math.times
 import io.github.sceneview.math.toMatrix
 import io.github.sceneview.math.toQuaternion
+import io.github.sceneview.safeDestroyEntity
+import io.github.sceneview.safeDestroyTransformable
 import io.github.sceneview.utils.intervalSeconds
 import kotlin.reflect.KProperty1
 
@@ -386,6 +389,7 @@ open class Node(
     var onAddedToScene: ((scene: Scene) -> Unit)? = null
     var onRemovedFromScene: ((scene: Scene) -> Unit)? = null
 
+    var onTouch: ((e: MotionEvent, hitResult: HitResult) -> Boolean)? = null
     var onDown: ((e: MotionEvent) -> Boolean)? = null
     var onShowPress: ((e: MotionEvent) -> Unit)? = null
     var onSingleTapUp: ((e: MotionEvent) -> Boolean)? = null
@@ -829,6 +833,10 @@ open class Node(
         collider?.markWorldShapeDirty()
         childNodes.forEach { it.onWorldTransformChanged() }
     }
+
+
+    open fun onTouchEvent(e: MotionEvent, hitResult: HitResult) =
+        onTouch?.invoke(e, hitResult) ?: false
 
     override fun onDown(e: MotionEvent) = onDown?.invoke(e) ?: false
     override fun onShowPress(e: MotionEvent) {

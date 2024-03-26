@@ -152,18 +152,6 @@ open class ARSceneView @JvmOverloads constructor(
      */
     sharedCollisionSystem: CollisionSystem? = null,
     /**
-     * Detects various gestures and events.
-     *
-     * The gesture listener callback will notify users when a particular motion event has occurred.
-     *
-     * Responds to Android touch events with listeners.
-     */
-    sharedGestureDetector: GestureDetector? = null,
-    /**
-     * The listener invoked for all the gesture detector callbacks.
-     */
-    sharedOnGestureListener: GestureDetector.OnGestureListener? = null,
-    /**
      * The [ARCameraStream] to render the camera texture.
      *
      * Use it to control if the occlusion should be enabled or disabled
@@ -231,6 +219,13 @@ open class ARSceneView @JvmOverloads constructor(
      * [TrackingState.TRACKING]
      */
     var onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
+    /**
+     * The listener invoked for all the gesture detector callbacks.
+     *
+     * Responds to Android touch events with listeners.
+     */
+    onGestureListener: GestureDetector.OnGestureListener? = null,
+    onTouchEvent: ((e: MotionEvent, hitResult: io.github.sceneview.collision.HitResult?) -> Boolean)? = null,
     /**
      * Updates of the state of the ARCore system.
      *
@@ -628,6 +623,7 @@ open class ARSceneView @JvmOverloads constructor(
 
         fun createARCameraStream(materialLoader: MaterialLoader) = ARCameraStream(materialLoader)
 
-        fun createAREnvironment(engine: Engine) = createEnvironment(engine, isOpaque = true, skybox = null)
+        fun createAREnvironment(engine: Engine) =
+            createEnvironment(engine, isOpaque = true, skybox = null)
     }
 }

@@ -203,8 +203,11 @@ open class SceneView @JvmOverloads constructor(
     var viewNodeWindowManager: ViewNode.WindowManager? = null,
     /**
      * The listener invoked for all the gesture detector callbacks.
+     *
+     * Responds to Android touch events with listeners.
      */
-    sharedOnGestureListener: GestureDetector.OnGestureListener? = null,
+    onGestureListener: GestureDetector.OnGestureListener? = null,
+    var onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     sharedActivity: ComponentActivity? = null,
     sharedLifecycle: Lifecycle? = null,
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
@@ -414,16 +417,41 @@ open class SceneView @JvmOverloads constructor(
      * The gesture listener callback will notify users when a particular motion event has occurred.
      * Responds to Android touch events with listeners.
      */
-    var gestureDetector =
-        (sharedGestureDetector ?: HitTestGestureDetector(context, collisionSystem)).apply {
-            listener = sharedOnGestureListener
-        }
+    var gestureDetector: GestureDetector? =
+        GestureDetector(context = context, listener = onGestureListener)
+        private set
 
     /**
      * The listener invoked for all the gesture detector callbacks.
+     *
+     * Responds to Android touch events with listeners.
      */
-    var onGestureListener
-        get() = gestureDetector.listener
+    var onGestureListener: GestureDetector.OnGestureListener?
+        get() = gestureDetector?.listener
+        set(value) {
+            gestureDetector?.listener = value
+        }
+
+    var cameraGestureDetector: CameraGestureDetector? =
+        CameraGestureDetector(viewHeight = ::getHeight, manipulator = cameraManipulator)
+        private set
+
+    /**
+     * Helper that enables camera interaction similar to sketchfab or Google Maps.
+     *
+     * Needs to be a callable function because it can be reinitialized in case of viewport change
+     * or camera node manual position changed.
+     *
+     * The first onTouch event will make the first manipulator build. So you can change the camera
+     * position before any user gesture.
+     *
+     * Clients notify the camera manipulator of various mouse or touch events, then periodically
+     * call its getLookAt() method so that they can adjust their camera(s). Three modes are
+     * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
+     * is passed into the create method.
+     */
+    var cameraManipulator: Manipulator?
+        get() = cameraGestureDetector?.manipulator
         set(value) {
             gestureDetector.listener = value
         }
@@ -665,22 +693,29 @@ open class SceneView @JvmOverloads constructor(
         super.onDetachedFromWindow()
     }
 
-    protected open fun onResized(width: Int, height: Int) {
-        view.viewport = Viewport(0, 0, width, height)
-        cameraNode.updateProjection()
-        updateCameraManipulator()
-    }
-
     @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(motionEvent: MotionEvent): Boolean {
+    override fun onTouchEvent(event: MotionEvent): Boolean {
         // This makes sure that the view's onTouchListener is called.
-        if (!super.onTouchEvent(motionEvent)) {
-            lastTouchEvent = motionEvent
-            gestureDetector.onTouchEvent(motionEvent)
-            cameraGestureDetector?.onTouchEvent(motionEvent)
+        if (!super.onTouchEvent(event)) {
+            lastTouchEvent = event
+            val hitResult = collisionSystem.hitTest(event).firstOrNull {
+                it.node.isTouchable
+            }
+            if (onTouchEvent?.invoke(event, hitResult) != true &&
+                hitResult?.node?.onTouchEvent(event, hitResult) != true
+            ) {
+                gestureDetector?.onTouchEvent(event, hitResult)
+                cameraGestureDetector?.onTouchEvent(event)
+            }
+
             return true
         }
         return false
+    }
+
+    protected open fun onResized(width: Int, height: Int) {
+        view.viewport = Viewport(0, 0, width, height)
+        cameraNode.updateProjection()
     }
 
     internal fun addNode(node: Node) {
