@@ -7,11 +7,13 @@ import io.github.sceneview.geometries.Sphere
 import io.github.sceneview.math.Position
 
 open class SphereNode private constructor(
+    engine: Engine,
     override val geometry: Sphere,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
     builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
+    engine = engine,
     geometry = geometry,
     materialInstances = materialInstances,
     primitivesOffsets = primitivesOffsets,
@@ -19,10 +21,12 @@ open class SphereNode private constructor(
 ) {
 
     constructor(
+        engine: Engine,
         geometry: Sphere,
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
@@ -38,6 +42,7 @@ open class SphereNode private constructor(
         materialInstances: List<MaterialInstance?>,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Sphere.Builder()
             .radius(radius)
             .center(center)
@@ -57,6 +62,7 @@ open class SphereNode private constructor(
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Sphere.Builder()
             .radius(radius)
             .center(center)
@@ -72,5 +78,5 @@ open class SphereNode private constructor(
         center: Position = geometry.center,
         stacks: Int = geometry.stacks,
         slices: Int = geometry.slices
-    ) = setGeometry(geometry.update(radius, center, stacks, slices))
+    ) = setGeometry(geometry.update(engine, radius, center, stacks, slices))
 }

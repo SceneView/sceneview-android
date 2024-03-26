@@ -41,7 +41,6 @@ private const val kColorSize = 4 // r, g, b, a
  * @see Sphere
  */
 open class Geometry internal constructor(
-    internal val engine: Engine,
     val primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     val vertexBuffer: VertexBuffer,
@@ -166,7 +165,7 @@ open class Geometry internal constructor(
         open fun build(engine: Engine) =
             build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Geometry(
-                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer,
+                    primitiveType, vertices, vertexBuffer, indices, indexBuffer,
                     offsets, boundingBox
                 )
             }
@@ -199,16 +198,16 @@ open class Geometry internal constructor(
         }
 
     fun update(
+        engine: Engine,
         vertices: List<Vertex> = this.vertices,
-        indices: List<List<Int>> = this.primitivesIndices
+        primitivesIndices: List<List<Int>> = this.primitivesIndices
     ) = apply {
-        this.vertices = vertices
-        this.primitivesIndices = indices
-    }
-
-    fun destroy() {
-        engine.destroyVertexBuffer(vertexBuffer)
-        engine.destroyIndexBuffer(indexBuffer)
+        if (this.vertices != vertices) {
+            setVertices(engine, vertices)
+        }
+        if (this.primitivesIndices != primitivesIndices) {
+            setPrimitivesIndices(engine, primitivesIndices)
+        }
     }
 }
 

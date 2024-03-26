@@ -42,6 +42,7 @@ import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.destroy
 
 @Composable
@@ -133,6 +134,14 @@ fun Scene(
      */
     cameraNode: CameraNode = rememberCameraNode(engine),
     /**
+     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
+     */
+    childNodes: List<Node> = rememberNodes(),
+    /**
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    /**
      * Helper that enables camera interaction similar to sketchfab or Google Maps.
      *
      * Needs to be a callable function because it can be reinitialized in case of viewport change
@@ -164,12 +173,9 @@ fun Scene(
      */
     viewNodeWindowManager: ViewNode.WindowManager? = null,
     /**
-     * Physics system to handle collision between nodes, hit testing on a nodes,...
-     */
-    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
-    /**
-     * Detects various gestures and events.
+     * The listener invoked for all the gesture detector callbacks.
      *
+     * Detects various gestures and events.
      * The gesture listener callback will notify users when a particular motion event has occurred.
      * Responds to Android touch events with listeners.
      */
@@ -193,8 +199,8 @@ fun Scene(
      * The callback will only be invoked if the Frame is considered as valid.
      */
     onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
-    onViewUpdated: (SceneView.() -> Unit)? = null,
-    onViewCreated: (SceneView.() -> Unit)? = null
+    onViewCreated: (SceneView.() -> Unit)? = null,
+    onViewUpdated: (SceneView.() -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
         ScenePreview(modifier)

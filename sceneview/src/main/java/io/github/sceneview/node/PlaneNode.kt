@@ -10,21 +10,25 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 open class PlaneNode private constructor(
+    engine: Engine,
     override val geometry: Plane,
     primitivesOffsets: List<IntRange>,
     materialInstances: List<MaterialInstance?>,
     builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
+    engine = engine,
     geometry = geometry,
     materialInstances = materialInstances,
     primitivesOffsets = primitivesOffsets,
     builderApply = builderApply
 ) {
     constructor(
+        engine: Engine,
         geometry: Plane,
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = geometry,
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
         materialInstances = listOf(materialInstance),
@@ -32,10 +36,12 @@ open class PlaneNode private constructor(
     )
 
     constructor(
+        engine: Engine,
         geometry: Plane,
         materialInstances: List<MaterialInstance?>,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = geometry,
         primitivesOffsets = geometry.primitivesOffsets,
         materialInstances = materialInstances,
@@ -51,6 +57,7 @@ open class PlaneNode private constructor(
         materialInstances: List<MaterialInstance?>,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Plane.Builder()
             .size(size)
             .center(center)
@@ -70,6 +77,7 @@ open class PlaneNode private constructor(
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Plane.Builder()
             .size(size)
             .center(center)
@@ -85,5 +93,5 @@ open class PlaneNode private constructor(
         center: Position = geometry.center,
         normal: Direction = geometry.normal,
         uvScale: UvScale = geometry.uvScale,
-    ) = setGeometry(geometry.update(size, center, normal, uvScale))
+    ) = setGeometry(geometry.update(engine, size, center, normal, uvScale))
 }

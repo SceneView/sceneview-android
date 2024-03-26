@@ -13,7 +13,6 @@ import io.github.sceneview.triangulation.Delaunator
 import io.github.sceneview.triangulation.Earcut
 
 class Shape private constructor(
-    engine: Engine,
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
@@ -28,7 +27,6 @@ class Shape private constructor(
     uvScale: UvScale,
     color: Color?
 ) : Geometry(
-    engine,
     primitiveType,
     vertices,
     vertexBuffer,
@@ -74,7 +72,6 @@ class Shape private constructor(
             )
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Shape(
-                    engine,
                     primitiveType,
                     vertices,
                     vertexBuffer,
@@ -107,6 +104,7 @@ class Shape private constructor(
         private set
 
     fun update(
+        engine: Engine,
         polygonPath: List<Position2> = this.polygonPath,
         polygonHoles: List<Int> = this.polygonHoles,
         delaunayPoints: List<Position2> = this.delaunayPoints,
@@ -114,15 +112,19 @@ class Shape private constructor(
         uvScale: UvScale = this.uvScale,
         color: Color? = this.color
     ) = apply {
+        update(
+            engine = engine,
+            vertices = getVertices(polygonPath + delaunayPoints),
+            primitivesIndices = getPolygonIndices(polygonPath, polygonHoles) +
+                    getDelaunayIndices(delaunayPoints)
+        )
+
         this.polygonPath = polygonPath
         this.polygonHoles = polygonHoles
         this.delaunayPoints = delaunayPoints
         this.normal = normal
         this.uvScale = uvScale
         this.color = color
-        vertices = getVertices(polygonPath + delaunayPoints)
-        primitivesIndices =
-            getPolygonIndices(polygonPath, polygonHoles) + getDelaunayIndices(delaunayPoints)
     }
 
     companion object {

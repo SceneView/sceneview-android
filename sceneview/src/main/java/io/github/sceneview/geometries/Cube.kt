@@ -10,7 +10,6 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 class Cube private constructor(
-    engine: Engine,
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
@@ -21,7 +20,6 @@ class Cube private constructor(
     size: Size,
     center: Position
 ) : Geometry(
-    engine = engine,
     primitiveType = primitiveType,
     vertices = vertices,
     vertexBuffer = vertexBuffer,
@@ -44,7 +42,7 @@ class Cube private constructor(
             primitivesIndices(INDICES)
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Cube(
-                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
+                    primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
                     boundingBox, size, center
                 )
             }
@@ -57,12 +55,14 @@ class Cube private constructor(
         private set
 
     fun update(
+        engine: Engine,
         center: Position = this.center,
         size: Size = this.size
     ) = apply {
+        update(engine = engine, vertices = getVertices(center, size))
+
         this.center = center
         this.size = size
-        vertices = getVertices(size, center)
     }
 
     companion object {

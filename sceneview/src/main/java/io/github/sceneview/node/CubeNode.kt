@@ -8,11 +8,13 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
 open class CubeNode private constructor(
+    engine: Engine,
     override val geometry: Cube,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
     builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
+    engine = engine,
     geometry = geometry,
     materialInstances = materialInstances,
     primitivesOffsets = primitivesOffsets,
@@ -20,10 +22,12 @@ open class CubeNode private constructor(
 ) {
 
     constructor(
+        engine: Engine,
         geometry: Cube,
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
@@ -37,6 +41,7 @@ open class CubeNode private constructor(
         materialInstances: List<MaterialInstance?>,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Cube.Builder()
             .size(size)
             .center(center)
@@ -52,6 +57,7 @@ open class CubeNode private constructor(
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Cube.Builder()
             .size(size)
             .center(center)
@@ -63,5 +69,5 @@ open class CubeNode private constructor(
     fun updateGeometry(
         center: Position = geometry.center,
         size: Size = geometry.size
-    ) = setGeometry(geometry.update(center, size))
+    ) = setGeometry(geometry.update(engine, center, size))
 }

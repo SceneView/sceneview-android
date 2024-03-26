@@ -13,7 +13,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 class Sphere private constructor(
-    engine: Engine,
     primitiveType: PrimitiveType,
     vertices: List<Vertex>,
     vertexBuffer: VertexBuffer,
@@ -26,7 +25,6 @@ class Sphere private constructor(
     stacks: Int,
     slices: Int
 ) : Geometry(
-    engine,
     primitiveType,
     vertices,
     vertexBuffer,
@@ -55,7 +53,7 @@ class Sphere private constructor(
             primitivesIndices(getIndices(stacks, slices))
             return build(engine) { vertexBuffer, indexBuffer, offsets, boundingBox ->
                 Sphere(
-                    engine, primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
+                    primitiveType, vertices, vertexBuffer, indices, indexBuffer, offsets,
                     boundingBox, radius, center, stacks, slices
                 )
             }
@@ -72,19 +70,25 @@ class Sphere private constructor(
         private set
 
     fun update(
+        engine: Engine,
         radius: Float = this.radius,
         center: Position = this.center,
         stacks: Int = this.stacks,
         slices: Int = this.slices
     ) = apply {
+        update(
+            engine = engine,
+            vertices = getVertices(radius, center, stacks, slices),
+            primitivesIndices = if (stacks != this.stacks || slices != this.slices) {
+                getIndices(stacks, slices)
+            } else {
+                this.primitivesIndices
+            }
+        )
         this.radius = radius
         this.center = center
-        vertices = getVertices(radius, center, stacks, slices)
-        if (stacks != this.stacks || slices != this.slices) {
-            this.stacks = stacks
-            this.slices = slices
-            primitivesIndices = getIndices(stacks, slices)
-        }
+        this.stacks = stacks
+        this.slices = slices
     }
 
     companion object {

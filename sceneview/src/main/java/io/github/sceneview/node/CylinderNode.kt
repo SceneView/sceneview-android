@@ -7,11 +7,13 @@ import io.github.sceneview.geometries.Cylinder
 import io.github.sceneview.math.Position
 
 open class CylinderNode private constructor(
+    engine: Engine,
     override val geometry: Cylinder,
     materialInstances: List<MaterialInstance?>,
     primitivesOffsets: List<IntRange> = geometry.primitivesOffsets,
     builderApply: RenderableManager.Builder.() -> Unit = {}
 ) : GeometryNode(
+    engine = engine,
     geometry = geometry,
     materialInstances = materialInstances,
     primitivesOffsets = primitivesOffsets,
@@ -19,10 +21,12 @@ open class CylinderNode private constructor(
 ) {
 
     constructor(
+        engine: Engine,
         geometry: Cylinder,
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine,
         geometry = geometry,
         materialInstances = listOf(materialInstance),
         primitivesOffsets = listOf(0..geometry.primitivesOffsets.last().last),
@@ -38,6 +42,7 @@ open class CylinderNode private constructor(
         materialInstances: List<MaterialInstance?>,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Cylinder.Builder()
             .radius(radius)
             .height(height)
@@ -57,6 +62,7 @@ open class CylinderNode private constructor(
         materialInstance: MaterialInstance? = null,
         builderApply: RenderableManager.Builder.() -> Unit = {}
     ) : this(
+        engine = engine,
         geometry = Cylinder.Builder()
             .radius(radius)
             .height(height)
@@ -72,5 +78,5 @@ open class CylinderNode private constructor(
         height: Float = geometry.height,
         center: Position = geometry.center,
         sideCount: Int = geometry.sideCount
-    ) = setGeometry(geometry.update(radius, height, center, sideCount))
+    ) = setGeometry(geometry.update(engine, radius, height, center, sideCount))
 }
