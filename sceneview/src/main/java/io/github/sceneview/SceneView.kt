@@ -869,13 +869,14 @@ open class SceneView @JvmOverloads constructor(
         }
 
         override fun onResized(width: Int, height: Int) {
+            this@SceneView.onResized(width, height)
+
             // Wait for all pending frames to be processed before returning. This is to avoid a race
             // between the surface being resized before pending frames are rendered into it.
             engine.createFence().apply {
                 wait(Fence.Mode.FLUSH, Fence.WAIT_FOR_EVER)
                 engine.destroyFence(this)
             }
-            this@SceneView.onResized(width, height)
         }
     }
 
