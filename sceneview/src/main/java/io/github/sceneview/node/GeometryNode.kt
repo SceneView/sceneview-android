@@ -66,5 +66,10 @@ open class GeometryNode(
     fun updateGeometry(
         vertices: List<Geometry.Vertex> = geometry.vertices,
         indices: List<List<Int>> = geometry.primitivesIndices
-    ) = setGeometry(geometry.update(vertices, indices))
+    ) = setGeometry(geometry.update(engine, vertices, indices))
+
+    override fun destroy() {
+        super.destroy()
+        engine.safeDestroyGeometry(geometry)
+    }
 }

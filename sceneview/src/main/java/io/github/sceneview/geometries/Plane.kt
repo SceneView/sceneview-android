@@ -123,11 +123,12 @@ class Plane private constructor(
         normal: Direction = this.normal,
         uvScale: UvScale = this.uvScale,
     ) = apply {
+        update(engine = engine, vertices = getVertices(size, center, normal, uvScale))
+
         this.size = size
         this.center = center
         this.normal = normal
         this.uvScale = uvScale
-        vertices = getVertices(size, center, normal, uvScale)
     }
 
     companion object {
