@@ -485,7 +485,7 @@ open class SceneView @JvmOverloads constructor(
             defaultCameraNode = it
         })
 
-        sharedLifecycle?.addObserver(lifecycleObserver)
+        lifecycle?.addObserver(lifecycleObserver)
     }
 
     /**
