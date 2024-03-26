@@ -37,6 +37,13 @@ val ModelInstance.camerasEntities: List<Entity>
 val ModelInstance.cameras: List<Camera>
     get() = entities.map { engine.getCameraComponent(it) }.filterNotNull()
 
+val ModelInstance.emptyNodeEntities: List<Entity>
+    get() = entities.filter {
+        !renderableManager.hasComponent(it) &&
+                !lightManager.hasComponent(it) &&
+                engine.getCameraComponent(it) == null
+    }
+
 /**
  * Attaches the given skin to the given node, which must have an associated mesh with
  * BONE_INDICES and BONE_WEIGHTS attributes.

@@ -18,6 +18,7 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.model.camerasEntities
 import io.github.sceneview.model.collisionShape
+import io.github.sceneview.model.emptyNodeEntities
 import io.github.sceneview.model.engine
 import io.github.sceneview.model.getAnimationIndex
 import io.github.sceneview.model.lightEntities
@@ -96,6 +97,11 @@ open class ModelNode(
     ) : io.github.sceneview.node.CameraNode(engine = modelInstance.engine, entity = entity),
         ChildNode
 
+    inner class EmptyNode internal constructor(
+        override val modelInstance: ModelInstance, entity: Entity
+    ) : Node(engine = modelInstance.engine, entity = entity),
+        ChildNode
+
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
     val renderableNodes = modelInstance.renderableEntities.map {
@@ -107,9 +113,12 @@ open class ModelNode(
     val cameraNodes = modelInstance.camerasEntities.map {
         CameraNode(modelInstance, it).apply { parent = this }
     }
+    val emptyNodes = modelInstance.emptyNodeEntities.map {
+        EmptyNode(modelInstance, it)
+    }
 
     val nodes: Map<String, Node> =
-        (renderableNodes + lightNodes + cameraNodes).associateBy { it.name }
+        (renderableNodes + emptyNodes + lightNodes + cameraNodes).associateBy { it.name }
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance].
