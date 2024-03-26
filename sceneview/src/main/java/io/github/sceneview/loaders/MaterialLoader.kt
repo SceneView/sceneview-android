@@ -278,10 +278,9 @@ class MaterialLoader(
             }
 
     fun createImageInstance(imageTexture: Texture, sampler: TextureSampler = TextureSampler2D()) =
-        createInstance(imageTextureMaterial)
-            .apply {
-                setTexture(imageTexture, sampler)
-            }
+        createInstance(imageTextureMaterial).apply {
+            setTexture(imageTexture, sampler)
+        }
 
     fun createVideoInstance(videoTexture: Texture, chromaKeyColor: Int? = null) =
         if (chromaKeyColor == null) {

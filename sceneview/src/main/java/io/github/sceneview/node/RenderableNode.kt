@@ -10,6 +10,7 @@ import io.github.sceneview.FilamentEntity
 import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.math.toVector3Box
+import io.github.sceneview.safeDestroyRenderable
 
 /**
  * A Node represents a transformation within the scene graph's hierarchy.
@@ -60,5 +61,10 @@ open class RenderableNode(
 
     fun updateCollisionShape() {
         collisionShape = axisAlignedBoundingBox.toVector3Box()
+    }
+
+    override fun destroy() {
+        super.destroy()
+        engine.safeDestroyRenderable(entity)
     }
 }

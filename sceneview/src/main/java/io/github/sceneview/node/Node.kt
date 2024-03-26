@@ -1011,8 +1011,9 @@ open class Node(
      * Detach and destroy the node and all its children.
      */
     open fun destroy() {
-        parent = null
-        transformManager.destroy(entity)
+        runCatching { parent = null }
+        engine.safeDestroyTransformable(entity)
+        engine.safeDestroyEntity(entity)
     }
 }
 
