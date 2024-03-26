@@ -225,27 +225,3 @@ open class GestureDetector(context: Context, var listener: OnGestureListener?) {
         scaleGestureDetector.onTouchEvent(event)
     }
 }
-
-open class SelectedNodeGestureDetector(
-    context: Context,
-    var selectedNode: Node?
-) : GestureDetector(context, { _, onCompleted ->
-    onCompleted(selectedNode)
-})
-
-open class HitTestGestureDetector(
-    context: Context,
-    collisionSystem: CollisionSystem
-) : GestureDetector(context, { e, onCompleted ->
-    onCompleted(collisionSystem.hitTest(e).firstOrNull { it.node.isTouchable }?.node)
-})
-
-open class PickGestureDetector(
-    context: Context,
-    view: View,
-    nodes: () -> List<Node>
-) : GestureDetector(context, { e, onCompleted ->
-    view.pickNode(e, nodes()) { node, _, _ ->
-        onCompleted(node?.takeIf { it.isTouchable })
-    }
-})
