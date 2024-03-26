@@ -832,7 +832,7 @@ open class SceneView @JvmOverloads constructor(
                 viewNodeWindowManager?.pause()
             }
 
-            activity?.setKeepScreenOn(false)
+//            activity?.setKeepScreenOn(false)
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
