@@ -16,6 +16,7 @@ import androidx.lifecycle.Lifecycle
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
@@ -40,10 +41,10 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.node.ViewNode.WindowManager
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
-import io.github.sceneview.rememberHitTestGestureDetector
 import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelLoader
@@ -175,15 +176,21 @@ fun ARScene(
      */
     collisionSystem: CollisionSystem = rememberCollisionSystem(view),
     /**
-     * Detects various gestures and events.
+     * Used for Node's that can display an Android [View]
      *
-     * The gesture listener callback will notify users when a particular motion event has occurred.
-     * Responds to Android touch events with listeners.
+     * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
+     * added and removed from.
+     *
+     * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
+     * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
+     * views can be added to as children. This allows us to safely and correctly draw the [View]
+     * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
+     * isolated from the rest of the activities View hierarchy.
+     *
+     * Additionally, this manages the lifecycle of the window to help ensure that the window is
+     * added/removed from the WindowManager at the appropriate times.
      */
-    gestureDetector: GestureDetector = rememberHitTestGestureDetector(
-        LocalContext.current,
-        collisionSystem
-    ),
+    viewNodeWindowManager: WindowManager? = null,
     /**
      * The session is ready to be accessed.
      */
@@ -222,13 +229,6 @@ fun ARScene(
      * [TrackingState.TRACKING]
      */
     onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
-    /**
-     * Represents a virtual camera, which determines the perspective through which the scene is
-     * viewed.
-     *
-     * All other functionality in Node is supported. You can access the position and rotation of the
-     * camera, assign a collision shape to it, or add children to it.
-     */
     /**
      * The listener invoked for all the gesture detector callbacks.
      */
@@ -269,6 +269,7 @@ fun ARScene(
                     sessionFeatures,
                     sessionCameraConfig,
                     sessionConfiguration,
+                    viewNodeWindowManager,
                     onSessionCreated,
                     onSessionResumed,
                     onSessionPaused,
@@ -285,7 +286,7 @@ fun ARScene(
                 sceneView.setCameraNode(cameraNode)
                 sceneView.mainLightNode = mainLightNode
                 sceneView.environment = environment
-                sceneView.gestureDetector = gestureDetector
+                sceneView.viewNodeWindowManager = viewNodeWindowManager
                 sceneView.onGestureListener = onGestureListener
 
                 sceneView.planeRenderer.isEnabled = planeRenderer

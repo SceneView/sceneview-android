@@ -3,6 +3,8 @@ package io.github.sceneview.ar
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Size
+import android.view.MotionEvent
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
@@ -10,6 +12,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.View
@@ -44,6 +47,7 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.node.ViewNode.WindowManager
 import java.util.concurrent.Executors
 
 /**
@@ -186,6 +190,22 @@ open class ARSceneView @JvmOverloads constructor(
      */
     sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
     /**
+     * Used for Node's that can display an Android [View]
+     *
+     * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
+     * added and removed from.
+     *
+     * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
+     * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
+     * views can be added to as children. This allows us to safely and correctly draw the [View]
+     * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
+     * isolated from the rest of the activities View hierarchy.
+     *
+     * Additionally, this manages the lifecycle of the window to help ensure that the window is
+     * added/removed from the WindowManager at the appropriate times.
+     */
+    viewNodeWindowManager: WindowManager? = null,
+    /**
      * The session is ready to be accessed.
      */
     var onSessionCreated: ((session: Session) -> Unit)? = null,
@@ -236,13 +256,14 @@ open class ARSceneView @JvmOverloads constructor(
     sharedView,
     sharedRenderer,
     sharedCameraNode,
-    null,
     sharedMainLightNode,
     sharedEnvironment,
     isOpaque,
     sharedCollisionSystem,
-    sharedGestureDetector,
-    sharedOnGestureListener,
+    null,
+    viewNodeWindowManager,
+    onGestureListener,
+    onTouchEvent,
     sharedActivity,
     sharedLifecycle
 ) {

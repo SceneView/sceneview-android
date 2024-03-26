@@ -4,9 +4,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaRecorder
 import android.opengl.EGLContext
+import android.os.Build
 import android.util.AttributeSet
 import android.view.*
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.*
@@ -19,16 +22,15 @@ import com.google.android.filament.gltfio.Gltfio
 import com.google.android.filament.utils.KTX1Loader
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.Utils
-import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import dev.romainguy.kotlin.math.Float2
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
+import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.gesture.HitTestGestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
-import io.github.sceneview.gesture.orbitHomePosition
 import io.github.sceneview.gesture.transform
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
@@ -43,9 +45,8 @@ import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.*
-import kotlin.math.min
-import com.google.android.filament.utils.GestureDetector as CameraGestureDetector
 
 typealias Entity = Int
 typealias EntityInstance = Int
@@ -170,13 +171,36 @@ open class SceneView @JvmOverloads constructor(
      */
     sharedCollisionSystem: CollisionSystem? = null,
     /**
-     * Detects various gestures and events.
+     * Helper that enables camera interaction similar to sketchfab or Google Maps.
      *
-     * The gesture listener callback will notify users when a particular motion event has occurred.
+     * Needs to be a callable function because it can be reinitialized in case of viewport change
+     * or camera node manual position changed.
      *
-     * Responds to Android touch events with listeners.
+     * The first onTouch event will make the first manipulator build. So you can change the camera
+     * position before any user gesture.
+     *
+     * Clients notify the camera manipulator of various mouse or touch events, then periodically
+     * call its getLookAt() method so that they can adjust their camera(s). Three modes are
+     * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
+     * is passed into the create method.
      */
-    sharedGestureDetector: GestureDetector? = null,
+    cameraManipulator: Manipulator? = createCameraManipulator(),
+    /**
+     * Used for Node's that can display an Android [View]
+     *
+     * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
+     * added and removed from.
+     *
+     * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
+     * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
+     * views can be added to as children. This allows us to safely and correctly draw the [View]
+     * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
+     * isolated from the rest of the activities View hierarchy.
+     *
+     * Additionally, this manages the lifecycle of the window to help ensure that the window is
+     * added/removed from the WindowManager at the appropriate times.
+     */
+    var viewNodeWindowManager: ViewNode.WindowManager? = null,
     /**
      * The listener invoked for all the gesture detector callbacks.
      */
@@ -367,6 +391,13 @@ open class SceneView @JvmOverloads constructor(
         }
 
     /**
+     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     */
+    val collisionSystem = (sharedCollisionSystem ?: createCollisionSystem(view).also {
+        defaultCollisionSystem = it
+    })
+
+    /**
      * Invoked when an frame is processed.
      *
      * Registers a callback to be invoked when a valid Frame is processing.
@@ -376,13 +407,6 @@ open class SceneView @JvmOverloads constructor(
      * The callback will only be invoked if the Frame is considered as valid.
      */
     var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
-
-    /**
-     * Physics system to handle collision between nodes, hit testing on a nodes,...
-     */
-    val collisionSystem = (sharedCollisionSystem ?: createCollisionSystem(view).also {
-        defaultCollisionSystem = it
-    })
 
     /**
      * Detects various gestures and events.
@@ -419,18 +443,12 @@ open class SceneView @JvmOverloads constructor(
         }
 
     protected var isDestroyed = false
-    protected val viewAttachmentManager
-        get() = _viewAttachmentManager ?: ViewAttachmentManager(context, this).also {
-            _viewAttachmentManager = it
-        }
 
     private val displayHelper = DisplayHelper(context)
     private var swapChain: SwapChain? = null
     private val lifecycleObserver = LifeCycleObserver()
     private val frameCallback = FrameCallback()
-    private var _viewAttachmentManager: ViewAttachmentManager? = null
-    private var cameraGestureDetector: CameraGestureDetector? = null
-    private var _cameraManipulator: Manipulator? = null
+
     private var lastTouchEvent: MotionEvent? = null
     private var surfaceMirrorer: SurfaceMirrorer? = null
     private var lastFrameTimeNanos: Long? = null
@@ -783,7 +801,10 @@ open class SceneView @JvmOverloads constructor(
 
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
-            _viewAttachmentManager?.onResume()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                viewNodeWindowManager?.resume(this@SceneView)
+            }
 
             // Start the drawing when the renderer is resumed.  Remove and re-add the callback
             // to avoid getting called twice.
@@ -796,12 +817,17 @@ open class SceneView @JvmOverloads constructor(
         override fun onPause(owner: LifecycleOwner) {
             Choreographer.getInstance().removeFrameCallback(frameCallback)
 
-            _viewAttachmentManager?.onPause()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                viewNodeWindowManager?.pause()
+            }
 
             activity?.setKeepScreenOn(false)
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                viewNodeWindowManager?.destroy()
+            }
             destroy()
         }
     }
@@ -959,7 +985,10 @@ open class SceneView @JvmOverloads constructor(
                 .orbitSpeed(0.005f, 0.005f)
                 .zoomSpeed(0.05f)
                 .build(Manipulator.Mode.ORBIT)
-        }
+
+
+        @RequiresApi(Build.VERSION_CODES.P)
+        fun createViewNodeManager(context: Context) = ViewNode.WindowManager(context)
 
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
 
