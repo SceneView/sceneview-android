@@ -605,6 +605,7 @@ open class SceneView @JvmOverloads constructor(
     open fun destroy() {
         if (!isDestroyed) {
             lifecycle = null
+            Choreographer.getInstance().removeFrameCallback(frameCallback)
 
             runCatching { uiHelper.detach() }
 
