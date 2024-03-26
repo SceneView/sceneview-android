@@ -432,44 +432,6 @@ fun rememberCollisionSystem(
 }
 
 @Composable
-fun rememberGestureDetector(
-    context: Context,
-    nodeSelector: (e: MotionEvent, (node: Node?) -> Unit) -> Unit,
-    creator: () -> GestureDetector = {
-        GestureDetector(context, nodeSelector)
-    }
-) = remember(context, nodeSelector, creator)
-
-@Composable
-fun rememberSelectedNodeDetector(
-    context: Context,
-    selectedNode: Node?,
-    creator: () -> GestureDetector = {
-        SelectedNodeGestureDetector(context, selectedNode)
-    }
-) = remember(context, selectedNode, creator)
-
-
-@Composable
-fun rememberHitTestGestureDetector(
-    context: Context,
-    collisionSystem: CollisionSystem,
-    creator: () -> GestureDetector = {
-        HitTestGestureDetector(context, collisionSystem)
-    }
-) = remember(context, collisionSystem, creator)
-
-@Composable
-fun rememberPickGestureDetector(
-    context: Context,
-    view: View,
-    nodes: () -> List<Node>,
-    creator: () -> GestureDetector = {
-        PickGestureDetector(context, view, nodes)
-    }
-) = remember(context, view, nodes, creator)
-
-@Composable
 fun rememberOnGestureListener(
     onDown: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
     onShowPress: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
