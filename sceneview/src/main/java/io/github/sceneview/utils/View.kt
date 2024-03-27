@@ -155,17 +155,24 @@ fun View.pick(
         /** The fragment coordinate in GL convention at the picking query location  */
         fragCoords: Float3
     ) -> Unit
-) = pick(
-    xPx.toInt(),
-    // Invert the y coordinate since its origin must be at the bottom
-    (viewport.height - yPx).toInt(),
-    handler
-) { result ->
-    onCompleted(
-        result.renderable,
-        result.depth,
-        result.fragCoords.toFloat3()
-    )
+) =
+// Wrap in a try/catch to handle the case where we receive a pick event as the screen is
+// being swiped to emulate a back button press. In that case, the view will be destroyed but
+// there is still a possibility of this method being called after the fact but before the
+// sceneview is fully destroyed which would trigger an IllegalStateException and crash the app
+    runCatching {
+    pick(
+        xPx.toInt(),
+        // Invert the y coordinate since its origin must be at the bottom
+        (viewport.height - yPx).toInt(),
+        handler
+    ) { result ->
+        onCompleted(
+            result.renderable,
+            result.depth,
+            result.fragCoords.toFloat3()
+        )
+    }
 }
 
 /**
