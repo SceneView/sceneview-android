@@ -46,15 +46,15 @@ android {
 dependencies {
     implementation project(":samples:common")
 
-    implementation "androidx.compose.ui:ui:1.5.4"
-    implementation "androidx.compose.foundation:foundation:1.5.4"
-    implementation 'androidx.activity:activity-compose:1.8.1'
-    implementation 'androidx.compose.material:material:1.5.4'
-    implementation "androidx.compose.ui:ui-tooling-preview:1.5.4"
-    implementation "androidx.navigation:navigation-compose:2.7.5"
-    debugImplementation "androidx.compose.ui:ui-tooling:1.5.4"
+    implementation "androidx.compose.ui:ui:1.6.4"
+    implementation "androidx.compose.foundation:foundation:1.6.4"
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation 'androidx.compose.material:material:1.6.4'
+    implementation "androidx.compose.ui:ui-tooling-preview:1.6.4"
+    implementation "androidx.navigation:navigation-compose:2.7.7"
+    debugImplementation "androidx.compose.ui:ui-tooling:1.6.4"
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:sceneview:2.0.4"
+    releaseImplementation "io.github.sceneview:sceneview:2.1.0"
     debugImplementation project(":sceneview")
 }
