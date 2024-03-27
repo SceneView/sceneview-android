@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.flatbuffers;
+package io.github.sceneview.com.google.flatbuffers;
 
-import static com.google.flatbuffers.Constants.*;
+import static io.github.sceneview.com.google.flatbuffers.Constants.*;
 
 import java.io.IOException;
 import java.io.InputStream;

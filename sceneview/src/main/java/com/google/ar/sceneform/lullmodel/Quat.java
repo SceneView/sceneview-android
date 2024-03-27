@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Struct;
 
 @SuppressWarnings("unused")
 public final class Quat extends Struct {

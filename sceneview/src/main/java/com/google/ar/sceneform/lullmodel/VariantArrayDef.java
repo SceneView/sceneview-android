@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -22,7 +22,7 @@ public final class VariantArrayDef extends Table {
   public int valuesLength() { int o = __offset(4); return o != 0 ? __vector_len(o) : 0; }
 
   public static int createVariantArrayDef(FlatBufferBuilder builder,
-      int valuesOffset) {
+                                          int valuesOffset) {
     builder.startObject(1);
     VariantArrayDef.addValues(builder, valuesOffset);
     return VariantArrayDef.endVariantArrayDef(builder);

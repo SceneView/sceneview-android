@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -25,7 +25,7 @@ public final class ModelPipelineCollidableDef extends Table {
   public ByteBuffer sourceInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 4, 1); }
 
   public static int createModelPipelineCollidableDef(FlatBufferBuilder builder,
-      int sourceOffset) {
+                                                     int sourceOffset) {
     builder.startObject(1);
     ModelPipelineCollidableDef.addSource(builder, sourceOffset);
     return ModelPipelineCollidableDef.endModelPipelineCollidableDef(builder);

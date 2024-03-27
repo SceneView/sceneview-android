@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -40,9 +40,9 @@ public final class MaterialDef extends Table {
   public int texturesLength() { int o = __offset(8); return o != 0 ? __vector_len(o) : 0; }
 
   public static int createMaterialDef(FlatBufferBuilder builder,
-      int nameOffset,
-      int propertiesOffset,
-      int texturesOffset) {
+                                      int nameOffset,
+                                      int propertiesOffset,
+                                      int texturesOffset) {
     builder.startObject(3);
     MaterialDef.addTextures(builder, texturesOffset);
     MaterialDef.addProperties(builder, propertiesOffset);

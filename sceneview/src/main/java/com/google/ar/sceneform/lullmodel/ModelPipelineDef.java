@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -49,11 +49,11 @@ public final class ModelPipelineDef extends Table {
   public int texturesLength() { int o = __offset(12); return o != 0 ? __vector_len(o) : 0; }
 
   public static int createModelPipelineDef(FlatBufferBuilder builder,
-      int sourcesOffset,
-      int renderablesOffset,
-      int collidableOffset,
-      int skeletonOffset,
-      int texturesOffset) {
+                                           int sourcesOffset,
+                                           int renderablesOffset,
+                                           int collidableOffset,
+                                           int skeletonOffset,
+                                           int texturesOffset) {
     builder.startObject(5);
     ModelPipelineDef.addTextures(builder, texturesOffset);
     ModelPipelineDef.addSkeleton(builder, skeletonOffset);

@@ -4,8 +4,8 @@ package com.google.ar.sceneform.lullmodel;
 
 import java.nio.*;
 
-import java.util.*;
-import com.google.flatbuffers.*;
+import io.github.sceneview.com.google.flatbuffers.FlatBufferBuilder;
+import io.github.sceneview.com.google.flatbuffers.Table;
 
 @SuppressWarnings("unused")
 /**
@@ -20,7 +20,7 @@ public final class DataInt extends Table {
   public int value() { int o = __offset(4); return o != 0 ? bb.getInt(o + bb_pos) : 0; }
 
   public static int createDataInt(FlatBufferBuilder builder,
-      int value) {
+                                  int value) {
     builder.startObject(1);
     DataInt.addValue(builder, value);
     return DataInt.endDataInt(builder);
