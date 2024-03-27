@@ -22,9 +22,10 @@ A Sceneform replacement in Kotlin and Jetpack Compose
 ```gradle
 dependencies {
     // Sceneview
-    implementation 'io.github.sceneview:sceneview:2.0.4'
+    implementation 'io.github.sceneview:sceneview:2.1.0'
 }
 ```
+
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
 ### AR (Filament + ARCore included)
@@ -32,9 +33,10 @@ dependencies {
 ```gradle
 dependencies {
     // ARSceneview
-    implementation 'io.github.sceneview:arsceneview:2.0.4'
+    implementation 'io.github.sceneview:arsceneview:2.1.0'
 }
 ```
+
 [API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
 
 ## Usage
@@ -58,6 +60,7 @@ Scene(
     environment = environmentLoader.createHDREnvironment("environment.hdr")!!
 )
 ```
+
 [Sample](https://github.com/SceneView/sceneview-android/tree/main/samples/model-viewer-compose)
 
 ### AR Model Viewer
@@ -93,6 +96,7 @@ ARScene(
     )
 )
 ```
+
 [Sample](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-model-viewer-compose)
 
 ## AR - Cloud Anchors
