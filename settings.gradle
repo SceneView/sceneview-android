@@ -9,7 +9,6 @@ dependencyResolutionManagement {
 rootProject.name = "SceneView"
 include ':sceneview'
 include ':arsceneview'
-//include ':sceneview_2_0_0'
 
 // Samples
 include ':samples:common'
