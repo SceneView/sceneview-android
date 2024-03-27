@@ -83,8 +83,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
 
     // Compose
-    implementation "androidx.compose.ui:ui:1.5.3"
-    implementation "androidx.compose.foundation:foundation:1.5.3"
+    implementation "androidx.compose.ui:ui:1.6.4"
+    implementation "androidx.compose.foundation:foundation:1.6.4"
 
     // SceneView
     api project(":sceneview")
