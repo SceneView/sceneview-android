@@ -27,14 +27,14 @@ dependencies {
 https://sceneview.github.io/api/sceneview-android/sceneview/
 
 ### Usage
-https://sceneview.github.io/api/sceneview-android/sceneview/
+https://github.com/SceneView/sceneview-android/blob/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/model-viewer-compose/src/main/java/io/github/sceneview/sample/modelviewer/compose/MainActivity.kt#L50-L89
 
 ### Current Version
 https://github.com/SceneView/sceneview-android/blob/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/sceneview/gradle.properties#L6
 
-### Inlcuded Filament Dependencies
+### Filament
+#### Included Dependencies
 https://github.com/SceneView/sceneview-android/blob/3abb70cc4362100a2232a2fd1ade9f850fe83096/sceneview/build.gradle#L113-L117
-
 
 ## AR ARScene (Scene + ARCore)
 
