@@ -1,8 +1,6 @@
 # ![logo](https://github.com/SceneView/sceneview-android/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05)
 
-### 3D and AR Android `@Composable` and layout view with Google Filament and ARCore
-
-A Sceneform replacement in Kotlin and Jetpack Compose
+# 3D and AR Android Jetpack Compose and Layout View based on Google Filament and ARCore
 
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
@@ -13,23 +11,35 @@ A Sceneform replacement in Kotlin and Jetpack Compose
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 [![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
 
-## Dependency
 
+## 3D Scene (Filament)
+
+### Dependency
 *app/build.gradle*
-
-### 3D (Filament included)
-
 ```gradle
 dependencies {
     // Sceneview
-    implementation 'io.github.sceneview:sceneview:2.1.0'
+    implementation("io.github.sceneview:sceneview:2.1.0")
 }
 ```
 
-[API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
+### API
+https://sceneview.github.io/api/sceneview-android/sceneview/
 
-### AR (`api` Filament + `api` ARCore included)
+### Usage
+https://sceneview.github.io/api/sceneview-android/sceneview/
 
+### Current Version
+https://github.com/SceneView/sceneview-android/blob/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/sceneview/gradle.properties#L6
+
+### Inlcuded Filament Dependencies
+https://github.com/SceneView/sceneview-android/blob/3abb70cc4362100a2232a2fd1ade9f850fe83096/sceneview/build.gradle#L113-L117
+
+
+## AR ARScene (Scene + ARCore)
+
+### Dependency
+*app/build.gradle*
 ```gradle
 dependencies {
     // ARSceneview
@@ -41,7 +51,7 @@ dependencies {
 
 ## Usage
 
-### 3D Model Viewer
+
 
 ```kotlin
 val engine = rememberEngine()
