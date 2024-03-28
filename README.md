@@ -28,7 +28,7 @@ dependencies {
 
 [API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
 
-### AR (Filament + ARCore included)
+### AR (`api` Filament + `api` ARCore included)
 
 ```gradle
 dependencies {
@@ -99,160 +99,46 @@ ARScene(
 
 [Sample](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-model-viewer-compose)
 
-## AR - Cloud Anchors
 
-[Sources](https://github.com/Gebort/FESTU.Navigator)
 
-```kotlin
+### 3D `@Composable Scene()`
+https://github.com/SceneView/sceneview-android/blob/8be5d205d4b168e5d6e8ba0521e4bf71f3d93bcd/sceneview/src/main/java/io/github/sceneview/Scene.kt#L50-L200
+### AR `@Composable ARScene()`
+https://github.com/SceneView/sceneview-android/blob/8be5d205d4b168e5d6e8ba0521e4bf71f3d93bcd/arsceneview/src/main/java/io/github/sceneview/ar/ARScene.kt#L62-L244
+### Samples
+https://github.com/SceneView/sceneview-android/tree/main/samples
 
-sceneView.cloudAnchorEnabled = true
+## Links
 
-// Host/Record a Cloud Anchor
-node.onAnchorChanged = { node: ArNode, anchor: Anchor? ->
-    if (anchor != null) {
-        node.hostCloudAnchor { anchor: Anchor, success: Boolean ->
-            if (success) {
-                // Save the hosted Cloud Anchor Id
-                val cloudAnchorId = anchor.cloudAnchorId
-            }
-        }
-    }
-}
+### Tutorials
+[Youtube Videos](https://www.youtube.com/results?search_query=SceneView+android)
 
-// Resolve/Restore the Cloud Anchor
-node.resolveCloudAnchor(cloudAnchorId) { anchor: Anchor, success: Boolean ->
-    if (success) {
-        node.isVisible = true
-    }
-}
-```
+## Filament 
+### GitHub
+https://github.com/google/filament
 
-## AR Depth/Objects Occlusion
+### Dependencies
+https://github.com/SceneView/sceneview-android/blob/3abb70cc4362100a2232a2fd1ade9f850fe83096/sceneview/build.gradle#L113-L117
 
-[![](https://markdown-videos.deta.dev/youtube/bzyoR3ugGFA)](https://www.youtube.com/watch?v=bzyoR3ugGFA)
-
-```kotlin
-sceneView.isDepthOcclusionEnabled = true
-```
-
-This will process the incoming ARCore `DepthImage` to occlude virtual objects behind real world
-objects.  
-If the AR `Session` is not configured properly the standard camera material is used.  
-Valid `Session.Config` for the Depth occlusion are `Config.DepthMode.AUTOMATIC`
-and `Config.DepthMode.RAW_DEPTH_ONLY`  
-Disable this value to apply the standard camera material to the CameraStream.
-
-## AR Geospatial API
-
-[![](https://markdown-videos.deta.dev/youtube/QZYg9WU5wSA)](https://www.youtube.com/watch?v=QZYg9WU5wSA)
-
-Follow
-the [official developer guide](https://developers.google.com/ar/develop/java/geospatial/developer-guide)
-to enable Geospatial in your application. For configuring the ARCore session, you just need to
-enable
-Geospatial via ArSceneView.
-
-- Enable Geospatial via ArSceneView
-
-```kotlin
-arSceneView.geospatialEnabled = true
-```
-
-- Create an Anchor
-
-```kotlin
-val earth = arSceneView.session?.earth ?: return
-if (earth.trackingState == TrackingState.TRACKING) {
-    // Place the earth anchor at the same altitude as that of the camera to make it easier to view.
-    val altitude = earth.cameraGeospatialPose.altitudeMeters - 1
-    val rotation = Rotation(0f, 0f, 0f)
-    // Put the anchor somewhere around the user.
-    val latitude = earth.cameraGeospatialPose.latitude + 0.0004
-    val longitude = earth.cameraGeospatialPose.longitude + 0.0004
-    earthAnchor = earth.createAnchor(latitude, longitude, altitude, rotation)
-}
-// Attach the anchor to the arModelNode.
-arModelNode.anchor = earthAnchor
-```
-
-## Camera Permission and ARCore install/update/unavailable
-
-`ArSceneView` automatically handles the camera permission prompt and the ARCore requirements checks.
-Everything is proceed when the attached view Activity/Fragment is resumed but you can also add
-your `ArSceneView` at any time, the prompt will then occure when first `addView(arSceneView)` is
-called.
-
-If you need it, you can add a listener on both ARCore success or failed session creation (including
-camera permission denied since a session cannot be created without it)
-
-- Camera permission has been granted and latest ARCore Services version are already installed or
-  have been installed during the auto check
-
-```kotlin
-sceneView.onArSessionCreated = { arSession: ArSession ->
-}
-```
-
-- Handle a fallback in case of camera permission denied or AR unavailable and possibly move to 3D
-  only usage
-
-```kotlin
-sceneView.onArSessionFailed = { exception: Exception ->
-    // If AR is not available, we add the model directly to the scene for a 3D only usage
-    sceneView.addChild(modelNode)
-}
-```
-
-The exception contains the failure reason. *e.g. SecurityException in case of camera permission
-denied*
-
-## Features
-
-- Use `sceneview` dependency for 3D only or `arsceneview` for 3D and ARCore.
-- Compose: Use the `Scene` or `ARScene` `@Composable`
-- Layout: Add the `<SceneView>` or `<ArSceneView>` tag to your layout or call
-  the `ArSceneview(context: Context)` constructor in your code.
-- Requesting the camera permission and installing/updating the Google Play Services for AR is
-  handled automatically in the `ArSceneView`.
-- Support for the latest ARCore features (the upcoming features will be integrated quicker thanks to
-  Kotlin).
-- Lifecycle-aware components = Better memory management and performance.
-- Resources are loaded using coroutines launched in the `LifecycleCoroutineScope` of the `SceneView`
-  /`ArSceneView`. This means that loading is started when the view is created and cancelled when it
-  is destroyed.
-- Multiple instances are now possible.
-- Much easier to use. For example, the local and world `position`, `rotation` and `scale` of
-  the `Node` are now directly accessible without creating ~`Vector3`~ objects (`position.x = 1f`
-  , `rotation = Rotation(90f, 180f, 0f)`, `scale = Scale(0.5f)`, etc.).
-
-## Architecture
-
-[![](https://markdown-videos.deta.dev/youtube/00vj8AttWO4)](https://www.youtube.com/watch?v=00vj8AttWO4)
-
-## Why have we included the Kotlin-Math library in SceneView?
-
-Earlier versions of OpenGL had a fixed rendering pipeline and provided an API for setting positions
-of vertices, transformation and projection matrices, etc. However, with the new rendering pipeline
-it is required to prepare this data before passing it to GLSL shaders and OpenGL doesn't provide any
-mathematical functions to do that.
-
-It is possible to implement the required functions yourself like
-in [Sceneform](https://github.com/SceneView/sceneform-android) or use an existing library. For
-example, C++ supports operator overloading and benefits from the
-excellent [GLM library](https://glm.g-truc.net/0.9.9/) that allows to use the same syntax and
-features as GLSL.
-
-We use the [Kotlin-Math library](https://github.com/romainguy/kotlin-math) to rely on a well-tested
-functions and get an advantage of using Kotlin operators for vector, matrix and quaternion
-operations too.
+## Filament Dependency
+https://github.com/SceneView/sceneview-android/blob/8be5d205d4b168e5d6e8ba0521e4bf71f3d93bcd/arsceneview/build.gradle#L92-L93
 
 ## Support our work
 
-- [Buy a SceneView T-Shirt](https://sceneview.threadless.com/designs/sceneview)
+### Help us
+- Buy devices to test the SDK on
+- Equipment for decent video recording Tutorials and Presentations
+- Sceneview Hosting Fees
 
+### How To Contribute
+- [Send $9.99 on Open Collective (CB, Paypal, Google Pay,..)](https://opencollective.com/sceneview/contribute/say-thank-you-ask-a-question-ask-for-features-and-fixes-33651)
+- [Buy a SceneView T-Shirt](https://sceneview.threadless.com/designs/sceneview)
 [![Shop](https://user-images.githubusercontent.com/6597529/229289239-beabba4a-b368-4667-b68a-b49b9729cd56.png)](https://sceneview.threadless.com/designs/sceneview)
 [![Shop](https://user-images.githubusercontent.com/6597529/229322274-1842af45-a328-4b8c-b51a-9fc2402c1fc8.png)](https://sceneview.threadless.com/designs/sceneview)
-
-- [Contribute $9.99](https://opencollective.com/sceneview/contribute/say-thank-you-ask-a-question-ask-for-features-and-fixes-33651)
+- Create a Pull Request
 
 [![Open Collective](https://user-images.githubusercontent.com/6597529/229289721-bdecf986-1b83-46bd-92cb-433114f03429.png)](https://opencollective.com/sceneview)
+
+---
+⚠️ Geospatial API: Be sure to follow the official [Google Geospatial Developer guide](https://developers.google.com/ar/develop/java/geospatial/developer-guide)
+to enable Geospatial API in your application.
