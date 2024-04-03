@@ -174,8 +174,13 @@ class ARCore(
      * more complicated lifecycle requirements: [Session.close]
      */
     fun destroy() {
-        session?.close()
-        session = null
+        session?.let {
+            synchronized(it) {
+                if (session == null) return@synchronized
+                it.close()
+                session = null
+            }
+        }
     }
 
     fun onException(exception: Exception) {
