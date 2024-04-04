@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SceneViewSample</string>
+    <string name="ar_btn_annotate">Annotate</string>
+    <string name="ar_tv_annotation">Annotation #%s</string>
+</resources>
