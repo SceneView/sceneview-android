@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ViewNode
+
         viewNodeWindowManager = ViewNode.WindowManager(this@MainActivity)
 
         sceneView = findViewById<ARSceneView?>(R.id.sceneView).apply {
@@ -140,7 +140,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
         viewNode.isVisible = true
         viewNode.isRotationEditable = true
 
-
         val anchorNode = AnchorNode(sceneView.engine, anchor)
         anchorNode.isEditable = true
         anchorNode.isRotationEditable = true
@@ -163,7 +162,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
 
     private fun updateIsHitting(frame: Frame?): Boolean {
         // Skip frames!
-        if (currentHittestAttempt < HITTEST_SKIP_AMOUNT) {
+        if (currentHittestAttempt < HIT_TEST_SKIP_AMOUNT) {
             currentHittestAttempt++
             isHittestPaused = true
             return isHitting
@@ -251,6 +250,8 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
     // endregion Hittest On ScreenCenter
     //////////////////////////
 
+    ///////////////////
+    // region Look at Rotation
     private fun updateRotationOfViewNodes() {
         nodeList.forEach {
             if (it.anchor.trackingState == TrackingState.TRACKING) {
@@ -273,6 +274,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
             }
         }
     }
+    // endregion Look at Rotation
+    ///////////////////
+
 
 
     private fun resetValues() {
@@ -281,34 +285,11 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
         isHittestPaused = false
     }
 
-    fun isTracking(): Boolean {
+    private fun isTracking(): Boolean {
         return isTracking
     }
 
-    fun isHitting(): Boolean {
-        return isHitting
-    }
-
-    fun isHittestPaused(): Boolean {
-        return isHittestPaused
-    }
-
-    fun getLastHitResult(): HitResult? {
-        return lastHitResult
-    }
-
-    fun getLastHitTimestamp(): Long {
-        return lastHitTimestamp
-    }
-
-    fun getFrameTime(): FrameTime? {
-        return frameTime
-    }
-
-
     companion object {
-        const val HITTEST_SKIP_AMOUNT = 0
+        const val HIT_TEST_SKIP_AMOUNT = 0
     }
-
-
 }
