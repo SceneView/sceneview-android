@@ -319,7 +319,7 @@ open class SceneView @JvmOverloads constructor(
      * @see EnvironmentLoader
      */
     open var indirectLight: IndirectLight?
-        get() = scene.indirectLight
+        get() = scene.indirectLight ?: createIndirectLightNode(engine).also { indirectLight = it }
         set(value) {
             if (scene.indirectLight != value) {
                 scene.indirectLight = value
@@ -930,6 +930,7 @@ open class SceneView @JvmOverloads constructor(
 
         const val DEFAULT_MAIN_LIGHT_COLOR_TEMPERATURE = 6_500.0f
         const val DEFAULT_MAIN_LIGHT_COLOR_INTENSITY = 100_000.0f
+        const val DEFAULT_INDIRECT_LIGHT_COLOR_INTENSITY = 100_000.0f
 
         val DEFAULT_MAIN_LIGHT_COLOR = Colors.cct(DEFAULT_MAIN_LIGHT_COLOR_TEMPERATURE).toColor()
         val DEFAULT_MAIN_LIGHT_INTENSITY = DEFAULT_MAIN_LIGHT_COLOR_INTENSITY
@@ -1002,6 +1003,12 @@ open class SceneView @JvmOverloads constructor(
         fun createViewNodeManager(context: Context) = ViewNode.WindowManager(context)
 
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
+
+        fun createIndirectLightNode(engine: Engine): IndirectLight {
+            return IndirectLight.Builder()
+                .intensity(DEFAULT_INDIRECT_LIGHT_COLOR_INTENSITY)
+                .build(engine)
+        }
 
         fun createEnvironment(environmentLoader: EnvironmentLoader, isOpaque: Boolean = true) =
             createEnvironment(
