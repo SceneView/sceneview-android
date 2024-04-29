@@ -91,7 +91,7 @@ open class Node(
     /**
      * ### Define your own custom name
      */
-    var name: String? = null
+    open var name: String? = null
 
     /**
      * The node can be selected when a touch event happened.
