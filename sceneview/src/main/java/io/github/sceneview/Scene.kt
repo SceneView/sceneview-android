@@ -44,7 +44,7 @@ import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.node.ViewNode
+import io.github.sceneview.node.ViewNode2
 import io.github.sceneview.utils.destroy
 
 @Composable
@@ -173,7 +173,7 @@ fun Scene(
      * Additionally, this manages the lifecycle of the window to help ensure that the window is
      * added/removed from the WindowManager at the appropriate times.
      */
-    viewNodeWindowManager: ViewNode.WindowManager? = null,
+    viewNodeWindowManager: ViewNode2.WindowManager? = null,
     /**
      * The listener invoked for all the gesture detector callbacks.
      *
@@ -523,7 +523,7 @@ fun rememberCameraManipulator(
 @Composable
 fun rememberViewNodeManager(
     context: Context = LocalContext.current,
-    creator: () -> ViewNode.WindowManager = {
+    creator: () -> ViewNode2.WindowManager = {
         SceneView.createViewNodeManager(context)
     }
 ) = remember(context, creator).also {
