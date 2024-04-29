@@ -69,7 +69,7 @@ open class ModelNode(
         /**
          * Gets the `NameComponentManager` label for the given node, if it exists.
          */
-        val name: String get() = model.getName(entity) ?: "$entity"
+        val name: String? get() = model.getName(entity)
 
         /**
          * Gets the glTF extras string for the asset or a specific node.
@@ -85,22 +85,30 @@ open class ModelNode(
     inner class RenderableNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : io.github.sceneview.node.RenderableNode(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
     inner class LightNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : io.github.sceneview.node.LightNode(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
     inner class CameraNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : io.github.sceneview.node.CameraNode(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
     inner class EmptyNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : Node(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
     data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
 
@@ -118,7 +126,7 @@ open class ModelNode(
     }
 
     val nodes: Map<String, Node> =
-        (renderableNodes + emptyNodes + lightNodes + cameraNodes).associateBy { it.name }
+        (renderableNodes + emptyNodes + lightNodes + cameraNodes).associateBy { it.name ?: "${it.entity}" }
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance].
