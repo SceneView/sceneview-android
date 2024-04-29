@@ -24,6 +24,8 @@ public class ResourceManager {
     private final ResourceRegistry<ModelRenderable> modelRenderableRegistry =
             new ResourceRegistry<>();
 
+    private final ResourceRegistry<ViewRenderable> viewRenderableRegistry = new ResourceRegistry<>();
+
     ResourceRegistry<Texture> getTextureRegistry() {
         return textureRegistry;
     }
@@ -34,6 +36,11 @@ public class ResourceManager {
 
     ResourceRegistry<ModelRenderable> getModelRenderableRegistry() {
         return modelRenderableRegistry;
+    }
+
+
+    ResourceRegistry<ViewRenderable> getViewRenderableRegistry() {
+        return viewRenderableRegistry;
     }
 
     public long reclaimReleasedResources() {
@@ -69,5 +76,11 @@ public class ResourceManager {
         addResourceHolder(textureRegistry);
         addResourceHolder(materialRegistry);
         addResourceHolder(modelRenderableRegistry);
+        addViewRenderableRegistry();
+    }
+
+
+    private void addViewRenderableRegistry() {
+        addResourceHolder(viewRenderableRegistry);
     }
 }

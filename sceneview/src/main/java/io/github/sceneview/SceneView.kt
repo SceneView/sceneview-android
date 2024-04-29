@@ -45,7 +45,7 @@ import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.node.ViewNode
+import io.github.sceneview.node.ViewNode2
 import io.github.sceneview.utils.*
 
 typealias Entity = Int
@@ -185,7 +185,7 @@ open class SceneView @JvmOverloads constructor(
      * Additionally, this manages the lifecycle of the window to help ensure that the window is
      * added/removed from the WindowManager at the appropriate times.
      */
-    var viewNodeWindowManager: ViewNode.WindowManager? = null,
+    var viewNodeWindowManager: ViewNode2.WindowManager? = null,
     /**
      * The listener invoked for all the gesture detector callbacks.
      *
@@ -999,7 +999,7 @@ open class SceneView @JvmOverloads constructor(
 
 
         @RequiresApi(Build.VERSION_CODES.P)
-        fun createViewNodeManager(context: Context) = ViewNode.WindowManager(context)
+        fun createViewNodeManager(context: Context) = ViewNode2.WindowManager(context)
 
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
 

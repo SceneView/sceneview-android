@@ -44,7 +44,7 @@ import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.node.ViewNode.WindowManager
+import io.github.sceneview.node.ViewNode2.WindowManager
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
