@@ -82,9 +82,6 @@ android {
 }
 
 dependencies {
-    //TODO: Remove it when cleaned all
-    implementation files("libs/libsceneform_runtime_schemas.jar")
-
     // Kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
