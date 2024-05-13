@@ -296,11 +296,11 @@ fun Camera.worldToView(worldPosition: Position): Float2 =
  * x = (0 = left, 0.5 = center, 1 = right)
  * y = (0 = bottom, 0.5 = center, 1 = top)
  *
- *  @return A Ray from the camera near to far / infinity
+ *  @return A Ray from the camera near to far
  */
 fun Camera.viewToRay(viewPosition: Float2): Ray {
     val startPosition = viewToWorld(viewPosition, z = 0.0f)
-    val endPosition = viewToWorld(viewPosition, z = 1.0f)
+    val endPosition = viewToWorld(viewPosition, z = 0.99f)
     val direction = endPosition - startPosition
     return Ray(origin = startPosition, direction = direction)
 }
