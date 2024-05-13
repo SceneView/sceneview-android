@@ -325,9 +325,9 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
     }
 
     override fun destroy() {
-        super.destroy()
-
         engine.safeDestroyCamera(camera)
+
+        super.destroy()
     }
 
     internal fun setView(view: View) {
