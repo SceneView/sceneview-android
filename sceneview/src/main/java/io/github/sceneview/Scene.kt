@@ -283,7 +283,8 @@ inline fun <reified T : Node> rememberNode(crossinline creator: () -> T) =
     }
 
 @Composable
-fun rememberNode(engine: Engine) = rememberNode { Node(engine) }
+fun rememberNode(engine: Engine, creator: Node.() -> Unit = {}) =
+    rememberNode { Node(engine).apply(creator) }
 
 @Composable
 fun rememberNodes(creator: MutableList<Node>.() -> Unit = {}) = remember {
