@@ -39,6 +39,7 @@ import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.math.Position
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
@@ -157,7 +158,9 @@ fun Scene(
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
      */
-    cameraManipulator: Manipulator? = rememberCameraManipulator(),
+    cameraManipulator: Manipulator? = rememberCameraManipulator(
+        cameraNode.worldPosition
+    ),
     /**
      * Used for Node's that can display an Android [View]
      *
@@ -509,8 +512,10 @@ fun rememberOnGestureListener(
 
 @Composable
 fun rememberCameraManipulator(
+    orbitHomePosition: Position? = null,
+    targetPosition: Position? = null,
     creator: () -> Manipulator = {
-        SceneView.createCameraManipulator()
+        SceneView.createDefaultCameraManipulator(orbitHomePosition, targetPosition)
     }
 ) = remember(creator).also { collisionSystem ->
     DisposableEffect(collisionSystem) {
