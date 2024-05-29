@@ -172,6 +172,7 @@ class MainActivity : ComponentActivity() {
         ).apply {
             // Model Node needs to be editable for independent rotation from the anchor rotation
             isEditable = true
+            editableScaleRange = 0.2f..0.75f
         }
         val boundingBoxNode = CubeNode(
             engine,
