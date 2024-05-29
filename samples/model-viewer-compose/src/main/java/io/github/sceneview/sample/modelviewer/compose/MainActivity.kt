@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
                                     modelInstance = modelLoader.createModelInstance(
                                         assetFileLocation = "models/damaged_helmet.glb"
                                     ),
-                                    scaleToUnits = 1.0f
+                                    scaleToUnits = 0.25f
                                 )
                             }),
                         environment = environmentLoader.createHDREnvironment(
