@@ -34,6 +34,7 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNode
+import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.sample.SceneviewTheme
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit.MILLISECONDS
@@ -85,7 +86,14 @@ class MainActivity : ComponentActivity() {
                         onFrame = {
                             centerNode.rotation = cameraRotation
                             cameraNode.lookAt(centerNode)
-                        }
+                        },
+                        onGestureListener = rememberOnGestureListener(
+                            onDoubleTap = { _, node ->
+                                node?.apply {
+                                    scale *= 2.0f
+                                }
+                            }
+                        )
                     )
                     Image(
                         modifier = Modifier
