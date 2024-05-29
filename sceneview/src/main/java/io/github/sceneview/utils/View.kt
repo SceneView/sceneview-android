@@ -73,7 +73,7 @@ fun View.worldToScreen(worldPosition: Position): Float2 =
     camera!!.worldToView(worldPosition).apply {
         x *= viewport.width
         // Invert Y because screen Y points down and ViewPort Y points up.
-        y *= 1.0f - x
+        y = (1.0f - y) * viewport.height
     }
 
 /**
