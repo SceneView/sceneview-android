@@ -116,10 +116,10 @@ open class ModelNode(
         RenderableNode(modelInstance, it)
     }
     val lightNodes = modelInstance.lightEntities.map {
-        LightNode(modelInstance, it).apply { parent = this }
+        LightNode(modelInstance, it).apply { parent = this@ModelNode }
     }
     val cameraNodes = modelInstance.camerasEntities.map {
-        CameraNode(modelInstance, it).apply { parent = this }
+        CameraNode(modelInstance, it).apply { parent = this@ModelNode }
     }
     val emptyNodes = modelInstance.emptyNodeEntities.map {
         EmptyNode(modelInstance, it)
