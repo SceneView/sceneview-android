@@ -25,6 +25,7 @@ import io.github.sceneview.model.lightEntities
 import io.github.sceneview.model.model
 import io.github.sceneview.model.renderableEntities
 import io.github.sceneview.utils.intervalSeconds
+import kotlin.math.abs
 
 /**
  * Create the ModelNode from a loaded model instance.
@@ -69,7 +70,7 @@ open class ModelNode(
         /**
          * Gets the `NameComponentManager` label for the given node, if it exists.
          */
-        val name: String get() = model.getName(entity) ?: "$entity"
+        val name: String? get() = model.getName(entity)
 
         /**
          * Gets the glTF extras string for the asset or a specific node.
@@ -85,40 +86,52 @@ open class ModelNode(
     inner class RenderableNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : io.github.sceneview.node.RenderableNode(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
     inner class LightNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : io.github.sceneview.node.LightNode(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
     inner class CameraNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : io.github.sceneview.node.CameraNode(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
     inner class EmptyNode internal constructor(
         override val modelInstance: ModelInstance, entity: Entity
     ) : Node(engine = modelInstance.engine, entity = entity),
-        ChildNode
+        ChildNode {
+        override var name = super<ChildNode>.name
+    }
 
-    data class PlayingAnimation(val startTime: Long = System.nanoTime(), val loop: Boolean = true)
+    data class PlayingAnimation(
+        val startTime: Long = System.nanoTime(),
+        var speed: Float = 1f,
+        val loop: Boolean = true
+    )
 
     val renderableNodes = modelInstance.renderableEntities.map {
         RenderableNode(modelInstance, it)
     }
     val lightNodes = modelInstance.lightEntities.map {
-        LightNode(modelInstance, it).apply { parent = this }
+        LightNode(modelInstance, it).apply { parent = this@ModelNode }
     }
     val cameraNodes = modelInstance.camerasEntities.map {
-        CameraNode(modelInstance, it).apply { parent = this }
+        CameraNode(modelInstance, it).apply { parent = this@ModelNode }
     }
     val emptyNodes = modelInstance.emptyNodeEntities.map {
         EmptyNode(modelInstance, it)
     }
 
     val nodes: Map<String, Node> =
-        (renderableNodes + emptyNodes + lightNodes + cameraNodes).associateBy { it.name }
+        (renderableNodes + emptyNodes + lightNodes + cameraNodes).associateBy { it.name ?: "${it.entity}" }
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance].
@@ -225,12 +238,15 @@ open class ModelNode(
      * animation definition. Uses `TransformManager`.
      *
      * @param animationIndex Zero-based index for the `animation` of interest.
+     * @param speed The rate at which the `animation` plays. Reverses the `animation` if negative.
+     * Pauses the `animation` if zero.
+     * @param loop Specifies if the `animation` should repeat forever.
      *
      * @see Animator.getAnimationCount
      */
-    fun playAnimation(animationIndex: Int, loop: Boolean = true) {
+    fun playAnimation(animationIndex: Int, speed: Float = 1f, loop: Boolean = true) {
         if (animationIndex < animationCount) {
-            playingAnimations[animationIndex] = PlayingAnimation(loop = loop)
+            playingAnimations[animationIndex] = PlayingAnimation(speed = speed, loop = loop)
         }
     }
 
@@ -238,8 +254,30 @@ open class ModelNode(
      * @see playAnimation
      * @see Animator.getAnimationName
      */
-    fun playAnimation(animationName: String, loop: Boolean = true) {
-        animator.getAnimationIndex(animationName)?.let { playAnimation(it, loop) }
+    fun playAnimation(animationName: String, speed: Float = 1f, loop: Boolean = true) {
+        animator.getAnimationIndex(animationName)?.let { playAnimation(it, speed, loop) }
+    }
+
+    /**
+     * Sets the rate at which the `animation` is played.
+     *
+     * @param animationIndex Zero-based index for the `animation` of interest.
+     * @param speed The rate at which the `animation` plays. Reverses the `animation` if negative.
+     * Pauses the `animation` if zero.
+     * @see playAnimation
+     */
+    fun setAnimationSpeed(animationIndex: Int, speed: Float) {
+        if (animationIndex < animationCount) {
+            playingAnimations[animationIndex]?.speed = speed
+        }
+    }
+
+    /**
+     * @see setAnimationSpeed
+     * @see Animator.getAnimationName
+     */
+    fun setAnimationSpeed(animationName: String, speed: Float) {
+        animator.getAnimationIndex(animationName)?.let { setAnimationSpeed(it, speed) }
     }
 
     fun stopAnimation(animationIndex: Int) {
@@ -375,18 +413,31 @@ open class ModelNode(
         super.onFrame(frameTimeNanos)
 
         model.popRenderable()
+        applyAnimations(frameTimeNanos)
+        animator.updateBoneMatrices()
+    }
 
+    private fun applyAnimations(frameTimeNanos: Long) {
         playingAnimations.forEach { (index, animation) ->
+            if (animation.speed == 0f) return@forEach
+
             animator.let { animator ->
                 val elapsedTimeSeconds = frameTimeNanos.intervalSeconds(animation.startTime)
-                animator.applyAnimation(index, elapsedTimeSeconds.toFloat())
+                val adjustedTimeSeconds = elapsedTimeSeconds.toFloat() * abs(animation.speed)
+                val animationDuration = animator.getAnimationDuration(index)
+                val animationTime: Float = if (animation.speed > 0) {
+                    adjustedTimeSeconds
+                } else {
+                    animationDuration - adjustedTimeSeconds
+                }
 
-                if (!animation.loop && elapsedTimeSeconds >= animator.getAnimationDuration(index)) {
+                animator.applyAnimation(index, animationTime)
+
+                if (!animation.loop && adjustedTimeSeconds >= animationDuration) {
                     playingAnimations.remove(index)
                 }
             }
         }
-        animator.updateBoneMatrices()
     }
 }
 

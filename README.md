@@ -19,7 +19,7 @@
 ```gradle
 dependencies {
     // Sceneview
-    implementation("io.github.sceneview:sceneview:2.1.0")
+    implementation("io.github.sceneview:sceneview:2.1.1")
 }
 ```
 
@@ -43,7 +43,7 @@ https://github.com/SceneView/sceneview-android/blob/3abb70cc4362100a2232a2fd1ade
 ```gradle
 dependencies {
     // ARSceneview
-    implementation 'io.github.sceneview:arsceneview:2.1.0'
+    implementation 'io.github.sceneview:arsceneview:2.1.1'
 }
 ```
 

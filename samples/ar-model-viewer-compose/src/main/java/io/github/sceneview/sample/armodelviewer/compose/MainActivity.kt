@@ -36,7 +36,6 @@ import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.ar.rememberARCameraNode
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
-import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CubeNode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCollisionSystem
@@ -49,7 +48,6 @@ import io.github.sceneview.rememberView
 import io.github.sceneview.sample.SceneviewTheme
 
 private const val kModelFile = "models/damaged_helmet.glb"
-private const val kMaxModelInstances = 10
 
 class MainActivity : ComponentActivity() {
 
@@ -74,7 +72,6 @@ class MainActivity : ComponentActivity() {
 
                     var planeRenderer by remember { mutableStateOf(true) }
 
-                    val modelInstances = remember { mutableListOf<ModelInstance>() }
                     var trackingFailureReason by remember {
                         mutableStateOf<TrackingFailureReason?>(null)
                     }
@@ -112,7 +109,6 @@ class MainActivity : ComponentActivity() {
                                             engine = engine,
                                             modelLoader = modelLoader,
                                             materialLoader = materialLoader,
-                                            modelInstances = modelInstances,
                                             anchor = anchor
                                         )
                                     }
@@ -134,7 +130,6 @@ class MainActivity : ComponentActivity() {
                                                 engine = engine,
                                                 modelLoader = modelLoader,
                                                 materialLoader = materialLoader,
-                                                modelInstances = modelInstances,
                                                 anchor = anchor
                                             )
                                         }
@@ -167,21 +162,17 @@ class MainActivity : ComponentActivity() {
         engine: Engine,
         modelLoader: ModelLoader,
         materialLoader: MaterialLoader,
-        modelInstances: MutableList<ModelInstance>,
         anchor: Anchor
     ): AnchorNode {
         val anchorNode = AnchorNode(engine = engine, anchor = anchor)
         val modelNode = ModelNode(
-            modelInstance = modelInstances.apply {
-                if (isEmpty()) {
-                    this += modelLoader.createInstancedModel(kModelFile, kMaxModelInstances)
-                }
-            }.removeLast(),
+            modelInstance = modelLoader.createModelInstance(kModelFile),
             // Scale to fit in a 0.5 meters cube
             scaleToUnits = 0.5f
         ).apply {
             // Model Node needs to be editable for independent rotation from the anchor rotation
             isEditable = true
+            editableScaleRange = 0.2f..0.75f
         }
         val boundingBoxNode = CubeNode(
             engine,

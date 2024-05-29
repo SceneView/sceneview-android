@@ -39,12 +39,13 @@ import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.math.Position
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.node.ViewNode
+import io.github.sceneview.node.ViewNode2
 import io.github.sceneview.utils.destroy
 
 @Composable
@@ -157,7 +158,9 @@ fun Scene(
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
      */
-    cameraManipulator: Manipulator? = rememberCameraManipulator(),
+    cameraManipulator: Manipulator? = rememberCameraManipulator(
+        cameraNode.worldPosition
+    ),
     /**
      * Used for Node's that can display an Android [View]
      *
@@ -173,7 +176,7 @@ fun Scene(
      * Additionally, this manages the lifecycle of the window to help ensure that the window is
      * added/removed from the WindowManager at the appropriate times.
      */
-    viewNodeWindowManager: ViewNode.WindowManager? = null,
+    viewNodeWindowManager: ViewNode2.WindowManager? = null,
     /**
      * The listener invoked for all the gesture detector callbacks.
      *
@@ -280,7 +283,8 @@ inline fun <reified T : Node> rememberNode(crossinline creator: () -> T) =
     }
 
 @Composable
-fun rememberNode(engine: Engine) = rememberNode { Node(engine) }
+fun rememberNode(engine: Engine, creator: Node.() -> Unit = {}) =
+    rememberNode { Node(engine).apply(creator) }
 
 @Composable
 fun rememberNodes(creator: MutableList<Node>.() -> Unit = {}) = remember {
@@ -509,8 +513,10 @@ fun rememberOnGestureListener(
 
 @Composable
 fun rememberCameraManipulator(
+    orbitHomePosition: Position? = null,
+    targetPosition: Position? = null,
     creator: () -> Manipulator = {
-        SceneView.createCameraManipulator()
+        SceneView.createDefaultCameraManipulator(orbitHomePosition, targetPosition)
     }
 ) = remember(creator).also { collisionSystem ->
     DisposableEffect(collisionSystem) {
@@ -523,7 +529,7 @@ fun rememberCameraManipulator(
 @Composable
 fun rememberViewNodeManager(
     context: Context = LocalContext.current,
-    creator: () -> ViewNode.WindowManager = {
+    creator: () -> ViewNode2.WindowManager = {
         SceneView.createViewNodeManager(context)
     }
 ) = remember(context, creator).also {

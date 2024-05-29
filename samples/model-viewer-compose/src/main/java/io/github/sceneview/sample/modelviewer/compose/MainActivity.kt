@@ -29,11 +29,13 @@ import io.github.sceneview.animation.Transition.animateRotation
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.node.ModelNode
+import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNode
+import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.sample.SceneviewTheme
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit.MILLISECONDS
@@ -51,11 +53,14 @@ class MainActivity : ComponentActivity() {
                     val modelLoader = rememberModelLoader(engine)
                     val environmentLoader = rememberEnvironmentLoader(engine)
 
-                    val cameraNode = rememberCameraNode(engine).apply {
-                        position = Position(z = 4.0f)
-                    }
                     val centerNode = rememberNode(engine)
-                        .addChildNode(cameraNode)
+
+                    val cameraNode = rememberCameraNode(engine) {
+                        position = Position(y = -0.5f, z = 2.0f)
+                        lookAt(centerNode)
+                        centerNode.addChildNode(this)
+                    }
+
                     val cameraTransition = rememberInfiniteTransition(label = "CameraTransition")
                     val cameraRotation by cameraTransition.animateRotation(
                         initialValue = Rotation(y = 0.0f),
@@ -70,13 +75,17 @@ class MainActivity : ComponentActivity() {
                         engine = engine,
                         modelLoader = modelLoader,
                         cameraNode = cameraNode,
+                        cameraManipulator = rememberCameraManipulator(
+                            orbitHomePosition = cameraNode.worldPosition,
+                            targetPosition = centerNode.worldPosition
+                        ),
                         childNodes = listOf(centerNode,
                             rememberNode {
                                 ModelNode(
                                     modelInstance = modelLoader.createModelInstance(
                                         assetFileLocation = "models/damaged_helmet.glb"
                                     ),
-                                    scaleToUnits = 1.0f
+                                    scaleToUnits = 0.25f
                                 )
                             }),
                         environment = environmentLoader.createHDREnvironment(
@@ -85,7 +94,14 @@ class MainActivity : ComponentActivity() {
                         onFrame = {
                             centerNode.rotation = cameraRotation
                             cameraNode.lookAt(centerNode)
-                        }
+                        },
+                        onGestureListener = rememberOnGestureListener(
+                            onDoubleTap = { _, node ->
+                                node?.apply {
+                                    scale *= 2.0f
+                                }
+                            }
+                        )
                     )
                     Image(
                         modifier = Modifier
@@ -97,7 +113,7 @@ class MainActivity : ComponentActivity() {
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(
                                     alpha = 0.5f
                                 ),
-                                shape = MaterialTheme.shapes.small
+                                shape = MaterialTheme.shapes.medium
                             )
                             .padding(8.dp),
                         painter = painterResource(id = R.drawable.logo),
@@ -113,7 +129,7 @@ class MainActivity : ComponentActivity() {
                             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
                             titleContentColor = MaterialTheme.colorScheme.onPrimary
 
-                        ),
+                        )
                     )
                 }
             }
