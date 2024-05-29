@@ -36,5 +36,6 @@ dependencies {
     implementation project(":samples:common")
 
     // SceneView
-    implementation "io.github.sceneview:sceneview:2.2.0"
+    releaseImplementation "io.github.sceneview:sceneview:2.2.0"
+    debugImplementation project(":sceneview")
 }
