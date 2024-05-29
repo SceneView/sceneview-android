@@ -4,13 +4,14 @@ import com.google.android.filament.Camera
 import com.google.android.filament.Camera.Projection
 import com.google.android.filament.utils.pow
 import dev.romainguy.kotlin.math.Float2
+import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Ray
 import dev.romainguy.kotlin.math.inverse
-import io.github.sceneview.collision.MathHelper
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
+import io.github.sceneview.math.almostEquals
 import io.github.sceneview.math.toColumnsDoubleArray
 import io.github.sceneview.math.toColumnsFloatArray
 import io.github.sceneview.math.toDirection
@@ -251,19 +252,16 @@ val Camera.forwardDirection: Direction
  * @return The world position of the point.
  */
 fun Camera.viewToWorld(viewPosition: Float2, z: Float = 1.0f): Position {
-    // Normalize between -1 and 1.
     val clipSpacePosition = Float4(
-        x = viewPosition.x * 2.0f - 1.0f,
-        y = viewPosition.y * 2.0f - 1.0f,
-        z = 2.0f * z - 1.0f,
+        // Normalize between -1 and 1.
+        Float3(x = viewPosition.x, y = viewPosition.y, z = z) * 2.0f - 1.0f,
         w = 1.0f
     )
-    val result = inverse(projectionTransform * viewTransform) * clipSpacePosition
-    val w = 1.0F / result.w
-    if (MathHelper.almostEqualRelativeAndAbs(result.w, 0.0f)) {
-        result.xy = Float2(0.0f)
+    val worldPosition = inverse(cullingProjectionTransform * viewTransform) * clipSpacePosition
+    return when {
+        worldPosition.w almostEquals 0.0f -> Position()
+        else -> worldPosition.xyz / worldPosition.w
     }
-    return result.xyz * w
 }
 
 /**

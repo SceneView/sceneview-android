@@ -1,6 +1,7 @@
 package io.github.sceneview.math
 
 import com.google.android.filament.Box
+import com.google.android.filament.utils.equals
 import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Float4
@@ -24,7 +25,8 @@ import dev.romainguy.kotlin.math.slerp
 import dev.romainguy.kotlin.math.translation
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.Vector3
-import kotlin.math.absoluteValue
+import java.lang.Math.ulp
+import kotlin.math.max
 
 typealias Position2 = Float2
 typealias Position = Float3
@@ -193,7 +195,11 @@ fun Float.compareTo(v: Float, delta: Float): Float = when {
     else -> compareTo(v).toFloat()
 }
 
-fun Float.equals(v: Float, delta: Float) = (this - v).absoluteValue < delta
+/**
+ * Returns true if two floats are equal within a tolerance. Useful for comparing floating point
+ * numbers while accounting for the limitations in floating point precision.
+ */
+infix fun Float.almostEquals(other: Float) = equals(other, max(ulp(this), ulp(other)) * 2)
 
 fun Float2.compareTo(v: Float, delta: Float = 0.0f) = Float2(
     x.compareTo(v, delta),
