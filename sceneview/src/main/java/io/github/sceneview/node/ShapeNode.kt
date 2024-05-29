@@ -1,5 +1,6 @@
 package io.github.sceneview.node
 
+import android.graphics.Path
 import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
@@ -50,7 +51,7 @@ open class ShapeNode private constructor(
 
     constructor(
         engine: Engine,
-        polygonPath: List<Position2> = listOf(),
+        polygonPoints: List<Position2> = listOf(),
         polygonHoles: List<Int> = listOf(),
         delaunayPoints: List<Position2> = listOf(),
         normal: Direction = Shape.DEFAULT_NORMAL,
@@ -61,7 +62,31 @@ open class ShapeNode private constructor(
     ) : this(
         engine = engine,
         geometry = Shape.Builder()
-            .polygonPath(polygonPath, polygonHoles)
+            .polygonPath(points = polygonPoints, holes = polygonHoles)
+            .delaunayPoints(delaunayPoints)
+            .normal(normal)
+            .uvScale(uvScale)
+            .color(color)
+            .build(engine),
+        materialInstances = materialInstances,
+        builderApply = builderApply
+    )
+
+    constructor(
+        engine: Engine,
+        polygonPath: Path,
+        stepSize: Float = 1.0f,
+        polygonHoles: List<Int> = listOf(),
+        delaunayPoints: List<Position2> = listOf(),
+        normal: Direction = Shape.DEFAULT_NORMAL,
+        uvScale: UvScale = UvScale(1.0f),
+        color: Color? = null,
+        materialInstances: List<MaterialInstance?>,
+        builderApply: RenderableManager.Builder.() -> Unit = {}
+    ) : this(
+        engine = engine,
+        geometry = Shape.Builder()
+            .polygonPath(path = polygonPath, stepSize = stepSize, holes = polygonHoles)
             .delaunayPoints(delaunayPoints)
             .normal(normal)
             .uvScale(uvScale)

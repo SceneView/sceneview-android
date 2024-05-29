@@ -1,5 +1,7 @@
 package io.github.sceneview.geometries
 
+import android.graphics.Path
+import android.graphics.PathMeasure
 import com.google.android.filament.Box
 import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
@@ -49,10 +51,36 @@ class Shape private constructor(
         var color: Color? = null
             private set
 
-        fun polygonPath(path: List<Position2>, holes: List<Int> = listOf()) = apply {
-            this.polygonPath = path
+        fun polygonPath(points: List<Position2>, holes: List<Int> = listOf()) = apply {
+            this.polygonPath = points
             this.polygonHoles = holes
         }
+
+        /**
+         * Create a Polygon shape from a Path
+         *
+         * @param path the path to create the shape from
+         * @param stepSize Adjust this value to control the desired point density
+         */
+        fun polygonPath(path: Path, stepSize: Float = 1.0f, holes: List<Int> = listOf()) =
+            polygonPath(
+                points = buildList {
+                    // forceClosed = false for not including endpoint twice
+                    val pathMeasure = PathMeasure(path, false)
+                    var distance = 0f
+                    while (distance < pathMeasure.length) {
+                        // Get the current point coordinates at a specific distance along the path
+                        add(
+                            FloatArray(2).apply {
+                                pathMeasure.getPosTan(distance, this, null)
+                            }.let { Position2(it[0], it[1]) }
+                        )
+                        // Increase distance to get the next point
+                        distance += stepSize
+                    }
+                },
+                holes = holes
+            )
 
         fun delaunayPoints(delaunayPoints: List<Position2>) = apply {
             this.delaunayPoints = delaunayPoints
