@@ -33,11 +33,6 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
-//    packagingOptions {
-//        resources {
-//            excludes += '/META-INF/{AL2.0,LGPL2.1}'
-//        }
-//    }
     androidResources {
         noCompress 'filamat', 'ktx'
     }
@@ -54,7 +49,7 @@ dependencies {
     implementation "androidx.navigation:navigation-compose:2.7.7"
     debugImplementation "androidx.compose.ui:ui-tooling:1.6.7"
 
-    // ArSceneView
+    // SceneView
     releaseImplementation "io.github.sceneview:sceneview:2.2.0"
     debugImplementation project(":sceneview")
 }
