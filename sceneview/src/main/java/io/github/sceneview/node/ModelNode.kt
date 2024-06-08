@@ -130,8 +130,8 @@ open class ModelNode(
         EmptyNode(modelInstance, it)
     }
 
-    val nodes: Map<String, Node> =
-        (renderableNodes + emptyNodes + lightNodes + cameraNodes).associateBy { it.name ?: "${it.entity}" }
+    val nodes: List<Node> =
+        (renderableNodes + emptyNodes + lightNodes + cameraNodes)
 
     /**
      * The source [Model] ([FilamentAsset]) from the [ModelInstance].
@@ -197,10 +197,10 @@ open class ModelNode(
         set(value) = renderableNodes.forEach { it.isShadowReceiver = value }
 
     init {
-        nodes.values.forEach { node ->
+        nodes.forEach { node ->
             node.parent = when (val parentEntity = node.parentEntity) {
                 this.entity -> this
-                else -> nodes.values.firstOrNull { it.entity == parentEntity } ?: this
+                else -> nodes.firstOrNull { it.entity == parentEntity } ?: this
             }
         }
         if (autoAnimate && animator.animationCount > 0) {
