@@ -8,7 +8,6 @@ import com.google.android.filament.Texture
 import com.google.android.filament.TextureSampler
 import com.google.android.filament.gltfio.MaterialProvider.MaterialKey
 import com.google.android.filament.gltfio.UbershaderProvider
-import io.github.sceneview.material.VideoMaterial
 import io.github.sceneview.material.kMaterialDefaultMetallic
 import io.github.sceneview.material.kMaterialDefaultReflectance
 import io.github.sceneview.material.kMaterialDefaultRoughness
@@ -83,7 +82,6 @@ class MaterialLoader(
     }
 
     private val materials = mutableListOf<Material>()
-    private val videoMaterials = mutableListOf<VideoMaterial>()
     private val materialInstances = mutableListOf<MaterialInstance>()
 
     /**
@@ -318,8 +316,6 @@ class MaterialLoader(
 
         materialInstances.toList().forEach { destroyMaterialInstance(it) }
         materialInstances.clear()
-        videoMaterials.toList().forEach { it.destroy() }
-        videoMaterials.clear()
         materials.toList().forEach { destroyMaterial(it) }
         materials.clear()
     }
