@@ -13,7 +13,7 @@ import io.github.sceneview.texture.VideoTexture
 class VideoMaterial(
     val engine: Engine,
     materialLoader: MaterialLoader,
-    chromaKeyColor: Int? = null,
+    chromaKeyColor: Int? = null
 ) {
     /**
      * Images drawn to the Surface will be made available to the Filament Stream.

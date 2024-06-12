@@ -883,7 +883,9 @@ open class Node(
 
     override fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean {
         return if (isPositionEditable) {
-            collisionSystem?.hitTest(e)?.first { it.node == parent }?.let {
+            // Find the hit test location in the parent to place the child at the
+            // corresponding location
+            collisionSystem?.hitTest(e)?.firstOrNull { it.node == parent }?.let {
                 onMove(detector, e, it.worldPosition)
             } ?: false
         } else {
