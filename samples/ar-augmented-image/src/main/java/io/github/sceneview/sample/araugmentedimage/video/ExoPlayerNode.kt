@@ -9,7 +9,7 @@ import com.google.android.filament.RenderableManager
 import dev.romainguy.kotlin.math.normalize
 import io.github.sceneview.geometries.Plane
 import io.github.sceneview.loaders.MaterialLoader
-import io.github.sceneview.material.setExternalTexture
+import io.github.sceneview.material.VideoMaterial
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
