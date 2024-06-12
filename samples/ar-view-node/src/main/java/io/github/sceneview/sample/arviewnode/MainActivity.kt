@@ -1,10 +1,17 @@
 package io.github.sceneview.sample.arviewnode
 
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
 import com.google.ar.core.DepthPoint
@@ -23,6 +30,7 @@ import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.collision.Quaternion
 import io.github.sceneview.collision.Vector3
 import io.github.sceneview.math.toVector3
+import io.github.sceneview.node.ImageNode
 import io.github.sceneview.node.ViewNode
 import java.util.Locale
 
@@ -108,11 +116,39 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
             lastHitResult?.let { hitResult ->
                 hitResult.createAnchorOrNull().apply {
                     if (this != null) {
-                        addAnchorNode(this)
+                        //addAnchorNode(this)
+
+                        addImageNode(this)
                     }
                 }
             }
         }
+    }
+
+    private fun addImageNode(anchor: Anchor) {
+        Glide
+            .with(this)
+            .asBitmap()
+            .load("https://upload.wikimedia.org/wikipedia/commons/0/01/Cat-1044750.jpg")
+            .fitCenter()
+            .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+            .apply(RequestOptions.timeoutOf(5 * 60 * 1000))
+            .into(object : CustomTarget<Bitmap>(){
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                    val imageNode = ImageNode(
+                        materialLoader = sceneView.materialLoader,
+                        bitmap = resource
+                    )
+
+                    val anchorNode = AnchorNode(sceneView.engine, anchor)
+                    anchorNode.addChildNode(imageNode)
+
+                    sceneView.addChildNode(anchorNode)
+                }
+
+                override fun onLoadCleared(placeholder: Drawable?) {
+                }
+            })
     }
 
     private fun addAnchorNode(anchor: Anchor) {
@@ -140,6 +176,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
         viewNode.isVisible = true
         viewNode.isRotationEditable = true
 
+
         val anchorNode = AnchorNode(sceneView.engine, anchor)
         anchorNode.isEditable = true
         anchorNode.isRotationEditable = true
@@ -162,7 +199,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
 
     private fun updateIsHitting(frame: Frame?): Boolean {
         // Skip frames!
-        if (currentHittestAttempt < HIT_TEST_SKIP_AMOUNT) {
+        if (currentHittestAttempt < HITTEST_SKIP_AMOUNT) {
             currentHittestAttempt++
             isHittestPaused = true
             return isHitting
@@ -250,8 +287,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
     // endregion Hittest On ScreenCenter
     //////////////////////////
 
-    ///////////////////
-    // region Look at Rotation
     private fun updateRotationOfViewNodes() {
         nodeList.forEach {
             if (it.anchor.trackingState == TrackingState.TRACKING) {
@@ -274,9 +309,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
             }
         }
     }
-    // endregion Look at Rotation
-    ///////////////////
-
 
 
     private fun resetValues() {
@@ -285,11 +317,32 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
         isHittestPaused = false
     }
 
-    private fun isTracking(): Boolean {
+    fun isTracking(): Boolean {
         return isTracking
     }
 
+    fun isHitting(): Boolean {
+        return isHitting
+    }
+
+    fun isHittestPaused(): Boolean {
+        return isHittestPaused
+    }
+
+    fun getLastHitResult(): HitResult? {
+        return lastHitResult
+    }
+
+    fun getLastHitTimestamp(): Long {
+        return lastHitTimestamp
+    }
+
+    fun getFrameTime(): FrameTime? {
+        return frameTime
+    }
+
+
     companion object {
-        const val HIT_TEST_SKIP_AMOUNT = 0
+        const val HITTEST_SKIP_AMOUNT = 0
     }
 }
