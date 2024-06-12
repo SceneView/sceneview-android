@@ -1,90 +1,62 @@
 package io.github.sceneview.sample.arviewnode
 
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
-import com.google.ar.core.Anchor
+import androidx.core.content.ContextCompat
 import com.google.ar.core.Config
-import com.google.ar.core.DepthPoint
-import com.google.ar.core.Frame
-import com.google.ar.core.HitResult
-import com.google.ar.core.Plane
-import com.google.ar.core.Point
-import com.google.ar.core.Trackable
-import com.google.ar.core.TrackingState
-import com.google.ar.core.exceptions.DeadlineExceededException
-import com.google.ar.core.exceptions.FatalException
-import com.google.ar.core.exceptions.NotTrackingException
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.createAnchorOrNull
 import io.github.sceneview.ar.node.AnchorNode
-import io.github.sceneview.collision.Quaternion
-import io.github.sceneview.collision.Vector3
-import io.github.sceneview.math.toVector3
-import io.github.sceneview.node.ImageNode
-import io.github.sceneview.node.ViewNode
-import java.util.Locale
+import io.github.sceneview.sample.arviewnode.databinding.ActivityMainBinding
+import io.github.sceneview.sample.arviewnode.nodes.events.ImageNodeEvent
+import io.github.sceneview.sample.arviewnode.nodes.events.ViewNodeEvent
+import io.github.sceneview.sample.arviewnode.nodes.target.ImageNodeHelper
+import io.github.sceneview.sample.arviewnode.nodes.target.TrackingNode
+import io.github.sceneview.sample.arviewnode.nodes.target.ViewNodeHelper
+import io.github.sceneview.sample.arviewnode.utils.NodeRotationHelper
 
 
-class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickListener {
+class MainActivity : AppCompatActivity(), View.OnClickListener {
 
-    lateinit var sceneView: ARSceneView
+    private lateinit var view: ActivityMainBinding
+    private lateinit var sceneView: ARSceneView
+    private lateinit var trackingNode: TrackingNode
+    private lateinit var imageNodeHelper: ImageNodeHelper
+    private lateinit var viewNodeHelper: ViewNodeHelper
+
     private val nodeList: MutableList<AnchorNode> = mutableListOf()
-    lateinit var viewNodeWindowManager: ViewNode.WindowManager
 
-    /**
-     * Indicates if the Camera is currently tracking.
-     */
-    private var isTracking = false
-
-    /**
-     * Indicates if the HitTest was successful.
-     */
-    private var isHitting = false
-
-    /**
-     * If we skip Frames this value is set to true, otherwise false.
-     */
-    private var isHittestPaused = true
-
-    /**
-     * This is a simple counter to track skipped frames. After HITTEST_SKIP_AMOUNT is
-     * reached this counter is set back to 0.
-     */
-    private var currentHittestAttempt = 0
-
-    /**
-     * That is our HitResult. This variable is the most important one in this
-     * class. Based on the HitResult Anchors can be created.
-     */
-    private var lastHitResult: HitResult? = null
-
-    /**
-     * This is the timestamp of the used Frame to perform the HitTest.
-     */
-    private var lastHitTimestamp: Long = 0
-
-    private var lastFps = 0.0
-
-    private var frameTime: FrameTime? = null
-
-    private var annotationCounter: Int = 0
+    private var nodeType = NodeType.VIEW_NODE
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewNodeWindowManager = ViewNode.WindowManager(this@MainActivity)
+        view = ActivityMainBinding
+            .inflate(
+                layoutInflater,
+                null,
+                false
+            )
+
+        setContentView(view.root)
 
         sceneView = findViewById<ARSceneView?>(R.id.sceneView).apply {
+            trackingNode = TrackingNode(
+                this@MainActivity,
+                this
+            )
+            imageNodeHelper = ImageNodeHelper(
+                this@MainActivity,
+                this,
+                this@MainActivity::onEvent
+            )
+            viewNodeHelper = ViewNodeHelper(
+                this@MainActivity,
+                this,
+                this@MainActivity::onEvent
+            )
+
             configureSession { session, config ->
                 config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                     true -> Config.DepthMode.AUTOMATIC
@@ -96,253 +68,136 @@ class MainActivity : AppCompatActivity(R.layout.activity_main), View.OnClickList
             }
 
             onSessionUpdated = { _, frame ->
-                updateIsTracking(frame)
-                updateIsHitting(frame)
-                updateRotationOfViewNodes()
-            }
+                trackingNode.frameUpdate(frame)
+                NodeRotationHelper
+                    .updateRotationOfViewNodes(
+                        sceneView,
+                        nodeList
+                    )
 
-            viewNodeWindowManager = this@MainActivity.viewNodeWindowManager
+                updateBtnEnabledState()
+            }
 
             lifecycle = this@MainActivity.lifecycle
         }
 
-
-
-        findViewById<Button>(R.id.btnAnnotate).setOnClickListener(this)
+        view.btnAdd.setOnClickListener(this)
+        view.btnViewNode.setOnClickListener(this)
+        view.btnImageNode.setOnClickListener(this)
     }
 
-    override fun onClick(v: View?) {
-        if (isHitting) {
-            lastHitResult?.let { hitResult ->
+    private fun updateBtnEnabledState() {
+        if (trackingNode.isTracking()) {
+            if (!view.btnAdd.isEnabled) {
+                view.btnAdd.isEnabled = true
+            }
+        } else {
+            if (view.btnAdd.isEnabled) {
+                view.btnAdd.isEnabled = false
+            }
+        }
+    }
+
+    ///////////////////////
+    // region View.OnClickListener
+    override fun onClick(v: View) {
+        when (v.id) {
+            view.btnAdd.id -> {
+                handleOnAddClicked()
+            }
+
+            view.btnViewNode.id -> {
+                handleOnSetViewNodeClicked()
+            }
+
+            view.btnImageNode.id -> {
+                handleOnSetImageNodeClicked()
+            }
+        }
+    }
+
+    private fun handleOnAddClicked() {
+        if (trackingNode.isHitting()) {
+            trackingNode.getLastHitResult()?.let { hitResult ->
                 hitResult.createAnchorOrNull().apply {
                     if (this != null) {
-                        //addAnchorNode(this)
+                        when (nodeType) {
+                            NodeType.VIEW_NODE -> {
+                                viewNodeHelper.addViewNode(this)
+                            }
 
-                        addImageNode(this)
+                            NodeType.IMAGE_NODE -> {
+                                imageNodeHelper.addImageNode(this)
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    private fun addImageNode(anchor: Anchor) {
-        Glide
-            .with(this)
-            .asBitmap()
-            .load("https://upload.wikimedia.org/wikipedia/commons/0/01/Cat-1044750.jpg")
-            .fitCenter()
-            .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-            .apply(RequestOptions.timeoutOf(5 * 60 * 1000))
-            .into(object : CustomTarget<Bitmap>(){
-                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                    val imageNode = ImageNode(
-                        materialLoader = sceneView.materialLoader,
-                        bitmap = resource
-                    )
+    private fun handleOnSetViewNodeClicked() {
+        nodeType = NodeType.VIEW_NODE
 
-                    val anchorNode = AnchorNode(sceneView.engine, anchor)
-                    anchorNode.addChildNode(imageNode)
-
-                    sceneView.addChildNode(anchorNode)
-                }
-
-                override fun onLoadCleared(placeholder: Drawable?) {
-                }
-            })
+        applyActiveColor(view.btnViewNode)
+        applyDisabledColor(view.btnImageNode)
     }
 
-    private fun addAnchorNode(anchor: Anchor) {
-        annotationCounter++
+    private fun handleOnSetImageNodeClicked() {
+        nodeType = NodeType.IMAGE_NODE
 
-        val view: View = View.inflate(
-            this@MainActivity,
-            R.layout.view_node_text_view_annotation,
-            null
-        )
-        view.findViewById<TextView>(R.id.textView).text = String.format(
-            Locale.getDefault(),
-            getString(R.string.ar_tv_annotation),
-            annotationCounter.toString()
-        )
-
-        val viewNode = ViewNode(
-            sceneView.engine,
-            viewNodeWindowManager,
-            sceneView.materialLoader,
-            view,
-            unlit = true
-        )
-        viewNode.isEditable = true
-        viewNode.isVisible = true
-        viewNode.isRotationEditable = true
-
-
-        val anchorNode = AnchorNode(sceneView.engine, anchor)
-        anchorNode.isEditable = true
-        anchorNode.isRotationEditable = true
-        anchorNode.addChildNode(viewNode)
-
-        nodeList.add(anchorNode)
-        sceneView.addChildNode(anchorNode)
+        applyActiveColor(view.btnImageNode)
+        applyDisabledColor(view.btnViewNode)
     }
 
-    //////////////////////////
-    // region Hittest On ScreenCenter
-    private fun updateIsTracking(frame: Frame?): Boolean {
-        //isTracking = false
-        if (frame == null) return false
-        isTracking = frame
-            .camera
-            .trackingState == TrackingState.TRACKING
-        return isTracking
+    private fun applyActiveColor(view: View) {
+        view.backgroundTintList = ContextCompat
+            .getColorStateList(
+                this,
+                R.color.main_color
+            )
     }
 
-    private fun updateIsHitting(frame: Frame?): Boolean {
-        // Skip frames!
-        if (currentHittestAttempt < HITTEST_SKIP_AMOUNT) {
-            currentHittestAttempt++
-            isHittestPaused = true
-            return isHitting
-        }
-        if (!isTracking()) return false
-        if (frame == null) return false
-        if (frame.camera.trackingState != TrackingState.TRACKING) return false
-        frameTime = FrameTime(frame.timestamp, lastHitTimestamp)
-        if (frameDropDetected(frame, frameTime!!) && lastFps > 0.0 && lastHitTimestamp > 0) {
-            isHittestPaused = true
-            return isHitting
-        }
-        return try {
-            val pt = getScreenCenter()
-            updateHitTestInternal(frame, pt)
-        } catch (e: NotTrackingException) {
-            resetValues()
-            false
-        } catch (e: DeadlineExceededException) {
-            resetValues()
-            false
-        } catch (e: FatalException) {
-            resetValues()
-            false
-        }
+    private fun applyDisabledColor(view: View) {
+        view.backgroundTintList = ContextCompat
+            .getColorStateList(
+                this,
+                R.color.gray_500
+            )
     }
-
-    private fun updateHitTestInternal(
-        frame: Frame,
-        pt: android.graphics.Point
-    ): Boolean {
-        resetValues()
-
-        val hits = frame.hitTest(pt.x.toFloat(), pt.y.toFloat())
-
-        for (hit in hits) {
-            val trackable = hit.trackable
-
-            // Check what kind of Trackable we have.
-            isHitting = when (trackable) {
-                is Plane -> validatePlane(trackable, hit)
-                is DepthPoint -> validateDepthPoint(trackable)
-                is Point -> validatePoint(trackable)
-                else -> false
-            }
-
-            // If we have found a valid Trackable leave the for-loop.
-            if (isHitting) {
-                lastHitResult = hit
-                break
-            }
-        }
-        return isHitting
-    }
+    // endregion View.OnClickListener
+    ///////////////////////
 
 
-    private fun frameDropDetected(
-        frame: Frame,
-        frameTime: FrameTime
-    ): Boolean {
-        lastHitTimestamp = frame.timestamp
-        val fpsThreshold: Double = lastFps / 100.0 * 60
-        val currentFps: Double = frameTime.fps
-        val frameDrop = fpsThreshold > currentFps
-        lastFps = frameTime.fps
-        return frameDrop
-    }
-
-
-    private fun getScreenCenter(): android.graphics.Point {
-        return android.graphics.Point(sceneView.width / 2, sceneView.height / 2)
-    }
-
-    private fun validatePlane(trackable: Trackable, hit: HitResult): Boolean {
-        return (trackable as Plane).isPoseInPolygon(hit.hitPose) && trackable.trackingState == TrackingState.TRACKING
-    }
-
-    private fun validatePoint(trackable: Trackable): Boolean {
-        return (trackable as Point).orientationMode === Point.OrientationMode.ESTIMATED_SURFACE_NORMAL && trackable.trackingState == TrackingState.TRACKING
-    }
-
-    private fun validateDepthPoint(trackable: Trackable): Boolean {
-        return trackable.trackingState == TrackingState.TRACKING
-    }
-    // endregion Hittest On ScreenCenter
-    //////////////////////////
-
-    private fun updateRotationOfViewNodes() {
-        nodeList.forEach {
-            if (it.anchor.trackingState == TrackingState.TRACKING) {
-                val cameraPosition = sceneView.cameraNode.worldPosition
-
-                val nodePosition = it.worldPosition
-
-                val cameraVec3 = cameraPosition.toVector3()
-                val nodeVec3 = nodePosition.toVector3()
-
-                val direction = Vector3.subtract(cameraVec3, nodeVec3)
-
-                val lookRotation = Quaternion.lookRotation(direction, Vector3.up())
-
-                it.worldQuaternion = dev.romainguy.kotlin.math.Quaternion(
-                    lookRotation.x,
-                    lookRotation.y,
-                    lookRotation.z,
-                    lookRotation.w)
+    ///////////////////
+    // region OnEvent Handling
+    private fun onEvent(event: ImageNodeEvent) {
+        when (event) {
+            is ImageNodeEvent.NewImageNode -> {
+                nodeList.add(event.anchorNode)
+                sceneView.addChildNode(event.anchorNode)
             }
         }
     }
 
-
-    private fun resetValues() {
-        currentHittestAttempt = 0
-        isHitting = false
-        isHittestPaused = false
+    private fun onEvent(event: ViewNodeEvent) {
+        when (event) {
+            is ViewNodeEvent.NewViewNode -> {
+                nodeList.add(event.anchorNode)
+                sceneView.addChildNode(event.anchorNode)
+            }
+        }
     }
-
-    fun isTracking(): Boolean {
-        return isTracking
-    }
-
-    fun isHitting(): Boolean {
-        return isHitting
-    }
-
-    fun isHittestPaused(): Boolean {
-        return isHittestPaused
-    }
-
-    fun getLastHitResult(): HitResult? {
-        return lastHitResult
-    }
-
-    fun getLastHitTimestamp(): Long {
-        return lastHitTimestamp
-    }
-
-    fun getFrameTime(): FrameTime? {
-        return frameTime
-    }
+    // endregion OnEvent Handling
+    ///////////////////
 
 
     companion object {
         const val HITTEST_SKIP_AMOUNT = 0
+    }
+
+    enum class NodeType {
+        IMAGE_NODE,
+        VIEW_NODE
     }
 }

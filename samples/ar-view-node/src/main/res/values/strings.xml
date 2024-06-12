@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">SceneViewSample</string>
-    <string name="ar_btn_annotate">Annotate</string>
     <string name="ar_tv_annotation">Annotation #%s</string>
+    <string name="ar_add_image_node">ImageNode</string>
+    <string name="ar_add_view_node">ViewNode</string>
 </resources>
