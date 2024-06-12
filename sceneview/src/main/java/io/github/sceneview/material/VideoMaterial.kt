@@ -10,7 +10,7 @@ import io.github.sceneview.safeDestroyStream
 import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.texture.VideoTexture
 
-class VideoMaterial internal constructor(
+class VideoMaterial(
     val engine: Engine,
     materialLoader: MaterialLoader,
     chromaKeyColor: Int? = null,
