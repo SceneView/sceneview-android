@@ -28,8 +28,8 @@ class ImageNodeHelper(
 
     private val requestOptions = RequestOptions()
         .timeout(5 * 60 * 1000)
-        .override(702, 467)
-        .encodeQuality(75)
+        .override(351, 233)
+        .encodeQuality(70)
 
     fun addImageNode(anchor: Anchor) {
         Glide
