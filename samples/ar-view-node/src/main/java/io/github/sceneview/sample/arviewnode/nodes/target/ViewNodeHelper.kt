@@ -9,6 +9,7 @@ import com.google.ar.sceneform.rendering.ViewAttachmentManager
 import com.google.ar.sceneform.rendering.ViewRenderable
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
+import io.github.sceneview.math.Scale
 import io.github.sceneview.node.ViewNode
 import io.github.sceneview.sample.arviewnode.R
 import io.github.sceneview.sample.arviewnode.nodes.events.ViewNodeEvent
@@ -51,6 +52,7 @@ class ViewNodeHelper(
                 viewAttachmentManager
             ).apply {
                 setRenderable(it)
+                scale = Scale(-1f, 1f, 1f)
             }
 
             viewNode.isEditable = true
