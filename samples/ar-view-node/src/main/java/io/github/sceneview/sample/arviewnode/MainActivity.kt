@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
     private lateinit var trackingNode: TrackingNode
     private lateinit var imageNodeHelper: ImageNodeHelper
     private lateinit var viewNodeHelper: ViewNodeHelper
+    private lateinit var nodeRotationHelper: NodeRotationHelper
 
     private val nodeList: MutableList<AnchorNode> = mutableListOf()
 
@@ -63,6 +64,7 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
             arSceneView,
             this@MainActivity::onEvent
         )
+        nodeRotationHelper = NodeRotationHelper()
     }
 
     private fun configureArSession(arSceneView: ARSceneView) {
@@ -80,7 +82,7 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
     private fun handleOnSessionUpdated(arSceneView: ARSceneView) {
         arSceneView.onSessionUpdated = { _, frame ->
             trackingNode.frameUpdate(frame)
-            NodeRotationHelper
+            nodeRotationHelper
                 .updateRotationOfViewNodes(
                     viewMvc.getSceneView(),
                     nodeList

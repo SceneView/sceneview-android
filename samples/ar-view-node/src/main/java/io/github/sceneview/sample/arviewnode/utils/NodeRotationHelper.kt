@@ -7,12 +7,21 @@ import io.github.sceneview.collision.Quaternion
 import io.github.sceneview.collision.Vector3
 import io.github.sceneview.math.toVector3
 
-object NodeRotationHelper {
+class NodeRotationHelper {
+
+    private var skipCounter = 0
 
     fun updateRotationOfViewNodes(
         sceneView: ARSceneView,
         nodeList: MutableList<AnchorNode>
     ) {
+        if (skipCounter <= MAX_SKIP_FRAMES) {
+            skipCounter++
+            return
+        }
+
+        skipCounter = 0
+
         nodeList.forEach {
             if (it.anchor.trackingState == TrackingState.TRACKING) {
                 val cameraPosition = sceneView.cameraNode.worldPosition
@@ -33,5 +42,9 @@ object NodeRotationHelper {
                     lookRotation.w)
             }
         }
+    }
+
+    companion object {
+        const val MAX_SKIP_FRAMES = 10
     }
 }
