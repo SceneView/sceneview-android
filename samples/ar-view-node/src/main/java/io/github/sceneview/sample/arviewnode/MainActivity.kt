@@ -1,14 +1,11 @@
 package io.github.sceneview.sample.arviewnode
 
 import android.os.Bundle
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import com.google.ar.core.Config
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.createAnchorOrNull
 import io.github.sceneview.ar.node.AnchorNode
-import io.github.sceneview.sample.arviewnode.databinding.ActivityMainBinding
 import io.github.sceneview.sample.arviewnode.nodes.events.ImageNodeEvent
 import io.github.sceneview.sample.arviewnode.nodes.events.ViewNodeEvent
 import io.github.sceneview.sample.arviewnode.nodes.target.ImageNodeHelper
@@ -17,10 +14,10 @@ import io.github.sceneview.sample.arviewnode.nodes.target.ViewNodeHelper
 import io.github.sceneview.sample.arviewnode.utils.NodeRotationHelper
 
 
-class MainActivity : AppCompatActivity(), View.OnClickListener {
+class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
 
-    private lateinit var view: ActivityMainBinding
-    private lateinit var sceneView: ARSceneView
+    private lateinit var viewMvc: MainActivityViewMvc
+
     private lateinit var trackingNode: TrackingNode
     private lateinit var imageNodeHelper: ImageNodeHelper
     private lateinit var viewNodeHelper: ViewNodeHelper
@@ -29,94 +26,85 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private var nodeType = NodeType.VIEW_NODE
 
+    ////////////////////
+    // region Lifecycle Methods
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        view = ActivityMainBinding
-            .inflate(
-                layoutInflater,
-                null,
-                false
-            )
+        viewMvc = MainActivityViewMvcImpl(
+            this,
+            layoutInflater,
+            null
+        )
+        setContentView(viewMvc.getView().root)
+        viewMvc.registerListener(this)
 
-        setContentView(view.root)
-
-        sceneView = findViewById<ARSceneView?>(R.id.sceneView).apply {
-            trackingNode = TrackingNode(
-                this@MainActivity,
-                this
-            )
-            imageNodeHelper = ImageNodeHelper(
-                this@MainActivity,
-                this,
-                this@MainActivity::onEvent
-            )
-            viewNodeHelper = ViewNodeHelper(
-                this@MainActivity,
-                this,
-                this@MainActivity::onEvent
-            )
-
-            configureSession { session, config ->
-                config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                    true -> Config.DepthMode.AUTOMATIC
-                    else -> Config.DepthMode.DISABLED
-                }
-                config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
-                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                config.planeFindingMode = Config.PlaneFindingMode.DISABLED
-            }
-
-            onSessionUpdated = { _, frame ->
-                trackingNode.frameUpdate(frame)
-                NodeRotationHelper
-                    .updateRotationOfViewNodes(
-                        sceneView,
-                        nodeList
-                    )
-
-                updateBtnEnabledState()
-            }
+        viewMvc.getSceneView().apply {
+            initObjects(this)
+            configureArSession(this)
+            handleOnSessionUpdated(this)
 
             lifecycle = this@MainActivity.lifecycle
         }
-
-        view.btnAdd.setOnClickListener(this)
-        view.btnViewNode.setOnClickListener(this)
-        view.btnImageNode.setOnClickListener(this)
     }
 
-    private fun updateBtnEnabledState() {
-        if (trackingNode.isTracking()) {
-            if (!view.btnAdd.isEnabled) {
-                view.btnAdd.isEnabled = true
+    private fun initObjects(arSceneView: ARSceneView) {
+        trackingNode = TrackingNode(
+            this@MainActivity,
+            arSceneView
+        )
+        imageNodeHelper = ImageNodeHelper(
+            this@MainActivity,
+            arSceneView,
+            this@MainActivity::onEvent
+        )
+        viewNodeHelper = ViewNodeHelper(
+            this@MainActivity,
+            arSceneView,
+            this@MainActivity::onEvent
+        )
+    }
+
+    private fun configureArSession(arSceneView: ARSceneView) {
+        arSceneView.configureSession { session, config ->
+            config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                true -> Config.DepthMode.AUTOMATIC
+                else -> Config.DepthMode.DISABLED
             }
-        } else {
-            if (view.btnAdd.isEnabled) {
-                view.btnAdd.isEnabled = false
-            }
+            config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
+            config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+            config.planeFindingMode = Config.PlaneFindingMode.DISABLED
         }
     }
 
-    ///////////////////////
-    // region View.OnClickListener
-    override fun onClick(v: View) {
-        when (v.id) {
-            view.btnAdd.id -> {
-                handleOnAddClicked()
-            }
-
-            view.btnViewNode.id -> {
-                handleOnSetViewNodeClicked()
-            }
-
-            view.btnImageNode.id -> {
-                handleOnSetImageNodeClicked()
-            }
+    private fun handleOnSessionUpdated(arSceneView: ARSceneView) {
+        arSceneView.onSessionUpdated = { _, frame ->
+            trackingNode.frameUpdate(frame)
+            NodeRotationHelper
+                .updateRotationOfViewNodes(
+                    viewMvc.getSceneView(),
+                    nodeList
+                )
+            viewMvc.updateBtnEnabledState(trackingNode.isTracking())
         }
     }
 
-    private fun handleOnAddClicked() {
+    override fun onDestroy() {
+        viewMvc.getSceneView().removeChildNodes(nodeList)
+        viewMvc.unregisterListener(this)
+        super.onDestroy()
+    }
+    // endregion Lifecycle Methods
+    ////////////////////
+
+
+    ///////////////////////////////
+    // region MainActivityViewMvc.Listener
+    override fun updateActiveNodeType(nodeType: NodeType) {
+        this.nodeType = nodeType
+    }
+
+    override fun handleOnAddClicked() {
         if (trackingNode.isHitting()) {
             trackingNode.getLastHitResult()?.let { hitResult ->
                 hitResult.createAnchorOrNull().apply {
@@ -135,38 +123,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             }
         }
     }
-
-    private fun handleOnSetViewNodeClicked() {
-        nodeType = NodeType.VIEW_NODE
-
-        applyActiveColor(view.btnViewNode)
-        applyDisabledColor(view.btnImageNode)
-    }
-
-    private fun handleOnSetImageNodeClicked() {
-        nodeType = NodeType.IMAGE_NODE
-
-        applyActiveColor(view.btnImageNode)
-        applyDisabledColor(view.btnViewNode)
-    }
-
-    private fun applyActiveColor(view: View) {
-        view.backgroundTintList = ContextCompat
-            .getColorStateList(
-                this,
-                R.color.main_color
-            )
-    }
-
-    private fun applyDisabledColor(view: View) {
-        view.backgroundTintList = ContextCompat
-            .getColorStateList(
-                this,
-                R.color.gray_500
-            )
-    }
-    // endregion View.OnClickListener
-    ///////////////////////
+    // endregion MainActivityViewMvc.Listener
+    ///////////////////////////////
 
 
     ///////////////////
@@ -175,7 +133,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         when (event) {
             is ImageNodeEvent.NewImageNode -> {
                 nodeList.add(event.anchorNode)
-                sceneView.addChildNode(event.anchorNode)
+                viewMvc.getSceneView().addChildNode(event.anchorNode)
             }
         }
     }
@@ -184,7 +142,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         when (event) {
             is ViewNodeEvent.NewViewNode -> {
                 nodeList.add(event.anchorNode)
-                sceneView.addChildNode(event.anchorNode)
+                viewMvc.getSceneView().addChildNode(event.anchorNode)
             }
         }
     }
