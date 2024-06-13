@@ -1,6 +1,5 @@
 package io.github.sceneview.sample.arviewnode.utils
 
-import android.util.Log
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
