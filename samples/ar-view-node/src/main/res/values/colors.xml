@@ -6,4 +6,5 @@
     <color name="blue_gray_500">#607D8B</color>
     <color name="main_color">#FFBB86FC</color>
     <color name="btn_pressed_color">#FF6200EE</color>
+    <color name="red_500">#F44336</color>
 </resources>

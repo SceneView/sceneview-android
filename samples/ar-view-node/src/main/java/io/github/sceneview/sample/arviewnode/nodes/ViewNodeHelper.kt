@@ -13,6 +13,7 @@ import io.github.sceneview.node.ViewNode
 import io.github.sceneview.sample.arviewnode.R
 import io.github.sceneview.sample.arviewnode.nodes.events.ViewNodeEvent
 import java.util.Locale
+import java.util.concurrent.CompletableFuture
 
 class ViewNodeHelper(
     private val context: Context,
@@ -38,7 +39,7 @@ class ViewNodeHelper(
             .setView(context, view)
             .build(sceneView.engine)
 
-        viewRenderable!!.thenAccept {
+        viewRenderable.thenAccept {
             val viewAttachmentManager = ViewAttachmentManager(
                 context,
                 sceneView
@@ -52,16 +53,17 @@ class ViewNodeHelper(
             ).apply {
                 setRenderable(it)
                 scale = Scale(-1f, 1f, 1f)
+                isEditable = true
+                isVisible = true
+                isRotationEditable = true
             }
 
-            viewNode.isEditable = true
-            viewNode.isVisible = true
-            viewNode.isRotationEditable = true
-
-            val anchorNode = AnchorNode(sceneView.engine, anchor)
-            anchorNode.isEditable = true
-            anchorNode.isRotationEditable = true
-            anchorNode.addChildNode(viewNode)
+            val anchorNode = AnchorNode(
+                sceneView.engine,
+                anchor
+            ).apply {
+                addChildNode(viewNode)
+            }
 
             onEvent(ViewNodeEvent.NewViewNode(anchorNode))
         }

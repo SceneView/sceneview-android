@@ -1,7 +1,10 @@
 package io.github.sceneview.sample.arviewnode.nodes
 
 import android.content.Context
+import android.util.Log
 import android.view.View
+import android.widget.ImageView
+import androidx.core.content.ContextCompat
 import com.google.ar.core.DepthPoint
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
@@ -69,6 +72,8 @@ class TrackingNode(
     private var lastFps = 0.0
 
     private var frameTime: FrameTime? = null
+
+    private var isValid = ValidIndicator.IS_NOT_VALID
 
     private var trackingAnchorNode: AnchorNode? = null
     private var trackingNode: ViewNode? = null
@@ -209,7 +214,10 @@ class TrackingNode(
         ) {
             createdCalled = true
             create()
-        } else {
+
+        } else if (trackingNode != null &&
+            createdCalled
+        ) {
             update()
         }
     }
@@ -254,6 +262,35 @@ class TrackingNode(
     }
 
     private fun update() {
+        val isValid = getIsValid()
+
+        if (this.isValid != isValid) {
+            this.isValid = isValid
+
+            if (isValid == ValidIndicator.IS_VALID) {
+                (trackingNode as ViewNode)
+                    .renderable
+                    ?.view
+                    ?.findViewById<ImageView>(R.id.imageView)
+                    ?.backgroundTintList = ContextCompat
+                    .getColorStateList(
+                        context,
+                        R.color.white
+                    )
+
+            } else if (isValid == ValidIndicator.IS_NOT_VALID) {
+                (trackingNode as ViewNode)
+                    .renderable
+                    ?.view
+                    ?.findViewById<ImageView>(R.id.imageView)
+                    ?.backgroundTintList = ContextCompat
+                    .getColorStateList(
+                        context,
+                        R.color.red_500
+                    )
+            }
+        }
+
         getLastHitResult()?.let { hitResult ->
             trackingAnchorNode?.worldPosition = hitResult.hitPose.position
             trackingAnchorNode?.worldRotation = rotationMarkerVertical.toRotation()
@@ -268,6 +305,14 @@ class TrackingNode(
         )
 
         return view
+    }
+
+    private fun getIsValid(): ValidIndicator {
+        return if (isHitting) {
+            ValidIndicator.IS_VALID
+        } else {
+            ValidIndicator.IS_NOT_VALID
+        }
     }
     // endregion UpdateTrackingNode
     /////////////////////
@@ -288,4 +333,9 @@ class TrackingNode(
     }
     // endregion Public Functions
     ///////////////////
+
+    enum class ValidIndicator {
+        IS_VALID,
+        IS_NOT_VALID
+    }
 }
