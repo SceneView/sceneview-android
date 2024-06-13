@@ -1,10 +1,11 @@
-package io.github.sceneview.sample.arviewnode.nodes.target
+package io.github.sceneview.sample.arviewnode.nodes
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.bitmap.Downsampler
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -25,6 +26,11 @@ class ImageNodeHelper(
      */
     private val imageUrl = "https://upload.wikimedia.org/wikipedia/commons/0/01/Cat-1044750.jpg"
 
+    private val requestOptions = RequestOptions()
+        .timeout(5 * 60 * 1000)
+        .override(702, 467)
+        .encodeQuality(75)
+
     fun addImageNode(anchor: Anchor) {
         Glide
             .with(context)
@@ -32,7 +38,7 @@ class ImageNodeHelper(
             .load(imageUrl)
             .fitCenter()
             .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-            .apply(RequestOptions.timeoutOf(5 * 60 * 1000))
+            .apply(requestOptions)
             .into(object : CustomTarget<Bitmap>() {
                 override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     val imageNode = ImageNode(

@@ -8,9 +8,9 @@ import io.github.sceneview.ar.arcore.createAnchorOrNull
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.sample.arviewnode.nodes.events.ImageNodeEvent
 import io.github.sceneview.sample.arviewnode.nodes.events.ViewNodeEvent
-import io.github.sceneview.sample.arviewnode.nodes.target.ImageNodeHelper
-import io.github.sceneview.sample.arviewnode.nodes.target.TrackingNode
-import io.github.sceneview.sample.arviewnode.nodes.target.ViewNodeHelper
+import io.github.sceneview.sample.arviewnode.nodes.ImageNodeHelper
+import io.github.sceneview.sample.arviewnode.nodes.TrackingNode
+import io.github.sceneview.sample.arviewnode.nodes.ViewNodeHelper
 import io.github.sceneview.sample.arviewnode.utils.NodeRotationHelper
 
 
@@ -90,7 +90,6 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
     }
 
     override fun onDestroy() {
-        viewMvc.getSceneView().removeChildNodes(nodeList)
         viewMvc.unregisterListener(this)
         super.onDestroy()
     }

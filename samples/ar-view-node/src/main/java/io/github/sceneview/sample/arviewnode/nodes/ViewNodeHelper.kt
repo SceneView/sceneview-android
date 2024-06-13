@@ -1,7 +1,6 @@
-package io.github.sceneview.sample.arviewnode.nodes.target
+package io.github.sceneview.sample.arviewnode.nodes
 
 import android.content.Context
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import com.google.ar.core.Anchor
