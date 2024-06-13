@@ -1,20 +1,28 @@
 package io.github.sceneview.sample.arviewnode.utils
 
+import android.util.Log
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.collision.Quaternion
 import io.github.sceneview.collision.Vector3
 import io.github.sceneview.math.toVector3
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class NodeRotationHelper {
 
     private var skipCounter = 0
+    private var isRunning = false
 
     fun updateRotationOfViewNodes(
         sceneView: ARSceneView,
         nodeList: MutableList<AnchorNode>
     ) {
+        if (isRunning) {
+            return
+        }
+
         if (skipCounter <= MAX_SKIP_FRAMES) {
             skipCounter++
             return
@@ -22,26 +30,33 @@ class NodeRotationHelper {
 
         skipCounter = 0
 
-        nodeList.forEach {
-            if (it.anchor.trackingState == TrackingState.TRACKING) {
-                val cameraPosition = sceneView.cameraNode.worldPosition
+        GlobalScope.launch {
+            isRunning = true
 
-                val nodePosition = it.worldPosition
+            nodeList.forEach {
+                if (it.anchor.trackingState == TrackingState.TRACKING) {
+                    val cameraPosition = sceneView.cameraNode.worldPosition
 
-                val cameraVec3 = cameraPosition.toVector3()
-                val nodeVec3 = nodePosition.toVector3()
+                    val nodePosition = it.worldPosition
 
-                val direction = Vector3.subtract(cameraVec3, nodeVec3)
+                    val cameraVec3 = cameraPosition.toVector3()
+                    val nodeVec3 = nodePosition.toVector3()
 
-                val lookRotation = Quaternion.lookRotation(direction, Vector3.up())
+                    val direction = Vector3.subtract(cameraVec3, nodeVec3)
 
-                it.worldQuaternion = dev.romainguy.kotlin.math.Quaternion(
-                    lookRotation.x,
-                    lookRotation.y,
-                    lookRotation.z,
-                    lookRotation.w)
+                    val lookRotation = Quaternion.lookRotation(direction, Vector3.up())
+
+                    it.worldQuaternion = dev.romainguy.kotlin.math.Quaternion(
+                        lookRotation.x,
+                        lookRotation.y,
+                        lookRotation.z,
+                        lookRotation.w)
+                }
             }
+
+            isRunning = false
         }
+
     }
 
     companion object {
