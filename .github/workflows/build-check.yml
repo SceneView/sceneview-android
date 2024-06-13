@@ -22,6 +22,8 @@ jobs:
           distribution: adopt
           java-version: 17
 
+      - uses: gradle/actions/wrapper-validation@v3
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
