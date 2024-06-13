@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
-    <size android:height="40dp" android:width="40dp"/>
-    <stroke
-        android:width="2dp"
-        android:color="#FFFFFF" />
-
+    <solid android:color="@color/btn_pressed_color" />
+    <size
+        android:width="100dp"
+        android:height="100dp" />
 </shape>
