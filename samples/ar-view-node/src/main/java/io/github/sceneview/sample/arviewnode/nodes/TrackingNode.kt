@@ -1,6 +1,7 @@
 package io.github.sceneview.sample.arviewnode.nodes
 
 import android.content.Context
+import android.util.Log
 import android.view.View
 import com.google.ar.core.DepthPoint
 import com.google.ar.core.Frame
@@ -46,6 +47,8 @@ class TrackingNode(
      * If we skip Frames this value is set to true, otherwise false.
      */
     private var isHittestPaused = true
+
+    private var createdCalled = false
 
     /**
      * This is a simple counter to track skipped frames. After HITTEST_SKIP_AMOUNT is
@@ -201,11 +204,15 @@ class TrackingNode(
     /////////////////////
     // region UpdateTrackingNode
     private fun updateTrackingNode() {
-        if (trackingNode == null) {
+        if (trackingNode == null &&
+            isHitting &&
+            !createdCalled
+        ) {
+            createdCalled = true
             create()
+        } else {
+            update()
         }
-
-        update()
     }
 
     private fun create() {
