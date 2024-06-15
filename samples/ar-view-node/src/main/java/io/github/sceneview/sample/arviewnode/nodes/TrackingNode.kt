@@ -21,7 +21,6 @@ import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.createAnchorOrNull
 import io.github.sceneview.ar.arcore.position
-import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.math.toRotation
 import io.github.sceneview.node.ViewNode
 import io.github.sceneview.sample.arviewnode.MainActivity
@@ -64,7 +63,6 @@ class TrackingNode(
 
     private var isValid = ValidIndicator.IS_NOT_VALID
 
-    private var trackingAnchorNode: AnchorNode? = null
     private var trackingNode: ViewNode? = null
 
     /**
@@ -220,13 +218,7 @@ class TrackingNode(
                             setRenderable(it)
                         }
 
-                        trackingAnchorNode = AnchorNode(
-                            sceneView.engine,
-                            this
-                        )
-
-                        trackingAnchorNode!!.addChildNode(trackingNode!!)
-                        sceneView.addChildNode(trackingAnchorNode!!)
+                        sceneView.addChildNode(trackingNode!!)
                     }
                 }
             }
@@ -264,8 +256,8 @@ class TrackingNode(
         }
 
         getLastHitResult()?.let { hitResult ->
-            trackingAnchorNode?.worldPosition = hitResult.hitPose.position
-            trackingAnchorNode?.worldRotation = rotationMarkerVertical.toRotation()
+            trackingNode?.worldPosition = hitResult.hitPose.position
+            trackingNode?.worldRotation = rotationMarkerVertical.toRotation()
         }
     }
 
