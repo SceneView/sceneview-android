@@ -51,18 +51,18 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
 
     private fun initObjects(arSceneView: ARSceneView) {
         trackingNode = TrackingNode(
-            this@MainActivity,
+            this,
             arSceneView
         )
         imageNodeHelper = ImageNodeHelper(
-            this@MainActivity,
+            this,
             arSceneView,
-            this@MainActivity::onEvent
+            this::onEvent
         )
         viewNodeHelper = ViewNodeHelper(
-            this@MainActivity,
+            this,
             arSceneView,
-            this@MainActivity::onEvent
+            this::onEvent
         )
         nodeRotationHelper = NodeRotationHelper()
     }
