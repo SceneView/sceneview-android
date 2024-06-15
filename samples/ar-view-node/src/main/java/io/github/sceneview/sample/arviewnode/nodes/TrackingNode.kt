@@ -25,7 +25,6 @@ import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.math.toRotation
 import io.github.sceneview.node.ViewNode
-import io.github.sceneview.sample.arviewnode.FrameTime
 import io.github.sceneview.sample.arviewnode.MainActivity
 import io.github.sceneview.sample.arviewnode.R
 
@@ -63,15 +62,6 @@ class TrackingNode(
      * class. Based on the HitResult Anchors can be created.
      */
     private var lastHitResult: HitResult? = null
-
-    /**
-     * This is the timestamp of the used Frame to perform the HitTest.
-     */
-    private var lastHitTimestamp: Long = 0
-
-    private var lastFps = 0.0
-
-    private var frameTime: FrameTime? = null
 
     private var isValid = ValidIndicator.IS_NOT_VALID
 
@@ -118,11 +108,7 @@ class TrackingNode(
         if (!isTracking()) return false
         if (frame == null) return false
         if (frame.camera.trackingState != TrackingState.TRACKING) return false
-        frameTime = FrameTime(frame.timestamp, lastHitTimestamp)
-        if (frameDropDetected(frame, frameTime!!) && lastFps > 0.0 && lastHitTimestamp > 0) {
-            isHittestPaused = true
-            return isHitting
-        }
+
         return try {
             val pt = getScreenCenter()
             updateHitTestInternal(frame, pt)
@@ -164,19 +150,6 @@ class TrackingNode(
             }
         }
         return isHitting
-    }
-
-
-    private fun frameDropDetected(
-        frame: Frame,
-        frameTime: FrameTime
-    ): Boolean {
-        lastHitTimestamp = frame.timestamp
-        val fpsThreshold: Double = lastFps / 100.0 * 60
-        val currentFps: Double = frameTime.fps
-        val frameDrop = fpsThreshold > currentFps
-        lastFps = frameTime.fps
-        return frameDrop
     }
 
 
