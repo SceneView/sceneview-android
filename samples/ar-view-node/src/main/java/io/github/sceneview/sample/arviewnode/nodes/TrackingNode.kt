@@ -1,7 +1,6 @@
 package io.github.sceneview.sample.arviewnode.nodes
 
 import android.content.Context
-import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
@@ -49,7 +48,7 @@ class TrackingNode(
      */
     private var isHittestPaused = true
 
-    private var createdCalled = false
+    private var createCalled = false
 
     /**
      * This is a simple counter to track skipped frames. After HITTEST_SKIP_AMOUNT is
@@ -183,13 +182,13 @@ class TrackingNode(
     private fun updateTrackingNode() {
         if (trackingNode == null &&
             isHitting &&
-            !createdCalled
+            !createCalled
         ) {
-            createdCalled = true
+            createCalled = true
             create()
 
         } else if (trackingNode != null &&
-            createdCalled
+            createCalled
         ) {
             update()
         }
