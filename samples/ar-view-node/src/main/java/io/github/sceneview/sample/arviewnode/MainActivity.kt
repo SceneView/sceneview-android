@@ -105,7 +105,7 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
         this.nodeType = nodeType
     }
 
-    override fun handleOnAddClicked() {
+    override fun handleAddClicked() {
         if (trackingNode.isHitting()) {
             trackingNode.getLastHitResult()?.let { hitResult ->
                 hitResult.createAnchorOrNull().apply {

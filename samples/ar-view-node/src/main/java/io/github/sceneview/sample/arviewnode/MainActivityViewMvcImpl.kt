@@ -48,21 +48,21 @@ class MainActivityViewMvcImpl(
         when (v.id) {
             binding.btnAdd.id -> {
                 listeners.forEach {
-                    it.handleOnAddClicked()
+                    it.handleAddClicked()
                 }
             }
 
             binding.btnViewNode.id -> {
-                handleOnSetViewNodeClicked()
+                handleSetViewNodeClicked()
             }
 
             binding.btnImageNode.id -> {
-                handleOnSetImageNodeClicked()
+                handleSetImageNodeClicked()
             }
         }
     }
 
-    private fun handleOnSetViewNodeClicked() {
+    private fun handleSetViewNodeClicked() {
         listeners.forEach {
             it.updateActiveNodeType(MainActivity.NodeType.VIEW_NODE)
         }
@@ -71,7 +71,7 @@ class MainActivityViewMvcImpl(
         applyDisabledColor(binding.btnImageNode)
     }
 
-    private fun handleOnSetImageNodeClicked() {
+    private fun handleSetImageNodeClicked() {
         listeners.forEach {
             it.updateActiveNodeType(MainActivity.NodeType.IMAGE_NODE)
         }

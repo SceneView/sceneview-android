@@ -18,6 +18,6 @@ interface MainActivityViewMvc {
     interface Listener {
         fun updateActiveNodeType(nodeType: MainActivity.NodeType)
 
-        fun handleOnAddClicked()
+        fun handleAddClicked()
     }
 }
