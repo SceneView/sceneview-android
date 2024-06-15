@@ -6,8 +6,11 @@ import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.collision.Quaternion
 import io.github.sceneview.collision.Vector3
 import io.github.sceneview.math.toVector3
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class NodeRotationHelper {
 
@@ -30,32 +33,33 @@ class NodeRotationHelper {
         skipCounter = 0
 
         GlobalScope.launch {
-            isRunning = true
+            withContext(Dispatchers.IO) {
+                isRunning = true
 
-            nodeList.forEach {
-                if (it.anchor.trackingState == TrackingState.TRACKING) {
-                    val cameraPosition = sceneView.cameraNode.worldPosition
+                nodeList.forEach {
+                    if (it.anchor.trackingState == TrackingState.TRACKING) {
+                        val cameraPosition = sceneView.cameraNode.worldPosition
 
-                    val nodePosition = it.worldPosition
+                        val nodePosition = it.worldPosition
 
-                    val cameraVec3 = cameraPosition.toVector3()
-                    val nodeVec3 = nodePosition.toVector3()
+                        val cameraVec3 = cameraPosition.toVector3()
+                        val nodeVec3 = nodePosition.toVector3()
 
-                    val direction = Vector3.subtract(cameraVec3, nodeVec3)
+                        val direction = Vector3.subtract(cameraVec3, nodeVec3)
 
-                    val lookRotation = Quaternion.lookRotation(direction, Vector3.up())
+                        val lookRotation = Quaternion.lookRotation(direction, Vector3.up())
 
-                    it.worldQuaternion = dev.romainguy.kotlin.math.Quaternion(
-                        lookRotation.x,
-                        lookRotation.y,
-                        lookRotation.z,
-                        lookRotation.w)
+                        it.worldQuaternion = dev.romainguy.kotlin.math.Quaternion(
+                            lookRotation.x,
+                            lookRotation.y,
+                            lookRotation.z,
+                            lookRotation.w)
+                    }
                 }
+
+                isRunning = false
             }
-
-            isRunning = false
         }
-
     }
 
     companion object {
