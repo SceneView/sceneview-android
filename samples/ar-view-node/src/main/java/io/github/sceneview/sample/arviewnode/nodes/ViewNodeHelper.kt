@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture
 class ViewNodeHelper(
     private val context: Context,
     private val sceneView: ARSceneView,
-    val onEvent: (ViewNodeEvent) -> Unit
+    val onViewNodeEvent: (ViewNodeEvent) -> Unit
 ) {
     /**
      * If an anchored ViewNode should show something else, then change
@@ -65,7 +65,7 @@ class ViewNodeHelper(
                 addChildNode(viewNode)
             }
 
-            onEvent(ViewNodeEvent.NewViewNode(anchorNode))
+            onViewNodeEvent(ViewNodeEvent.NewViewNode(anchorNode))
         }
     }
 

@@ -18,7 +18,7 @@ import io.github.sceneview.sample.arviewnode.nodes.events.ImageNodeEvent
 class ImageNodeHelper(
     private val context: Context,
     private val sceneView: ARSceneView,
-    val onEvent: (ImageNodeEvent) -> Unit
+    val onImageNodeEvent: (ImageNodeEvent) -> Unit
 ) {
     /**
      * If an Anchored ImageNode should show something else, then
@@ -49,7 +49,7 @@ class ImageNodeHelper(
                     val anchorNode = AnchorNode(sceneView.engine, anchor)
                     anchorNode.addChildNode(imageNode)
 
-                    onEvent(ImageNodeEvent.NewImageNode(anchorNode))
+                    onImageNodeEvent(ImageNodeEvent.NewImageNode(anchorNode))
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {

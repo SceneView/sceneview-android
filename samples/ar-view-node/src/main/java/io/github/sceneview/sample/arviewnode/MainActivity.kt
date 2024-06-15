@@ -57,12 +57,12 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
         imageNodeHelper = ImageNodeHelper(
             this,
             arSceneView,
-            this::onEvent
+            this::onImageNodeEvent
         )
         viewNodeHelper = ViewNodeHelper(
             this,
             arSceneView,
-            this::onEvent
+            this::onViewNodeEvent
         )
         nodeRotationHelper = NodeRotationHelper()
     }
@@ -130,7 +130,7 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
 
     ///////////////////
     // region OnEvent Handling
-    private fun onEvent(event: ImageNodeEvent) {
+    private fun onImageNodeEvent(event: ImageNodeEvent) {
         when (event) {
             is ImageNodeEvent.NewImageNode -> {
                 nodeList.add(event.anchorNode)
@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
         }
     }
 
-    private fun onEvent(event: ViewNodeEvent) {
+    private fun onViewNodeEvent(event: ViewNodeEvent) {
         when (event) {
             is ViewNodeEvent.NewViewNode -> {
                 nodeList.add(event.anchorNode)
