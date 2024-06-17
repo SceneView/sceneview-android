@@ -14,13 +14,17 @@ import io.github.sceneview.safeDestroyModel
 import io.github.sceneview.utils.loadFileBuffer
 import io.github.sceneview.utils.readBuffer
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.Buffer
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which is
@@ -239,6 +243,30 @@ class ModelLoader(
         // Release model since it will not be re-instantiated
 //        it?.releaseSourceData()
         onResult.invoke(it?.instance)
+    }
+
+    /**
+     * Loads a [Model] from the contents of a GLB or GLTF file within a self owned coroutine scope
+     *
+     * @param fileLocation the .glb or .gltf file location:
+     * - A relative asset file location *models/mymodel.glb*
+     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
+     * - A File path *Uri.fromFile(myModelFile).path*
+     * - An http or https url *https://mydomain.com/mymodel.glb*
+     *
+     * @see loadModel
+     */
+    suspend fun loadModelInstanceAsync(
+        fileLocation: String,
+        resourceResolver: (resourceFileName: String) -> String = {
+            getFolderPath(fileLocation, it)
+        },
+    ) :Deferred<ModelInstance?> = coroutineScope.async {
+        suspendCoroutine { continuation ->
+            loadModelAsync(fileLocation, resourceResolver) {
+                continuation.resume(it?.instance)
+            }
+        }
     }
 
     /**
