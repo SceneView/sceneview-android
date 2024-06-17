@@ -40,12 +40,12 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
         setContentView(viewMvc.getView().root)
         viewMvc.registerListener(this)
 
-        viewMvc.getSceneView().apply {
-            initObjects(this)
-            configureArSession(this)
-            handleOnSessionUpdated(this)
+        viewMvc.getSceneView().let {
+            initObjects(it)
+            configureArSession(it)
+            handleOnSessionUpdated(it)
 
-            lifecycle = this@MainActivity.lifecycle
+            it.lifecycle = this.lifecycle
         }
     }
 
