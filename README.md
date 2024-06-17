@@ -270,10 +270,10 @@ ARScene(
 
 ## Support our work
 
-### Help us
+### Help us to
 - Buy devices to test the SDK on
-- Equipment for decent video recording Tutorials and Presentations
-- Sceneview Hosting Fees
+- Buy equipment for decent video recording Tutorials and Presentations
+- Pay Sceneview Hosting Fees
 
 ### How To Contribute
 - [Send $9.99 on Open Collective (CB, Paypal, Google Pay,..)](https://opencollective.com/sceneview/contribute/say-thank-you-ask-a-question-ask-for-features-and-fixes-33651)
