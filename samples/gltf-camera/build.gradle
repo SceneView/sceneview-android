@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+
+android {
+    namespace "io.github.sceneview.sample.gltfcamera"
+
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "io.github.sceneview.sample.gltfcamera"
+        minSdk 28
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
+    androidResources {
+        noCompress 'filamat', 'ktx'
+    }
+}
+
+dependencies {
+    implementation project(":samples:common")
+
+    implementation "androidx.compose.ui:ui:1.6.7"
+    implementation "androidx.compose.foundation:foundation:1.6.7"
+    implementation 'androidx.activity:activity-compose:1.9.0'
+    implementation 'androidx.compose.material:material:1.6.7'
+    implementation "androidx.compose.ui:ui-tooling-preview:1.6.7"
+    implementation "androidx.navigation:navigation-compose:2.7.7"
+    debugImplementation "androidx.compose.ui:ui-tooling:1.6.7"
+
+    // SceneView
+    releaseImplementation "io.github.sceneview:sceneview:2.2.1"
+    debugImplementation project(":sceneview")
+}
