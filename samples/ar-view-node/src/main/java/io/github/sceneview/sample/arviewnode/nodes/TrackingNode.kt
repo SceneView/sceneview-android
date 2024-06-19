@@ -19,7 +19,6 @@ import com.google.ar.sceneform.rendering.ViewRenderable
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.ar.arcore.createAnchorOrNull
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.math.toRotation
 import io.github.sceneview.node.ViewNode
@@ -149,7 +148,6 @@ class TrackingNode(
         return isHitting
     }
 
-
     private fun getScreenCenter(): android.graphics.Point {
         return android.graphics.Point(sceneView.width / 2, sceneView.height / 2)
     }
@@ -193,35 +191,29 @@ class TrackingNode(
     }
 
     private fun create() {
-        getLastHitResult()?.let { hitResult ->
-            hitResult.createAnchorOrNull().apply {
-                if (this != null) {
-                    val view = createView()
+        val view = createView()
 
-                    val viewRenderable = ViewRenderable
-                        .builder()
-                        .setView(context, view)
-                        .build(sceneView.engine)
+        val viewRenderable = ViewRenderable
+            .builder()
+            .setView(context, view)
+            .build(sceneView.engine)
 
-                    viewRenderable!!.thenAccept {
-                        val viewAttachmentManager = ViewAttachmentManager(
-                            context,
-                            sceneView
-                        )
-                        viewAttachmentManager.onResume()
+        viewRenderable!!.thenAccept {
+            val viewAttachmentManager = ViewAttachmentManager(
+                context,
+                sceneView
+            )
+            viewAttachmentManager.onResume()
 
-                        trackingNode = ViewNode(
-                            sceneView.engine,
-                            sceneView.modelLoader,
-                            viewAttachmentManager
-                        ).apply {
-                            setRenderable(it)
-                        }
-
-                        sceneView.addChildNode(trackingNode!!)
-                    }
-                }
+            trackingNode = ViewNode(
+                sceneView.engine,
+                sceneView.modelLoader,
+                viewAttachmentManager
+            ).apply {
+                setRenderable(it)
             }
+
+            sceneView.addChildNode(trackingNode!!)
         }
     }
 
