@@ -22,10 +22,46 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.math.toRotation
 import io.github.sceneview.node.ViewNode
-import io.github.sceneview.sample.arviewnode.MainActivity
 import io.github.sceneview.sample.arviewnode.R
 
 
+/**
+ * ## Overview
+ * * The `TrackingNode` is designed to see where the Smartphone is currently pointing
+ * in the ARScene. It determines further if the camera is currently tracking and if a
+ * hit test is successful.This class integrates with ARCore and the Android view system to
+ * provide visual indicators in the AR environment.
+ *
+ * ## Constructor
+ * * context (Context): The Android context in which the AR scene operates.
+ * * sceneView (ARSceneView): The AR scene view that contains the nodes and camera.
+ *
+ * ## Example Usage
+ * ```
+ * // Create an instance of TrackingNode
+ * val trackingNode = TrackingNode(context, sceneView)
+ *
+ * // Update the frame
+ * trackingNode.frameUpdate(frame)
+ *
+ * // Check if the camera is tracking
+ * val tracking = trackingNode.isTracking()
+ *
+ * // Check if a valid hit result is found
+ * val hitting = trackingNode.isHitting()
+ *
+ * // Get the last hit result
+ * val hitResult = trackingNode.getLastHitResult()
+ * ```
+ *
+ * ## Notes
+ * * Ensure that the AR environment and dependencies (like ARCore) are properly set up
+ * for this class to function as intended.
+ * * The HITTEST_SKIP_AMOUNT should be defined in your project, specifying how many frames
+ * to skip between hit tests.
+ * * This class handles exceptions that may occur during hit testing, ensuring that the AR
+ * experience remains stable.
+ */
 class TrackingNode(
     private val context: Context,
     private val sceneView: ARSceneView
@@ -46,6 +82,9 @@ class TrackingNode(
      */
     private var isHittestPaused = true
 
+    /**
+     * Tracks if the create function has been called.
+     */
     private var createCalled = false
 
     /**
@@ -60,8 +99,14 @@ class TrackingNode(
      */
     private var lastHitResult: HitResult? = null
 
+    /**
+     * Indicates the validity of the current hit result.
+     */
     private var isValid = ValidIndicator.IS_NOT_VALID
 
+    /**
+     * Stores the view node used for tracking.
+     */
     private var trackingNode: ViewNode? = null
 
     /**
@@ -71,6 +116,20 @@ class TrackingNode(
     private val rotationMarkerVertical = Quaternion
         .fromAxisAngle(Float3(1.0f, 0.0f, 0.0f), 90f)
 
+    /**
+     * ## Overview
+     * * Updates the tracking and hit test states, and manages the tracking node.
+     *
+     * ## Implementation Details:
+     * * Update Tracking State:
+     *    * Calls updateIsTracking(frame) to update the tracking state.
+     * * Update Hit Test State:
+     *    * Calls updateIsHitting(frame) to update the hit test state.
+     * * Update Tracking Node:
+     *    * Calls updateTrackingNode() to manage the creation and updating of the tracking node.
+     *
+     * @param frame (Frame?): The current AR frame.
+     */
     fun frameUpdate(frame: Frame?) {
         updateIsTracking(frame)
         updateIsHitting(frame)
@@ -80,8 +139,14 @@ class TrackingNode(
 
     ///////////////////
     // region UpdateIsTracking
+    /**
+     * Updates the isTracking property based on the camera's tracking state.
+     *
+     * @param frame (Frame?): The current AR frame.
+     *
+     * @return Boolean: True if a valid hit result is found, false otherwise.
+     */
     private fun updateIsTracking(frame: Frame?): Boolean {
-        //isTracking = false
         if (frame == null) return false
         isTracking = frame
             .camera
@@ -94,9 +159,26 @@ class TrackingNode(
 
     //////////////////
     // region UpdateIsHitting
+    /**
+     * ## Overview
+     * * Updates the isHitting property based on the hit test results.
+     *
+     * ## Implementation Details:
+     * * Frame Skipping:
+     *    * Increments currentHittestAttempt and skips hit testing if the attempt is below HITTEST_SKIP_AMOUNT.
+     * * Hit Testing:
+     *    * Performs hit testing if the camera is tracking and the frame is not null.
+     *    * Calls updateHitTestInternal(frame, getScreenCenter()) to perform the actual hit test.
+     * * Exception Handling:
+     *    * Resets values if hit testing fails due to exceptions.
+     *
+     * @param frame (Frame?): The current AR frame.
+     *
+     * @return Boolean: True if a valid hit result is found, false otherwise.
+     */
     private fun updateIsHitting(frame: Frame?): Boolean {
         // Skip frames!
-        if (currentHittestAttempt < MainActivity.HITTEST_SKIP_AMOUNT) {
+        if (currentHittestAttempt < HITTEST_SKIP_AMOUNT) {
             currentHittestAttempt++
             isHittestPaused = true
             return isHitting
@@ -120,6 +202,14 @@ class TrackingNode(
         }
     }
 
+    /**
+     * Performs the hit test and updates the hit test result.
+     *
+     * @param frame (Frame): The current AR frame.
+     * @param pt (android.graphics.Point): The point on the screen to perform the hit test.
+     *
+     * @return Boolean: True if a valid hit result is found, false otherwise
+     */
     private fun updateHitTestInternal(
         frame: Frame,
         pt: android.graphics.Point
@@ -148,22 +238,52 @@ class TrackingNode(
         return isHitting
     }
 
+    /**
+     * Returns the center point of the screen.
+     *
+     * @return android.graphics.Point: The center point of the screen.
+     */
     private fun getScreenCenter(): android.graphics.Point {
         return android.graphics.Point(sceneView.width / 2, sceneView.height / 2)
     }
 
+    /**
+     * Validates the hit result for a plane trackable.
+     *
+     * @param trackable (Trackable): The trackable being validated.
+     * @param hit (HitResult): The hit result.
+     *
+     * @return Boolean: True if the hit result is valid, false otherwise.
+     */
     private fun validatePlane(trackable: Trackable, hit: HitResult): Boolean {
         return (trackable as Plane).isPoseInPolygon(hit.hitPose) && trackable.trackingState == TrackingState.TRACKING
     }
 
+    /**
+     * Validates the hit result for a point trackable.
+     *
+     * @param trackable (Trackable): The trackable being validated.
+     *
+     * @return Boolean: True if the hit result is valid, false otherwise.
+     */
     private fun validatePoint(trackable: Trackable): Boolean {
         return (trackable as Point).orientationMode === Point.OrientationMode.ESTIMATED_SURFACE_NORMAL && trackable.trackingState == TrackingState.TRACKING
     }
 
+    /**
+     * Validates the hit result for a depth point trackable.
+     *
+     * @param trackable (Trackable): The trackable being validated.
+     *
+     * @return Boolean: True if the hit result is valid, false otherwise.
+     */
     private fun validateDepthPoint(trackable: Trackable): Boolean {
         return trackable.trackingState == TrackingState.TRACKING
     }
 
+    /**
+     * Resets the hit test related values.
+     */
     private fun resetValues() {
         currentHittestAttempt = 0
         isHitting = false
@@ -175,6 +295,9 @@ class TrackingNode(
 
     /////////////////////
     // region UpdateTrackingNode
+    /**
+     * Manages the creation and updating of the tracking node.
+     */
     private fun updateTrackingNode() {
         if (trackingNode == null &&
             isHitting &&
@@ -190,6 +313,9 @@ class TrackingNode(
         }
     }
 
+    /**
+     * Creates the tracking node.
+     */
     private fun create() {
         val view = createView()
 
@@ -217,6 +343,9 @@ class TrackingNode(
         }
     }
 
+    /**
+     * Updates the tracking node based on the current hit result.
+     */
     private fun update() {
         val isValid = getIsValid()
 
@@ -253,6 +382,11 @@ class TrackingNode(
         }
     }
 
+    /**
+     * Creates the view for the tracking node.
+     *
+     * @return View: The created view.
+     */
     private fun createView(): View {
         val view: View = View.inflate(
             context,
@@ -263,6 +397,11 @@ class TrackingNode(
         return view
     }
 
+    /**
+     * Determines the validity of the current hit result.
+     *
+     * @return ValidIndicator: The validity indicator.
+     */
     private fun getIsValid(): ValidIndicator {
         return if (isHitting) {
             ValidIndicator.IS_VALID
@@ -276,14 +415,29 @@ class TrackingNode(
 
     ///////////////////
     // region Public Functions
+    /**
+     * Returns the tracking state.
+     *
+     * @return Boolean: True if the camera is tracking, false otherwise.
+     */
     fun isTracking(): Boolean {
         return isTracking
     }
 
+    /**
+     * Returns the hit test state.
+     *
+     * @return Boolean: True if a valid hit result is found, false otherwise.
+     */
     fun isHitting(): Boolean {
         return isHitting
     }
 
+    /**
+     * Returns the last hit result.
+     *
+     * @return HitResult?: The last hit result, or null if no valid hit result is found.
+     */
     fun getLastHitResult(): HitResult? {
         return lastHitResult
     }
@@ -293,5 +447,9 @@ class TrackingNode(
     enum class ValidIndicator {
         IS_VALID,
         IS_NOT_VALID
+    }
+
+    companion object {
+        const val HITTEST_SKIP_AMOUNT = 0
     }
 }

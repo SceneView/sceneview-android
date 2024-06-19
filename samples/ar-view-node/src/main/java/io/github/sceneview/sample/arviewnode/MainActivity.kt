@@ -150,11 +150,6 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
     // endregion OnEvent Handling
     ///////////////////
 
-
-    companion object {
-        const val HITTEST_SKIP_AMOUNT = 0
-    }
-
     enum class NodeType {
         IMAGE_NODE,
         VIEW_NODE
