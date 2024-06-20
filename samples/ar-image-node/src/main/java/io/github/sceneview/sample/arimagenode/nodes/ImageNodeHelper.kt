@@ -1,4 +1,4 @@
-package io.github.sceneview.sample.arviewnode.nodes
+package io.github.sceneview.sample.arimagenode.nodes
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -12,7 +12,7 @@ import com.google.ar.core.Anchor
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.node.ImageNode
-import io.github.sceneview.sample.arviewnode.nodes.events.ImageNodeEvent
+import io.github.sceneview.sample.arimagenode.nodes.events.ImageNodeEvent
 
 /**
  * ## Overview

@@ -1,10 +1,11 @@
-package io.github.sceneview.sample.arviewnode
+package io.github.sceneview.sample.arimagenode
+
 
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.sample.arviewnode.databinding.ActivityMainBinding
+import io.github.sceneview.sample.arimagenode.databinding.ActivityMainBinding
 import java.util.Collections
 
 class MainActivityViewMvcImpl(

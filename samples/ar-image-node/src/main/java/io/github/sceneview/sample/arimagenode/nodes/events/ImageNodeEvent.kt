@@ -1,4 +1,4 @@
-package io.github.sceneview.sample.arviewnode.nodes.events
+package io.github.sceneview.sample.arimagenode.nodes.events
 
 import io.github.sceneview.ar.node.AnchorNode
 

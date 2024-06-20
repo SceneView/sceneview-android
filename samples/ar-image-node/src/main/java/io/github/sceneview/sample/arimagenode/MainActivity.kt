@@ -1,4 +1,5 @@
-package io.github.sceneview.sample.arviewnode
+package io.github.sceneview.sample.arimagenode
+
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -6,18 +7,17 @@ import com.google.ar.core.Config
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.createAnchorOrNull
 import io.github.sceneview.ar.node.AnchorNode
-import io.github.sceneview.sample.arviewnode.nodes.events.ViewNodeEvent
-import io.github.sceneview.sample.arviewnode.nodes.TrackingNode
-import io.github.sceneview.sample.arviewnode.nodes.ViewNodeHelper
-import io.github.sceneview.sample.arviewnode.utils.NodeRotationHelper
+import io.github.sceneview.sample.arimagenode.nodes.ImageNodeHelper
+import io.github.sceneview.sample.arimagenode.nodes.TrackingNode
+import io.github.sceneview.sample.arimagenode.nodes.events.ImageNodeEvent
+import io.github.sceneview.sample.arimagenode.utils.NodeRotationHelper
 
 
 class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
-
     private lateinit var viewMvc: MainActivityViewMvc
 
     private lateinit var trackingNode: TrackingNode
-    private lateinit var viewNodeHelper: ViewNodeHelper
+    private lateinit var imageNodeHelper: ImageNodeHelper
     private lateinit var nodeRotationHelper: NodeRotationHelper
 
     private val nodeList: MutableList<AnchorNode> = mutableListOf()
@@ -48,10 +48,10 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
             this,
             arSceneView
         )
-        viewNodeHelper = ViewNodeHelper(
+        imageNodeHelper = ImageNodeHelper(
             this,
             arSceneView,
-            this::onViewNodeEvent
+            this::onImageNodeEvent
         )
         nodeRotationHelper = NodeRotationHelper()
     }
@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
             trackingNode.getLastHitResult()?.let { hitResult ->
                 hitResult.createAnchorOrNull().apply {
                     if (this != null) {
-                        viewNodeHelper.addViewNode(this)
+                        imageNodeHelper.addImageNode(this)
                     }
                 }
             }
@@ -107,9 +107,9 @@ class MainActivity : AppCompatActivity(), MainActivityViewMvc.Listener {
 
     ///////////////////
     // region OnEvent Handling
-    private fun onViewNodeEvent(event: ViewNodeEvent) {
+    private fun onImageNodeEvent(event: ImageNodeEvent) {
         when (event) {
-            is ViewNodeEvent.NewViewNode -> {
+            is ImageNodeEvent.NewImageNode -> {
                 nodeList.add(event.anchorNode)
                 viewMvc.getSceneView().addChildNode(event.anchorNode)
             }
