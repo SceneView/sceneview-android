@@ -44,7 +44,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         }
 
     // Far = 1 km
-    private var _far = 30.0f//1000.0f
+    private var _far = 1000.0f
     override var far: Float
         get() = super.far
         set(value) {
@@ -335,7 +335,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         updateProjection()
     }
 
-    private fun getViewPortAspect() =
+    fun getViewPortAspect() =
         viewport?.let { (it.width.toDouble() / it.height.toDouble()) }?.takeIf { !it.isNaN() }
             ?: 1.0
 }

@@ -204,7 +204,7 @@ open class ModelNode(
             }
         }
         if (autoAnimate && animator.animationCount > 0) {
-            playAnimation(0)
+            for (i in 0 until animator.animationCount) { playAnimation(i) }
         }
         scaleToUnits?.let { scaleToUnitCube(it) }
         centerOrigin?.let { centerOrigin(it) }
