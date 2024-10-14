@@ -9,6 +9,8 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Transform
 
 /**
+ * Pan fixed version of the mostly duplicated com.google.android.filament.utils.GestureDetector
+ *
  * Responds to Android touch events and manages a camera manipulator.
  * Supports one-touch orbit, two-touch pan, and pinch-to-zoom.
  *
@@ -48,8 +50,6 @@ open class CameraGestureDetector(
     }
 
     /**
-     * Pan fixed version of the mostly duplicated com.google.android.filament.utils.GestureDetector
-     *
      * The first onTouch event will make the first manipulator build. So you can change the camera
      * position before any user gesture.
      *

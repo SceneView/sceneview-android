@@ -135,6 +135,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Override default camera manipulator to achieve relative zooming based on distance from camera to
+ * target and separation between two fingers.
+ *
+ * Target is calculated as closest node to center of finger's position in direction of camera.
+ */
 class AdvancedCameraManipulator(
     private val cameraNode: CameraNode,
     private val collisionSystem: CollisionSystem,
