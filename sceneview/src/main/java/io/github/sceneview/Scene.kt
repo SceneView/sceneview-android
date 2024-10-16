@@ -278,7 +278,7 @@ fun Scene(
     cameraNode: CameraNode = rememberCameraNode(engine),
     childNodes: List<Node> = rememberNodes(),
     collisionSystem: CollisionSystem = rememberCollisionSystem(view),
-    manipulator: Manipulator? = null,
+    manipulator: Manipulator,
     viewNodeWindowManager: ViewNode2.WindowManager? = null,
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
     onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,

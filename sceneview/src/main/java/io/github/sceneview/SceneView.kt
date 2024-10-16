@@ -248,7 +248,7 @@ open class SceneView @JvmOverloads constructor(
         sharedEnvironment: Environment? = null,
         isOpaque: Boolean = true,
         sharedCollisionSystem: CollisionSystem? = null,
-        manipulator: Manipulator? = null,
+        manipulator: Manipulator,
         viewNodeWindowManager: ViewNode2.WindowManager? = null,
         onGestureListener: GestureDetector.OnGestureListener? = null,
         onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
