@@ -54,9 +54,6 @@ import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
-import io.github.sceneview.gesture.orbitHomePosition
-import io.github.sceneview.gesture.targetPosition
-import io.github.sceneview.gesture.transform
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -198,7 +195,8 @@ open class SceneView @JvmOverloads constructor(
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
      */
-    cameraManipulator: Manipulator? = createDefaultCameraManipulator(sharedCameraNode?.worldPosition),
+    cameraManipulator: CameraGestureDetector.CameraManipulator? =
+        createDefaultCameraManipulator(sharedCameraNode?.worldPosition),
     /**
      * Used for Node's that can display an Android [View]
      *
@@ -225,6 +223,61 @@ open class SceneView @JvmOverloads constructor(
     sharedActivity: ComponentActivity? = null,
     sharedLifecycle: Lifecycle? = null,
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
+
+    /** ## Deprecated: Use [CameraGestureDetector.DefaultCameraManipulator]
+     *
+     * Replace `manipulator = Manipulator.Builder().build()` with
+     * `cameraManipulator = CameraGestureDetector.DefaultCameraManipulator(manipulator =
+     * Manipulator.Builder().build())`
+     */
+    @Deprecated("Use CameraGestureDetector.DefaultCameraManipulator")
+    constructor(
+        context: Context,
+        attrs: AttributeSet? = null,
+        defStyleAttr: Int = 0,
+        defStyleRes: Int = 0,
+        sharedEngine: Engine? = null,
+        sharedModelLoader: ModelLoader? = null,
+        sharedMaterialLoader: MaterialLoader? = null,
+        sharedEnvironmentLoader: EnvironmentLoader? = null,
+        sharedScene: Scene? = null,
+        sharedView: View? = null,
+        sharedRenderer: Renderer? = null,
+        sharedCameraNode: CameraNode? = null,
+        sharedMainLightNode: LightNode? = null,
+        sharedEnvironment: Environment? = null,
+        isOpaque: Boolean = true,
+        sharedCollisionSystem: CollisionSystem? = null,
+        manipulator: Manipulator,
+        viewNodeWindowManager: ViewNode2.WindowManager? = null,
+        onGestureListener: GestureDetector.OnGestureListener? = null,
+        onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
+        sharedActivity: ComponentActivity? = null,
+        sharedLifecycle: Lifecycle? = null,
+    ): this (
+        context = context,
+        attrs = attrs,
+        defStyleAttr = defStyleAttr,
+        defStyleRes = defStyleRes,
+        sharedEngine = sharedEngine,
+        sharedModelLoader = sharedModelLoader,
+        sharedMaterialLoader = sharedMaterialLoader,
+        sharedEnvironmentLoader = sharedEnvironmentLoader,
+        sharedScene = sharedScene,
+        sharedView = sharedView,
+        sharedRenderer = sharedRenderer,
+        sharedCameraNode = sharedCameraNode,
+        sharedMainLightNode = sharedMainLightNode,
+        sharedEnvironment = sharedEnvironment,
+        isOpaque = isOpaque,
+        sharedCollisionSystem = sharedCollisionSystem,
+        cameraManipulator = CameraGestureDetector.createDefaultCameraManipulator(manipulator),
+        viewNodeWindowManager = viewNodeWindowManager,
+        onGestureListener = onGestureListener,
+        onTouchEvent = onTouchEvent,
+        sharedActivity = sharedActivity,
+        sharedLifecycle = sharedLifecycle,
+    )
 
     val engine = sharedEngine ?: createEglContext().let {
         defaultEglContext = it
@@ -447,7 +500,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
     var cameraGestureDetector: CameraGestureDetector? =
-        CameraGestureDetector(viewHeight = ::getHeight, manipulator = cameraManipulator)
+        CameraGestureDetector(viewHeight = ::getHeight, cameraManipulator = cameraManipulator)
         private set
 
     /**
@@ -464,10 +517,10 @@ open class SceneView @JvmOverloads constructor(
      * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
      * is passed into the create method.
      */
-    var cameraManipulator: Manipulator?
-        get() = cameraGestureDetector?.manipulator
+    var cameraManipulator: CameraGestureDetector.CameraManipulator?
+        get() = cameraGestureDetector?.cameraManipulator
         set(value) {
-            cameraGestureDetector?.manipulator = value
+            cameraGestureDetector?.cameraManipulator = value
         }
 
     protected open val activity: ComponentActivity? = sharedActivity
@@ -676,7 +729,7 @@ open class SceneView @JvmOverloads constructor(
                 if (lastTouchEvent != null) {
                     manipulator.update(frameTimeNanos.intervalSeconds(lastFrameTimeNanos).toFloat())
                     // Extract the camera basis from the helper and push it to the Filament camera.
-                    cameraNode.transform = manipulator.transform
+                    cameraNode.transform = manipulator.getTransform()
                 }
             }
 
@@ -997,15 +1050,10 @@ open class SceneView @JvmOverloads constructor(
         fun createDefaultCameraManipulator(
             orbitHomePosition: Position? = null,
             targetPosition: Position? = null
-        ) = Manipulator.Builder()
-            .apply {
-                orbitHomePosition?.let { orbitHomePosition(it) }
-                targetPosition?.let { targetPosition(it) }
-            }
-//                .viewport(min(width, 1), min(height, 1))
-            .orbitSpeed(0.005f, 0.005f)
-            .zoomSpeed(0.05f)
-            .build(Manipulator.Mode.ORBIT)
+        ) = CameraGestureDetector.DefaultCameraManipulator(
+            orbitHomePosition = orbitHomePosition,
+            targetPosition = targetPosition
+        )
 
 
         @RequiresApi(Build.VERSION_CODES.P)
