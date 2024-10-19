@@ -5,9 +5,10 @@ import com.google.android.filament.utils.Float2
 import com.google.android.filament.utils.Manipulator
 import com.google.android.filament.utils.distance
 import com.google.android.filament.utils.mix
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Transform
 
 /**
- *
  * Pan fixed version of the mostly duplicated com.google.android.filament.utils.GestureDetector
  *
  * Responds to Android touch events and manages a camera manipulator.
@@ -16,7 +17,100 @@ import com.google.android.filament.utils.mix
  * Copied from
  * filament-utils-android/src/main/java/com/google/android/filament/utils/GestureDetector.kt
  */
-open class CameraGestureDetector(private val viewHeight: () -> Int, var manipulator: Manipulator?) {
+open class CameraGestureDetector(
+    private val viewHeight: () -> Int,
+    var cameraManipulator: CameraManipulator?,
+) {
+    /**
+     * ## Deprecated: Use CameraGestureDetector.CameraManipulator
+     *
+     * Replace `manipulator = Manipulator.Builder().build()` with
+     * `cameraManipulator = CameraGestureDetector.DefaultCameraManipulator(manipulator =
+     * Manipulator.Builder().build())`
+     */
+    @Deprecated("Use CameraGestureDetector.CameraManipulator")
+    constructor(
+        viewHeight: () -> Int,
+        manipulator: Manipulator?
+    ): this(
+        viewHeight,
+        createDefaultCameraManipulator(manipulator)
+    )
+
+    interface CameraManipulator {
+        fun setViewport(width: Int, height: Int)
+        fun getTransform(): Transform
+        fun grabBegin(x: Int, y: Int, strafe: Boolean)
+        fun grabUpdate(x: Int, y: Int)
+        fun grabEnd()
+        fun scrollBegin(x: Int, y: Int, separation: Float)
+        fun scrollUpdate(x: Int, y: Int, prevSeparation: Float, currSeparation: Float)
+        fun scrollEnd()
+        fun update(deltaTime: Float)
+    }
+
+    /**
+     * The first onTouch event will make the first manipulator build. So you can change the camera
+     * position before any user gesture.
+     *
+     * Clients notify the camera manipulator of various mouse or touch events, then periodically
+     * call its getLookAt() method so that they can adjust their camera(s). Three modes are
+     * supported: ORBIT, MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode
+     * is passed into the create method.
+     */
+    open class DefaultCameraManipulator(
+        protected val manipulator: Manipulator,
+    ): CameraManipulator {
+        private val kZoomSpeed = 1f / 10f
+
+        constructor(
+            orbitHomePosition: Position? = null,
+            targetPosition: Position? = null
+        ) : this(
+            Manipulator.Builder()
+                .apply {
+                    orbitHomePosition?.let { orbitHomePosition(it) }
+                    targetPosition?.let { targetPosition(it) }
+                }
+//                .viewport(min(width, 1), min(height, 1))
+                .orbitSpeed(0.005f, 0.005f)
+                .zoomSpeed(0.05f)
+                .build(Manipulator.Mode.ORBIT),
+        )
+
+        override fun setViewport(width: Int, height: Int) {
+            manipulator.setViewport(width, height)
+        }
+
+        override fun getTransform(): Transform {
+            return manipulator.transform
+        }
+
+        override fun grabBegin(x: Int, y: Int, strafe: Boolean) {
+            manipulator.grabBegin(x, y, strafe)
+        }
+
+        override fun grabUpdate(x: Int, y: Int) {
+            manipulator.grabUpdate(x, y)
+        }
+
+        override fun grabEnd() {
+            manipulator.grabEnd()
+        }
+
+        override fun scrollBegin(x: Int, y: Int, separation: Float) {}
+
+        override fun scrollUpdate(x: Int, y: Int, prevSeparation: Float, currSeparation: Float) {
+            manipulator.scroll(x, y, (prevSeparation - currSeparation) * kZoomSpeed)
+        }
+
+        override fun scrollEnd() {}
+
+        override fun update(deltaTime: Float) {
+            manipulator.update(deltaTime)
+        }
+    }
+
     private enum class Gesture { NONE, ORBIT, PAN, ZOOM }
 
     // Simplified memento of MotionEvent, minimal but sufficient for our purposes.
@@ -49,7 +143,6 @@ open class CameraGestureDetector(private val viewHeight: () -> Int, var manipula
     private val kGestureConfidenceCount = 2
     private val kPanConfidenceDistance = 10
     private val kZoomConfidenceDistance = 10
-    private val kZoomSpeed = 1f / 10f
 
     var isPanEnabled: Boolean = true
 
@@ -73,13 +166,13 @@ open class CameraGestureDetector(private val viewHeight: () -> Int, var manipula
                 if (currentGesture == Gesture.ZOOM) {
                     val d0 = previousTouch.separation
                     val d1 = touch.separation
-                    manipulator?.scroll(touch.x, touch.y, (d0 - d1) * kZoomSpeed)
+                    cameraManipulator?.scrollUpdate(touch.x, touch.y, d0, d1)
                     previousTouch = touch
                     return
                 }
 
                 if (currentGesture != Gesture.NONE) {
-                    manipulator?.grabUpdate(touch.x, touch.y)
+                    cameraManipulator?.grabUpdate(touch.x, touch.y)
                     return
                 }
 
@@ -95,19 +188,20 @@ open class CameraGestureDetector(private val viewHeight: () -> Int, var manipula
                 }
 
                 if (isOrbitGesture()) {
-                    manipulator?.grabBegin(touch.x, touch.y, false)
+                    cameraManipulator?.grabBegin(touch.x, touch.y, false)
                     currentGesture = Gesture.ORBIT
                     return
                 }
 
                 if (isZoomGesture()) {
+                    cameraManipulator?.scrollBegin(touch.x, touch.y, touch.separation)
                     currentGesture = Gesture.ZOOM
                     previousTouch = touch
                     return
                 }
 
                 if (isPanGesture()) {
-                    manipulator?.grabBegin(touch.x, touch.y, true)
+                    cameraManipulator?.grabBegin(touch.x, touch.y, true)
                     currentGesture = Gesture.PAN
                     return
                 }
@@ -124,7 +218,7 @@ open class CameraGestureDetector(private val viewHeight: () -> Int, var manipula
         tentativeOrbitEvents.clear()
         tentativeZoomEvents.clear()
         currentGesture = Gesture.NONE
-        manipulator?.grabEnd()
+        cameraManipulator?.grabEnd()
     }
 
     private fun isOrbitGesture(): Boolean {
@@ -147,5 +241,17 @@ open class CameraGestureDetector(private val viewHeight: () -> Int, var manipula
         val oldest = tentativeZoomEvents.first().separation
         val newest = tentativeZoomEvents.last().separation
         return kotlin.math.abs(newest - oldest) > kZoomConfidenceDistance
+    }
+
+    companion object {
+        fun createDefaultCameraManipulator(
+            manipulator: Manipulator? = null,
+        ): DefaultCameraManipulator? {
+            if (manipulator == null) {
+                return null
+            }
+
+            return DefaultCameraManipulator(manipulator)
+        }
     }
 }

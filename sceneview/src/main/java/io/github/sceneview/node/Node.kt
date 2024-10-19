@@ -32,7 +32,6 @@ import io.github.sceneview.collision.TransformProvider
 import io.github.sceneview.gesture.MoveGestureDetector
 import io.github.sceneview.gesture.RotateGestureDetector
 import io.github.sceneview.gesture.ScaleGestureDetector
-import io.github.sceneview.gesture.transform
 import io.github.sceneview.managers.getParentOrNull
 import io.github.sceneview.managers.getTransform
 import io.github.sceneview.managers.getWorldTransform
