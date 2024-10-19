@@ -3,6 +3,7 @@ package io.github.sceneview.sample.arcloudanchor
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -50,7 +51,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                     hostButton.isVisible = true
                     resolveButton.isVisible = true
                     actionButton.isVisible = false
-                    cloudAnchorNode.isVisible = false
+                    if (::cloudAnchorNode.isInitialized) {
+                        cloudAnchorNode.isVisible = false
+                    }
                 }
 
                 Mode.HOST -> {
@@ -62,7 +65,10 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                         isVisible = true
                         isEnabled = true
                     }
-                    cloudAnchorNode.isVisible = true
+                    if (::cloudAnchorNode.isInitialized) {
+                        Log.e(TAG, "CloudAnchorNode resolved")
+                        cloudAnchorNode.isVisible = true
+                    }
                 }
 
                 Mode.RESOLVE -> {
@@ -94,11 +100,13 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             loadingView.isGone = !value
         }
 
-    var cloudAnchorId by requireContext().getSharedPreferences("preferences", Context.MODE_PRIVATE)
-        .string(defaultValue = null)
+    private var cloudAnchorId: String? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        cloudAnchorId = requireContext().getSharedPreferences("preferences", Context.MODE_PRIVATE)
+            .string().toString()
 
         val topGuideline = view.findViewById<Guideline>(R.id.topGuideline)
         topGuideline.doOnApplyWindowInsets { systemBarsInsets ->
@@ -165,7 +173,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                     return
                 }
                 val anchor = cursorNode.createAnchor() ?: return
-
+                session.hostCloudAnchorAsync(anchor, 20,null)
+                cloudAnchorNode = CloudAnchorNode(sceneView.engine, anchor, cloudAnchorId)
                 sceneView.addChildNode(CloudAnchorNode(sceneView.engine, anchor).apply {
                     host(session) { cloudAnchorId, state ->
                         mode = if (state == CloudAnchorState.SUCCESS && cloudAnchorId != null) {
