@@ -1055,8 +1055,6 @@ open class SceneView @JvmOverloads constructor(
             targetPosition = targetPosition
         )
 
-
-        @RequiresApi(Build.VERSION_CODES.P)
         fun createViewNodeManager(context: Context) = ViewNode2.WindowManager(context)
 
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
