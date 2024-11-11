@@ -6,7 +6,6 @@ import android.graphics.Canvas
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.SurfaceTexture
-import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -18,7 +17,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.setViewTreeFullyDrawnReporterOwner
 import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
 import androidx.annotation.LayoutRes
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -63,7 +61,6 @@ import io.github.sceneview.safeDestroyTexture
  * (water, mirror surfaces, front camera in AR, etc.).
  * True to invert front faces, false otherwise
  */
-@RequiresApi(Build.VERSION_CODES.P)
 class ViewNode2(
     engine: Engine,
     val windowManager: WindowManager,
@@ -319,7 +316,6 @@ class ViewNode2(
      *  the view will not be marked as dirty when child views are animating when hardware
      *  accelerated.
      */
-    @RequiresApi(Build.VERSION_CODES.P)
     inner class Layout @JvmOverloads constructor(
         context: Context,
         attrs: AttributeSet? = null,
