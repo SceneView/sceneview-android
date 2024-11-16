@@ -1,15 +1,16 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
     namespace 'io.github.sceneview.sample.common'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         minSdk 24
-        targetSdk 34
+        targetSdk 35
     }
 
     compileOptions {
@@ -21,9 +22,6 @@ android {
     }
     buildFeatures {
         compose true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
 }
 
