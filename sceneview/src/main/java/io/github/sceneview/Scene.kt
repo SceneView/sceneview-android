@@ -584,7 +584,6 @@ fun rememberCameraManipulator(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.P)
 @Composable
 fun rememberViewNodeManager(
     context: Context = LocalContext.current,

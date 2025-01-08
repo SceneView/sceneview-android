@@ -1,15 +1,11 @@
 package io.github.sceneview.node
 
 import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Canvas
-import android.graphics.ImageFormat
-import android.graphics.Picture
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
-import android.media.ImageReader
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
+import android.graphics.SurfaceTexture
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -17,11 +13,16 @@ import android.view.Surface
 import android.view.View
 import android.view.WindowManager.LayoutParams
 import android.widget.FrameLayout
+import androidx.activity.ComponentActivity
+import androidx.activity.setViewTreeFullyDrawnReporterOwner
+import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
 import androidx.annotation.LayoutRes
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
@@ -60,7 +61,6 @@ import io.github.sceneview.safeDestroyTexture
  * (water, mirror surfaces, front camera in AR, etc.).
  * True to invert front faces, false otherwise
  */
-@RequiresApi(Build.VERSION_CODES.P)
 class ViewNode2(
     engine: Engine,
     val windowManager: WindowManager,
@@ -68,12 +68,7 @@ class ViewNode2(
     view: View,
     unlit: Boolean = false,
     invertFrontFaceWinding: Boolean = false,
-    // This seems a little high, but lower values cause occasional "client tried to acquire
-    // more than maxImages buffers" on a Pixel 3
-    val imageReaderMaxImages: Int = 7
 ) : PlaneNode(engine = engine) {
-
-    var surface: Surface? = null
 
     // Updated when the view is added to the view manager
     var pxPerUnits = 250.0f
@@ -92,11 +87,11 @@ class ViewNode2(
         addView(view)
     }
 
-    private var imageReader: ImageReader? = null
-    private val picture = Picture()
-    private val directImageHandler = Handler(Looper.getMainLooper())
+    private val surfaceTexture = SurfaceTexture(0).also { it.detachFromGLContext() }
+    private val surface = Surface(surfaceTexture)
 
     val stream: Stream = Stream.Builder()
+        .stream(surfaceTexture)
         .build(engine)
 
     val texture: Texture = Texture.Builder()
@@ -295,13 +290,14 @@ class ViewNode2(
 //    }
 
     override fun destroy() {
-        super.destroy()
+
+        windowManager.removeView(layout)
 
         engine.safeDestroyMaterialInstance(materialInstance)
         engine.safeDestroyTexture(texture)
         engine.safeDestroyStream(stream)
 
-        windowManager.removeView(layout)
+        super.destroy()
     }
 
     /**
@@ -320,7 +316,6 @@ class ViewNode2(
      *  the view will not be marked as dirty when child views are animating when hardware
      *  accelerated.
      */
-    @RequiresApi(Build.VERSION_CODES.P)
     inner class Layout @JvmOverloads constructor(
         context: Context,
         attrs: AttributeSet? = null,
@@ -332,15 +327,8 @@ class ViewNode2(
             super.onLayout(changed, left, top, right, bottom)
 
             // Only called when we first get View size
-            imageReader?.close()
-            imageReader = ImageReader.newInstance(
-                width,
-                height,
-                ImageFormat.RGB_565,
-                imageReaderMaxImages
-            )
-            surface?.release()
-            surface = imageReader?.surface
+            surfaceTexture.setDefaultBufferSize(width, height)
+
         }
 
         override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
@@ -351,30 +339,13 @@ class ViewNode2(
 
         override fun dispatchDraw(canvas: Canvas) {
             if (!isAttachedToWindow) return
-            // Check for Stream validity
-            val stream = stream.takeIf { it.timestamp > 0 } ?: return
 
             // Sanity that the surface is valid.
-            val viewSurface = surface?.takeIf { it.isValid } ?: return
-            if (isDirty) {
-                val pictureCanvas = picture.beginRecording(width, height)
-                pictureCanvas.drawColor(android.graphics.Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-                super.dispatchDraw(pictureCanvas)
-                picture.endRecording()
-                val surfaceCanvas = viewSurface.lockCanvas(null)
-                picture.draw(surfaceCanvas)
-                viewSurface.unlockCanvasAndPost(surfaceCanvas)
-
-                val image = imageReader!!.acquireLatestImage()
-                stream.setAcquiredImage(
-                    image.hardwareBuffer!!,
-                    directImageHandler
-                ) {
-                    image.close()
-                }
-            }
-            // Ask for redraw to update on each frames until stream is null
-            invalidate()
+            val viewSurface = surface.takeIf { it.isValid } ?: return
+            val surfaceCanvas = viewSurface.lockCanvas(null)
+            surfaceCanvas.drawColor(android.graphics.Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+            super.dispatchDraw(surfaceCanvas)
+            viewSurface.unlockCanvasAndPost(surfaceCanvas)
         }
     }
 
@@ -383,7 +354,17 @@ class ViewNode2(
         private val windowManager =
             context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
 
-        val layout by lazy { FrameLayout(context) }
+        val layout by lazy {
+            FrameLayout(context).also {
+                context.findActivity()?.let { activity ->
+                    it.setViewTreeLifecycleOwner(activity)
+                    it.setViewTreeSavedStateRegistryOwner(activity)
+                    it.setViewTreeViewModelStoreOwner(activity)
+                    it.setViewTreeFullyDrawnReporterOwner(activity)
+                    it.setViewTreeOnBackPressedDispatcherOwner(activity)
+                }
+            }
+        }
 
         fun addView(view: View) = layout.addView(view)
         fun addView(view: View, params: FrameLayout.LayoutParams) = layout.addView(view, params)
@@ -441,4 +422,9 @@ class ViewNode2(
             }
         }
     }
+}
+
+
+private fun Context.findActivity(): ComponentActivity? {
+    return generateSequence(this) { (it as? ContextWrapper)?.baseContext }.filterIsInstance<ComponentActivity>().firstOrNull()
 }
