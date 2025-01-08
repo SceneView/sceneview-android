@@ -893,9 +893,7 @@ open class SceneView @JvmOverloads constructor(
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                viewNodeWindowManager?.resume(this@SceneView)
-            }
+            viewNodeWindowManager?.resume(this@SceneView)
 
             // Start the drawing when the renderer is resumed.  Remove and re-add the callback
             // to avoid getting called twice.
@@ -908,15 +906,11 @@ open class SceneView @JvmOverloads constructor(
         override fun onPause(owner: LifecycleOwner) {
             Choreographer.getInstance().removeFrameCallback(frameCallback)
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                viewNodeWindowManager?.pause()
-            }
+            viewNodeWindowManager?.pause()
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                viewNodeWindowManager?.destroy()
-            }
+            viewNodeWindowManager?.destroy()
             destroy()
         }
     }
@@ -1055,8 +1049,6 @@ open class SceneView @JvmOverloads constructor(
             targetPosition = targetPosition
         )
 
-
-        @RequiresApi(Build.VERSION_CODES.P)
         fun createViewNodeManager(context: Context) = ViewNode2.WindowManager(context)
 
         fun createMainLightNode(engine: Engine): LightNode = DefaultLightNode(engine)
