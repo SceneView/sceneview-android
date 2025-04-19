@@ -40,6 +40,6 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.6.1")
 
     // ARSceneview
-    releaseImplementation "io.github.sceneview:arsceneview:2.2.1"
+    releaseImplementation "io.github.sceneview:arsceneview:2.3.0"
     debugImplementation project(":arsceneview")
 }
