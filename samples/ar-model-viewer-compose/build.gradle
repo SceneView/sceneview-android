@@ -53,6 +53,6 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-tooling:1.7.8"
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:2.2.1"
+    releaseImplementation "io.github.sceneview:arsceneview:2.3.0"
     debugImplementation project(":arsceneview")
 }
