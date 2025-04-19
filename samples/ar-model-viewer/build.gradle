@@ -6,12 +6,12 @@ plugins {
 android {
     namespace "io.github.sceneview.sample.armodelviewer"
 
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "io.github.sceneview.sample.armodelviewer"
         minSdk 28
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0.0"
     }

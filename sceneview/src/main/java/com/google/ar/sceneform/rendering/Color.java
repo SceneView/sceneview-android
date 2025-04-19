@@ -9,6 +9,7 @@ import com.google.android.filament.Colors;
  *
  * @deprecated
  */
+@Deprecated
 public class Color {
   private static final float INT_COLOR_SCALE = 1.0f / 255.0f;
 
