@@ -85,46 +85,6 @@ interface RenderableComponent : Component {
         renderableManager.setMorphWeights(renderableInstance, weights, offset)
 
     /**
-     * Changes the morph target buffer for the given primitive.
-     *
-     * The renderable must be built with morphing enabled.
-     *
-     * @see RenderableManager.setMorphTargetBufferAt
-     */
-    fun setMorphTargetBufferAt(
-        @IntRange(from = 0) level: Int,
-        @IntRange(from = 0) primitiveIndex: Int,
-        morphTargetBuffer: MorphTargetBuffer,
-        @IntRange(from = 0) offset: Int,
-        @IntRange(from = 0) count: Int
-    ) = renderableManager.setMorphTargetBufferAt(
-        renderableInstance,
-        level,
-        primitiveIndex,
-        morphTargetBuffer,
-        offset,
-        count
-    )
-
-    /**
-     * Utility method to change morph target buffer for the given primitive.
-     *
-     * @see RenderableManager.setMorphTargetBufferAt
-     */
-    fun setMorphTargetBufferAt(
-        @IntRange(from = 0) level: Int,
-        @IntRange(from = 0) primitiveIndex: Int,
-        morphTargetBuffer: MorphTargetBuffer
-    ) = renderableManager.setMorphTargetBufferAt(
-        renderableInstance,
-        level,
-        primitiveIndex,
-        morphTargetBuffer,
-        0,
-        morphTargetBuffer.vertexCount
-    )
-
-    /**
      * Gets the morph target count on a renderable.
      *
      * @see RenderableManager.getMorphTargetCount

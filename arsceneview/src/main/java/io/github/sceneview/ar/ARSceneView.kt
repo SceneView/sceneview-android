@@ -578,15 +578,15 @@ open class ARSceneView @JvmOverloads constructor(
 
     override fun destroy() {
         if (!isDestroyed) {
-            defaultCameraNode?.destroy()
-            defaultCameraStream?.destroy()
+            runCatching { defaultCameraNode?.destroy() }
+            runCatching { defaultCameraStream?.destroy() }
 
-            lightEstimator?.destroy()
-            planeRenderer.destroy()
-            destroyArCore()
+            runCatching { lightEstimator?.destroy() }
+            runCatching { planeRenderer.destroy() }
+            runCatching { destroyArCore() }
         }
 
-        super.destroy()
+        runCatching { super.destroy() }
     }
 
     private fun destroyArCore() {

@@ -1,16 +1,18 @@
 buildscript {
-    ext.kotlin_version = '1.9.24'
+    ext.kotlin_version = '2.0.21'
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.4.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24"
+        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21"
         // Maven Central Publish
         classpath "com.vanniktech:gradle-maven-publish-plugin:0.25.3"
         // Dokka
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.9.10"
+        // Compose
+        classpath "org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.0.21"
     }
 }
 
