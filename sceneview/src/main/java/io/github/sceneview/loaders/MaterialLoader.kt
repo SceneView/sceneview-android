@@ -301,14 +301,18 @@ class MaterialLoader(
     }
 
     fun destroyMaterial(material: Material) {
-        engine.safeDestroyMaterialInstance(material.defaultInstance)
-        engine.safeDestroyMaterial(material)
-        materials -= material
+        if (material in materials) {
+            engine.safeDestroyMaterialInstance(material.defaultInstance)
+            engine.safeDestroyMaterial(material)
+            materials -= material
+        }
     }
 
     fun destroyMaterialInstance(materialInstance: MaterialInstance) {
-        engine.safeDestroyMaterialInstance(materialInstance)
-        materialInstances -= materialInstance
+        if (materialInstance in materialInstances) {
+            engine.safeDestroyMaterialInstance(materialInstance)
+            materialInstances -= materialInstance
+        }
     }
 
     fun destroy() {
