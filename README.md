@@ -29,8 +29,8 @@
 
 SceneView enables developers to easily incorporate 3D and AR capabilities into Android applications using Google's Filament rendering engine and ARCore. The library offers two main components:
 
-1. **SceneView**: 3D rendering capabilities using Filament
-2. **ARSceneView**: Augmented reality capabilities using Filament + ARCore
+1. **Sceneview**: 3D rendering capabilities using Filament
+2. **ARSceneview**: Augmented reality capabilities using Filament + ARCore
 
 ## <a name="3d-scene-with-filament"></a>3D Scene with Filament
 
@@ -50,8 +50,11 @@ dependencies {
 Here's a basic example of creating a 3D scene in Jetpack Compose:
 
 ```kotlin
-// Core rendering components
+
+// Filament 3D Engine
 val engine = rememberEngine()
+
+// Core rendering components
 val view = rememberView(engine)
 val renderer = rememberRenderer(engine)
 val scene = rememberScene(engine)
@@ -60,6 +63,8 @@ val scene = rememberScene(engine)
 val modelLoader = rememberModelLoader(engine)
 val materialLoader = rememberMaterialLoader(engine)
 val environmentLoader = rememberEnvironmentLoader(engine)
+
+// Collision System
 val collisionSystem = rememberCollisionSystem(view)
 
 Scene(
@@ -99,25 +104,30 @@ Scene(
         // Add a glTF model
         add(
             ModelNode(
+                // Create a single instance model from assets file
                 modelInstance = modelLoader.createModelInstance(
                     assetFileLocation = "models/damaged_helmet.glb"
                 ),
+                // Make the model fit into a 1 unit cube
                 scaleToUnits = 1.0f
             )
         )
         
         // Add a 3D cylinder with custom material
-        add(CylinderNode(
-            engine = engine,
-            radius = 0.2f,
-            height = 2.0f,
-            materialInstance = materialLoader.createColorInstance(
-                color = Color.Blue,
-                metallic = 0.5f,
-                roughness = 0.2f,
-                reflectance = 0.4f
-            )
+        add(
+            CylinderNode(
+                engine = engine,
+                radius = 0.2f,
+                height = 2.0f,
+                // Simple colored material with physics properties
+                materialInstance = materialLoader.createColorInstance(
+                    color = Color.Blue,
+                    metallic = 0.5f,
+                    roughness = 0.2f,
+                    reflectance = 0.4f
+                )
         ).apply {
+            // Define the node position and rotation 
             transform(
                 position = Position(y = 1.0f),
                 rotation = Rotation(x = 90.0f)
@@ -132,6 +142,7 @@ Scene(
         }
     ),
     
+    // Handle tap event on the scene
     onTouchEvent = { event: MotionEvent, hitResult: HitResult? ->
         hitResult?.let { println("World tapped : ${it.worldPosition}") }
         false
@@ -146,8 +157,10 @@ Scene(
 
 ### <a name="3d-sample-projects"></a>Sample Projects
 
-- [Model Viewer (Compose)](https://github.com/SceneView/sceneview-android/tree/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/model-viewer-compose)
-- [Model Viewer (Layout)](https://github.com/SceneView/sceneview-android/tree/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/model-viewer)
+- [Model Viewer (Compose)](/samples/model-viewer-compose)
+- [Model Viewer (Layout)](/samples/model-viewer)
+- [Camera Manipulator (Compose)](/samples/camera-manipulator-compose)
+- [gtTF Camera (Compose)](/samples/gltf-camera)
 
 ## <a name="ar-scene-with-arcore"></a>AR Scene with ARCore
 
@@ -174,7 +187,7 @@ ARScene(
     
     // Configure AR session settings
     sessionConfiguration = { session, config ->
-        // Enable depth if supported
+        // Enable depth if supported on the device
         config.depthMode =
             when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                 true -> Config.DepthMode.AUTOMATIC
@@ -220,11 +233,11 @@ ARScene(
 
 ### <a name="ar-sample-projects"></a>Sample Projects
 
-- [AR Augmented Image](https://github.com/SceneView/sceneview-android/tree/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/ar-augmented-image)
-- [AR Cloud Anchors](https://github.com/SceneView/sceneview-android/tree/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/ar-cloud-anchor)
-- [AR Model Viewer (Compose)](https://github.com/SceneView/sceneview-android/tree/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/ar-model-viewer-compose)
-- [AR Model Viewer (Layout)](https://github.com/SceneView/sceneview-android/tree/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/ar-model-viewer)
-- [AR Point Cloud](https://github.com/SceneView/sceneview-android/tree/2bed398b3e10e8e9737d6e4a38933e783c1ee75e/samples/ar-point-cloud)
+- [AR Model Viewer (Compose)](/samples/ar-model-viewer-compose)
+- [AR Model Viewer (Layout)](/samples/ar-model-viewer)
+- [AR Augmented Image](/samples/ar-augmented-image)
+- [AR Cloud Anchors](/samples/ar-cloud-anchor)
+- [AR Point Cloud](/samples/ar-point-cloud)
 
 ## Resources
 
@@ -233,9 +246,9 @@ ARScene(
 - [AR API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
 
 ### Community
-- [SceneView Website](https://sceneview.github.io/)
-- [Discord Server](https://discord.gg/UbNDDBTNqb)
-- [YouTube Tutorials](https://www.youtube.com/results?search_query=Sceneview+android)
+- [Website](https://sceneview.github.io/)
+- [Discord](https://discord.gg/UbNDDBTNqb)
+- [YouTube](https://www.youtube.com/results?search_query=Sceneview+android)
 
 ### Related Projects
 - [Google Filament](https://github.com/google/filament)
