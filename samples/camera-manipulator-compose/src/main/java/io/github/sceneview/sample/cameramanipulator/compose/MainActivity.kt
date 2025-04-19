@@ -1,4 +1,4 @@
-package io.github.sceneview.sample.modelviewer.compose.cameramanipulator
+package io.github.sceneview.sample.cameramanipulator.compose
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
