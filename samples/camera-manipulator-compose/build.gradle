@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    namespace 'io.github.sceneview.sample.modelviewer.compose.cameramanipulator'
+    namespace 'io.github.sceneview.sample.cameramanipulator.compose'
 
     compileSdk 35
 
     defaultConfig {
-        applicationId "io.github.sceneview.sample.modelviewer.compose.cameramanipulator"
+        applicationId "io.github.sceneview.sample.cameramanipulator.compose"
         minSdk 28
         targetSdk 35
         versionCode 1
