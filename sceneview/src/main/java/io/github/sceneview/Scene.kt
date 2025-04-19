@@ -2,11 +2,9 @@ package io.github.sceneview
 
 import android.content.Context
 import android.opengl.EGLContext
-import android.os.Build
 import android.view.MotionEvent
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -17,9 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
@@ -163,11 +161,11 @@ fun Scene(
     /**
      * Used for Node's that can display an Android [View]
      *
-     * Manages a [FrameLayout] that is attached directly to a [WindowManager] that other views can be
+     * Manages a [FrameLayout] that is attached directly to a [ViewNode2.WindowManager] that other views can be
      * added and removed from.
      *
-     * To render a [View], the [View] must be attached to a [WindowManager] so that it can be properly
-     * drawn. This class encapsulates a [FrameLayout] that is attached to a [WindowManager] that other
+     * To render a [View], the [View] must be attached to a [ViewNode2.WindowManager] so that it can be properly
+     * drawn. This class encapsulates a [FrameLayout] that is attached to a [ViewNode2.WindowManager] that other
      * views can be added to as children. This allows us to safely and correctly draw the [View]
      * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
      * isolated from the rest of the activities View hierarchy.
