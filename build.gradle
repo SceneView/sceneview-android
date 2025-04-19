@@ -8,7 +8,7 @@ buildscript {
         classpath 'com.android.tools.build:gradle:8.7.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21"
         // Maven Central Publish
-        classpath "com.vanniktech:gradle-maven-publish-plugin:0.25.3"
+        classpath "com.vanniktech:gradle-maven-publish-plugin:0.30.0"
         // Dokka
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.9.10"
         // Compose
