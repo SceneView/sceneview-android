@@ -64,7 +64,7 @@ import io.github.sceneview.safeDestroyTexture
 class ViewNode2(
     engine: Engine,
     val windowManager: WindowManager,
-    materialLoader: MaterialLoader,
+    private val materialLoader: MaterialLoader,
     view: View,
     unlit: Boolean = false,
     invertFrontFaceWinding: Boolean = false,
@@ -102,13 +102,18 @@ class ViewNode2(
             setExternalStream(engine, stream)
         }
 
-    init {
-        materialInstance = materialLoader.createViewInstance(
-            viewTexture = texture,
-            unlit = unlit,
-            invertFrontFaceWinding = invertFrontFaceWinding
-        )
+    override var materialInstance: MaterialInstance = materialLoader.createViewInstance(viewTexture = texture,
+        unlit = unlit,
+        invertFrontFaceWinding = invertFrontFaceWinding
+    ).also {
+        setMaterialInstanceAt(0, it)
     }
+        set(value) {
+            val old = field
+            materialLoader.destroyMaterialInstance(old)
+            field = value
+            setMaterialInstanceAt(0, value)
+        }
 
     constructor(
         engine: Engine,
@@ -293,7 +298,7 @@ class ViewNode2(
 
         windowManager.removeView(layout)
 
-        engine.safeDestroyMaterialInstance(materialInstance)
+        materialLoader.destroyMaterialInstance(materialInstance)
         engine.safeDestroyTexture(texture)
         engine.safeDestroyStream(stream)
 
@@ -426,5 +431,6 @@ class ViewNode2(
 
 
 private fun Context.findActivity(): ComponentActivity? {
-    return generateSequence(this) { (it as? ContextWrapper)?.baseContext }.filterIsInstance<ComponentActivity>().firstOrNull()
+    return generateSequence(this) { (it as? ContextWrapper)?.baseContext }.filterIsInstance<ComponentActivity>()
+        .firstOrNull()
 }
