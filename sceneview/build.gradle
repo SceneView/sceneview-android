@@ -72,6 +72,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     // Preserve compression of filament files
     androidResources {
@@ -81,7 +82,7 @@ android {
 
 dependencies {
     // Android KTX
-    implementation "androidx.fragment:fragment-ktx:1.8.5"
+    implementation "androidx.fragment:fragment-ktx:1.8.6"
 
     // Compose
     implementation "androidx.compose.ui:ui:1.7.8"
