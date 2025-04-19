@@ -6,8 +6,9 @@
 
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![Filament](https://img.shields.io/badge/Filament-v1.51.0-yellow)](https://github.com/google/filament)
-[![ARCore](https://img.shields.io/badge/ARCore-v1.42.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
+[![Filament](https://img.shields.io/badge/Filament-v1.56.0-yellow)](https://github.com/google/filament)
+[![ARCore](https://img.shields.io/badge/ARCore-v1.48.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
+
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 [![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
 
@@ -30,7 +31,7 @@
 SceneView enables developers to easily incorporate 3D and AR capabilities into Android applications using Google's Filament rendering engine and ARCore. The library offers two main components:
 
 1. **Sceneview**: 3D rendering capabilities using Filament
-2. **ARSceneview**: Augmented reality capabilities using Filament + ARCore
+2. **ARSceneview**: Augmented Reality capabilities using Filament and ARCore
 
 ## <a name="3d-scene-with-filament"></a>3D Scene with Filament
 
@@ -54,30 +55,27 @@ Here's a basic example of creating a 3D scene in Jetpack Compose:
 // Filament 3D Engine
 val engine = rememberEngine()
 
-// Core rendering components
-val view = rememberView(engine)
-val renderer = rememberRenderer(engine)
-val scene = rememberScene(engine)
-
 // Asset loaders
 val modelLoader = rememberModelLoader(engine)
 val materialLoader = rememberMaterialLoader(engine)
 val environmentLoader = rememberEnvironmentLoader(engine)
 
-// Collision System
-val collisionSystem = rememberCollisionSystem(view)
-
 Scene(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
-    view = view,
-    renderer = renderer,
-    scene = scene,
+
+    // Core rendering components
+    view = rememberView(engine),
+    renderer = rememberRenderer(engine),
+    scene = rememberScene(engine),
+ 
+    // Asset loaders
     modelLoader = modelLoader,
     materialLoader = materialLoader,
     environmentLoader = environmentLoader,
-    collisionSystem = collisionSystem,
-    isOpaque = true,
+
+    // Collision System
+    collisionSystem = rememberCollisionSystem(view)
     
     // Add a direct light source (required for shadows)
     mainLightNode = rememberMainLightNode(engine) {
