@@ -20,10 +20,10 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.managers.safeDestroy
 import io.github.sceneview.material.setExternalTexture
 import io.github.sceneview.material.setParameter
-import io.github.sceneview.material.setTexture
 import io.github.sceneview.math.Transform
 import io.github.sceneview.safeDestroyTexture
 import io.github.sceneview.safeDestroyVertexBuffer
+import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.utils.OpenGL
 import io.github.sceneview.utils.clone
 import java.nio.ByteBuffer
@@ -86,9 +86,17 @@ open class ARCameraStream(
     /**
      * Extracted texture from the session depth image
      */
-    val depthTexture =
-        Texture.Builder().sampler(Texture.Sampler.SAMPLER_2D).format(Texture.InternalFormat.RG8)
-            .levels(1).build(engine)
+    var depthTexture: Texture? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                value?.let {
+                    depthOcclusionMaterial.setDefaultParameter(
+                        kDepthTextureParameter, value, TextureSampler2D()
+                    )
+                }
+            }
+        }
 
     /**
      * ### Flat camera material
@@ -107,7 +115,6 @@ open class ARCameraStream(
         defaultInstance.apply {
             setParameter(kUVTransformParameter, Transform())
             setExternalTexture(kCameraTextureParameter, cameraTexture)
-            setTexture(kDepthTextureParameter, depthTexture)
         }
     }
 
@@ -238,6 +245,19 @@ open class ARCameraStream(
                 else -> null
             }?.let { depthImage ->
                 // Recalculate Occlusion
+                val depthTexture = depthTexture?.takeIf {
+                    it.getWidth(0) == depthImage.width && it.getHeight(0) == depthImage.height
+                } ?: Texture.Builder()
+                    .width(depthImage.width)
+                    .height(depthImage.height)
+                    .sampler(Texture.Sampler.SAMPLER_2D)
+                    .format(Texture.InternalFormat.RG8)
+                    .levels(1)
+                    .build(engine).also {
+                        depthTexture?.let(engine::safeDestroyTexture)
+                        depthTexture = it
+                    }
+
                 // To solve a problem with a to early released DepthImage the ByteBuffer which holds
                 // all necessary data is cloned. The cloned ByteBuffer is unaffected of a released
                 // DepthImage and therefore produces not a flickering result.
@@ -261,7 +281,7 @@ open class ARCameraStream(
         engine.safeDestroyVertexBuffer(vertexBuffer)
         renderableManager.safeDestroy(entity)
         cameraTextures.values.forEach { engine.safeDestroyTexture(it) }
-        engine.safeDestroyTexture(depthTexture)
+        depthTexture?.let(engine::safeDestroyTexture)
         uvCoordinates.clear()
         transformedUvCoordinates?.clear()
         Log.d("Sceneview", "CameraStream destroyed")
