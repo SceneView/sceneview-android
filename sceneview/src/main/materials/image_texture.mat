@@ -5,6 +5,10 @@ material {
         {
            "type" : "sampler2d",
            "name" : "texture"
+        },
+        {
+            "type": "float",
+            "name": "opacity",
         }
     ],
     "requires" : [
@@ -18,6 +22,10 @@ material {
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        material.baseColor = texture(materialParams_texture, getUV0());
+        vec4 tex = texture(materialParams_texture, getUV0());
+        float finalAlpha = tex.a * materialParams.opacity;
+        tex.rgb *= finalAlpha;
+        tex.a = finalAlpha;
+        material.baseColor = tex;
     }
 }
