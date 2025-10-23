@@ -8,7 +8,6 @@ import android.net.Uri
 import android.util.Log
 import androidx.annotation.RawRes
 import androidx.core.net.toUri
-import com.google.ar.sceneform.utilities.SceneformBufferUtils
 import fuel.Fuel
 import fuel.HttpLoader
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +20,7 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 object FileLoader {
-    private val TAG: String = SceneformBufferUtils::class.java.getSimpleName()
+    private val TAG: String = FileLoader::class.java.getSimpleName()
     private const val ASSET_FILE_PATH_ROOT = "android_asset"
 
     /**
