@@ -1,0 +1,87 @@
+[versions]
+
+agp = "8.13.0"
+kotlin = "2.2.21"
+composeCompiler = "2.2.20"
+coreKtx = "1.17.0"
+appcompat = "1.7.1"
+fragmentKtx = "1.8.9"
+
+composeUi = "1.9.4"
+composeFoundation = "1.9.4"
+composeMaterial = "1.9.4"
+composeMaterial3 = "1.4.0"
+activityCompose = "1.11.0"
+navigationCompose = "2.9.5"
+
+coroutines = "1.10.2"
+kotlinMath = "1.6.0"
+
+arCore = "1.51.0"
+filament = "1.66.0"
+fuel = "2.3.1"
+googleMaterial = "1.13.0"
+media3 = "1.8.0"
+
+mavenPublish = "0.30.0"
+dokka = "2.1.0"
+
+[libraries]
+arsceneview = { module = "io.github.sceneview:arsceneview", version = "2.3.0"}
+sceneview = { module = "io.github.sceneview:sceneview", version = "2.3.0"}
+
+# AndroidX
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
+
+# Compose
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "composeUi" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "composeUi" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "composeUi" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "composeFoundation" }
+androidx-compose-material = { group = "androidx.compose.material", name = "material", version.ref = "composeMaterial" }
+androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core", version = "1.7.8"}
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+
+# Kotlin
+kotlin-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlin-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlin-math = { group = "dev.romainguy", name = "kotlin-math", version.ref = "kotlinMath" }
+
+# AR
+arcore = { group = "com.google.ar", name = "core", version.ref = "arCore" }
+
+# Filament
+filament-android = { group = "com.google.android.filament", name = "filament-android", version.ref = "filament" }
+filament-gltfio = { group = "com.google.android.filament", name = "gltfio-android", version.ref = "filament" }
+filament-utils = { group = "com.google.android.filament", name = "filament-utils-android", version.ref = "filament" }
+
+# Other
+fuel-core = { group = "com.github.kittinunf.fuel", name = "fuel", version.ref = "fuel" }
+fuel-android = { group = "com.github.kittinunf.fuel", name = "fuel-android", version.ref = "fuel" }
+fuel-coroutines = { group = "com.github.kittinunf.fuel", name = "fuel-coroutines", version.ref = "fuel" }
+google-material = { group = "com.google.android.material", name = "material", version.ref = "googleMaterial" }
+
+# Media
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+
+# Gradle Plugins
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+
+
+# Publishing
+publish = { module = "com.vanniktech:gradle-maven-publish-plugin", version = '0.30.0' }
+
+[plugins]
+
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "composeCompiler" }
+publish = { id = "com.vanniktech.maven.publish", version.ref = 'mavenPublish' }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
