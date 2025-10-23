@@ -18,6 +18,7 @@ class ImageTexture {
 
         init {
             sampler(Texture.Sampler.SAMPLER_2D)
+            usage(Texture.Usage.DEFAULT or Texture.Usage.GEN_MIPMAPPABLE)
             // This tells Filament to figure out the number of mip levels
             levels(0xff)
         }

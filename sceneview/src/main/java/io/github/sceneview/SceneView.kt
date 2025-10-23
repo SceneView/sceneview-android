@@ -1062,7 +1062,7 @@ open class SceneView @JvmOverloads constructor(
                     environmentLoader.context.assets.readBuffer(
                         fileLocation = "environments/neutral/neutral_ibl.ktx"
                     ),
-                )
+                ).indirectLight,
             )
 
         fun createEnvironment(
