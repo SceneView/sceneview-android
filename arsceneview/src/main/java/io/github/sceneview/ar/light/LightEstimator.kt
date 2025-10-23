@@ -224,6 +224,7 @@ class LightEstimator(
                             .height(height)
                             .levels(0xff)
                             .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
+                            .usage(Texture.Usage.DEFAULT or Texture.Usage.GEN_MIPMAPPABLE)
                             .format(Texture.InternalFormat.R11F_G11F_B10F)
                             .build(engine)
                             .also {

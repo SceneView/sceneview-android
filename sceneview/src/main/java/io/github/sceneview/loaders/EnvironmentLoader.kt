@@ -246,8 +246,8 @@ class EnvironmentLoader(
         iblBuffer: Buffer? = null,
         skyboxBuffer: Buffer? = null
     ) = createEnvironment(
-        indirectLight = iblBuffer?.let { KTX1Loader.createIndirectLight(engine, it) },
-        skybox = skyboxBuffer?.let { KTX1Loader.createSkybox(engine, it) },
+        indirectLight = iblBuffer?.let { KTX1Loader.createIndirectLight(engine, it) }?.indirectLight,
+        skybox = skyboxBuffer?.let { KTX1Loader.createSkybox(engine, it) }?.skybox,
         sphericalHarmonics = iblBuffer?.rewind()?.let { KTX1Loader.getSphericalHarmonics(it) }
     )
 

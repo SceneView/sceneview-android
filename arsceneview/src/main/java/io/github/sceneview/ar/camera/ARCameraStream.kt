@@ -66,7 +66,9 @@ open class ARCameraStream(
      * Textures buffer
      */
     var cameraTextures: Map<Int, Texture> = cameraTextureIds.associateWith { cameraTextureId ->
-        Texture.Builder().sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+        Texture.Builder()
+            .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+            .usage(Texture.Usage.DEFAULT or Texture.Usage.GEN_MIPMAPPABLE)
             .format(Texture.InternalFormat.RGB16F)
             .importTexture(cameraTextureId.toLong())
             .build(engine)
@@ -87,8 +89,12 @@ open class ARCameraStream(
      * Extracted texture from the session depth image
      */
     val depthTexture =
-        Texture.Builder().sampler(Texture.Sampler.SAMPLER_2D).format(Texture.InternalFormat.RG8)
-            .levels(1).build(engine)
+        Texture.Builder()
+            .sampler(Texture.Sampler.SAMPLER_2D)
+            .usage(Texture.Usage.DEFAULT or Texture.Usage.GEN_MIPMAPPABLE)
+            .format(Texture.InternalFormat.RG8)
+            .levels(1)
+            .build(engine)
 
     /**
      * ### Flat camera material
