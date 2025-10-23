@@ -10,7 +10,7 @@ import androidx.annotation.RawRes
 import androidx.core.net.toUri
 import com.google.ar.sceneform.utilities.SceneformBufferUtils
 import fuel.Fuel
-import fuel.get
+import fuel.HttpLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.readByteArray
@@ -25,10 +25,17 @@ object FileLoader {
     private const val ASSET_FILE_PATH_ROOT = "android_asset"
 
     /**
-     * Fuel 3.0 uses a singleton object.
-     * For custom HTTP/HTTPS configuration, you can use FuelBuilder:
-     * var fuelClient: HttpLoader = FuelBuilder().build()
+     * HTTP client for loading files from URLs.
+     * Can be customized for specific configurations (timeouts, headers, etc.):
      *
+     * FileLoader.httpLoader = FuelBuilder()
+     *     .config(customClient)
+     *     .build()
+     *
+     */
+    var httpLoader: HttpLoader = Fuel.loader()
+
+    /**
      * Load a file content buffer from different sources.
      *
      * The file location can be:
@@ -43,7 +50,7 @@ object FileLoader {
             when (uri.scheme) {
                 "http", "https" -> {
                     try {
-                        val bytes = Fuel.get(fileLocation).source.readByteArray()
+                        val bytes = httpLoader.get { url = fileLocation }.source.readByteArray()
                         ByteBuffer.wrap(bytes)
                     } catch (e: Exception) {
                         Log.e(TAG, "Error loading file from URL: $fileLocation", e)
