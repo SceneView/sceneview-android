@@ -98,9 +98,7 @@ dependencies {
     api "com.google.android.filament:filament-utils-android:$filament_version"
 
     // Fuel
-    implementation "com.github.kittinunf.fuel:fuel:2.3.1"
-    implementation "com.github.kittinunf.fuel:fuel-android:2.3.1"
-    implementation "com.github.kittinunf.fuel:fuel-coroutines:2.3.1"
+    implementation "com.github.kittinunf.fuel:fuel:3.0.0-alpha04"
 }
 
 apply plugin: "com.vanniktech.maven.publish"
