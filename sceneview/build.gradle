@@ -99,9 +99,6 @@ dependencies {
 
     // Fuel
     implementation "com.github.kittinunf.fuel:fuel:3.0.0-alpha04"
-
-    // kotlinx-io (required for Fuel 3.0)
-    implementation "org.jetbrains.kotlinx:kotlinx-io-core:0.6.0"
 }
 
 apply plugin: "com.vanniktech.maven.publish"
