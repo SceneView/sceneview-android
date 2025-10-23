@@ -68,8 +68,10 @@ public class ExternalTexture {
         this.filamentStream = filamentStream;
 
         // Create the filament texture.
-        filamentTexture = new Texture.Builder()
+        filamentTexture = new Texture
+                .Builder()
                 .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+                .usage(Texture.Usage.DEFAULT | Texture.Usage.GEN_MIPMAPPABLE)
                 .format(Texture.InternalFormat.RGB8)
                 .build(engine);
 
