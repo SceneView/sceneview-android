@@ -6,12 +6,12 @@ plugins {
 android {
     namespace "io.github.sceneview.sample.arpointcloud"
 
-    compileSdk 35
+    
 
     defaultConfig {
         applicationId "io.github.sceneview.sample.arpointcloud"
         minSdk 28
-        targetSdk 35
+        targetSdk 36
         versionCode 1
         versionName "1.0.0"
     }

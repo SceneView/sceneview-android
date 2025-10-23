@@ -41,11 +41,11 @@ if (project.properties['filamentPluginEnabled']?.toBoolean()) {
 android {
     namespace 'io.github.sceneview.ar'
 
-    compileSdk 35
+    
 
     defaultConfig {
         minSdk 24
-        targetSdk 35
+        targetSdk 36
 
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -77,18 +77,18 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.16.0'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
 
     // Compose
-    implementation "androidx.compose.ui:ui:1.7.8"
-    implementation "androidx.compose.foundation:foundation:1.7.8"
+    implementation "androidx.compose.ui:ui:1.9.3"
+    implementation "androidx.compose.foundation:foundation:1.9.3"
 
     // SceneView
     api project(":sceneview")
 
     // ARCore
-    api "com.google.ar:core:1.48.0"
+    api "com.google.ar:core:1.51.0"
 }
 
 apply plugin: "com.vanniktech.maven.publish"
