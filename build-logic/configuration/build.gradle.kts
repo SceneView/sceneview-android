@@ -1,7 +1,3 @@
-//
-// Copyright © 2024 Geomagical Labs, Inc. All rights reserved.
-//
-
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 

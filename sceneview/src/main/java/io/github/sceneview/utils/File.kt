@@ -5,11 +5,14 @@ import android.content.Context
 import android.content.res.AssetManager
 import android.content.res.Resources
 import android.net.Uri
+import android.util.Log
 import androidx.annotation.RawRes
-import com.github.kittinunf.fuel.core.FuelManager
-import com.github.kittinunf.fuel.coroutines.awaitByteArray
+import androidx.core.net.toUri
+import fuel.Fuel
+import fuel.HttpLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.io.readByteArray
 import java.io.File
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -17,13 +20,19 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 object FileLoader {
-
+    private val TAG: String = FileLoader::class.java.getSimpleName()
     private const val ASSET_FILE_PATH_ROOT = "android_asset"
 
     /**
-     * Pass your own [FuelManager] and change it properties for specific http/https configuration.
+     * HTTP client for loading files from URLs.
+     * Can be customized for specific configurations (timeouts, headers, etc.):
+     *
+     * FileLoader.httpLoader = FuelBuilder()
+     *     .config(customClient)
+     *     .build()
+     *
      */
-    var fuelManager: FuelManager = FuelManager()
+    var httpLoader: HttpLoader = Fuel.loader()
 
     /**
      * Load a file content buffer from different sources.
@@ -35,11 +44,17 @@ object FileLoader {
      * - An http or https url *https://mydomain.com/mymodel.glb*
      */
     suspend fun loadFileBuffer(context: Context, fileLocation: String): ByteBuffer? {
-        val uri = Uri.parse(fileLocation)
+        val uri = fileLocation.toUri()
         return withContext(Dispatchers.IO) {
             when (uri.scheme) {
                 "http", "https" -> {
-                    ByteBuffer.wrap(fuelManager.get(fileLocation).awaitByteArray())
+                    try {
+                        val bytes = httpLoader.get { url = fileLocation }.source.readByteArray()
+                        ByteBuffer.wrap(bytes)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error loading file from URL: $fileLocation", e)
+                        null
+                    }
                 }
 
                 else -> {
@@ -59,7 +74,7 @@ object FileLoader {
      * - An http or https url *https://mydomain.com/mymodel.glb*
      */
     fun readFileBuffer(context: Context, fileLocation: String): ByteBuffer? {
-        val uri = Uri.parse(fileLocation)
+        val uri = fileLocation.toUri()
         return when (uri.scheme) {
             ContentResolver.SCHEME_FILE -> if (uri.firstPathSegment == ASSET_FILE_PATH_ROOT) {
                 context.assets.open(

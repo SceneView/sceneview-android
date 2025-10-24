@@ -1,7 +1,3 @@
-//
-// Copyright © 2024 Geomagical Labs, Inc. All rights reserved.
-//
-
 package io.github.sceneview
 
 import io.github.sceneview.extensions.getPlugin

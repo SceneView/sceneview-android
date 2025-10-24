@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.publish)
     alias(libs.plugins.dokka)
-//    id("filament-tools-plugin")
+    id("filament-tools-plugin")
 }
 
 // *************************************************************************************************

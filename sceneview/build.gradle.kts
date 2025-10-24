@@ -100,9 +100,7 @@ dependencies {
     api(libs.filament.utils)
 
     // Fuel
-    implementation(libs.fuel.core)
-    implementation(libs.fuel.android)
-    implementation(libs.fuel.coroutines)
+    implementation(libs.fuel)
 }
 
 mavenPublishing {

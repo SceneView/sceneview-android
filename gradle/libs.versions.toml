@@ -19,7 +19,7 @@ kotlinMath = "1.6.0"
 
 arCore = "1.51.0"
 filament = "1.66.0"
-fuel = "2.3.1"
+fuel = "3.0.0-alpha04"
 googleMaterial = "1.13.0"
 media3 = "1.8.0"
 
@@ -60,9 +60,7 @@ filament-gltfio = { group = "com.google.android.filament", name = "gltfio-androi
 filament-utils = { group = "com.google.android.filament", name = "filament-utils-android", version.ref = "filament" }
 
 # Other
-fuel-core = { group = "com.github.kittinunf.fuel", name = "fuel", version.ref = "fuel" }
-fuel-android = { group = "com.github.kittinunf.fuel", name = "fuel-android", version.ref = "fuel" }
-fuel-coroutines = { group = "com.github.kittinunf.fuel", name = "fuel-coroutines", version.ref = "fuel" }
+fuel = { group = "com.github.kittinunf.fuel", name = "fuel", version.ref = "fuel" }
 google-material = { group = "com.google.android.material", name = "material", version.ref = "googleMaterial" }
 
 # Media
