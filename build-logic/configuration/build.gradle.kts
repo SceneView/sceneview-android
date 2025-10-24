@@ -30,9 +30,5 @@ gradlePlugin {
             id = "filament-tools-plugin"
             implementationClass = "io.github.sceneview.FilamentToolsPlugin"
         }
-        register("publishing") {
-            id = "publishing"
-            implementationClass = "io.github.sceneview.PublishingPlugin"
-        }
     }
 }

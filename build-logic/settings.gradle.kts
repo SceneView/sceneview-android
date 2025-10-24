@@ -1,6 +1,3 @@
-
-
-
 pluginManagement {
     repositories {
         google()
