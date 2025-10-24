@@ -1,4 +1,5 @@
 package io.github.sceneview
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -12,8 +13,12 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.ProviderFactory
-import org.gradle.api.tasks.*
-import org.gradle.api.tasks.incremental.InputFileDetails
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.os.OperatingSystem
 import org.gradle.process.ExecOperations
 import org.gradle.work.ChangeType
@@ -21,10 +26,9 @@ import org.gradle.work.Incremental
 import org.gradle.work.InputChanges
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.nio.file.Paths
 import javax.inject.Inject
 
-abstract class TaskWithBinary(private val binaryName: String) : DefaultTask() {
+abstract class TaskWithBinary() : DefaultTask() {
 
     @get:Inject
     internal abstract val objects: ObjectFactory
@@ -33,23 +37,7 @@ abstract class TaskWithBinary(private val binaryName: String) : DefaultTask() {
     internal abstract val providers: ProviderFactory
 
     @get:Input
-    val binary: Property<String> by lazy {
-        val tool = listOf("/bin/$binaryName.exe", "/bin/$binaryName")
-        val fullPath = tool.map { path ->
-            val filamentToolsPath = providers
-                .gradleProperty("com.google.android.filament.tools-dir")
-                .forUseAtConfigurationTime().get()
-            val directory = objects.fileProperty()
-                .fileValue(File(filamentToolsPath)).asFile.get()
-            Paths.get(directory.absolutePath, path).toFile()
-        }
-
-        objects.property(String::class.java).apply {
-            set(
-                (if (OperatingSystem.current().isWindows) fullPath[0] else fullPath[1]).toString()
-            )
-        }
-    }
+    abstract val binary: Property<String>
 }
 
 internal open class LogOutputStream(
@@ -62,7 +50,7 @@ internal open class LogOutputStream(
     }
 }
 
-abstract class MaterialCompiler : TaskWithBinary("matc") {
+abstract class MaterialCompiler : TaskWithBinary() {
     @get:Incremental
     @get:InputDirectory
     abstract val inputDir: DirectoryProperty
@@ -109,7 +97,7 @@ abstract class MaterialCompiler : TaskWithBinary("matc") {
                 val matcArgs = mutableListOf<String>()
                 val excludeVulkan = providers
                     .gradleProperty("com.google.android.filament.exclude-vulkan")
-                    .forUseAtConfigurationTime().isPresent
+                    .isPresent
                 if (!excludeVulkan) {
                     matcArgs += listOf("-a", "vulkan")
                 }
@@ -138,7 +126,7 @@ abstract class MaterialCompiler : TaskWithBinary("matc") {
     }
 }
 
-abstract class IblGenerator : TaskWithBinary("cmgen") {
+abstract class IblGenerator : TaskWithBinary() {
 
     @get:Input
     @get:Optional
@@ -215,7 +203,7 @@ abstract class IblGenerator : TaskWithBinary("cmgen") {
     }
 }
 
-abstract class MeshCompiler : TaskWithBinary("filamesh") {
+abstract class MeshCompiler : TaskWithBinary() {
     @get:Incremental
     @get:InputFile
     abstract val inputFile: RegularFileProperty
@@ -290,13 +278,24 @@ open class FilamentToolsPlugin : Plugin<Project> {
         val extension =
             project.extensions.create("filamentTools", FilamentToolsPluginExtension::class.java)
 
-        project.tasks.register("filamentCompileMaterials", MaterialCompiler::class.java) { 
+        val filamentToolsDirProvider = project.providers
+            .gradleProperty("com.google.android.filament.tools-dir")
+
+        fun getBinaryPath(binaryName: String): String {
+            val os = OperatingSystem.current()
+            val extension = if (os.isWindows) ".exe" else ""
+            val filamentToolsDir = File(filamentToolsDirProvider.get())
+            return File(filamentToolsDir, "bin/$binaryName$extension").absolutePath
+        }
+
+        project.tasks.register("filamentCompileMaterials", MaterialCompiler::class.java) {
             group = "filament"
-            enabled =
-                extension.materialInputDir.isPresent &&
-                        extension.materialOutputDir.isPresent
+            enabled = filamentToolsDirProvider.isPresent &&
+                    extension.materialInputDir.isPresent &&
+                    extension.materialOutputDir.isPresent
             inputDir.set(extension.materialInputDir)
             outputDir.set(extension.materialOutputDir)
+            binary.set(getBinaryPath("matc"))
         }
 
         project.tasks.named("preBuild") {
@@ -305,11 +304,14 @@ open class FilamentToolsPlugin : Plugin<Project> {
 
         project.tasks.register("filamentGenerateIbl", IblGenerator::class.java) {
             group = "filament"
-            enabled = extension.iblInputDir.isPresent && extension.iblOutputDir.isPresent
+            enabled = filamentToolsDirProvider.isPresent &&
+                    extension.iblInputDir.isPresent &&
+                    extension.iblOutputDir.isPresent
             cmgenArgs.set(extension.cmgenArgs)
             inputDir.set(extension.iblInputDir)
             outputDir.set(extension.iblOutputDir)
             format.set(extension.iblFormat)
+            binary.set(getBinaryPath("cmgen"))
         }
 
         project.tasks.named("preBuild") {
@@ -318,9 +320,12 @@ open class FilamentToolsPlugin : Plugin<Project> {
 
         project.tasks.register("filamentCompileMesh", MeshCompiler::class.java) {
             group = "filament"
-            enabled = extension.meshInputFile.isPresent && extension.meshOutputDir.isPresent
+            enabled = filamentToolsDirProvider.isPresent &&
+                    extension.meshInputFile.isPresent &&
+                    extension.meshOutputDir.isPresent
             inputFile.set(extension.meshInputFile)
             outputDir.set(extension.meshOutputDir)
+            binary.set(getBinaryPath("filamesh"))
         }
 
         project.tasks.named("preBuild") {

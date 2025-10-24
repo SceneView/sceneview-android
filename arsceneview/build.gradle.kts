@@ -96,6 +96,19 @@ dependencies {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.S01)
+    publishToMavenCentral()
     signAllPublications()
+}
+
+configure<io.github.sceneview.FilamentToolsPluginExtension> {
+    // Material generation: .mat -> .filamat
+    materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
+    materialOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/materials"))
+}
+
+tasks.named("clean") {
+    doFirst {
+        delete("src/main/assets/materials")
+        delete("src/main/assets/environments")
+    }
 }

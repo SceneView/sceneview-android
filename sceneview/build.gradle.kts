@@ -1,11 +1,10 @@
-
 plugins {
     id("com.android.library")
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.publish)
     alias(libs.plugins.dokka)
-//    id("filament-tools-plugin")
+    id("filament-tools-plugin")
 }
 
 // *************************************************************************************************
@@ -57,11 +56,17 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
         getByName("debug") {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -104,6 +109,23 @@ dependencies {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.S01)
+    publishToMavenCentral()
     signAllPublications()
+}
+
+configure<io.github.sceneview.FilamentToolsPluginExtension> {
+    // Material generation: .mat -> .filamat
+    materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
+    materialOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/materials"))
+    // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
+    iblInputDir.set(project.layout.projectDirectory.dir("src/main/environments"))
+    iblOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/environments"))
+    iblFormat = "ktx"
+}
+
+tasks.named("clean") {
+    doFirst {
+        delete("src/main/assets/materials")
+        delete("src/main/assets/environments")
+    }
 }
