@@ -113,19 +113,21 @@ mavenPublishing {
     signAllPublications()
 }
 
-configure<io.github.sceneview.FilamentToolsPluginExtension> {
-    // Material generation: .mat -> .filamat
-    materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
-    materialOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/materials"))
-    // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
-    iblInputDir.set(project.layout.projectDirectory.dir("src/main/environments"))
-    iblOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/environments"))
-    iblFormat = "ktx"
-}
+if (project.properties["filamentPluginEnabled"]?.toString()?.toBoolean() == true) {
+    configure<io.github.sceneview.FilamentToolsPluginExtension> {
+        // Material generation: .mat -> .filamat
+        materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
+        materialOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/materials"))
+        // IBL and Skybox generation: .hdr -> _ibl.ktx and _skybox.ktx
+        iblInputDir.set(project.layout.projectDirectory.dir("src/main/environments"))
+        iblOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/environments"))
+        iblFormat = "ktx"
+    }
 
-tasks.named("clean") {
-    doFirst {
-        delete("src/main/assets/materials")
-        delete("src/main/assets/environments")
+    tasks.named("clean") {
+        doFirst {
+            delete("src/main/assets/materials")
+            delete("src/main/assets/environments")
+        }
     }
 }

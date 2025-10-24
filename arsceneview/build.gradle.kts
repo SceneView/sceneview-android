@@ -100,15 +100,17 @@ mavenPublishing {
     signAllPublications()
 }
 
-configure<io.github.sceneview.FilamentToolsPluginExtension> {
-    // Material generation: .mat -> .filamat
-    materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
-    materialOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/materials"))
-}
+if (project.properties["filamentPluginEnabled"]?.toString()?.toBoolean() == true) {
+    configure<io.github.sceneview.FilamentToolsPluginExtension> {
+        // Material generation: .mat -> .filamat
+        materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
+        materialOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/materials"))
+    }
 
-tasks.named("clean") {
-    doFirst {
-        delete("src/main/assets/materials")
-        delete("src/main/assets/environments")
+    tasks.named("clean") {
+        doFirst {
+            delete("src/main/assets/materials")
+            delete("src/main/assets/environments")
+        }
     }
 }
