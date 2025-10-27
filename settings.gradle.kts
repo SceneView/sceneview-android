@@ -3,7 +3,7 @@
 import java.io.File
 import java.io.File.separator
 
-//enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -22,7 +22,6 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-rootProject.name = "SceneView"
 
 /**
  * This file is responsible for loading and including all submodules which declare a
