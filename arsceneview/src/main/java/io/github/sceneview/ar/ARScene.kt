@@ -305,7 +305,9 @@ fun ARScene(
                 onViewUpdated?.invoke(sceneView)
             },
             onReset = {},
-            onRelease = { sceneView -> sceneView.destroy() }
+            onRelease = { sceneView ->
+                sceneView.destroy()
+            }
         )
     }
 }

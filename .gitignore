@@ -8,3 +8,6 @@
 .cxx
 local.properties
 /.idea
+/build-logic/build
+/build-logic/configuration/build
+/build-logic/gradle
