@@ -28,7 +28,7 @@ pluginManagement {
  * build.gradle.kts file in their root. No need to use include("path-to-folder") anymore
  */
 
-val ignored = listOf("build", ".gradle", ".idea", "src", "out", ".git", "tools", "build-logic")
+val ignored = listOf("build", ".gradle", ".idea", ".kotlin", ".git", ".github", "scripts", "build-logic", "assets")
 val projectNames = mutableListOf<String>()
 rootDir.walk().onEnter { !ignored.contains(it.name) }.filter { it.isDirectory }
     .map { it.path.replace(rootDir.path, "") }.forEach { path ->

@@ -47,10 +47,15 @@ abstract class TaskWithBinary(binaryName: String) : DefaultTask() {
         val filamentToolsDirProvider = project.providers
             .gradleProperty("com.google.android.filament.tools-dir")
 
-        val os = OperatingSystem.current()
-        val extension = if (os.isWindows) ".exe" else ""
-        val filamentToolsDir = File(filamentToolsDirProvider.get())
-        return File(filamentToolsDir, "bin/$binaryName$extension").absolutePath
+        if (filamentToolsDirProvider.isPresent) {
+            val os = OperatingSystem.current()
+            val extension = if (os.isWindows) ".exe" else ""
+            val filamentToolsDir = File(filamentToolsDirProvider.get())
+            return File(filamentToolsDir, "bin/$binaryName$extension").absolutePath
+        } else {
+            logger.warn("com.google.android.filament.tools-dir is not set")
+            return binaryName
+        }
     }
 }
 
