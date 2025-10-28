@@ -303,21 +303,27 @@ abstract class MeshCompiler : TaskWithBinary(binaryName = "filamesh") {
  *      ./gradlew -Pcom.google.android.filament.tools-dir=../../dist-release assembleDebug
  *
  */
-abstract class FilamentToolsPluginExtension {
-    abstract val materialInputDir: DirectoryProperty
-    abstract val materialOutputDir: DirectoryProperty
-    abstract val cmgenArgs: Property<String>
-    abstract val iblInputDir: DirectoryProperty
-    abstract val iblOutputDir: DirectoryProperty
-    abstract val iblFormat: Property<String>
-    abstract val meshInputFile: RegularFileProperty
-    abstract val meshOutputDir: DirectoryProperty
+open class FilamentToolsPluginExtension @Inject constructor(objects: ObjectFactory) {
+    val materialInputDir: DirectoryProperty = objects.directoryProperty()
+    val materialOutputDir: DirectoryProperty = objects.directoryProperty()
+
+    val cmgenArgs: Property<String> = objects.property(String::class.java)
+    val iblInputDir: DirectoryProperty = objects.directoryProperty()
+    val iblOutputDir: DirectoryProperty = objects.directoryProperty()
+    val iblFormat: Property<String> = objects.property(String::class.java)
+
+    val meshInputFile: RegularFileProperty = objects.fileProperty()
+    val meshOutputDir: DirectoryProperty = objects.directoryProperty()
 }
 
 open class FilamentToolsPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension =
-            project.extensions.create("filamentTools", FilamentToolsPluginExtension::class.java)
+            project.extensions.create(
+                "filamentTools",
+                FilamentToolsPluginExtension::class.java,
+                project.objects
+            )
 
         val filamentToolsDirProvider = project.providers
             .gradleProperty("com.google.android.filament.tools-dir")
