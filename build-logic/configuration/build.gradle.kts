@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     `kotlin-dsl`
+    alias(libs.plugins.publish)
 }
 
 group = "io.github.sceneview.buildlogic.configuration"
@@ -31,4 +32,9 @@ gradlePlugin {
             implementationClass = "io.github.sceneview.FilamentToolsPlugin"
         }
     }
+}
+
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 }

@@ -105,6 +105,9 @@ if (project.properties["filamentPluginEnabled"]?.toString()?.toBoolean() == true
         // Material generation: .mat -> .filamat
         materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
         materialOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/materials"))
+        iblInputDir.set(project.layout.projectDirectory.dir("src/main/environments"))
+        iblOutputDir.set(project.layout.projectDirectory.dir("src/main/assets/environments"))
+        iblFormat = "ktx"
     }
 
     tasks.named("clean") {

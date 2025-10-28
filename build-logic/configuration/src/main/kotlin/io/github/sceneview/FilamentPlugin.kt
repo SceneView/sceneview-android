@@ -28,7 +28,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 
-abstract class TaskWithBinary() : DefaultTask() {
+abstract class TaskWithBinary(binaryName: String) : DefaultTask() {
 
     @get:Inject
     internal abstract val objects: ObjectFactory
@@ -38,6 +38,20 @@ abstract class TaskWithBinary() : DefaultTask() {
 
     @get:Input
     abstract val binary: Property<String>
+
+    init {
+        binary.set(getBinaryPath(binaryName))
+    }
+
+    private fun getBinaryPath(binaryName: String): String {
+        val filamentToolsDirProvider = project.providers
+            .gradleProperty("com.google.android.filament.tools-dir")
+
+        val os = OperatingSystem.current()
+        val extension = if (os.isWindows) ".exe" else ""
+        val filamentToolsDir = File(filamentToolsDirProvider.get())
+        return File(filamentToolsDir, "bin/$binaryName$extension").absolutePath
+    }
 }
 
 internal open class LogOutputStream(
@@ -50,7 +64,11 @@ internal open class LogOutputStream(
     }
 }
 
-abstract class MaterialCompiler : TaskWithBinary() {
+/**
+ * Custom task to compile material files using matc
+ * This task handles incremental builds
+ */
+abstract class MaterialCompiler : TaskWithBinary(binaryName = "matc") {
     @get:Incremental
     @get:InputDirectory
     abstract val inputDir: DirectoryProperty
@@ -126,7 +144,11 @@ abstract class MaterialCompiler : TaskWithBinary() {
     }
 }
 
-abstract class IblGenerator : TaskWithBinary() {
+/**
+ * Custom task to process IBLs using cmgen
+ * This task handles incremental builds
+ */
+abstract class IblGenerator : TaskWithBinary(binaryName = "cmgen") {
 
     @get:Input
     @get:Optional
@@ -203,7 +225,11 @@ abstract class IblGenerator : TaskWithBinary() {
     }
 }
 
-abstract class MeshCompiler : TaskWithBinary() {
+/**
+ * Custom task to compile mesh files using filamesh
+ * This task handles incremental builds
+ */
+abstract class MeshCompiler : TaskWithBinary(binaryName = "filamesh") {
     @get:Incremental
     @get:InputFile
     abstract val inputFile: RegularFileProperty
@@ -262,6 +288,21 @@ abstract class MeshCompiler : TaskWithBinary() {
     }
 }
 
+
+/**
+ *  This plugin accepts the following parameters:
+ *
+ *  com.google.android.filament.tools-dir
+ *      Path to the Filament distribution/install directory for desktop.
+ *      This directory must contain bin/matc.
+ *
+ *  com.google.android.filament.exclude-vulkan
+ *      When set, support for Vulkan will be excluded.
+ *
+ *  Example:
+ *      ./gradlew -Pcom.google.android.filament.tools-dir=../../dist-release assembleDebug
+ *
+ */
 abstract class FilamentToolsPluginExtension {
     abstract val materialInputDir: DirectoryProperty
     abstract val materialOutputDir: DirectoryProperty
@@ -281,13 +322,6 @@ open class FilamentToolsPlugin : Plugin<Project> {
         val filamentToolsDirProvider = project.providers
             .gradleProperty("com.google.android.filament.tools-dir")
 
-        fun getBinaryPath(binaryName: String): String {
-            val os = OperatingSystem.current()
-            val extension = if (os.isWindows) ".exe" else ""
-            val filamentToolsDir = File(filamentToolsDirProvider.get())
-            return File(filamentToolsDir, "bin/$binaryName$extension").absolutePath
-        }
-
         project.tasks.register("filamentCompileMaterials", MaterialCompiler::class.java) {
             group = "filament"
             enabled = filamentToolsDirProvider.isPresent &&
@@ -295,7 +329,6 @@ open class FilamentToolsPlugin : Plugin<Project> {
                     extension.materialOutputDir.isPresent
             inputDir.set(extension.materialInputDir)
             outputDir.set(extension.materialOutputDir)
-            binary.set(getBinaryPath("matc"))
         }
 
         project.tasks.named("preBuild") {
@@ -311,7 +344,6 @@ open class FilamentToolsPlugin : Plugin<Project> {
             inputDir.set(extension.iblInputDir)
             outputDir.set(extension.iblOutputDir)
             format.set(extension.iblFormat)
-            binary.set(getBinaryPath("cmgen"))
         }
 
         project.tasks.named("preBuild") {
@@ -325,7 +357,6 @@ open class FilamentToolsPlugin : Plugin<Project> {
                     extension.meshOutputDir.isPresent
             inputFile.set(extension.meshInputFile)
             outputDir.set(extension.meshOutputDir)
-            binary.set(getBinaryPath("filamesh"))
         }
 
         project.tasks.named("preBuild") {
