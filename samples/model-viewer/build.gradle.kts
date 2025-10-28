@@ -25,9 +25,9 @@ android {
 }
 
 dependencies {
-    implementation(project(":samples:common"))
+    implementation(projects.samples.common)
 
     // SceneView
-    "releaseImplementation"(libs.sceneview)
-    "debugImplementation"(project(":sceneview"))
+    releaseImplementation(libs.sceneview)
+    debugImplementation(projects.sceneview)
 }

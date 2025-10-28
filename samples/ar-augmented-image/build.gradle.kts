@@ -28,7 +28,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":samples:common"))
+    implementation(projects.samples.common)
 
     // ExoPlayer
     implementation(libs.androidx.media3.exoplayer)
@@ -36,5 +36,5 @@ dependencies {
 
     // ARSceneview
     releaseImplementation(libs.arsceneview)
-    debugImplementation(project(":arsceneview"))
+    debugImplementation(projects.arsceneview)
 }

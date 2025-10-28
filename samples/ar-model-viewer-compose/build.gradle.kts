@@ -34,17 +34,10 @@ android {
 }
 
 dependencies {
-    implementation(project(":samples:common"))
-
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.compose.material)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.navigation.compose)
+    implementation(projects.samples.common)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     // ArSceneView
-    "releaseImplementation"(libs.arsceneview)
-    "debugImplementation"(project(":arsceneview"))
+    releaseImplementation(libs.arsceneview)
+    debugImplementation(projects.arsceneview)
 }

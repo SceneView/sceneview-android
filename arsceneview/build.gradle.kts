@@ -56,7 +56,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
 
     // SceneView
-    api(project(":sceneview"))
+    api(projects.sceneview)
 
     // ARCore
     api(libs.arcore)

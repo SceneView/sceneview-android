@@ -29,18 +29,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":samples:common"))
-
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.compose.material)
-    implementation(libs.androidx.compose.material.icons)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.navigation.compose)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-
+    implementation(projects.samples.common)
     // SceneView
-    "releaseImplementation"(libs.sceneview)
-    "debugImplementation"(project(":sceneview"))
+    releaseImplementation(libs.sceneview)
+    debugImplementation(projects.sceneview)
 }

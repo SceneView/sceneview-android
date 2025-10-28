@@ -29,7 +29,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":samples:common"))
+    implementation(projects.samples.common)
 
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.foundation)
@@ -40,6 +40,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     // SceneView
-    "releaseImplementation"(libs.sceneview)
-    "debugImplementation"(project(":sceneview"))
+    releaseImplementation(libs.sceneview)
+    debugImplementation(projects.sceneview)
 }

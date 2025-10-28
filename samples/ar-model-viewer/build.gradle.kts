@@ -25,9 +25,9 @@ android {
 }
 
 dependencies {
-    implementation(project(":samples:common"))
+    implementation(projects.samples.common)
 
     // ArSceneView
-    "releaseImplementation"(libs.arsceneview)
-    "debugImplementation"(project(":arsceneview"))
+    releaseImplementation(libs.arsceneview)
+    debugImplementation(projects.arsceneview)
 }
