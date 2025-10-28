@@ -30,6 +30,7 @@ android {
 
 dependencies {
     implementation(projects.samples.common)
+    implementation(libs.androidx.compose.material.icons)
     // SceneView
     releaseImplementation(libs.sceneview)
     debugImplementation(projects.sceneview)
