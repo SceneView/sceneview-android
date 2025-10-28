@@ -113,6 +113,51 @@ mavenPublishing {
     signAllPublications()
 }
 
+dokka {
+    moduleName.set("SceneView Android")
+    dokkaSourceSets.configureEach {
+        externalDocumentationLinks.register("example-docs") {
+            url("https://example.com/docs/")
+            packageListUrl("https://example.com/docs/package-list")
+        }
+    }
+    dokkaSourceSets.main {
+        includes.from("README.md")
+        sourceLink {
+            localDirectory.set(file("src/main/kotlin"))
+            remoteUrl("https://example.com/src")
+            remoteLineSuffix.set("#L")
+        }
+        reportUndocumented.set(true)
+        skipEmptyPackages.set(true)
+        skipDeprecated.set(true)
+        jdkVersion.set(21)
+
+        // Do not create a link to the online Android SDK documentation
+        enableAndroidDocumentationLink.set(false)
+
+        // AndroidX + Compose docs
+        externalDocumentationLinks {
+            register("developer.android.com/reference") {
+                url("https://developer.android.com/reference/")
+                packageListUrl("https://developer.android.com/reference/androidx/package-list")
+            }
+            register("developer.android.com/reference/kotlin") {
+                url("https://developer.android.com/reference/kotlin/")
+                packageListUrl("https://developer.android.com/reference/kotlin/androidx/package-list")
+            }
+        }
+
+        sourceLink {
+            localDirectory.set(project.file("src/main/kotlin"))
+            // URL showing where the source code can be accessed through the web browser
+            remoteUrl("https://github.com/sceneview/sceneview-android/blob/main/${project.name}/src/main/kotlin")
+            // Suffix which is used to append the line number to the URL. Use #L for GitHub
+            remoteLineSuffix.set("#L")
+        }
+    }
+}
+
 if (project.properties["filamentPluginEnabled"]?.toString()?.toBoolean() == true) {
     configure<io.github.sceneview.FilamentToolsPluginExtension> {
         // Material generation: .mat -> .filamat
