@@ -75,7 +75,6 @@ open class ExoPlayerNode(
 
     override fun destroy() {
         super.destroy()
-        exoPlayer.release()
         videoMaterial.destroy()
     }
 
