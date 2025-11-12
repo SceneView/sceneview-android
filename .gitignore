@@ -11,3 +11,4 @@ local.properties
 /build-logic/build
 /build-logic/configuration/build
 /build-logic/gradle
+/buildSrc/build/
