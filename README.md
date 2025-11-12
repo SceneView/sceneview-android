@@ -6,8 +6,8 @@
 
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![Filament](https://img.shields.io/badge/Filament-v1.56.0-yellow)](https://github.com/google/filament)
-[![ARCore](https://img.shields.io/badge/ARCore-v1.48.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
+[![Filament](https://img.shields.io/badge/Filament-v1.66.0-yellow)](https://github.com/google/filament)
+[![ARCore](https://img.shields.io/badge/ARCore-v1.51.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 [![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
@@ -42,7 +42,7 @@ Add the dependency to your app's build.gradle:
 ```gradle
 dependencies {
     // Sceneview for 3D capabilities
-    implementation("io.github.sceneview:sceneview:2.3.0")
+    implementation("io.github.sceneview:sceneview:2.3.1")
 }
 ```
 
@@ -169,7 +169,7 @@ Add the dependency to your app's build.gradle:
 ```gradle
 dependencies {
     // ARSceneview for augmented reality capabilities
-    implementation 'io.github.sceneview:arsceneview:2.3.0'
+    implementation 'io.github.sceneview:arsceneview:2.3.1'
 }
 ```
 
