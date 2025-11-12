@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaRecorder
 import android.opengl.EGLContext
-import android.os.Build
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.MotionEvent
@@ -13,7 +12,6 @@ import android.view.SurfaceView
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
-import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -254,7 +252,7 @@ open class SceneView @JvmOverloads constructor(
         onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
         sharedActivity: ComponentActivity? = null,
         sharedLifecycle: Lifecycle? = null,
-    ): this (
+    ) : this(
         context = context,
         attrs = attrs,
         defStyleAttr = defStyleAttr,

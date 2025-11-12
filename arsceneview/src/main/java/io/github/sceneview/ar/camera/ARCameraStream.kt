@@ -185,7 +185,8 @@ open class ARCameraStream(
             // Always draw the camera feed last to avoid overdraw
             .culling(false)
             .priority(RENDER_PRIORITY_LAST)
-            .geometry(0,
+            .geometry(
+                0,
                 RenderableManager.PrimitiveType.TRIANGLES,
                 vertexBuffer,
                 IndexBuffer.Builder()
@@ -248,24 +249,25 @@ open class ARCameraStream(
                 // all necessary data is cloned. The cloned ByteBuffer is unaffected of a released
                 // DepthImage and therefore produces not a flickering result.
                 val buffer = depthImage.planes[0].buffer//.clone()
-                depthTexture.setImage(engine, 0, PixelBufferDescriptor(
-                    buffer, Texture.Format.RG, Texture.Type.UBYTE, 1, 0, 0, 0, null
-                ) {
-                    // Close the image only after the execution
-                    depthImage.close()
-                    buffer.clear()
-                })
+                depthTexture.setImage(
+                    engine, 0, PixelBufferDescriptor(
+                        buffer, Texture.Format.RG, Texture.Type.UBYTE, 1, 0, 0, 0, null
+                    ) {
+                        // Close the image only after the execution
+                        depthImage.close()
+                        buffer.clear()
+                    })
             }
         }
     }
 
     fun destroy() {
+        renderableManager.safeDestroy(entity)
         materialLoader.destroyMaterialInstance(standardMaterial.defaultInstance)
         materialLoader.destroyMaterial(standardMaterial)
         materialLoader.destroyMaterialInstance(depthOcclusionMaterial.defaultInstance)
         materialLoader.destroyMaterial(depthOcclusionMaterial)
         engine.safeDestroyVertexBuffer(vertexBuffer)
-        renderableManager.safeDestroy(entity)
         cameraTextures.values.forEach { engine.safeDestroyTexture(it) }
         engine.safeDestroyTexture(depthTexture)
         uvCoordinates.clear()
