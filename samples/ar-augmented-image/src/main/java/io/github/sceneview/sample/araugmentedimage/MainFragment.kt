@@ -7,11 +7,13 @@ import androidx.fragment.app.Fragment
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.google.ar.core.Config
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.addAugmentedImage
 import io.github.sceneview.ar.arcore.getUpdatedAugmentedImages
 import io.github.sceneview.ar.node.AugmentedImageNode
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Scale
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.sample.araugmentedimage.video.ExoPlayerNode
 
@@ -20,6 +22,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     lateinit var sceneView: ARSceneView
 
     val augmentedImageNodes = mutableListOf<AugmentedImageNode>()
+
+    var exoPlayer: ExoPlayer? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -36,6 +40,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                     requireContext().assets.open("augmentedimages/qrcode.png")
                         .use(BitmapFactory::decodeStream)
                 )
+                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             }
             onSessionUpdated = { session, frame ->
                 frame.getUpdatedAugmentedImages().forEach { augmentedImage ->
@@ -57,16 +62,21 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                                         ExoPlayerNode(
                                             engine = engine,
                                             materialLoader = materialLoader,
+                                            rotateToNode = true,
 //                                            size = Size(x = augmentedImage.extentX, y = augmentedImage.extentZ), // When the width of the image is set
                                             exoPlayer = ExoPlayer.Builder(requireContext()).build()
                                                 .apply {
-                                                    setMediaItem(MediaItem.fromUri("https://sceneview.github.io/assets/videos/ads/ar_camera_app_ad.mp4"))
+                                                    setMediaItem(MediaItem.fromUri("https://sceneview.github.io/videos/ads/ar_camera_app_ad.mp4"))
                                                     prepare()
                                                     playWhenReady = true
                                                     repeatMode = Player.REPEAT_MODE_ALL
+                                                }.also {
+                                                    exoPlayer = it
                                                 },
 //                                            chromaKeyColor = if (chromaKey) 0x2fff19 else null, // 0x2fff19 is colorOf(0.1843f, 1.0f, 0.098f)
-                                        )
+                                        ).apply {
+                                            scale = Scale(.25f)
+                                        }
                                     )
                                 }
                             }
@@ -77,5 +87,23 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        exoPlayer?.play()
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        exoPlayer?.pause()
+    }
+
+    override fun onDestroyView() {
+        exoPlayer?.stop()
+        exoPlayer?.release()
+        super.onDestroyView()
     }
 }

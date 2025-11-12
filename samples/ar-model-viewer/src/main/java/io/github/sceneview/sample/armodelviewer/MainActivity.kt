@@ -52,16 +52,6 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
         }
 
-    fun updateInstructions() {
-        instructionText.text = trackingFailureReason?.let {
-            it.getDescription(this)
-        } ?: if (anchorNode == null) {
-            getString(R.string.point_your_phone_down)
-        } else {
-            null
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -80,7 +70,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         })
         instructionText = findViewById(R.id.instructionText)
         loadingView = findViewById(R.id.loadingView)
-        sceneView = findViewById<ARSceneView?>(R.id.sceneView).apply {
+        sceneView = findViewById<ARSceneView>(R.id.sceneView).apply {
             lifecycle = this@MainActivity.lifecycle
             planeRenderer.isEnabled = true
             configureSession { session, config ->
@@ -105,6 +95,16 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
         }
 //        sceneView.viewNodeWindowManager = ViewAttachmentManager(context, this).apply { onResume() }
+    }
+
+    fun updateInstructions() {
+        instructionText.text = trackingFailureReason?.let {
+            it.getDescription(this)
+        } ?: if (anchorNode == null) {
+            getString(R.string.point_your_phone_down)
+        } else {
+            null
+        }
     }
 
     fun addAnchorNode(anchor: Anchor) {
