@@ -566,6 +566,8 @@ open class SceneView @JvmOverloads constructor(
         })
 
         lifecycle?.addObserver(lifecycleObserver)
+
+        keepScreenOn = true
     }
 
     /**
@@ -897,8 +899,6 @@ open class SceneView @JvmOverloads constructor(
             // to avoid getting called twice.
             Choreographer.getInstance().removeFrameCallback(frameCallback)
             Choreographer.getInstance().postFrameCallback(frameCallback)
-
-            activity?.setKeepScreenOn(true)
         }
 
         override fun onPause(owner: LifecycleOwner) {
