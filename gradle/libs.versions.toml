@@ -1,29 +1,29 @@
 [versions]
 
 agp = "8.13.2"
-kotlin = "2.2.21"
-composeCompiler = "2.2.20"
+kotlin = "2.3.0"
+composeCompiler = "2.3.0"
 coreKtx = "1.17.0"
 appcompat = "1.7.1"
 fragmentKtx = "1.8.9"
 
-composeUi = "1.9.4"
-composeFoundation = "1.9.4"
-composeMaterial = "1.9.4"
+composeUi = "1.10.0"
+composeFoundation = "1.10.0"
+composeMaterial = "1.10.0"
 composeMaterial3 = "1.4.0"
-activityCompose = "1.11.0"
-navigationCompose = "2.9.5"
+activityCompose = "1.12.2"
+navigationCompose = "2.9.6"
 
 coroutines = "1.10.2"
 kotlinMath = "1.6.0"
 
-arCore = "1.51.0"
+arCore = "1.52.0"
 filament = "1.68.2"
 fuel = "3.0.0-alpha04"
 googleMaterial = "1.13.0"
-media3 = "1.8.0"
+media3 = "1.9.0"
 
-mavenPublish = "0.34.0"
+mavenPublish = "0.35.0"
 dokka = "2.1.0"
 
 [libraries]
@@ -73,7 +73,7 @@ android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", ver
 
 
 # Publishing
-publish = { module = "com.vanniktech:gradle-maven-publish-plugin", version = '0.30.0' }
+publish = { module = "com.vanniktech:gradle-maven-publish-plugin", version = '0.35.0' }
 
 [plugins]
 
