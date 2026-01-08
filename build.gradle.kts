@@ -5,3 +5,14 @@ plugins {
     alias(libs.plugins.publish) apply false
     alias { libs.plugins.dokka } apply true
 }
+
+dokka {
+    dokkaPublications.html {
+        includes.from(project.layout.projectDirectory.file("README.md"))
+    }
+}
+
+dependencies {
+    dokka(projects.arsceneview)
+    dokka(projects.sceneview)
+}
