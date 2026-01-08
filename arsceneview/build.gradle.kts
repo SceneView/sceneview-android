@@ -68,20 +68,9 @@ mavenPublishing {
 }
 
 dokka {
-    moduleName.set("SceneView Android")
-    dokkaSourceSets.configureEach {
-        externalDocumentationLinks.register("example-docs") {
-            url("https://example.com/docs/")
-            packageListUrl("https://example.com/docs/package-list")
-        }
-    }
+    moduleName.set("ArSceneView Android - 3D and AR")
     dokkaSourceSets.main {
-        includes.from("README.md")
-        sourceLink {
-            localDirectory.set(file("src/main/kotlin"))
-            remoteUrl("https://example.com/src")
-            remoteLineSuffix.set("#L")
-        }
+        includes.from("../README.md")
         reportUndocumented.set(true)
         skipEmptyPackages.set(true)
         skipDeprecated.set(true)
@@ -103,9 +92,9 @@ dokka {
         }
 
         sourceLink {
-            localDirectory.set(project.file("src/main/kotlin"))
+            localDirectory.set(project.file("src/main/java"))
             // URL showing where the source code can be accessed through the web browser
-            remoteUrl("https://github.com/sceneview/sceneview-android/blob/main/${project.name}/src/main/kotlin")
+            remoteUrl("https://github.com/sceneview/sceneview-android/tree/main/${project.name}/src/main/java")
             // Suffix which is used to append the line number to the URL. Use #L for GitHub
             remoteLineSuffix.set("#L")
         }
