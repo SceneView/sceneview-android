@@ -42,7 +42,7 @@ Add the dependency to your app's build.gradle:
 ```gradle
 dependencies {
     // Sceneview for 3D capabilities
-    implementation("io.github.sceneview:sceneview:2.3.1")
+    implementation("io.github.sceneview:sceneview:2.3.2")
 }
 ```
 
@@ -75,7 +75,7 @@ Scene(
     environmentLoader = environmentLoader,
 
     // Collision System
-    collisionSystem = rememberCollisionSystem(view)
+    collisionSystem = rememberCollisionSystem(view),
     
     // Add a direct light source (required for shadows)
     mainLightNode = rememberMainLightNode(engine) {
@@ -169,7 +169,7 @@ Add the dependency to your app's build.gradle:
 ```gradle
 dependencies {
     // ARSceneview for augmented reality capabilities
-    implementation 'io.github.sceneview:arsceneview:2.3.1'
+    implementation 'io.github.sceneview:arsceneview:2.3.2'
 }
 ```
 

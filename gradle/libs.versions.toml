@@ -27,8 +27,8 @@ mavenPublish = "0.35.0"
 dokka = "2.1.0"
 
 [libraries]
-arsceneview = { module = "io.github.sceneview:arsceneview", version = "2.3.1"}
-sceneview = { module = "io.github.sceneview:sceneview", version = "2.3.1"}
+arsceneview = { module = "io.github.sceneview:arsceneview", version = "2.3.2"}
+sceneview = { module = "io.github.sceneview:sceneview", version = "2.3.2"}
 
 # AndroidX
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
