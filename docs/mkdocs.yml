@@ -1,6 +1,6 @@
-site_name: SceneView Codelabs
-site_description: Step-by-step guides for building 3D and AR apps with SceneView and Jetpack Compose
-site_url: https://sceneview.github.io/codelabs/
+site_name: SceneView
+site_description: 3D and AR for Jetpack Compose, powered by Google Filament and ARCore
+site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview-android
 repo_name: SceneView/sceneview-android
 edit_uri: edit/main/docs/docs/
@@ -25,27 +25,28 @@ theme:
     code: JetBrains Mono
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
     - navigation.top
+    - navigation.indexes
     - search.suggest
     - search.highlight
     - content.code.copy
     - content.code.annotate
     - toc.follow
-  logo: assets/logo.png
-  favicon: assets/logo.png
 
 nav:
   - Home: index.md
   - Codelabs:
+    - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md
     - AR with Compose: codelabs/codelab-ar-compose.md
-  - Reference:
-    - API (3D): https://sceneview.github.io/api/sceneview-android/sceneview/
-    - API (AR): https://sceneview.github.io/api/sceneview-android/arsceneview/
-    - Migration Guide: https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md
-    - Changelog: https://github.com/SceneView/sceneview-android/blob/main/CHANGELOG.md
+  - Migration guide: migration.md
+  - Changelog: changelog.md
+  - API reference:
+    - API (3D — sceneview): https://sceneview.github.io/api/sceneview-android/sceneview/
+    - API (AR — arsceneview): https://sceneview.github.io/api/sceneview-android/arsceneview/
 
 plugins:
   - search

@@ -1,6 +1,6 @@
 # SceneView — 3D and AR with Compose
 
-![SceneView Logo](https://github.com/SceneView/sceneview-android/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05){ width=300 }
+![SceneView Logo](https://github.com/SceneView/sceneview-android/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05){ width=280 }
 
 ## 3D is just Compose UI.
 
@@ -16,6 +16,26 @@ Scene(modifier = Modifier.fillMaxSize()) {
     LightNode(type = LightManager.Type.SUN)
 }
 ```
+
+---
+
+## Install
+
+=== "3D only"
+
+    ```kotlin
+    dependencies {
+        implementation("io.github.sceneview:sceneview:3.0.0")
+    }
+    ```
+
+=== "3D + AR"
+
+    ```kotlin
+    dependencies {
+        implementation("io.github.sceneview:arsceneview:3.0.0")
+    }
+    ```
 
 ---
 
@@ -47,26 +67,6 @@ Scene(modifier = Modifier.fillMaxSize()) {
 
 ---
 
-## Install
-
-=== "3D only"
-
-    ```gradle
-    dependencies {
-        implementation("io.github.sceneview:sceneview:3.0.0")
-    }
-    ```
-
-=== "3D + AR"
-
-    ```gradle
-    dependencies {
-        implementation("io.github.sceneview:arsceneview:3.0.0")
-    }
-    ```
-
----
-
 ## Key concepts
 
 ### Nodes are composables
@@ -80,6 +80,12 @@ Pass Compose state into node parameters. The scene updates on the next frame. To
 ### Everything is `remember`
 
 The Filament engine, model loaders, environment, camera — all are `remember`-ed values with automatic cleanup. Create them, use them, forget about them.
+
+---
+
+## Upgrading from v2.x?
+
+See the [Migration guide](migration.md) for a step-by-step walkthrough of every breaking change.
 
 ---
 
