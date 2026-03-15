@@ -19,7 +19,6 @@ import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.arcore.zDirection
 import io.github.sceneview.loaders.MaterialLoader
-import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.material.setParameter
 import io.github.sceneview.material.setTexture
 import io.github.sceneview.math.Color
@@ -36,7 +35,6 @@ import io.github.sceneview.texture.ImageTexture
  */
 class PlaneRenderer(
     val engine: Engine,
-    private val modelLoader: ModelLoader,
     materialLoader: MaterialLoader,
     private val scene: Scene
 ) {
@@ -71,7 +69,6 @@ class PlaneRenderer(
 
     private val materialInstances = mutableListOf<MaterialInstance>()
 
-    // TODO: Remove when it isn't used in PlaneVisualizer
     private var shadowMaterial = materialLoader.createMaterial(
         "materials/plane_renderer_shadow.filamat"
     )
@@ -223,7 +220,7 @@ class PlaneRenderer(
         // If not, create a new plane visualizer for this plane.
         if (plane.trackingState == TrackingState.TRACKING || plane.subsumedBy == null) {
             val planeVisualizer = visualizers[plane]
-                ?: PlaneVisualizer(engine, modelLoader, scene, plane).apply {
+                ?: PlaneVisualizer(engine, scene, plane).apply {
                     setPlaneMaterial(planeMaterial.createInstance().also {
                         materialInstances += it
                     })

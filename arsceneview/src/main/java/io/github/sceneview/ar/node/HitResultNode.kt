@@ -9,14 +9,13 @@ import com.google.ar.core.Point
 import com.google.ar.core.Session
 import com.google.ar.core.Trackable
 import com.google.ar.core.TrackingState
-import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.firstByTypeOrNull
 
 /**
  * AR real time AR HitTest positioned node.
  *
  * This [PoseNode] follows the actual ARCore detected orientation and position at the provided
- * relative X, Y location in the [ARSceneView]
+ * relative X, Y location in the AR scene view
  *
  * Performs a ray cast from the user's device in the direction of the given location in the
  * camera view. Intersections with detected scene geometry are returned, sorted by distance from

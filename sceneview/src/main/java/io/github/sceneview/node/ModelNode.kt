@@ -8,7 +8,6 @@ import com.google.android.filament.gltfio.FilamentAsset
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.max
 import io.github.sceneview.Entity
-import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -30,7 +29,7 @@ import kotlin.math.abs
 /**
  * Create the ModelNode from a loaded model instance.
  *
- * Use your own single [MaterialLoader] instance or the [SceneView.materialLoader] one to load your
+ * Use your own single [MaterialLoader] instance to load your
  * gltF form different .glTF/.glb resource locations.
  *
  * @see ModelLoader

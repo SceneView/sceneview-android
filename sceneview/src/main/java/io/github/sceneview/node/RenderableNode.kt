@@ -7,7 +7,6 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import io.github.sceneview.Entity
 import io.github.sceneview.FilamentEntity
-import io.github.sceneview.SceneView
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.math.toVector3Box
 import io.github.sceneview.safeDestroyRenderable
@@ -18,7 +17,7 @@ import io.github.sceneview.safeDestroyRenderable
  * This node contains a renderable model for the rendering engine to render.
  *
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
- * another node, or the [SceneView]
+ * another node, or the scene root
  * .
  */
 open class RenderableNode(

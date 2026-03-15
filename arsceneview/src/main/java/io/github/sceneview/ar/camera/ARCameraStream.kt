@@ -14,7 +14,6 @@ import com.google.ar.core.Config
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
-import com.google.ar.sceneform.rendering.Renderable
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.managers.safeDestroy
@@ -178,7 +177,7 @@ open class ARCameraStream(
             .receiveShadows(false)
             // Always draw the camera feed last to avoid overdraw
             .culling(false)
-            .priority(Renderable.RENDER_PRIORITY_LAST)
+            .priority(7)
             .geometry(0,
                 RenderableManager.PrimitiveType.TRIANGLES,
                 vertexBuffer,
