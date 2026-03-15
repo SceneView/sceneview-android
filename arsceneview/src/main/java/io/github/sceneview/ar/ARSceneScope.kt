@@ -1,0 +1,584 @@
+package io.github.sceneview.ar
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.google.android.filament.Engine
+import com.google.android.filament.MaterialInstance
+import com.google.ar.core.Anchor
+import com.google.ar.core.AugmentedFace
+import com.google.ar.core.AugmentedImage
+import com.google.ar.core.AugmentedImage.TrackingMethod
+import com.google.ar.core.Camera
+import com.google.ar.core.Frame
+import com.google.ar.core.HitResult
+import com.google.ar.core.Plane
+import com.google.ar.core.Point
+import com.google.ar.core.Pose
+import com.google.ar.core.StreetscapeGeometry
+import com.google.ar.core.Trackable
+import com.google.ar.core.TrackingState
+import io.github.sceneview.NodeScope
+import io.github.sceneview.SceneDsl
+import io.github.sceneview.SceneScope
+import io.github.sceneview.loaders.EnvironmentLoader
+import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.loaders.ModelLoader
+import io.github.sceneview.node.Node as NodeImpl
+import io.github.sceneview.ar.node.AnchorNode as AnchorNodeImpl
+import io.github.sceneview.ar.node.AugmentedFaceNode as AugmentedFaceNodeImpl
+import io.github.sceneview.ar.node.AugmentedImageNode as AugmentedImageNodeImpl
+import io.github.sceneview.ar.node.CloudAnchorNode as CloudAnchorNodeImpl
+import io.github.sceneview.ar.node.HitResultNode as HitResultNodeImpl
+import io.github.sceneview.ar.node.PoseNode as PoseNodeImpl
+import io.github.sceneview.ar.node.StreetscapeGeometryNode as StreetscapeGeometryNodeImpl
+import io.github.sceneview.ar.node.TrackableNode as TrackableNodeImpl
+
+/**
+ * The composable DSL scope for building AR scenes inside [ARScene].
+ *
+ * `ARSceneScope` extends [SceneScope] with AR-specific node composables that follow ARCore-tracked
+ * objects — anchors, images, faces, cloud anchors, hit-test results, and generic trackables.
+ * Every node is a `@Composable` function: it enters the scene on first composition and is
+ * destroyed automatically when it leaves.
+ *
+ * Drive AR content with ordinary Compose state. When state changes, the composition reacts and
+ * the AR scene updates on the next frame — no imperative add/remove calls needed.
+ *
+ * ```kotlin
+ * ARScene(modifier = Modifier.fillMaxSize()) {
+ *     // anchor is a mutableStateOf<Anchor?> — null until a plane is detected
+ *     anchor?.let { a ->
+ *         AnchorNode(anchor = a) {
+ *             ModelNode(
+ *                 modelInstance = rememberModelInstance(modelLoader, "models/helmet.glb"),
+ *                 scaleToUnits = 0.5f
+ *             )
+ *         }
+ *     }
+ * }
+ * ```
+ *
+ * AR-specific composables ([AnchorNode], [PoseNode], [HitResultNode], etc.) are only available
+ * at the top level of `ARScene { }`. Inside a nested [NodeScope] (the `content` block of any
+ * node), only the base [SceneScope] composables are in scope.
+ *
+ * @param engine            The Filament [Engine] shared with the parent [ARScene].
+ * @param modelLoader       [ModelLoader] for loading glTF/GLB models.
+ * @param materialLoader    [MaterialLoader] for creating material instances.
+ * @param environmentLoader [EnvironmentLoader] for loading HDR environments.
+ * @param _nodes            Internal SnapshotStateList backing the scene's root node list.
+ */
+@SceneDsl
+class ARSceneScope internal constructor(
+    engine: Engine,
+    modelLoader: ModelLoader,
+    materialLoader: MaterialLoader,
+    environmentLoader: EnvironmentLoader,
+    _nodes: SnapshotStateList<NodeImpl>
+) : SceneScope(
+    engine = engine,
+    modelLoader = modelLoader,
+    materialLoader = materialLoader,
+    environmentLoader = environmentLoader,
+    _nodes = _nodes
+) {
+
+    // ── AnchorNode ────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that tracks a real-world [Anchor] position and orientation.
+     *
+     * The node's transform is updated each frame to match the anchor's pose as ARCore refines its
+     * understanding of the environment. The node is only visible when the anchor is in
+     * [TrackingState.TRACKING].
+     *
+     * Typical usage — place a model at a tapped surface:
+     * ```kotlin
+     * var anchor by remember { mutableStateOf<Anchor?>(null) }
+     *
+     * ARScene(
+     *     onSessionUpdated = { _, frame ->
+     *         if (anchor == null) {
+     *             anchor = frame.hitTest(centerX, centerY)
+     *                 .firstOrNull()?.createAnchor()
+     *         }
+     *     }
+     * ) {
+     *     anchor?.let { a ->
+     *         AnchorNode(anchor = a) {
+     *             ModelNode(modelInstance = rememberModelInstance(modelLoader, "helmet.glb"))
+     *         }
+     *     }
+     * }
+     * ```
+     *
+     * @param anchor                  The ARCore anchor to follow.
+     * @param updateAnchorPose        Whether to automatically update the node's pose when the
+     *                                anchor pose changes. Default `true`.
+     * @param visibleTrackingStates   The set of [TrackingState]s for which the node is rendered.
+     *                                Default: only [TrackingState.TRACKING].
+     * @param onTrackingStateChanged  Callback invoked when the anchor's tracking state changes.
+     * @param onAnchorChanged         Callback invoked when the [Anchor] reference is replaced.
+     * @param onUpdated               Callback invoked each frame while the anchor is updated.
+     * @param apply                   Additional imperative configuration on the [AnchorNodeImpl].
+     * @param content                 Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun AnchorNode(
+        anchor: Anchor,
+        updateAnchorPose: Boolean = true,
+        visibleTrackingStates: Set<TrackingState> = setOf(TrackingState.TRACKING),
+        onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+        onAnchorChanged: ((Anchor) -> Unit)? = null,
+        onUpdated: ((Anchor) -> Unit)? = null,
+        apply: AnchorNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, anchor) {
+            AnchorNodeImpl(
+                engine = engine,
+                anchor = anchor,
+                onTrackingStateChanged = onTrackingStateChanged,
+                onAnchorChanged = onAnchorChanged,
+                onUpdated = onUpdated
+            ).apply {
+                this.updateAnchorPose = updateAnchorPose
+                this.visibleTrackingStates = visibleTrackingStates
+                apply()
+            }
+        }
+        SideEffect {
+            node.updateAnchorPose = updateAnchorPose
+            node.visibleTrackingStates = visibleTrackingStates
+            node.onTrackingStateChanged = onTrackingStateChanged
+            node.onAnchorChanged = onAnchorChanged
+            node.onUpdated = onUpdated
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── PoseNode ──────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that is positioned at a specific ARCore [Pose] in the real world.
+     *
+     * Unlike [AnchorNode], a `PoseNode` is not persisted across sessions — it follows the given
+     * pose directly. It is useful for placing temporary indicators or hit-test results.
+     *
+     * @param pose                        The world-space [Pose] to track.
+     * @param visibleCameraTrackingStates States in which the node is visible based on camera tracking.
+     * @param onPoseChanged               Callback invoked when the pose changes.
+     * @param apply                       Additional imperative configuration on the [PoseNodeImpl].
+     * @param content                     Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun PoseNode(
+        pose: Pose = Pose.IDENTITY,
+        visibleCameraTrackingStates: Set<TrackingState> = setOf(TrackingState.TRACKING),
+        onPoseChanged: ((Pose) -> Unit)? = null,
+        apply: PoseNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine) {
+            PoseNodeImpl(
+                engine = engine,
+                pose = pose,
+                onPoseChanged = onPoseChanged
+            ).apply {
+                this.visibleCameraTrackingStates = visibleCameraTrackingStates
+                apply()
+            }
+        }
+        SideEffect {
+            node.pose = pose
+            node.visibleCameraTrackingStates = visibleCameraTrackingStates
+            node.onPoseChanged = onPoseChanged
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── HitResultNode ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that follows real-time AR hit-test results at the given view coordinates.
+     *
+     * On each [Frame] update, the node performs a hit test at ([xPx], [yPx]) in view space and
+     * moves to the intersection with detected scene geometry (planes, depth, instant placement).
+     * Useful for placement cursors or interactive positioning UIs.
+     *
+     * ```kotlin
+     * ARScene {
+     *     HitResultNode(xPx = viewWidth / 2f, yPx = viewHeight / 2f) {
+     *         CubeNode(size = Float3(0.05f))
+     *     }
+     * }
+     * ```
+     *
+     * @param xPx                       View X coordinate in pixels for the hit test.
+     * @param yPx                       View Y coordinate in pixels for the hit test.
+     * @param planeTypes                Which plane types to include in results.
+     * @param point                     Include [Point] trackable results.
+     * @param depthPoint                Include depth-based hit results.
+     * @param instantPlacementPoint     Include instant placement results.
+     * @param trackingStates            Only accept results where the trackable has these states.
+     * @param pointOrientationModes     Filter by point orientation mode.
+     * @param planePoseInPolygon        Require the pose to lie inside the plane polygon.
+     * @param minCameraDistance         Minimum camera distance filter.
+     * @param predicate                 Custom filter applied to each [HitResult].
+     * @param apply                     Additional imperative configuration on [HitResultNodeImpl].
+     * @param content                   Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun HitResultNode(
+        xPx: Float,
+        yPx: Float,
+        planeTypes: Set<Plane.Type> = Plane.Type.entries.toSet(),
+        point: Boolean = true,
+        depthPoint: Boolean = true,
+        instantPlacementPoint: Boolean = true,
+        trackingStates: Set<TrackingState> = setOf(TrackingState.TRACKING),
+        pointOrientationModes: Set<Point.OrientationMode> = setOf(
+            Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
+        ),
+        planePoseInPolygon: Boolean = true,
+        minCameraDistance: Pair<Camera, Float>? = null,
+        predicate: ((HitResult) -> Boolean)? = null,
+        apply: HitResultNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, xPx, yPx) {
+            HitResultNodeImpl(
+                engine = engine,
+                xPx = xPx,
+                yPx = yPx,
+                planeTypes = planeTypes,
+                point = point,
+                depthPoint = depthPoint,
+                instantPlacementPoint = instantPlacementPoint,
+                trackingStates = trackingStates,
+                pointOrientationModes = pointOrientationModes,
+                planePoseInPolygon = planePoseInPolygon,
+                minCameraDistance = minCameraDistance,
+                predicate = predicate
+            ).apply(apply)
+        }
+        NodeLifecycle(node, content)
+    }
+
+    /**
+     * A node that follows a custom real-time AR hit-test.
+     *
+     * Provide your own [hitTest] lambda for full control over which [HitResult] the node follows.
+     *
+     * @param hitTest   Invoked each frame with the current [Frame]; return the [HitResult] to
+     *                  follow or `null` to keep the last known pose.
+     * @param apply     Additional imperative configuration on [HitResultNodeImpl].
+     * @param content   Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun HitResultNode(
+        hitTest: HitResultNodeImpl.(Frame) -> HitResult?,
+        apply: HitResultNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine) {
+            HitResultNodeImpl(engine = engine, hitTest = hitTest).apply(apply)
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── AugmentedImageNode ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that tracks a detected [AugmentedImage] in the camera feed.
+     *
+     * The node's pose is updated to match the image's center pose while it is being tracked.
+     * Optionally scales the node to match the physical image's real-world dimensions.
+     *
+     * Usage — show content over a magazine cover:
+     * ```kotlin
+     * ARScene(
+     *     sessionConfiguration = { session, config ->
+     *         config.augmentedImageDatabase = AugmentedImageDatabase(session).also { db ->
+     *             db.addImage("cover", coverBitmap)
+     *         }
+     *     },
+     *     onSessionUpdated = { _, frame ->
+     *         frame.getUpdatedTrackables(AugmentedImage::class.java).forEach { image ->
+     *             if (image.trackingState == TrackingState.TRACKING) detectedImages += image
+     *         }
+     *     }
+     * ) {
+     *     detectedImages.forEach { image ->
+     *         AugmentedImageNode(augmentedImage = image) {
+     *             ModelNode(modelInstance = rememberModelInstance(modelLoader, "drone.glb"))
+     *         }
+     *     }
+     * }
+     * ```
+     *
+     * @param augmentedImage            The ARCore [AugmentedImage] to track.
+     * @param applyImageScale           If `true`, scales the node to match the image's physical size.
+     * @param visibleTrackingMethods    Tracking methods for which the node is visible.
+     * @param onTrackingStateChanged    Callback when tracking state changes.
+     * @param onTrackingMethodChanged   Callback when the tracking method changes.
+     * @param onUpdated                 Callback invoked each frame while the image is updated.
+     * @param apply                     Additional imperative configuration.
+     * @param content                   Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun AugmentedImageNode(
+        augmentedImage: AugmentedImage,
+        applyImageScale: Boolean = false,
+        visibleTrackingMethods: Set<TrackingMethod> = setOf(
+            TrackingMethod.FULL_TRACKING, TrackingMethod.LAST_KNOWN_POSE
+        ),
+        onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+        onTrackingMethodChanged: ((TrackingMethod) -> Unit)? = null,
+        onUpdated: ((AugmentedImage) -> Unit)? = null,
+        apply: AugmentedImageNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, augmentedImage) {
+            AugmentedImageNodeImpl(
+                engine = engine,
+                augmentedImage = augmentedImage,
+                applyImageScale = applyImageScale,
+                visibleTrackingMethods = visibleTrackingMethods,
+                onTrackingStateChanged = onTrackingStateChanged,
+                onTrackingMethodChanged = onTrackingMethodChanged,
+                onUpdated = onUpdated
+            ).apply(apply)
+        }
+        SideEffect {
+            node.applyImageScale = applyImageScale
+            node.onTrackingStateChanged = onTrackingStateChanged
+            node.onUpdated = onUpdated
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── AugmentedFaceNode ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that renders a 3D mesh aligned to a detected [AugmentedFace].
+     *
+     * Automatically updates the face mesh vertices and region poses each frame while
+     * [AugmentedFace] tracking is active. Requires the session to be configured with
+     * `AugmentedFaceMode.MESH3D` and the front camera.
+     *
+     * ```kotlin
+     * ARScene(
+     *     sessionFeatures = setOf(Session.Feature.FRONT_CAMERA),
+     *     sessionConfiguration = { _, config ->
+     *         config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
+     *     },
+     *     onSessionUpdated = { session, _ ->
+     *         detectedFaces = session.getAllTrackables(AugmentedFace::class.java)
+     *             .filter { it.trackingState == TrackingState.TRACKING }
+     *     }
+     * ) {
+     *     detectedFaces.forEach { face ->
+     *         AugmentedFaceNode(augmentedFace = face, meshMaterialInstance = faceMaterial)
+     *     }
+     * }
+     * ```
+     *
+     * @param augmentedFace         The ARCore [AugmentedFace] to render.
+     * @param meshMaterialInstance  Optional material applied to the face mesh.
+     * @param onTrackingStateChanged Callback when tracking state changes.
+     * @param onUpdated             Callback invoked each frame while the face is updated.
+     * @param apply                 Additional imperative configuration.
+     * @param content               Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun AugmentedFaceNode(
+        augmentedFace: AugmentedFace,
+        meshMaterialInstance: MaterialInstance? = null,
+        onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+        onUpdated: ((AugmentedFace) -> Unit)? = null,
+        apply: AugmentedFaceNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, augmentedFace) {
+            AugmentedFaceNodeImpl(
+                engine = engine,
+                augmentedFace = augmentedFace,
+                meshMaterialInstance = meshMaterialInstance,
+                onTrackingStateChanged = onTrackingStateChanged,
+                onUpdated = onUpdated
+            ).apply(apply)
+        }
+        SideEffect {
+            node.onTrackingStateChanged = onTrackingStateChanged
+            node.onUpdated = onUpdated
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── CloudAnchorNode ───────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that tracks an ARCore Cloud Anchor, enabling persistent AR experiences across devices
+     * and sessions.
+     *
+     * After placing the node, call [CloudAnchorNodeImpl.host] to upload the anchor to the
+     * Google Cloud ARCore API and receive a persistent cloud anchor ID.
+     * To resolve a previously hosted anchor by ID, use [CloudAnchorNodeImpl.resolve] companion.
+     *
+     * ```kotlin
+     * var cloudNode: CloudAnchorNode? by remember { mutableStateOf(null) }
+     *
+     * ARScene {
+     *     cloudNode?.let { node ->
+     *         // The node is already created; just add children
+     *     }
+     * }
+     *
+     * // Resolve a previously hosted anchor
+     * LaunchedEffect(session) {
+     *     CloudAnchorNode.resolve(engine, session, "ua-...") { state, node ->
+     *         cloudNode = node
+     *     }
+     * }
+     * ```
+     *
+     * @param anchor                  The local [Anchor] to associate with a cloud anchor.
+     * @param cloudAnchorId           The cloud anchor ID if already resolved; `null` when hosting.
+     * @param onTrackingStateChanged  Callback when tracking state changes.
+     * @param onUpdated               Callback invoked each frame while the anchor is updated.
+     * @param onHosted                Callback invoked when cloud hosting completes (success or fail).
+     * @param apply                   Additional imperative configuration.
+     * @param content                 Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun CloudAnchorNode(
+        anchor: Anchor,
+        cloudAnchorId: String? = null,
+        onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+        onUpdated: ((Anchor?) -> Unit)? = null,
+        onHosted: ((cloudAnchorId: String?, state: com.google.ar.core.Anchor.CloudAnchorState) -> Unit)? = null,
+        apply: CloudAnchorNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, anchor) {
+            CloudAnchorNodeImpl(
+                engine = engine,
+                anchor = anchor,
+                cloudAnchorId = cloudAnchorId,
+                onTrackingStateChanged = onTrackingStateChanged,
+                onUpdated = onUpdated,
+                onHosted = onHosted
+            ).apply(apply)
+        }
+        SideEffect {
+            node.onTrackingStateChanged = onTrackingStateChanged
+            node.onUpdated = onUpdated
+            node.onHosted = onHosted
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── TrackableNode ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A generic node that tracks any ARCore [Trackable].
+     *
+     * The node is only visible while the trackable's state is within [visibleTrackingStates].
+     * Useful for custom trackable types or when only the base tracking behavior is needed.
+     *
+     * @param trackable               The [Trackable] to follow.
+     * @param visibleTrackingStates   States in which the node is rendered.
+     * @param onTrackingStateChanged  Callback when tracking state changes.
+     * @param onUpdated               Callback invoked each frame while the trackable is updated.
+     * @param apply                   Additional imperative configuration.
+     * @param content                 Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun <T : Trackable> TrackableNode(
+        trackable: T,
+        visibleTrackingStates: Set<TrackingState> = setOf(TrackingState.TRACKING),
+        onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+        onUpdated: ((T) -> Unit)? = null,
+        apply: TrackableNodeImpl<T>.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, trackable) {
+            TrackableNodeImpl<T>(
+                engine = engine,
+                visibleTrackingStates = visibleTrackingStates,
+                onTrackingStateChanged = onTrackingStateChanged,
+                onUpdated = onUpdated
+            ).apply {
+                this.trackable = trackable
+                apply()
+            }
+        }
+        SideEffect {
+            node.trackable = trackable
+            node.onTrackingStateChanged = onTrackingStateChanged
+            node.onUpdated = onUpdated
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── StreetscapeGeometryNode ───────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that renders a [StreetscapeGeometry] mesh from the ARCore Geospatial Streetscape API.
+     *
+     * Requires `Config.StreetscapeGeometryMode.ENABLED` and `Config.GeospatialMode.ENABLED` to be
+     * set in the ARCore session config. Obtain streetscape geometry from
+     * [Frame.getUpdatedTrackables].
+     *
+     * ```kotlin
+     * ARScene(
+     *     sessionConfiguration = { _, config ->
+     *         config.geospatialMode = Config.GeospatialMode.ENABLED
+     *         config.streetscapeGeometryMode = Config.StreetscapeGeometryMode.ENABLED
+     *     },
+     *     onSessionUpdated = { _, frame ->
+     *         geometries = frame.getUpdatedTrackables(StreetscapeGeometry::class.java).toList()
+     *     }
+     * ) {
+     *     geometries.forEach { geo ->
+     *         StreetscapeGeometryNode(streetscapeGeometry = geo, meshMaterialInstance = buildingMat)
+     *     }
+     * }
+     * ```
+     *
+     * @param streetscapeGeometry     The [StreetscapeGeometry] mesh to render.
+     * @param meshMaterialInstance    Optional material applied to the geometry mesh.
+     * @param onTrackingStateChanged  Callback when tracking state changes.
+     * @param onUpdated               Callback invoked each frame while the geometry is updated.
+     * @param apply                   Additional imperative configuration.
+     * @param content                 Optional child nodes declared in a [NodeScope].
+     */
+    @Composable
+    fun StreetscapeGeometryNode(
+        streetscapeGeometry: StreetscapeGeometry,
+        meshMaterialInstance: MaterialInstance? = null,
+        onTrackingStateChanged: ((TrackingState) -> Unit)? = null,
+        onUpdated: ((StreetscapeGeometry) -> Unit)? = null,
+        apply: StreetscapeGeometryNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, streetscapeGeometry) {
+            StreetscapeGeometryNodeImpl(
+                engine = engine,
+                streetscapeGeometry = streetscapeGeometry,
+                meshMaterialInstance = meshMaterialInstance,
+                onTrackingStateChanged = onTrackingStateChanged,
+                onUpdated = onUpdated
+            ).apply(apply)
+        }
+        SideEffect {
+            node.onTrackingStateChanged = onTrackingStateChanged
+            node.onUpdated = onUpdated
+        }
+        NodeLifecycle(node, content)
+    }
+}
