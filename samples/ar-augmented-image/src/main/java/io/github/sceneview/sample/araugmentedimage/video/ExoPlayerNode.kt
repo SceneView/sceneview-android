@@ -1,12 +1,16 @@
 package io.github.sceneview.sample.araugmentedimage.video
 
 import androidx.annotation.OptIn
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.google.android.filament.Engine
 import com.google.android.filament.RenderableManager
 import dev.romainguy.kotlin.math.normalize
+import io.github.sceneview.NodeScope
 import io.github.sceneview.geometries.Plane
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.material.VideoMaterial
@@ -88,6 +92,39 @@ open class ExoPlayerNode(
     }
 }
 
+/**
+ * DSL composable that adds an [ExoPlayerNode] as a child of this [NodeScope]'s parent node.
+ */
+@Composable
+fun NodeScope.ExoPlayerNode(
+    exoPlayer: ExoPlayer,
+    chromaKeyColor: Int? = null,
+    rotateToNode: Boolean = false,
+    size: Size = Plane.DEFAULT_SIZE,
+    center: Position = Plane.DEFAULT_CENTER,
+    normal: Direction = Plane.DEFAULT_NORMAL,
+) {
+    val node = remember(engine, materialLoader, exoPlayer) {
+        ExoPlayerNode(
+            engine = engine,
+            materialLoader = materialLoader,
+            exoPlayer = exoPlayer,
+            chromaKeyColor = chromaKeyColor,
+            rotateToNode = rotateToNode,
+            size = size,
+            center = center,
+            normal = normal,
+        )
+    }
+    DisposableEffect(node) {
+        parentNode.addChildNode(node)
+        onDispose {
+            parentNode.removeChildNode(node)
+            node.destroy()
+        }
+    }
+}
+
 @OptIn(UnstableApi::class)
 private fun ExoPlayer.doOnVideoSized(block: (player: ExoPlayer, videoWidth: Int, videoHeight: Int) -> Unit) {
     val videoWidth = videoFormat?.width ?: 0
@@ -95,18 +132,18 @@ private fun ExoPlayer.doOnVideoSized(block: (player: ExoPlayer, videoWidth: Int,
     if (videoWidth > 0 && videoHeight > 0) {
         block(this, videoWidth, videoHeight)
     } else {
-        addListener(
-            object : Player.Listener {
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_READY) {
-                        val width = videoFormat?.width ?: 0
-                        val height = videoFormat?.height ?: 0
-                        if (width > 0 && height > 0) {
-                            block(this@doOnVideoSized, width, height)
-                        }
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    val width = videoFormat?.width ?: 0
+                    val height = videoFormat?.height ?: 0
+                    if (width > 0 && height > 0) {
+                        removeListener(this)
+                        block(this@doOnVideoSized, width, height)
                     }
                 }
-            },
-        )
+            }
+        }
+        addListener(listener)
     }
 }
