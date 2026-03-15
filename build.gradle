@@ -18,6 +18,8 @@ buildscript {
     }
 }
 
+apply plugin: 'org.jetbrains.dokka'
+
 allprojects {
     plugins.withId("com.vanniktech.maven.publish") {
         mavenPublishing {
