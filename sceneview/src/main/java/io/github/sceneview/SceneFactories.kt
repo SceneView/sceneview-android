@@ -21,6 +21,7 @@ import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.loaders.EnvironmentLoader
+import io.github.sceneview.managers.color
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toColor
@@ -125,7 +126,7 @@ class DefaultLightNode(engine: Engine) : LightNode(
     engine = engine,
     type = LightManager.Type.DIRECTIONAL,
     apply = {
-        color(DEFAULT_MAIN_/btLIGHT_COLOR)
+        color(DEFAULT_MAIN_LIGHT_COLOR)
         intensity(DEFAULT_MAIN_LIGHT_COLOR_INTENSITY)
         direction(0.0f, -1.0f, 0.0f)
         castShadows(true)

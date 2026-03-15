@@ -1,8 +1,14 @@
 package io.github.sceneview.ar
 
 import android.content.Context.WINDOW_SERVICE
+import android.graphics.PixelFormat
+import android.graphics.SurfaceTexture
 import android.util.Size
 import android.view.MotionEvent
+import android.view.Surface
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.TextureView
 import android.view.WindowManager as AndroidWindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -16,14 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.viewinterop.AndroidEmbeddedExternalSurface
-import androidx.compose.ui.viewinterop.AndroidExternalSurface
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -530,61 +533,96 @@ fun ARScene(
         arPlaneRenderer.viewSize = Size(width, height)
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     when (surfaceType) {
-        SurfaceType.Surface -> AndroidExternalSurface(
-            modifier = modifier.pointerInteropFilter { event -> touchDispatcher(event); true },
-            isOpaque = isOpaque
-        ) {
-            onSurface { surface, width, height ->
-                swapChainRef.set(engine.createSwapChain(surface))
-                displayHelper.attach(renderer, display)
-                cameraGestureDetectorRef.set(CameraGestureDetector(
-                    viewHeight = { height },
-                    cameraManipulator = null
-                ))
-                applyARResize(width, height)
-                engine.drainFramePipeline()
+        SurfaceType.Surface -> AndroidView(
+            modifier = modifier,
+            factory = { ctx ->
+                SurfaceView(ctx).also { sv ->
+                    if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
+                    sv.holder.addCallback(object : SurfaceHolder.Callback {
+                        override fun surfaceCreated(holder: SurfaceHolder) {}
 
-                surface.onChanged { w, h ->
-                    applyARResize(w, h)
-                    engine.drainFramePipeline()
-                }
-                surface.onDestroyed {
-                    cameraGestureDetectorRef.set(null)
-                    swapChainRef.getAndSet(null)?.let { runCatching { engine.destroySwapChain(it) } }
-                    engine.flushAndWait()
-                    displayHelper.detach()
-                }
-            }
-        }
+                        override fun surfaceChanged(
+                            holder: SurfaceHolder, format: Int, width: Int, height: Int
+                        ) {
+                            if (swapChainRef.get() == null) {
+                                swapChainRef.set(engine.createSwapChain(holder.surface))
+                                displayHelper.attach(renderer, display)
+                                cameraGestureDetectorRef.set(
+                                    CameraGestureDetector(
+                                        viewHeight = { sv.height },
+                                        cameraManipulator = null
+                                    )
+                                )
+                            }
+                            applyARResize(width, height)
+                            engine.drainFramePipeline()
+                        }
 
-        SurfaceType.TextureSurface -> AndroidEmbeddedExternalSurface(
-            modifier = modifier.pointerInteropFilter { event -> touchDispatcher(event); true },
-            isOpaque = isOpaque
-        ) {
-            onSurface { surface, width, height ->
-                swapChainRef.set(engine.createSwapChain(surface))
-                displayHelper.attach(renderer, display)
-                cameraGestureDetectorRef.set(CameraGestureDetector(
-                    viewHeight = { height },
-                    cameraManipulator = null
-                ))
-                applyARResize(width, height)
-                engine.drainFramePipeline()
+                        override fun surfaceDestroyed(holder: SurfaceHolder) {
+                            cameraGestureDetectorRef.set(null)
+                            swapChainRef.getAndSet(null)?.let {
+                                runCatching { engine.destroySwapChain(it) }
+                            }
+                            engine.flushAndWait()
+                            displayHelper.detach()
+                        }
+                    })
+                    sv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                }
+            },
+            update = {}
+        )
 
-                surface.onChanged { w, h ->
-                    applyARResize(w, h)
-                    engine.drainFramePipeline()
+        SurfaceType.TextureSurface -> AndroidView(
+            modifier = modifier,
+            factory = { ctx ->
+                TextureView(ctx).also { tv ->
+                    tv.isOpaque = isOpaque
+                    var textureSurface: Surface? = null
+                    tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                        override fun onSurfaceTextureAvailable(
+                            st: SurfaceTexture, width: Int, height: Int
+                        ) {
+                            textureSurface = Surface(st)
+                            swapChainRef.set(engine.createSwapChain(textureSurface!!))
+                            displayHelper.attach(renderer, display)
+                            cameraGestureDetectorRef.set(
+                                CameraGestureDetector(
+                                    viewHeight = { tv.height },
+                                    cameraManipulator = null
+                                )
+                            )
+                            applyARResize(width, height)
+                            engine.drainFramePipeline()
+                        }
+
+                        override fun onSurfaceTextureSizeChanged(
+                            st: SurfaceTexture, width: Int, height: Int
+                        ) {
+                            applyARResize(width, height)
+                            engine.drainFramePipeline()
+                        }
+
+                        override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                            cameraGestureDetectorRef.set(null)
+                            swapChainRef.getAndSet(null)?.let {
+                                runCatching { engine.destroySwapChain(it) }
+                            }
+                            engine.flushAndWait()
+                            displayHelper.detach()
+                            textureSurface?.release()
+                            textureSurface = null
+                            return true
+                        }
+
+                        override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
+                    }
+                    tv.setOnTouchListener { _, event -> touchDispatcher(event); true }
                 }
-                surface.onDestroyed {
-                    cameraGestureDetectorRef.set(null)
-                    swapChainRef.getAndSet(null)?.let { runCatching { engine.destroySwapChain(it) } }
-                    engine.flushAndWait()
-                    displayHelper.detach()
-                }
-            }
-        }
+            },
+            update = {}
+        )
     }
 
     // ── DSL content ───────────────────────────────────────────────────────────────────────────────
