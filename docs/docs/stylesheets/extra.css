@@ -1,0 +1,66 @@
+/* SceneView CodeLab custom styles */
+
+:root {
+  --md-primary-fg-color: #6c35aa;
+  --md-primary-fg-color--light: #9c65da;
+  --md-primary-fg-color--dark: #4a1d8a;
+  --md-accent-fg-color: #9c27b0;
+}
+
+/* Step numbers for codelab-style headers */
+.md-content h2 {
+  counter-increment: step;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.md-content h2::before {
+  content: counter(step);
+  background: var(--md-primary-fg-color);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 700;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.md-content {
+  counter-reset: step;
+}
+
+/* Code blocks */
+.highlight code {
+  font-size: 0.85rem;
+}
+
+/* Card grid */
+.grid.cards > ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+}
+
+.grid.cards > ul > li {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: box-shadow 0.2s;
+}
+
+.grid.cards > ul > li:hover {
+  box-shadow: 0 4px 16px rgba(108, 53, 170, 0.15);
+}
+
+/* Hero image centering */
+.md-content img[width] {
+  display: block;
+  margin: 0 auto 2rem;
+}
