@@ -1,0 +1,85 @@
+site_name: SceneView Codelabs
+site_description: Step-by-step guides for building 3D and AR apps with SceneView and Jetpack Compose
+site_url: https://sceneview.github.io/codelabs/
+repo_url: https://github.com/SceneView/sceneview-android
+repo_name: SceneView/sceneview-android
+edit_uri: edit/main/docs/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  logo: assets/logo.png
+  favicon: assets/logo.png
+
+nav:
+  - Home: index.md
+  - Codelabs:
+    - 3D with Compose: codelabs/codelab-3d-compose.md
+    - AR with Compose: codelabs/codelab-ar-compose.md
+  - Reference:
+    - API (3D): https://sceneview.github.io/api/sceneview-android/sceneview/
+    - API (AR): https://sceneview.github.io/api/sceneview-android/arsceneview/
+    - Migration Guide: https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md
+    - Changelog: https://github.com/SceneView/sceneview-android/blob/main/CHANGELOG.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: kotlin
+          class: language-kotlin
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/SceneView/sceneview-android
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/UbNDDBTNqb
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+
+extra_css:
+  - stylesheets/extra.css
