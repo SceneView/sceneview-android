@@ -253,7 +253,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         dest.z = x * m.data[2] + y * m.data[6] + z * m.data[10] + w * m.data[14]
         w = x * m.data[3] + y * m.data[7] + z * m.data[11] + w * m.data[15]
         if (MathHelper.almostEqualRelativeAndAbs(w, 0.0f)) {
-            dest[0f, 0f] = 0f
+            dest.set(0f, 0f, 0f)
             return false
         }
         w = 1.0f / w
@@ -330,7 +330,7 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         super.destroy()
     }
 
-    internal fun setView(view: View) {
+    fun setView(view: View) {
         this.view = view
         updateProjection()
     }

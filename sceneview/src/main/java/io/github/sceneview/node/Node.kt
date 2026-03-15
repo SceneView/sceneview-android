@@ -111,6 +111,15 @@ open class Node(
     var editableScaleRange = 0.1f..10.0f
 
     /**
+     * Sensitivity multiplier applied to pinch-to-scale gestures.
+     *
+     * `1.0` passes the raw detector factor directly; values below `1.0` make scaling more
+     * progressive by reducing the delta on each event. `0.5` (default) halves the per-frame
+     * delta, giving a noticeably smoother and more controlled feel.
+     */
+    var scaleGestureSensitivity: Float = 0.5f
+
+    /**
      * The visible state of this node.
      *
      * Note that a Node may be visible but still not rendered if its parent is not visible or if it
@@ -439,14 +448,14 @@ open class Node(
      * If null, this node's current collision shape will be removed.
      */
     var collisionShape: CollisionShape? = null
-        get() = collider?.shape
+        get() = collider?.getShape()
         set(value) {
             field = value
             if (value != null) {
                 val collider = collider ?: Collider(
                     this
                 ).also { collider = it }
-                collider.shape = value
+                collider.setShape(value)
             } else {
                 collider = null
             }
@@ -885,7 +894,7 @@ open class Node(
             // Find the hit test location in the parent to place the child at the
             // corresponding location
             collisionSystem?.hitTest(e)?.firstOrNull { it.node == parent }?.let {
-                onMove(detector, e, it.worldPosition)
+                onMove(detector, e, it.getWorldPosition())
             } ?: false
         } else {
             parent?.onMove(detector, e) ?: false
@@ -974,7 +983,8 @@ open class Node(
 
     open fun onScale(detector: ScaleGestureDetector, e: MotionEvent, scaleFactor: Float): Boolean {
         return if (onScale?.invoke(detector, e, scaleFactor) != false) {
-            val newScale = scale * scaleFactor
+            val damped = 1f + (scaleFactor - 1f) * scaleGestureSensitivity
+            val newScale = scale * damped
             if (newScale.x in editableScaleRange &&
                 newScale.y in editableScaleRange &&
                 newScale.z in editableScaleRange

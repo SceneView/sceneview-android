@@ -30,9 +30,9 @@ class CollisionSystem(var view: View) {
         var result: Collider? = null
         val tempResult = RayHit()
         for (collider in colliders) {
-            val collisionShape = collider.transformedShape ?: continue
+            val collisionShape = collider.getTransformedShape() ?: continue
             if (collisionShape.rayIntersection(ray, tempResult)) {
-                if (tempResult.distance < resultHit.distance) {
+                if (tempResult.getDistance() < resultHit.getDistance()) {
                     resultHit.set(tempResult)
                     result = collider
                 }
@@ -53,7 +53,7 @@ class CollisionSystem(var view: View) {
 
         // Check the ray against all the colliders.
         for (collider in colliders) {
-            val collisionShape = collider.transformedShape ?: continue
+            val collisionShape = collider.getTransformedShape() ?: continue
             if (collisionShape.rayIntersection(ray, tempResult)) {
                 hitCount++
                 var result: T? = null
@@ -75,9 +75,7 @@ class CollisionSystem(var view: View) {
         }
 
         // Sort the hits by distance.
-        resultBuffer.sortWith(Comparator { a: T?, b: T? ->
-            a!!.distance.compareTo(b!!.distance)
-        })
+        resultBuffer.sortWith(compareBy { it?.getDistance() })
         return hitCount
     }
 
@@ -132,24 +130,21 @@ class CollisionSystem(var view: View) {
     fun hitTest(ray: dev.romainguy.kotlin.math.Ray): List<HitResult> =
         colliders.mapNotNull { collider ->
             HitResult().takeIf {
-                collider.transformedShape?.rayIntersection(ray.toCollisionRay(), it) == true
+                collider.getTransformedShape()?.rayIntersection(ray.toCollisionRay(), it) == true
             }?.apply {
                 node = collider.node
             }?.takeIf {
                 it.node.isHittable
             }
-        }.sortedWith { a: HitResult, b: HitResult ->
-            // Sort the hits by distance.
-            a.distance.compareTo(b.distance)
-        }
+        }.sortedBy { it.getDistance() }
 
     fun intersects(collider: Collider): Collider? {
-        val collisionShape = collider.transformedShape ?: return null
+        val collisionShape = collider.getTransformedShape() ?: return null
         for (otherCollider in colliders) {
             if (otherCollider == collider) {
                 continue
             }
-            val otherCollisionShape = otherCollider.transformedShape ?: continue
+            val otherCollisionShape = otherCollider.getTransformedShape() ?: continue
             if (collisionShape.shapeIntersection(otherCollisionShape)) {
                 return otherCollider
             }
@@ -158,12 +153,12 @@ class CollisionSystem(var view: View) {
     }
 
     fun intersectsAll(collider: Collider, processResult: Consumer<Collider>) {
-        val collisionShape = collider.transformedShape ?: return
+        val collisionShape = collider.getTransformedShape() ?: return
         for (otherCollider in colliders) {
             if (otherCollider == collider) {
                 continue
             }
-            val otherCollisionShape = otherCollider.transformedShape ?: continue
+            val otherCollisionShape = otherCollider.getTransformedShape() ?: continue
             if (collisionShape.shapeIntersection(otherCollisionShape)) {
                 processResult.accept(otherCollider)
             }

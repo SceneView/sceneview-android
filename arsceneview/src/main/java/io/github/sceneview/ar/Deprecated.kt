@@ -153,6 +153,7 @@ class Scene {
  * - ...
  */
 @Deprecated("Use SceneView directly", replaceWith = ReplaceWith("sceneView"))
+@Suppress("RestrictedApi")
 fun SceneView.getScene() = null
 
 
