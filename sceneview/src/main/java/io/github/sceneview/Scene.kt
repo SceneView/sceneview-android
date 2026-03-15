@@ -1,22 +1,37 @@
 package io.github.sceneview
 
 import android.content.Context
+import android.content.Context.WINDOW_SERVICE
+import android.graphics.PixelFormat
+import android.graphics.SurfaceTexture
 import android.opengl.EGLContext
 import android.view.MotionEvent
-import android.widget.FrameLayout
+import android.view.Surface
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.TextureView
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
@@ -24,9 +39,10 @@ import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
+import com.google.android.filament.SwapChain
 import com.google.android.filament.View
-import com.google.android.filament.utils.Manipulator
-import dev.romainguy.kotlin.math.Float2
+import com.google.android.filament.Viewport
+import com.google.android.filament.android.DisplayHelper
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
@@ -41,61 +57,121 @@ import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.model.Model
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.utils.readBuffer
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.ViewNode2
 import io.github.sceneview.utils.destroy
+import io.github.sceneview.utils.intervalSeconds
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+import dev.romainguy.kotlin.math.Float2
 
+/**
+ * A Filament 3D scene declared as Compose UI.
+ *
+ * `Scene` is a `@Composable` that embeds a Filament viewport. Its trailing [content] block is
+ * a **[SceneScope]** DSL where every node — models, lights, cameras, geometry, Compose UI — is
+ * itself a composable function. Nodes enter the scene on first composition and are automatically
+ * destroyed when they leave, with no manual lifecycle management required.
+ *
+ * 3D content is reactive: pass Compose state into node parameters and the scene updates on the
+ * next frame exactly like any other composable.
+ *
+ * ### Minimal usage
+ * ```kotlin
+ * Scene(modifier = Modifier.fillMaxSize()) {
+ *     rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+ *         ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
+ *     }
+ * }
+ * ```
+ *
+ * ### Composing nodes
+ * ```kotlin
+ * Scene {
+ *     // Nodes are composable functions — nest them to build a scene graph
+ *     Node(position = Position(y = 0.5f)) {
+ *         ModelNode(modelInstance = helmet)
+ *         CubeNode(size = Size(0.05f))
+ *     }
+ *     LightNode(type = LightManager.Type.DIRECTIONAL)
+ * }
+ * ```
+ *
+ * ### AR variant
+ * For AR use [io.github.sceneview.ar.ARScene] from the `arsceneview` module.
+ *
+ * @param modifier              Modifier for the underlying surface.
+ * @param surfaceType           [SurfaceType.Surface] (SurfaceView, renders behind Compose layers,
+ *                              best GPU performance) or [SurfaceType.TextureSurface] (TextureView,
+ *                              renders inline, supports alpha blending). Default: [SurfaceType.Surface].
+ * @param engine                Shared Filament [Engine]. Use [rememberEngine].
+ * @param modelLoader           Loader for glTF/GLB models. Use [rememberModelLoader].
+ * @param materialLoader        Loader for Filament material templates. Use [rememberMaterialLoader].
+ * @param environmentLoader     Loader for HDR/KTX environments. Use [rememberEnvironmentLoader].
+ * @param view                  Filament [View] (one per window). Use [rememberView].
+ * @param isOpaque              Whether the render target is opaque. Default `true`.
+ * @param renderer              Filament [Renderer]. Use [rememberRenderer].
+ * @param scene                 Filament [Scene] graph, shareable across views. Use [rememberScene].
+ * @param environment           IBL + skybox environment. Use [rememberEnvironment].
+ * @param mainLightNode         Primary directional light (required for shadows).
+ * @param cameraNode            Active rendering camera. Use [rememberCameraNode].
+ * @param collisionSystem       Hit-testing and collision system. Use [rememberCollisionSystem].
+ * @param cameraManipulator     Orbit/pan/zoom camera controller. Use [rememberCameraManipulator].
+ * @param viewNodeWindowManager Off-screen window manager required for [SceneScope.ViewNode].
+ * @param onGestureListener     Gesture callbacks — tap, double-tap, drag, pinch, etc.
+ * @param onTouchEvent          Raw touch event callback with optional hit-test result.
+ * @param activity              Host [ComponentActivity] (auto-resolved from [LocalContext]).
+ * @param lifecycle             Lifecycle that drives rendering resume/pause.
+ * @param onFrame               Called once per rendered frame, immediately before rendering.
+ * @param content               Declare 3D scene content using the [SceneScope] composable DSL.
+ */
 @Composable
 fun Scene(
     modifier: Modifier = Modifier,
+    /**
+     * Selects whether the backing surface is SurfaceView-based ([SurfaceType.Surface], renders
+     * behind Compose, best performance) or TextureView-based ([SurfaceType.TextureSurface],
+     * renders inline, supports alpha blending).
+     */
+    surfaceType: SurfaceType = SurfaceType.Surface,
     /**
      * Provide your own instance if you want to share Filament resources between multiple views.
      */
     engine: Engine = rememberEngine(),
     /**
-     * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object, which is
-     * a bundle of Filament textures, vertex buffers, index buffers, etc.
-     *
-     * A [Model] is composed of 1 or more [ModelInstance] objects which contain entities and components.
+     * Consumes a blob of glTF 2.0 content (either JSON or GLB) and produces a [Model] object,
+     * which is a bundle of Filament textures, vertex buffers, index buffers, etc.
      */
     modelLoader: ModelLoader = rememberModelLoader(engine),
     /**
      * A Filament Material defines the visual appearance of an object.
-     *
-     * Materials function as a templates from which [MaterialInstance]s can be spawned.
+     * Materials function as templates from which [MaterialInstance]s can be spawned.
      */
     materialLoader: MaterialLoader = rememberMaterialLoader(engine),
     /**
      * Utility for decoding an HDR file or consuming KTX1 files and producing Filament textures,
      * IBLs, and sky boxes.
-     *
-     * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces
-     * into a single file.
      */
     environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
     /**
-     * Encompasses all the state needed for rendering a {@link Scene}.
-     *
-     * [View] instances are heavy objects that internally cache a lot of data needed for
-     * rendering. It is not advised for an application to use many View objects.
-     *
-     * For example, in a game, a [View] could be used for the main scene and another one for the
-     * game's user interface. More <code>View</code> instances could be used for creating special
-     * effects (e.g. a [View] is akin to a rendering pass).
+     * Encompasses all the state needed for rendering a [Scene].
+     * [View] instances are heavy objects that internally cache a lot of data needed for rendering.
      */
     view: View = rememberView(engine),
     /**
-     * Controls whether the render target (SurfaceView) is opaque or not.
-     * The render target is considered opaque by default.
+     * Controls whether the render target is opaque or not. Default `true`.
      */
     isOpaque: Boolean = true,
     /**
      * A [Renderer] instance represents an operating system's window.
-     *
-     * Typically, applications create a [Renderer] per window. The [Renderer] generates drawing
-     * commands for the render thread and manages frame latency.
+     * Typically, applications create a [Renderer] per window.
      */
     renderer: Renderer = rememberRenderer(engine),
     /**
@@ -104,215 +180,348 @@ fun Scene(
     scene: Scene = rememberScene(engine),
     /**
      * Defines the lighting environment and the skybox of the scene.
-     *
-     * Environments are usually captured as high-resolution HDR equirectangular images and processed
-     * by the cmgen tool to generate the data needed by IndirectLight.
-     *
-     * You can also process an hdr at runtime but this is more consuming.
-     *
-     * - Currently IndirectLight is intended to be used for "distant probes", that is, to represent
-     * global illumination from a distant (i.e. at infinity) environment, such as the sky or distant
-     * mountains.
-     * Only a single IndirectLight can be used in a Scene. This limitation will be lifted in the
-     * future.
-     *
-     * - When added to a Scene, the Skybox fills all untouched pixels.
-     *
-     * @see [EnvironmentLoader]
      */
     environment: Environment = rememberEnvironment(environmentLoader, isOpaque = isOpaque),
     /**
      * Always add a direct light source since it is required for shadowing.
-     *
      * We highly recommend adding an [IndirectLight] as well.
      */
     mainLightNode: LightNode? = rememberMainLightNode(engine),
     /**
      * Represents a virtual camera, which determines the perspective through which the scene is
      * viewed.
-     *
-     * All other functionality in Node is supported. You can access the position and rotation of the
-     * camera, assign a collision shape to it, or add children to it.
      */
     cameraNode: CameraNode = rememberCameraNode(engine),
     /**
-     * List of the scene's nodes that can be linked to a `mutableStateOf<List<Node>>()`
-     */
-    childNodes: List<Node> = rememberNodes(),
-    /**
-     * Physics system to handle collision between nodes, hit testing on a nodes,...
+     * Physics system to handle collision between nodes, hit testing on nodes, etc.
      */
     collisionSystem: CollisionSystem = rememberCollisionSystem(view),
     /**
      * Helper that enables camera interaction similar to sketchfab or Google Maps.
-     *
-     * Needs to be a callable function because it can be reinitialized in case of viewport change
-     * or camera node manual position changed.
-     *
-     * The first onTouch event will make the first manipulator build. So you can change the camera
-     * position before any user gesture.
-     *
-     * Clients notify the camera manipulator of various mouse or touch events, then periodically
-     * call its getTransform() method so that they can adjust their camera(s).
      */
     cameraManipulator: CameraGestureDetector.CameraManipulator? = rememberCameraManipulator(
         cameraNode.worldPosition
     ),
     /**
-     * Used for Node's that can display an Android [View]
-     *
-     * Manages a [FrameLayout] that is attached directly to a [ViewNode2.WindowManager] that other views can be
-     * added and removed from.
-     *
-     * To render a [View], the [View] must be attached to a [ViewNode2.WindowManager] so that it can be properly
-     * drawn. This class encapsulates a [FrameLayout] that is attached to a [ViewNode2.WindowManager] that other
-     * views can be added to as children. This allows us to safely and correctly draw the [View]
-     * associated with a [RenderableManager] [Entity] and a [MaterialInstance] while keeping them
-     * isolated from the rest of the activities View hierarchy.
-     *
-     * Additionally, this manages the lifecycle of the window to help ensure that the window is
-     * added/removed from the WindowManager at the appropriate times.
+     * Used for [SceneScope.ViewNode] composables — manages the off-screen window attachment.
+     * Obtain with [rememberViewNodeManager].
      */
     viewNodeWindowManager: ViewNode2.WindowManager? = null,
     /**
-     * The listener invoked for all the gesture detector callbacks.
-     *
-     * Detects various gestures and events.
-     * The gesture listener callback will notify users when a particular motion event has occurred.
-     * Responds to Android touch events with listeners.
+     * The listener invoked for all gesture detector callbacks.
      */
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
     onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
-     * Invoked when an frame is processed.
-     *
-     * Registers a callback to be invoked when a valid Frame is processing.
-     *
-     * The callback to be invoked once per frame **immediately before the scene is updated.
-     *
-     * The callback will only be invoked if the Frame is considered as valid.
+     * Invoked once per frame immediately before the scene is updated and rendered.
      */
     onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
-    onViewCreated: (SceneView.() -> Unit)? = null,
-    onViewUpdated: (SceneView.() -> Unit)? = null
+    /**
+     * Declare scene nodes using the [SceneScope] DSL.
+     */
+    content: (@Composable SceneScope.() -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) {
         ScenePreview(modifier)
-    } else {
-        AndroidView(
+        return
+    }
+
+    val context = LocalContext.current
+
+    // ── Node DSL state ────────────────────────────────────────────────────────────────────────────
+
+    val scopeChildNodes: SnapshotStateList<Node> = remember { mutableStateListOf() }
+
+    // ── Scene / camera / environment setup ───────────────────────────────────────────────────────
+
+    val nodeManager = remember(scene, collisionSystem) { SceneNodeManager(scene, collisionSystem) }
+
+    SideEffect {
+        scene.indirectLight = environment.indirectLight
+        scene.skybox = environment.skybox
+        view.scene = scene
+        view.camera = cameraNode.camera
+        cameraNode.collisionSystem = collisionSystem
+        cameraNode.setView(view)
+    }
+
+    // ── Main light node ───────────────────────────────────────────────────────────────────────────
+
+    val prevMainLightRef = remember { AtomicReference<LightNode?>(null) }
+    SideEffect {
+        val prev = prevMainLightRef.get()
+        if (prev != mainLightNode) {
+            prev?.let { nodeManager.removeNode(it) }
+            mainLightNode?.let { nodeManager.addNode(it) }
+            prevMainLightRef.set(mainLightNode)
+        }
+    }
+
+    // ── DSL nodes → Filament scene sync ──────────────────────────────────────────────────────────
+
+    val childNodesRef = remember { AtomicReference(emptyList<Node>()) }
+
+    LaunchedEffect(nodeManager) {
+        var prevNodes = emptyList<Node>()
+        snapshotFlow { scopeChildNodes.toList() }.collect { newNodes ->
+            (prevNodes - newNodes.toSet()).forEach { nodeManager.removeNode(it) }
+            (newNodes - prevNodes.toSet()).forEach { nodeManager.addNode(it) }
+            prevNodes = newNodes
+            childNodesRef.set(newNodes)
+        }
+    }
+
+    // ── Lifecycle-aware rendering ─────────────────────────────────────────────────────────────────
+
+    val isResumed = remember {
+        AtomicBoolean(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+    }
+    DisposableEffect(lifecycle) {
+        val observer = object : DefaultLifecycleObserver {
+            override fun onResume(owner: LifecycleOwner) { isResumed.set(true) }
+            override fun onPause(owner: LifecycleOwner) { isResumed.set(false) }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+
+    // ── Shared surface + rendering state ─────────────────────────────────────────────────────────
+
+    // Swap chain is set when the surface is ready and cleared when it is destroyed.
+    val swapChainRef = remember { AtomicReference<SwapChain?>(null) }
+    val lastFrameTimeNanosRef = remember { AtomicLong(0L) }
+    val gestureDetector = remember(context) { GestureDetector(context = context, listener = null) }
+    val cameraGestureDetectorRef = remember { AtomicReference<CameraGestureDetector?>(null) }
+
+    SideEffect {
+        gestureDetector.listener = onGestureListener
+        cameraGestureDetectorRef.get()?.cameraManipulator = cameraManipulator
+    }
+
+    // Common touch dispatcher — wired to both SurfaceView and TextureView via setOnTouchListener.
+    val touchDispatcher: (MotionEvent) -> Unit = { event ->
+        val hitResult = collisionSystem.hitTest(event).firstOrNull { it.node.isTouchable }
+        if (onTouchEvent?.invoke(event, hitResult) != true &&
+            hitResult?.node?.onTouchEvent(event, hitResult) != true
+        ) {
+            gestureDetector.onTouchEvent(event, hitResult)
+            cameraGestureDetectorRef.get()?.onTouchEvent(event)
+        }
+    }
+
+    // DisplayHelper for frame pacing — one per composition.
+    val displayHelper = remember(context) { DisplayHelper(context) }
+
+    // Helper to apply a viewport resize.
+    fun applyResize(width: Int, height: Int) {
+        view.viewport = Viewport(0, 0, width, height)
+        cameraManipulator?.setViewport(width, height)
+        cameraNode.updateProjection()
+    }
+
+    // ── Render loop ───────────────────────────────────────────────────────────────────────────────
+
+    LaunchedEffect(engine, renderer, view, scene) {
+        while (true) {
+            if (!isResumed.get()) {
+                delay(16)
+                continue
+            }
+            withFrameNanos { frameTimeNanos ->
+                val sc = swapChainRef.get() ?: return@withFrameNanos
+
+                modelLoader.updateLoad()
+                childNodesRef.get().forEach { it.onFrame(frameTimeNanos) }
+
+                cameraManipulator?.let { manipulator ->
+                    val lastTime = lastFrameTimeNanosRef.get().takeIf { it != 0L }
+                    manipulator.update(frameTimeNanos.intervalSeconds(lastTime).toFloat())
+                    cameraNode.transform = manipulator.getTransform()
+                }
+
+                onFrame?.invoke(frameTimeNanos)
+
+                if (renderer.beginFrame(sc, frameTimeNanos)) {
+                    renderer.render(view)
+                    renderer.endFrame()
+                }
+
+                lastFrameTimeNanosRef.set(frameTimeNanos)
+            }
+        }
+    }
+
+    // ── Surface view ──────────────────────────────────────────────────────────────────────────────
+
+    @Suppress("DEPRECATION")
+    val display = remember(context) {
+        (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
+    }
+
+    when (surfaceType) {
+        SurfaceType.Surface -> AndroidView(
             modifier = modifier,
-            factory = { context ->
-                SceneView(
-                    context,
-                    null,
-                    0,
-                    0,
-                    engine,
-                    modelLoader,
-                    materialLoader,
-                    environmentLoader,
-                    scene,
-                    view,
-                    renderer,
-                    cameraNode,
-                    mainLightNode,
-                    environment,
-                    isOpaque,
-                    collisionSystem,
-                    cameraManipulator,
-                    viewNodeWindowManager,
-                    onGestureListener,
-                    onTouchEvent,
-                    activity,
-                    lifecycle,
-                ).also {
-                    onViewCreated?.invoke(it)
+            factory = { ctx ->
+                SurfaceView(ctx).also { sv ->
+                    if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
+                    sv.holder.addCallback(object : SurfaceHolder.Callback {
+                        override fun surfaceCreated(holder: SurfaceHolder) {}
+
+                        override fun surfaceChanged(
+                            holder: SurfaceHolder, format: Int, width: Int, height: Int
+                        ) {
+                            if (swapChainRef.get() == null) {
+                                swapChainRef.set(engine.createSwapChain(holder.surface))
+                                displayHelper.attach(renderer, display)
+                                cameraGestureDetectorRef.set(
+                                    CameraGestureDetector(
+                                        viewHeight = { sv.height },
+                                        cameraManipulator = cameraManipulator
+                                    )
+                                )
+                            }
+                            applyResize(width, height)
+                            engine.drainFramePipeline()
+                        }
+
+                        override fun surfaceDestroyed(holder: SurfaceHolder) {
+                            cameraGestureDetectorRef.set(null)
+                            swapChainRef.getAndSet(null)?.let {
+                                runCatching { engine.destroySwapChain(it) }
+                            }
+                            engine.flushAndWait()
+                            displayHelper.detach()
+                        }
+                    })
+                    sv.setOnTouchListener { _, event -> touchDispatcher(event); true }
                 }
             },
-            update = { sceneView ->
-                sceneView.scene = scene
-                sceneView.environment = environment
-                sceneView.mainLightNode = mainLightNode
-                sceneView.setCameraNode(cameraNode)
-                sceneView.childNodes = childNodes
-                sceneView.cameraManipulator = cameraManipulator
-                sceneView.viewNodeWindowManager = viewNodeWindowManager
-                sceneView.onGestureListener = onGestureListener
-                sceneView.onTouchEvent = onTouchEvent
-                sceneView.onFrame = onFrame
-
-                onViewUpdated?.invoke(sceneView)
-            },
-            onReset = {},
-            onRelease = { sceneView ->
-                sceneView.destroy()
-            }
+            update = {}
         )
+
+        SurfaceType.TextureSurface -> AndroidView(
+            modifier = modifier,
+            factory = { ctx ->
+                TextureView(ctx).also { tv ->
+                    tv.isOpaque = isOpaque
+                    var textureSurface: Surface? = null
+                    tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                        override fun onSurfaceTextureAvailable(
+                            st: SurfaceTexture, width: Int, height: Int
+                        ) {
+                            textureSurface = Surface(st)
+                            swapChainRef.set(engine.createSwapChain(textureSurface!!))
+                            displayHelper.attach(renderer, display)
+                            cameraGestureDetectorRef.set(
+                                CameraGestureDetector(
+                                    viewHeight = { tv.height },
+                                    cameraManipulator = cameraManipulator
+                                )
+                            )
+                            applyResize(width, height)
+                            engine.drainFramePipeline()
+                        }
+
+                        override fun onSurfaceTextureSizeChanged(
+                            st: SurfaceTexture, width: Int, height: Int
+                        ) {
+                            applyResize(width, height)
+                            engine.drainFramePipeline()
+                        }
+
+                        override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                            cameraGestureDetectorRef.set(null)
+                            swapChainRef.getAndSet(null)?.let {
+                                runCatching { engine.destroySwapChain(it) }
+                            }
+                            engine.flushAndWait()
+                            displayHelper.detach()
+                            textureSurface?.release()
+                            textureSurface = null
+                            return true
+                        }
+
+                        override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
+                    }
+                    tv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                }
+            },
+            update = {}
+        )
+    }
+
+    // ── DSL content ───────────────────────────────────────────────────────────────────────────────
+
+    if (content != null) {
+        val scope = remember(engine, modelLoader, materialLoader, environmentLoader) {
+            SceneScope(
+                engine = engine,
+                modelLoader = modelLoader,
+                materialLoader = materialLoader,
+                environmentLoader = environmentLoader,
+                _nodes = scopeChildNodes
+            )
+        }
+        scope.content()
     }
 }
 
-/** ## Deprecated: Use [CameraGestureDetector.DefaultCameraManipulator]
+// ── Async resource helpers ────────────────────────────────────────────────────────────────────────
+
+/**
+ * Asynchronously loads a glTF/GLB [ModelInstance] from [assetFileLocation].
  *
- * Replace `manipulator = Manipulator.Builder().build()` with
- * `cameraManipulator = CameraGestureDetector.DefaultCameraManipulator(manipulator =
- * Manipulator.Builder().build())`
+ * Returns `null` while loading is in progress, then triggers recomposition once the model is
+ * ready. This makes it easy to use with conditional node declarations:
+ * ```kotlin
+ * Scene {
+ *     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
+ *         ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
+ *     }
+ * }
+ * ```
+ *
+ * @param modelLoader       The [ModelLoader] to use.
+ * @param assetFileLocation Path to the GLB/glTF file relative to the `assets` folder.
+ * @return                  `null` while loading; the loaded [ModelInstance] once ready.
  */
 @Composable
-@Deprecated("Use CameraGestureDetector.DefaultCameraManipulator")
-fun Scene(
-    modifier: Modifier = Modifier,
-    engine: Engine = rememberEngine(),
-    modelLoader: ModelLoader = rememberModelLoader(engine),
-    materialLoader: MaterialLoader = rememberMaterialLoader(engine),
-    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
-    view: View = rememberView(engine),
-    isOpaque: Boolean = true,
-    renderer: Renderer = rememberRenderer(engine),
-    scene: Scene = rememberScene(engine),
-    environment: Environment = rememberEnvironment(environmentLoader, isOpaque = isOpaque),
-    mainLightNode: LightNode? = rememberMainLightNode(engine),
-    cameraNode: CameraNode = rememberCameraNode(engine),
-    childNodes: List<Node> = rememberNodes(),
-    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
-    manipulator: Manipulator,
-    viewNodeWindowManager: ViewNode2.WindowManager? = null,
-    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
-    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
-    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
-    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
-    onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
-    onViewCreated: (SceneView.() -> Unit)? = null,
-    onViewUpdated: (SceneView.() -> Unit)? = null
-) {
-    Scene(
-        modifier = modifier,
-        engine = engine,
-        modelLoader = modelLoader,
-        materialLoader = materialLoader,
-        environmentLoader = environmentLoader,
-        view = view,
-        isOpaque = isOpaque,
-        renderer = renderer,
-        scene = scene,
-        environment = environment,
-        mainLightNode = mainLightNode,
-        cameraNode = cameraNode,
-        childNodes = childNodes,
-        collisionSystem = collisionSystem,
-        cameraManipulator = CameraGestureDetector.createDefaultCameraManipulator(manipulator),
-        viewNodeWindowManager = viewNodeWindowManager,
-        onGestureListener = onGestureListener,
-        onTouchEvent = onTouchEvent,
-        activity = activity,
-        lifecycle = lifecycle,
-        onFrame = onFrame,
-        onViewCreated = onViewCreated,
-        onViewUpdated = onViewUpdated
-    )
+fun rememberModelInstance(
+    modelLoader: ModelLoader,
+    assetFileLocation: String
+): ModelInstance? {
+    val context = LocalContext.current
+    return produceState<ModelInstance?>(
+        initialValue = null,
+        key1 = modelLoader,
+        key2 = assetFileLocation
+    ) {
+        // Read file bytes on IO, then call Filament APIs back on Main (produceState's context).
+        val buffer = withContext(Dispatchers.IO) {
+            runCatching { context.assets.readBuffer(assetFileLocation) }.getOrNull()
+        } ?: return@produceState
+        value = runCatching { modelLoader.createModelInstance(buffer) }.getOrNull()
+    }.value
 }
 
+// ── Engine / resource lifecycle helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Creates and remembers a Filament [Engine] and its backing EGL context.
+ *
+ * The engine is the root Filament object. It owns all other Filament resources and must outlive
+ * them. Both the engine and its EGL context are destroyed automatically when the composition
+ * leaves the tree.
+ *
+ * Only one engine per process is typically needed. Pass it explicitly to all `remember*` helpers
+ * if you want to share Filament resources across multiple `Scene` composables.
+ *
+ * @param eglContextCreator Factory for the EGL context. Override for custom EGL configurations.
+ * @param engineCreator     Factory for the [Engine]. Override to customise engine flags.
+ * @return A [Engine] that is destroyed with its EGL context on disposal.
+ */
 @Composable
 fun rememberEngine(
     eglContextCreator: () -> EGLContext = { SceneView.createEglContext() },
@@ -329,6 +538,24 @@ fun rememberEngine(
     return engine
 }
 
+/**
+ * Creates and remembers a [Node] of type [T] using [creator], destroying it on disposal.
+ *
+ * Use this overload when you need a standalone node (e.g. a camera rig pivot) that lives
+ * outside the `Scene { }` content block and must be passed as a parameter to `Scene`.
+ *
+ * ```kotlin
+ * val centerNode = rememberNode(engine)
+ * val cameraNode = rememberCameraNode(engine) {
+ *     position = Position(z = 3.0f)
+ *     centerNode.addChildNode(this)
+ * }
+ * Scene(cameraNode = cameraNode) { ... }
+ * ```
+ *
+ * @param creator Factory that produces the node. Called once and memoised.
+ * @return The created node, destroyed when the composition leaves the tree.
+ */
 @Composable
 inline fun <reified T : Node> rememberNode(crossinline creator: () -> T) =
     remember(creator).also { node ->
@@ -339,22 +566,29 @@ inline fun <reified T : Node> rememberNode(crossinline creator: () -> T) =
         }
     }
 
+/**
+ * Creates and remembers a base [Node] using the Filament [engine].
+ *
+ * @param engine  The Filament engine to create the node with.
+ * @param creator Optional configuration block applied to the node after creation.
+ * @return A [Node] destroyed on disposal.
+ */
 @Composable
 fun rememberNode(engine: Engine, creator: Node.() -> Unit = {}) =
     rememberNode { Node(engine).apply(creator) }
 
-@Composable
-fun rememberNodes(creator: MutableList<Node>.() -> Unit = {}) = remember {
-    buildList(creator).toMutableStateList()
-}.also { nodes ->
-    DisposableEffect(nodes) {
-        onDispose {
-            nodes.forEach { it.destroy() }
-            nodes.clear()
-        }
-    }
-}
-
+/**
+ * Creates and remembers a Filament [Scene].
+ *
+ * A `Scene` is a flat container of Filament entities (renderables, lights). It can be shared
+ * across multiple [View]s. Destroyed on disposal.
+ *
+ * You rarely need to call this directly — `Scene { }` creates one by default.
+ * Provide your own if you want to share the same scene graph across multiple composables.
+ *
+ * @param engine  The Filament [Engine] that owns this scene.
+ * @param creator Factory for the scene. Override for custom scene flags.
+ */
 @Composable
 fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.createScene(engine) }) =
     remember(engine, creator).also { scene ->
@@ -365,6 +599,19 @@ fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.createScene
         }
     }
 
+/**
+ * Creates and remembers a Filament [View].
+ *
+ * A `View` is a heavy object that holds all rendering state for a single viewport — anti-aliasing,
+ * shadows, post-processing, etc. One per window is recommended. Destroyed on disposal.
+ *
+ * You rarely need to call this directly — `Scene { }` creates one by default.
+ * Provide your own if you want to share the view with a [CollisionSystem] that is declared
+ * outside the `Scene { }` block.
+ *
+ * @param engine  The Filament [Engine] that owns this view.
+ * @param creator Factory for the view. Override for custom view flags.
+ */
 @Composable
 fun rememberView(engine: Engine, creator: () -> View = { SceneView.createView(engine) }) =
     remember(engine, creator).also { view ->
@@ -375,6 +622,17 @@ fun rememberView(engine: Engine, creator: () -> View = { SceneView.createView(en
         }
     }
 
+/**
+ * Creates and remembers a Filament [Renderer].
+ *
+ * A `Renderer` represents an operating system window and drives the frame pipeline —
+ * `beginFrame`, `render`, `endFrame`. One per window is recommended. Destroyed on disposal.
+ *
+ * You rarely need to call this directly — `Scene { }` creates one by default.
+ *
+ * @param engine  The Filament [Engine] that owns this renderer.
+ * @param creator Factory for the renderer.
+ */
 @Composable
 fun rememberRenderer(
     engine: Engine,
@@ -387,6 +645,19 @@ fun rememberRenderer(
     }
 }
 
+/**
+ * Creates and remembers a [ModelLoader] for loading glTF/GLB assets.
+ *
+ * `ModelLoader` consumes glTF 2.0 content (JSON or binary GLB) and produces Filament textures,
+ * vertex buffers, index buffers, and material instances. It also drives incremental async
+ * loading via `updateLoad()`, which is called automatically every frame inside `Scene`.
+ *
+ * Use [rememberModelInstance] to load a specific model file.
+ *
+ * @param engine  The Filament [Engine] that owns the loaded assets.
+ * @param context Android context used to open asset files. Defaults to [LocalContext].
+ * @param creator Factory for the loader.
+ */
 @Composable
 fun rememberModelLoader(
     engine: Engine,
@@ -402,6 +673,19 @@ fun rememberModelLoader(
     }
 }
 
+/**
+ * Creates and remembers a [MaterialLoader] for building Filament material instances.
+ *
+ * `MaterialLoader` holds a set of compiled material templates (`.filamat` files bundled as
+ * assets) and provides factory methods for creating `MaterialInstance`s — e.g.
+ * `createColorInstance(color, metallic, roughness)` for a quick PBR material.
+ *
+ * The loader is required by geometry nodes (`CubeNode`, `SphereNode`, etc.) and `ImageNode`.
+ *
+ * @param engine  The Filament [Engine] that owns the material instances.
+ * @param context Android context used to open bundled material assets. Defaults to [LocalContext].
+ * @param creator Factory for the loader.
+ */
 @Composable
 fun rememberMaterialLoader(
     engine: Engine,
@@ -417,6 +701,17 @@ fun rememberMaterialLoader(
     }
 }
 
+/**
+ * Creates and remembers an [EnvironmentLoader] for decoding HDR and KTX1 environment assets.
+ *
+ * `EnvironmentLoader` turns an equirectangular HDR file (or a pair of pre-filtered KTX1 files)
+ * into a Filament `IndirectLight` (image-based lighting) and optional `Skybox`. Use it with
+ * [rememberEnvironment] to wire the result into a `Scene`.
+ *
+ * @param engine  The Filament [Engine] that owns the produced textures.
+ * @param context Android context used to open asset files. Defaults to [LocalContext].
+ * @param creator Factory for the loader.
+ */
 @Composable
 fun rememberEnvironmentLoader(
     engine: Engine,
@@ -432,6 +727,24 @@ fun rememberEnvironmentLoader(
     }
 }
 
+/**
+ * Creates and remembers the main rendering [CameraNode].
+ *
+ * The camera node determines the viewpoint and projection of the scene. Pass it to
+ * `Scene(cameraNode = ...)` to set it as the active camera.
+ *
+ * ```kotlin
+ * val cameraNode = rememberCameraNode(engine) {
+ *     position = Position(z = 4.0f)
+ *     lookAt(Position(0f, 0f, 0f))
+ * }
+ * Scene(cameraNode = cameraNode) { ... }
+ * ```
+ *
+ * @param engine The Filament [Engine] that owns the camera.
+ * @param apply  Configuration block applied to the node after creation (position, FOV, etc.).
+ * @return A [CameraNode] destroyed on disposal.
+ */
 @Composable
 fun rememberCameraNode(
     engine: Engine,
@@ -440,6 +753,25 @@ fun rememberCameraNode(
     SceneView.createCameraNode(engine).apply(apply)
 }
 
+/**
+ * Creates and remembers the primary directional [LightNode] (the sun).
+ *
+ * A direct light source is required for shadows. The default configuration creates a
+ * `LightManager.Type.DIRECTIONAL` light with intensity suitable for outdoor scenes.
+ * Combine with [rememberEnvironment] (IBL) for physically-based lighting.
+ *
+ * ```kotlin
+ * Scene(
+ *     mainLightNode = rememberMainLightNode(engine) {
+ *         intensity = 100_000.0f
+ *     }
+ * )
+ * ```
+ *
+ * @param engine The Filament [Engine] that owns the light.
+ * @param apply  Configuration block applied after creation (intensity, direction, color, etc.).
+ * @return A [LightNode] destroyed on disposal.
+ */
 @Composable
 fun rememberMainLightNode(
     engine: Engine,
@@ -448,6 +780,24 @@ fun rememberMainLightNode(
     SceneView.createMainLightNode(engine).apply(apply)
 }
 
+/**
+ * Creates and remembers an [Environment] from an [EnvironmentLoader].
+ *
+ * An `Environment` bundles a Filament `IndirectLight` (image-based lighting) with an optional
+ * `Skybox`. Pass the result to `Scene(environment = ...)`.
+ *
+ * The [environment] factory lambda runs once and is memoised. Use it to load an HDR file:
+ * ```kotlin
+ * val environment = rememberEnvironment(environmentLoader) {
+ *     environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+ * }
+ * ```
+ *
+ * @param environmentLoader The loader that produced the IBL textures.
+ * @param isOpaque          If `false`, the skybox is cleared so the surface background shows through.
+ * @param environment       Factory that produces the [Environment]. Memoised by the loader + opacity key.
+ * @return An [Environment] destroyed on disposal.
+ */
 @Composable
 fun rememberEnvironment(
     environmentLoader: EnvironmentLoader,
@@ -463,6 +813,17 @@ fun rememberEnvironment(
     }
 }
 
+/**
+ * Creates and remembers an [Environment] directly from a Filament [Engine].
+ *
+ * Use this overload when you want to construct the [Environment] manually (e.g. from KTX
+ * assets) without an [EnvironmentLoader].
+ *
+ * @param engine      The Filament [Engine] that owns the IBL and skybox textures.
+ * @param isOpaque    If `false`, the skybox is cleared so the surface background shows through.
+ * @param environment Factory that produces the [Environment]. Memoised by the engine + opacity key.
+ * @return An [Environment] destroyed on disposal.
+ */
 @Composable
 fun rememberEnvironment(
     engine: Engine,
@@ -478,6 +839,18 @@ fun rememberEnvironment(
     }
 }
 
+/**
+ * Creates and remembers a [CollisionSystem] for hit testing and node interaction.
+ *
+ * The collision system maps touch events to 3D nodes using the [View]'s projection and the
+ * bounding boxes of all scene nodes. It is called automatically by the touch dispatcher inside
+ * `Scene`, so you only need to provide this explicitly if you declared the [View] yourself via
+ * [rememberView].
+ *
+ * @param view    The Filament [View] whose projection is used for hit testing.
+ * @param creator Factory for the collision system.
+ * @return A [CollisionSystem] destroyed on disposal.
+ */
 @Composable
 fun rememberCollisionSystem(
     view: View,
@@ -492,6 +865,28 @@ fun rememberCollisionSystem(
     }
 }
 
+/**
+ * Creates and remembers a [GestureDetector.OnGestureListener] from individual lambda callbacks.
+ *
+ * Provides a composable-friendly way to listen for gestures on scene nodes. Each callback
+ * receives the triggering [MotionEvent] and the [Node] that was hit (or `null` for empty-space
+ * gestures). Pass the result to `Scene(onGestureListener = ...)`.
+ *
+ * The most commonly used callbacks:
+ * - [onSingleTapConfirmed] — reliable single-tap, fired after double-tap window expires
+ * - [onDoubleTap] — double-tap on a node or empty space
+ * - [onMove] / [onMoveBegin] / [onMoveEnd] — drag gesture on a node
+ * - [onRotate] / [onRotateBegin] / [onRotateEnd] — two-finger rotate gesture
+ * - [onScale] / [onScaleBegin] / [onScaleEnd] — pinch-to-scale gesture
+ *
+ * ```kotlin
+ * onGestureListener = rememberOnGestureListener(
+ *     onDoubleTap  = { _, node -> node?.apply { scale *= 2.0f } },
+ *     onScale      = { detector, _, node -> node?.apply { scale *= detector.scaleFactor } },
+ *     onMove       = { _, e, node -> node?.apply { position += ... } }
+ * )
+ * ```
+ */
 @Composable
 fun rememberOnGestureListener(
     onDown: (e: MotionEvent, node: Node?) -> Unit = { _, _ -> },
@@ -568,6 +963,26 @@ fun rememberOnGestureListener(
     }
 ) = remember(creator)
 
+/**
+ * Creates and remembers a [CameraGestureDetector.CameraManipulator] for orbit/pan/zoom control.
+ *
+ * The manipulator translates touch gestures into camera transform updates — one-finger drag to
+ * orbit, two-finger drag to pan, pinch to zoom. It is updated automatically every frame inside
+ * `Scene`.
+ *
+ * Pass `null` to `Scene(cameraManipulator = null)` to disable camera interaction entirely.
+ *
+ * ```kotlin
+ * val cameraManipulator = rememberCameraManipulator(
+ *     orbitHomePosition = cameraNode.worldPosition,
+ *     targetPosition    = centerNode.worldPosition
+ * )
+ * ```
+ *
+ * @param orbitHomePosition Camera's world position to return to on double-tap (optional).
+ * @param targetPosition    Point in world space the camera orbits around (optional).
+ * @param creator           Factory for the manipulator. Override to set a custom orbit speed, etc.
+ */
 @Composable
 fun rememberCameraManipulator(
     orbitHomePosition: Position? = null,
@@ -575,13 +990,28 @@ fun rememberCameraManipulator(
     creator: () -> CameraGestureDetector.CameraManipulator = {
         SceneView.createDefaultCameraManipulator(orbitHomePosition, targetPosition)
     }
-) = remember(creator).also { collisionSystem ->
-    DisposableEffect(collisionSystem) {
-        onDispose {
-        }
-    }
-}
+) = remember(creator)
 
+/**
+ * Creates and remembers a [ViewNode2.WindowManager] required by [SceneScope.ViewNode].
+ *
+ * `ViewNode` renders Compose UI content onto a 3D plane by attaching an off-screen `Window`
+ * to the window manager. This helper creates that window manager and destroys it on disposal.
+ *
+ * ```kotlin
+ * val windowManager = rememberViewNodeManager()
+ *
+ * Scene {
+ *     ViewNode(windowManager = windowManager) {
+ *         Card { Text("Hello from 3D!") }
+ *     }
+ * }
+ * ```
+ *
+ * @param context Android context used to attach the off-screen window. Defaults to [LocalContext].
+ * @param creator Factory for the window manager.
+ * @return A [ViewNode2.WindowManager] destroyed on disposal.
+ */
 @Composable
 fun rememberViewNodeManager(
     context: Context = LocalContext.current,

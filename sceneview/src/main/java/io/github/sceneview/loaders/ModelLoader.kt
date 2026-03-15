@@ -424,7 +424,7 @@ class ModelLoader(
         resourceLoader.destroy()
     }
 
-    internal fun updateLoad() {
+    fun updateLoad() {
         // Allow the resource loader to finalize textures that have become ready.
 //        resourceLoader.asyncUpdateLoad()
     }

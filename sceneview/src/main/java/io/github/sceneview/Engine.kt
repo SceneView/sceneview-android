@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.android.filament.Camera
 import com.google.android.filament.Engine
+import com.google.android.filament.Fence
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Material
@@ -28,6 +29,17 @@ fun Engine.createMaterialLoader(context: Context) = MaterialLoader(this, context
 fun Engine.createEnvironmentLoader(context: Context) = EnvironmentLoader(this, context)
 
 fun Engine.createCamera() = createCamera(entityManager.create())
+
+/**
+ * Blocks until all pending GPU frames have been rendered.
+ * Call after resizing or destroying a surface to avoid pipeline races.
+ */
+fun Engine.drainFramePipeline() {
+    createFence().apply {
+        wait(Fence.Mode.FLUSH, Fence.WAIT_FOR_EVER)
+        destroyFence(this)
+    }
+}
 
 fun AssetLoader.safeDestroyModel(model: Model) {
     runCatching { model.releaseSourceData() }

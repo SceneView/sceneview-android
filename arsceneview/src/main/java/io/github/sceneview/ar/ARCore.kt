@@ -18,7 +18,6 @@ import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
-import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import io.github.sceneview.ar.arcore.ARSession
 
 /**
@@ -237,21 +236,13 @@ class ARCore(
     fun isInstalled(context: Context) =
         ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
 
-    /** Check to see if we're on a device where ARCore can be installed */
-    fun canBeInstalled(context: Context): Boolean {
-        val availability = ArCoreApk.getInstance().checkAvailability(context)
-        return availability == Availability.SUPPORTED_APK_TOO_OLD || availability == Availability.SUPPORTED_NOT_INSTALLED
-    }
-
     /**
      * Returns true if we attempted to request an install.
      *
+     * @throws UnavailableUserActionRequiredException if the user needs to take an action (e.g. install ARCore)
      * @throws UnavailableDeviceNotCompatibleException if the device does not support ARCore
      */
     fun install(activity: ComponentActivity, installRequested: Boolean): Boolean {
-        if (!canBeInstalled(activity)) {
-            throw UnavailableDeviceNotCompatibleException()
-        }
         return ArCoreApk.getInstance().requestInstall(
             activity,
             !installRequested
@@ -259,6 +250,7 @@ class ARCore(
     }
 }
 
+@Suppress("REDUNDANT_ELSE_IN_WHEN")
 fun TrackingFailureReason.getDescription(context: Context) = when (this) {
     TrackingFailureReason.NONE -> ""
     TrackingFailureReason.BAD_STATE -> context.getString(R.string.sceneview_bad_state_message)
