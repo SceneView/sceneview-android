@@ -1,17 +1,18 @@
 plugins {
     id 'com.android.application'
-    id 'kotlin-android'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
     namespace 'io.github.sceneview.sample.arcloudanchor'
 
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "io.github.sceneview.sample.arcloudanchor"
         minSdk 24
-        targetSdk 35
+        targetSdk 36
         versionCode 1
         versionName "1.0.0"
     }
@@ -27,6 +28,9 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17
     }
+    buildFeatures {
+        compose true
+    }
     androidResources {
         noCompress 'filamat', 'ktx'
     }
@@ -36,6 +40,5 @@ dependencies {
     implementation project(":samples:common")
 
     // ArSceneView
-    releaseImplementation "io.github.sceneview:arsceneview:2.3.0"
-    debugImplementation project(":arsceneview")
+    implementation project(":arsceneview")
 }

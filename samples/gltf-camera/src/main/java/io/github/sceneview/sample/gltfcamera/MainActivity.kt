@@ -39,10 +39,12 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
 import io.github.sceneview.node.ModelNode
+import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberEnvironmentLoader
+import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
-import io.github.sceneview.rememberNode
 import io.github.sceneview.sample.SceneviewTheme
 
 private const val kAperture = 16f
@@ -51,9 +53,7 @@ private const val kSensitivity = 100f
 
 class MainActivity : ComponentActivity() {
 
-    @OptIn(
-        ExperimentalMaterial3Api::class
-    )
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -64,45 +64,70 @@ class MainActivity : ComponentActivity() {
                     val modelLoader = rememberModelLoader(engine)
                     val environmentLoader = rememberEnvironmentLoader(engine)
 
-                    val modelNode = rememberNode {
-                        ModelNode(
-                            modelInstance = modelLoader.createModelInstance(
-                                assetFileLocation = "models/halls_green_haa_emplacement.glb"
-                            )
-                        )
-                    }
+                    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet_cameras.glb")
+
+                    val defaultCameraNode = rememberCameraNode(engine)
+
+                    var viewSize by remember { mutableStateOf(IntSize.Zero) }
+
+                    // Captured from ModelNode's apply block so we can access its GLTF camera nodes
+                    var modelNode by remember { mutableStateOf<ModelNode?>(null) }
                     val cameraNodes = remember(modelNode) {
-                        modelNode.cameraNodes.onEach {
-                            it.setExposure(kAperture, kShutterSpeed, kSensitivity)
-                        }
+                        modelNode?.cameraNodes?.also { nodes ->
+                            nodes.forEach { it.setExposure(kAperture, kShutterSpeed, kSensitivity) }
+                        } ?: emptyList()
                     }
 
-                    var selectedCameraNode by remember { mutableStateOf(cameraNodes[0]) }
+                    var selectedCameraNode by remember(cameraNodes) {
+                        mutableStateOf(cameraNodes.getOrNull(0))
+                    }
+
+                    // Update projection whenever the selected camera or viewport size changes
+                    val aspect = if (viewSize.height > 0) viewSize.width.toDouble() / viewSize.height else 1.0
+                    selectedCameraNode?.updateProjection(aspect = aspect, near = 0.05f, far = 5000.0f)
+
+                    val environment = rememberEnvironment(environmentLoader) {
+                        environmentLoader.createHDREnvironment("environments/symmetrical_garden_02_4k.hdr")!!
+                    }
 
                     Scene(
                         modifier = Modifier
                             .fillMaxSize()
-                            .onSizeChanged { modelNode.updateCamerasProjection(it) },
+                            .onSizeChanged { size -> viewSize = size },
                         engine = engine,
                         modelLoader = modelLoader,
-                        cameraNode = selectedCameraNode,
-                        childNodes = listOf(modelNode),
-                        environment = environmentLoader.createHDREnvironment(
-                            assetFileLocation = "environments/symmetrical_garden_02_4k.hdr"
-                        )!!
-                    )
-                    ChipsGroup(
-                        labels = cameraNodes.map { it.name ?: "" },
-                        onSelected = {
-                            selectedCameraNode = cameraNodes[it]
+                        cameraNode = selectedCameraNode ?: defaultCameraNode,
+                        environment = environment
+                    ) {
+                        modelInstance?.let { instance ->
+                            ModelNode(
+                                modelInstance = instance,
+                                scaleToUnits = 0.5f,
+                                apply = {
+                                    // Apply the "CameraInit" animation at t=0 so that camera
+                                    // entity transforms are set from the GLTF node hierarchy
+                                    // before the first frame renders.
+                                    if (animationCount > 0) animator.applyAnimation(0, 0f)
+                                    if (modelNode == null) modelNode = this
+                                }
+                            )
                         }
-                    )
+                    }
+
+                    if (cameraNodes.isNotEmpty()) {
+                        ChipsGroup(
+                            labels = cameraNodes.mapIndexed { i, node ->
+                                node.name?.takeIf { it.isNotBlank() && it != "<unknown>" }
+                                    ?: "Camera ${i + 1}"
+                            },
+                            onSelected = { selectedCameraNode = cameraNodes[it] }
+                        )
+                    }
 
                     TopAppBar(
                         title = {
                             Image(
-                                modifier = Modifier
-                                    .width(192.dp),
+                                modifier = Modifier.width(192.dp),
                                 painter = painterResource(id = R.drawable.logo),
                                 contentDescription = "Logo"
                             )
@@ -110,7 +135,6 @@ class MainActivity : ComponentActivity() {
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
                             titleContentColor = MaterialTheme.colorScheme.onPrimary
-
                         )
                     )
                 }
@@ -130,13 +154,12 @@ class MainActivity : ComponentActivity() {
                 .navigationBarsPadding()
                 .padding(8.dp)
         ) {
-
             labels.forEachIndexed { index, label ->
                 val selected = selectedIndex == index
                 FilterChip(
                     label = {
                         Text(
-                            style = MaterialTheme.typography.bodyLarge.copy(),
+                            style = MaterialTheme.typography.bodyLarge,
                             text = label
                         )
                     },
@@ -160,15 +183,5 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-    }
-}
-
-fun ModelNode.updateCamerasProjection(viewPortSize: IntSize) {
-    cameraNodes.forEach { cameraNode ->
-        cameraNode.updateProjection(
-            aspect = viewPortSize.let { it.width.toDouble() / it.height.toDouble() },
-            near = 0.05f,
-            far = 5000.0f
-        )
     }
 }
