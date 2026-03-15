@@ -1,18 +1,18 @@
 buildscript {
-    ext.kotlin_version = '2.0.21'
+    ext.kotlin_version = '2.3.10'
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.9.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21"
+        classpath 'com.android.tools.build:gradle:9.1.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.10"
         // Maven Central Publish
-        classpath "com.vanniktech:gradle-maven-publish-plugin:0.30.0"
+        classpath "com.vanniktech:gradle-maven-publish-plugin:0.36.0"
         // Dokka
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.9.10"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:2.1.0"
         // Compose
-        classpath "org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.0.21"
+        classpath "org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.3.10"
     }
 }
 
@@ -54,12 +54,10 @@ apply plugin: 'org.jetbrains.dokka'
 //    }
 //}
 
-import com.vanniktech.maven.publish.SonatypeHost
-
 allprojects {
     plugins.withId("com.vanniktech.maven.publish") {
         mavenPublishing {
-            publishToMavenCentral(SonatypeHost.S01)
+            publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
 
             signAllPublications()
         }
