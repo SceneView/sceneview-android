@@ -1,42 +1,46 @@
 package io.github.sceneview.ar
 
-import androidx.annotation.Nullable
 import com.google.android.filament.Engine
+import com.google.android.filament.EntityManager
+import com.google.android.filament.IndexBuffer
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
 import com.google.android.filament.Scene
+import com.google.android.filament.VertexBuffer
 import com.google.ar.core.Plane
 import com.google.ar.core.TrackingState
-import com.google.ar.sceneform.rendering.ModelRenderable
-import com.google.ar.sceneform.rendering.RenderableDefinition
-import com.google.ar.sceneform.rendering.RenderableDefinition.Submesh
-import com.google.ar.sceneform.rendering.RenderableInstance
-import com.google.ar.sceneform.rendering.Vertex
 import io.github.sceneview.collision.Matrix
 import io.github.sceneview.collision.TransformProvider
 import io.github.sceneview.collision.Vector3
-import io.github.sceneview.loaders.ModelLoader
-import java.util.concurrent.ExecutionException
+import io.github.sceneview.safeDestroyIndexBuffer
+import io.github.sceneview.safeDestroyVertexBuffer
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
- * Renders a single ARCore Plane.
+ * Renders a single ARCore Plane using native Filament geometry.
  */
 class PlaneVisualizer(
     private val engine: Engine,
-    private val modelLoader: ModelLoader,
     private val scene: Scene,
     private val plane: Plane
 ) : TransformProvider {
 
     companion object {
-        private val TAG = PlaneVisualizer::class.java.simpleName
-
         private const val VERTS_PER_BOUNDARY_VERT = 2
-
-        // Feather distance 0.2 meters.
         private const val FEATHER_LENGTH = 0.2f
-
-        // Feather scale over the distance between plane center and vertices.
         private const val FEATHER_SCALE = 0.2f
+
+        // Pre-allocated maximums: ARCore docs cap plane polygon at 128 boundary verts
+        private const val MAX_BOUNDARY_VERTS = 128
+        private const val MAX_VERTS = MAX_BOUNDARY_VERTS * VERTS_PER_BOUNDARY_VERT
+        // Each boundary vertex contributes 6 boundary-strip indices + up to 3 fan indices
+        private const val MAX_INDICES = MAX_BOUNDARY_VERTS * 6 + (MAX_BOUNDARY_VERTS - 2) * 3
+
+        private const val FLOAT_BYTES = 4
+        private const val INT_BYTES = 4
+        // POSITION: 3 floats per vertex
+        private const val POSITION_STRIDE = 3 * FLOAT_BYTES
     }
 
     private val planeMatrix = Matrix()
@@ -46,18 +50,36 @@ class PlaneVisualizer(
     private var isShadowReceiver = false
     private var isVisible = false
 
-    private var planeRenderable: ModelRenderable? = null
-    private var planeRenderableInstance: RenderableInstance? = null
+    private var planeSubmeshMaterial: MaterialInstance? = null
+    private var shadowSubmeshMaterial: MaterialInstance? = null
 
-    private val vertices = ArrayList<Vertex>()
-    private val triangleIndices = ArrayList<Int>()
-    private val renderableDefinition: RenderableDefinition = RenderableDefinition
-        .builder()
-        .setVertices(vertices)
+    private val entity = EntityManager.get().create()
+
+    private val vertexBuffer: VertexBuffer = VertexBuffer.Builder()
+        .vertexCount(MAX_VERTS)
+        .bufferCount(1)
+        .attribute(
+            VertexBuffer.VertexAttribute.POSITION,
+            0,
+            VertexBuffer.AttributeType.FLOAT3,
+            0,
+            POSITION_STRIDE
+        )
         .build(engine)
 
-    private var planeSubmesh: Submesh? = null
-    private var shadowSubmesh: Submesh? = null
+    private val indexBuffer: IndexBuffer = IndexBuffer.Builder()
+        .indexCount(MAX_INDICES)
+        .bufferType(IndexBuffer.Builder.IndexType.UINT)
+        .build(engine)
+
+    // Reusable direct buffers
+    private val vertexData: ByteBuffer =
+        ByteBuffer.allocateDirect(MAX_VERTS * POSITION_STRIDE).order(ByteOrder.nativeOrder())
+    private val indexData: ByteBuffer =
+        ByteBuffer.allocateDirect(MAX_INDICES * INT_BYTES).order(ByteOrder.nativeOrder())
+
+    // Track the last primitive counts so we only rebuild the renderable when they change
+    private var builtPrimitiveCount = 0
 
     fun setEnabled(enabled: Boolean) {
         if (isEnabled != enabled) {
@@ -81,56 +103,30 @@ class PlaneVisualizer(
     }
 
     fun setPlaneMaterial(materialInstance: MaterialInstance) {
-        if (planeSubmesh == null) {
-            planeSubmesh = Submesh.builder()
-                .setTriangleIndices(triangleIndices)
-                .setMaterial(materialInstance)
-                .build(engine)
-        } else {
-            planeSubmesh!!.material = materialInstance
-        }
-
-        if (planeRenderable != null) {
-            updateRenderable()
-        }
+        planeSubmeshMaterial = materialInstance
+        if (builtPrimitiveCount > 0) updateRenderable()
     }
 
     fun setShadowMaterial(materialInstance: MaterialInstance) {
-        if (shadowSubmesh == null) {
-            shadowSubmesh = Submesh.builder()
-                .setTriangleIndices(triangleIndices)
-                .setMaterial(materialInstance)
-                .build(engine)
-        } else {
-            shadowSubmesh!!.material = materialInstance
-        }
-
-        if (planeRenderable != null) {
-            updateRenderable()
-        }
+        shadowSubmeshMaterial = materialInstance
+        if (builtPrimitiveCount > 0) updateRenderable()
     }
 
-    override fun getTransformationMatrix(): Matrix {
-        return planeMatrix
-    }
+    override fun getTransformationMatrix(): Matrix = planeMatrix
 
     fun updatePlane() {
         if (!isEnabled || (!isVisible && !isShadowReceiver)) {
             removePlaneFromScene()
             return
         }
-
         if (plane.trackingState != TrackingState.TRACKING) {
             removePlaneFromScene()
             return
         }
 
-        // Set the transformation matrix to the pose of the plane.
         plane.centerPose.toMatrix(planeMatrix.data, 0)
 
-        // Calculate the mesh for the plane.
-        val success = updateRenderableDefinitionForPlane()
-        if (!success) {
+        if (!updateGeometry()) {
             removePlaneFromScene()
             return
         }
@@ -139,159 +135,135 @@ class PlaneVisualizer(
         addPlaneToScene()
     }
 
-    @Suppress("AndroidApiChecker", "FutureReturnValueIgnored")
-    internal fun updateRenderable() {
-        // The order of the meshes is important: plane before shadow, so blend order indices match.
-        val submeshes = buildList {
-            if (isVisible && planeSubmesh != null) add(planeSubmesh!!)
-            if (isShadowReceiver && shadowSubmesh != null) add(shadowSubmesh!!)
+    private fun updateGeometry(): Boolean {
+        val boundary = plane.polygon ?: return false
+        boundary.rewind()
+        val boundaryVertexCount = boundary.limit() / 2
+        if (boundaryVertexCount == 0) return false
+
+        val numVerts = boundaryVertexCount * VERTS_PER_BOUNDARY_VERT
+        val numIndices = (boundaryVertexCount * 6) + ((boundaryVertexCount - 2) * 3)
+        if (numVerts > MAX_VERTS || numIndices > MAX_INDICES) return false
+
+        vertexData.clear()
+        val floats = vertexData.asFloatBuffer()
+
+        // Outer boundary vertices at y=0
+        boundary.rewind()
+        while (boundary.hasRemaining()) {
+            val x = boundary.get()
+            val z = boundary.get()
+            floats.put(x); floats.put(0f); floats.put(z)
         }
 
-        if (submeshes.isEmpty()) {
+        // Inner feathered vertices at y=1
+        boundary.rewind()
+        while (boundary.hasRemaining()) {
+            val x = boundary.get()
+            val z = boundary.get()
+            val magnitude = Math.hypot(x.toDouble(), z.toDouble()).toFloat()
+            val scale = if (magnitude != 0f) {
+                1f - minOf(FEATHER_LENGTH / magnitude, FEATHER_SCALE)
+            } else {
+                1f - FEATHER_SCALE
+            }
+            floats.put(x * scale); floats.put(1f); floats.put(z * scale)
+        }
+
+        vertexData.rewind()
+        vertexBuffer.setBufferAt(engine, 0, vertexData, 0, numVerts * POSITION_STRIDE)
+
+        indexData.clear()
+        val ints = indexData.asIntBuffer()
+
+        val firstInner = boundaryVertexCount
+        // Interior fan
+        for (i in 0 until boundaryVertexCount - 2) {
+            ints.put(firstInner); ints.put(firstInner + i + 1); ints.put(firstInner + i + 2)
+        }
+        // Boundary strip quads
+        for (i in 0 until boundaryVertexCount) {
+            val o1 = i
+            val o2 = (i + 1) % boundaryVertexCount
+            val n1 = firstInner + i
+            val n2 = firstInner + (i + 1) % boundaryVertexCount
+            ints.put(o1); ints.put(o2); ints.put(n1)
+            ints.put(n1); ints.put(o2); ints.put(n2)
+        }
+
+        indexData.rewind()
+        indexBuffer.setBuffer(engine, indexData, 0, numIndices * INT_BYTES)
+
+        return true
+    }
+
+    private fun updateRenderable() {
+        val primitives = buildList {
+            if (isVisible && planeSubmeshMaterial != null) add(planeSubmeshMaterial!!)
+            if (isShadowReceiver && shadowSubmeshMaterial != null) add(shadowSubmeshMaterial!!)
+        }
+
+        if (primitives.isEmpty()) {
             removePlaneFromScene()
             return
         }
 
-        renderableDefinition.setSubmeshes(submeshes)
+        val rm = engine.renderableManager
 
-        if (planeRenderable == null) {
-            try {
-                planeRenderable = ModelRenderable.builder()
-                    .setSource(renderableDefinition)
-                    .build(engine)
-                    .get()
-                planeRenderable!!.setShadowCaster(false)
-                planeRenderable!!.setShadowReceiver(true)
-                // Creating a Renderable is immediate when using RenderableDefinition.
-            } catch (ex: InterruptedException) {
-                throw AssertionError("Unable to create plane renderable.")
-            } catch (ex: ExecutionException) {
-                throw AssertionError("Unable to create plane renderable.")
-            }
-            planeRenderableInstance = planeRenderable!!.createInstance(
-                engine,
-                modelLoader.assetLoader,
-                modelLoader.resourceLoader,
-                this
-            )
+        if (builtPrimitiveCount != primitives.size) {
+            // Primitive count changed — rebuild the renderable from scratch
+            if (builtPrimitiveCount > 0) rm.destroy(entity)
+            RenderableManager.Builder(primitives.size)
+                .castShadows(false)
+                .receiveShadows(true)
+                .culling(false)
+                .apply {
+                    primitives.forEachIndexed { idx, mat ->
+                        geometry(
+                            idx,
+                            RenderableManager.PrimitiveType.TRIANGLES,
+                            vertexBuffer,
+                            indexBuffer
+                        )
+                        material(idx, mat)
+                        blendOrder(idx, idx)
+                    }
+                }
+                .build(engine, entity)
+            builtPrimitiveCount = primitives.size
         } else {
-            planeRenderable!!.updateFromDefinition(renderableDefinition)
+            // Same primitive count — just update materials
+            val inst = rm.getInstance(entity)
+            primitives.forEachIndexed { idx, mat ->
+                rm.setMaterialInstanceAt(inst, idx, mat)
+            }
         }
 
-        // The plane must always be drawn before the shadow, we use the blendOrder to enforce that.
-        // this works because both sub-meshes will be sorted at the same distance from the camera
-        // since they're part of the same renderable. The blendOrder, determines the sorting in
-        // that situation.
-        if (planeRenderableInstance != null && submeshes.size > 1) {
-            planeRenderableInstance!!.setBlendOrderAt(0, 0) // plane
-            planeRenderableInstance!!.setBlendOrderAt(1, 1) // shadow
-        }
-        planeRenderableInstance!!.prepareForDraw(engine)
-
+        // Update transform
         val transformManager = engine.transformManager
-        val instance = transformManager.getInstance(planeRenderableInstance!!.entity)
-        transformManager.setTransform(instance, planeRenderableInstance!!.getWorldModelMatrix().data)
+        val transformInst = transformManager.getInstance(entity)
+        transformManager.setTransform(transformInst, planeMatrix.data)
     }
 
     fun destroy() {
         removePlaneFromScene()
-
-        planeRenderableInstance?.destroy()
-        planeRenderable = null
+        if (builtPrimitiveCount > 0) engine.renderableManager.destroy(entity)
+        engine.safeDestroyVertexBuffer(vertexBuffer)
+        engine.safeDestroyIndexBuffer(indexBuffer)
+        EntityManager.get().destroy(entity)
     }
 
     private fun addPlaneToScene() {
-        if (isPlaneAddedToScene || planeRenderableInstance == null) {
-            return
+        if (!isPlaneAddedToScene) {
+            scene.addEntity(entity)
+            isPlaneAddedToScene = true
         }
-        scene.addEntity(planeRenderableInstance!!.getRenderedEntity())
-
-        isPlaneAddedToScene = true
     }
 
     private fun removePlaneFromScene() {
-        if (!isPlaneAddedToScene || planeRenderableInstance == null) {
-            return
+        if (isPlaneAddedToScene) {
+            scene.removeEntity(entity)
+            isPlaneAddedToScene = false
         }
-
-        scene.removeEntity(planeRenderableInstance!!.getRenderedEntity())
-
-        isPlaneAddedToScene = false
-    }
-
-    private fun updateRenderableDefinitionForPlane(): Boolean {
-        val boundary = plane.polygon ?: return false
-
-        boundary.rewind()
-        val boundaryVertices = boundary.limit() / 2
-
-        if (boundaryVertices == 0) {
-            return false
-        }
-
-        val numVertices = boundaryVertices * VERTS_PER_BOUNDARY_VERT
-        vertices.clear()
-        vertices.ensureCapacity(numVertices)
-
-        val numIndices = (boundaryVertices * 6) + ((boundaryVertices - 2) * 3)
-        triangleIndices.clear()
-        triangleIndices.ensureCapacity(numIndices)
-
-        val normal = Vector3.up()
-
-        // Copy the perimeter vertices into the vertex buffer and add in the y-coordinate.
-        while (boundary.hasRemaining()) {
-            val x = boundary.get()
-            val z = boundary.get()
-            vertices.add(Vertex.builder().setPosition(Vector3(x, 0.0f, z)).setNormal(normal).build())
-        }
-
-        // Generate the interior vertices.
-        boundary.rewind()
-        while (boundary.hasRemaining()) {
-            val x = boundary.get()
-            val z = boundary.get()
-
-            val magnitude = Math.hypot(x.toDouble(), z.toDouble()).toFloat()
-            var scale = 1.0f - FEATHER_SCALE
-            if (magnitude != 0.0f) {
-                scale = 1.0f - Math.min(FEATHER_LENGTH / magnitude, FEATHER_SCALE)
-            }
-
-            vertices.add(
-                Vertex.builder()
-                    .setPosition(Vector3(x * scale, 1.0f, z * scale))
-                    .setNormal(normal)
-                    .build()
-            )
-        }
-
-        // Generate triangle (4, 5, 6) and (4, 6, 7).
-        val firstInnerVertex = boundaryVertices.toShort().toInt()
-        for (i in 0 until boundaryVertices - 2) {
-            triangleIndices.add(firstInnerVertex)
-            triangleIndices.add(firstInnerVertex + i + 1)
-            triangleIndices.add(firstInnerVertex + i + 2)
-        }
-
-        // Generate triangle (0, 1, 4), (4, 1, 5), (5, 1, 2), (5, 2, 6), (6, 2, 3), (6, 3, 7)
-        // (7, 3, 0), (7, 0, 4)
-        val firstOuterVertex = 0
-        for (i in 0 until boundaryVertices) {
-            val outerVertex1 = firstOuterVertex + i
-            val outerVertex2 = firstOuterVertex + ((i + 1) % boundaryVertices)
-            val innerVertex1 = firstInnerVertex + i
-            val innerVertex2 = firstInnerVertex + ((i + 1) % boundaryVertices)
-
-            triangleIndices.add(outerVertex1)
-            triangleIndices.add(outerVertex2)
-            triangleIndices.add(innerVertex1)
-
-            triangleIndices.add(innerVertex1)
-            triangleIndices.add(outerVertex2)
-            triangleIndices.add(innerVertex2)
-        }
-
-        return true
     }
 }

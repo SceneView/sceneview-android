@@ -2,14 +2,8 @@ package io.github.sceneview
 
 import android.content.Context
 import android.content.Context.WINDOW_SERVICE
-import android.graphics.PixelFormat
-import android.graphics.SurfaceTexture
 import android.opengl.EGLContext
 import android.view.MotionEvent
-import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
-import android.view.TextureView
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -24,11 +18,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.viewinterop.AndroidEmbeddedExternalSurface
+import androidx.compose.ui.viewinterop.AndroidExternalSurface
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -314,13 +311,6 @@ fun Scene(
     // DisplayHelper for frame pacing — one per composition.
     val displayHelper = remember(context) { DisplayHelper(context) }
 
-    // Helper to apply a viewport resize.
-    fun applyResize(width: Int, height: Int) {
-        view.viewport = Viewport(0, 0, width, height)
-        cameraManipulator?.setViewport(width, height)
-        cameraNode.updateProjection()
-    }
-
     // ── Render loop ───────────────────────────────────────────────────────────────────────────────
 
     LaunchedEffect(engine, renderer, view, scene) {
@@ -360,96 +350,67 @@ fun Scene(
         (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
     }
 
+    fun applyResize(width: Int, height: Int) {
+        view.viewport = Viewport(0, 0, width, height)
+        cameraManipulator?.setViewport(width, height)
+        cameraNode.updateProjection()
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
     when (surfaceType) {
-        SurfaceType.Surface -> AndroidView(
-            modifier = modifier,
-            factory = { ctx ->
-                SurfaceView(ctx).also { sv ->
-                    if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
-                    sv.holder.addCallback(object : SurfaceHolder.Callback {
-                        override fun surfaceCreated(holder: SurfaceHolder) {}
+        SurfaceType.Surface -> AndroidExternalSurface(
+            modifier = modifier.pointerInteropFilter { event -> touchDispatcher(event); true },
+            isOpaque = isOpaque
+        ) {
+            onSurface { surface, width, height ->
+                swapChainRef.set(engine.createSwapChain(surface))
+                displayHelper.attach(renderer, display)
+                cameraGestureDetectorRef.set(CameraGestureDetector(
+                    viewHeight = { height },
+                    cameraManipulator = cameraManipulator
+                ))
+                applyResize(width, height)
+                engine.drainFramePipeline()
 
-                        override fun surfaceChanged(
-                            holder: SurfaceHolder, format: Int, width: Int, height: Int
-                        ) {
-                            if (swapChainRef.get() == null) {
-                                swapChainRef.set(engine.createSwapChain(holder.surface))
-                                displayHelper.attach(renderer, display)
-                                cameraGestureDetectorRef.set(
-                                    CameraGestureDetector(
-                                        viewHeight = { sv.height },
-                                        cameraManipulator = cameraManipulator
-                                    )
-                                )
-                            }
-                            applyResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun surfaceDestroyed(holder: SurfaceHolder) {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                        }
-                    })
-                    sv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                surface.onChanged { w, h ->
+                    applyResize(w, h)
+                    engine.drainFramePipeline()
                 }
-            },
-            update = {}
-        )
-
-        SurfaceType.TextureSurface -> AndroidView(
-            modifier = modifier,
-            factory = { ctx ->
-                TextureView(ctx).also { tv ->
-                    tv.isOpaque = isOpaque
-                    var textureSurface: Surface? = null
-                    tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                        override fun onSurfaceTextureAvailable(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            textureSurface = Surface(st)
-                            swapChainRef.set(engine.createSwapChain(textureSurface!!))
-                            displayHelper.attach(renderer, display)
-                            cameraGestureDetectorRef.set(
-                                CameraGestureDetector(
-                                    viewHeight = { tv.height },
-                                    cameraManipulator = cameraManipulator
-                                )
-                            )
-                            applyResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureSizeChanged(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            applyResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                            textureSurface?.release()
-                            textureSurface = null
-                            return true
-                        }
-
-                        override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
-                    }
-                    tv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                surface.onDestroyed {
+                    cameraGestureDetectorRef.set(null)
+                    swapChainRef.getAndSet(null)?.let { runCatching { engine.destroySwapChain(it) } }
+                    engine.flushAndWait()
+                    displayHelper.detach()
                 }
-            },
-            update = {}
-        )
+            }
+        }
+
+        SurfaceType.TextureSurface -> AndroidEmbeddedExternalSurface(
+            modifier = modifier.pointerInteropFilter { event -> touchDispatcher(event); true },
+            isOpaque = isOpaque
+        ) {
+            onSurface { surface, width, height ->
+                swapChainRef.set(engine.createSwapChain(surface))
+                displayHelper.attach(renderer, display)
+                cameraGestureDetectorRef.set(CameraGestureDetector(
+                    viewHeight = { height },
+                    cameraManipulator = cameraManipulator
+                ))
+                applyResize(width, height)
+                engine.drainFramePipeline()
+
+                surface.onChanged { w, h ->
+                    applyResize(w, h)
+                    engine.drainFramePipeline()
+                }
+                surface.onDestroyed {
+                    cameraGestureDetectorRef.set(null)
+                    swapChainRef.getAndSet(null)?.let { runCatching { engine.destroySwapChain(it) } }
+                    engine.flushAndWait()
+                    displayHelper.detach()
+                }
+            }
+        }
     }
 
     // ── DSL content ───────────────────────────────────────────────────────────────────────────────
@@ -524,8 +485,8 @@ fun rememberModelInstance(
  */
 @Composable
 fun rememberEngine(
-    eglContextCreator: () -> EGLContext = { SceneView.createEglContext() },
-    engineCreator: (eglContext: EGLContext) -> Engine = { SceneView.createEngine(it) }
+    eglContextCreator: () -> EGLContext = { createEglContext() },
+    engineCreator: (eglContext: EGLContext) -> Engine = { createEngine(it) }
 ): Engine {
     val eglContext = remember(eglContextCreator)
     val engine = remember(eglContext) { engineCreator(eglContext) }
@@ -590,7 +551,7 @@ fun rememberNode(engine: Engine, creator: Node.() -> Unit = {}) =
  * @param creator Factory for the scene. Override for custom scene flags.
  */
 @Composable
-fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.createScene(engine) }) =
+fun rememberScene(engine: Engine, creator: () -> Scene = { createScene(engine) }) =
     remember(engine, creator).also { scene ->
         DisposableEffect(scene) {
             onDispose {
@@ -613,7 +574,7 @@ fun rememberScene(engine: Engine, creator: () -> Scene = { SceneView.createScene
  * @param creator Factory for the view. Override for custom view flags.
  */
 @Composable
-fun rememberView(engine: Engine, creator: () -> View = { SceneView.createView(engine) }) =
+fun rememberView(engine: Engine, creator: () -> View = { createView(engine) }) =
     remember(engine, creator).also { view ->
         DisposableEffect(view) {
             onDispose {
@@ -636,7 +597,7 @@ fun rememberView(engine: Engine, creator: () -> View = { SceneView.createView(en
 @Composable
 fun rememberRenderer(
     engine: Engine,
-    creator: () -> Renderer = { SceneView.createRenderer(engine) }
+    creator: () -> Renderer = { createRenderer(engine) }
 ) = remember(engine, creator).also { renderer ->
     DisposableEffect(renderer) {
         onDispose {
@@ -663,7 +624,7 @@ fun rememberModelLoader(
     engine: Engine,
     context: Context = LocalContext.current,
     creator: () -> ModelLoader = {
-        SceneView.createModelLoader(engine, context)
+        engine.createModelLoader(context)
     }
 ) = remember(engine, context, creator).also { modelLoader ->
     DisposableEffect(modelLoader) {
@@ -691,7 +652,7 @@ fun rememberMaterialLoader(
     engine: Engine,
     context: Context = LocalContext.current,
     creator: () -> MaterialLoader = {
-        SceneView.createMaterialLoader(engine, context)
+        engine.createMaterialLoader(context)
     }
 ) = remember(engine, context, creator).also { materialLoader ->
     DisposableEffect(materialLoader) {
@@ -717,7 +678,7 @@ fun rememberEnvironmentLoader(
     engine: Engine,
     context: Context = LocalContext.current,
     creator: () -> EnvironmentLoader = {
-        SceneView.createEnvironmentLoader(engine, context)
+        engine.createEnvironmentLoader(context)
     }
 ) = remember(engine, context, creator).also { environmentLoader ->
     DisposableEffect(environmentLoader) {
@@ -750,7 +711,7 @@ fun rememberCameraNode(
     engine: Engine,
     apply: CameraNode.() -> Unit = {},
 ) = rememberNode {
-    SceneView.createCameraNode(engine).apply(apply)
+    createCameraNode(engine).apply(apply)
 }
 
 /**
@@ -777,7 +738,7 @@ fun rememberMainLightNode(
     engine: Engine,
     apply: LightNode.() -> Unit = {}
 ) = rememberNode {
-    SceneView.createMainLightNode(engine).apply(apply)
+    createMainLightNode(engine).apply(apply)
 }
 
 /**
@@ -803,7 +764,7 @@ fun rememberEnvironment(
     environmentLoader: EnvironmentLoader,
     isOpaque: Boolean = true,
     environment: () -> Environment = {
-        SceneView.createEnvironment(environmentLoader, isOpaque)
+        createEnvironment(environmentLoader, isOpaque)
     }
 ) = remember(environmentLoader, isOpaque, environment).also {
     DisposableEffect(it) {
@@ -829,7 +790,7 @@ fun rememberEnvironment(
     engine: Engine,
     isOpaque: Boolean = true,
     environment: () -> Environment = {
-        SceneView.createEnvironment(engine, isOpaque)
+        createEnvironment(engine, isOpaque)
     }
 ) = remember(engine, isOpaque, environment).also {
     DisposableEffect(it) {
@@ -855,7 +816,7 @@ fun rememberEnvironment(
 fun rememberCollisionSystem(
     view: View,
     creator: () -> CollisionSystem = {
-        SceneView.createCollisionSystem(view)
+        createCollisionSystem(view)
     }
 ) = remember(view, creator).also { collisionSystem ->
     DisposableEffect(collisionSystem) {
@@ -988,7 +949,7 @@ fun rememberCameraManipulator(
     orbitHomePosition: Position? = null,
     targetPosition: Position? = null,
     creator: () -> CameraGestureDetector.CameraManipulator = {
-        SceneView.createDefaultCameraManipulator(orbitHomePosition, targetPosition)
+        createDefaultCameraManipulator(orbitHomePosition, targetPosition)
     }
 ) = remember(creator)
 
@@ -1016,7 +977,7 @@ fun rememberCameraManipulator(
 fun rememberViewNodeManager(
     context: Context = LocalContext.current,
     creator: () -> ViewNode2.WindowManager = {
-        SceneView.createViewNodeManager(context)
+        createViewNodeManager(context)
     }
 ) = remember(context, creator).also {
     DisposableEffect(it) {

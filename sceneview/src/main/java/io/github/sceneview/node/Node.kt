@@ -21,7 +21,6 @@ import dev.romainguy.kotlin.math.transform
 import io.github.sceneview.Entity
 import io.github.sceneview.EntityInstance
 import io.github.sceneview.FilamentEntity
-import io.github.sceneview.SceneView
 import io.github.sceneview.animation.NodeAnimator
 import io.github.sceneview.collision.Collider
 import io.github.sceneview.collision.CollisionShape
@@ -189,7 +188,7 @@ open class Node(
     /**
      * World-space position.
      *
-     * The world position of this component (i.e. relative to the [SceneView]).
+     * The world position of this component (i.e. relative to the scene root).
      * This is the composition of this component's local position with its parent's world position.
      *
      * @see worldTransform
@@ -214,7 +213,7 @@ open class Node(
     /**
      * The world-space quaternion.
      *
-     * The world quaternion of this component (i.e. relative to the [SceneView]).
+     * The world quaternion of this component (i.e. relative to the scene root).
      * This is the composition of this component's local quaternion with its parent's world
      * quaternion.
      *
@@ -248,7 +247,7 @@ open class Node(
     /**
      * World-space rotation.
      *
-     * The world rotation of this component (i.e. relative to the [SceneView]).
+     * The world rotation of this component (i.e. relative to the scene root).
      * This is the composition of this component's local rotation with its parent's world rotation.
      *
      * @see worldTransform
@@ -275,7 +274,7 @@ open class Node(
     /**
      * World-space scale.
      *
-     * The world scale of this component (i.e. relative to the [SceneView]).
+     * The world scale of this component (i.e. relative to the scene root).
      * This is the composition of this component's local scale with its parent's world scale.
      *
      * @see worldTransform

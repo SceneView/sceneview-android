@@ -6,7 +6,6 @@ import com.google.ar.core.Frame
 import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
-import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.getProjectionTransform
 import io.github.sceneview.ar.arcore.transform
 import io.github.sceneview.node.CameraNode
@@ -14,7 +13,7 @@ import io.github.sceneview.node.CameraNode
 /**
  * Represents a virtual camera, which determines the perspective through which the scene is viewed.
  *
- * If the camera is part of an [ARSceneView], then the camera automatically tracks the
+ * If the camera is part of an AR scene, then the camera automatically tracks the
  * camera pose from ARCore.
  *
  * The following methods will throw [ ] when called:
