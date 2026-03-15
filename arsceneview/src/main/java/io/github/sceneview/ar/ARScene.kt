@@ -1,14 +1,8 @@
 package io.github.sceneview.ar
 
 import android.content.Context.WINDOW_SERVICE
-import android.graphics.PixelFormat
-import android.graphics.SurfaceTexture
 import android.util.Size
 import android.view.MotionEvent
-import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
-import android.view.TextureView
 import android.view.WindowManager as AndroidWindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -22,11 +16,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.viewinterop.AndroidEmbeddedExternalSurface
+import androidx.compose.ui.viewinterop.AndroidExternalSurface
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -47,7 +44,6 @@ import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
 import io.github.sceneview.SceneNodeManager
-import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.ar.arcore.configure
 import io.github.sceneview.ar.arcore.getUpdatedTrackables
@@ -287,8 +283,8 @@ fun ARScene(
 
     // ── AR subsystems ─────────────────────────────────────────────────────────────────────────────
 
-    val arPlaneRenderer = remember(engine, modelLoader, materialLoader, scene) {
-        PlaneRenderer(engine, modelLoader, materialLoader, scene)
+    val arPlaneRenderer = remember(engine, materialLoader, scene) {
+        PlaneRenderer(engine, materialLoader, scene)
     }
     val lightEstimator = remember(engine, environmentLoader) {
         LightEstimator(engine, environmentLoader.iblPrefilter)
@@ -534,96 +530,61 @@ fun ARScene(
         arPlaneRenderer.viewSize = Size(width, height)
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     when (surfaceType) {
-        SurfaceType.Surface -> AndroidView(
-            modifier = modifier,
-            factory = { ctx ->
-                SurfaceView(ctx).also { sv ->
-                    if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
-                    sv.holder.addCallback(object : SurfaceHolder.Callback {
-                        override fun surfaceCreated(holder: SurfaceHolder) {}
+        SurfaceType.Surface -> AndroidExternalSurface(
+            modifier = modifier.pointerInteropFilter { event -> touchDispatcher(event); true },
+            isOpaque = isOpaque
+        ) {
+            onSurface { surface, width, height ->
+                swapChainRef.set(engine.createSwapChain(surface))
+                displayHelper.attach(renderer, display)
+                cameraGestureDetectorRef.set(CameraGestureDetector(
+                    viewHeight = { height },
+                    cameraManipulator = null
+                ))
+                applyARResize(width, height)
+                engine.drainFramePipeline()
 
-                        override fun surfaceChanged(
-                            holder: SurfaceHolder, format: Int, width: Int, height: Int
-                        ) {
-                            if (swapChainRef.get() == null) {
-                                swapChainRef.set(engine.createSwapChain(holder.surface))
-                                displayHelper.attach(renderer, display)
-                                cameraGestureDetectorRef.set(
-                                    CameraGestureDetector(
-                                        viewHeight = { sv.height },
-                                        cameraManipulator = null
-                                    )
-                                )
-                            }
-                            applyARResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun surfaceDestroyed(holder: SurfaceHolder) {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                        }
-                    })
-                    sv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                surface.onChanged { w, h ->
+                    applyARResize(w, h)
+                    engine.drainFramePipeline()
                 }
-            },
-            update = {}
-        )
-
-        SurfaceType.TextureSurface -> AndroidView(
-            modifier = modifier,
-            factory = { ctx ->
-                TextureView(ctx).also { tv ->
-                    tv.isOpaque = isOpaque
-                    var textureSurface: Surface? = null
-                    tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                        override fun onSurfaceTextureAvailable(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            textureSurface = Surface(st)
-                            swapChainRef.set(engine.createSwapChain(textureSurface!!))
-                            displayHelper.attach(renderer, display)
-                            cameraGestureDetectorRef.set(
-                                CameraGestureDetector(
-                                    viewHeight = { tv.height },
-                                    cameraManipulator = null
-                                )
-                            )
-                            applyARResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureSizeChanged(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            applyARResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                            textureSurface?.release()
-                            textureSurface = null
-                            return true
-                        }
-
-                        override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
-                    }
-                    tv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                surface.onDestroyed {
+                    cameraGestureDetectorRef.set(null)
+                    swapChainRef.getAndSet(null)?.let { runCatching { engine.destroySwapChain(it) } }
+                    engine.flushAndWait()
+                    displayHelper.detach()
                 }
-            },
-            update = {}
-        )
+            }
+        }
+
+        SurfaceType.TextureSurface -> AndroidEmbeddedExternalSurface(
+            modifier = modifier.pointerInteropFilter { event -> touchDispatcher(event); true },
+            isOpaque = isOpaque
+        ) {
+            onSurface { surface, width, height ->
+                swapChainRef.set(engine.createSwapChain(surface))
+                displayHelper.attach(renderer, display)
+                cameraGestureDetectorRef.set(CameraGestureDetector(
+                    viewHeight = { height },
+                    cameraManipulator = null
+                ))
+                applyARResize(width, height)
+                engine.drainFramePipeline()
+
+                surface.onChanged { w, h ->
+                    applyARResize(w, h)
+                    engine.drainFramePipeline()
+                }
+                surface.onDestroyed {
+                    cameraGestureDetectorRef.set(null)
+                    swapChainRef.getAndSet(null)?.let { runCatching { engine.destroySwapChain(it) } }
+                    engine.flushAndWait()
+                    displayHelper.detach()
+                }
+            }
+        }
     }
 
     // ── DSL content ───────────────────────────────────────────────────────────────────────────────
@@ -720,7 +681,7 @@ private fun onARFrame(
 fun rememberARCameraNode(
     engine: Engine,
     creator: () -> ARCameraNode = {
-        ARSceneView.createARCameraNode(engine)
+        createARCameraNode(engine)
     }
 ) = rememberNode(creator)
 
@@ -742,7 +703,7 @@ fun rememberARCameraNode(
 fun rememberARCameraStream(
     materialLoader: MaterialLoader,
     creator: () -> ARCameraStream = {
-        ARSceneView.createARCameraStream(materialLoader)
+        createARCameraStream(materialLoader)
     }
 ) = remember(materialLoader) { creator() }.also { cameraStream ->
     DisposableEffect(cameraStream) {
@@ -771,7 +732,7 @@ fun rememberAREnvironment(
     engine: Engine,
     apply: Environment.() -> Unit = {}
 ) = remember(engine) {
-    ARSceneView.createAREnvironment(engine).apply(apply)
+    createAREnvironment(engine).apply(apply)
 }.also { environment ->
     DisposableEffect(environment) {
         onDispose {

@@ -1,7 +1,6 @@
 package io.github.sceneview.ar
 
 import com.google.ar.core.*
-import io.github.sceneview.SceneView
 import io.github.sceneview.node.Node
 
 // Deprecated
@@ -141,21 +140,6 @@ class Scene {
 }
 
 // SceneView
-
-/**
- * ## Deprecated: Use [ARSceneView]
- *
- * ### All functions are directly on [SceneView] and [ArSceneview]*
- * *= [SceneView]/[ARSceneView] is a Scene (NodeParent)* that can contain
- * - Camera Node
- * - Lights Nodes
- * - Model Nodes
- * - ...
- */
-@Deprecated("Use SceneView directly", replaceWith = ReplaceWith("sceneView"))
-@Suppress("RestrictedApi")
-fun SceneView.getScene() = null
-
 
 // Session
 
