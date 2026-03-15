@@ -1,0 +1,44 @@
+name: Publish Codelabs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'marketing/codelabs/**'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Build and deploy codelabs site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install MkDocs Material
+        run: pip install mkdocs-material
+
+      - name: Sync codelabs from marketing/
+        run: |
+          cp marketing/codelabs/codelab-3d-compose.md docs/docs/codelabs/codelab-3d-compose.md
+          cp marketing/codelabs/codelab-ar-compose.md docs/docs/codelabs/codelab-ar-compose.md
+
+      - name: Build site
+        run: mkdocs build --config-file docs/mkdocs.yml --site-dir site
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.PERSONAL_TOKEN }}
+          external_repository: SceneView/sceneview.github.io
+          publish_branch: main
+          publish_dir: ./site
+          destination_dir: codelabs
+          full_commit_message: Deploy codelabs site
+          enable_jekyll: false
