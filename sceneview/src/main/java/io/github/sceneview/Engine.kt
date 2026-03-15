@@ -24,6 +24,11 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.model.Model
 
+typealias Entity = Int
+typealias EntityInstance = Int
+typealias FilamentEntity = com.google.android.filament.Entity
+typealias FilamentEntityInstance = com.google.android.filament.EntityInstance
+
 fun Engine.createModelLoader(context: Context) = ModelLoader(this, context)
 fun Engine.createMaterialLoader(context: Context) = MaterialLoader(this, context)
 fun Engine.createEnvironmentLoader(context: Context) = EnvironmentLoader(this, context)
