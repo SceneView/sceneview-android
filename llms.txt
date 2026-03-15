@@ -1,0 +1,388 @@
+# SceneView for Android
+
+SceneView is a Compose-first 3D and AR SDK for Android, built on Filament (Google's real-time rendering engine) and ARCore. It provides declarative composables for rendering interactive 3D scenes, loading glTF/GLB models, and building AR experiences.
+
+**Maven artifacts (version 3.0.0):**
+- 3D only: `io.github.sceneview:sceneview:3.0.0`
+- AR + 3D: `io.github.sceneview:arsceneview:3.0.0`
+
+**Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.10 | **Compose BOM compatible**
+
+---
+
+## Setup
+
+### build.gradle (app module)
+```kotlin
+dependencies {
+    implementation("io.github.sceneview:sceneview:3.0.0")   // 3D only
+    implementation("io.github.sceneview:arsceneview:3.0.0") // AR (includes sceneview)
+}
+```
+
+### AndroidManifest.xml (AR apps)
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-feature android:name="android.hardware.camera.ar" android:required="true" />
+<application>
+    <meta-data android:name="com.google.ar.core" android:value="required" />
+</application>
+```
+
+---
+
+## Core Composables
+
+### Scene — 3D viewport
+```kotlin
+@Composable
+fun My3DScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraManipulator = rememberCameraManipulator(),
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        },
+        mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+    ) {
+        rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
+            ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
+        }
+    }
+}
+```
+
+### ARScene — AR viewport
+```kotlin
+@Composable
+fun MyARScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+
+    ARScene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        planeRenderer = true,
+        sessionConfiguration = { session, config ->
+            config.depthMode = Config.DepthMode.AUTOMATIC
+            config.instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
+            config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+        },
+        onSessionUpdated = { session, frame -> /* per-frame logic */ }
+    ) {
+        // ARSceneScope DSL here
+    }
+}
+```
+
+---
+
+## SceneScope — Node DSL
+
+All content inside `Scene { }` or `ARScene { }` is a `SceneScope`.
+
+### ModelNode
+```kotlin
+Scene(...) {
+    val instance = rememberModelInstance(modelLoader, "models/my_model.glb")
+    if (instance != null) {
+        ModelNode(
+            modelInstance = instance,
+            scaleToUnits = 1.0f,
+            centerOrigin = Position(y = -1f),
+            position = Position(x = 0f, y = 0f, z = -2f),
+            rotation = Rotation(y = 45f),
+            isEditable = true,
+            autoAnimate = true
+        )
+    }
+}
+```
+
+### Primitive geometry nodes
+```kotlin
+Scene(...) {
+    CubeNode(size = Size(0.5f, 0.5f, 0.5f), materialInstance = redMaterial)
+    SphereNode(radius = 0.3f, materialInstance = blueMaterial)
+    CylinderNode(radius = 0.2f, height = 1.0f, materialInstance = greenMaterial)
+    PlaneNode(size = Size(5f, 5f), materialInstance = greyMaterial)
+}
+```
+
+### LightNode
+`apply` is `LightManager.Builder.() -> Unit` — must use the named parameter, NOT a trailing lambda.
+```kotlin
+Scene(...) {
+    LightNode(
+        type = LightManager.Type.SUN,
+        apply = {
+            color(1.0f, 1.0f, 1.0f)
+            intensity(100_000f)
+            castShadows(true)
+        }
+    )
+    LightNode(
+        type = LightManager.Type.POINT,
+        apply = { intensity(50_000f); falloff(5.0f) }
+    )
+}
+```
+
+### ImageNode
+```kotlin
+Scene(...) {
+    ImageNode(imageFileLocation = "images/logo.png", size = Size(1f, 1f))
+    ImageNode(imageResId = R.drawable.my_image)
+    ImageNode(bitmap = myBitmap, size = Size(2f, 1f))
+}
+```
+
+### ViewNode — Compose UI in 3D
+```kotlin
+val windowManager = rememberViewNodeManager()
+Scene(viewNodeWindowManager = windowManager) {
+    ViewNode(windowManager = windowManager) {
+        Card { Text("Hello 3D World!") }
+    }
+}
+```
+
+### Node hierarchy
+```kotlin
+Scene(...) {
+    Node(position = Position(y = 1f)) {
+        ModelNode(modelInstance = instance, position = Position(x = -1f))
+        CubeNode(size = Size(0.1f), position = Position(x = 1f))
+    }
+}
+```
+
+---
+
+## ARSceneScope — AR Node DSL
+
+### HitResultNode — surface cursor
+```kotlin
+val view = LocalView.current
+ARScene(...) {
+    HitResultNode(xPx = view.width / 2f, yPx = view.height / 2f) {
+        SphereNode(radius = 0.02f)  // reticle
+    }
+}
+```
+
+### AnchorNode — pin to real world
+```kotlin
+ARScene(
+    onTouchEvent = { event, hitResult ->
+        if (event.action == MotionEvent.ACTION_UP && hitResult != null)
+            anchor = hitResult.createAnchor()
+        true
+    }
+) {
+    anchor?.let { a ->
+        AnchorNode(anchor = a) {
+            ModelNode(modelInstance = instance!!, scaleToUnits = 0.5f, isEditable = true)
+        }
+    }
+}
+```
+
+### AugmentedImageNode
+```kotlin
+ARScene(
+    sessionConfiguration = { session, config ->
+        config.augmentedImageDatabase = AugmentedImageDatabase(session).also { db ->
+            db.addImage("target", bitmap, 0.15f)
+        }
+    },
+    onSessionUpdated = { _, frame ->
+        trackedImages = frame.getUpdatedTrackables(AugmentedImage::class.java)
+            .filter { it.trackingState == TrackingState.TRACKING }
+    }
+) {
+    trackedImages.forEach { image ->
+        AugmentedImageNode(augmentedImage = image) {
+            ModelNode(modelInstance = instance!!, scaleToUnits = image.extentX)
+        }
+    }
+}
+```
+
+### AugmentedFaceNode
+```kotlin
+ARScene(
+    sessionFeatures = setOf(Session.Feature.FRONT_CAMERA),
+    sessionConfiguration = { _, config ->
+        config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
+    },
+    onSessionUpdated = { session, _ ->
+        trackedFaces = session.getAllTrackables(AugmentedFace::class.java)
+            .filter { it.trackingState == TrackingState.TRACKING }
+    }
+) {
+    trackedFaces.forEach { face ->
+        AugmentedFaceNode(augmentedFace = face, meshMaterialInstance = faceMaterial)
+    }
+}
+```
+
+### CloudAnchorNode
+```kotlin
+ARScene(...) {
+    CloudAnchorNode(
+        anchor = localAnchor,
+        cloudAnchorId = savedCloudId,
+        onHosted = { cloudId, state ->
+            if (state == CloudAnchorState.SUCCESS) save(cloudId!!)
+        }
+    ) {
+        ModelNode(modelInstance = instance!!)
+    }
+}
+```
+
+---
+
+## Node Properties & Interaction
+
+```kotlin
+node.position = Position(x = 1f, y = 0f, z = -2f)  // meters
+node.rotation = Rotation(x = 0f, y = 45f, z = 0f)   // degrees
+node.scale    = Scale(x = 1f, y = 1f, z = 1f)
+node.isVisible   = true
+node.isEditable  = true   // pinch-scale, drag-move, two-finger-rotate
+node.isTouchable = true
+
+node.onSingleTapConfirmed = { event -> true }
+node.onFrame = { frameTimeNanos -> }
+
+node.transform(position = Position(x = 2f), smooth = true, smoothSpeed = 5f)
+node.lookAt(targetNode)
+
+node.animateRotations(Rotation(0f), Rotation(y = 360f)).also {
+    it.duration = 2000
+    it.repeatCount = ValueAnimator.INFINITE
+}.start()
+
+val hit: Node? = node.overlapTest()
+```
+
+---
+
+## Resource Loading
+
+```kotlin
+// Composable (preferred) — null while loading, recomposes when ready
+val instance: ModelInstance? = rememberModelInstance(modelLoader, "models/file.glb")
+
+// Imperative — call from LaunchedEffect or ViewModel
+val instance = modelLoader.loadModelInstance("models/file.glb")
+modelLoader.loadModelInstanceAsync("models/file.glb") { instance -> }
+
+// HDR environment
+val env = environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+val env = environmentLoader.createKtxEnvironment("environments/studio.ktx")
+```
+
+---
+
+## Camera
+
+```kotlin
+// Orbit / pan / zoom
+Scene(cameraManipulator = rememberCameraManipulator(
+    orbitHomePosition = Position(x = 0f, y = 2f, z = 4f),
+    targetPosition = Position(x = 0f, y = 0f, z = 0f)
+))
+
+// Custom camera
+Scene(cameraNode = rememberCameraNode(engine) {
+    position = Position(x = 0f, y = 2f, z = 5f)
+    lookAt(Position(0f, 0f, 0f))
+})
+
+// Main light shortcut (apply block is LightNode.() -> Unit — set properties directly)
+Scene(mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f })
+```
+
+---
+
+## Gestures
+
+```kotlin
+Scene(
+    onGestureListener = rememberOnGestureListener(
+        onSingleTapConfirmed = { event, node -> },
+        onDoubleTap = { event, node -> node?.let { it.scale = Scale(2f) } },
+        onLongPress = { event, node -> }
+    ),
+    onTouchEvent = { event, hitResult -> false }
+)
+```
+
+---
+
+## Math Types
+
+```kotlin
+import io.github.sceneview.math.Position   // Float3, meters
+import io.github.sceneview.math.Rotation   // Float3, degrees
+import io.github.sceneview.math.Scale      // Float3
+import io.github.sceneview.math.Direction  // Float3, unit vector
+import io.github.sceneview.math.Size       // Float2
+
+Position(x = 0f, y = 1f, z = -2f)
+Rotation(y = 90f)
+Scale(1.5f)          // uniform
+Scale(x = 2f, y = 1f, z = 2f)
+```
+
+---
+
+## Surface Types
+
+```kotlin
+Scene(surfaceType = SurfaceType.Surface)          // SurfaceView, best perf (default)
+Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)  // TextureView, alpha
+```
+
+---
+
+## Threading Rules
+
+- Filament JNI calls must run on the **main thread**.
+- `rememberModelInstance` is safe — reads bytes on IO, creates Filament objects on Main.
+- Never call `modelLoader.createModel*` or `materialLoader.*` from background coroutines.
+- Use `modelLoader.loadModelInstanceAsync` for imperative code.
+
+---
+
+## Samples
+
+| Sample | Demonstrates |
+|--------|-------------|
+| `model-viewer` | Orbit camera, HDR env, glTF animation |
+| `ar-model-viewer` | Tap-to-place, pinch/drag/rotate |
+| `gltf-camera` | Cameras from glTF file |
+| `camera-manipulator` | Orbit/pan/zoom |
+| `ar-augmented-image` | Image detection, overlay, video |
+| `ar-cloud-anchor` | Cross-device persistent anchors |
+| `ar-point-cloud` | ARCore feature point cloud |
+| `autopilot-demo` | Autonomous AR demo |
+
+---
+
+## AI Integration
+
+MCP server: `@sceneview/mcp`. Add to `.claude/mcp.json`:
+```json
+{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "@sceneview/mcp"] } } }
+```
