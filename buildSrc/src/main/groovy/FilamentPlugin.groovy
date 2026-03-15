@@ -52,7 +52,7 @@ abstract class TaskWithBinary extends DefaultTask {
             def fullPath = tool.collect { path ->
                 def filamentToolsPath = providers
                         .gradleProperty("com.google.android.filament.tools-dir")
-                        .forUseAtConfigurationTime().get()
+                        .get()
                 def directory = objects.fileProperty()
                         .fileValue(new File(filamentToolsPath)).getAsFile().get()
                 Paths.get(directory.absolutePath, path).toFile()
@@ -132,7 +132,7 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 def matcArgs = []
                 def exclude_vulkan = providers
                         .gradleProperty("com.google.android.filament.exclude-vulkan")
-                        .forUseAtConfigurationTime().present
+                        .present
                 if (!exclude_vulkan) {
                     matcArgs += ['-a', 'vulkan']
                 }
