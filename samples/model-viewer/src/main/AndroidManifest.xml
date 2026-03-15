@@ -16,5 +16,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ShowcaseActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="true"
+            android:label="Product Showcase"
+            android:screenOrientation="locked" />
     </application>
 </manifest>
