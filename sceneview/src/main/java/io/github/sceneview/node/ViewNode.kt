@@ -40,7 +40,7 @@ open class ViewNode(
     /**
      * The [RenderableInstance] to display.
      *
-     * If [collisionShape] is not set, then [Renderable.getCollisionShape] is used to detect
+     * If [collisionShape] is not set, then [Renderable.collisionShape] is used to detect
      * collisions for this [Node].
      *
      * The renderable is usually a 3D model.
@@ -58,10 +58,10 @@ open class ViewNode(
         }
 
     override val sceneEntities
-        get() = renderableInstance?.let { listOf(it.renderedEntity) } ?: listOf()
+        get() = renderableInstance?.let { listOf(it.getRenderedEntity()) } ?: listOf()
 
     val renderable: ViewRenderable?
-        get() = renderableInstance?.renderable as? ViewRenderable
+        get() = renderableInstance?.getRenderable() as? ViewRenderable
 
     var onViewLoaded: ((renderableInstance: RenderableInstance, view: View) -> Unit)? = null
     var onError: ((exception: Exception) -> Unit)? = null
@@ -71,7 +71,7 @@ open class ViewNode(
         Matrix()
     open val transformationMatrixInverted: Matrix
         get() = _transformationMatrixInverted.apply {
-            Matrix.invert(transformationMatrix, this)
+            Matrix.invert(getTransformationMatrix(), this)
         }
 
     override fun onFrame(frameTimeNanos: Long) {
@@ -82,14 +82,14 @@ open class ViewNode(
         // TODO : Remove the renderable.id thing when Renderable is kotlined
         // Update state when the renderable has changed.
         renderable?.let { renderable ->
-            if (renderable.id.checkChanged(renderableId)) {
+            if (renderable.getId().checkChanged(renderableId)) {
                 onRenderableChanged()
             }
         }
         renderableInstance?.let { renderableInstance ->
             renderableInstance.setModelMatrix(
                 transformManager,
-                renderableInstance.worldModelMatrix.data
+                renderableInstance.getWorldModelMatrix().data
             )
         }
     }
@@ -115,7 +115,7 @@ open class ViewNode(
 
         collisionShape = renderable?.collisionShape
         // TODO : Clean when Renderable is kotlined
-        renderableId = renderable?.id?.get() ?: ChangeId.EMPTY_ID
+        renderableId = renderable?.getId()?.get() ?: ChangeId.EMPTY_ID
 
         updateVisibility()
     }
@@ -130,7 +130,7 @@ open class ViewNode(
             ViewRenderable.builder()
                 .setView(context, layoutResId)
                 .build(engine).thenAccept { renderable ->
-                    val view = renderable.view
+                    val view = renderable.getView()
                     val instance = setRenderable(renderable)
                     onLoaded?.invoke(instance!!, view)
                     onViewLoaded(instance!!, view)

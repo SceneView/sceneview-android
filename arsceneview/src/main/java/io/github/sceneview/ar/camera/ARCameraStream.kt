@@ -14,7 +14,7 @@ import com.google.ar.core.Config
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
-import com.google.ar.sceneform.rendering.Renderable.RENDER_PRIORITY_LAST
+import com.google.ar.sceneform.rendering.Renderable
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.managers.safeDestroy
@@ -49,7 +49,7 @@ open class ARCameraStream(
 //    /**
 //     * Changes the coarse-level camera draw ordering
 //     */
-//    var priority: Int = RENDER_PRIORITY_LAST
+//    var priority: Int = Renderable.RENDER_PRIORITY_LAST
 //        set(value) {
 //            field = value
 //            renderable.setPriority(value)
@@ -173,12 +173,12 @@ open class ARCameraStream(
     private var transformedUvCoordinates: FloatBuffer? = null
 
     init {
-        RenderableManager.Builder(4)
+        RenderableManager.Builder(1)
             .castShadows(false)
             .receiveShadows(false)
             // Always draw the camera feed last to avoid overdraw
             .culling(false)
-            .priority(RENDER_PRIORITY_LAST)
+            .priority(Renderable.RENDER_PRIORITY_LAST)
             .geometry(0,
                 RenderableManager.PrimitiveType.TRIANGLES,
                 vertexBuffer,

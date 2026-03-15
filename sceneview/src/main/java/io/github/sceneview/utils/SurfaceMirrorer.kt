@@ -1,15 +1,16 @@
 package io.github.sceneview.utils
 
 import android.view.Surface
+import com.google.android.filament.Engine
 import com.google.android.filament.Renderer
 import com.google.android.filament.SwapChain
+import com.google.android.filament.View
 import com.google.android.filament.Viewport
-import io.github.sceneview.SceneView
 
 /**
  * Displays the Camera stream using Filament.
  */
-class SurfaceMirrorer {
+internal class SurfaceMirrorer {
 
     data class SurfaceMirror(
         val surface: Surface,
@@ -19,14 +20,13 @@ class SurfaceMirrorer {
 
     private val surfaceMirrors = mutableListOf<SurfaceMirror>()
 
-    fun onFrame(sceneView: SceneView) {
+    internal fun onFrame(renderer: Renderer, view: View) {
         surfaceMirrors.forEach { mirror ->
             if (mirror.swapChain != null) {
-                sceneView.renderer.copyFrame(
+                renderer.copyFrame(
                     mirror.swapChain!!,
-                    // TODO could this be moved to [startMirroring]?
-                    getLetterboxViewport(sceneView.view.viewport, mirror.viewport),
-                    sceneView.view.viewport,
+                    getLetterboxViewport(view.viewport, mirror.viewport),
+                    view.viewport,
                     Renderer.MIRROR_FRAME_FLAG_COMMIT
                             or Renderer.MIRROR_FRAME_FLAG_SET_PRESENTATION_TIME
                             or Renderer.MIRROR_FRAME_FLAG_CLEAR
@@ -47,6 +47,7 @@ class SurfaceMirrorer {
      * recording. This will incur a rendering performance cost and should only be set when capturing
      * this view. To stop the additional rendering, call [stopMirroring].
      *
+     * @param engine the Filament [Engine] used to create swap chains.
      * @param surface the Surface onto which the rendered scene should be mirrored.
      * @param left the left edge of the rectangle into which the view should be mirrored on surface.
      * @param bottom the bottom edge of the rectangle into which the view should be mirrored on
@@ -56,18 +57,18 @@ class SurfaceMirrorer {
      * @param height the height of the rectangle into which the SceneView should be mirrored on
      * surface.
      */
-    fun startMirroring(
-        sceneView: SceneView,
+    internal fun startMirroring(
+        engine: Engine,
         surface: Surface,
         left: Int = 0,
         bottom: Int = 0,
-        width: Int = sceneView.width,
-        height: Int = sceneView.height
+        width: Int,
+        height: Int
     ) {
         surfaceMirrors.add(
             SurfaceMirror(
                 surface,
-                sceneView.engine.createSwapChain(surface),
+                engine.createSwapChain(surface),
                 Viewport(left, bottom, width, height)
             )
         )
@@ -81,9 +82,9 @@ class SurfaceMirrorer {
      *
      * The application is responsible for calling [Surface.release] on the Surface when done.
      */
-    fun stopMirroring(sceneView: SceneView, surface: Surface) {
+    internal fun stopMirroring(engine: Engine, surface: Surface) {
         surfaceMirrors.removeAll(surfaceMirrors.filter { it.surface == surface }.onEach { mirror ->
-            mirror.swapChain?.let { runCatching { sceneView.engine.destroySwapChain(it) } }
+            mirror.swapChain?.let { runCatching { engine.destroySwapChain(it) } }
             mirror.swapChain = null
         })
     }

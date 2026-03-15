@@ -229,6 +229,7 @@ class LightEstimator(
                             .also {
                                 cubeMapTexture = it
                             }
+                        @Suppress("DEPRECATION")
                         cubeMapTexture.setImage(
                             engine,
                             0,

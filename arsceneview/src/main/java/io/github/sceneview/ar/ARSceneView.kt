@@ -51,11 +51,14 @@ import io.github.sceneview.node.ViewNode2.WindowManager
 import java.util.concurrent.Executors
 
 /**
- * A SurfaceView that integrates with ARCore and renders a scene
+ * A SurfaceView that integrates with ARCore and renders a scene.
+ *
+ * This is an internal implementation detail of SceneView library v3.x.
+ * Use the [ARScene] composable instead — it is the public API entry point.
  *
  * @param sessionFeatures Fundamental session features
  */
-open class ARSceneView @JvmOverloads constructor(
+internal open class ARSceneView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,

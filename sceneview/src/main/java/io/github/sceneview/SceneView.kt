@@ -14,6 +14,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresApi
+import androidx.annotation.RestrictTo
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -82,11 +83,15 @@ typealias FilamentEntityInstance = com.google.android.filament.EntityInstance
 /**
  * A SurfaceView that manages rendering and interactions with the 3D scene.
  *
+ * This is an internal implementation detail of SceneView library v3.x.
+ * Use the [Scene] composable instead — it is the public API entry point.
+ *
  * Maintains the scene graph, a hierarchical organization of a scene's content.
  * A scene can have zero or more child nodes and each node can have zero or more child nodes.
  * The Scene also provides hit testing, a way to detect which node is touched by a MotionEvent or
  * Ray.
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 open class SceneView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -654,11 +659,11 @@ open class SceneView @JvmOverloads constructor(
         if (surfaceMirrorer == null) {
             surfaceMirrorer = SurfaceMirrorer()
         }
-        surfaceMirrorer?.startMirroring(this, surface, left, bottom, width, height)
+        surfaceMirrorer?.startMirroring(engine, surface, left, bottom, width, height)
     }
 
     fun stopMirroring(surface: Surface) {
-        surfaceMirrorer?.stopMirroring(this, surface)
+        surfaceMirrorer?.stopMirroring(engine, surface)
         surfaceMirrorer = null
     }
 
@@ -740,7 +745,7 @@ open class SceneView @JvmOverloads constructor(
             // Render the scene, unless the renderer wants to skip the frame.
             if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {
                 renderer.render(view)
-                surfaceMirrorer?.onFrame(this)
+                surfaceMirrorer?.onFrame(renderer, view)
                 renderer.endFrame()
             }
         }
@@ -945,10 +950,7 @@ open class SceneView @JvmOverloads constructor(
 
             // Wait for all pending frames to be processed before returning. This is to avoid a race
             // between the surface being resized before pending frames are rendered into it.
-            engine.createFence().apply {
-                wait(Fence.Mode.FLUSH, Fence.WAIT_FOR_EVER)
-                engine.destroyFence(this)
-            }
+            engine.drainFramePipeline()
         }
     }
 
@@ -1062,7 +1064,7 @@ open class SceneView @JvmOverloads constructor(
                     environmentLoader.context.assets.readBuffer(
                         fileLocation = "environments/neutral/neutral_ibl.ktx"
                     ),
-                )
+                ).indirectLight
             )
 
         fun createEnvironment(

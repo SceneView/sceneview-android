@@ -2,6 +2,8 @@ package io.github.sceneview.ar.arcore
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Rect
+import android.os.Build
 import android.view.Display
 import android.view.WindowManager
 import com.google.ar.core.AugmentedImageDatabase
@@ -22,17 +24,31 @@ class ARSession(
     val onConfigChanged: (session: Session, config: Config) -> Unit
 ) : Session(context, features) {
 
-    private val display: Display by lazy {
-        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).getDefaultDisplay()
-    }
-
     // We use device display sizes by default cause the onSurfaceChanged may be called after the
     // onResume and ARCore doesn't appreciate that we do things on session before calling
     // setDisplayGeometry()
     // = flickering screen if the phone is locked when starting the app
-    var displayRotation = display.rotation
-    var displayWidth = display.width
-    var displayHeight = display.height
+    var displayRotation: Int
+    var displayWidth: Int
+    var displayHeight: Int
+
+    init {
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds: Rect = windowManager.currentWindowMetrics.bounds
+            displayRotation = context.display?.rotation ?: 0
+            displayWidth = bounds.width()
+            displayHeight = bounds.height()
+        } else {
+            @Suppress("DEPRECATION")
+            val display: Display = windowManager.defaultDisplay
+            displayRotation = display.rotation
+            @Suppress("DEPRECATION")
+            displayWidth = display.width
+            @Suppress("DEPRECATION")
+            displayHeight = display.height
+        }
+    }
 
     var isResumed = false
 
