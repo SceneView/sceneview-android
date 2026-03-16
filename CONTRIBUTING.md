@@ -1,8 +1,43 @@
 # How to contribute
 
+## AI-assisted workflow (recommended)
+
+SceneView ships with a full Claude Code setup so you can contribute with AI assistance
+from the first keystroke — no context-gathering needed.
+
+### Quick start
+
+1. Install [Claude Code](https://claude.ai/code)
+2. Clone the repo and open it: `claude` inside the project root
+3. Run `/contribute` — Claude walks you through the entire workflow
+
+### Available slash commands
+
+| Command | What it does |
+|---|---|
+| `/contribute` | Full guided workflow from understanding to PR |
+| `/review` | Checks threading rules, Compose API, Kotlin style, module boundaries |
+| `/document` | Generates/updates KDoc and `llms.txt` for changed APIs |
+| `/test` | Audits coverage and generates missing tests |
+
+### MCP server (optional)
+
+If you use Claude Desktop or another MCP-compatible editor, add the SceneView MCP server
+for full API context in any chat:
+
+```json
+{
+  "mcpServers": {
+    "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] }
+  }
+}
+```
+
+---
+
 ## Issues
 
-There is no special template for issues. You just need to select a title that characterizes the problem in general and provide a short description of the problem in a comment. You should also include code, logs or screenshots if they help to understand the problem.
+Use the issue templates on GitHub. For questions, open a [Discussion](https://github.com/SceneView/sceneview-android/discussions) instead.
 
 Feature requests are welcomed too!
 
