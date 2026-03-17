@@ -618,6 +618,24 @@ fun rememberView(engine: Engine, creator: () -> View = { createView(engine) }) =
     }
 
 /**
+ * Creates and remembers a Filament [View] tuned for AR (used as the default in `ARScene`).
+ *
+ * Uses [createARView] instead of [createView] — the key difference is [ToneMapper.Linear] instead
+ * of [ToneMapper.Filmic], which prevents the AR camera background from being over-processed.
+ *
+ * @see createARView for a full explanation of why AR needs a different tone mapper.
+ */
+@Composable
+fun rememberARView(engine: Engine, creator: () -> View = { createARView(engine) }) =
+    remember(engine, creator).also { view ->
+        DisposableEffect(view) {
+            onDispose {
+                engine.safeDestroyView(view)
+            }
+        }
+    }
+
+/**
  * Creates and remembers a Filament [Renderer].
  *
  * A `Renderer` represents an operating system window and drives the frame pipeline —
