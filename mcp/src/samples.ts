@@ -1,5 +1,6 @@
 export type SampleId =
   | "model-viewer"
+  | "geometry-scene"
   | "ar-tap-to-place"
   | "ar-placement-cursor"
   | "ar-augmented-image"
@@ -46,6 +47,63 @@ fun ModelViewerScreen() {
                 isEditable = true
             )
         }
+    }
+}`,
+  },
+
+  "geometry-scene": {
+    id: "geometry-scene",
+    title: "3D Geometry Scene",
+    description: "Procedural 3D scene using primitive geometry nodes (cube, sphere, plane) — no GLB required",
+    dependency: "io.github.sceneview:sceneview:3.0.0",
+    prompt:
+      "Create an Android Compose screen called `GeometrySceneScreen` that renders a full-screen 3D scene with a red rotating cube, a metallic blue sphere, and a green floor plane. No model files — use SceneView built-in geometry nodes. Orbit camera. Use SceneView `io.github.sceneview:sceneview:3.0.0`.",
+    code: `@Composable
+fun GeometrySceneScreen() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val t = rememberInfiniteTransition(label = "spin")
+    val angle by t.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(4_000, easing = LinearEasing)),
+        label = "angle"
+    )
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        materialLoader = materialLoader,
+        mainLightNode = rememberMainLightNode(engine) { intensity(80_000f) },
+        cameraManipulator = rememberCameraManipulator()
+    ) {
+        // Rotating red cube
+        CubeNode(
+            engine,
+            size = Size(0.5f, 0.5f, 0.5f),
+            materialInstance = materialLoader.createColorInstance(
+                Color.Red, metallic = 0f, roughness = 0.5f
+            ),
+            position = Position(x = -0.6f),
+            rotation = Rotation(y = angle)
+        )
+        // Metallic blue sphere
+        SphereNode(
+            engine,
+            radius = 0.3f,
+            materialInstance = materialLoader.createColorInstance(
+                Color.Blue, metallic = 0.8f, roughness = 0.2f
+            ),
+            position = Position(x = 0.6f)
+        )
+        // Floor plane
+        PlaneNode(
+            engine,
+            size = Size(2f, 0f, 2f),
+            materialInstance = materialLoader.createColorInstance(
+                Color(0xFF4CAF50), metallic = 0f, roughness = 0.9f
+            ),
+            position = Position(y = -0.35f)
+        )
     }
 }`,
   },
