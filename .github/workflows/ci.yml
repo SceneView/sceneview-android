@@ -1,32 +1,28 @@
-name: Build Check
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [main]
 
 jobs:
   build:
-    name: Debug build + lint
+    name: Build & lint
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
           cache: gradle
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - run: chmod +x ./gradlew
 
-      - name: Build library
+      - name: Build libraries
         run: ./gradlew :sceneview:assembleDebug :arsceneview:assembleDebug --stacktrace
 
       - name: Lint
