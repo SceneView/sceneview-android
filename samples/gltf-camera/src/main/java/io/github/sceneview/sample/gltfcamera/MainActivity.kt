@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
                     selectedCameraNode?.updateProjection(aspect = aspect, near = 0.05f, far = 5000.0f)
 
                     val environment = rememberEnvironment(environmentLoader) {
-                        environmentLoader.createHDREnvironment("environments/symmetrical_garden_02_4k.hdr")!!
+                        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
                     }
 
                     Scene(
