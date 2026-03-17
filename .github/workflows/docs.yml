@@ -1,4 +1,4 @@
-name: Publish docs site
+name: Deploy docs site
 
 on:
   push:
@@ -6,25 +6,22 @@ on:
     paths:
       - 'docs/**'
       - 'marketing/codelabs/**'
-      - 'MIGRATION.md'
       - 'CHANGELOG.md'
+      - 'MIGRATION.md'
   workflow_dispatch:
 
 jobs:
-  publish:
-    name: Build and deploy docs site
+  deploy:
+    name: Build and deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install MkDocs Material
-        run: pip install mkdocs-material
+      - run: pip install mkdocs-material
 
       - name: Sync content into docs
         run: |
@@ -37,7 +34,7 @@ jobs:
         run: mkdocs build --config-file docs/mkdocs.yml --site-dir site
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           external_repository: SceneView/sceneview.github.io
