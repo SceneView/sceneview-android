@@ -17,7 +17,6 @@ coroutines = "1.10.2"
 kotlinMath = "1.6.0"
 
 arCore = "1.53.0"
-filament = "1.57.1"
 fuel = "2.3.1"
 googleMaterial = "1.13.0"
 media3 = "1.9.2"
@@ -26,9 +25,6 @@ mavenPublish = "0.33.0"
 dokka = "2.0.0"
 
 [libraries]
-arsceneview = { module = "io.github.sceneview:arsceneview", version = "2.3.0" }
-sceneview = { module = "io.github.sceneview:sceneview", version = "2.3.0" }
-
 # AndroidX
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -52,11 +48,6 @@ kotlin-math = { group = "dev.romainguy", name = "kotlin-math", version.ref = "ko
 
 # AR
 arcore = { group = "com.google.ar", name = "core", version.ref = "arCore" }
-
-# Filament
-filament-android = { group = "com.google.android.filament", name = "filament-android", version.ref = "filament" }
-filament-gltfio = { group = "com.google.android.filament", name = "gltfio-android", version.ref = "filament" }
-filament-utils = { group = "com.google.android.filament", name = "filament-utils-android", version.ref = "filament" }
 
 # Fuel (HTTP client)
 fuel = { group = "com.github.kittinunf.fuel", name = "fuel", version.ref = "fuel" }
