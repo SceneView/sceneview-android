@@ -75,6 +75,51 @@ fun createView(engine: Engine): View = engine.createView().apply {
     setShadowingEnabled(false)
 }
 
+/**
+ * Creates a [View] tuned for AR (ARScene).
+ *
+ * The key difference from [createView] is the tone mapper: AR uses [ToneMapper.Linear] (identity)
+ * instead of [ToneMapper.Filmic].
+ *
+ * The AR camera stream material applies `inverseTonemapSRGB()` in its fragment shader to convert
+ * the camera image from sRGB gamma space into Filament's linear working space. If a non-linear
+ * tone mapper (e.g. Filmic) is then applied as a post-process step, the camera feed gets
+ * additionally curved — resulting in oversaturation, high contrast, and vignetting (issue #657).
+ *
+ * With [ToneMapper.Linear] the post-process step is a passthrough, so the full pipeline for the
+ * camera background becomes:
+ *
+ *   camera sRGB → inverseTonemapSRGB → linear → ToneMapper.Linear (passthrough) → sRGB output
+ *                                                                              = original image ✓
+ *
+ * Shadows are enabled by default because AR users commonly want 3D content to cast shadows on
+ * detected planes. Disable via `View.setShadowingEnabled(false)` when not needed.
+ */
+fun createARView(engine: Engine): View = engine.createView().apply {
+    renderQuality = renderQuality.apply {
+        hdrColorBuffer = QualityLevel.MEDIUM
+    }
+    dynamicResolutionOptions = dynamicResolutionOptions.apply {
+        enabled = false
+        homogeneousScaling = true
+        quality = QualityLevel.MEDIUM
+    }
+    multiSampleAntiAliasingOptions = multiSampleAntiAliasingOptions.apply {
+        enabled = false
+    }
+    antiAliasing = AntiAliasing.FXAA
+    ambientOcclusionOptions = ambientOcclusionOptions.apply {
+        enabled = false
+    }
+    // Linear tone mapper: passthrough, preserves the camera background unchanged.
+    // See KDoc above for the full explanation.
+    colorGrading = ColorGrading.Builder()
+        .toneMapper(ToneMapper.Linear())
+        .build(engine)
+    // Shadows on by default for AR: models casting shadows onto detected planes.
+    setShadowingEnabled(true)
+}
+
 fun createRenderer(engine: Engine): Renderer = engine.createRenderer()
 
 fun createCameraNode(engine: Engine): CameraNode = DefaultCameraNode(engine)
