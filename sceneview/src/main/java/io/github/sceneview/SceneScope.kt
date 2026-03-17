@@ -1,6 +1,7 @@
 package io.github.sceneview
 
 import android.graphics.Bitmap
+import android.media.MediaPlayer
 import androidx.annotation.DrawableRes
 import androidx.annotation.RestrictTo
 import androidx.compose.runtime.Composable
@@ -38,7 +39,8 @@ import io.github.sceneview.node.ModelNode as ModelNodeImpl
 import io.github.sceneview.node.Node as NodeImpl
 import io.github.sceneview.node.PlaneNode as PlaneNodeImpl
 import io.github.sceneview.node.SphereNode as SphereNodeImpl
-import io.github.sceneview.node.ViewNode2
+import io.github.sceneview.node.VideoNode as VideoNodeImpl
+import io.github.sceneview.node.ViewNode as ViewNodeImpl
 
 /**
  * DSL marker annotation that prevents implicit access to outer [SceneScope] from inside a
@@ -163,25 +165,46 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * }
      * ```
      *
-     * @param modelInstance The loaded model instance to render.
-     * @param autoAnimate   Whether to automatically play all animations in the model.
-     * @param scaleToUnits  If set, uniformly scales the model to fit within a cube of this size (in meters).
-     * @param centerOrigin  Origin alignment relative to the model's bounding box.
-     *                      - `null` keeps the model's original center
-     *                      - `Position(0,0,0)` centers horizontally and vertically
-     *                      - `Position(0,-1,0)` = centered horizontally, bottom-aligned
-     * @param position      Local position.
-     * @param rotation      Local rotation in Euler angles (degrees).
-     * @param scale         Local scale.
-     * @param isVisible     Whether to render the node.
-     * @param isEditable    Whether the node can be interactively transformed.
-     * @param apply         Additional imperative configuration applied once on creation.
-     * @param content       Optional child nodes declared in a [NodeScope].
+     * **Reactive animation** — drive animations from Compose state:
+     * ```kotlin
+     * var isWalking by remember { mutableStateOf(false) }
+     *
+     * ModelNode(
+     *     modelInstance = instance,
+     *     autoAnimate = false,
+     *     animationName = if (isWalking) "Walk" else "Idle"
+     * )
+     * ```
+     * When [animationName] changes the previous animation is stopped and the new one starts.
+     * When [animationName] is `null` the [autoAnimate] behaviour applies instead.
+     *
+     * @param modelInstance  The loaded model instance to render.
+     * @param autoAnimate    Automatically play all animations in the model when [animationName]
+     *                       is `null`. Default `true`.
+     * @param animationName  Name of the glTF animation to play. `null` defers to [autoAnimate].
+     *                       Changing this value from Compose state switches animations reactively.
+     * @param animationLoop  Whether [animationName] loops. Default `true`.
+     * @param animationSpeed Playback speed multiplier for [animationName]. Default `1f`.
+     * @param scaleToUnits   Uniformly scales the model to fit within a cube of this size (meters).
+     * @param centerOrigin   Origin alignment relative to the model's bounding box.
+     *                       - `null` keeps the model's original center
+     *                       - `Position(0,0,0)` centers horizontally and vertically
+     *                       - `Position(0,-1,0)` = centered horizontally, bottom-aligned
+     * @param position       Local position.
+     * @param rotation       Local rotation in Euler angles (degrees).
+     * @param scale          Local scale.
+     * @param isVisible      Whether to render the node.
+     * @param isEditable     Whether the node can be interactively transformed.
+     * @param apply          Additional imperative configuration applied once on creation.
+     * @param content        Optional child nodes declared in a [NodeScope].
      */
     @Composable
     fun ModelNode(
         modelInstance: ModelInstance,
         autoAnimate: Boolean = true,
+        animationName: String? = null,
+        animationLoop: Boolean = true,
+        animationSpeed: Float = 1f,
         scaleToUnits: Float? = null,
         centerOrigin: Position? = null,
         position: Position = Position(x = 0f),
@@ -195,7 +218,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         val node = remember(engine, modelInstance) {
             ModelNodeImpl(
                 modelInstance = modelInstance,
-                autoAnimate = autoAnimate,
+                autoAnimate = autoAnimate && animationName == null,
                 scaleToUnits = scaleToUnits,
                 centerOrigin = centerOrigin
             ).apply {
@@ -217,6 +240,13 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             if (scaleToUnits == null) node.scale = scale
             node.isVisible = isVisible
             node.isEditable = isEditable
+        }
+        // Switch animation reactively when animationName changes.
+        if (animationName != null) {
+            DisposableEffect(node, animationName) {
+                node.playAnimation(animationName, speed = animationSpeed, loop = animationLoop)
+                onDispose { node.stopAnimation(animationName) }
+            }
         }
         NodeLifecycle(node, content)
     }
@@ -539,6 +569,57 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         NodeLifecycle(node, content)
     }
 
+    // ── VideoNode ─────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that renders video from an Android [android.media.MediaPlayer] onto a flat plane in
+     * 3D space.
+     *
+     * The plane is auto-sized to the video's aspect ratio (longer edge = 1.0 world unit) unless
+     * you provide an explicit [size]. When the video dimensions become known via
+     * [android.media.MediaPlayer.OnVideoSizeChangedListener] the geometry is updated automatically.
+     *
+     * ```kotlin
+     * val player = remember {
+     *     MediaPlayer().apply {
+     *         setDataSource(context, videoUri)
+     *         isLooping = true
+     *         prepare()
+     *         start()
+     *     }
+     * }
+     * DisposableEffect(Unit) { onDispose { player.release() } }
+     *
+     * Scene {
+     *     VideoNode(player = player, position = Position(z = -2f))
+     * }
+     * ```
+     *
+     * @param player           [android.media.MediaPlayer] whose frames are rendered on this node.
+     * @param chromaKeyColor   Optional ARGB chroma-key colour for green-screen compositing.
+     * @param size             Fixed plane size in world units. `null` = auto-size from video.
+     * @param apply            Additional configuration on the [VideoNodeImpl] instance.
+     * @param content          Optional child nodes in a [NodeScope].
+     */
+    @Composable
+    fun VideoNode(
+        player: MediaPlayer,
+        chromaKeyColor: Int? = null,
+        size: Size? = null,
+        apply: VideoNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(materialLoader, player) {
+            VideoNodeImpl(
+                materialLoader = materialLoader,
+                player = player,
+                chromaKeyColor = chromaKeyColor,
+                size = size
+            ).apply(apply)
+        }
+        NodeLifecycle(node, content)
+    }
+
     // ── ViewNode ──────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -547,7 +628,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * The Compose [viewContent] is rendered to an OpenGL texture and displayed on a plane node,
      * enabling rich UI overlays in the 3D scene (labels, info cards, HUDs, etc.).
      *
-     * **Requires a [ViewNode2.WindowManager]** — obtain one with [rememberViewNodeManager]:
+     * **Requires a [ViewNodeImpl.WindowManager]** — obtain one with [rememberViewNodeManager]:
      * ```kotlin
      * val windowManager = rememberViewNodeManager()
      * Scene {
@@ -557,24 +638,24 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * }
      * ```
      *
-     * @param windowManager         The [ViewNode2.WindowManager] to attach the view to.
+     * @param windowManager         The [ViewNodeImpl.WindowManager] to attach the view to.
      * @param unlit                 If `true`, ignores scene lighting (always fully bright).
      * @param invertFrontFaceWinding Inverts face winding — useful for front-facing AR cameras.
-     * @param apply                 Additional configuration on the [ViewNode2] instance.
+     * @param apply                 Additional configuration on the [ViewNodeImpl] instance.
      * @param content               Optional 3D child nodes in a [NodeScope].
      * @param viewContent           The Compose UI to render inside the 3D node.
      */
     @Composable
     fun ViewNode(
-        windowManager: ViewNode2.WindowManager,
+        windowManager: ViewNodeImpl.WindowManager,
         unlit: Boolean = false,
         invertFrontFaceWinding: Boolean = false,
-        apply: ViewNode2.() -> Unit = {},
+        apply: ViewNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null,
         viewContent: @Composable () -> Unit
     ) {
         val node = remember(engine, windowManager) {
-            ViewNode2(
+            ViewNodeImpl(
                 engine = engine,
                 windowManager = windowManager,
                 materialLoader = materialLoader,

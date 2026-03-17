@@ -32,7 +32,7 @@ import com.google.android.filament.Texture
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.math.Size
-import io.github.sceneview.node.ViewNode2.WindowManager
+import io.github.sceneview.node.ViewNode.WindowManager
 import io.github.sceneview.safeDestroyMaterialInstance
 import io.github.sceneview.safeDestroyStream
 import io.github.sceneview.safeDestroyTexture
@@ -54,14 +54,14 @@ import io.github.sceneview.safeDestroyTexture
  * Additionally, this manages the lifecycle of the window to help ensure that the window is
  * added/removed from the WindowManager at the appropriate times.
  *
- * @param view The 2D Android [View] that is rendered by this [ViewNode2]
+ * @param view The 2D Android [View] that is rendered by this [ViewNode]
  * @param unlit True to disable all lights influences on the rendered view
  * @param invertFrontFaceWinding Inverts the winding order of front faces.
  * Inverting the winding order of front faces is useful when rendering mirrored reflections
  * (water, mirror surfaces, front camera in AR, etc.).
  * True to invert front faces, false otherwise
  */
-class ViewNode2(
+class ViewNode(
     engine: Engine,
     val windowManager: WindowManager,
     private val materialLoader: MaterialLoader,
