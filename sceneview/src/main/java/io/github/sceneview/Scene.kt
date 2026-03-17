@@ -3,11 +3,9 @@ package io.github.sceneview
 import android.content.Context
 import android.content.Context.WINDOW_SERVICE
 import android.graphics.PixelFormat
-import android.graphics.SurfaceTexture
 import android.opengl.EGLContext
 import android.view.MotionEvent
 import android.view.Surface
-import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.WindowManager
@@ -43,6 +41,7 @@ import com.google.android.filament.SwapChain
 import com.google.android.filament.View
 import com.google.android.filament.Viewport
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.UiHelper
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
@@ -360,41 +359,54 @@ fun Scene(
         (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
     }
 
+    // UiHelper manages swap chain creation/destruction and handles surface lifecycle more robustly
+    // than a bare SurfaceHolder.Callback (fixes rendering on Feature Level 1 / OpenGL ES emulators).
+    val uiHelperRef = remember { AtomicReference<UiHelper?>(null) }
+    DisposableEffect(engine) {
+        onDispose { uiHelperRef.getAndSet(null)?.detach() }
+    }
+
+    // Shared RendererCallback — wired to whichever surface type is active.
+    fun makeRendererCallback(viewHeight: () -> Int) = object : UiHelper.RendererCallback {
+        override fun onNativeWindowChanged(surface: Surface) {
+            val uiHelper = uiHelperRef.get() ?: return
+            swapChainRef.getAndSet(
+                engine.createSwapChain(surface, uiHelper.swapChainFlags)
+            )?.let { engine.destroySwapChain(it) }
+            displayHelper.attach(renderer, display)
+            if (cameraGestureDetectorRef.get() == null) {
+                cameraGestureDetectorRef.set(
+                    CameraGestureDetector(
+                        viewHeight = viewHeight,
+                        cameraManipulator = cameraManipulator
+                    )
+                )
+            }
+        }
+
+        override fun onDetachedFromSurface() {
+            cameraGestureDetectorRef.set(null)
+            swapChainRef.getAndSet(null)?.let { engine.destroySwapChain(it) }
+            engine.flushAndWait()
+            displayHelper.detach()
+        }
+
+        override fun onResizeView(width: Int, height: Int) {
+            applyResize(width, height)
+            engine.drainFramePipeline()
+        }
+    }
+
     when (surfaceType) {
         SurfaceType.Surface -> AndroidView(
             modifier = modifier,
             factory = { ctx ->
                 SurfaceView(ctx).also { sv ->
                     if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
-                    sv.holder.addCallback(object : SurfaceHolder.Callback {
-                        override fun surfaceCreated(holder: SurfaceHolder) {}
-
-                        override fun surfaceChanged(
-                            holder: SurfaceHolder, format: Int, width: Int, height: Int
-                        ) {
-                            if (swapChainRef.get() == null) {
-                                swapChainRef.set(engine.createSwapChain(holder.surface))
-                                displayHelper.attach(renderer, display)
-                                cameraGestureDetectorRef.set(
-                                    CameraGestureDetector(
-                                        viewHeight = { sv.height },
-                                        cameraManipulator = cameraManipulator
-                                    )
-                                )
-                            }
-                            applyResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun surfaceDestroyed(holder: SurfaceHolder) {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                        }
-                    })
+                    val uiHelper = UiHelper(UiHelper.ContextErrorHandler { })
+                    uiHelper.renderCallback = makeRendererCallback { sv.height }
+                    uiHelper.attachTo(sv)
+                    uiHelperRef.set(uiHelper)
                     sv.setOnTouchListener { _, event -> touchDispatcher(event); true }
                 }
             },
@@ -406,45 +418,10 @@ fun Scene(
             factory = { ctx ->
                 TextureView(ctx).also { tv ->
                     tv.isOpaque = isOpaque
-                    var textureSurface: Surface? = null
-                    tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                        override fun onSurfaceTextureAvailable(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            textureSurface = Surface(st)
-                            swapChainRef.set(engine.createSwapChain(textureSurface!!))
-                            displayHelper.attach(renderer, display)
-                            cameraGestureDetectorRef.set(
-                                CameraGestureDetector(
-                                    viewHeight = { tv.height },
-                                    cameraManipulator = cameraManipulator
-                                )
-                            )
-                            applyResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureSizeChanged(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            applyResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                            textureSurface?.release()
-                            textureSurface = null
-                            return true
-                        }
-
-                        override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
-                    }
+                    val uiHelper = UiHelper(UiHelper.ContextErrorHandler { })
+                    uiHelper.renderCallback = makeRendererCallback { tv.height }
+                    uiHelper.attachTo(tv)
+                    uiHelperRef.set(uiHelper)
                     tv.setOnTouchListener { _, event -> touchDispatcher(event); true }
                 }
             },
