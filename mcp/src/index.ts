@@ -23,7 +23,7 @@ try {
 }
 
 const server = new Server(
-  { name: "@sceneview/mcp", version: "3.0.0" },
+  { name: "@sceneview/mcp", version: "3.0.1" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
