@@ -391,7 +391,7 @@ fun Scene(
             displayHelper.detach()
         }
 
-        override fun onResizeView(width: Int, height: Int) {
+        override fun onResized(width: Int, height: Int) {
             applyResize(width, height)
             engine.drainFramePipeline()
         }
@@ -403,7 +403,7 @@ fun Scene(
             factory = { ctx ->
                 SurfaceView(ctx).also { sv ->
                     if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
-                    val uiHelper = UiHelper(UiHelper.ContextErrorHandler { })
+                    val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
                     uiHelper.renderCallback = makeRendererCallback { sv.height }
                     uiHelper.attachTo(sv)
                     uiHelperRef.set(uiHelper)
@@ -418,7 +418,7 @@ fun Scene(
             factory = { ctx ->
                 TextureView(ctx).also { tv ->
                     tv.isOpaque = isOpaque
-                    val uiHelper = UiHelper(UiHelper.ContextErrorHandler { })
+                    val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
                     uiHelper.renderCallback = makeRendererCallback { tv.height }
                     uiHelper.attachTo(tv)
                     uiHelperRef.set(uiHelper)
