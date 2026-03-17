@@ -15,7 +15,13 @@ class SceneNodeManager(
     val scene: Scene,
     val collisionSystem: CollisionSystem
 ) {
+    // Tracks which nodes are currently registered in the Filament scene so that
+    // removeNode() is idempotent — safe to call from both SceneScope.detach()
+    // (synchronous, before node.destroy()) and the LaunchedEffect snapshot collector.
+    private val managedNodes = mutableSetOf<Node>()
+
     fun addNode(node: Node) {
+        if (!managedNodes.add(node)) return
         node.collisionSystem = collisionSystem
         if (node.sceneEntities.isNotEmpty()) {
             scene.addEntities(node.sceneEntities.toIntArray())
@@ -27,6 +33,7 @@ class SceneNodeManager(
     }
 
     fun removeNode(node: Node) {
+        if (!managedNodes.remove(node)) return
         node.collisionSystem = null
         if (node.sceneEntities.isNotEmpty()) {
             scene.removeEntities(node.sceneEntities.toIntArray())
