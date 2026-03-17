@@ -6,10 +6,26 @@ export type SampleId =
   | "ar-augmented-image"
   | "ar-face-filter";
 
+export type SampleTag =
+  | "3d"
+  | "ar"
+  | "model"
+  | "geometry"
+  | "animation"
+  | "camera"
+  | "environment"
+  | "anchor"
+  | "plane-detection"
+  | "image-tracking"
+  | "face-tracking"
+  | "placement"
+  | "gestures";
+
 export interface Sample {
   id: SampleId;
   title: string;
   description: string;
+  tags: SampleTag[];
   dependency: string;
   prompt: string;
   code: string;
@@ -20,6 +36,7 @@ export const SAMPLES: Record<SampleId, Sample> = {
     id: "model-viewer",
     title: "3D Model Viewer",
     description: "Full-screen 3D scene with a GLB model, HDR environment, and orbit camera",
+    tags: ["3d", "model", "environment", "camera"],
     dependency: "io.github.sceneview:sceneview:3.0.0",
     prompt:
       "Create an Android Compose screen called `ModelViewerScreen` that loads a GLB file from assets/models/my_model.glb and displays it in a full-screen 3D scene with an orbit camera (drag to rotate, pinch to zoom). Add an HDR environment from assets/environments/sky_2k.hdr for realistic lighting. Use SceneView `io.github.sceneview:sceneview:3.0.0`.",
@@ -55,6 +72,7 @@ fun ModelViewerScreen() {
     id: "geometry-scene",
     title: "3D Geometry Scene",
     description: "Procedural 3D scene using primitive geometry nodes (cube, sphere, plane) — no GLB required",
+    tags: ["3d", "geometry", "animation"],
     dependency: "io.github.sceneview:sceneview:3.0.0",
     prompt:
       "Create an Android Compose screen called `GeometrySceneScreen` that renders a full-screen 3D scene with a red rotating cube, a metallic blue sphere, and a green floor plane. No model files — use SceneView built-in geometry nodes. Orbit camera. Use SceneView `io.github.sceneview:sceneview:3.0.0`.",
@@ -113,6 +131,7 @@ fun GeometrySceneScreen() {
     title: "AR Tap-to-Place",
     description:
       "AR scene where each tap places a GLB model on a detected surface. Placed models are pinch-to-scale and drag-to-rotate.",
+    tags: ["ar", "model", "anchor", "plane-detection", "placement", "gestures"],
     dependency: "io.github.sceneview:arsceneview:3.0.0",
     prompt:
       "Create an Android Compose screen called `TapToPlaceScreen` that opens the camera in AR mode. Show a plane detection grid. When the user taps a detected surface, place a 3D GLB model from assets/models/chair.glb at that point. The user should be able to pinch-to-scale and drag-to-rotate after placing. Multiple taps = multiple objects. Use SceneView `io.github.sceneview:arsceneview:3.0.0`.",
@@ -158,6 +177,7 @@ fun TapToPlaceScreen() {
     id: "ar-placement-cursor",
     title: "AR Placement Cursor",
     description: "AR scene with a reticle that follows the surface at screen center. Tap to confirm placement.",
+    tags: ["ar", "model", "anchor", "plane-detection", "placement", "camera"],
     dependency: "io.github.sceneview:arsceneview:3.0.0",
     prompt:
       "Create an Android Compose AR screen called `ARCursorScreen`. Show a small reticle that snaps to the nearest detected surface at the center of the screen as the user moves the camera. When the user taps, place a GLB model from assets/models/object.glb at that position and hide the reticle. Use SceneView `io.github.sceneview:arsceneview:3.0.0`.",
@@ -206,6 +226,7 @@ fun ARCursorScreen() {
     id: "ar-augmented-image",
     title: "AR Augmented Image",
     description: "Detects a reference image in the camera feed and overlays a 3D model above it.",
+    tags: ["ar", "model", "anchor", "image-tracking"],
     dependency: "io.github.sceneview:arsceneview:3.0.0",
     prompt:
       "Create an Android Compose AR screen called `AugmentedImageScreen` that detects a printed reference image (from R.drawable.target_image, physical width 15 cm) and places a 3D GLB model from assets/models/overlay.glb above it, scaled to match the image width. The model should disappear when the image is lost. Use SceneView `io.github.sceneview:arsceneview:3.0.0`.",
@@ -250,6 +271,7 @@ fun AugmentedImageScreen() {
     id: "ar-face-filter",
     title: "AR Face Filter",
     description: "Front-camera AR that detects faces and renders a 3D mesh material over them.",
+    tags: ["ar", "face-tracking", "camera"],
     dependency: "io.github.sceneview:arsceneview:3.0.0",
     prompt:
       "Create an Android Compose AR screen called `FaceFilterScreen` using the front camera. Detect all visible faces and apply a custom material from assets/materials/face_mask.filamat to the face mesh. Use SceneView `io.github.sceneview:arsceneview:3.0.0` with `Session.Feature.FRONT_CAMERA` and `AugmentedFaceMode.MESH3D`.",
