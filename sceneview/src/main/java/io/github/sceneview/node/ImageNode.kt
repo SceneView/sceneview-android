@@ -144,7 +144,12 @@ open class ImageNode private constructor(
     }
 
     override fun destroy() {
+        // Capture the MaterialInstance reference before super.destroy() removes the renderable
+        // component (after which getMaterialInstanceAt would fail). Destroy the instance before
+        // the texture so Filament's "Invalid texture still bound to MaterialInstance" check passes.
+        val mi = materialInstance
         super.destroy()
+        materialLoader.destroyMaterialInstance(mi)
         engine.safeDestroyTexture(texture)
     }
 }
