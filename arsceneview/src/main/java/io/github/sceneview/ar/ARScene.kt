@@ -67,7 +67,7 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.node.ViewNode2.WindowManager
+import io.github.sceneview.node.ViewNode.WindowManager
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
@@ -239,7 +239,7 @@ fun ARScene(
      */
     collisionSystem: CollisionSystem = rememberCollisionSystem(view),
     /**
-     * Used for [io.github.sceneview.node.ViewNode2]s that can display an Android [android.view.View].
+     * Used for [io.github.sceneview.node.ViewNode]s that can display an Android [android.view.View].
      */
     viewNodeWindowManager: WindowManager? = null,
     /**

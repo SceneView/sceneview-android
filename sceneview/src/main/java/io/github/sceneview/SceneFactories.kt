@@ -27,7 +27,7 @@ import io.github.sceneview.math.colorOf
 import io.github.sceneview.math.toColor
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
-import io.github.sceneview.node.ViewNode2
+import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.OpenGL
 import io.github.sceneview.utils.readBuffer
 
@@ -134,7 +134,7 @@ fun createDefaultCameraManipulator(
     targetPosition = targetPosition
 )
 
-fun createViewNodeManager(context: Context) = ViewNode2.WindowManager(context)
+fun createViewNodeManager(context: Context) = ViewNode.WindowManager(context)
 
 fun createEnvironment(
     environmentLoader: EnvironmentLoader,

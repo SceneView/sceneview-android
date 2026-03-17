@@ -2,9 +2,9 @@
 
 SceneView is a Compose-first 3D and AR SDK for Android, built on Filament (Google's real-time rendering engine) and ARCore. It provides declarative composables for rendering interactive 3D scenes, loading glTF/GLB models, and building AR experiences.
 
-**Maven artifacts (version 3.0.0):**
-- 3D only: `io.github.sceneview:sceneview:3.0.0`
-- AR + 3D: `io.github.sceneview:arsceneview:3.0.0`
+**Maven artifacts (version 3.1.0):**
+- 3D only: `io.github.sceneview:sceneview:3.1.0`
+- AR + 3D: `io.github.sceneview:arsceneview:3.1.0`
 
 **Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.10 | **Compose BOM compatible**
 
@@ -15,8 +15,8 @@ SceneView is a Compose-first 3D and AR SDK for Android, built on Filament (Googl
 ### build.gradle (app module)
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.0.0")   // 3D only
-    implementation("io.github.sceneview:arsceneview:3.0.0") // AR (includes sceneview)
+    implementation("io.github.sceneview:sceneview:3.1.0")   // 3D only
+    implementation("io.github.sceneview:arsceneview:3.1.0") // AR (includes sceneview)
 }
 ```
 
@@ -100,10 +100,29 @@ Scene(...) {
             position = Position(x = 0f, y = 0f, z = -2f),
             rotation = Rotation(y = 45f),
             isEditable = true,
-            autoAnimate = true
+            autoAnimate = true   // plays all glTF animations automatically
         )
     }
 }
+```
+
+**Reactive animation** — drive animation selection from Compose state:
+```kotlin
+var isWalking by remember { mutableStateOf(false) }
+
+Scene(...) {
+    instance?.let {
+        ModelNode(
+            modelInstance = it,
+            autoAnimate = false,
+            animationName = if (isWalking) "Walk" else "Idle",
+            animationLoop = true,
+            animationSpeed = 1f
+        )
+    }
+}
+// When animationName changes, the previous animation stops and the new one starts.
+// animationName = null + autoAnimate = true plays all animations.
 ```
 
 ### Primitive geometry nodes
@@ -143,6 +162,28 @@ Scene(...) {
     ImageNode(bitmap = myBitmap, size = Size(2f, 1f))
 }
 ```
+
+### VideoNode — video on a 3D plane
+```kotlin
+val player = remember {
+    MediaPlayer().apply {
+        setDataSource(context, videoUri)
+        isLooping = true
+        prepare()
+        start()
+    }
+}
+DisposableEffect(Unit) { onDispose { player.release() } }
+
+Scene(...) {
+    VideoNode(
+        player = player,
+        // size = null → auto-sized from video aspect ratio (longer edge = 1 unit)
+        position = Position(z = -2f)
+    )
+}
+```
+Supports `chromaKeyColor: Int?` for green-screen compositing.
 
 ### ViewNode — Compose UI in 3D
 ```kotlin

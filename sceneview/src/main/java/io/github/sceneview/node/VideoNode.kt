@@ -1,137 +1,167 @@
 package io.github.sceneview.node
 
-// TODO: To finish
-//open class VideoNode private constructor(
-//    engine: Engine,
-//    val materialLoader: MaterialLoader,
-//    entity: Entity = EntityManager.get().create(),
-//    parent: Node? = null,
-//    mediaPlayer: MediaPlayer,
-//    val texture: Texture,
-//    /**
-//     * `null` to adjust size on the normalized image size
-//     */
-//    val size: Size? = null,
-//    center: Position = Plane.DEFAULT_CENTER,
-//    normal: Direction = Plane.DEFAULT_NORMAL,
-//    builder: RenderableManager.Builder.() -> Unit = {}
-//) : PlaneNode(
-//    engine, entity, parent,
-//    size ?: normalize(Size(mediaPlayer.videoWidth.toFloat(), mediaPlayer.videoHeight.toFloat())),
-//    center, normal,
-//    materialLoader.createVideoInstance(texture),
-//    builder
-//) {
-//    var mediaPlayer = mediaPlayer
-//        set(value) {
-//            field = value
-//            texture.setExternalStream()setBitmap(engine, value)
-//            if (size == null) {
-//                updateGeometry(
-//                    size = normalize(Size(value.videoWidth.toFloat(), value.videoHeight.toFloat()))
-//                )
-//            }
-//        }
-//
-//    init {
-//        if (size == null) {
-//            mediaPlayer.doOnVideoSized { player, width, height ->
-//                if (player == this.player) {
-//                    updateGeometry(size = normalize(Size(width.toFloat(), height.toFloat())))
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//open class VideoNode(
-//    videoMaterial: VideoMaterial,
-//    val player: MediaPlayer,
-//    size: Size = Plane.DEFAULT_SIZE,
-//    center: Position = Plane.DEFAULT_CENTER,
-//    normal: Direction = Plane.DEFAULT_NORMAL,
-//    scaleToVideoRatio: Boolean = true,
-//    /**
-//     * Keep the video aspect ratio.
-//     * - `true` to fit within max width or height
-//     * - `false` the video will be stretched to the node scale
-//     */
-//    keepAspectRatio: Boolean = true,
-//    /**
-//     * The parent node.
-//     *
-//     * If set to null, this node will not be attached.
-//     *
-//     * The local position, rotation, and scale of this node will remain the same.
-//     * Therefore, the world position, rotation, and scale of this node may be different after the
-//     * parent changes.
-//     */
-//    parent: Node? = null,
-//    renderableApply: RenderableManager.Builder.() -> Unit = {}
-//) : PlaneNode(
-//    engine = videoMaterial.engine,
-//    size = size,
-//    center = center,
-//    normal = normal,
-//    materialInstance = videoMaterial.instance,
-//    parent = parent,
-//    renderableApply = renderableApply
-//) {
-//
-//
-//    constructor(
-//        materialLoader: MaterialLoader,
-//        player: MediaPlayer,
-//        chromaKeyColor: Int? = null,
-//        scaleToVideoRatio: Boolean = true,
-//        /**
-//         * Keep the video aspect ratio.
-//         * - `true` to fit within max width or height
-//         * - `false` the video will be stretched to the node scale
-//         */
-//        keepAspectRatio: Boolean = true,
-//        size: Size = Plane.DEFAULT_SIZE,
-//        center: Position = Plane.DEFAULT_CENTER,
-//        normal: Direction = Plane.DEFAULT_NORMAL,
-//        /**
-//         * The parent node.
-//         *
-//         * If set to null, this node will not be attached.
-//         *
-//         * The local position, rotation, and scale of this node will remain the same.
-//         * Therefore, the world position, rotation, and scale of this node may be different after the
-//         * parent changes.
-//         */
-//        parent: Node? = null,
-//        renderableApply: RenderableManager.Builder.() -> Unit = {}
-//    ) : this(
-//        videoMaterial = materialLoader.createVideoInstance(player, chromaKeyColor),
-//        player = player,
-//        scaleToVideoRatio = scaleToVideoRatio,
-//        keepAspectRatio = keepAspectRatio,
-//        size = size,
-//        center = center,
-//        normal = normal,
-//        parent = parent,
-//        renderableApply = renderableApply
-//    )
-//
-//    override fun destroy() {
-//        super.destroy()
-//
-//        player.stop()
-//    }
-//}
-//
-//
-//fun MediaPlayer.doOnVideoSized(block: (player: MediaPlayer, videoWidth: Int, videoHeight: Int) -> Unit) {
-//    if (videoWidth > 0 && videoHeight > 0) {
-//        block(this, videoWidth, videoHeight)
-//    } else {
-//        setOnVideoSizeChangedListener { _, width: Int, height: Int ->
-//            if (width > 0 && height > 0) {
-//                block(this, width, height)
-//            }
-//        }
-//    }
-//}
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
+import android.view.Surface
+import com.google.android.filament.MaterialInstance
+import com.google.android.filament.RenderableManager
+import com.google.android.filament.Stream
+import com.google.android.filament.Texture
+import dev.romainguy.kotlin.math.normalize
+import io.github.sceneview.geometries.Plane
+import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.math.Direction
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Size
+import io.github.sceneview.safeDestroyStream
+import io.github.sceneview.safeDestroyTexture
+
+/**
+ * A [Node] that renders video from an Android [MediaPlayer] onto a flat plane in 3D space.
+ *
+ * Creates a Filament [Stream] backed by a [SurfaceTexture], routes the [MediaPlayer]'s output
+ * to that surface, and maps it to a [PlaneNode] whose aspect ratio matches the video dimensions.
+ *
+ * Optionally supports chroma-key (green-screen) compositing via [chromaKeyColor].
+ *
+ * ```kotlin
+ * Scene {
+ *     val player = remember {
+ *         MediaPlayer().apply {
+ *             setDataSource(context, videoUri)
+ *             isLooping = true
+ *             prepare()
+ *             start()
+ *         }
+ *     }
+ *     DisposableEffect(Unit) { onDispose { player.release() } }
+ *
+ *     VideoNode(
+ *         materialLoader = materialLoader,
+ *         player = player,
+ *         position = Position(z = -2f)
+ *     )
+ * }
+ * ```
+ *
+ * The plane is auto-sized from the video's aspect ratio (longer edge = 1.0 world unit) unless
+ * you provide an explicit [size]. When the video dimensions become known via
+ * [MediaPlayer.OnVideoSizeChangedListener] the geometry is updated automatically.
+ *
+ * @param materialLoader   [MaterialLoader] used to create the video plane material.
+ * @param player           [MediaPlayer] whose frames are rendered on this node. The player should
+ *                         be prepared before passing it so that its dimensions are available for
+ *                         initial sizing. If not yet prepared, the plane starts at 16:9 and is
+ *                         resized once [MediaPlayer.OnVideoSizeChangedListener] fires.
+ * @param chromaKeyColor   Optional ARGB chroma-key colour for green-screen compositing.
+ * @param size             Fixed plane size in world units. `null` (default) = auto-size from the
+ *                         video's aspect ratio.
+ * @param center           Geometry centre offset relative to the node's origin.
+ * @param normal           Plane normal direction.
+ * @param builderApply     Extra [RenderableManager.Builder] configuration.
+ */
+open class VideoNode(
+    val materialLoader: MaterialLoader,
+    player: MediaPlayer,
+    chromaKeyColor: Int? = null,
+    /**
+     * Fixed plane size in world units.
+     * `null` (default) = auto-size from video dimensions (longer edge = 1.0 unit).
+     */
+    val size: Size? = null,
+    center: Position = Plane.DEFAULT_CENTER,
+    normal: Direction = Plane.DEFAULT_NORMAL,
+    builderApply: RenderableManager.Builder.() -> Unit = {}
+) : PlaneNode(
+    engine = materialLoader.engine,
+    size = size ?: videoNaturalSize(player),
+    center = center,
+    normal = normal,
+    builderApply = builderApply
+) {
+    private val surfaceTexture: SurfaceTexture = SurfaceTexture(0).also {
+        it.detachFromGLContext()
+    }
+
+    private val surface: Surface = Surface(surfaceTexture)
+
+    /** The Filament [Stream] backed by the internal [SurfaceTexture]. */
+    val stream: Stream = Stream.Builder()
+        .stream(surfaceTexture)
+        .build(materialLoader.engine)
+
+    /** The Filament external [Texture] sampling frames from [stream]. */
+    val texture: Texture = Texture.Builder()
+        .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
+        .format(Texture.InternalFormat.RGB8)
+        .build(materialLoader.engine)
+        .apply { setExternalStream(materialLoader.engine, stream) }
+
+    override var materialInstance: MaterialInstance =
+        materialLoader.createVideoInstance(texture, chromaKeyColor)
+            .also { setMaterialInstanceAt(0, it) }
+        set(value) {
+            val old = field
+            field = value
+            setMaterialInstanceAt(0, value)
+            materialLoader.destroyMaterialInstance(old)  // also removes from MaterialLoader tracking
+        }
+
+    /**
+     * The [MediaPlayer] currently feeding this node.
+     *
+     * Assigning a new player automatically routes its output to the node's internal surface and
+     * registers the video-size listener. The old player is NOT stopped or released.
+     */
+    var player: MediaPlayer = player
+        set(value) {
+            field.setOnVideoSizeChangedListener(null)
+            field = value
+            value.setSurface(surface)
+            if (size == null) {
+                val w = value.videoWidth
+                val h = value.videoHeight
+                if (w > 0 && h > 0) {
+                    updateGeometry(size = normalize(Size(w.toFloat(), h.toFloat())))
+                }
+            }
+            value.setOnVideoSizeChangedListener(onVideoSizeChanged)
+        }
+
+    private val onVideoSizeChanged = MediaPlayer.OnVideoSizeChangedListener { _, width, height ->
+        if (size == null && width > 0 && height > 0) {
+            updateGeometry(size = normalize(Size(width.toFloat(), height.toFloat())))
+        }
+    }
+
+    init {
+        // Route the player's output to our surface and register the size listener.
+        this.player = player
+    }
+
+    override fun destroy() {
+        val mi = materialInstance
+        super.destroy()
+        player.setOnVideoSizeChangedListener(null)
+        surface.release()
+        materialLoader.destroyMaterialInstance(mi)
+        materialLoader.engine.safeDestroyTexture(texture)
+        materialLoader.engine.safeDestroyStream(stream)
+        surfaceTexture.release()
+    }
+}
+
+/**
+ * Returns a normalised [Size] derived from [player]'s video dimensions, or a default 16:9 ratio
+ * when the dimensions are not yet known (player not prepared, or no video track).
+ */
+private fun videoNaturalSize(player: MediaPlayer): Size {
+    val w = player.videoWidth
+    val h = player.videoHeight
+    return if (w > 0 && h > 0) {
+        normalize(Size(w.toFloat(), h.toFloat()))
+    } else {
+        // 16:9 default — will be corrected by OnVideoSizeChangedListener once the player is ready
+        Size(1.0f, 9.0f / 16.0f)
+    }
+}

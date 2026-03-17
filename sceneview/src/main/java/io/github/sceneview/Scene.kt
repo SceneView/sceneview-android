@@ -60,7 +60,7 @@ import io.github.sceneview.utils.readBuffer
 import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
-import io.github.sceneview.node.ViewNode2
+import io.github.sceneview.node.ViewNode
 import io.github.sceneview.utils.destroy
 import io.github.sceneview.utils.intervalSeconds
 import kotlinx.coroutines.Dispatchers
@@ -205,7 +205,7 @@ fun Scene(
      * Used for [SceneScope.ViewNode] composables — manages the off-screen window attachment.
      * Obtain with [rememberViewNodeManager].
      */
-    viewNodeWindowManager: ViewNode2.WindowManager? = null,
+    viewNodeWindowManager: ViewNode.WindowManager? = null,
     /**
      * The listener invoked for all gesture detector callbacks.
      */
@@ -1006,7 +1006,7 @@ fun rememberCameraManipulator(
 ) = remember(creator)
 
 /**
- * Creates and remembers a [ViewNode2.WindowManager] required by [SceneScope.ViewNode].
+ * Creates and remembers a [ViewNode.WindowManager] required by [SceneScope.ViewNode].
  *
  * `ViewNode` renders Compose UI content onto a 3D plane by attaching an off-screen `Window`
  * to the window manager. This helper creates that window manager and destroys it on disposal.
@@ -1023,12 +1023,12 @@ fun rememberCameraManipulator(
  *
  * @param context Android context used to attach the off-screen window. Defaults to [LocalContext].
  * @param creator Factory for the window manager.
- * @return A [ViewNode2.WindowManager] destroyed on disposal.
+ * @return A [ViewNode.WindowManager] destroyed on disposal.
  */
 @Composable
 fun rememberViewNodeManager(
     context: Context = LocalContext.current,
-    creator: () -> ViewNode2.WindowManager = {
+    creator: () -> ViewNode.WindowManager = {
         createViewNodeManager(context)
     }
 ) = remember(context, creator).also {
