@@ -432,13 +432,14 @@ fun Scene(
     // ── DSL content ───────────────────────────────────────────────────────────────────────────────
 
     if (content != null) {
-        val scope = remember(engine, modelLoader, materialLoader, environmentLoader) {
+        val scope = remember(engine, modelLoader, materialLoader, environmentLoader, nodeManager) {
             SceneScope(
                 engine = engine,
                 modelLoader = modelLoader,
                 materialLoader = materialLoader,
                 environmentLoader = environmentLoader,
-                _nodes = scopeChildNodes
+                _nodes = scopeChildNodes,
+                nodeRemover = nodeManager::removeNode
             )
         }
         scope.content()

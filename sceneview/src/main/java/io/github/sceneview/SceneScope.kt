@@ -85,7 +85,11 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
     val modelLoader: ModelLoader,
     val materialLoader: MaterialLoader,
     val environmentLoader: EnvironmentLoader,
-    internal val _nodes: SnapshotStateList<NodeImpl>
+    internal val _nodes: SnapshotStateList<NodeImpl>,
+    // Called synchronously in detach() to remove the node from the Filament scene before
+    // node.destroy() runs. This prevents the SIGABRT caused by destroying a MaterialInstance
+    // while its Renderable entity is still registered in the scene.
+    internal val nodeRemover: ((NodeImpl) -> Unit)? = null
 ) {
 
     // ── Attachment helpers ────────────────────────────────────────────────────────────────────────
@@ -101,6 +105,11 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * Detach [node] from this scope's container. Overridden in [NodeScope] to remove from parent.
      */
     internal open fun detach(node: NodeImpl) {
+        // Remove from the Filament scene synchronously before node.destroy() is called.
+        // For child nodes (NodeScope) this happens via parentNode.removeChildNode → onChildRemoved.
+        // For root-level nodes the LaunchedEffect that watches scopeChildNodes is async, so we
+        // must remove explicitly here to guarantee the entity leaves the scene first.
+        nodeRemover?.invoke(node)
         _nodes.remove(node)
     }
 
