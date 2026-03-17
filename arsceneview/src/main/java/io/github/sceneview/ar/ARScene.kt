@@ -78,7 +78,7 @@ import io.github.sceneview.rememberNode
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberScene
-import io.github.sceneview.rememberView
+import io.github.sceneview.rememberARView
 import io.github.sceneview.safeDestroyEnvironment
 import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicBoolean
@@ -135,7 +135,9 @@ import java.util.concurrent.atomic.AtomicReference
  * @param sessionConfiguration     Callback to configure the ARCore [Session] and [Config].
  * @param planeRenderer            Whether to render the AR plane grid overlay.
  * @param cameraStream             [ARCameraStream] for camera texture rendering and occlusion.
- * @param view                     Filament [View] for this scene. Use [rememberView].
+ * @param view                     Filament [View] for this scene. Use [rememberARView] (default)
+ *                                 which applies [ToneMapper.Linear] to prevent the camera
+ *                                 background from being over-processed by Filamic tone mapping.
  * @param isOpaque                 Whether the render target is opaque. Default `true`.
  * @param renderer                 Filament [Renderer]. Use [rememberRenderer].
  * @param scene                    Filament [Scene] graph. Use [rememberScene].
@@ -210,7 +212,7 @@ fun ARScene(
     /**
      * Encompasses all the state needed for rendering a [Scene].
      */
-    view: View = rememberView(engine),
+    view: View = rememberARView(engine),
     /**
      * Controls whether the render target is opaque or not. Default `true`.
      */
