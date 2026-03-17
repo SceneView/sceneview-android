@@ -50,6 +50,8 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
 
         buildConfigField 'String', 'VERSION_NAME', "\"${project.properties['VERSION_NAME']}\""
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -101,6 +103,11 @@ dependencies {
     implementation "com.github.kittinunf.fuel:fuel:2.3.1"
     implementation "com.github.kittinunf.fuel:fuel-android:2.3.1"
     implementation "com.github.kittinunf.fuel:fuel-coroutines:2.3.1"
+
+    // Instrumented tests
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
+    androidTestImplementation "androidx.test:runner:1.6.2"
+    androidTestImplementation "androidx.test:rules:1.6.1"
 }
 
 apply plugin: "com.vanniktech.maven.publish"
