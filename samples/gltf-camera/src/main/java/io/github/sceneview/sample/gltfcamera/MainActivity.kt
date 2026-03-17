@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
                     val modelLoader = rememberModelLoader(engine)
                     val environmentLoader = rememberEnvironmentLoader(engine)
 
-                    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet_cameras.glb")
+                    val modelInstance = rememberModelInstance(modelLoader, "models/brainstem_cameras.glb")
 
                     val defaultCameraNode = rememberCameraNode(engine)
 
@@ -102,12 +102,9 @@ class MainActivity : ComponentActivity() {
                         modelInstance?.let { instance ->
                             ModelNode(
                                 modelInstance = instance,
-                                scaleToUnits = 0.5f,
+                                scaleToUnits = 1.0f,
+                                autoAnimate = true,
                                 apply = {
-                                    // Apply the "CameraInit" animation at t=0 so that camera
-                                    // entity transforms are set from the GLTF node hierarchy
-                                    // before the first frame renders.
-                                    if (animationCount > 0) animator.applyAnimation(0, 0f)
                                     if (modelNode == null) modelNode = this
                                 }
                             )
