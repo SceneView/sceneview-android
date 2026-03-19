@@ -73,6 +73,10 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org
 
+      - name: Install dependencies
+        working-directory: mcp
+        run: npm ci
+
       - name: Sync version from tag
         working-directory: mcp
         run: |
