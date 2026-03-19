@@ -19,3 +19,6 @@ local.properties
 mcp/node_modules/
 mcp/.DS_Store
 mcp/demo/*.mp4
+
+# Sample build outputs
+samples/*/build/

@@ -26,7 +26,7 @@ try {
 }
 
 const server = new Server(
-  { name: "@sceneview/mcp", version: "3.0.2" },
+  { name: "@sceneview/mcp", version: "3.1.1" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
@@ -38,7 +38,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       uri: "sceneview://api",
       name: "SceneView API Reference",
       description:
-        "Complete SceneView 3.0.0 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
+        "Complete SceneView 3.1.1 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
       mimeType: "text/markdown",
     },
     {
@@ -242,7 +242,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `### build.gradle.kts`,
                 `\`\`\`kotlin`,
                 `dependencies {`,
-                `    implementation("io.github.sceneview:sceneview:3.0.0")`,
+                `    implementation("io.github.sceneview:sceneview:3.1.1")`,
                 `}`,
                 `\`\`\``,
                 ``,
@@ -263,7 +263,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `### build.gradle.kts`,
                 `\`\`\`kotlin`,
                 `dependencies {`,
-                `    implementation("io.github.sceneview:arsceneview:3.0.0")`,
+                `    implementation("io.github.sceneview:arsceneview:3.1.1")`,
                 `}`,
                 `\`\`\``,
                 ``,
