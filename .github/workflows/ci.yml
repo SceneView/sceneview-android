@@ -25,6 +25,9 @@ jobs:
       - name: Build libraries
         run: ./gradlew :sceneview:assembleDebug :arsceneview:assembleDebug --stacktrace
 
+      - name: Build samples
+        run: ./gradlew :samples:model-viewer:assembleDebug :samples:ar-model-viewer:assembleDebug :samples:gltf-camera:assembleDebug :samples:autopilot-demo:assembleDebug --stacktrace
+
       - name: Lint
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
 
