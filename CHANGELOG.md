@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.1.1 — Build compatibility patch
+
+- Downgrade AGP from 8.13.2 → 8.11.1 for Android Studio compatibility
+- Update AGP classpath in root `build.gradle` to match
+- Refresh `gltf-camera` sample: animated BrainStem character + futuristic rooftop night environment
+
+## 3.1.0 — VideoNode, reactive animation API
+
+### New features
+- `VideoNode` — render a video stream (MediaPlayer / ExoPlayer) as a textured 3D surface
+- Reactive animation API — drive node animations from Compose state
+- `ViewNode` rename — `ViewNode2` unified into `ViewNode`
+
+### Fixes
+- `ToneMapper.Linear` in `ARScene` prevents overlit camera background
+- `ImageNode` SIGABRT: destroy `MaterialInstance` before texture on dispose
+- `cameraNode` registered with `SceneNodeManager` so HUD-parented nodes render correctly
+- Entities removed from scene before destroy to prevent SIGABRT
+- `UiHelper` API corrected for Filament 1.56.0
+
+### AI tooling
+- MCP server: `validate_code`, `list_samples`, `get_migration_guide` tools + live Issues resource
+- 89 unit tests for MCP validator, samples, migration guide, and issues modules
+
 ## 3.0.0 — Compose-native rewrite
 
 ### Breaking changes
