@@ -455,6 +455,7 @@ ARScene(
 - [AR API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
 - [Migration Guide — v2.x → v3.0](MIGRATION.md)
 - [Changelog](CHANGELOG.md)
+- [Roadmap](ROADMAP.md)
 
 ### Community
 - [Website](https://sceneview.github.io/)
