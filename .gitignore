@@ -22,3 +22,7 @@ mcp/demo/*.mp4
 
 # Sample build outputs
 samples/*/build/
+
+# MCP compiled test artifacts
+mcp/dist/*.test.js
+mcp/llms.txt
