@@ -22,11 +22,8 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Build libraries
-        run: ./gradlew :sceneview:assembleDebug :arsceneview:assembleDebug --stacktrace
-
-      - name: Build samples
-        run: ./gradlew :samples:model-viewer:assembleDebug :samples:ar-model-viewer:assembleDebug :samples:gltf-camera:assembleDebug :samples:autopilot-demo:assembleDebug --stacktrace
+      - name: Build
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Lint
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
@@ -39,4 +36,73 @@ jobs:
           path: |
             sceneview/build/reports/lint-results-debug.html
             arsceneview/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+
+  # AR samples run on x86_64 Linux where the ARCore emulator APK is supported.
+  # Apple Silicon Macs only have ARM64 QEMU and cannot run the x86 ARCore emulator APK locally.
+  ar-emulator:
+    name: AR emulator QA
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Build AR samples
+        run: ./gradlew :samples:ar-model-viewer:assembleDebug :samples:ar-augmented-image:assembleDebug :samples:ar-point-cloud:assembleDebug --stacktrace
+
+      - name: Download ARCore emulator APK
+        run: |
+          curl -L -o arcore-emulator.apk \
+            "https://github.com/google-ar/arcore-android-sdk/releases/download/1.53.0/Google_Play_Services_for_AR_1.53.0_x86_for_emulator.apk"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AR emulator test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: Pixel_6_AR
+          emulator-options: -no-window -no-audio -gpu swiftshader_indirect -camera-back virtualscene -partition-size 4096
+          disable-animations: true
+          script: |
+            # Install ARCore emulator APK
+            adb install -r arcore-emulator.apk
+
+            # Grant camera permissions upfront
+            adb shell pm grant io.github.sceneview.sample.armodelviewer android.permission.CAMERA
+
+            # Launch ar-model-viewer and capture screenshot
+            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.armodelviewer/.MainActivity
+            sleep 12
+            adb exec-out screencap -p > ar-model-viewer.png
+
+            # Launch ar-point-cloud and capture screenshot
+            adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA
+            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.arpointcloud/.MainActivity
+            sleep 12
+            adb exec-out screencap -p > ar-point-cloud.png
+
+            echo "AR screenshots captured"
+
+      - name: Upload AR screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ar-emulator-screenshots
+          path: "*.png"
           if-no-files-found: ignore
