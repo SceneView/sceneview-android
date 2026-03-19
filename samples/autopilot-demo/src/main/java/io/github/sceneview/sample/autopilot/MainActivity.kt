@@ -47,10 +47,7 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Size
-import io.github.sceneview.node.CubeNode
-import io.github.sceneview.node.CylinderNode
 import io.github.sceneview.node.LightNode
-import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMainLightNode
@@ -170,110 +167,110 @@ private fun AutopilotScene(roadOffset: Float, time: Float) {
         cameraManipulator = null
     ) {
         // ── Road (5 static nodes) ──────────────────────────────────────────────
-        PlaneNode(engine, Size(60f, 0f, 60f), materialInstance = groundMat,
+        PlaneNode(Size(60f, 0f, 60f), materialInstance = groundMat,
             position = Position(y = -0.06f))
-        PlaneNode(engine, Size(12f, 0f, 60f), materialInstance = roadMat,
+        PlaneNode(Size(12f, 0f, 60f), materialInstance = roadMat,
             position = Position(y = -0.01f))
-        PlaneNode(engine, Size(0.15f, 0f, 60f), materialInstance = laneMat,
+        PlaneNode(Size(0.15f, 0f, 60f), materialInstance = laneMat,
             position = Position(x = -5.5f, y = 0.001f))
-        PlaneNode(engine, Size(0.15f, 0f, 60f), materialInstance = laneMat,
+        PlaneNode(Size(0.15f, 0f, 60f), materialInstance = laneMat,
             position = Position(x = 5.5f, y = 0.001f))
-        PlaneNode(engine, Size(0.10f, 0f, 60f), materialInstance = laneMat,
+        PlaneNode(Size(0.10f, 0f, 60f), materialInstance = laneMat,
             position = Position(x = 4.7f, y = 0.001f))
 
         // ── Dashed centre lines (8 tiles) — scrolling ─────────────────────────
         for (i in 0 until 8) {
-            PlaneNode(engine, Size(0.16f, 0f, 2.0f), materialInstance = yellowMat,
+            PlaneNode(Size(0.16f, 0f, 2.0f), materialInstance = yellowMat,
                 position = Position(y = 0.001f, z = ((i * 4f - roadOffset % 4f) + 32f) % 32f - 16f))
         }
 
         // ── Ego car — white, STATIC in right lane (x = +2.75) ────────────────
-        CubeNode(engine, Size(1.85f, 0.60f, 3.70f), materialInstance = egoMat,
+        CubeNode(Size(1.85f, 0.60f, 3.70f), materialInstance = egoMat,
             position = Position(x = 2.75f, y = 0.45f, z = 2.5f))
-        CubeNode(engine, Size(1.50f, 0.42f, 1.70f), materialInstance = egoMat,
+        CubeNode(Size(1.50f, 0.42f, 1.70f), materialInstance = egoMat,
             position = Position(x = 2.75f, y = 0.93f, z = 2.2f))
-        CubeNode(engine, Size(1.65f, 0.12f, 0.07f), materialInstance = tailMat,
+        CubeNode(Size(1.65f, 0.12f, 0.07f), materialInstance = tailMat,
             position = Position(x = 2.75f, y = 0.46f, z = 4.37f))
 
         // Ego wheels (4 nodes)
         val bx = 2.75f; val by = 0.45f; val bz = 2.5f; val xs = 0.95f; val r = 0.29f
-        CylinderNode(engine, r, 0.2f, materialInstance = wheelMat,
+        CylinderNode(r, 0.2f, materialInstance = wheelMat,
             position = Position(x = bx - xs, y = by - (r + 0.04f), z = bz - 1.5f),
             rotation = Rotation(z = 90f))
-        CylinderNode(engine, r, 0.2f, materialInstance = wheelMat,
+        CylinderNode(r, 0.2f, materialInstance = wheelMat,
             position = Position(x = bx + xs, y = by - (r + 0.04f), z = bz - 1.5f),
             rotation = Rotation(z = 90f))
-        CylinderNode(engine, r, 0.2f, materialInstance = wheelMat,
+        CylinderNode(r, 0.2f, materialInstance = wheelMat,
             position = Position(x = bx - xs, y = by - (r + 0.04f), z = bz + 1.5f),
             rotation = Rotation(z = 90f))
-        CylinderNode(engine, r, 0.2f, materialInstance = wheelMat,
+        CylinderNode(r, 0.2f, materialInstance = wheelMat,
             position = Position(x = bx + xs, y = by - (r + 0.04f), z = bz + 1.5f),
             rotation = Rotation(z = 90f))
 
         // ── Truck — oscillates ahead in ego lane ───────────────────────────────
         val tZ = -15f - sin(time * 0.12f) * 7f
-        CubeNode(engine, Size(2.4f, 1.55f, 6.5f), materialInstance = truckMat,
+        CubeNode(Size(2.4f, 1.55f, 6.5f), materialInstance = truckMat,
             position = Position(x = 2.75f, y = 0.77f, z = tZ))
 
         // ── Oncoming — left lane ───────────────────────────────────────────────
         val c1Z = (roadOffset * 1.5f % 51f) - 35f
-        CubeNode(engine, Size(1.7f, 1.10f, 3.5f), materialInstance = carMat,
+        CubeNode(Size(1.7f, 1.10f, 3.5f), materialInstance = carMat,
             position = Position(x = -2.75f, y = 0.55f, z = c1Z))
         val c3Z = ((roadOffset * 1.3f + 25f) % 51f) - 35f
-        CubeNode(engine, Size(1.7f, 1.10f, 3.5f), materialInstance = carMat,
+        CubeNode(Size(1.7f, 1.10f, 3.5f), materialInstance = carMat,
             position = Position(x = -2.75f, y = 0.55f, z = c3Z))
         val bZ = (roadOffset * 0.9f % 65f) - 45f
-        CubeNode(engine, Size(2.5f, 1.80f, 7.0f), materialInstance = busMat,
+        CubeNode(Size(2.5f, 1.80f, 7.0f), materialInstance = busMat,
             position = Position(x = -2.75f, y = 0.9f, z = bZ))
 
         // ── Car behind ego ─────────────────────────────────────────────────────
-        CubeNode(engine, Size(1.7f, 1.10f, 3.5f), materialInstance = carMat,
+        CubeNode(Size(1.7f, 1.10f, 3.5f), materialInstance = carMat,
             position = Position(x = 2.75f, y = 0.55f, z = 6f + roadOffset * 0.18f % 12f))
 
         // ── Bikes (bike lane x≈5.0) ────────────────────────────────────────────
         val bk1z = -(roadOffset * 0.11f % 55f) + 8f
-        CubeNode(engine, Size(0.22f, 0.80f, 1.0f), materialInstance = bikeMat,
+        CubeNode(Size(0.22f, 0.80f, 1.0f), materialInstance = bikeMat,
             position = Position(x = 5.0f, y = 0.65f, z = bk1z))
-        CubeNode(engine, Size(0.40f, 0.55f, 0.30f), materialInstance = pedMat,
+        CubeNode(Size(0.40f, 0.55f, 0.30f), materialInstance = pedMat,
             position = Position(x = 5.0f, y = 1.20f, z = bk1z - 0.1f))
         val bk2z = -(roadOffset * 0.14f % 55f) + 22f
-        CubeNode(engine, Size(0.22f, 0.80f, 1.0f), materialInstance = bikeMat,
+        CubeNode(Size(0.22f, 0.80f, 1.0f), materialInstance = bikeMat,
             position = Position(x = 5.2f, y = 0.65f, z = bk2z))
-        CubeNode(engine, Size(0.40f, 0.55f, 0.30f), materialInstance = pedMat,
+        CubeNode(Size(0.40f, 0.55f, 0.30f), materialInstance = pedMat,
             position = Position(x = 5.2f, y = 1.20f, z = bk2z - 0.1f))
 
         // ── Pedestrians (sidewalk x≈6.6) ───────────────────────────────────────
         val ps = roadOffset * 0.03f
-        CubeNode(engine, Size(0.40f, 1.55f, 0.30f), materialInstance = pedMat,
+        CubeNode(Size(0.40f, 1.55f, 0.30f), materialInstance = pedMat,
             position = Position(x = 6.5f, y = 0.77f + sin(time * 3.8f) * 0.03f, z = -(ps % 30f) + 5f))
-        CubeNode(engine, Size(0.40f, 1.55f, 0.30f), materialInstance = pedMat,
+        CubeNode(Size(0.40f, 1.55f, 0.30f), materialInstance = pedMat,
             position = Position(x = 6.9f, y = 0.77f + sin(time * 3.8f + 0.6f) * 0.03f, z = -(ps % 30f) + 13f))
-        CubeNode(engine, Size(0.40f, 1.55f, 0.30f), materialInstance = pedMat,
+        CubeNode(Size(0.40f, 1.55f, 0.30f), materialInstance = pedMat,
             position = Position(x = 6.7f, y = 0.77f + sin(time * 3.8f + 1.2f) * 0.03f, z = -(ps * 0.7f % 30f) + 20f))
 
         // ── Traffic lights — right-side gantry at z = -12 ─────────────────────
-        CubeNode(engine, Size(0.15f, 5.0f, 0.15f), materialInstance = tlBoxMat,
+        CubeNode(Size(0.15f, 5.0f, 0.15f), materialInstance = tlBoxMat,
             position = Position(x = 6.3f, y = 2.5f, z = -12f))
-        CubeNode(engine, Size(3.4f, 0.15f, 0.15f), materialInstance = tlBoxMat,
+        CubeNode(Size(3.4f, 0.15f, 0.15f), materialInstance = tlBoxMat,
             position = Position(x = 4.6f, y = 5.0f, z = -12f))
-        CubeNode(engine, Size(0.42f, 1.35f, 0.32f), materialInstance = tlBoxMat,
+        CubeNode(Size(0.42f, 1.35f, 0.32f), materialInstance = tlBoxMat,
             position = Position(x = 3.2f, y = 4.37f, z = -12f))
         // Dark lens backgrounds
-        CubeNode(engine, Size(0.26f, 0.26f, 0.20f), materialInstance = tlBoxMat,
+        CubeNode(Size(0.26f, 0.26f, 0.20f), materialInstance = tlBoxMat,
             position = Position(x = 3.2f, y = 4.83f, z = -11.88f))
-        CubeNode(engine, Size(0.26f, 0.26f, 0.20f), materialInstance = tlBoxMat,
+        CubeNode(Size(0.26f, 0.26f, 0.20f), materialInstance = tlBoxMat,
             position = Position(x = 3.2f, y = 4.45f, z = -11.88f))
-        CubeNode(engine, Size(0.26f, 0.26f, 0.20f), materialInstance = tlBoxMat,
+        CubeNode(Size(0.26f, 0.26f, 0.20f), materialInstance = tlBoxMat,
             position = Position(x = 3.2f, y = 4.07f, z = -11.88f))
 
         // Animated glow — shown based on traffic light phase
-        CubeNode(engine, Size(0.22f, 0.22f, 0.08f), materialInstance = tlGrnMat,
+        CubeNode(Size(0.22f, 0.22f, 0.08f), materialInstance = tlGrnMat,
             position = if (tlPhase == 0) Position(x = 3.2f, y = 4.07f, z = -11.68f)
                        else Position(y = -100f))
-        CubeNode(engine, Size(0.22f, 0.22f, 0.08f), materialInstance = tlYelMat,
+        CubeNode(Size(0.22f, 0.22f, 0.08f), materialInstance = tlYelMat,
             position = if (tlPhase == 1) Position(x = 3.2f, y = 4.45f, z = -11.68f)
                        else Position(y = -100f))
-        CubeNode(engine, Size(0.22f, 0.22f, 0.08f), materialInstance = tlRedMat,
+        CubeNode(Size(0.22f, 0.22f, 0.08f), materialInstance = tlRedMat,
             position = if (tlPhase == 2) Position(x = 3.2f, y = 4.83f, z = -11.68f)
                        else Position(y = -100f))
     }
