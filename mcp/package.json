@@ -34,6 +34,7 @@
     "dist/index.js",
     "dist/issues.js",
     "dist/migration.js",
+    "dist/node-reference.js",
     "dist/samples.js",
     "dist/validator.js",
     "llms.txt"
