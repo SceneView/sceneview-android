@@ -55,6 +55,14 @@
 
 ---
 
+## Backlog
+
+| Priority | Task | Status |
+|----------|------|--------|
+| 1 | **Material 3 Expressive design** — Clean, professional UI using `MaterialExpressiveTheme`, `MotionScheme.expressive()`, fully rounded shapes, spring animations, dynamic color, and expressive components (FloatingToolbar, LoadingIndicator, ButtonGroup) across the entire demo app | In progress |
+
+---
+
 ## Ongoing
 
 - Keep `llms.txt` and MCP server in sync with every public API change
