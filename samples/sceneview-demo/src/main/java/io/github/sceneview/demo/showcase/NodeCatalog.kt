@@ -29,13 +29,13 @@ object NodeCatalog {
             category = NodeCategory.GEOMETRY,
             codeSnippet = """
 Scene {
+    val mat = remember(materialLoader) {
+        materialLoader.createColorInstance(Color.Blue)
+    }
     CubeNode(
         size = Size(1f),
         center = Position(0f, 0.5f, 0f),
-        apply = {
-            materialInstance = materialLoader
-                .createColorInstance(Color.Blue)
-        }
+        materialInstance = mat
     )
 }""".trimIndent()
         ),
@@ -46,13 +46,13 @@ Scene {
             category = NodeCategory.GEOMETRY,
             codeSnippet = """
 Scene {
+    val mat = remember(materialLoader) {
+        materialLoader.createColorInstance(Color.Red)
+    }
     SphereNode(
         radius = 0.5f,
         center = Position(0f, 0.5f, 0f),
-        apply = {
-            materialInstance = materialLoader
-                .createColorInstance(Color.Red)
-        }
+        materialInstance = mat
     )
 }""".trimIndent()
         ),
@@ -63,14 +63,14 @@ Scene {
             category = NodeCategory.GEOMETRY,
             codeSnippet = """
 Scene {
+    val mat = remember(materialLoader) {
+        materialLoader.createColorInstance(Color.Green)
+    }
     CylinderNode(
         radius = 0.3f,
         height = 1f,
         center = Position(0f, 0.5f, 0f),
-        apply = {
-            materialInstance = materialLoader
-                .createColorInstance(Color.Green)
-        }
+        materialInstance = mat
     )
 }""".trimIndent()
         ),
@@ -81,13 +81,13 @@ Scene {
             category = NodeCategory.GEOMETRY,
             codeSnippet = """
 Scene {
+    val mat = remember(materialLoader) {
+        materialLoader.createColorInstance(Color.Yellow)
+    }
     PlaneNode(
         size = Size(1f, 1f),
         center = Position(0f, 0f, 0f),
-        apply = {
-            materialInstance = materialLoader
-                .createColorInstance(Color.Yellow)
-        }
+        materialInstance = mat
     )
 }""".trimIndent()
         ),
@@ -133,9 +133,12 @@ Scene {
             icon = Icons.Default.WbCloudy,
             category = NodeCategory.LIGHT,
             codeSnippet = """
+var timeOfDay by remember { mutableFloatStateOf(12f) }
 Scene {
     DynamicSkyNode(
-        sunPosition = Position(0f, 1f, -1f)
+        timeOfDay = timeOfDay,  // 0-24: 6=sunrise, 12=noon, 18=sunset
+        turbidity = 2f,
+        sunIntensity = 110_000f
     )
 }""".trimIndent()
         ),
@@ -145,11 +148,15 @@ Scene {
             icon = Icons.Default.Circle,
             category = NodeCategory.LIGHT,
             codeSnippet = """
-Scene {
+val probeEnv = rememberEnvironment(environmentLoader) {
+    environmentLoader.createHDREnvironment("envs/studio.hdr")!!
+}
+Scene(scene = scene) {
     ReflectionProbeNode(
-        environment = environmentLoader
-            .createHDREnvironment("envs/studio.hdr"),
-        halfExtent = Float3(2f, 2f, 2f)
+        filamentScene = scene,
+        environment = probeEnv,
+        position = Position(0f, 1f, 0f),
+        radius = 3f
     )
 }""".trimIndent()
         ),
@@ -161,11 +168,12 @@ Scene {
             icon = Icons.Default.CameraAlt,
             category = NodeCategory.CAMERA,
             codeSnippet = """
-Scene {
-    CameraNode(
-        position = Position(0f, 1f, 3f),
-        lookAt = Position(0f, 0f, 0f)
-    )
+val cameraNode = rememberCameraNode(engine) {
+    position = Position(0f, 1f, 3f)
+    lookAt(Position(0f, 0f, 0f))
+}
+Scene(cameraNode = cameraNode) {
+    // scene content
 }""".trimIndent()
         ),
 
@@ -178,7 +186,7 @@ Scene {
             codeSnippet = """
 Scene {
     ImageNode(
-        imageUrl = "https://example.com/image.png",
+        imageFileLocation = "images/logo.png",
         size = Size(1f, 1f)
     )
 }""".trimIndent()
@@ -192,6 +200,10 @@ Scene {
 Scene {
     TextNode(
         text = "Hello SceneView!",
+        fontSize = 48f,
+        textColor = Color.WHITE,
+        widthMeters = 0.6f,
+        heightMeters = 0.2f,
         position = Position(0f, 1f, 0f)
     )
 }""".trimIndent()
@@ -203,9 +215,12 @@ Scene {
             category = NodeCategory.CONTENT,
             codeSnippet = """
 Scene {
-    BillboardNode {
-        TextNode(text = "I face the camera!")
-    }
+    BillboardNode(
+        bitmap = myBitmap,
+        widthMeters = 0.5f,
+        heightMeters = 0.5f,
+        position = Position(0f, 1f, 0f)
+    )
 }""".trimIndent()
         ),
         NodeDemo(
@@ -215,13 +230,13 @@ Scene {
             category = NodeCategory.CONTENT,
             codeSnippet = """
 Scene {
+    val mat = remember(materialLoader) {
+        materialLoader.createColorInstance(Color.Cyan)
+    }
     LineNode(
         start = Position(0f, 0f, 0f),
         end = Position(1f, 1f, 0f),
-        apply = {
-            materialInstance = materialLoader
-                .createColorInstance(Color.Cyan)
-        }
+        materialInstance = mat
     )
 }""".trimIndent()
         ),
@@ -247,11 +262,16 @@ Scene {
             icon = Icons.Default.Videocam,
             category = NodeCategory.CONTENT,
             codeSnippet = """
+val player = remember {
+    MediaPlayer().apply {
+        setDataSource(context, videoUri)
+        isLooping = true; prepare(); start()
+    }
+}
+DisposableEffect(Unit) { onDispose { player.release() } }
+
 Scene {
-    VideoNode(
-        videoUri = "asset:///video.mp4",
-        size = Size(1.6f, 0.9f)
-    )
+    VideoNode(player = player)
 }""".trimIndent()
         ),
 
@@ -263,11 +283,17 @@ Scene {
             category = NodeCategory.AR,
             requiresAR = true,
             codeSnippet = """
-ARScene {
-    val anchor = rememberAnchor(hitResult)
-    anchor?.let {
-        AnchorNode(anchor = it) {
-            ModelNode(modelInstance = model)
+var anchor by remember { mutableStateOf<Anchor?>(null) }
+ARScene(
+    onTouchEvent = { event, hitResult ->
+        if (event.action == MotionEvent.ACTION_UP && hitResult != null)
+            anchor = hitResult.createAnchor()
+        true
+    }
+) {
+    anchor?.let { a ->
+        AnchorNode(anchor = a) {
+            ModelNode(modelInstance = model, scaleToUnits = 0.5f)
         }
     }
 }""".trimIndent()
@@ -279,15 +305,22 @@ ARScene {
             category = NodeCategory.AR,
             requiresAR = true,
             codeSnippet = """
+var trackedImages by remember { mutableStateOf(listOf<AugmentedImage>()) }
 ARScene(
     sessionConfiguration = { session, config ->
         config.augmentedImageDatabase =
             AugmentedImageDatabase(session)
-                .apply { addImage("marker", bitmap) }
+                .apply { addImage("marker", bitmap, 0.15f) }
+    },
+    onSessionUpdated = { _, frame ->
+        trackedImages = frame.getUpdatedTrackables(AugmentedImage::class.java)
+            .filter { it.trackingState == TrackingState.TRACKING }
     }
 ) {
-    AugmentedImageNode(imageName = "marker") {
-        ModelNode(modelInstance = model)
+    trackedImages.forEach { image ->
+        AugmentedImageNode(augmentedImage = image) {
+            ModelNode(modelInstance = model, scaleToUnits = image.extentX)
+        }
     }
 }""".trimIndent()
         ),
