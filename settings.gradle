@@ -23,5 +23,6 @@ include ":samples:autopilot-demo"
 include ":samples:post-processing"
 include ":samples:physics-demo"
 include ":samples:dynamic-sky"
-include ':samples:line-path'
-include ':samples:text-labels'
+include ":samples:line-path"
+include ":samples:text-labels"
+include ":samples:reflection-probe"
