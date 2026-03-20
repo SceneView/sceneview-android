@@ -1,21 +1,36 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package io.github.sceneview.demo
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -24,6 +39,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.github.sceneview.demo.showcase.ShowcaseScreen
 import io.github.sceneview.demo.qa.QAScreen
+import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.update.InAppUpdateManager
 
 class MainActivity : ComponentActivity() {
@@ -37,7 +53,9 @@ class MainActivity : ComponentActivity() {
         updateManager = InAppUpdateManager(this)
 
         setContent {
-            SceneViewDemoApp(updateManager)
+            SceneViewDemoTheme {
+                SceneViewDemoApp(updateManager)
+            }
         }
     }
 
@@ -59,10 +77,19 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
                 screens.forEach { screen ->
+                    val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                    val scale by animateFloatAsState(
+                        targetValue = if (selected) 1f else 0.92f,
+                        label = "navScale"
+                    )
+
                     NavigationBarItem(
                         icon = {
                             Icon(
@@ -70,11 +97,19 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
                                     Screen.Showcase -> Icons.Default.ViewInAr
                                     Screen.QA -> Icons.Default.BugReport
                                 },
-                                contentDescription = screen.label
+                                contentDescription = screen.label,
+                                modifier = Modifier.scale(scale)
                             )
                         },
-                        label = { Text(screen.label) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        label = { Text(screen.label, style = MaterialTheme.typography.labelMedium) },
+                        selected = selected,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
                         onClick = {
                             navController.navigate(screen.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -92,7 +127,11 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
         NavHost(
             navController = navController,
             startDestination = Screen.Showcase.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
+            exitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) },
+            popEnterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
+            popExitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) }
         ) {
             composable(Screen.Showcase.route) {
                 ShowcaseScreen(updateManager = updateManager)

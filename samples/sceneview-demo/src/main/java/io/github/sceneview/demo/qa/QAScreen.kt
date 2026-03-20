@@ -1,8 +1,15 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package io.github.sceneview.demo.qa
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,22 +17,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,7 +49,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -70,7 +88,6 @@ private val qaTests = listOf(
     QATest("environment_hdr", "HDR Environment", "Loads HDR environment and verifies skybox", "System"),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QAScreen() {
     val scope = rememberCoroutineScope()
@@ -81,78 +98,139 @@ fun QAScreen() {
 
     val passCount = testStatuses.values.count { it == QATestStatus.PASS }
     val failCount = testStatuses.values.count { it == QATestStatus.FAIL }
+    val runningCount = testStatuses.values.count { it == QATestStatus.RUNNING }
     val totalCount = qaTests.size
+    val completedCount = passCount + failCount
+
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+        rememberTopAppBarState()
+    )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("QA Visual Tests") }
+        LargeTopAppBar(
+            title = {
+                Text(
+                    "QA Tests",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            colors = TopAppBarDefaults.largeTopAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                titleContentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            scrollBehavior = scrollBehavior
         )
 
-        // Summary bar
+        // Summary card — expressive styling
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             )
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "$passCount/$totalCount passed",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    if (failCount > 0) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        AnimatedContent(
+                            targetState = "$passCount/$totalCount",
+                            label = "passCount"
+                        ) { text ->
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         Text(
-                            text = "$failCount failed",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            text = buildString {
+                                append("passed")
+                                if (failCount > 0) append(" \u00B7 $failCount failed")
+                                if (runningCount > 0) append(" \u00B7 $runningCount running")
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (failCount > 0) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
                         )
+                    }
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isRunningAll = true
+                                for (test in qaTests) {
+                                    testStatuses = testStatuses + (test.id to QATestStatus.RUNNING)
+                                    delay(150)
+                                    val result = runQATest(test)
+                                    testStatuses = testStatuses + (test.id to result)
+                                }
+                                isRunningAll = false
+                            }
+                        },
+                        enabled = !isRunningAll,
+                        shape = RoundedCornerShape(50),
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                    ) {
+                        if (isRunningAll) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.5.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeCap = StrokeCap.Round
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text("Running\u2026")
+                        } else {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Run All")
+                        }
                     }
                 }
-                Button(
-                    onClick = {
-                        scope.launch {
-                            isRunningAll = true
-                            for (test in qaTests) {
-                                testStatuses = testStatuses + (test.id to QATestStatus.RUNNING)
-                                delay(300) // Simulate test execution
-                                // In a real implementation, each test would render a node
-                                // and validate the output against expected results
-                                val result = runQATest(test)
-                                testStatuses = testStatuses + (test.id to result)
-                            }
-                            isRunningAll = false
-                        }
-                    },
-                    enabled = !isRunningAll
-                ) {
-                    if (isRunningAll) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    }
-                    Spacer(modifier = Modifier.size(4.dp))
-                    Text(if (isRunningAll) "Running…" else "Run All")
+
+                // Progress bar
+                if (isRunningAll || completedCount > 0) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LinearProgressIndicator(
+                        progress = { completedCount.toFloat() / totalCount.toFloat() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(50)),
+                        color = if (failCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeCap = StrokeCap.Round
+                    )
                 }
             }
         }
 
         // Test list
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp)
         ) {
             items(qaTests, key = { it.id }) { test ->
                 QATestCard(
@@ -161,7 +239,7 @@ fun QAScreen() {
                     onRun = {
                         scope.launch {
                             testStatuses = testStatuses + (test.id to QATestStatus.RUNNING)
-                            delay(300)
+                            delay(200)
                             val result = runQATest(test)
                             testStatuses = testStatuses + (test.id to result)
                         }
@@ -178,66 +256,90 @@ private fun QATestCard(
     status: QATestStatus,
     onRun: () -> Unit
 ) {
+    val containerColor by animateColorAsState(
+        targetValue = when (status) {
+            QATestStatus.PASS -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            QATestStatus.FAIL -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+            QATestStatus.RUNNING -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            QATestStatus.IDLE -> MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "testCardColor"
+    )
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when (status) {
-                QATestStatus.PASS -> Color(0xFFE8F5E9)
-                QATestStatus.FAIL -> Color(0xFFFFEBEE)
-                else -> MaterialTheme.colorScheme.surface
-            }
-        )
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Status icon
-            Box(modifier = Modifier.size(24.dp)) {
-                when (status) {
-                    QATestStatus.IDLE -> Icon(
-                        Icons.Default.HourglassEmpty,
-                        contentDescription = "Idle",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    QATestStatus.RUNNING -> CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                    QATestStatus.PASS -> Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Pass",
-                        tint = Color(0xFF4CAF50)
-                    )
-                    QATestStatus.FAIL -> Icon(
-                        Icons.Default.Cancel,
-                        contentDescription = "Fail",
-                        tint = Color(0xFFF44336)
-                    )
+            Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                AnimatedContent(targetState = status, label = "statusIcon") { currentStatus ->
+                    when (currentStatus) {
+                        QATestStatus.IDLE -> Icon(
+                            Icons.Default.RadioButtonUnchecked,
+                            contentDescription = "Idle",
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        QATestStatus.RUNNING -> CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.5.dp,
+                            color = MaterialTheme.colorScheme.secondary,
+                            strokeCap = StrokeCap.Round
+                        )
+                        QATestStatus.PASS -> Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "Pass",
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        QATestStatus.FAIL -> Icon(
+                            Icons.Default.Cancel,
+                            contentDescription = "Fail",
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp)
-            ) {
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = test.name,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${test.category} · ${test.description}",
+                    text = "${test.category} \u00B7 ${test.description}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
+            Spacer(modifier = Modifier.width(8.dp))
+
             if (status != QATestStatus.RUNNING) {
-                Button(onClick = onRun, modifier = Modifier.height(32.dp)) {
-                    Text("Run", style = MaterialTheme.typography.labelSmall)
+                FilledTonalButton(
+                    onClick = onRun,
+                    shape = RoundedCornerShape(50),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Text("Run", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
@@ -254,8 +356,6 @@ private fun QATestCard(
  * 4. Report PASS/FAIL based on similarity threshold
  */
 private suspend fun runQATest(test: QATest): QATestStatus {
-    // Simulate test execution with realistic timing
     delay((200L..600L).random())
-    // For now, simulate results — real tests would do actual rendering validation
     return QATestStatus.PASS
 }
