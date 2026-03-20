@@ -160,7 +160,7 @@ fun ShowcaseScreen(updateManager: InAppUpdateManager) {
 }
 
 @Composable
-private fun NodeCard(
+internal fun NodeCard(
     node: NodeDemo,
     isExpanded: Boolean,
     onToggle: () -> Unit

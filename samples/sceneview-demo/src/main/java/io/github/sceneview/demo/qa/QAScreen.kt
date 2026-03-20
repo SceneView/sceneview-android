@@ -251,7 +251,7 @@ fun QAScreen() {
 }
 
 @Composable
-private fun QATestCard(
+internal fun QATestCard(
     test: QATest,
     status: QATestStatus,
     onRun: () -> Unit
