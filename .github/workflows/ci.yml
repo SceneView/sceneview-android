@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -39,4 +40,123 @@ jobs:
           path: |
             sceneview/build/reports/lint-results-debug.html
             arsceneview/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+
+  # AR samples run on x86_64 Linux where the ARCore emulator APK is supported.
+  # Apple Silicon Macs only have ARM64 QEMU and cannot run the x86 ARCore emulator APK locally.
+  ar-emulator:
+    name: AR emulator QA
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Build AR samples
+        run: ./gradlew :samples:ar-model-viewer:assembleDebug :samples:ar-augmented-image:assembleDebug :samples:ar-point-cloud:assembleDebug --stacktrace
+
+      - name: Download ARCore emulator APK
+        run: |
+          curl -L -o arcore-emulator.apk \
+            "https://github.com/google-ar/arcore-android-sdk/releases/download/1.53.0/Google_Play_Services_for_AR_1.53.0_x86_for_emulator.apk"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AR emulator test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: Pixel_6_AR
+          emulator-options: -no-window -no-audio -gpu swiftshader_indirect -camera-back virtualscene -partition-size 4096
+          disable-animations: true
+          script: |
+            #!/usr/bin/env bash
+            set -e
+
+            # Wait for launcher to fully settle
+            sleep 20
+            adb shell input keyevent 82 || true   # unlock screen
+            sleep 5
+            # Dismiss any ANR/permission dialogs
+            adb shell input keyevent 4 || true
+            adb shell input keyevent 4 || true
+            adb shell input keyevent 4 || true
+
+            # Install ARCore emulator APK
+            adb install -r arcore-emulator.apk
+
+            # Install sample APKs
+            adb install -r samples/ar-model-viewer/build/outputs/apk/debug/ar-model-viewer-debug.apk
+            adb install -r samples/ar-point-cloud/build/outputs/apk/debug/ar-point-cloud-debug.apk
+            adb install -r samples/ar-augmented-image/build/outputs/apk/debug/ar-augmented-image-debug.apk
+
+            # Grant camera permissions upfront
+            adb shell pm grant io.github.sceneview.sample.armodelviewer android.permission.CAMERA || true
+            adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA || true
+            adb shell pm grant io.github.sceneview.sample.araugmentedimage android.permission.CAMERA || true
+
+            # ---------------------------------------------------------------------------
+            # inject_motion: simulate phone movement so ARCore transitions from
+            # INITIALIZING → TRACKING and the virtualscene camera feed becomes visible.
+            #
+            # `adb emu sensor set` sends values directly through ADB — no auth token,
+            # no nc/telnet required. Each call shifts the virtualscene viewpoint,
+            # giving ARCore the image motion it needs for visual odometry.
+            # ---------------------------------------------------------------------------
+            inject_motion() {
+              echo "  [motion] injecting sensor motion via adb emu"
+              adb emu sensor set acceleration 0.4:9.5:0.3  ; sleep 1
+              adb emu sensor set gyroscope 0.25:0.10:0.20  ; sleep 1
+              adb emu sensor set acceleration -0.3:9.7:0.5 ; sleep 1
+              adb emu sensor set gyroscope -0.15:0.20:-0.10; sleep 1
+              adb emu sensor set acceleration 0.2:9.8:-0.2 ; sleep 1
+              adb emu sensor set gyroscope 0.10:-0.10:0.15 ; sleep 1
+              adb emu sensor set acceleration 0:9.8:0      ; sleep 1
+              adb emu sensor set gyroscope 0:0:0
+              echo "  [motion] done"
+            }
+
+            capture_ar_screenshot() {
+              local pkg="$1" activity="$2" out="$3"
+              echo "--- $pkg ---"
+              adb shell am force-stop com.google.android.apps.nexuslauncher || true
+              adb shell am start -S --activity-clear-task -n "${pkg}/${activity}"
+              sleep 10
+              inject_motion
+              sleep 20
+              adb exec-out screencap -p > "$out"
+              echo "  saved $out"
+            }
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.armodelviewer .MainActivity ar-model-viewer.png
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.arpointcloud .MainActivity ar-point-cloud.png
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.araugmentedimage .MainActivity ar-augmented-image.png
+
+            echo "AR screenshots captured"
+
+      - name: Upload AR screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ar-emulator-screenshots
+          path: "*.png"
           if-no-files-found: ignore
