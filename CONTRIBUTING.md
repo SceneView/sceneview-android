@@ -37,7 +37,7 @@ for full API context in any chat:
 
 ## Issues
 
-Use the issue templates on GitHub. For questions, open a [Discussion](https://github.com/SceneView/sceneview-android/discussions) instead.
+Use the issue templates on GitHub. For questions, open a [Discussion](https://github.com/SceneView/sceneview/discussions) instead.
 
 Feature requests are welcomed too!
 
@@ -71,4 +71,4 @@ You should keep changes as minimal as possible, however, you can fix obvious mis
 
 ### Changes in Filament materials
 
-You should recompile the Filament materials using the [current Filament version](https://github.com/google/filament/releases) if you make any changes to them. The recommended way to do that is to enable the [Filament plugin](https://github.com/SceneView/sceneview-android/blob/main/gradle.properties) and build the project.
+You should recompile the Filament materials using the [current Filament version](https://github.com/google/filament/releases) if you make any changes to them. The recommended way to do that is to enable the [Filament plugin](https://github.com/SceneView/sceneview/blob/main/gradle.properties) and build the project.

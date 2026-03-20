@@ -19,12 +19,12 @@
   "author": "SceneView (https://github.com/SceneView)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SceneView/sceneview-android.git",
+    "url": "https://github.com/SceneView/sceneview.git",
     "directory": "mcp"
   },
-  "homepage": "https://github.com/SceneView/sceneview-android/tree/main/mcp#readme",
+  "homepage": "https://github.com/SceneView/sceneview/tree/main/mcp#readme",
   "bugs": {
-    "url": "https://github.com/SceneView/sceneview-android/issues"
+    "url": "https://github.com/SceneView/sceneview/issues"
   },
   "type": "module",
   "bin": {

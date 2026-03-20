@@ -231,11 +231,11 @@ That's 3 lines. A photorealistic 3D model, rendered with Filament, in your Compo
 
 ## Links
 
-- **GitHub**: [github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android)
-- **API Reference (3D)**: [sceneview.github.io/api/sceneview-android/sceneview](https://sceneview.github.io/api/sceneview-android/sceneview/)
-- **API Reference (AR)**: [sceneview.github.io/api/sceneview-android/arsceneview](https://sceneview.github.io/api/sceneview-android/arsceneview/)
+- **GitHub**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
+- **API Reference (3D)**: [sceneview.github.io/api/sceneview/sceneview](https://sceneview.github.io/api/sceneview/sceneview/)
+- **API Reference (AR)**: [sceneview.github.io/api/sceneview/arsceneview](https://sceneview.github.io/api/sceneview/arsceneview/)
 - **Discord**: [discord.gg/UbNDDBTNqb](https://discord.gg/UbNDDBTNqb)
-- **Migration guide**: [MIGRATION.md](https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md)
+- **Migration guide**: [MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGRATION.md)
 
 ---
 

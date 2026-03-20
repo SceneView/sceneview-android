@@ -1,8 +1,8 @@
 site_name: SceneView
 site_description: 3D and AR for Jetpack Compose, powered by Google Filament and ARCore
 site_url: https://sceneview.github.io/
-repo_url: https://github.com/SceneView/sceneview-android
-repo_name: SceneView/sceneview-android
+repo_url: https://github.com/SceneView/sceneview
+repo_name: SceneView/sceneview
 edit_uri: edit/main/docs/docs/
 
 theme:
@@ -45,8 +45,8 @@ nav:
   - Migration guide: migration.md
   - Changelog: changelog.md
   - API reference:
-    - API (3D — sceneview): https://sceneview.github.io/api/sceneview-android/sceneview/
-    - API (AR — arsceneview): https://sceneview.github.io/api/sceneview-android/arsceneview/
+    - API (3D — sceneview): https://sceneview.github.io/api/sceneview/sceneview/
+    - API (AR — arsceneview): https://sceneview.github.io/api/sceneview/arsceneview/
 
 plugins:
   - search
@@ -75,7 +75,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/SceneView/sceneview-android
+      link: https://github.com/SceneView/sceneview
     - icon: fontawesome/brands/discord
       link: https://discord.gg/UbNDDBTNqb
   analytics:

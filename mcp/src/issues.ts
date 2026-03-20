@@ -29,7 +29,7 @@ export async function fetchKnownIssues(): Promise<string> {
 
   try {
     const response = await fetch(
-      "https://api.github.com/repos/SceneView/sceneview-android/issues?state=open&per_page=30",
+      "https://api.github.com/repos/SceneView/sceneview/issues?state=open&per_page=30",
       {
         headers: {
           Accept: "application/vnd.github+json",

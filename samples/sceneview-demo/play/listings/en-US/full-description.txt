@@ -17,6 +17,6 @@ Run visual regression tests to validate that every node renders correctly:
 Built-in update button ensures you're always running the latest version, matching the newest SceneView SDK release.
 
 SceneView Demo is open source and part of the SceneView project:
-https://github.com/SceneView/sceneview-android
+https://github.com/SceneView/sceneview
 
 Whether you're evaluating SceneView for a new project, debugging rendering issues, or looking for code examples — this app has you covered.

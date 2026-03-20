@@ -199,7 +199,7 @@ Download: https://kenney.nl/assets/furniture-kit
 Large text:
 ```
 SceneView 3.0
-github.com/SceneView/sceneview-android
+github.com/SceneView/sceneview
 ```
 
 Small text below:
@@ -264,7 +264,7 @@ Float a Compose Card next to an AR-placed object.
 
 10 extra lines. Noticeably better.
 
-→ github.com/SceneView/sceneview-android
+→ github.com/SceneView/sceneview
 → Open source · Filament · ARCore · Compose
 
 #AndroidDev #JetpackCompose #AR #3D #SceneView #Kotlin #MobileDev
