@@ -14,7 +14,9 @@ import com.google.android.filament.IndexBuffer
 import com.google.android.filament.LightManager
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
+import com.google.android.filament.Scene as FilamentScene
 import com.google.android.filament.VertexBuffer
+import io.github.sceneview.environment.Environment
 import io.github.sceneview.geometries.Cube
 import io.github.sceneview.geometries.Cylinder
 import io.github.sceneview.geometries.Plane
@@ -41,6 +43,7 @@ import io.github.sceneview.node.ModelNode as ModelNodeImpl
 import io.github.sceneview.node.Node as NodeImpl
 import io.github.sceneview.node.PathNode as PathNodeImpl
 import io.github.sceneview.node.PlaneNode as PlaneNodeImpl
+import io.github.sceneview.node.ReflectionProbeNode as ReflectionProbeNodeComposable
 import io.github.sceneview.node.SphereNode as SphereNodeImpl
 import io.github.sceneview.node.TextNode as TextNodeImpl
 import io.github.sceneview.node.VideoNode as VideoNodeImpl
@@ -899,6 +902,63 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             ).apply(apply)
         }
         NodeLifecycle(node, content)
+    }
+
+    // ── ReflectionProbeNode ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Overrides the scene's indirect light (IBL) with a baked [Environment] for a defined zone.
+     *
+     * When [radius] is greater than zero, the probe is a **local zone**: the IBL override is only
+     * applied while [cameraPosition] is within [radius] metres of [position]. Set [radius] to `0f`
+     * (or any non-positive value) for a **global probe** that always overrides the scene IBL.
+     *
+     * ```kotlin
+     * val probeEnv = rememberEnvironment(environmentLoader) {
+     *     environmentLoader.createHDREnvironment("environments/office.hdr")!!
+     * }
+     * var cameraPos by remember { mutableStateOf(Position()) }
+     *
+     * Scene(
+     *     scene = scene,
+     *     onFrame = { cameraPos = cameraNode.worldPosition }
+     * ) {
+     *     // Local probe — active only when the camera is within 3 m of the origin
+     *     ReflectionProbeNode(
+     *         filamentScene = scene,
+     *         environment = probeEnv,
+     *         position = Position(x = 0f, y = 1f, z = 0f),
+     *         radius = 3f,
+     *         cameraPosition = cameraPos
+     *     )
+     * }
+     * ```
+     *
+     * @param filamentScene  The Filament [com.google.android.filament.Scene] whose indirect light
+     *                       is overridden. Obtain via [rememberScene] and pass it to `Scene`.
+     * @param environment    The [Environment] whose [Environment.indirectLight] is applied.
+     * @param position       Centre of the reflection zone in world space. Defaults to the origin.
+     * @param radius         Sphere radius in metres. `0f` or negative means always-active (global).
+     * @param priority       Higher value wins when multiple probes are simultaneously active.
+     * @param cameraPosition Current camera world-space position, updated each frame.
+     */
+    @Composable
+    fun ReflectionProbeNode(
+        filamentScene: FilamentScene,
+        environment: Environment,
+        position: Position = Position(x = 0f, y = 0f, z = 0f),
+        radius: Float = 0f,
+        priority: Int = 0,
+        cameraPosition: Position = Position(x = 0f, y = 0f, z = 0f)
+    ) {
+        ReflectionProbeNodeComposable(
+            filamentScene = filamentScene,
+            environment = environment,
+            position = position,
+            radius = radius,
+            priority = priority,
+            cameraPosition = cameraPosition
+        )
     }
 
     // ── Internal lifecycle helper ─────────────────────────────────────────────────────────────────
