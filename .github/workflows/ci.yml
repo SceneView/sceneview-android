@@ -27,7 +27,7 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Build samples
-        run: ./gradlew :samples:model-viewer:assembleDebug :samples:ar-model-viewer:assembleDebug :samples:gltf-camera:assembleDebug :samples:autopilot-demo:assembleDebug --stacktrace
+        run: ./gradlew :samples:model-viewer:assembleDebug :samples:ar-model-viewer:assembleDebug :samples:gltf-camera:assembleDebug :samples:autopilot-demo:assembleDebug :samples:sceneview-demo:assembleDebug --stacktrace
 
       - name: Lint
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
