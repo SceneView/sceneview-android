@@ -105,24 +105,66 @@ jobs:
             adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA || true
             adb shell pm grant io.github.sceneview.sample.araugmentedimage android.permission.CAMERA || true
 
-            # Kill the Pixel Launcher before each sample so its ANR dialog never appears
-            # ar-model-viewer
-            adb shell am force-stop com.google.android.apps.nexuslauncher || true
-            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.armodelviewer/.MainActivity
-            sleep 20
-            adb exec-out screencap -p > ar-model-viewer.png
+            # ---------------------------------------------------------------------------
+            # inject_motion: simulate phone movement via the emulator console so ARCore
+            # transitions from INITIALIZING → TRACKING and the virtual scene camera feed
+            # becomes visible. Without motion the virtual scene is static, ARCore never
+            # gets visual odometry, and the camera surface stays white.
+            #
+            # The emulator console lives on port 5554. We authenticate with the token
+            # written to ~/.emulator_console_auth_token and inject accelerometer /
+            # gyroscope deltas. When the sensor values change, the virtualscene renderer
+            # moves the camera through the 3D room, giving ARCore real image motion.
+            # ---------------------------------------------------------------------------
+            inject_motion() {
+              local port="${1:-5554}"
+              local token
+              token=$(cat ~/.emulator_console_auth_token 2>/dev/null || true)
+              if [ -z "$token" ]; then
+                echo "  [motion] no auth token found, skipping sensor injection"
+                return 0
+              fi
+              echo "  [motion] injecting sensor motion on port $port"
+              # Each printf+nc call sets a new sensor value; the virtual scene camera
+              # moves with it, producing the image change ARCore needs for SLAM.
+              _send() { printf 'auth %s\r\n%s\r\nquit\r\n' "$token" "$1" \
+                          | nc -w 2 localhost "$port" > /dev/null 2>&1 || true; }
+              _send "sensor set acceleration 0.4:9.5:0.3"  ; sleep 1
+              _send "sensor set gyroscope 0.25:0.10:0.20"  ; sleep 1
+              _send "sensor set acceleration -0.3:9.7:0.5" ; sleep 1
+              _send "sensor set gyroscope -0.15:0.20:-0.10"; sleep 1
+              _send "sensor set acceleration 0.2:9.8:-0.2" ; sleep 1
+              _send "sensor set gyroscope 0.10:-0.10:0.15" ; sleep 1
+              _send "sensor set acceleration 0:9.8:0"      ; sleep 1
+              _send "sensor set gyroscope 0:0:0"
+              echo "  [motion] sensor injection complete"
+            }
 
-            # ar-point-cloud
-            adb shell am force-stop com.google.android.apps.nexuslauncher || true
-            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.arpointcloud/.MainActivity
-            sleep 20
-            adb exec-out screencap -p > ar-point-cloud.png
+            # Helper: launch an app, inject motion, wait for ARCore to track + detect a
+            # plane, then capture the screenshot. Takes package, activity, output file.
+            capture_ar_screenshot() {
+              local pkg="$1" activity="$2" out="$3"
+              echo "--- $pkg ---"
+              adb shell am force-stop com.google.android.apps.nexuslauncher || true
+              adb shell am start -S --activity-clear-task -n "${pkg}/${activity}"
+              # Give ARCore time to initialize before we start moving
+              sleep 10
+              # Inject motion so the virtual scene camera moves → ARCore tracks
+              inject_motion 5554
+              # Wait for plane detection (30 s total from launch is usually enough)
+              sleep 20
+              adb exec-out screencap -p > "$out"
+              echo "  saved $out"
+            }
 
-            # ar-augmented-image
-            adb shell am force-stop com.google.android.apps.nexuslauncher || true
-            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.araugmentedimage/.MainActivity
-            sleep 20
-            adb exec-out screencap -p > ar-augmented-image.png
+            capture_ar_screenshot \
+              io.github.sceneview.sample.armodelviewer .MainActivity ar-model-viewer.png
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.arpointcloud .MainActivity ar-point-cloud.png
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.araugmentedimage .MainActivity ar-augmented-image.png
 
             echo "AR screenshots captured"
 
