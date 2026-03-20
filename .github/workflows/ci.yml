@@ -80,22 +80,45 @@ jobs:
           emulator-options: -no-window -no-audio -gpu swiftshader_indirect -camera-back virtualscene -partition-size 4096
           disable-animations: true
           script: |
+            # Wait for launcher to fully settle and dismiss any ANR dialogs
+            sleep 15
+            adb shell input keyevent 82   # unlock screen
+            sleep 3
+            # Dismiss ANR dialog if present (click "Wait" button repeatedly)
+            for i in $(seq 1 5); do
+              adb shell input keyevent 4 2>/dev/null || true
+              sleep 1
+            done
+
             # Install ARCore emulator APK
             adb install -r arcore-emulator.apk
 
-            # Grant camera permissions upfront
+            # Grant camera permissions upfront for all AR samples
             adb shell pm grant io.github.sceneview.sample.armodelviewer android.permission.CAMERA
+            adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA
+            adb shell pm grant io.github.sceneview.sample.araugmentedimage android.permission.CAMERA
 
-            # Launch ar-model-viewer and capture screenshot
+            # ar-model-viewer
             adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.armodelviewer/.MainActivity
-            sleep 12
+            sleep 20
+            # Dismiss any dialog that appeared
+            adb shell input keyevent 4 2>/dev/null || true
+            sleep 2
             adb exec-out screencap -p > ar-model-viewer.png
 
-            # Launch ar-point-cloud and capture screenshot
-            adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA
+            # ar-point-cloud
             adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.arpointcloud/.MainActivity
-            sleep 12
+            sleep 20
+            adb shell input keyevent 4 2>/dev/null || true
+            sleep 2
             adb exec-out screencap -p > ar-point-cloud.png
+
+            # ar-augmented-image
+            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.araugmentedimage/.MainActivity
+            sleep 20
+            adb shell input keyevent 4 2>/dev/null || true
+            sleep 2
+            adb exec-out screencap -p > ar-augmented-image.png
 
             echo "AR screenshots captured"
 
