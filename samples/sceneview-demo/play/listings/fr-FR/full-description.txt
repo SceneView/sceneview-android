@@ -17,4 +17,4 @@ Exécutez des tests de régression visuelle pour valider le rendu de chaque node
 Bouton de mise à jour intégré pour toujours utiliser la dernière version, alignée avec la dernière release du SDK SceneView.
 
 SceneView Demo est open source et fait partie du projet SceneView :
-https://github.com/SceneView/sceneview-android
+https://github.com/SceneView/sceneview

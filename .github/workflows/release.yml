@@ -56,7 +56,7 @@ jobs:
           external_repository: SceneView/sceneview.github.io
           publish_branch: main
           publish_dir: ./build/dokka/htmlMultiModule
-          destination_dir: api/sceneview-android
+          destination_dir: api/sceneview
           full_commit_message: "API docs ${{ github.ref_name }}"
           enable_jekyll: false
 
