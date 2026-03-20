@@ -135,7 +135,10 @@ private fun ARModelViewer() {
             materialLoader = materialLoader,
             collisionSystem = collisionSystem,
             cameraNode = cameraNode,
-            planeRenderer = anchor == null,
+            // Always show the plane grid so the user can see detected surfaces even after
+            // a model has been placed. The built-in PlaneRenderer draws a subtle textured
+            // grid on every horizontal plane tracked by ARCore.
+            planeRenderer = true,
             sessionConfiguration = { session, config ->
                 config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
                     true -> Config.DepthMode.AUTOMATIC
@@ -168,6 +171,10 @@ private fun ARModelViewer() {
             anchor?.let {
                 AnchorNode(anchor = it) {
                     modelInstance?.let { instance ->
+                        // isEditable = true enables all three built-in gestures on the node:
+                        //   - Single-finger drag  -> move the model along the AR plane
+                        //   - Two-finger pinch    -> scale the model (clamped by editableScaleRange)
+                        //   - Two-finger twist    -> rotate the model around its Y axis
                         ModelNode(
                             modelInstance = instance,
                             scaleToUnits = selectedModel.scaleToUnits,
