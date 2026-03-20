@@ -1,0 +1,51 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace "io.github.sceneview.sample.physicsdemo"
+
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "io.github.sceneview.sample.physicsdemo"
+        minSdk 28
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose true
+    }
+    androidResources {
+        noCompress 'filamat', 'ktx'
+    }
+}
+
+dependencies {
+    implementation project(":samples:common")
+
+    implementation "androidx.compose.ui:ui:1.10.5"
+    implementation "androidx.compose.foundation:foundation:1.10.5"
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation 'androidx.compose.material:material:1.10.5'
+    implementation "androidx.compose.ui:ui-tooling-preview:1.10.5"
+    debugImplementation "androidx.compose.ui:ui-tooling:1.10.5"
+
+    // SceneView
+    implementation project(":sceneview")
+}
