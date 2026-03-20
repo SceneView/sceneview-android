@@ -67,6 +67,12 @@ Every Claude Code session MUST read this section first to stay in sync.
 ### Current state (last updated: 2026-03-20)
 
 - **Active branch**: `claude/identify-project-focus-FU1rl`
+- **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
+  so AI assistants can generate correct 3D/AR Compose code on the first try
+- **llms.txt**: Major update — added 6 missing node types (TextNode, BillboardNode, LineNode,
+  PathNode, MeshNode, material creation), complete remember* helpers reference table,
+  ARScene session lifecycle callbacks
+- **NodeCatalog.kt**: All code snippets fixed to match actual API signatures
 - **Demo app** (`samples/sceneview-demo/`): Upgraded to Material 3 Expressive (`material3:1.5.0-alpha15`)
   - `MaterialExpressiveTheme` + `MotionScheme.expressive()` + dynamic color
   - ShowcaseScreen: LargeTopAppBar, filter chips, expressive cards with spring animations
