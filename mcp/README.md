@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/sceneview-mcp?color=cb3837&label=npm)](https://www.npmjs.com/package/sceneview-mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-MCP server for [SceneView](https://github.com/SceneView/sceneview-android) — 3D and AR as Jetpack Compose composables for Android.
+MCP server for [SceneView](https://github.com/SceneView/sceneview) — 3D and AR as Jetpack Compose composables for Android.
 
 Add this to Claude and it **always knows how to use SceneView**. No copy-pasting docs. No hallucinated APIs. Correct, compilable Kotlin — first try.
 
@@ -123,6 +123,6 @@ npm publish --access public
 
 ## Links
 
-- **SDK**: [github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android)
+- **SDK**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
 - **npm**: [npmjs.com/package/sceneview-mcp](https://www.npmjs.com/package/sceneview-mcp)
 - **MCP spec**: [modelcontextprotocol.io](https://modelcontextprotocol.io)

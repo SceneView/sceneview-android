@@ -1,6 +1,6 @@
-# SceneView for Android
+# SceneView
 
-![SceneView Logo](https://github.com/SceneView/sceneview-android/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05)
+![SceneView Logo](https://github.com/SceneView/sceneview/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05)
 
 > ## 3D is just Compose UI.
 
@@ -451,8 +451,8 @@ ARScene(
 ## Resources
 
 ### Documentation
-- [3D API Reference](https://sceneview.github.io/api/sceneview-android/sceneview/)
-- [AR API Reference](https://sceneview.github.io/api/sceneview-android/arsceneview/)
+- [3D API Reference](https://sceneview.github.io/api/sceneview/sceneview/)
+- [AR API Reference](https://sceneview.github.io/api/sceneview/arsceneview/)
 - [Migration Guide — v2.x → v3.0](MIGRATION.md)
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)
