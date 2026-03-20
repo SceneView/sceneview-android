@@ -29,6 +29,7 @@ import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Size
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.node.BillboardNode as BillboardNodeImpl
 import io.github.sceneview.node.CameraNode as CameraNodeImpl
 import io.github.sceneview.node.CubeNode as CubeNodeImpl
 import io.github.sceneview.node.CylinderNode as CylinderNodeImpl
@@ -39,6 +40,7 @@ import io.github.sceneview.node.ModelNode as ModelNodeImpl
 import io.github.sceneview.node.Node as NodeImpl
 import io.github.sceneview.node.PlaneNode as PlaneNodeImpl
 import io.github.sceneview.node.SphereNode as SphereNodeImpl
+import io.github.sceneview.node.TextNode as TextNodeImpl
 import io.github.sceneview.node.VideoNode as VideoNodeImpl
 import io.github.sceneview.node.ViewNode as ViewNodeImpl
 
@@ -569,7 +571,104 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         NodeLifecycle(node, content)
     }
 
-    // ── VideoNode ─────────────────────────────────────────────────────────────────────────────────
+    // ── BillboardNode ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A flat quad node that always faces the camera (billboard behaviour).
+     *
+     * Pass a [Bitmap] and optionally explicit [widthMeters]/[heightMeters] to control the world-
+     * space size of the quad. Provide [cameraPositionProvider] so the node can rotate toward the
+     * camera every frame.
+     *
+     * @param bitmap                 The bitmap texture to display.
+     * @param widthMeters            Quad width in meters (`null` derives from bitmap aspect ratio).
+     * @param heightMeters           Quad height in meters (`null` derives from bitmap aspect ratio).
+     * @param position               Local position.
+     * @param cameraPositionProvider Lambda returning the camera world position every frame.
+     * @param apply                  Additional configuration on the [BillboardNodeImpl].
+     * @param content                Optional child nodes.
+     */
+    @Composable
+    fun BillboardNode(
+        bitmap: Bitmap,
+        widthMeters: Float? = null,
+        heightMeters: Float? = null,
+        position: Position = Position(x = 0f),
+        cameraPositionProvider: (() -> Position)? = null,
+        apply: BillboardNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, materialLoader, bitmap) {
+            BillboardNodeImpl(
+                materialLoader = materialLoader,
+                bitmap = bitmap,
+                widthMeters = widthMeters,
+                heightMeters = heightMeters,
+                cameraPositionProvider = cameraPositionProvider
+            ).apply(apply)
+        }
+        SideEffect {
+            node.bitmap = bitmap
+            node.position = position
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── TextNode ──────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A 3D text-label node that always faces the camera.
+     *
+     * Text is rendered to an Android [android.graphics.Bitmap] via [android.graphics.Canvas] and
+     * displayed on a flat quad that rotates toward the camera each frame.
+     *
+     * @param text                   The string to display.
+     * @param fontSize               Font size in pixels used when rendering the bitmap (default 48).
+     * @param textColor              ARGB text colour (default opaque white).
+     * @param backgroundColor        ARGB background fill colour (default semi-transparent black).
+     * @param widthMeters            Quad width in meters (default 0.6).
+     * @param heightMeters           Quad height in meters (default 0.2).
+     * @param position               Local position.
+     * @param cameraPositionProvider Lambda returning the camera world position every frame.
+     * @param apply                  Additional configuration on the [TextNodeImpl].
+     * @param content                Optional child nodes.
+     */
+    @Composable
+    fun TextNode(
+        text: String,
+        fontSize: Float = 48f,
+        textColor: Int = android.graphics.Color.WHITE,
+        backgroundColor: Int = 0xCC000000.toInt(),
+        widthMeters: Float = 0.6f,
+        heightMeters: Float = 0.2f,
+        position: Position = Position(x = 0f),
+        cameraPositionProvider: (() -> Position)? = null,
+        apply: TextNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, materialLoader) {
+            TextNodeImpl(
+                materialLoader = materialLoader,
+                text = text,
+                fontSize = fontSize,
+                textColor = textColor,
+                backgroundColor = backgroundColor,
+                widthMeters = widthMeters,
+                heightMeters = heightMeters,
+                cameraPositionProvider = cameraPositionProvider
+            ).apply(apply)
+        }
+        SideEffect {
+            node.text = text
+            node.fontSize = fontSize
+            node.textColor = textColor
+            node.backgroundColor = backgroundColor
+            node.position = position
+        }
+        NodeLifecycle(node, content)
+    }
+
+        // ── VideoNode ─────────────────────────────────────────────────────────────────────────────────
 
     /**
      * A node that renders video from an Android [android.media.MediaPlayer] onto a flat plane in
