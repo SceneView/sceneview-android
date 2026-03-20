@@ -29,16 +29,20 @@ import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Size
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.node.BillboardNode as BillboardNodeImpl
 import io.github.sceneview.node.CameraNode as CameraNodeImpl
 import io.github.sceneview.node.CubeNode as CubeNodeImpl
 import io.github.sceneview.node.CylinderNode as CylinderNodeImpl
 import io.github.sceneview.node.ImageNode as ImageNodeImpl
 import io.github.sceneview.node.LightNode as LightNodeImpl
+import io.github.sceneview.node.LineNode as LineNodeImpl
 import io.github.sceneview.node.MeshNode as MeshNodeImpl
 import io.github.sceneview.node.ModelNode as ModelNodeImpl
 import io.github.sceneview.node.Node as NodeImpl
+import io.github.sceneview.node.PathNode as PathNodeImpl
 import io.github.sceneview.node.PlaneNode as PlaneNodeImpl
 import io.github.sceneview.node.SphereNode as SphereNodeImpl
+import io.github.sceneview.node.TextNode as TextNodeImpl
 import io.github.sceneview.node.VideoNode as VideoNodeImpl
 import io.github.sceneview.node.ViewNode as ViewNodeImpl
 
@@ -569,7 +573,104 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         NodeLifecycle(node, content)
     }
 
-    // ── VideoNode ─────────────────────────────────────────────────────────────────────────────────
+    // ── BillboardNode ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A flat quad node that always faces the camera (billboard behaviour).
+     *
+     * Pass a [Bitmap] and optionally explicit [widthMeters]/[heightMeters] to control the world-
+     * space size of the quad. Provide [cameraPositionProvider] so the node can rotate toward the
+     * camera every frame.
+     *
+     * @param bitmap                 The bitmap texture to display.
+     * @param widthMeters            Quad width in meters (`null` derives from bitmap aspect ratio).
+     * @param heightMeters           Quad height in meters (`null` derives from bitmap aspect ratio).
+     * @param position               Local position.
+     * @param cameraPositionProvider Lambda returning the camera world position every frame.
+     * @param apply                  Additional configuration on the [BillboardNodeImpl].
+     * @param content                Optional child nodes.
+     */
+    @Composable
+    fun BillboardNode(
+        bitmap: Bitmap,
+        widthMeters: Float? = null,
+        heightMeters: Float? = null,
+        position: Position = Position(x = 0f),
+        cameraPositionProvider: (() -> Position)? = null,
+        apply: BillboardNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, materialLoader, bitmap) {
+            BillboardNodeImpl(
+                materialLoader = materialLoader,
+                bitmap = bitmap,
+                widthMeters = widthMeters,
+                heightMeters = heightMeters,
+                cameraPositionProvider = cameraPositionProvider
+            ).apply(apply)
+        }
+        SideEffect {
+            node.bitmap = bitmap
+            node.position = position
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── TextNode ──────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A 3D text-label node that always faces the camera.
+     *
+     * Text is rendered to an Android [android.graphics.Bitmap] via [android.graphics.Canvas] and
+     * displayed on a flat quad that rotates toward the camera each frame.
+     *
+     * @param text                   The string to display.
+     * @param fontSize               Font size in pixels used when rendering the bitmap (default 48).
+     * @param textColor              ARGB text colour (default opaque white).
+     * @param backgroundColor        ARGB background fill colour (default semi-transparent black).
+     * @param widthMeters            Quad width in meters (default 0.6).
+     * @param heightMeters           Quad height in meters (default 0.2).
+     * @param position               Local position.
+     * @param cameraPositionProvider Lambda returning the camera world position every frame.
+     * @param apply                  Additional configuration on the [TextNodeImpl].
+     * @param content                Optional child nodes.
+     */
+    @Composable
+    fun TextNode(
+        text: String,
+        fontSize: Float = 48f,
+        textColor: Int = android.graphics.Color.WHITE,
+        backgroundColor: Int = 0xCC000000.toInt(),
+        widthMeters: Float = 0.6f,
+        heightMeters: Float = 0.2f,
+        position: Position = Position(x = 0f),
+        cameraPositionProvider: (() -> Position)? = null,
+        apply: TextNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine, materialLoader) {
+            TextNodeImpl(
+                materialLoader = materialLoader,
+                text = text,
+                fontSize = fontSize,
+                textColor = textColor,
+                backgroundColor = backgroundColor,
+                widthMeters = widthMeters,
+                heightMeters = heightMeters,
+                cameraPositionProvider = cameraPositionProvider
+            ).apply(apply)
+        }
+        SideEffect {
+            node.text = text
+            node.fontSize = fontSize
+            node.textColor = textColor
+            node.backgroundColor = backgroundColor
+            node.position = position
+        }
+        NodeLifecycle(node, content)
+    }
+
+        // ── VideoNode ─────────────────────────────────────────────────────────────────────────────────
 
     /**
      * A node that renders video from an Android [android.media.MediaPlayer] onto a flat plane in
@@ -663,6 +764,106 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 invertFrontFaceWinding = invertFrontFaceWinding,
                 content = viewContent
             ).apply(apply)
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── LineNode ──────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that renders a single line segment between two 3D points.
+     *
+     * ```kotlin
+     * Scene {
+     *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Red) }
+     *     LineNode(
+     *         start = Position(0f, 0f, 0f),
+     *         end   = Position(1f, 0f, 0f),
+     *         materialInstance = mat
+     *     )
+     * }
+     * ```
+     *
+     * @param start            Start point of the line in local space (meters).
+     * @param end              End point of the line in local space (meters).
+     * @param materialInstance The material instance to apply (color, unlit, etc.).
+     * @param position         Local position of the node's origin.
+     * @param rotation         Local rotation in Euler angles (degrees).
+     * @param apply            Additional configuration on the [LineNodeImpl].
+     * @param content          Optional child nodes.
+     */
+    @Composable
+    fun LineNode(
+        start: Position = io.github.sceneview.geometries.Line.DEFAULT_START,
+        end: Position = io.github.sceneview.geometries.Line.DEFAULT_END,
+        materialInstance: MaterialInstance? = null,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        apply: LineNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine) {
+            LineNodeImpl(
+                engine = engine,
+                start = start,
+                end = end,
+                materialInstance = materialInstance
+            ).apply(apply)
+        }
+        SideEffect {
+            node.updateGeometry(start = start, end = end)
+            node.position = position
+            node.rotation = rotation
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── PathNode ──────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that renders a polyline through a list of 3D points.
+     *
+     * ```kotlin
+     * Scene {
+     *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Green) }
+     *     PathNode(
+     *         points = spiralPoints,
+     *         closed = false,
+     *         materialInstance = mat
+     *     )
+     * }
+     * ```
+     *
+     * @param points           Ordered list of 3D points forming the polyline (at least 2).
+     * @param closed           When `true`, adds a closing segment from the last to the first point.
+     * @param materialInstance The material instance to apply.
+     * @param position         Local position of the node's origin.
+     * @param rotation         Local rotation in Euler angles (degrees).
+     * @param apply            Additional configuration on the [PathNodeImpl].
+     * @param content          Optional child nodes.
+     */
+    @Composable
+    fun PathNode(
+        points: List<Position> = io.github.sceneview.geometries.Path.DEFAULT_POINTS,
+        closed: Boolean = false,
+        materialInstance: MaterialInstance? = null,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        apply: PathNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine) {
+            PathNodeImpl(
+                engine = engine,
+                points = points,
+                closed = closed,
+                materialInstance = materialInstance
+            ).apply(apply)
+        }
+        SideEffect {
+            node.updateGeometry(points = points, closed = closed)
+            node.position = position
+            node.rotation = rotation
         }
         NodeLifecycle(node, content)
     }
