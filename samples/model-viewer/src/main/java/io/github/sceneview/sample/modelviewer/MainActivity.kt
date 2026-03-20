@@ -8,17 +8,23 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -41,6 +47,13 @@ import io.github.sceneview.sample.SceneviewTheme
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit.MILLISECONDS
 
+private data class ModelEntry(val label: String, val assetPath: String, val scale: Float)
+
+private val models = listOf(
+    ModelEntry("Helmet", "models/damaged_helmet.glb", 1.0f),
+    ModelEntry("Fox", "models/Fox.glb", 0.012f),
+)
+
 class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +66,9 @@ class MainActivity : ComponentActivity() {
                     val engine = rememberEngine()
                     val modelLoader = rememberModelLoader(engine)
                     val environmentLoader = rememberEnvironmentLoader(engine)
+
+                    var selectedIndex by remember { mutableStateOf(0) }
+                    val selectedModel = models[selectedIndex]
 
                     val centerNode = rememberNode(engine)
 
@@ -71,7 +87,10 @@ class MainActivity : ComponentActivity() {
                         )
                     )
 
-                    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
+                    val modelInstance = rememberModelInstance(
+                        modelLoader,
+                        selectedModel.assetPath
+                    )
                     val environment = rememberEnvironment(environmentLoader) {
                         environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
                     }
@@ -102,10 +121,28 @@ class MainActivity : ComponentActivity() {
                         modelInstance?.let { instance ->
                             ModelNode(
                                 modelInstance = instance,
-                                scaleToUnits = 0.25f
+                                scaleToUnits = selectedModel.scale
                             )
                         }
                     }
+
+                    // Model picker chips — bottom centre
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        models.forEachIndexed { index, model ->
+                            FilterChip(
+                                selected = index == selectedIndex,
+                                onClick = { selectedIndex = index },
+                                label = { Text(model.label) }
+                            )
+                        }
+                    }
+
                     Image(
                         modifier = Modifier
                             .width(192.dp)
@@ -131,7 +168,6 @@ class MainActivity : ComponentActivity() {
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
                             titleContentColor = MaterialTheme.colorScheme.onPrimary
-
                         )
                     )
                 }
