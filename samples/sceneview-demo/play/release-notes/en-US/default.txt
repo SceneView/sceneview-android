@@ -1,0 +1,6 @@
+Initial release of SceneView Demo:
+• Showcase mode with interactive node catalog and code snippets
+• QA mode with visual regression test suite
+• In-app update support
+• 16 node types documented with examples
+• 17 automated QA tests

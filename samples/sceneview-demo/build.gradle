@@ -1,0 +1,83 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace "io.github.sceneview.demo"
+
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "io.github.sceneview.demo"
+        minSdk 28
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            // Populated from environment variables or local.properties
+            def keystoreFile = System.getenv("SCENEVIEW_DEMO_KEYSTORE_FILE")
+            def keystorePass = System.getenv("SCENEVIEW_DEMO_KEYSTORE_PASSWORD")
+            def keyAlias = System.getenv("SCENEVIEW_DEMO_KEY_ALIAS")
+            def keyPass = System.getenv("SCENEVIEW_DEMO_KEY_PASSWORD")
+
+            if (keystoreFile != null) {
+                storeFile file(keystoreFile)
+                storePassword keystorePass
+                keyAlias keyAlias
+                keyPassword keyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            def keystoreFile = System.getenv("SCENEVIEW_DEMO_KEYSTORE_FILE")
+            if (keystoreFile != null) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose true
+    }
+    androidResources {
+        noCompress 'filamat', 'ktx'
+    }
+}
+
+dependencies {
+    implementation project(":samples:common")
+
+    // Compose
+    implementation "androidx.compose.ui:ui:1.10.5"
+    implementation "androidx.compose.foundation:foundation:1.10.5"
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation 'androidx.compose.material3:material3:1.3.2'
+    implementation 'androidx.compose.material:material-icons-extended:1.7.8'
+    implementation "androidx.compose.ui:ui-tooling-preview:1.10.5"
+    implementation "androidx.navigation:navigation-compose:2.8.9"
+    debugImplementation "androidx.compose.ui:ui-tooling:1.10.5"
+
+    // SceneView (3D + AR)
+    implementation project(":sceneview")
+    implementation project(":arsceneview")
+
+    // Google Play In-App Updates
+    implementation 'com.google.android.play:app-update:2.1.0'
+    implementation 'com.google.android.play:app-update-ktx:2.1.0'
+}

@@ -1,0 +1,22 @@
+SceneView Demo is the official companion app for the SceneView Android SDK — the easiest way to add 3D and Augmented Reality to your Android apps using Jetpack Compose.
+
+🎯 SHOWCASE MODE
+Browse every node type available in SceneView: CubeNode, SphereNode, ModelNode, LightNode, TextNode, BillboardNode, and many more. Each entry includes:
+• A description of what the node does
+• Ready-to-use Compose code snippets
+• Category filtering (Geometry, Model, Light, Camera, Content, AR)
+
+🧪 QA MODE
+Run visual regression tests to validate that every node renders correctly:
+• One-tap "Run All" to execute the full test suite
+• Individual test execution for targeted validation
+• Pass/Fail status with visual indicators
+• Covers geometry, model loading, lighting, camera, content, and system tests
+
+📦 ALWAYS UP TO DATE
+Built-in update button ensures you're always running the latest version, matching the newest SceneView SDK release.
+
+SceneView Demo is open source and part of the SceneView project:
+https://github.com/SceneView/sceneview-android
+
+Whether you're evaluating SceneView for a new project, debugging rendering issues, or looking for code examples — this app has you covered.
