@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,6 +25,9 @@ jobs:
 
       - name: Build
         run: ./gradlew assembleDebug --stacktrace
+
+      - name: Build samples
+        run: ./gradlew :samples:model-viewer:assembleDebug :samples:ar-model-viewer:assembleDebug :samples:gltf-camera:assembleDebug :samples:autopilot-demo:assembleDebug --stacktrace
 
       - name: Lint
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
@@ -79,52 +83,7 @@ jobs:
           avd-name: Pixel_6_AR
           emulator-options: -no-window -no-audio -gpu swiftshader_indirect -camera-back virtualscene -partition-size 4096
           disable-animations: true
-          script: |
-            #!/usr/bin/env bash
-            set -e
-
-            # Wait for launcher to fully settle
-            sleep 20
-            adb shell input keyevent 82 || true   # unlock screen
-            sleep 5
-            # Dismiss any ANR/permission dialogs
-            adb shell input keyevent 4 || true
-            adb shell input keyevent 4 || true
-            adb shell input keyevent 4 || true
-
-            # Install ARCore emulator APK
-            adb install -r arcore-emulator.apk
-
-            # Install sample APKs
-            adb install -r samples/ar-model-viewer/build/outputs/apk/debug/ar-model-viewer-debug.apk
-            adb install -r samples/ar-point-cloud/build/outputs/apk/debug/ar-point-cloud-debug.apk
-            adb install -r samples/ar-augmented-image/build/outputs/apk/debug/ar-augmented-image-debug.apk
-
-            # Grant camera permissions upfront
-            adb shell pm grant io.github.sceneview.sample.armodelviewer android.permission.CAMERA || true
-            adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA || true
-            adb shell pm grant io.github.sceneview.sample.araugmentedimage android.permission.CAMERA || true
-
-            # Kill the Pixel Launcher before each sample so its ANR dialog never appears
-            # ar-model-viewer
-            adb shell am force-stop com.google.android.apps.nexuslauncher || true
-            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.armodelviewer/.MainActivity
-            sleep 20
-            adb exec-out screencap -p > ar-model-viewer.png
-
-            # ar-point-cloud
-            adb shell am force-stop com.google.android.apps.nexuslauncher || true
-            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.arpointcloud/.MainActivity
-            sleep 20
-            adb exec-out screencap -p > ar-point-cloud.png
-
-            # ar-augmented-image
-            adb shell am force-stop com.google.android.apps.nexuslauncher || true
-            adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.araugmentedimage/.MainActivity
-            sleep 20
-            adb exec-out screencap -p > ar-augmented-image.png
-
-            echo "AR screenshots captured"
+          script: .github/scripts/ar-emulator-screenshots.sh
 
       - name: Upload AR screenshots
         if: always()
