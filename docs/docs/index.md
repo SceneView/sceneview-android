@@ -1,6 +1,6 @@
 # SceneView — 3D and AR with Compose
 
-![SceneView Logo](https://github.com/SceneView/sceneview-android/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05){ width=280 }
+![SceneView Logo](https://github.com/SceneView/sceneview/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05){ width=280 }
 
 ## 3D is just Compose UI.
 
@@ -92,4 +92,4 @@ See the [Migration guide](migration.md) for a step-by-step walkthrough of every 
 ## Community
 
 [:simple-discord: Discord](https://discord.gg/UbNDDBTNqb){ .md-button }
-[:simple-github: GitHub](https://github.com/SceneView/sceneview-android){ .md-button .md-button--primary }
+[:simple-github: GitHub](https://github.com/SceneView/sceneview){ .md-button .md-button--primary }

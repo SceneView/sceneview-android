@@ -9,7 +9,7 @@ export async function fetchKnownIssues() {
     let issues = [];
     let fetchError = null;
     try {
-        const response = await fetch("https://api.github.com/repos/SceneView/sceneview-android/issues?state=open&per_page=30", {
+        const response = await fetch("https://api.github.com/repos/SceneView/sceneview/issues?state=open&per_page=30", {
             headers: {
                 Accept: "application/vnd.github+json",
                 "User-Agent": "sceneview-mcp/3.0",
