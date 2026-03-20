@@ -105,25 +105,23 @@ jobs:
             adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA || true
             adb shell pm grant io.github.sceneview.sample.araugmentedimage android.permission.CAMERA || true
 
+            # Kill the Pixel Launcher before each sample so its ANR dialog never appears
             # ar-model-viewer
+            adb shell am force-stop com.google.android.apps.nexuslauncher || true
             adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.armodelviewer/.MainActivity
             sleep 20
-            adb shell input keyevent 4 || true
-            sleep 2
             adb exec-out screencap -p > ar-model-viewer.png
 
             # ar-point-cloud
+            adb shell am force-stop com.google.android.apps.nexuslauncher || true
             adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.arpointcloud/.MainActivity
             sleep 20
-            adb shell input keyevent 4 || true
-            sleep 2
             adb exec-out screencap -p > ar-point-cloud.png
 
             # ar-augmented-image
+            adb shell am force-stop com.google.android.apps.nexuslauncher || true
             adb shell am start -S --activity-clear-task -n io.github.sceneview.sample.araugmentedimage/.MainActivity
             sleep 20
-            adb shell input keyevent 4 || true
-            sleep 2
             adb exec-out screencap -p > ar-augmented-image.png
 
             echo "AR screenshots captured"
