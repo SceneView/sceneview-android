@@ -45,3 +45,40 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 | `arsceneview/` | AR layer — `ARScene`, `ARSceneScope`, ARCore integration |
 | `samples/common/` | Shared helpers across sample apps |
 | `mcp/` | `@sceneview/mcp` — MCP server for AI assistant integration |
+
+## Session continuity
+
+Every Claude Code session MUST read this section first to stay in sync.
+
+### Current state (last updated: 2026-03-20)
+
+- **Active branch**: `claude/identify-project-focus-FU1rl`
+- **Demo app** (`samples/sceneview-demo/`): Upgraded to Material 3 Expressive (`material3:1.5.0-alpha15`)
+  - `MaterialExpressiveTheme` + `MotionScheme.expressive()` + dynamic color
+  - ShowcaseScreen: LargeTopAppBar, filter chips, expressive cards with spring animations
+  - QAScreen: animated summary card, rounded progress bars, spring-animated test cards
+  - Navigation: bottom NavigationBar with scale animation, fade+scale transitions
+  - InAppUpdate: animated banner with rounded progress indicator
+- **Backlog priority 1**: Material 3 Expressive — polish remaining (see `ROADMAP.md` Backlog section)
+
+### Design direction
+
+- **Material 3 Expressive** everywhere — fully rounded shapes, spring/physics animations, dynamic color
+- Clean, professional, modern look
+- Use expressive components when available: FloatingToolbar, LoadingIndicator, ButtonGroup
+
+### Decisions already made
+
+- M3 1.5.0-alpha15 (latest expressive alpha) over stable 1.3.x
+- Dynamic color (Android 12+) with custom light/dark fallback palette
+- `MotionScheme.expressive()` as default motion scheme
+- LargeTopAppBar with exit-until-collapsed scroll behavior on both screens
+- Spring-based animations (DampingRatioLowBouncy) for card expand/collapse
+
+### How to update this section
+
+After completing significant work, update the "Current state" block above with:
+1. The active branch name
+2. A brief summary of what changed
+3. Any new decisions or design choices made
+4. Update the date
