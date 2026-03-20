@@ -95,6 +95,11 @@ jobs:
             # Install ARCore emulator APK
             adb install -r arcore-emulator.apk
 
+            # Install sample APKs
+            adb install -r samples/ar-model-viewer/build/outputs/apk/debug/ar-model-viewer-debug.apk
+            adb install -r samples/ar-point-cloud/build/outputs/apk/debug/ar-point-cloud-debug.apk
+            adb install -r samples/ar-augmented-image/build/outputs/apk/debug/ar-augmented-image-debug.apk
+
             # Grant camera permissions upfront
             adb shell pm grant io.github.sceneview.sample.armodelviewer android.permission.CAMERA || true
             adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA || true
