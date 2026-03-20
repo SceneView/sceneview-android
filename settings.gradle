@@ -20,5 +20,9 @@ include ':samples:gltf-camera'
 include ':samples:model-viewer'
 include ':samples:camera-manipulator'
 include ':samples:autopilot-demo'
+<<<<<<< HEAD
 include ':samples:post-processing'
 include ':samples:physics-demo'
+=======
+include ':samples:dynamic-sky'
+>>>>>>> 8ebd2ec (feat: add DynamicSkyNode, FogNode, and dynamic-sky sample (3.3.0 roadmap))
