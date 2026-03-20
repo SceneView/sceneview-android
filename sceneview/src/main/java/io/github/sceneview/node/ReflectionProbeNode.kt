@@ -1,0 +1,93 @@
+package io.github.sceneview.node
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import com.google.android.filament.Scene
+import dev.romainguy.kotlin.math.length
+import io.github.sceneview.environment.Environment
+import io.github.sceneview.math.Position
+
+/**
+ * A composable that overrides the scene's indirect light (IBL) with a baked environment
+ * for a defined zone around a world-space position.
+ *
+ * When [radius] is greater than zero, the probe is a local zone: the override only applies
+ * while [cameraPosition] is within [radius] metres of [position]. Set [radius] to `0f` (or
+ * any non-positive value) for a global probe that always overrides the scene IBL.
+ *
+ * Multiple `ReflectionProbeNode`s can be declared inside the same `Scene { }` block. The
+ * **last** one whose zone contains the camera wins, following Compose's top-down composition
+ * order. Use the [priority] parameter to break ties explicitly — the probe with the highest
+ * priority value takes precedence when more than one zone is active simultaneously.
+ *
+ * ### Usage
+ * ```kotlin
+ * val environment = rememberEnvironment(environmentLoader) {
+ *     environmentLoader.createHDREnvironment("environments/office.hdr")!!
+ * }
+ *
+ * Scene(
+ *     environment = defaultEnvironment,
+ *     onFrame = { cameraPosition = cameraNode.worldPosition }
+ * ) {
+ *     // Global fallback — always active
+ *     ReflectionProbeNode(
+ *         filamentScene = scene,
+ *         environment = environment,
+ *         cameraPosition = cameraPosition
+ *     )
+ *
+ *     // Local zone — active only when the camera is within 3 m of the origin
+ *     ReflectionProbeNode(
+ *         filamentScene = scene,
+ *         environment = officeEnvironment,
+ *         position = Position(x = 0f, y = 1f, z = 0f),
+ *         radius = 3f,
+ *         cameraPosition = cameraPosition
+ *     )
+ * }
+ * ```
+ *
+ * @param filamentScene  The Filament [Scene] whose [Scene.setIndirectLight] is overridden.
+ *                       Obtain via [rememberScene] or the `scene` parameter of `Scene { }`.
+ * @param environment    The [Environment] containing the [IndirectLight] to apply.
+ * @param position       Centre of the reflection zone in world space. Defaults to the origin.
+ * @param radius         Sphere radius (metres) of the zone influence. `0f` or negative means
+ *                       the probe is always active (global).
+ * @param priority       Higher value wins when multiple probes are simultaneously active.
+ *                       Has no effect when only one probe is active.
+ * @param cameraPosition Current camera world-space position, updated each frame. Drive this
+ *                       from `onFrame` via [CameraNode.worldPosition].
+ */
+@Composable
+fun ReflectionProbeNode(
+    filamentScene: Scene,
+    environment: Environment,
+    position: Position = Position(x = 0f, y = 0f, z = 0f),
+    radius: Float = 0f,
+    priority: Int = 0,
+    cameraPosition: Position = Position(x = 0f, y = 0f, z = 0f)
+) {
+    // Capture the previous indirect light so we can restore it when the probe is removed.
+    val previousIndirectLight = remember(filamentScene) { filamentScene.indirectLight }
+
+    // Determine whether this probe's zone contains the camera.
+    val isActive = radius <= 0f || length(cameraPosition - position) <= radius
+
+    SideEffect {
+        if (isActive) {
+            filamentScene.indirectLight = environment.indirectLight
+        }
+    }
+
+    DisposableEffect(filamentScene, environment) {
+        onDispose {
+            // Restore the indirect light that was active before this probe was composed.
+            // If a different probe is still active, its own SideEffect will re-apply after
+            // this disposal.
+            filamentScene.indirectLight = previousIndirectLight
+        }
+    }
+}
