@@ -1,7 +1,21 @@
 # SceneView for Android — Claude Code guide
 
-This is the SceneView SDK repository. SceneView provides 3D and AR as Jetpack Compose
-composables for Android, built on Google Filament and ARCore.
+## Project purpose
+
+SceneView is an **AI-first SDK**: its primary goal is to enable Claude (and other AI
+assistants) to help developers build 3D and AR apps in Jetpack Compose. Every design
+decision — API surface, documentation, samples, `llms.txt` — should be optimized so
+that when a developer asks an AI "build me an AR app", the AI can produce correct,
+complete, working code on the first try.
+
+**Implication for contributors:** when adding or changing APIs, always ask "can an AI
+read the docs and generate correct code for this?" If not, simplify the API or improve
+the documentation until it can.
+
+## About
+
+SceneView provides 3D and AR as Jetpack Compose composables for Android, built on
+Google Filament and ARCore.
 
 ## Full API reference
 
