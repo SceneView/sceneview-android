@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 3D cube icon representing SceneView -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L74,40 L74,64 L54,76 L34,64 L34,40 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0"/>
+    <path
+        android:fillColor="#E0D0FF"
+        android:pathData="M54,28 L74,40 L74,64 L54,52 Z"/>
+    <path
+        android:fillColor="#C0B0E0"
+        android:pathData="M54,28 L34,40 L34,64 L54,52 Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,64 L54,76 L74,64 L54,52 Z"/>
+</vector>
