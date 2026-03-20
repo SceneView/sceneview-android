@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.1.2 — Sample polish, CI fixes, maintenance tooling
+
+### Fixes
+- `autopilot-demo`: remove deprecated `engine` parameter from `PlaneNode`, `CubeNode`, `CylinderNode` constructors (API aligned with composable node design)
+- CI: fix AR emulator stability — wait for launcher, dismiss ANR dialogs, kill Pixel Launcher before screenshots
+
+### Sample improvements
+- `model-viewer`: scale up Damaged Helmet 0.25 → 1.0; add Fox model (CC0, KhronosGroup glTF-Sample-Assets) with model picker chip row
+- `camera-manipulator`: scale up model 0.25 → 1.0; add gesture hint bar (Drag·Orbit / Pinch·Zoom / Pan·Move)
+
+### Developer tooling
+- `/maintain` Claude Code skill + daily maintenance GitHub Action for automated SDK upkeep
+- AR emulator CI job using x86\_64 Linux + ARCore emulator APK for screenshot verification
+- `ROADMAP.md` added covering 3.2–4.0 milestones
+
 ## 3.1.1 — Build compatibility patch
 
 - Downgrade AGP from 8.13.2 → 8.11.1 for Android Studio compatibility
