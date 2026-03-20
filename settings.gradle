@@ -7,22 +7,19 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "SceneView"
-include ':sceneview'
-include ':arsceneview'
+include ":sceneview"
+include ":arsceneview"
 
 // Samples
-include ':samples:common'
-include ':samples:ar-augmented-image'
-include ':samples:ar-cloud-anchor'
-include ':samples:ar-model-viewer'
-include ':samples:ar-point-cloud'
-include ':samples:gltf-camera'
-include ':samples:model-viewer'
-include ':samples:camera-manipulator'
-include ':samples:autopilot-demo'
-<<<<<<< HEAD
-include ':samples:post-processing'
-include ':samples:physics-demo'
-=======
-include ':samples:dynamic-sky'
->>>>>>> 8ebd2ec (feat: add DynamicSkyNode, FogNode, and dynamic-sky sample (3.3.0 roadmap))
+include ":samples:common"
+include ":samples:ar-augmented-image"
+include ":samples:ar-cloud-anchor"
+include ":samples:ar-model-viewer"
+include ":samples:ar-point-cloud"
+include ":samples:gltf-camera"
+include ":samples:model-viewer"
+include ":samples:camera-manipulator"
+include ":samples:autopilot-demo"
+include ":samples:post-processing"
+include ":samples:physics-demo"
+include ":samples:dynamic-sky"
