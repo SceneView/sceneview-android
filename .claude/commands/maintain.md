@@ -11,6 +11,12 @@ You are the autonomous maintainer of the SceneView Android SDK. Run through ever
 - Build all samples locally and capture a screenshot of each on the emulator.
   - Start emulator: `~/Library/Android/sdk/emulator/emulator -avd Pixel_9 -no-window -no-audio -gpu swiftshader_indirect -partition-size 4096`
   - For each sample: build → install → launch → `adb screencap` → attach screenshot to the relevant GitHub release or issue.
+  - **Non-AR samples** (model-viewer, gltf-camera, camera-manipulator, autopilot-demo): screenshot locally on Pixel_9 AVD.
+  - **AR samples** (ar-model-viewer, ar-augmented-image, ar-point-cloud): DO NOT attempt locally on Apple Silicon.
+    Apple Silicon Macs only have the `darwin-aarch64` QEMU binary. ARCore's emulator APK is x86-only.
+    The ARM64 system images also expose the back camera as IDs `"1"`/`"10"` instead of `"0"` — ARCore hardcodes `"0"`.
+    AR emulator screenshots are captured automatically by the `ar-emulator` CI job on x86_64 Ubuntu (KVM).
+    Check CI artifacts for AR screenshots: `gh run list --workflow=ci.yml --limit 1`
 
 ## 2. Issue triage
 
