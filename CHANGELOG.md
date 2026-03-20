@@ -1,5 +1,42 @@
 # Changelog
 
+## 3.2.0 — New node types: Physics, Sky, Fog, Reflections, Lines, Labels
+
+### New SDK nodes
+- **`PhysicsNode`** — rigid body simulation; gravity, floor collision, sleep detection; physics-demo sample (tap-to-throw)
+- **`DynamicSkyNode`** — time-of-day sun light (direction, colour, intensity) driven by `timeOfDay: Float`; turbidity controls sunrise/sunset warmth
+- **`FogNode`** — reactive `View.fogOptions` wrapper (density, height falloff, colour); zero-cost when disabled
+- **`ReflectionProbeNode`** — overrides scene IBL with a baked cubemap; global or local zone mode (activates within `radius` metres)
+- **`LineNode`** / **`PathNode`** — Filament `LINES` primitive; live GPU buffer updates via `updateGeometry()`
+- **`BillboardNode`** — camera-facing quad via `onFrame` + `lookAt`
+- **`TextNode`** — extends `BillboardNode`; Canvas-rendered text bitmap; reactive `text`, `fontSize`, `textColor`, `backgroundColor`
+
+### New SceneScope DSL composables
+`PhysicsNode {}`, `DynamicSkyNode {}`, `FogNode {}`, `ReflectionProbeNode {}`, `LineNode {}`, `PathNode {}`, `BillboardNode {}`, `TextNode {}`
+
+### New samples
+| Sample | Demonstrates |
+|---|---|
+| `samples/physics-demo` | Tap-to-throw balls, floor collision, sleep |
+| `samples/post-processing` | Bloom, DoF, SSAO, Fog toggles |
+| `samples/dynamic-sky` | Time-of-day + turbidity + fog controls |
+| `samples/line-path` | 3-axis gizmo, spiral, animated sine-wave PathNode |
+| `samples/text-labels` | Camera-facing labels on 3D spheres; tap to cycle |
+| `samples/reflection-probe` | Metallic sphere with IBL override |
+
+### Sample improvements
+- `model-viewer`: animation playback controls (play/pause, next, name label)
+- `ar-model-viewer`: persistent plane mesh; gesture docs (`isEditable = true` handles pinch-scale + two-finger rotate)
+
+### Ecosystem
+- **MCP `get_node_reference` tool** — `@sceneview/mcp` server parses `llms.txt`; exposes `get_node_reference { nodeType }` and `list_node_types` for AI assistant integration
+
+### Dependencies
+- Filament 1.56.0 → **1.70.0**
+- Kotlin 2.1.21 → **2.3.20**
+
+---
+
 ## 3.1.2 — Sample polish, CI fixes, maintenance tooling
 
 ### Fixes
