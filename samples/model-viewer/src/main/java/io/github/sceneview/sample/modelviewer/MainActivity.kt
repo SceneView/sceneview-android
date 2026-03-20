@@ -10,18 +10,27 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,8 +76,12 @@ class MainActivity : ComponentActivity() {
                     val modelLoader = rememberModelLoader(engine)
                     val environmentLoader = rememberEnvironmentLoader(engine)
 
-                    var selectedIndex by remember { mutableStateOf(0) }
+                    var selectedIndex by remember { mutableIntStateOf(0) }
                     val selectedModel = models[selectedIndex]
+
+                    // Animation playback state — reset when model changes.
+                    var isPlaying by remember(selectedIndex) { mutableStateOf(true) }
+                    var animationIndex by remember(selectedIndex) { mutableIntStateOf(0) }
 
                     val centerNode = rememberNode(engine)
 
@@ -93,6 +106,18 @@ class MainActivity : ComponentActivity() {
                     )
                     val environment = rememberEnvironment(environmentLoader) {
                         environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+                    }
+
+                    // Derive animation info from the loaded instance (null while loading).
+                    val animationCount by remember(modelInstance) {
+                        derivedStateOf { modelInstance?.animator?.animationCount ?: 0 }
+                    }
+                    val currentAnimationName by remember(modelInstance, animationIndex) {
+                        derivedStateOf {
+                            modelInstance?.animator
+                                ?.takeIf { animationIndex < it.animationCount }
+                                ?.getAnimationName(animationIndex)
+                        }
                     }
 
                     Scene(
@@ -121,8 +146,63 @@ class MainActivity : ComponentActivity() {
                         modelInstance?.let { instance ->
                             ModelNode(
                                 modelInstance = instance,
-                                scaleToUnits = selectedModel.scale
+                                scaleToUnits = selectedModel.scale,
+                                // autoAnimate = false so we drive playback manually.
+                                autoAnimate = false,
+                                // Passing null stops all animations; passing the name plays it.
+                                animationName = if (isPlaying) currentAnimationName else null,
+                                animationLoop = true,
+                                animationSpeed = 1f
                             )
+                        }
+                    }
+
+                    // Animation controls — only shown when the loaded model has animations.
+                    if (animationCount > 0) {
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .navigationBarsPadding()
+                                .padding(bottom = 80.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                                    shape = MaterialTheme.shapes.extraLarge
+                                )
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // Play / Pause button
+                            FilledTonalIconButton(onClick = { isPlaying = !isPlaying }) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause
+                                    else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play"
+                                )
+                            }
+
+                            // Current animation name
+                            Text(
+                                text = currentAnimationName ?: "Animation ${animationIndex + 1}",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+
+                            // Next animation button — only shown when there are multiple animations.
+                            if (animationCount > 1) {
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        animationIndex = (animationIndex + 1) % animationCount
+                                        isPlaying = true
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipNext,
+                                        contentDescription = "Next animation"
+                                    )
+                                }
+                            }
                         }
                     }
 
