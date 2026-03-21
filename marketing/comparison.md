@@ -167,8 +167,9 @@ class UnityViewerActivity : UnityPlayerActivity() {
 ### "We already use Unity for 3D"
 
 Unity is the right choice if you're building a 3D-first game. But if you're adding 3D to an
-existing Compose app — a product viewer, an AR feature, a data visualization — Unity's 40–80 MB
-runtime, separate build pipeline, and inability to integrate with Compose make it overkill.
+existing Compose app — a product viewer, an AR feature, a data visualization — Unity's 60–350 MB
+runtime overhead, separate C# build pipeline, and inability to integrate with Compose make it
+overkill. (Developers have reported 350 MB minimum APK size for a basic Unity AR app on Android.)
 
 SceneView adds ~5 MB and works inside your existing Compose screens.
 
@@ -182,8 +183,10 @@ Compose composables.
 ### "Sceneform worked fine for us"
 
 Google archived Sceneform in 2021. The `.sfb` model format is deprecated. No Compose support.
-No new ARCore features (geospatial, streetscape, depth). SceneView was created as Sceneform's
-successor — the migration path is straightforward and documented in
+No new ARCore features (geospatial, streetscape, depth). The community fork ("Sceneform
+Maintained") has unresolved compatibility issues including 16 KB page size compliance required
+by Android 15 (API 35). SceneView was created as Sceneform's successor — the migration path
+is straightforward and documented in
 [MIGRATION.md](https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md).
 
 ### "What about Kotlin Multiplatform / iOS?"

@@ -94,8 +94,9 @@ ARScene(
 
 ### 1. It's Compose — not a wrapper around something else
 
-Other libraries give you a `SurfaceView` to embed in your layout and an imperative API to manage
-the scene graph. SceneView's scene graph **is** the Compose tree. The Compose runtime owns it.
+60% of the top 1,000 Play Store apps use Jetpack Compose. It's the standard. Other 3D libraries
+give you a `SurfaceView` to embed in your layout and an imperative API to manage the scene graph.
+SceneView's scene graph **is** the Compose tree. The Compose runtime owns it.
 
 This means:
 - `if/else` controls whether nodes exist
