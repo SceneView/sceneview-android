@@ -4,13 +4,26 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -30,6 +43,7 @@ class Activity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         setContent {
             SceneviewTheme {
@@ -93,11 +107,56 @@ class Activity : ComponentActivity() {
                                         }
                                         ExoPlayerNode(exoPlayer = exoPlayer)
                                     }
-
                                 }
                             }
                         }
                     }
+
+                    // ── Status overlay ──
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .statusBarsPadding()
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Augmented Image",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (augmentedImages.isEmpty()) "Scanning for images..."
+                            else "${augmentedImages.size} image(s) tracked",
+                            color = if (augmentedImages.isEmpty()) Color(0xFFFFA726) else Color(0xFF4CAF50),
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        if (augmentedImages.isNotEmpty()) {
+                            augmentedImages.keys.forEach { name ->
+                                Text(
+                                    text = "  $name",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // ── Bottom hint ──
+                    Text(
+                        text = "Point camera at the rabbit image or QR code",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(bottom = 16.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                    )
                 }
             }
         }
