@@ -1,5 +1,5 @@
 site_name: SceneView
-site_description: The #1 3D and AR library for Android — Jetpack Compose composables powered by Google Filament and ARCore
+site_description: 3D & AR for Kotlin — Compose-native scenes on Android, XR, and beyond. Powered by Google Filament.
 site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview-android
 repo_name: SceneView/sceneview-android
