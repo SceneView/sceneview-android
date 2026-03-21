@@ -1,4 +1,4 @@
-# Migration Guide — v2.x → v3.0
+# Migration Guide
 
 SceneView 3.0 is a ground-up rewrite around Jetpack Compose. The core concepts are the same
 (Filament engine, ARCore session, node graph), but the API is fully Compose-native. This guide
@@ -237,3 +237,53 @@ the imports continue to work. No action required.
 | Replace `isOpaque = false` | Use `surfaceType = SurfaceType.TextureSurface` |
 | Replace Fragment + XML layout | Use `ComponentActivity` + `setContent { }` |
 | Replace imperative `anchor` node wiring | Drive with `mutableStateOf<Anchor?>` |
+
+---
+
+# v3.1.x → v3.2.x
+
+## New node types (non-breaking)
+
+v3.2.0 adds 8 new node composables in `SceneScope`. No migration required — these are additive.
+
+| Node | Purpose |
+|---|---|
+| `PhysicsNode` | Rigid body simulation (gravity, floor collision, sleep) |
+| `DynamicSkyNode` | Time-of-day sun positioning and coloring |
+| `FogNode` | Atmospheric fog (density, height, color) |
+| `ReflectionProbeNode` | Local/global IBL override zones |
+| `LineNode` | Single line segment between two points |
+| `PathNode` | Polyline through ordered points |
+| `BillboardNode` | Camera-facing image quad |
+| `TextNode` | Camera-facing text label |
+
+## Dependency management change
+
+Sample apps now use the Gradle version catalog (`libs.*`) instead of hardcoded versions.
+If you copied a sample `build.gradle` as a starting point, update your dependencies:
+
+```gradle
+// Before (hardcoded)
+implementation "androidx.compose.ui:ui:1.10.5"
+implementation "androidx.compose.material3:material3:1.3.2"
+
+// After (version catalog)
+implementation libs.androidx.compose.ui
+implementation libs.androidx.compose.material3
+```
+
+Or if you're not using a version catalog, bump to the latest versions listed in
+`gradle/libs.versions.toml`.
+
+## Edge-to-edge
+
+All sample activities now call `enableEdgeToEdge()` before `setContent {}`. If you're
+building on a sample, add it to your `onCreate`:
+
+```kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    enableEdgeToEdge()
+    setContent { /* ... */ }
+}
+```
