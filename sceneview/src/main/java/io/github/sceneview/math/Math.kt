@@ -38,8 +38,5 @@ fun colorOf(color: Int) = colorOf(
     a = android.graphics.Color.alpha(color) / 255.0f
 )
 
-/**
- * If rendering in linear space, first convert the gray scaled values to linear space by rising to
- * the power 2.2
- */
-fun Color.toLinearSpace() = transform { com.google.android.filament.utils.pow(it, 2.2f) }
+// Color.toLinearSpace() is now in sceneview-core (io.github.sceneview.math.Color.kt)
+// using the precise piecewise sRGB transfer function.
