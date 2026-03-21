@@ -65,12 +65,13 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-21)
+### Current state (last updated: 2026-03-22)
 
 - **Active branch**: `claude/identify-project-focus-FU1rl`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
-- **KMP migration (Phase 5 complete)**:
+- **KMP migration (Phase 6 complete)**:
+  - **sceneview-core: 41 commonMain + 11 commonTest + 2 androidMain + 2 iosMain = 56 files**
   - **sceneview-core commonMain** now contains:
     - `collision/` (15 files) — Vector3, Quaternion, Matrix, Ray, Box, Sphere, Intersections
     - `math/` (3 files) — type aliases, transforms, comparisons, Color (sRGB↔linear, HSV, luminance)
@@ -82,6 +83,8 @@ Every Claude Code session MUST read this section first to stay in sync.
     - `environment/` (1 file) — Environment<L, S> generic data class
     - `animation/` (3 files) — Easing, lerp/slerp, PropertyAnimation (loop/ping-pong), SpringAnimator
     - `scene/` (1 file) — SceneGraph manager with hit testing, node find, frame dispatch
+    - `geometries/` (5 files) — GeometryData, Cube, Sphere, Cylinder, Plane vertex generators
+    - `utils/` (1 file) — Duration interval/fps calculations
   - kotlin-math 1.6.0 as `api` dependency
   - Removed 14 duplicate collision files + 2 triangulation files from sceneview
   - sceneview depends on sceneview-core via `api project(':sceneview-core')`
