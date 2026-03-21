@@ -18,7 +18,15 @@
 - Bridge conversion functions documented with KDoc linking to migration plan
 
 ### Samples
-- XML theme upgraded from Material Components to **Material 3** (`Theme.Material3.DayNight.NoActionBar`)
+- All 14 sample `build.gradle` files migrated to **Gradle version catalog** (`libs.*`) — no more hardcoded versions
+- `enableEdgeToEdge()` added to all 14 sample activities for modern Android layout
+- Fixed outdated media3 (1.6.1 → 1.9.2) and material3 (1.3.2 → 1.4.0) in samples
+- **`reflection-probe`** — probe on/off toggle, material picker (Chrome/Gold/Copper/Rough), roughness slider, companion spheres, dark floor
+- **`line-path`** — amplitude/frequency sliders, Lissajous curve pattern, pattern selector chips
+- **`physics-demo`** — colored balls (6 colors), ball counter, bounciness slider, styled floor
+- **`text-labels`** — 5 planets with real names/sizes, 3-mode label cycling (Name → Size → Both), tap counter
+- **`README.md`** — added v3.2.0 nodes to DSL table, 6 new samples, Physics/Sky/Fog/TextNode code examples
+- **`MIGRATION.md`** — added v3.1→v3.2 migration notes
 
 ---
 
