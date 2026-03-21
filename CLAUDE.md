@@ -74,17 +74,19 @@ Every Claude Code session MUST read this section first to stay in sync.
   ARScene session lifecycle callbacks
 - **Demo app** (`samples/sceneview-demo/`): **Play Store ready**
   - **4-tab architecture**: Explore, Showcase, Gallery, QA
-  - **Explore tab**: Full-screen 3D viewer with orbit camera, HDR environment, model picker
-    - Models: ToyCar, SheenChair, IridescenceLamp + 5 Sketchfab models (sedan, cat, phoenix, etc.)
-    - Auto-rotating camera with infinite transition
-    - Gradient overlays, model picker chips
-  - **Showcase tab**: Live 3D previews in cards (geometry + model nodes render in real-time)
-    - Code snippets still visible below previews
-    - Category filtering with M3 FilterChips
-  - **Gallery tab**: LazyColumn stress-test with 13 live 3D scenes (models + geometry)
-  - **QA tab**: Spring-animated progress bar, reset button, scale animation on cards
-  - **Material 3 Expressive**: `MaterialExpressiveTheme` + `MotionScheme.expressive()` + dynamic color
-  - **Assets**: 11 GLB models (Khronos + Sketchfab), studio_2k.hdr (Poly Haven)
+  - **Explore tab**: Full-screen 3D viewer with orbit camera, environment + model picker chips
+    - 8 models: ToyCar, SheenChair, IridescenceLamp (Khronos), GeishaMask, SpaceHelmet,
+      SealStatuette, RobotMantis, KawaiiMeka (Sketchfab)
+    - 6-environment HDR switcher: Night / Studio / Warm / Sunset / Outdoor / Autumn
+    - Auto-rotating camera, gradient overlays
+  - **Showcase tab**: Live 3D previews per node type, category filter chips, code snippets
+  - **Gallery tab**: 14 cards — 6 realistic models + 5 animated + 3 procedural geometry,
+    each card uses a curated HDR environment matching its mood
+  - **QA tab**: Stress-test scenes, spring animations
+  - **Material 3 Expressive**: `MaterialExpressiveTheme` + dynamic color
+  - **Models** (11 GLB): 3 Khronos PBR demos + 3 realistic Sketchfab + 5 animated Sketchfab
+  - **Environments** (6 HDR): rooftop_night, studio, studio_warm, outdoor_cloudy, sunset, autumn_field
+  - **Build**: `assembleDebug` ✓ · `lint` ✓ · `bundleRelease` ✓
   - **Play Store**: Metadata EN+FR, feature graphic, icon 512px, 4 screenshot mockups, release notes
   - **App icon**: Adaptive icon — isometric 3D cube on M3 purple background
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
@@ -110,3 +112,47 @@ After completing significant work, update the "Current state" block above with:
 2. A brief summary of what changed
 3. Any new decisions or design choices made
 4. Update the date
+
+---
+
+## KMP Roadmap (Kotlin Multiplatform → iOS)
+
+### Current KMP state
+
+`sceneview-core/` already targets `android`, `iosArm64`, `iosSimulatorArm64`, `iosX64` with:
+- Collision system, triangulation (Earcut/Delaunay), logging abstraction, math utilities in `commonMain`
+
+`sceneview/` and `arsceneview/` are Android-only (99 + 29 Kotlin files respectively).
+
+### Code shareability analysis
+
+| Category | % of code | Action |
+|---|---|---|
+| Pure logic (math, geometry, animations, data classes) | ~25% | Move to `sceneview-core/commonMain` |
+| Filament JNI wrappers (managers, loaders, nodes) | ~40% | `androidMain` + `expect/actual` bridge for iOS |
+| Android framework (SurfaceView, MotionEvent, Context, ARCore) | ~35% | Stay in `androidMain`; needs iOS equivalents |
+
+### Key blockers
+
+1. **Filament iOS bindings** — No official Kotlin/Native artifacts. Requires Swift interop via `cinterop`.
+2. **Compose Multiplatform iOS** — Still in beta; iOS UI layer may need native SwiftUI fallback.
+3. **ARKit vs ARCore parity** — Cloud anchors and some ARCore features have no ARKit equivalent.
+
+### Phased plan
+
+| Phase | Scope | Complexity |
+|---|---|---|
+| 1 — Core restructure | Move math/geometry/animation to `sceneview-core/commonMain`; add `expect/actual FilamentBridge` | Medium |
+| 2 — iOS surface | Filament Metal backend via Swift → Kotlin/Native `cinterop`; gesture bridges | High |
+| 3 — iOS AR (ARKit) | ARKit→ARCore API mapping for planes, image tracking, face tracking | Very High |
+| 4 — Gesture system | `expect/actual GestureBridge`; iOS: `UIGestureRecognizer` | Low |
+| 5 — Resource abstraction | `expect/actual ResourceLoader`; iOS: bundle API; migrate to Fuel KMP | Low |
+| 6 — Test & stabilize | iOS sample, CI/CD, device perf profiling | Medium |
+
+**Estimated total effort:** 12–18 weeks · ~2,500–3,500 new LoC
+**Estimated code reuse after KMP:** ~40% of `sceneview` shared between Android and iOS
+
+### MVP target
+
+- Phase 1–2 complete → basic iOS 3D rendering (no AR), ship as `sceneview:4.0.0-ios-alpha`
+- Phase 3–4 complete → ARKit integration, ship as `arsceneview:4.0.0-ios-beta`
