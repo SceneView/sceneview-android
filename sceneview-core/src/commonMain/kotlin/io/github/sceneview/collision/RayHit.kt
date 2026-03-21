@@ -1,5 +1,7 @@
 package io.github.sceneview.collision
 
+import dev.romainguy.kotlin.math.Float3
+
 /**
  * Stores the results of ray intersection tests against various types of CollisionShape.
  */
@@ -29,6 +31,13 @@ open class RayHit {
      * @return a new vector that represents the position in world-space that the hit occurred at
      */
     fun getPoint(): Vector3 = Vector3(point)
+
+    /**
+     * Get the position in world-space where the ray hit the collision shape.
+     *
+     * @return a new Float3 that represents the position in world-space that the hit occurred at
+     */
+    fun getWorldPosition(): Float3 = getPoint().let { Float3(it.x, it.y, it.z) }
 
     fun set(other: RayHit) {
         Preconditions.checkNotNull(other, "Parameter \"other\" was null.")

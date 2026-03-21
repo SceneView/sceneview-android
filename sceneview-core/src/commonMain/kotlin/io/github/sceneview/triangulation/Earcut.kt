@@ -1,5 +1,6 @@
 package io.github.sceneview.triangulation
 
+import dev.romainguy.kotlin.math.Float2
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -41,6 +42,11 @@ object Earcut {
     fun triangulate(input: Input): List<Int> {
         return triangulate(input.vertices, input.holeIndices, input.dimensions)
     }
+
+    fun triangulate(path: List<Float2>, holeIndices: List<Int> = listOf()) = triangulate(
+        path.flatMap { listOf(it.x.toDouble(), it.y.toDouble()) }.toDoubleArray(),
+        holeIndices.toIntArray()
+    )
 
     /**
      * Triangulate a polygon with 3d coordinates with optional hole
