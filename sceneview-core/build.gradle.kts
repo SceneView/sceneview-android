@@ -11,32 +11,16 @@ kotlin {
     iosSimulatorArm64()
     iosX64()
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                implementation("org.jetbrains.kotlin:kotlin-stdlib")
-                api("dev.romainguy:kotlin-math:1.6.0")
-            }
+        commonMain.dependencies {
+            implementation("org.jetbrains.kotlin:kotlin-stdlib")
+            api("dev.romainguy:kotlin-math:1.6.0")
         }
 
-        val commonTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
-
-        val androidMain by getting
-
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosX64Main by getting
-
-        // Shared iOS source set
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
-            iosX64Main.dependsOn(this)
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }
