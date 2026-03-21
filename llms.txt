@@ -657,6 +657,11 @@ generateCube(size: Float3 = Float3(1f), center: Float3 = Float3(0f)): GeometryDa
 generateSphere(radius: Float = 1f, center: Float3 = Float3(0f), stacks: Int = 24, slices: Int = 24): GeometryData
 generateCylinder(radius: Float = 1f, height: Float = 2f, center: Float3 = Float3(0f), sideCount: Int = 24): GeometryData
 generatePlane(size: Float2 = Float2(1f), center: Float3 = Float3(0f), normal: Float3 = Float3(y = 1f)): GeometryData
+generateLine(start: Float3 = Float3(0f), end: Float3 = Float3(x = 1f)): GeometryData
+generatePath(points: List<Float3>, closed: Boolean = false): GeometryData  // requires >= 2 points
+generateShape(polygonPath: List<Float2>, polygonHoles: List<Int> = emptyList(),
+    delaunayPoints: List<Float2> = emptyList(), normal: Float3 = Float3(z = 1f),
+    uvScale: Float2 = Float2(1f), color: Float4? = null): GeometryData
 ```
 
 **Vertex** (`io.github.sceneview.rendering`):
@@ -673,6 +678,33 @@ data class Vertex(
 ```kotlin
 data class BoundingBox(val center: Position, val halfExtent: Size)
 fun GeometryData.boundingBox(): BoundingBox
+```
+
+### Animation time utilities
+
+`io.github.sceneview.animation` — pure functions for animation time conversion:
+```kotlin
+frameToTime(frame: Int, frameRate: Int): Float
+timeToFrame(time: Float, frameRate: Int): Int
+fractionToTime(fraction: Float, duration: Float): Float
+timeToFraction(time: Float, duration: Float): Float
+secondsToMillis(seconds: Float): Long
+millisToSeconds(millis: Long): Float
+frameCount(durationSeconds: Float, frameRate: Int): Int
+```
+
+### Camera projection math
+
+`io.github.sceneview.math` — pure projection utilities (no renderer dependency):
+```kotlin
+// View-space ↔ world-space conversions (takes matrices, works with any renderer)
+fun viewToWorld(viewPosition: Float2, z: Float, projectionMatrix: Mat4, viewMatrix: Mat4): Position
+fun worldToView(worldPosition: Position, projectionMatrix: Mat4, viewMatrix: Mat4): Float2
+fun viewToRay(viewPosition: Float2, projectionMatrix: Mat4, viewMatrix: Mat4): Ray
+
+// Exposure calculations
+fun exposureEV100(aperture: Float, shutterSpeed: Float, sensitivity: Float): Float
+fun exposureFactor(ev100: Float): Float
 ```
 
 ### SceneNode interface & SceneGraph
