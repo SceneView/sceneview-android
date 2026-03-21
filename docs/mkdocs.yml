@@ -1,5 +1,5 @@
 site_name: SceneView
-site_description: 3D and AR for Jetpack Compose, powered by Google Filament and ARCore
+site_description: 3D & AR for Kotlin — Compose-native scenes on Android, XR, and beyond. Powered by Google Filament.
 site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview-android
 repo_name: SceneView/sceneview-android
@@ -23,6 +23,8 @@ theme:
   font:
     text: Roboto
     code: JetBrains Mono
+  icon:
+    logo: material/cube-outline
   features:
     - navigation.tabs
     - navigation.tabs.sticky
@@ -34,24 +36,39 @@ theme:
     - search.highlight
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
     - toc.follow
 
 nav:
   - Home: index.md
-  - Showcase: showcase.md
+  - Get Started:
+    - Quickstart: quickstart.md
+    - API Cheatsheet: cheatsheet.md
+    - Recipes: recipes.md
+    - FAQ: faq.md
+    - Troubleshooting: troubleshooting.md
+  - Guides:
+    - Architecture: architecture.md
+    - Integrations: integrations.md
+    - Performance: performance.md
+    - Testing: testing.md
+  - Features:
+    - Why SceneView: showcase.md
+    - Use Cases: use-cases.md
+    - AI-Assisted Development: ai-development.md
+    - vs. Alternatives: comparison.md
+    - v4.0 Preview: v4-preview.md
   - Codelabs:
     - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md
     - AR with Compose: codelabs/codelab-ar-compose.md
-    - "Guide: Physics": codelabs/guide-physics.md
-    - "Guide: Dynamic sky & fog": codelabs/guide-dynamic-sky.md
-    - "Guide: Reflection probes": codelabs/guide-reflection-probes.md
-    - "Guide: Lines & text": codelabs/guide-lines-text.md
-  - Migration guide: migration.md
-  - Changelog: changelog.md
-  - API reference:
+  - API:
     - API (3D — sceneview): https://sceneview.github.io/api/sceneview-android/sceneview/
     - API (AR — arsceneview): https://sceneview.github.io/api/sceneview-android/arsceneview/
+  - Samples: samples.md
+  - Contribute: contributing.md
+  - Changelog: changelog.md
+  - Migration: migration.md
 
 plugins:
   - search
@@ -76,6 +93,9 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 extra:
   social:
@@ -83,9 +103,9 @@ extra:
       link: https://github.com/SceneView/sceneview-android
     - icon: fontawesome/brands/discord
       link: https://discord.gg/UbNDDBTNqb
-  # analytics:
-  #   provider: google
-  #   property: G-XXXXXXXXXX  # TODO: replace with real property ID
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
 
 extra_css:
   - stylesheets/extra.css
