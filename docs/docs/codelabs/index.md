@@ -2,6 +2,8 @@
 
 Step-by-step guides for building 3D and AR apps with SceneView and Jetpack Compose.
 
+## Getting started
+
 <div class="grid cards" markdown>
 
 -   :octicons-package-24: **3D with Compose**
@@ -23,5 +25,51 @@ Step-by-step guides for building 3D and AR apps with SceneView and Jetpack Compo
     **~20 minutes · Beginner**
 
     [:octicons-arrow-right-24: Start](codelab-ar-compose.md)
+
+</div>
+
+## Advanced guides
+
+<div class="grid cards" markdown>
+
+-   :material-soccer: **Physics simulation**
+
+    ---
+
+    Bouncing spheres with gravity, floor collisions, and configurable restitution.
+
+    **~15 minutes · Intermediate**
+
+    [:octicons-arrow-right-24: Start](guide-physics.md)
+
+-   :material-weather-sunset: **Dynamic sky & fog**
+
+    ---
+
+    Time-of-day sun cycle with atmospheric fog for moody outdoor scenes.
+
+    **~15 minutes · Intermediate**
+
+    [:octicons-arrow-right-24: Start](guide-dynamic-sky.md)
+
+-   :material-mirror: **Reflection probes**
+
+    ---
+
+    Zone-based IBL overrides for realistic metallic and glossy materials.
+
+    **~15 minutes · Intermediate**
+
+    [:octicons-arrow-right-24: Start](guide-reflection-probes.md)
+
+-   :material-vector-line: **Lines, paths & text**
+
+    ---
+
+    3D line drawings, polylines, and camera-facing text labels for annotation.
+
+    **~15 minutes · Intermediate**
+
+    [:octicons-arrow-right-24: Start](guide-lines-text.md)
 
 </div>
