@@ -1,20 +1,33 @@
 SceneView Demo est l'application compagnon officielle du SDK SceneView Android — le moyen le plus simple d'ajouter la 3D et la Réalité Augmentée à vos apps Android avec Jetpack Compose.
 
+🌐 MODE EXPLORATION
+Plongez dans un rendu 3D temps réel époustouflant avec des modèles interactifs :
+• Orbite, pincement pour zoomer, double-tap pour interagir
+• Éclairage HDR pour des matériaux PBR photoréalistes
+• Modèles animés avec rendu physique
+• Basculez entre plusieurs modèles de démonstration
+
 🎯 MODE VITRINE
 Parcourez tous les types de nodes disponibles dans SceneView : CubeNode, SphereNode, ModelNode, LightNode, TextNode, BillboardNode, et bien d'autres. Chaque entrée comprend :
-• Une description de la fonctionnalité du node
-• Des extraits de code Compose prêts à l'emploi
+• Aperçus 3D en temps réel
+• Des extraits de code Jetpack Compose prêts à l'emploi
 • Filtrage par catégorie (Géométrie, Modèle, Lumière, Caméra, Contenu, AR)
 
 🧪 MODE QA
 Exécutez des tests de régression visuelle pour valider le rendu de chaque node :
 • Bouton « Tout exécuter » pour lancer la suite complète
 • Exécution individuelle pour une validation ciblée
-• Statut Réussi/Échoué avec indicateurs visuels
+• Animations physiques de type ressort pour les résultats
 • Couvre géométrie, chargement de modèles, éclairage, caméra, contenu et tests système
 
+✨ DESIGN MATERIAL 3 EXPRESSIF
+Construit avec les derniers composants Material 3 Expressif :
+• Thème dynamique avec couleurs système (Android 12+)
+• Animations physiques à base de ressorts partout
+• Formes arrondies et mouvement expressif
+
 📦 TOUJOURS À JOUR
-Bouton de mise à jour intégré pour toujours utiliser la dernière version, alignée avec la dernière release du SDK SceneView.
+Support de mise à jour intégré pour rester sur la dernière version.
 
 SceneView Demo est open source et fait partie du projet SceneView :
 https://github.com/SceneView/sceneview

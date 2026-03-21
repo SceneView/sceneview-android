@@ -6,7 +6,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -28,15 +28,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import io.github.sceneview.demo.explore.ExploreScreen
 import io.github.sceneview.demo.showcase.ShowcaseScreen
 import io.github.sceneview.demo.qa.QAScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
@@ -65,15 +66,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-sealed class Screen(val route: String, val label: String) {
-    data object Showcase : Screen("showcase", "Showcase")
-    data object QA : Screen("qa", "QA Tests")
+sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
+    data object Explore : Screen("explore", "Explore", Icons.Default.Explore)
+    data object Showcase : Screen("showcase", "Showcase", Icons.Default.ViewInAr)
+    data object QA : Screen("qa", "QA Tests", Icons.Default.BugReport)
 }
 
 @Composable
 fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Showcase, Screen.QA)
+    val screens = listOf(Screen.Explore, Screen.Showcase, Screen.QA)
 
     Scaffold(
         bottomBar = {
@@ -93,10 +95,7 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
                     NavigationBarItem(
                         icon = {
                             Icon(
-                                imageVector = when (screen) {
-                                    Screen.Showcase -> Icons.Default.ViewInAr
-                                    Screen.QA -> Icons.Default.BugReport
-                                },
+                                imageVector = screen.icon,
                                 contentDescription = screen.label,
                                 modifier = Modifier.scale(scale)
                             )
@@ -126,13 +125,16 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Showcase.route,
+            startDestination = Screen.Explore.route,
             modifier = Modifier.padding(innerPadding),
             enterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
             exitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) },
             popEnterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
             popExitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) }
         ) {
+            composable(Screen.Explore.route) {
+                ExploreScreen()
+            }
             composable(Screen.Showcase.route) {
                 ShowcaseScreen(updateManager = updateManager)
             }

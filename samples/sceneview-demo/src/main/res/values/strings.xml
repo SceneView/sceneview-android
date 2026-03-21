@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SceneView Demo</string>
+    <string name="tab_explore">Explore</string>
     <string name="tab_showcase">Showcase</string>
     <string name="tab_qa">QA Tests</string>
     <string name="update_available">Update available</string>
