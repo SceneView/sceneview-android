@@ -22,13 +22,13 @@ android {
             // Populated from environment variables or local.properties
             def keystoreFile = System.getenv("SCENEVIEW_DEMO_KEYSTORE_FILE")
             def keystorePass = System.getenv("SCENEVIEW_DEMO_KEYSTORE_PASSWORD")
-            def keyAlias = System.getenv("SCENEVIEW_DEMO_KEY_ALIAS")
+            def ksAlias = System.getenv("SCENEVIEW_DEMO_KEY_ALIAS")
             def keyPass = System.getenv("SCENEVIEW_DEMO_KEY_PASSWORD")
 
             if (keystoreFile != null) {
                 storeFile file(keystoreFile)
                 storePassword keystorePass
-                keyAlias keyAlias
+                keyAlias ksAlias
                 keyPassword keyPass
             }
         }
