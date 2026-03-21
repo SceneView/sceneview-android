@@ -11,7 +11,7 @@ import java.util.function.BiConsumer
 import java.util.function.Consumer
 import java.util.function.Supplier
 
-// TODO: Completely move to Kotlin
+// Legacy collision system — scheduled for Kotlin-Math migration in 3.3.0 (see ROADMAP.md)
 class CollisionSystem(var view: View) {
 
     private val colliders = mutableListOf<Collider>()
