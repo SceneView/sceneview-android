@@ -4,19 +4,27 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 3D cube icon representing SceneView -->
+    <!-- 3D isometric cube — SceneView logo -->
+    <!-- Shadow -->
+    <path
+        android:fillColor="#20000000"
+        android:pathData="M54,80 L76,67 L76,66 L54,79 L32,66 L32,67 Z"/>
+    <!-- Top face — brightest -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,28 L74,40 L74,64 L54,76 L34,64 L34,40 Z"
+        android:pathData="M54,26 L76,39 L54,52 L32,39 Z"/>
+    <!-- Right face — medium -->
+    <path
+        android:fillColor="#D4C4F0"
+        android:pathData="M54,52 L76,39 L76,65 L54,78 Z"/>
+    <!-- Left face — darkest -->
+    <path
+        android:fillColor="#B0A0D0"
+        android:pathData="M54,52 L32,39 L32,65 L54,78 Z"/>
+    <!-- Top face edge highlight -->
+    <path
+        android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="0"/>
-    <path
-        android:fillColor="#E0D0FF"
-        android:pathData="M54,28 L74,40 L74,64 L54,52 Z"/>
-    <path
-        android:fillColor="#C0B0E0"
-        android:pathData="M54,28 L34,40 L34,64 L54,52 Z"/>
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M34,64 L54,76 L74,64 L54,52 Z"/>
+        android:strokeWidth="0.5"
+        android:pathData="M54,26 L76,39 L54,52 L32,39 Z"/>
 </vector>
