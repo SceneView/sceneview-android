@@ -117,6 +117,41 @@ Your existing 3D/AR skills and code patterns transfer directly to spatial comput
 
 - **Filament 2.x migration** — improved performance, better materials, reduced memory
 - **Kotlin Multiplatform proof of concept** — iOS via Filament's Metal backend (experimental)
+- **`ParticleNode`** — GPU particle system for fire, smoke, sparkles, confetti
+- **`AnimationController`** — composable-level animation blending, cross-fading, and layering
+- **`CollisionNode`** — declarative collision detection between scene nodes
+
+---
+
+## Who should care about 4.0
+
+<div class="grid cards" markdown>
+
+-   :material-shopping: **E-commerce teams**
+
+    ---
+
+    Multi-scene lets you embed 3D product viewers in `LazyColumn` feeds, `BottomSheet` configurators, and `Pager` carousels — all on one screen, all with independent cameras.
+
+-   :material-office-building: **Real estate / architecture**
+
+    ---
+
+    `PortalNode` lets users peek through doors into furnished rooms, walk through 3D floor plans, and compare lighting conditions — all without loading separate screens.
+
+-   :material-head-snowflake: **XR teams**
+
+    ---
+
+    `SceneView-XR` means the same code and patterns you build for phone AR transfer directly to Android XR headsets. No new framework to learn.
+
+-   :material-cellphone-link: **Cross-platform teams**
+
+    ---
+
+    KMP proof of concept means you can start sharing scene definitions between Android and iOS. One Kotlin codebase, two platforms.
+
+</div>
 
 ---
 
