@@ -72,11 +72,16 @@ private sealed class GalleryItemType {
 private enum class GeometryShape { CUBE, SPHERE, CYLINDER }
 
 private val galleryItems = listOf(
-    // Models — these will be updated when Sketchfab assets are downloaded
+    // Realistic models
     GalleryItem(
         "Toy Car",
         "Clearcoat automotive paint",
         GalleryItemType.Model("models/toy_car.glb", 0.8f)
+    ),
+    GalleryItem(
+        "Sedan Car",
+        "Photogrammetry car scan",
+        GalleryItemType.Model("models/sedan_car_scan.glb", 0.7f)
     ),
     GalleryItem(
         "Sheen Chair",
@@ -87,6 +92,37 @@ private val galleryItems = listOf(
         "Iridescence Lamp",
         "Glass sphere with iridescence",
         GalleryItemType.Model("models/iridescence_lamp.glb", 0.5f)
+    ),
+    GalleryItem(
+        "Sleeping Cat",
+        "Photogrammetry 3D scan",
+        GalleryItemType.Model("models/sleeping_cat.glb", 0.6f)
+    ),
+    // Animated models
+    GalleryItem(
+        "Phoenix Bird",
+        "Animated fantasy creature",
+        GalleryItemType.Model("models/animated_phoenix_bird.glb", 0.7f)
+    ),
+    GalleryItem(
+        "Robot Mantis",
+        "Animated mechanical insect",
+        GalleryItemType.Model("models/animated_robot_mantis.glb", 0.7f)
+    ),
+    GalleryItem(
+        "Dancing Giant",
+        "Low-poly character animation",
+        GalleryItemType.Model("models/animated_dancing_giant.glb", 0.8f)
+    ),
+    GalleryItem(
+        "Cat Walk",
+        "Animated cat walking cycle",
+        GalleryItemType.Model("models/animated_cat_walk.glb", 0.6f)
+    ),
+    GalleryItem(
+        "Angel Wings",
+        "Animated wing flapping",
+        GalleryItemType.Model("models/animated_angel_wings.glb", 0.7f)
     ),
     // Procedural geometry
     GalleryItem(
@@ -104,21 +140,6 @@ private val galleryItems = listOf(
         "Procedural cylinder geometry",
         GalleryItemType.Geometry(GeometryShape.CYLINDER, Color(0xFF34A853))
     ),
-    GalleryItem(
-        "Purple Cube",
-        "Material 3 primary color",
-        GalleryItemType.Geometry(GeometryShape.CUBE, Color(0xFF9C27B0))
-    ),
-    GalleryItem(
-        "Orange Sphere",
-        "Warm accent geometry",
-        GalleryItemType.Geometry(GeometryShape.SPHERE, Color(0xFFFF9800))
-    ),
-    GalleryItem(
-        "Teal Cylinder",
-        "Cool accent geometry",
-        GalleryItemType.Geometry(GeometryShape.CYLINDER, Color(0xFF009688))
-    ),
 )
 
 @Composable
@@ -133,7 +154,7 @@ fun GalleryScreen() {
                     Column {
                         Text("Gallery")
                         Text(
-                            "${galleryItems.size} live 3D scenes in a scrollable list",
+                            "${galleryItems.size} live 3D scenes · models, animations & geometry",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

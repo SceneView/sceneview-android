@@ -73,6 +73,11 @@ private val exploreModels = listOf(
     ExploreModel("Toy Car", "models/toy_car.glb", 0.8f, 3.0f),
     ExploreModel("Chair", "models/sheen_chair.glb", 0.6f, 3.5f),
     ExploreModel("Lamp", "models/iridescence_lamp.glb", 0.5f, 3.0f),
+    ExploreModel("Sedan Car", "models/sedan_car_scan.glb", 0.7f, 3.5f),
+    ExploreModel("Sleeping Cat", "models/sleeping_cat.glb", 0.6f, 2.5f),
+    ExploreModel("Phoenix Bird", "models/animated_phoenix_bird.glb", 0.7f, 3.0f),
+    ExploreModel("Robot Mantis", "models/animated_robot_mantis.glb", 0.7f, 3.5f),
+    ExploreModel("Dancing Giant", "models/animated_dancing_giant.glb", 0.8f, 3.5f),
 )
 
 @Composable
