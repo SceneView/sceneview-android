@@ -24,7 +24,15 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Build
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log || (tail -200 build-output.log > build-error.log && exit 1)
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-error-log
+          path: build-error.log
+          if-no-files-found: ignore
 
       - name: Build samples
         run: |
