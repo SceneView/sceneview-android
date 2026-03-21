@@ -69,7 +69,7 @@ fun Pose.distanceToPlane(cameraPose: Pose): Float {
     val position = this.position
     val cameraPosition = cameraPose.position
     // Compute dot product of plane's normal with vector from camera to plane center.
-    // TODO:Use Kotlin math distance?
+    // Signed distance from camera to plane along the plane normal
     return dot((cameraPosition - position), normal)
 //    return (cameraPosition.x - this.tx()) * normal[0] +
 //            (cameraPosition.y - this.ty()) * normal[1] +

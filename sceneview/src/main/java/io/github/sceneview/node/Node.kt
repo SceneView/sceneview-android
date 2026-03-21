@@ -1017,7 +1017,7 @@ open class Node(
         }
     }
 
-    // TODO : Remove this to full Kotlin Math
+    // Bridge for legacy collision system; returns world transform as a collision Matrix.
     override fun getTransformationMatrix(): Matrix {
         return worldTransform.toMatrix()
     }

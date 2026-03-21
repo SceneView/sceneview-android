@@ -204,7 +204,6 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         replaceWith = ReplaceWith(expression = "view.worldToScreen(point)")
     )
     fun worldToScreenPoint(point: Vector3): Vector3 {
-        // TODO : Move to Kotlin-Math
         val m = Matrix()
         Matrix.multiply(projectionTransform.toMatrix(), viewTransform.toMatrix(), m)
         val x = point.x

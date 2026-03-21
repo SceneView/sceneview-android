@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" width="1200" height="500">
+  <defs>
+    <linearGradient id="hero-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0015"/>
+      <stop offset="30%" stop-color="#1a0a30"/>
+      <stop offset="70%" stop-color="#0f1a3a"/>
+      <stop offset="100%" stop-color="#050a1a"/>
+    </linearGradient>
+    <linearGradient id="hero-accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6c35aa"/>
+      <stop offset="50%" stop-color="#e040fb"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+    <linearGradient id="code-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1e2e"/>
+      <stop offset="100%" stop-color="#11111b"/>
+    </linearGradient>
+    <filter id="hero-glow">
+      <feGaussianBlur stdDeviation="20" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft-glow">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="500" fill="url(#hero-bg)"/>
+
+  <!-- Subtle grid -->
+  <g opacity="0.04" stroke="white" stroke-width="0.5">
+    <line x1="0" y1="100" x2="1200" y2="100"/><line x1="0" y1="200" x2="1200" y2="200"/>
+    <line x1="0" y1="300" x2="1200" y2="300"/><line x1="0" y1="400" x2="1200" y2="400"/>
+    <line x1="200" y1="0" x2="200" y2="500"/><line x1="400" y1="0" x2="400" y2="500"/>
+    <line x1="600" y1="0" x2="600" y2="500"/><line x1="800" y1="0" x2="800" y2="500"/>
+    <line x1="1000" y1="0" x2="1000" y2="500"/>
+  </g>
+
+  <!-- Floating 3D objects - left side -->
+  <g transform="translate(150,250)">
+    <!-- Orbiting particles -->
+    <circle cx="0" cy="0" r="120" fill="none" stroke="#6c35aa" stroke-width="0.5" opacity="0.3" stroke-dasharray="4,8"/>
+    <circle cx="0" cy="0" r="80" fill="none" stroke="#e040fb" stroke-width="0.5" opacity="0.2" stroke-dasharray="3,6"/>
+
+    <!-- Central 3D cube (wireframe) -->
+    <g opacity="0.8" stroke="url(#hero-accent)" stroke-width="1.5" fill="none">
+      <!-- Front face -->
+      <polygon points="-35,-35 35,-35 35,35 -35,35"/>
+      <!-- Back face (offset) -->
+      <polygon points="-20,-50 50,-50 50,20 -20,20" opacity="0.4"/>
+      <!-- Connecting edges -->
+      <line x1="-35" y1="-35" x2="-20" y2="-50" opacity="0.5"/>
+      <line x1="35" y1="-35" x2="50" y2="-50" opacity="0.5"/>
+      <line x1="35" y1="35" x2="50" y2="20" opacity="0.5"/>
+      <line x1="-35" y1="35" x2="-20" y2="20" opacity="0.5"/>
+    </g>
+
+    <!-- Floating spheres -->
+    <circle cx="90" cy="-60" r="12" fill="#6c35aa" opacity="0.6" filter="url(#hero-glow)">
+      <animate attributeName="cy" values="-60;-70;-60" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="-80" cy="50" r="8" fill="#e040fb" opacity="0.5" filter="url(#hero-glow)">
+      <animate attributeName="cy" values="50;40;50" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="60" cy="80" r="6" fill="#00E5FF" opacity="0.4" filter="url(#hero-glow)">
+      <animate attributeName="cy" values="80;70;80" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="-100" cy="-30" r="4" fill="#FFD54F" opacity="0.4">
+      <animate attributeName="cy" values="-30;-40;-30" dur="3.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Right side - Code editor mockup -->
+  <g transform="translate(700,60)">
+    <rect width="420" height="380" rx="12" fill="url(#code-bg)" opacity="0.9" stroke="rgba(108,53,170,0.3)" stroke-width="1"/>
+
+    <!-- Title bar -->
+    <rect width="420" height="36" rx="12" fill="rgba(0,0,0,0.3)"/>
+    <rect y="24" width="420" height="12" fill="rgba(0,0,0,0.3)"/>
+    <circle cx="20" cy="18" r="5" fill="#ff5f56"/>
+    <circle cx="38" cy="18" r="5" fill="#ffbd2e"/>
+    <circle cx="56" cy="18" r="5" fill="#27c93f"/>
+    <text x="210" y="23" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-family="JetBrains Mono, monospace" font-size="11">ModelViewerScreen.kt</text>
+
+    <!-- Code content -->
+    <g transform="translate(20,56)" font-family="JetBrains Mono, monospace" font-size="13">
+      <text y="0" fill="#c792ea">@Composable</text>
+      <text y="22" fill="#82aaff">fun <tspan fill="#eeffff">ModelViewerScreen</tspan><tspan fill="#89ddff">() {</tspan></text>
+      <text y="52" fill="#676e95">  // 3D scene — same pattern as Column { }</text>
+      <text y="74" fill="#82aaff">  Scene<tspan fill="#89ddff">(</tspan></text>
+      <text y="96" fill="#eeffff">    modifier <tspan fill="#89ddff">=</tspan> Modifier<tspan fill="#89ddff">.</tspan><tspan fill="#82aaff">fillMaxSize</tspan><tspan fill="#89ddff">()</tspan></text>
+      <text y="118" fill="#89ddff">  ) {</text>
+      <text y="148" fill="#676e95">    // Model loads async — null until ready</text>
+      <text y="170" fill="#eeffff">    <tspan fill="#82aaff">rememberModelInstance</tspan><tspan fill="#89ddff">(</tspan></text>
+      <text y="192" fill="#eeffff">      modelLoader<tspan fill="#89ddff">,</tspan> <tspan fill="#c3e88d">"models/helmet.glb"</tspan></text>
+      <text y="214" fill="#89ddff">    )?.</tspan><text x="30" y="214" fill="#82aaff">let</text><text x="55" y="214" fill="#89ddff"> { instance -></text>
+      <text y="244" fill="#eeffff">      <tspan fill="#ffcb6b">ModelNode</tspan><tspan fill="#89ddff">(</tspan></text>
+      <text y="266" fill="#eeffff">        modelInstance <tspan fill="#89ddff">=</tspan> instance<tspan fill="#89ddff">,</tspan></text>
+      <text y="288" fill="#eeffff">        scaleToUnits <tspan fill="#89ddff">=</tspan> <tspan fill="#f78c6c">1.0f</tspan></text>
+      <text y="310" fill="#89ddff">      )</text>
+    </g>
+  </g>
+
+  <!-- Center text -->
+  <g transform="translate(420,180)">
+    <text x="0" y="0" fill="white" font-family="system-ui" font-size="18" font-weight="300" letter-spacing="6" opacity="0.5">SCENEVIEW</text>
+    <text x="0" y="50" fill="white" font-family="system-ui" font-size="42" font-weight="700">3D is just</text>
+    <text x="0" y="100" font-family="system-ui" font-size="42" font-weight="700" fill="url(#hero-accent)">Compose UI.</text>
+    <text x="0" y="145" fill="rgba(255,255,255,0.5)" font-family="system-ui" font-size="16" font-weight="300">Filament + ARCore + Jetpack Compose</text>
+  </g>
+
+  <!-- Bottom gradient line -->
+  <rect x="0" y="496" width="1200" height="4" fill="url(#hero-accent)" opacity="0.6"/>
+
+  <!-- Floating particles across -->
+  <circle cx="500" cy="80" r="2" fill="#6c35aa" opacity="0.3">
+    <animate attributeName="cy" values="80;60;80" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="900" cy="420" r="3" fill="#e040fb" opacity="0.2">
+    <animate attributeName="cy" values="420;400;420" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="350" cy="450" r="2" fill="#00E5FF" opacity="0.25">
+    <animate attributeName="cy" values="450;430;450" dur="3.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>

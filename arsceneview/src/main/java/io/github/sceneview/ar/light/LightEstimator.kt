@@ -295,7 +295,6 @@ class LightEstimator(
                 0.078848f, -0.273137f, 0.136569f
             ).let {
                 it.mapIndexed { index, value ->
-                    // TODO : Check if we still got to swap those indexes
                     // SH coefficients are not in the same order in Filament and Environmental HDR.
                     // SH coefficients at indices 6 and 7 are swapped between the two
                     // implementations.

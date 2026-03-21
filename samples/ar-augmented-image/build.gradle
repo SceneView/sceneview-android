@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId "io.github.sceneview.sample.araugmentedimage"
-        minSdk 24
+        minSdk 28
         targetSdk 36
         versionCode 1
         versionName "1.0.0"
@@ -40,8 +40,8 @@ dependencies {
     implementation project(":samples:common")
 
     // ExoPlayer
-    implementation("androidx.media3:media3-exoplayer:1.6.1")
-    implementation("androidx.media3:media3-ui:1.6.1")
+    implementation libs.androidx.media3.exoplayer
+    implementation libs.androidx.media3.ui
 
     // ARSceneview
     implementation project(":arsceneview")
