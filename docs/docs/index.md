@@ -1,21 +1,75 @@
 # SceneView — 3D and AR with Compose
 
-![SceneView Logo](https://github.com/SceneView/sceneview-android/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05){ width=280 }
+<div class="hero-section" markdown>
+
+![Hero Banner](assets/images/hero-banner.svg)
+
+</div>
+
+<div class="hero-tagline" markdown>
 
 ## 3D is just Compose UI.
 
-SceneView 3.0 brings the full power of Google Filament and ARCore into Jetpack Compose.
+SceneView brings the full power of **Google Filament** and **ARCore** into **Jetpack Compose**.
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.
 Lifecycle is automatic. State drives everything.
 
-```kotlin
-Scene(modifier = Modifier.fillMaxSize()) {
-    rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
-        ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
-    }
-    LightNode(type = LightManager.Type.SUN)
-}
-```
+[:octicons-rocket-24: Get started](#install){ .md-button .md-button--primary }
+[:octicons-eye-24: Showcase](showcase.md){ .md-button }
+
+</div>
+
+---
+
+## Visual showcase
+
+See what developers are building with SceneView — 3D scenes, AR experiences, and interactive demos, all in pure Compose.
+
+<div class="showcase-grid" markdown>
+
+<div class="showcase-card" markdown>
+![3D Model Viewer](assets/images/showcase-3d-model-viewer.svg)
+
+**3D Model Viewer**
+
+Photorealistic glTF rendering with HDR environment, orbit camera, and pinch-to-zoom gestures.
+
+[:octicons-code-24: Source](https://github.com/SceneView/sceneview-android/tree/main/samples/model-viewer){ .showcase-link }
+</div>
+
+<div class="showcase-card" markdown>
+![AR Model Viewer](assets/images/showcase-ar-model-viewer.svg)
+
+**AR Tap-to-Place**
+
+Detect real surfaces, tap to place 3D models, pinch to scale, drag to rotate — all with ARCore plane detection.
+
+[:octicons-code-24: Source](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-model-viewer){ .showcase-link }
+</div>
+
+<div class="showcase-card" markdown>
+![Augmented Image](assets/images/showcase-ar-augmented-image.svg)
+
+**Augmented Image**
+
+Point your camera at a real-world image and overlay interactive 3D content — product previews, AR catalogs, educational models.
+
+[:octicons-code-24: Source](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-augmented-image){ .showcase-link }
+</div>
+
+<div class="showcase-card" markdown>
+![Autopilot Demo](assets/images/showcase-autopilot.svg)
+
+**Autopilot HUD**
+
+Full autonomous driving interface built entirely with SceneView geometry nodes and Compose UI — no model files needed.
+
+[:octicons-code-24: Source](https://github.com/SceneView/sceneview-android/tree/main/samples/autopilot-demo){ .showcase-link }
+</div>
+
+</div>
+
+[:octicons-arrow-right-24: See all samples in the Showcase](showcase.md){ .md-button }
 
 ---
 
@@ -25,7 +79,7 @@ Scene(modifier = Modifier.fillMaxSize()) {
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:sceneview:3.0.0")
+        implementation("io.github.sceneview:sceneview:3.2.0")
     }
     ```
 
@@ -33,9 +87,30 @@ Scene(modifier = Modifier.fillMaxSize()) {
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:arsceneview:3.0.0")
+        implementation("io.github.sceneview:arsceneview:3.2.0")
     }
     ```
+
+---
+
+## Quick start
+
+```kotlin
+@Composable
+fun ModelViewerScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+
+    Scene(modifier = Modifier.fillMaxSize()) {
+        rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
+            ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
+        }
+        LightNode(type = LightManager.Type.SUN, apply = { intensity(100_000f) })
+    }
+}
+```
+
+That's it. No engine lifecycle callbacks. No `addChildNode()` or `destroy()` calls. The Compose runtime handles all of it.
 
 ---
 
@@ -80,6 +155,34 @@ Pass Compose state into node parameters. The scene updates on the next frame. To
 ### Everything is `remember`
 
 The Filament engine, model loaders, environment, camera — all are `remember`-ed values with automatic cleanup. Create them, use them, forget about them.
+
+---
+
+## Coming next
+
+<div class="grid cards" markdown>
+
+-   :material-cellphone-link: **Kotlin Multiplatform (iOS)**
+
+    ---
+
+    SceneView is exploring **KMP support** via Filament's Metal backend. Same Compose DSL, running natively on iOS.
+
+    **Roadmap: v4.0**
+
+    [:octicons-arrow-right-24: See the full roadmap](https://github.com/SceneView/sceneview-android/blob/main/ROADMAP.md)
+
+-   :material-virtual-reality: **Android XR**
+
+    ---
+
+    Spatial computing support with a dedicated **SceneView-XR** module for Android XR headsets and passthrough AR.
+
+    **Roadmap: v4.0**
+
+    [:octicons-arrow-right-24: See the full roadmap](https://github.com/SceneView/sceneview-android/blob/main/ROADMAP.md)
+
+</div>
 
 ---
 
