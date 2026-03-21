@@ -709,6 +709,75 @@ fun CustomEnvironment() {
 }
 ```
 
+### Post-processing effects (bloom, DoF, SSAO)
+
+```kotlin
+@Composable
+fun PostProcessingScene() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val model = rememberModelInstance(modelLoader, "models/helmet.glb")
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine, modelLoader = modelLoader,
+        cameraManipulator = rememberCameraManipulator(),
+        // Post-processing is configured via View options
+        createView = { engine ->
+            engine.createView().apply {
+                // Bloom
+                bloomOptions = bloomOptions.apply { enabled = true; strength = 0.3f }
+                // Depth of Field
+                depthOfFieldOptions = depthOfFieldOptions.apply { enabled = true; cocScale = 4f }
+                // Ambient Occlusion
+                ambientOcclusionOptions = ambientOcclusionOptions.apply { enabled = true }
+            }
+        }
+    ) {
+        model?.let { ModelNode(modelInstance = it, scaleToUnits = 1f) }
+    }
+}
+```
+
+### Lines, paths, and curves
+
+```kotlin
+@Composable
+fun LinesAndPaths() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val material = rememberMaterialInstance(materialLoader) { setBaseColor(colorOf(r = 0f, g = 0.7f, b = 1f)) }
+
+    Scene(modifier = Modifier.fillMaxSize(), engine = engine) {
+        // Single line
+        LineNode(start = Position(-1f, 0f, 0f), end = Position(1f, 0f, 0f), materialInstance = material)
+        // Path through points
+        PathNode(
+            points = listOf(Position(0f, 0f, 0f), Position(0.5f, 1f, 0f), Position(1f, 0f, 0f)),
+            materialInstance = material
+        )
+    }
+}
+```
+
+### World-space text labels
+
+```kotlin
+@Composable
+fun TextLabels() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val model = rememberModelInstance(modelLoader, "models/helmet.glb")
+
+    Scene(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader) {
+        model?.let {
+            ModelNode(modelInstance = it, scaleToUnits = 1f)
+        }
+        TextNode(text = "Damaged Helmet", position = Position(y = 0.8f))
+    }
+}
+```
+
 ### AR image tracking
 
 ```kotlin
@@ -746,17 +815,35 @@ fun ARImageTracking(coverBitmap: Bitmap) {
 
 ## Samples
 
+### 3D Scenes
+
+| Sample | Demonstrates | Complexity |
+|--------|-------------|------------|
+| `model-viewer` | glTF model, HDR env, orbit camera, animation play/pause | Beginner |
+| `camera-manipulator` | Orbit/pan/zoom, collision hit-testing, custom gestures | Beginner |
+| `gltf-camera` | Cameras embedded in glTF, exposure settings | Intermediate |
+| `line-path` | LineNode, PathNode, procedural curves, animated sine waves | Intermediate |
+| `text-labels` | TextNode world-space labels, face-to-camera constraints | Intermediate |
+| `dynamic-sky` | Procedural sky + fog atmosphere, real-time parameter sliders | Advanced |
+| `physics-demo` | Tap-to-spawn spheres, gravity, bounce, Euler integration | Advanced |
+| `post-processing` | Bloom, DoF, SSAO, fog — all post-processing effects | Advanced |
+| `reflection-probe` | ReflectionProbeNode, zone-based IBL switching | Advanced |
+| `autopilot-demo` | Procedural geometry scene, HUD overlay, no model files | Showcase |
+
+### Augmented Reality
+
+| Sample | Demonstrates | Complexity |
+|--------|-------------|------------|
+| `ar-model-viewer` | Tap-to-place, plane detection, pinch/rotate/drag | Beginner |
+| `ar-augmented-image` | Image detection, video overlay via ExoPlayer | Intermediate |
+| `ar-cloud-anchor` | Cross-device persistent anchors, host/resolve | Advanced |
+| `ar-point-cloud` | ARCore feature points, instanced rendering | Advanced |
+
+### Showcase
+
 | Sample | Demonstrates |
 |--------|-------------|
-| `model-viewer` | Orbit camera, HDR env, glTF animation |
-| `ar-model-viewer` | Tap-to-place, pinch/drag/rotate |
-| `gltf-camera` | Cameras from glTF file |
-| `camera-manipulator` | Orbit/pan/zoom |
-| `ar-augmented-image` | Image detection, overlay, video |
-| `ar-cloud-anchor` | Cross-device persistent anchors |
-| `ar-point-cloud` | ARCore feature point cloud |
-| `autopilot-demo` | Autonomous AR demo |
-| `sceneview-demo` | Play Store showcase — 4-tab demo app |
+| `sceneview-demo` | Play Store flagship — Explore, Showcase, Gallery, QA tabs |
 
 ---
 
