@@ -29,9 +29,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,8 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
 import io.github.sceneview.animation.Transition.animateRotation
-import io.github.sceneview.math.Position
-import io.github.sceneview.math.Rotation
+import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
@@ -99,6 +102,7 @@ private val exploreModels = listOf(
 fun ExploreScreen() {
     var selectedIndex by remember { mutableIntStateOf(0) }
     var selectedEnvIndex by remember { mutableIntStateOf(0) }
+    var isPlaying by remember { mutableStateOf(true) }
     val selectedModel = exploreModels[selectedIndex]
     val selectedEnv = exploreEnvironments[selectedEnvIndex]
 
@@ -111,15 +115,15 @@ fun ExploreScreen() {
         val centerNode = rememberNode(engine)
 
         val cameraNode = rememberCameraNode(engine) {
-            position = Position(y = -0.5f, z = selectedModel.cameraDistance)
+            position = Float3(y = -0.5f, z = selectedModel.cameraDistance)
             lookAt(centerNode)
             centerNode.addChildNode(this)
         }
 
         val cameraTransition = rememberInfiniteTransition(label = "CameraRotation")
         val cameraRotation by cameraTransition.animateRotation(
-            initialValue = Rotation(y = 0.0f),
-            targetValue = Rotation(y = 360.0f),
+            initialValue = Float3(y = 0.0f),
+            targetValue = Float3(y = 360.0f),
             animationSpec = infiniteRepeatable(
                 animation = tween(durationMillis = 12_000)
             )
@@ -162,7 +166,7 @@ fun ExploreScreen() {
                 ModelNode(
                     modelInstance = instance,
                     scaleToUnits = selectedModel.scale,
-                    autoAnimate = animationCount > 0,
+                    autoAnimate = isPlaying && animationCount > 0,
                     animationLoop = true
                 )
             }
@@ -228,6 +232,47 @@ fun ExploreScreen() {
                 .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Animation controls — only shown for animated models
+            if (animationCount > 0) {
+                val animName = remember(modelInstance, animationCount) {
+                    modelInstance?.animator?.getAnimationName(0) ?: ""
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    IconButton(
+                        onClick = { isPlaying = !isPlaying },
+                        modifier = Modifier.size(36.dp),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = Color.White.copy(alpha = 0.18f)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    if (animName.isNotBlank()) {
+                        Text(
+                            text = animName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                    if (animationCount > 1) {
+                        Text(
+                            text = "\u00B7 $animationCount animations",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+
             // Gesture hint
             Row(
                 verticalAlignment = Alignment.CenterVertically,
