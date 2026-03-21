@@ -79,6 +79,21 @@ node is removed and destroyed automatically. **Pure Compose semantics, in AR.**
 
 ---
 
+## What's new in 3.2
+
+SceneView 3.2 adds **8 new composable node types** on top of the 3.0 Compose rewrite:
+
+| New node | What it does |
+|---|---|
+| `DynamicSkyNode` | Time-of-day sun with colour model (sunrise → noon → sunset) |
+| `FogNode` | Atmospheric fog driven by Compose state |
+| `ReflectionProbeNode` | Local IBL override for reflective surfaces |
+| `PhysicsNode` | Rigid body simulation — gravity, collision, bounce |
+| `LineNode` / `PathNode` | 3D line segments and polylines |
+| `TextNode` / `BillboardNode` | Camera-facing text labels and image quads |
+
+Plus 6 new sample apps: dynamic-sky, physics-demo, post-processing, reflection-probe, line-path, text-labels.
+
 ## What's new in 3.0
 
 SceneView 3.0 is a ground-up rewrite around a single idea: **3D is just more Compose UI.**
@@ -120,7 +135,7 @@ See [MIGRATION.md](MIGRATION.md) for a step-by-step upgrade guide from 2.x.
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.0.0")
+    implementation("io.github.sceneview:sceneview:3.2.0")
 }
 ```
 
@@ -187,6 +202,14 @@ All composables available inside `Scene { }`:
 | `ImageNode(bitmap / fileLocation / resId)` | Image rendered on a plane |
 | `ViewNode(windowManager) { ComposeUI }` | **Compose UI rendered as a 3D surface** |
 | `MeshNode(primitiveType, vertexBuffer, indexBuffer)` | Custom GPU mesh |
+| `TextNode(text, fontSize)` | Camera-facing text label |
+| `BillboardNode(bitmap)` | Camera-facing image quad |
+| `LineNode(start, end)` | Single 3D line segment |
+| `PathNode(points, closed)` | 3D polyline through points |
+| `DynamicSkyNode(timeOfDay, turbidity)` | Time-of-day sun with colour model |
+| `FogNode(view, density, height, color)` | Atmospheric fog effect |
+| `ReflectionProbeNode(filamentScene, environment)` | Local IBL override |
+| `PhysicsNode(node, mass, restitution)` | Rigid body physics simulation |
 | `Node()` | Pivot / group node |
 
 **Gesture sensitivity** — `Node` exposes `scaleGestureSensitivity: Float` (default `0.5`). Lower
@@ -282,6 +305,12 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 | [Model Viewer](/samples/model-viewer) | Animated camera orbit around a glTF model, HDR environment, double-tap to scale |
 | [glTF Camera](/samples/gltf-camera) | Use a camera node imported directly from a glTF file |
 | [Camera Manipulator](/samples/camera-manipulator) | Orbit / pan / zoom camera interaction |
+| [Dynamic Sky](/samples/dynamic-sky) | Time-of-day sun, turbidity, fog controls via Compose sliders |
+| [Reflection Probe](/samples/reflection-probe) | Metallic surfaces with local cubemap reflections |
+| [Physics Demo](/samples/physics-demo) | Tap-to-throw balls with gravity and bounce |
+| [Post-Processing](/samples/post-processing) | Toggle bloom, depth-of-field, SSAO, and fog |
+| [Line & Path](/samples/line-path) | 3D lines, spirals, gizmos, animated sine wave |
+| [Text Labels](/samples/text-labels) | Camera-facing text labels on 3D spheres |
 | [Autopilot Demo](/samples/autopilot-demo) | Full animated scene built entirely with geometry nodes — no model files needed |
 
 ---
@@ -293,7 +322,7 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 ```gradle
 dependencies {
     // Includes sceneview — no need to add both
-    implementation("io.github.sceneview:arsceneview:3.0.0")
+    implementation("io.github.sceneview:arsceneview:3.2.0")
 }
 ```
 
