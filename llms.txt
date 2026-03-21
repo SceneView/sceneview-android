@@ -205,6 +205,126 @@ Scene(...) {
 }
 ```
 
+### PhysicsNode — rigid body simulation
+```kotlin
+Scene(...) {
+    val instance = rememberModelInstance(modelLoader, "models/ball.glb")
+    instance?.let {
+        ModelNode(modelInstance = it, scaleToUnits = 0.2f, position = Position(y = 3f)).also { node ->
+            PhysicsNode(
+                node = node,
+                mass = 1f,
+                restitution = 0.6f,         // bounciness [0,1]
+                linearVelocity = Position(0f, 0f, -2f),
+                floorY = 0f,
+                radius = 0.1f               // collision radius
+            )
+        }
+    }
+}
+```
+Gravity 9.8 m/s² along -Y, floor collision, sleep detection.
+
+### DynamicSkyNode — time-of-day sun
+```kotlin
+var timeOfDay by remember { mutableFloatStateOf(12f) }
+
+Scene(...) {
+    DynamicSkyNode(
+        timeOfDay = timeOfDay,      // [0, 24): 6=sunrise, 12=noon, 18=sunset
+        turbidity = 2f,             // haze [1, 10]: higher = warmer tones
+        sunIntensity = 110_000f     // max lux at noon
+    )
+}
+```
+Automatically positions/colors the sun based on time. Sunrise/sunset produces warm orange-red.
+
+### FogNode — atmospheric fog
+```kotlin
+Scene(...) {
+    FogNode(
+        view = view,                // same Filament View as Scene
+        density = 0.05f,            // [0, 1]
+        height = 1.0f,              // metres — denser below this Y
+        color = Color(0xFFCCDDFF),  // ARGB fog colour
+        enabled = true
+    )
+}
+```
+Per-View fog effect in Filament. Reactive to recomposition.
+
+### ReflectionProbeNode — local IBL override
+```kotlin
+Scene(...) {
+    ReflectionProbeNode(
+        filamentScene = filamentScene,
+        environment = chromeEnvironment,
+        position = Position(x = 2f, y = 0f, z = 0f),
+        radius = 3f,               // metres; ≤0 = global (always active)
+        priority = 0,
+        cameraPosition = cameraWorldPosition
+    )
+}
+```
+Overrides scene IBL with a baked environment cubemap for a zone.
+
+### LineNode — single line segment
+```kotlin
+Scene(...) {
+    LineNode(
+        start = Position(0f, 0f, 0f),
+        end = Position(1f, 1f, 0f),
+        materialInstance = unlitMaterial
+    )
+}
+```
+
+### PathNode — 3D polyline
+```kotlin
+Scene(...) {
+    PathNode(
+        points = listOf(
+            Position(0f, 0f, 0f),
+            Position(1f, 1f, 0f),
+            Position(2f, 0f, 0f)
+        ),
+        closed = false,
+        materialInstance = unlitMaterial
+    )
+}
+```
+Connected line segments through ordered points. `closed = true` adds segment from last to first.
+
+### BillboardNode — camera-facing quad
+```kotlin
+Scene(...) {
+    BillboardNode(
+        bitmap = logoBitmap,
+        widthMeters = 0.5f,         // null = derive from aspect ratio
+        heightMeters = null,
+        position = Position(y = 2f),
+        cameraPositionProvider = { cameraNode.worldPosition }
+    )
+}
+```
+
+### TextNode — 3D text label
+```kotlin
+Scene(...) {
+    TextNode(
+        text = "Hello World",
+        fontSize = 48f,
+        textColor = android.graphics.Color.WHITE,
+        backgroundColor = 0xCC000000.toInt(),
+        widthMeters = 0.6f,
+        heightMeters = 0.2f,
+        position = Position(y = 1.5f),
+        cameraPositionProvider = { cameraNode.worldPosition }
+    )
+}
+```
+Canvas-rendered text bitmap on a camera-facing quad. Re-renders when text/style changes.
+
 ---
 
 ## ARSceneScope — AR Node DSL
@@ -418,6 +538,12 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)  // TextureVie
 | `ar-cloud-anchor` | Cross-device persistent anchors |
 | `ar-point-cloud` | ARCore feature point cloud |
 | `autopilot-demo` | Autonomous AR demo |
+| `physics-demo` | Tap-to-throw balls, floor collision, sleep |
+| `post-processing` | Bloom, DoF, SSAO, Fog toggles |
+| `dynamic-sky` | Time-of-day sun + turbidity + fog |
+| `line-path` | 3-axis gizmo, spiral, animated sine-wave |
+| `text-labels` | Camera-facing labels on 3D spheres |
+| `reflection-probe` | Metallic sphere with IBL override |
 
 ---
 
