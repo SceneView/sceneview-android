@@ -11,6 +11,12 @@ Each sample is a self-contained Android project.
 | Place a model in AR on a surface | `ar-model-viewer` | `ARScene { AnchorNode { ModelNode() } }` |
 | Control camera orbit/pan/zoom | `camera-manipulator` | `rememberCameraManipulator()` |
 | Use cameras from a glTF file | `gltf-camera` | `CameraNode(camera = gltfCamera)` |
+| Draw lines and curves | `line-path` | `LineNode(start, end)`, `PathNode(points)` |
+| Add text labels in 3D | `text-labels` | `TextNode(text = "Label")` |
+| Procedural sky + fog atmosphere | `dynamic-sky` | `DynamicSkyNode`, `FogNode` |
+| Add physics (gravity, bounce) | `physics-demo` | Tap-to-spawn with Euler integration |
+| Bloom, DoF, SSAO effects | `post-processing` | View options (bloomOptions, etc.) |
+| Local reflections / IBL zones | `reflection-probe` | `ReflectionProbeNode` |
 | Detect real-world images in AR | `ar-augmented-image` | `AugmentedImageNode(image)` |
 | Share AR anchors across devices | `ar-cloud-anchor` | `CloudAnchorNode(anchor)` |
 | Visualize AR feature points | `ar-point-cloud` | ARCore point cloud rendering |
@@ -23,9 +29,15 @@ Each sample is a self-contained Android project.
 | Sample | Description | Complexity |
 |---|---|---|
 | `model-viewer` | Load a glTF/GLB model, HDR environment, orbit camera, animations | Beginner |
-| `camera-manipulator` | Orbit, pan, zoom camera with gesture controls | Beginner |
+| `camera-manipulator` | Orbit, pan, zoom camera with gesture and collision hit-testing | Beginner |
 | `gltf-camera` | Import and use camera nodes from glTF files | Intermediate |
-| `autopilot-demo` | Procedural geometry scene — no model files needed | Advanced |
+| `line-path` | LineNode, PathNode, procedural curves, animated sine waves | Intermediate |
+| `text-labels` | World-space text labels with face-to-camera constraints | Intermediate |
+| `dynamic-sky` | Procedural sky + fog atmosphere, real-time parameter sliders | Advanced |
+| `physics-demo` | Tap-to-spawn spheres with gravity, bounce, Euler integration | Advanced |
+| `post-processing` | Bloom, Depth of Field, SSAO, fog — all post-processing effects | Advanced |
+| `reflection-probe` | ReflectionProbeNode, zone-based IBL switching | Advanced |
+| `autopilot-demo` | Procedural geometry scene + HUD overlay — no model files needed | Showcase |
 
 ### Augmented Reality
 
