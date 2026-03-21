@@ -41,6 +41,9 @@ theme:
 
 nav:
   - Home: index.md
+  - Get Started:
+    - Quickstart: quickstart.md
+    - Troubleshooting: troubleshooting.md
   - Features:
     - Why SceneView: showcase.md
     - vs. Alternatives: comparison.md

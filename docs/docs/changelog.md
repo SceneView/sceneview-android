@@ -1,5 +1,35 @@
 # Changelog
 
+## 3.2.0 — Physics, atmosphere, drawing, and text
+
+### New node types
+
+- **`DynamicSkyNode`** — time-of-day sun with colour, intensity, and direction driven by a `Float` hour value. Sunrise/sunset colour model, turbidity control.
+- **`FogNode`** — atmospheric fog via Filament `View.fogOptions`. Density, height falloff, and colour driven by Compose state.
+- **`ReflectionProbeNode`** — local IBL override. Overrides the scene's indirect light within a spherical zone. Camera-position-aware activation.
+- **`PhysicsNode`** — rigid body simulation. Gravity, floor bounce (restitution), collision radius. Wraps any existing node.
+- **`LineNode`** — single 3D line segment between two points. GPU line primitive via Filament.
+- **`PathNode`** — 3D polyline through a list of points. Supports closed loops and animated geometry updates via `updateGeometry()`.
+- **`TextNode`** — camera-facing text label rendered to a Canvas bitmap. Configurable font size, text/background colour.
+- **`BillboardNode`** — camera-facing image quad. Always rotates toward the camera.
+
+### New samples
+
+- **`dynamic-sky`** — interactive time-of-day, turbidity, and fog controls
+- **`reflection-probe`** — metallic spheres with local cubemap reflections
+- **`physics-demo`** — tap-to-throw balls with gravity and bounce
+- **`post-processing`** — toggle bloom, depth-of-field, SSAO, and fog
+- **`line-path`** — 3D lines, spirals, axis gizmos, animated sine wave
+- **`text-labels`** — camera-facing text labels on 3D spheres
+
+### Improvements
+
+- Post-processing pipeline exposed via `View` options (bloom, DoF, SSAO, fog)
+- `MeshNode` composable for custom vertex/index buffer geometry
+- Filament and ARCore version bumps
+
+---
+
 ## 3.0.0 — Compose-native rewrite
 
 ### Breaking changes
