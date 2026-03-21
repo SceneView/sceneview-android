@@ -92,17 +92,21 @@ Every Claude Code session MUST read this section first to stay in sync.
   - sceneview depends on sceneview-core via `api project(':sceneview-core')`
   - Build: plugins DSL, default hierarchy template, native target warning suppressed
   - **iOS strategy**: dual approach — KMP for cross-platform apps, native SwiftUI for pure iOS
-- **SceneViewSwift** (`SceneViewSwift/`): iOS prototype (Swift Package, iOS 18+ / visionOS 2+)
+- **SceneViewSwift** (`SceneViewSwift/`): iOS prototype (Swift Package, iOS 18+ / visionOS 2+, **10 files**)
   - `SceneView` — SwiftUI RealityView wrapper mirroring Android's `Scene {}`
   - `ARSceneView` — ARKit + RealityKit AR skeleton with AnchorNode
-  - `ModelNode` — USDZ model loading with position/rotation/scale helpers
+  - `ModelNode` — USDZ loading, scaleToUnits, playAllAnimations, playAnimation(at:)
   - `GeometryNode` — procedural cube/sphere/cylinder/plane via MeshResource
+  - `TextNode` — 3D extruded text via MeshResource.generateText
+  - `BillboardNode` — always-faces-camera via BillboardComponent
+  - `LineNode` — line segment (thin cylinder) + axisGizmo factory
   - `LightNode` — directional/point/spot light stubs
   - `CameraControls` — orbit camera with full spherical→cartesian math, drag/pinch handling
-  - `SceneEnvironment` — HDR environment presets (studio, outdoor, sunset)
-- **llms.txt**: Major update — added 6 missing node types (TextNode, BillboardNode, LineNode,
-  PathNode, MeshNode, material creation), complete remember* helpers reference table,
-  ARScene session lifecycle callbacks
+  - `SceneEnvironment` — 6 HDR presets (studio, outdoor, sunset, night, warm, autumn)
+- **llms.txt**: Cross-platform — added iOS recipes (model-viewer, procedural, text, AR),
+  platform mapping table, KMP shared module description
+- **Cross-platform recipes** (`samples/recipes/`): 5 side-by-side Android + iOS recipes
+  - model-viewer, ar-tap-to-place, procedural-geometry, text-labels, physics
 - **Demo app** (`samples/sceneview-demo/`): **Play Store ready**
   - **4-tab architecture**: Explore, Showcase, Gallery, QA
   - **Explore tab**: Full-screen 3D viewer with orbit camera, environment + model picker chips
