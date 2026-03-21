@@ -11,7 +11,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material.icons.filled.ThreeDRotation
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.WbCloudy
@@ -345,7 +345,7 @@ Scene {
         NodeDemo(
             name = "BillboardNode",
             description = "Always-facing-camera sprite/billboard node.",
-            icon = Icons.Default.ThreeDRotation,
+            icon = Icons.Default.Layers,
             category = NodeCategory.CONTENT,
             codeSnippet = """
 Scene {
