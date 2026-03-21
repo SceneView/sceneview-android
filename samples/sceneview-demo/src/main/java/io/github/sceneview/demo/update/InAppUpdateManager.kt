@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package io.github.sceneview.demo.update
 
@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -53,7 +54,7 @@ class InAppUpdateManager(private val activity: Activity) {
     var downloadProgress by mutableStateOf(0f)
         private set
 
-    private val installStateListener = InstallStateUpdatedListener { state ->
+    private val installStateListener: InstallStateUpdatedListener = InstallStateUpdatedListener { state ->
         when (state.installStatus()) {
             InstallStatus.DOWNLOADING -> {
                 updateState = UpdateState.DOWNLOADING

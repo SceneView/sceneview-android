@@ -10,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,9 +24,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -37,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,21 +73,34 @@ private data class ExploreModel(
     val cameraDistance: Float = 2.0f
 )
 
+private data class ExploreEnvironment(val label: String, val assetPath: String)
+
+private val exploreEnvironments = listOf(
+    ExploreEnvironment("Night", "environments/rooftop_night_2k.hdr"),
+    ExploreEnvironment("Studio", "environments/studio_2k.hdr"),
+    ExploreEnvironment("Warm", "environments/studio_warm_2k.hdr"),
+    ExploreEnvironment("Sunset", "environments/sunset_2k.hdr"),
+    ExploreEnvironment("Outdoor", "environments/outdoor_cloudy_2k.hdr"),
+    ExploreEnvironment("Autumn", "environments/autumn_field_2k.hdr"),
+)
+
 private val exploreModels = listOf(
     ExploreModel("Toy Car", "models/toy_car.glb", 0.8f, 3.0f),
     ExploreModel("Chair", "models/sheen_chair.glb", 0.6f, 3.5f),
     ExploreModel("Lamp", "models/iridescence_lamp.glb", 0.5f, 3.0f),
-    ExploreModel("Sedan Car", "models/sedan_car_scan.glb", 0.7f, 3.5f),
-    ExploreModel("Sleeping Cat", "models/sleeping_cat.glb", 0.6f, 2.5f),
-    ExploreModel("Phoenix Bird", "models/animated_phoenix_bird.glb", 0.7f, 3.0f),
+    ExploreModel("Geisha Mask", "models/geisha_mask.glb", 1.0f, 2.0f),
+    ExploreModel("Space Helmet", "models/space_helmet.glb", 0.8f, 3.0f),
     ExploreModel("Robot Mantis", "models/animated_robot_mantis.glb", 0.7f, 3.5f),
-    ExploreModel("Dancing Giant", "models/animated_dancing_giant.glb", 0.8f, 3.5f),
+    ExploreModel("Kawaii Meka", "models/animated_kawaii_meka.glb", 0.8f, 3.0f),
+    ExploreModel("Carnotaurus", "models/animated_carnotaurus.glb", 0.7f, 3.5f),
 )
 
 @Composable
 fun ExploreScreen() {
     var selectedIndex by remember { mutableIntStateOf(0) }
+    var selectedEnvIndex by remember { mutableIntStateOf(0) }
     val selectedModel = exploreModels[selectedIndex]
+    val selectedEnv = exploreEnvironments[selectedEnvIndex]
 
     Box(modifier = Modifier.fillMaxSize()) {
         // ── Full-screen 3D Scene ───────────────────────────────────────────
@@ -109,8 +126,10 @@ fun ExploreScreen() {
         )
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetPath)
-        val environment = rememberEnvironment(environmentLoader) {
-            environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
+        val environment = key(selectedEnv.assetPath) {
+            rememberEnvironment(environmentLoader) {
+                environmentLoader.createHDREnvironment(selectedEnv.assetPath)!!
+            }
         }
 
         val animationCount by remember(modelInstance) {
@@ -214,7 +233,7 @@ fun ExploreScreen() {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .alpha(0.6f)
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 12.dp)
             ) {
                 Icon(
                     Icons.Default.TouchApp,
@@ -229,8 +248,50 @@ fun ExploreScreen() {
                 )
             }
 
+            // Environment picker chips
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .alpha(0.7f)
+                    .padding(bottom = 4.dp)
+            ) {
+                Icon(
+                    Icons.Default.LightMode,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = Color.White
+                )
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    exploreEnvironments.forEachIndexed { index, env ->
+                        FilterChip(
+                            selected = index == selectedEnvIndex,
+                            onClick = { selectedEnvIndex = index },
+                            label = {
+                                Text(
+                                    env.label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (index == selectedEnvIndex) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            shape = RoundedCornerShape(50),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
+                                containerColor = Color.White.copy(alpha = 0.10f),
+                                labelColor = Color.White
+                            )
+                        )
+                    }
+                }
+            }
+
             // Model picker chips
             Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 exploreModels.forEachIndexed { index, model ->
