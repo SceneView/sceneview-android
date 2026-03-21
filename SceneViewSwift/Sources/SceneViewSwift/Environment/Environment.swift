@@ -79,5 +79,29 @@ extension SceneEnvironment {
         intensity: 0.8
     )
 
-    // TODO: Add .night, .warm, .autumn presets matching Android SDK
+    /// Night rooftop lighting — dark, moody atmosphere.
+    public static let night = SceneEnvironment(
+        name: "Night",
+        hdrResource: "rooftop_night.hdr",
+        intensity: 0.4
+    )
+
+    /// Warm studio lighting — cozy, slightly orange tone.
+    public static let warm = SceneEnvironment(
+        name: "Warm",
+        hdrResource: "studio_warm.hdr",
+        intensity: 1.0
+    )
+
+    /// Autumn field lighting — soft, natural outdoor light.
+    public static let autumn = SceneEnvironment(
+        name: "Autumn",
+        hdrResource: "autumn_field.hdr",
+        intensity: 0.9
+    )
+
+    /// All available presets for UI pickers.
+    public static let allPresets: [SceneEnvironment] = [
+        .studio, .outdoor, .sunset, .night, .warm, .autumn
+    ]
 }
