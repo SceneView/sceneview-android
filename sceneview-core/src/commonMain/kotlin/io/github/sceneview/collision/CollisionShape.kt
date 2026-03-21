@@ -17,17 +17,17 @@ abstract class CollisionShape {
 
     abstract fun shapeIntersection(shape: CollisionShape): Boolean
 
-    internal abstract fun sphereIntersection(sphere: Sphere): Boolean
+    abstract fun sphereIntersection(sphere: Sphere): Boolean
 
-    internal abstract fun boxIntersection(box: Box): Boolean
+    abstract fun boxIntersection(box: Box): Boolean
 
     init {
         changeId.update()
     }
 
-    internal fun getId(): ChangeId = changeId
+    fun getId(): ChangeId = changeId
 
-    internal abstract fun transform(transformProvider: TransformProvider): CollisionShape
+    abstract fun transform(transformProvider: TransformProvider): CollisionShape
 
-    internal abstract fun transform(transformProvider: TransformProvider, result: CollisionShape)
+    abstract fun transform(transformProvider: TransformProvider, result: CollisionShape)
 }
