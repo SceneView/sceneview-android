@@ -5,9 +5,12 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
-      - 'marketing/codelabs/**'
+      - 'marketing/**'
       - 'CHANGELOG.md'
       - 'MIGRATION.md'
+      - 'CONTRIBUTING.md'
+      - 'ROADMAP.md'
+      - 'llms.txt'
   workflow_dispatch:
 
 jobs:
@@ -25,10 +28,14 @@ jobs:
 
       - name: Sync content into docs
         run: |
+          # Codelabs from marketing
           cp marketing/codelabs/codelab-3d-compose.md docs/docs/codelabs/codelab-3d-compose.md
           cp marketing/codelabs/codelab-ar-compose.md docs/docs/codelabs/codelab-ar-compose.md
+
+          # Root docs
           cp MIGRATION.md docs/docs/migration.md
           cp CHANGELOG.md docs/docs/changelog.md
+          cp CONTRIBUTING.md docs/docs/contributing.md
 
       - name: Build site
         run: mkdocs build --config-file docs/mkdocs.yml --site-dir site
