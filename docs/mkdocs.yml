@@ -53,6 +53,8 @@ nav:
     - Testing: testing.md
   - Features:
     - Why SceneView: showcase.md
+    - Use Cases: use-cases.md
+    - AI-Assisted Development: ai-development.md
     - vs. Alternatives: comparison.md
     - v4.0 Preview: v4-preview.md
   - Codelabs:
