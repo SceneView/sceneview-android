@@ -1,0 +1,39 @@
+title: "[Idea] "
+labels: ["enhancement", "idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest a new feature or improvement. We love hearing what the community needs.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Describe the idea
+      description: What should SceneView be able to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What problem does this solve? What are you building?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches or workarounds you've considered.
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - sceneview (3D)
+        - arsceneview (AR)
+        - New module
+        - Not sure

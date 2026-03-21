@@ -95,3 +95,38 @@ table td:nth-child(2) {
 .md-typeset .admonition.question {
   border-color: var(--md-primary-fg-color);
 }
+
+/* Cheatsheet — compact tables */
+.md-typeset table:not([class]) {
+  font-size: 0.88rem;
+}
+
+/* Mobile: full-width code blocks */
+@media screen and (max-width: 76.1875em) {
+  .md-content .highlight pre {
+    margin-left: -0.8rem;
+    margin-right: -0.8rem;
+    border-radius: 0;
+  }
+
+  /* Stack grid cards on small screens */
+  .grid.cards > ul {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better inline code readability */
+.md-typeset code:not(.highlight code) {
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+
+/* Navigation tab active indicator */
+.md-tabs__link--active {
+  border-bottom: 2px solid var(--md-accent-fg-color);
+}
