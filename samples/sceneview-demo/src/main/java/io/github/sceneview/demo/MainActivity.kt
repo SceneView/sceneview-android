@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -39,6 +40,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import io.github.sceneview.demo.effects.EffectsScreen
 import io.github.sceneview.demo.explore.ExploreScreen
 import io.github.sceneview.demo.gallery.GalleryScreen
 import io.github.sceneview.demo.showcase.ShowcaseScreen
@@ -74,13 +76,14 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Explore : Screen("explore", "Explore", Icons.Default.Explore)
     data object Showcase : Screen("showcase", "Showcase", Icons.Default.ViewInAr)
     data object Gallery : Screen("gallery", "Gallery", Icons.Default.PhotoLibrary)
+    data object Effects : Screen("effects", "Effects", Icons.Default.AutoAwesome)
     data object QA : Screen("qa", "QA Tests", Icons.Default.BugReport)
 }
 
 @Composable
 fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Explore, Screen.Showcase, Screen.Gallery, Screen.QA)
+    val screens = listOf(Screen.Explore, Screen.Showcase, Screen.Gallery, Screen.Effects, Screen.QA)
 
     // Auto-check for updates on launch
     LaunchedEffect(Unit) {
@@ -154,6 +157,9 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
                 }
                 composable(Screen.Gallery.route) {
                     GalleryScreen()
+                }
+                composable(Screen.Effects.route) {
+                    EffectsScreen()
                 }
                 composable(Screen.QA.route) {
                     QAScreen()

@@ -1,3 +1,5 @@
+@file:JvmName("SceneviewMathKt")
+
 package io.github.sceneview.math
 
 import com.google.android.filament.Box

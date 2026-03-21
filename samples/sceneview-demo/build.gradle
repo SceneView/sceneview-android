@@ -74,9 +74,8 @@ dependencies {
     implementation "androidx.navigation:navigation-compose:2.8.9"
     debugImplementation "androidx.compose.ui:ui-tooling:1.10.5"
 
-    // SceneView (3D + AR)
+    // SceneView (3D only — no AR features in this app)
     implementation project(":sceneview")
-    implementation project(":arsceneview")
 
     // Google Play In-App Updates
     implementation 'com.google.android.play:app-update:2.1.0'
