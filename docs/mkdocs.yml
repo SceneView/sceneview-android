@@ -1,5 +1,5 @@
 site_name: SceneView
-site_description: 3D and AR for Jetpack Compose, powered by Google Filament and ARCore
+site_description: Compose-native 3D & AR library powered by Google Filament and ARCore
 site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview
 repo_name: SceneView/sceneview
@@ -9,19 +9,19 @@ theme:
   name: material
   palette:
     - scheme: default
-      primary: deep purple
-      accent: purple
+      primary: white
+      accent: blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: deep purple
-      accent: purple
+      primary: black
+      accent: blue
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   font:
-    text: Roboto
+    text: Google Sans
     code: JetBrains Mono
   features:
     - navigation.tabs
