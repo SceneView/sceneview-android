@@ -17,70 +17,57 @@ Read `marketing/RESUME.md` for full context on what's done and what's left.
 ## Branch
 `claude/sceneview-marketing-showcase-CJCtV`
 
-## What's DONE (already committed & pushed)
+## What's DONE (committed & pushed)
 
-1. **Marketing website** — Full MkDocs site in `docs/` with:
-   - Home page (`docs/index.md`)
-   - Showcase/features page (`docs/showcase.md`)
-   - Comparison vs alternatives (`docs/comparison.md`)
-   - v4.0 preview (`docs/v4-preview.md`)
-   - Samples gallery (`docs/samples.md`)
-   - Two codelabs (`docs/codelabs/`)
-   - Contributing, changelog, migration pages
-   - `mkdocs.yml` config with Material theme
-   - Custom CSS (`docs/stylesheets/extra.css`)
-   - 7 sample screenshots in `docs/screenshots/`
+### Batch 1 — Marketing content (14 files)
+- Social: x-thread.md, linkedin-post.md, linkedin-video-storyboard.md
+- Long-form: devto-article.md, medium-article.md, youtube-script.md
+- Positioning: showcase.md, comparison.md, v4-preview.md
+- Assets: assets-catalog.md (24 Khronos models, direct HDR URLs)
+- GitHub: github-profile.md
+- Codelabs: 2 tutorials
+- README.md master index
 
-2. **CI/CD** — Two GitHub Actions workflows:
-   - `docs.yml` — builds & deploys docs on push
-   - `docs-on-release.yml` — rebuilds on release
+### Batch 2 — Docs site + CI
+- Full MkDocs site in `docs/` with 13 pages:
+  - Home, Quickstart, FAQ, API Cheatsheet, Troubleshooting
+  - Why SceneView, vs. Alternatives, v4.0 Preview
+  - Samples gallery (15 samples)
+  - 2 codelabs (3D + AR)
+  - Contributing, Changelog, Migration guide
+- `mkdocs.yml` with Material theme
+- Custom CSS with mobile responsiveness
+- 7 sample screenshots + 12 site screenshots
+- GitHub Actions: docs.yml, docs-on-release.yml
 
-3. **Marketing content** (14 files in `marketing/`):
-   - Social: x-thread.md, linkedin-post.md, linkedin-video-storyboard.md
-   - Long-form: devto-article.md, medium-article.md, youtube-script.md
-   - Positioning: showcase.md, comparison.md, v4-preview.md
-   - Assets: assets-catalog.md (expanded with 24 Khronos models, direct HDR URLs)
-   - GitHub: github-profile.md
-   - Codelabs: 2 tutorials
-   - README.md master index
+### Batch 3 — Community health
+- CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
+- SECURITY.md (vulnerability reporting, 90-day disclosure)
+- .editorconfig (Kotlin 4-space, UTF-8)
+- 3 GitHub Discussion templates (Q&A, Show & Tell, Ideas)
 
-## What's DONE (staged but NOT yet committed)
+### Batch 4 — Core files updated
+- llms.txt bumped to v3.2.0 with 8 new node types
+- README.md updated with v3.2 node table and 6 new samples
+- Changelog updated with v3.2.0 section
+- 6 sample READMEs for new samples
 
-4. **6 sample READMEs** — Written for all v3.2.0 samples:
-   - `samples/dynamic-sky/README.md`
-   - `samples/line-path/README.md`
-   - `samples/physics-demo/README.md`
-   - `samples/post-processing/README.md`
-   - `samples/reflection-probe/README.md`
-   - `samples/text-labels/README.md`
+## What could still be done (nice-to-have)
 
-## What's LEFT TO DO (in priority order)
+1. **Google Analytics property** — Replace G-XXXXXXXXXX in mkdocs.yml with real property ID
+2. **Verify settings.gradle** — Ensure all 15 sample modules are included
+3. **Dark mode screenshots** — wkhtmltoimage can't trigger JS palette; needs real Chromium
+4. **API docs deployment** — Set up Dokka/Javadoc for sceneview.github.io/api/
+5. **Social media posting** — Use the content in marketing/ to post
+6. **Video production** — Use youtube-script.md and linkedin-video-storyboard.md to produce videos
 
-### High priority
-5. **CODE_OF_CONDUCT.md** — Add Contributor Covenant v2.1 to repo root (GitHub community health score)
-6. **SECURITY.md** — Add security policy to repo root (vulnerability reporting, supported versions)
-7. **Update llms.txt** — Version shows 3.1.1, needs update to 3.2.0 with 8 new node types:
-   - PhysicsNode, DynamicSkyNode, FogNode, ReflectionProbeNode
-   - LineNode, PathNode, TextNode (BillboardNode)
-8. **.editorconfig** — Add for consistent formatting (Kotlin style, 4-space indent, UTF-8)
-
-### Medium priority
-9. **Enhance docs samples page** — `docs/samples.md` needs all 15 samples with descriptions and feature tags (currently only has basic list)
-10. **Quickstart guide** — `docs/quickstart.md` step-by-step from empty project to first 3D scene
-11. **Troubleshooting guide** — `docs/troubleshooting.md` with common errors and fixes
-12. **Polish docs landing page** — Better hero section, tabbed code examples for 3D vs AR
-
-### Lower priority
-13. **GitHub Discussions templates** — `.github/DISCUSSION_TEMPLATE/` with Q&A, Show & Tell, Ideas
-14. **Update settings.gradle** — Verify all 15 sample modules are included (some new ones may be missing)
-15. **Build and screenshot the docs site** — `pip install mkdocs-material && mkdocs build` then screenshot
-16. **Google Analytics** — Configure property ID in mkdocs.yml
-
-## Repo structure reference
-- `sceneview/` — Core 3D library
-- `arsceneview/` — AR layer
-- `samples/` — 15 sample apps + common
-- `docs/` — MkDocs website source
-- `marketing/` — Marketing content & assets catalog
-- `.github/` — Workflows, templates, funding
-- `mcp/` — MCP server for AI integration
+## File counts
+- 14 marketing content files
+- 13 docs pages
+- 6 sample READMEs
+- 3 community health files
+- 3 discussion templates
+- 2 CI/CD workflows
+- 12 site screenshots
+- 7 sample screenshots
+- ~4,500 lines of new content
