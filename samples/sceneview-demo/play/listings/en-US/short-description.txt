@@ -1,1 +1,1 @@
-Interactive showcase & QA tool for SceneView 3D/AR Android SDK nodes.
+Interactive 3D explorer, node showcase & QA tool for SceneView Android SDK.

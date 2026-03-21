@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -27,11 +28,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import io.github.sceneview.demo.qa.QAScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 
+@Preview(showSystemUi = true, name = "App - Explore Tab")
+@Composable
+private fun AppExplorePreview() {
+    SceneViewDemoTheme(dynamicColor = false) {
+        NavigationShellPreview(selectedTab = 0)
+    }
+}
+
 @Preview(showSystemUi = true, name = "App - Showcase Tab")
 @Composable
 private fun AppShowcasePreview() {
     SceneViewDemoTheme(dynamicColor = false) {
-        NavigationShellPreview(selectedTab = 0)
+        NavigationShellPreview(selectedTab = 1)
     }
 }
 
@@ -39,7 +48,7 @@ private fun AppShowcasePreview() {
 @Composable
 private fun AppQAPreview() {
     SceneViewDemoTheme(dynamicColor = false) {
-        NavigationShellPreview(selectedTab = 1)
+        NavigationShellPreview(selectedTab = 2)
     }
 }
 
@@ -54,7 +63,11 @@ private fun AppDarkPreview() {
 @Composable
 private fun NavigationShellPreview(selectedTab: Int) {
     var selected by remember { mutableIntStateOf(selectedTab) }
-    val tabs = listOf("Showcase" to Icons.Default.ViewInAr, "QA Tests" to Icons.Default.BugReport)
+    val tabs = listOf(
+        Triple("Explore", Icons.Default.Explore, "Explore"),
+        Triple("Showcase", Icons.Default.ViewInAr, "Showcase"),
+        Triple("QA Tests", Icons.Default.BugReport, "QA Tests")
+    )
 
     Scaffold(
         bottomBar = {
@@ -62,7 +75,7 @@ private fun NavigationShellPreview(selectedTab: Int) {
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
-                tabs.forEachIndexed { index, (label, icon) ->
+                tabs.forEachIndexed { index, (label, icon, _) ->
                     NavigationBarItem(
                         icon = { Icon(icon, contentDescription = label) },
                         label = { Text(label, style = MaterialTheme.typography.labelMedium) },
@@ -88,11 +101,16 @@ private fun NavigationShellPreview(selectedTab: Int) {
         ) {
             when (selected) {
                 0 -> Text(
-                    "Showcase Screen",
+                    "Explore Screen\n(3D Scene — not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                1 -> QAScreen()
+                1 -> Text(
+                    "Showcase Screen\n(3D previews — not available in preview)",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                2 -> QAScreen()
             }
         }
     }
