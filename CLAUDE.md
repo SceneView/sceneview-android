@@ -55,7 +55,8 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 | Module | Purpose |
 |---|---|
-| `sceneview/` | Core 3D library — `Scene`, `SceneScope`, all node types |
+| `sceneview-core/` | KMP module — portable collision, math, triangulation (commonMain/androidMain/iosMain) |
+| `sceneview/` | Android 3D library — `Scene`, `SceneScope`, all node types (depends on sceneview-core) |
 | `arsceneview/` | AR layer — `ARScene`, `ARSceneScope`, ARCore integration |
 | `samples/common/` | Shared helpers across sample apps |
 | `mcp/` | `@sceneview/mcp` — MCP server for AI assistant integration |
@@ -69,6 +70,15 @@ Every Claude Code session MUST read this section first to stay in sync.
 - **Active branch**: `claude/identify-project-focus-FU1rl`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
+- **KMP migration (Phase 2)**: Extracted portable math module to sceneview-core
+  - `sceneview-core/commonMain/math/` — type aliases, transforms, conversions, comparisons, slerp, lookAt, color helpers
+  - `sceneview-core/commonMain/collision/` — RayHit now includes getWorldPosition() with kotlin-math
+  - `sceneview-core/commonMain/triangulation/` — Earcut now includes Float2 convenience method
+  - Added `dev.romainguy:kotlin-math:1.6.0` as `api` dependency to sceneview-core
+  - expect/actual `ulp()` for JVM and iOS
+  - Removed 14 duplicate collision files + 2 triangulation files from sceneview module
+  - sceneview module now depends on sceneview-core via `api project(':sceneview-core')`
+  - sceneview Math.kt reduced to Android/Filament-only extensions (Box, Color)
 - **llms.txt**: Major update — added 6 missing node types (TextNode, BillboardNode, LineNode,
   PathNode, MeshNode, material creation), complete remember* helpers reference table,
   ARScene session lifecycle callbacks
