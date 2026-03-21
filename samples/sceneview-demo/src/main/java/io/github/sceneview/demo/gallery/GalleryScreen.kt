@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package io.github.sceneview.demo.gallery
 
@@ -22,8 +22,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ThreeDRotation
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
@@ -61,7 +62,8 @@ import io.github.sceneview.rememberModelLoader
 private data class GalleryItem(
     val title: String,
     val subtitle: String,
-    val type: GalleryItemType
+    val type: GalleryItemType,
+    val environment: String = "environments/rooftop_night_2k.hdr"
 )
 
 private sealed class GalleryItemType {
@@ -72,73 +74,92 @@ private sealed class GalleryItemType {
 private enum class GeometryShape { CUBE, SPHERE, CYLINDER }
 
 private val galleryItems = listOf(
-    // Realistic models
+    // Realistic models — PBR showcase
     GalleryItem(
         "Toy Car",
         "Clearcoat automotive paint",
-        GalleryItemType.Model("models/toy_car.glb", 0.8f)
-    ),
-    GalleryItem(
-        "Sedan Car",
-        "Photogrammetry car scan",
-        GalleryItemType.Model("models/sedan_car_scan.glb", 0.7f)
+        GalleryItemType.Model("models/toy_car.glb", 0.8f),
+        environment = "environments/studio_warm_2k.hdr"
     ),
     GalleryItem(
         "Sheen Chair",
         "Velvet fabric with sheen",
-        GalleryItemType.Model("models/sheen_chair.glb", 0.6f)
+        GalleryItemType.Model("models/sheen_chair.glb", 0.6f),
+        environment = "environments/studio_2k.hdr"
     ),
     GalleryItem(
         "Iridescence Lamp",
         "Glass sphere with iridescence",
-        GalleryItemType.Model("models/iridescence_lamp.glb", 0.5f)
+        GalleryItemType.Model("models/iridescence_lamp.glb", 0.5f),
+        environment = "environments/rooftop_night_2k.hdr"
     ),
     GalleryItem(
-        "Sleeping Cat",
-        "Photogrammetry 3D scan",
-        GalleryItemType.Model("models/sleeping_cat.glb", 0.6f)
+        "Geisha Mask",
+        "Painted lacquer & metal",
+        GalleryItemType.Model("models/geisha_mask.glb", 1.0f),
+        environment = "environments/studio_warm_2k.hdr"
+    ),
+    GalleryItem(
+        "Space Helmet",
+        "Sci-fi PBR metals & glass",
+        GalleryItemType.Model("models/space_helmet.glb", 0.8f),
+        environment = "environments/rooftop_night_2k.hdr"
+    ),
+    GalleryItem(
+        "Seal Statuette",
+        "Photogrammetry bronze scan",
+        GalleryItemType.Model("models/seal_statuette.glb", 0.8f),
+        environment = "environments/outdoor_cloudy_2k.hdr"
     ),
     // Animated models
     GalleryItem(
-        "Phoenix Bird",
-        "Animated fantasy creature",
-        GalleryItemType.Model("models/animated_phoenix_bird.glb", 0.7f)
-    ),
-    GalleryItem(
         "Robot Mantis",
-        "Animated mechanical insect",
-        GalleryItemType.Model("models/animated_robot_mantis.glb", 0.7f)
+        "Mechanical creature walk",
+        GalleryItemType.Model("models/animated_robot_mantis.glb", 0.7f),
+        environment = "environments/sunset_2k.hdr"
     ),
     GalleryItem(
-        "Dancing Giant",
-        "Low-poly character animation",
-        GalleryItemType.Model("models/animated_dancing_giant.glb", 0.8f)
+        "Kawaii Meka",
+        "Hand-painted mech · 3 animations",
+        GalleryItemType.Model("models/animated_kawaii_meka.glb", 0.8f),
+        environment = "environments/studio_2k.hdr"
     ),
     GalleryItem(
-        "Cat Walk",
-        "Animated cat walking cycle",
-        GalleryItemType.Model("models/animated_cat_walk.glb", 0.6f)
+        "Toon Horse",
+        "Rigged & animated gallop",
+        GalleryItemType.Model("models/animated_toon_horse.glb", 0.7f),
+        environment = "environments/autumn_field_2k.hdr"
     ),
     GalleryItem(
-        "Angel Wings",
-        "Animated wing flapping",
-        GalleryItemType.Model("models/animated_angel_wings.glb", 0.7f)
+        "Carnotaurus",
+        "Low-poly dinosaur",
+        GalleryItemType.Model("models/animated_carnotaurus.glb", 0.7f),
+        environment = "environments/outdoor_cloudy_2k.hdr"
+    ),
+    GalleryItem(
+        "Bunny Detective",
+        "Charming character animation",
+        GalleryItemType.Model("models/animated_bunny_detective.glb", 0.8f),
+        environment = "environments/studio_warm_2k.hdr"
     ),
     // Procedural geometry
     GalleryItem(
         "Blue Cube",
         "Procedural box geometry",
-        GalleryItemType.Geometry(GeometryShape.CUBE, Color(0xFF4285F4))
+        GalleryItemType.Geometry(GeometryShape.CUBE, Color(0xFF4285F4)),
+        environment = "environments/studio_2k.hdr"
     ),
     GalleryItem(
         "Red Sphere",
         "Procedural sphere geometry",
-        GalleryItemType.Geometry(GeometryShape.SPHERE, Color(0xFFEA4335))
+        GalleryItemType.Geometry(GeometryShape.SPHERE, Color(0xFFEA4335)),
+        environment = "environments/sunset_2k.hdr"
     ),
     GalleryItem(
         "Green Cylinder",
         "Procedural cylinder geometry",
-        GalleryItemType.Geometry(GeometryShape.CYLINDER, Color(0xFF34A853))
+        GalleryItemType.Geometry(GeometryShape.CYLINDER, Color(0xFF34A853)),
+        environment = "environments/autumn_field_2k.hdr"
     ),
 )
 
@@ -188,7 +209,7 @@ fun GalleryScreen() {
                         .padding(bottom = 8.dp)
                 ) {
                     Icon(
-                        Icons.Default.ThreeDRotation,
+                        Icons.Default.ViewInAr,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary
@@ -244,11 +265,13 @@ private fun GalleryCard(item: GalleryItem) {
                 when (item.type) {
                     is GalleryItemType.Model -> ModelScene(
                         modelPath = item.type.path,
-                        scaleToUnits = item.type.scale
+                        scaleToUnits = item.type.scale,
+                        environmentPath = item.environment
                     )
                     is GalleryItemType.Geometry -> GeometryScene(
                         shape = item.type.shape,
-                        color = item.type.color
+                        color = item.type.color,
+                        environmentPath = item.environment
                     )
                 }
             }
@@ -286,7 +309,11 @@ private fun GalleryCard(item: GalleryItem) {
 }
 
 @Composable
-private fun ModelScene(modelPath: String, scaleToUnits: Float) {
+private fun ModelScene(
+    modelPath: String,
+    scaleToUnits: Float,
+    environmentPath: String = "environments/rooftop_night_2k.hdr"
+) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
@@ -295,7 +322,7 @@ private fun ModelScene(modelPath: String, scaleToUnits: Float) {
         lookAt(Position(0f, 0f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
+        environmentLoader.createHDREnvironment(environmentPath)!!
     }
     val modelInstance = rememberModelInstance(modelLoader, modelPath)
 
@@ -319,7 +346,11 @@ private fun ModelScene(modelPath: String, scaleToUnits: Float) {
 }
 
 @Composable
-private fun GeometryScene(shape: GeometryShape, color: Color) {
+private fun GeometryScene(
+    shape: GeometryShape,
+    color: Color,
+    environmentPath: String = "environments/rooftop_night_2k.hdr"
+) {
     val engine = rememberEngine()
     val materialLoader = rememberMaterialLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
@@ -328,7 +359,7 @@ private fun GeometryScene(shape: GeometryShape, color: Color) {
         lookAt(Position(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
+        environmentLoader.createHDREnvironment(environmentPath)!!
     }
 
     Scene(
