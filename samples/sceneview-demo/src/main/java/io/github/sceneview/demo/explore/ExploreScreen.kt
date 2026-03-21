@@ -110,7 +110,7 @@ fun ExploreScreen() {
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetPath)
         val environment = rememberEnvironment(environmentLoader) {
-            environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+            environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
         }
 
         val animationCount by remember(modelInstance) {
