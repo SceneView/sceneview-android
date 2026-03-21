@@ -183,7 +183,7 @@ class ViewNode(
 
     override fun onTouchEvent(e: MotionEvent, hitResult: HitResult): Boolean {
         return super.onTouchEvent(e, hitResult).also {
-            //TODO
+            // ViewNode touch forwarding — currently delegated to super only.
 //        val scene: SceneView = node.getSceneViewInternal() ?: return false
 //        val pointerCount = motionEvent.pointerCount
 //        val pointerProperties = arrayOfNulls<MotionEvent.PointerProperties>(pointerCount)

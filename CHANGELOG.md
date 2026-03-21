@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.2.1 — Distribution, CI, documentation & tech debt sweep
+
+### Distribution
+- **APK workflow** — new `build-apks.yml` GitHub Action builds all 14 sample APKs and attaches them to every GitHub Release (debug-signed, sideloadable)
+
+### CI
+- Build step now covers **all 14 sample apps** (was 4); AR emulator job includes `ar-cloud-anchor`
+
+### Documentation
+- **`llms.txt`** — added 8 missing v3.2.0 node types: PhysicsNode, DynamicSkyNode, FogNode, ReflectionProbeNode, LineNode, PathNode, BillboardNode, TextNode; added 6 new samples to table
+- **`ROADMAP.md`** — consolidated: v3.2.0 marked as shipped, v3.3.0/v3.4.0 updated with correct remaining scope
+
+### Code quality
+- **Zero TODO/FIXME comments** in both `sceneview/` and `arsceneview/` SDK modules (was 14)
+- Legacy collision math classes annotated with migration target (3.3.0)
+- Bridge conversion functions documented with KDoc linking to migration plan
+
+### Samples
+- XML theme upgraded from Material Components to **Material 3** (`Theme.Material3.DayNight.NoActionBar`)
+
+---
+
 ## 3.2.0 — New node types: Physics, Sky, Fog, Reflections, Lines, Labels
 
 ### New SDK nodes

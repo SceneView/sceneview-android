@@ -64,17 +64,20 @@ fun Quaternion.toRotation(order: RotationsOrder = RotationsOrder.ZYX) = eulerAng
 
 fun FloatArray.toSize() = this.let { (x, y, z) -> Size(x, y, z) }
 
-//TODO: Remove when everything use Float3
+/**
+ * Bridge: Kotlin-Math Float3 → legacy collision Vector3.
+ * Remove once CollisionSystem is migrated to Kotlin-Math (see ROADMAP 3.3.0).
+ */
 fun Float3.toVector3() = Vector3(x, y, z)
 
-//TODO: Remove when everything use Float3
+/** @see Float3.toVector3 */
 fun Vector3.toFloat3() = Float3(x, y, z)
 
-//TODO: Remove when everything use Quaternion
+/** @see Float3.toVector3 */
 fun Quaternion.toOldQuaternion() =
     io.github.sceneview.collision.Quaternion(x, y, z, w)
 
-//TODO: Remove when everything use Quaternion
+/** @see Float3.toVector3 */
 fun io.github.sceneview.collision.Quaternion.toNewQuaternion() = Quaternion(x, y, z, w)
 
 fun Mat3.toColumnsFloatArray() = floatArrayOf(
@@ -188,8 +191,7 @@ fun lookTowards(eye: Position, direction: Direction) =
 fun List<Position2>.getCenter() = reduce { total, position -> total + position } / size.toFloat()
 fun List<Position>.getCenter() = reduce { total, position -> total + position } / size.toFloat()
 
-// TODO: Integrated in Kotlin-math 1.34.1 remove this when published.
-/////////////////////////////////////////////////////////////////////
+// Float comparison utilities (candidates for upstream Kotlin-math contribution)
 fun Float.compareTo(v: Float, delta: Float): Float = when {
     equals(v, delta) -> 0.0f
     else -> compareTo(v).toFloat()
