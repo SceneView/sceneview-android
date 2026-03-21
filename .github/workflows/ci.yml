@@ -60,6 +60,14 @@ jobs:
       - name: Run sceneview-core tests (JVM target)
         run: ./gradlew :sceneview-core:androidTest --stacktrace
 
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmp-test-reports
+          path: sceneview-core/build/reports/tests/
+          if-no-files-found: ignore
+
   # AR samples run on x86_64 Linux where the ARCore emulator APK is supported.
   # Apple Silicon Macs only have ARM64 QEMU and cannot run the x86 ARCore emulator APK locally.
   ar-emulator:
