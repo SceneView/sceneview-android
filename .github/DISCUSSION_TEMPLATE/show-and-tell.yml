@@ -1,0 +1,34 @@
+title: "[Show & Tell] "
+labels: ["showcase"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share what you've built with SceneView! Screenshots, videos, and links welcome.
+
+  - type: textarea
+    id: project
+    attributes:
+      label: What did you build?
+      description: Describe your project and how SceneView is used.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or video
+      description: Drag and drop images or paste links to videos.
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Interesting code snippets (optional)
+      description: Any SceneView patterns you're proud of or found useful.
+      render: kotlin
+
+  - type: input
+    id: link
+    attributes:
+      label: Play Store / GitHub link (optional)
+      placeholder: "https://play.google.com/store/apps/details?id=..."
