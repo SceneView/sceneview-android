@@ -38,6 +38,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Showcase: showcase.md
   - Codelabs:
     - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md

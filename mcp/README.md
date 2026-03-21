@@ -42,7 +42,7 @@ After saving, run `/mcp` in Claude Code or restart Claude Desktop to pick it up.
 
 ### Resource — `sceneview://api`
 
-The complete SceneView 3.0.0 API reference (`llms.txt`): composable signatures, node types, AR scope, resource loading, threading rules, and common patterns.
+The complete SceneView 3.2.0 API reference (`llms.txt`): composable signatures, node types, AR scope, resource loading, threading rules, and common patterns.
 
 ### Tool — `get_sample(scenario)`
 
@@ -71,7 +71,7 @@ Claude:  reads sceneview://api  ←  full API ref, always current
          │
 Claude:  calls get_sample("ar-tap-to-place")  ←  working Kotlin
          │
-Result:  Correct, compilable SceneView 3.0.0 code
+Result:  Correct, compilable SceneView 3.2.0 code
 ```
 
 ---
@@ -79,7 +79,7 @@ Result:  Correct, compilable SceneView 3.0.0 code
 ## Try it — sample prompts
 
 **3D model viewer**
-> Create a Compose screen that loads `models/helmet.glb` in a full-screen 3D scene with orbit camera and HDR environment. Use SceneView 3.0.0.
+> Create a Compose screen that loads `models/helmet.glb` in a full-screen 3D scene with orbit camera and HDR environment. Use SceneView 3.2.0.
 
 **AR tap-to-place**
 > Create an AR Compose screen. Tapping a detected surface places `models/chair.glb` with pinch-to-scale and drag-to-rotate. Multiple taps = multiple objects.
