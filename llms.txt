@@ -1153,3 +1153,130 @@ interface CameraManipulator {
 |---|---|
 | `Earcut` | Polygon triangulation (with holes) — returns triangle indices from 2D vertex coordinates |
 | `Delaunator` | Delaunay triangulation — computes Delaunay triangles from 2D point sets |
+
+---
+
+## Cross-Platform (Kotlin Multiplatform + iOS)
+
+SceneView is expanding to support iOS via SwiftUI + RealityKit, with shared
+logic in `sceneview-core` (Kotlin Multiplatform).
+
+### iOS Setup (Swift Package)
+
+```swift
+// Package.swift
+dependencies: [
+    .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "0.1.0")
+]
+```
+
+### iOS: Model Viewer
+
+```swift
+import SceneViewSwift
+
+struct ModelViewer: View {
+    @State private var model: ModelNode?
+
+    var body: some View {
+        SceneView { content in
+            if let model {
+                content.add(model.entity)
+            }
+        }
+        .cameraControls(.orbit)
+        .environment(.studio)
+        .task {
+            var node = try? await ModelNode.load("models/helmet.usdz")
+            node = node?.scaleToUnits(1.0)
+            node?.playAllAnimations()
+            model = node
+        }
+    }
+}
+```
+
+### iOS: Procedural Geometry
+
+```swift
+struct ProceduralScene: View {
+    var body: some View {
+        SceneView { content in
+            content.add(GeometryNode.cube(size: 0.5).entity)
+            content.add(GeometryNode.sphere(radius: 0.3, color: .blue)
+                .position(.init(x: 1, y: 0, z: 0)).entity)
+            content.add(GeometryNode.cylinder(radius: 0.2, height: 0.8, color: .green)
+                .position(.init(x: -1, y: 0, z: 0)).entity)
+        }
+        .cameraControls(.orbit)
+    }
+}
+```
+
+### iOS: 3D Text Labels
+
+```swift
+struct TextLabels: View {
+    var body: some View {
+        SceneView { content in
+            let label = TextNode(text: "Hello 3D!", fontSize: 0.1, color: .white)
+                .position(.init(x: 0, y: 1, z: -2))
+            content.add(label.entity)
+
+            let billboard = BillboardNode(
+                child: TextNode(text: "Always facing you", fontSize: 0.08).entity
+            ).position(.init(x: 0, y: 2, z: -2))
+            content.add(billboard.entity)
+        }
+    }
+}
+```
+
+### iOS: AR Tap-to-Place
+
+```swift
+struct ARTapToPlace: View {
+    @State private var model: ModelNode?
+
+    var body: some View {
+        ARSceneView(planeDetection: .horizontal) { content in
+            if let model {
+                let anchor = AnchorNode.plane(alignment: .horizontal)
+                anchor.add(model.entity)
+            }
+        }
+        .task {
+            model = try? await ModelNode.load("models/chair.usdz")
+                .scaleToUnits(0.5)
+        }
+    }
+}
+```
+
+### Platform Mapping
+
+| Concept | Android (Compose) | iOS (SwiftUI) |
+|---|---|---|
+| 3D scene | `Scene { }` | `SceneView { }` |
+| AR scene | `ARScene { }` | `ARSceneView { }` |
+| Load model | `rememberModelInstance(loader, "m.glb")` | `ModelNode.load("m.usdz")` |
+| Orbit camera | `rememberCameraManipulator()` | `.cameraControls(.orbit)` |
+| Environment | `rememberEnvironment(loader) { }` | `.environment(.studio)` |
+| Cube | `CubeNode(size)` | `GeometryNode.cube(size:)` |
+| Sphere | `SphereNode(radius)` | `GeometryNode.sphere(radius:)` |
+| Text | `TextNode(text = "...")` | `TextNode(text: "...")` |
+| Billboard | `BillboardNode { }` | `BillboardNode(child:)` |
+| Anchor | `AnchorNode(anchor) { }` | `AnchorNode.plane()` |
+| Renderer | Google Filament | Apple RealityKit |
+| AR framework | Google ARCore | Apple ARKit |
+| Model format | glTF/GLB | USDZ (+ glTF via GLTFKit2) |
+
+### Shared KMP Module (`sceneview-core`)
+
+Pure Kotlin logic shared between Android and iOS:
+- **Math**: Position, Rotation, Scale, Transform, Color, CameraProjection
+- **Collision**: Ray, Box, Sphere, intersections
+- **Geometry**: Cube, Sphere, Cylinder, Plane, Line, Path vertex generation
+- **Animation**: Easing, lerp/slerp, spring, smooth transform interpolation
+- **Physics**: Euler integration, floor bounce, restitution, sleep detection
+- **Triangulation**: Earcut (polygon), Delaunator (Delaunay)
