@@ -2,9 +2,9 @@
 
 SceneView is a Compose-first 3D and AR SDK for Android, built on Filament (Google's real-time rendering engine) and ARCore. It provides declarative composables for rendering interactive 3D scenes, loading glTF/GLB models, and building AR experiences.
 
-**Maven artifacts (version 3.1.1):**
-- 3D only: `io.github.sceneview:sceneview:3.1.1`
-- AR + 3D: `io.github.sceneview:arsceneview:3.1.1`
+**Maven artifacts (version 3.2.0):**
+- 3D only: `io.github.sceneview:sceneview:3.2.0`
+- AR + 3D: `io.github.sceneview:arsceneview:3.2.0`
 
 **Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.10 | **Compose BOM compatible**
 
@@ -15,8 +15,8 @@ SceneView is a Compose-first 3D and AR SDK for Android, built on Filament (Googl
 ### build.gradle (app module)
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.1.1")   // 3D only
-    implementation("io.github.sceneview:arsceneview:3.1.1") // AR (includes sceneview)
+    implementation("io.github.sceneview:sceneview:3.2.0")   // 3D only
+    implementation("io.github.sceneview:arsceneview:3.2.0") // AR (includes sceneview)
 }
 ```
 
@@ -191,6 +191,114 @@ val windowManager = rememberViewNodeManager()
 Scene(viewNodeWindowManager = windowManager) {
     ViewNode(windowManager = windowManager) {
         Card { Text("Hello 3D World!") }
+    }
+}
+```
+
+### BillboardNode — camera-facing image
+```kotlin
+Scene(...) {
+    BillboardNode(
+        bitmap = logoBitmap,
+        widthMeters = 0.5f,
+        position = Position(y = 2f)
+    )
+}
+```
+
+### TextNode — camera-facing text label
+```kotlin
+Scene(...) {
+    TextNode(
+        text = "Hello World",
+        fontSize = 48f,
+        textColor = Color.WHITE,
+        backgroundColor = 0xCC000000.toInt(),
+        widthMeters = 0.6f,
+        heightMeters = 0.2f,
+        position = Position(y = 1.5f)
+    )
+}
+```
+
+### LineNode — single 3D line segment
+```kotlin
+Scene(...) {
+    LineNode(
+        start = Position(0f, 0f, 0f),
+        end = Position(1f, 1f, 0f),
+        materialInstance = redMaterial
+    )
+}
+```
+
+### PathNode — 3D polyline through points
+```kotlin
+Scene(...) {
+    PathNode(
+        points = listOf(Position(0f), Position(1f, 1f, 0f), Position(2f, 0f, 0f)),
+        closed = false,
+        materialInstance = greenMaterial
+    )
+}
+```
+Use `updateGeometry(points, closed)` in `SideEffect` for animated paths.
+
+### DynamicSkyNode — time-of-day sun
+Extension function on `SceneScope`:
+```kotlin
+Scene(...) {
+    DynamicSkyNode(
+        timeOfDay = 14f,   // 0–24: midnight→sunrise→noon→sunset
+        turbidity = 2f,    // atmospheric haze [1–10]
+        sunIntensity = 110_000f
+    )
+}
+```
+
+### FogNode — atmospheric fog
+Extension function on `SceneScope`. Requires the Filament `View`:
+```kotlin
+val view = rememberView(engine)
+Scene(view = view, ...) {
+    FogNode(
+        view = view,
+        density = 0.05f,   // [0–1]
+        height = 1.0f,
+        color = Color(0xFFCCDDFF),
+        enabled = true
+    )
+}
+```
+
+### ReflectionProbeNode — local IBL override
+```kotlin
+Scene(scene = scene, ...) {
+    ReflectionProbeNode(
+        filamentScene = scene,
+        environment = probeEnvironment,
+        position = Position(0f, 1f, 0f),
+        radius = 3f,           // 0 = global
+        cameraPosition = cameraPos
+    )
+}
+```
+
+### PhysicsNode — rigid body simulation
+Top-level composable (not SceneScope member). Wraps an existing node with physics:
+```kotlin
+Scene(...) {
+    val ball = rememberModelInstance(modelLoader, "models/ball.glb")
+    ball?.let {
+        val node = ModelNode(modelInstance = it, scaleToUnits = 0.1f)
+        PhysicsNode(
+            node = node,
+            mass = 1f,
+            restitution = 0.6f,
+            linearVelocity = Position(0f, 5f, -3f),
+            floorY = 0f,
+            radius = 0.05f
+        )
     }
 }
 ```
@@ -414,10 +522,16 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)  // TextureVie
 | `ar-model-viewer` | Tap-to-place, pinch/drag/rotate |
 | `gltf-camera` | Cameras from glTF file |
 | `camera-manipulator` | Orbit/pan/zoom |
+| `dynamic-sky` | DynamicSkyNode, FogNode, time-of-day sliders |
+| `reflection-probe` | ReflectionProbeNode, local IBL, metallic surfaces |
+| `physics-demo` | PhysicsNode, tap-to-throw, collision, gravity |
+| `post-processing` | Bloom, depth-of-field, SSAO, fog toggles |
+| `line-path` | LineNode, PathNode, spirals, animated sine wave |
+| `text-labels` | TextNode, BillboardNode, camera-facing labels |
 | `ar-augmented-image` | Image detection, overlay, video |
 | `ar-cloud-anchor` | Cross-device persistent anchors |
 | `ar-point-cloud` | ARCore feature point cloud |
-| `autopilot-demo` | Autonomous AR demo |
+| `autopilot-demo` | Autonomous 3D demo |
 
 ---
 
