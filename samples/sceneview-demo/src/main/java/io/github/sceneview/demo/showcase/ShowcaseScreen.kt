@@ -58,7 +58,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.demo.update.InAppUpdateManager
-import io.github.sceneview.demo.update.UpdateBanner
 
 @Composable
 fun ShowcaseScreen(updateManager: InAppUpdateManager) {
@@ -99,8 +98,6 @@ fun ShowcaseScreen(updateManager: InAppUpdateManager) {
             },
             scrollBehavior = scrollBehavior
         )
-
-        UpdateBanner(updateManager)
 
         // Category filter chips
         Row(

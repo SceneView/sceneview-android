@@ -1,10 +1,7 @@
-SceneView Demo v1.0.0 :
-• NOUVEAU : Mode Exploration — visualiseur 3D interactif plein écran avec HDR studio
-• NOUVEAU : Aperçus 3D en temps réel dans les cartes Vitrine (géométrie + modèles)
-• NOUVEAU : Mode Galerie — stress-test LazyColumn avec plusieurs scènes 3D live
-• Assets pro : ToyCar (peinture clearcoat), SheenChair (tissu velours), IridescenceLamp (iridescence verre)
-• Environnement HDR pour un éclairage photoréaliste produit
-• Design Material 3 Expressif avec animations physiques
-• 18 types de nodes documentés avec extraits de code prêts à l'emploi
-• 17 tests QA automatisés
-• Support de mise à jour intégré
+SceneView Demo v1.1.0 :
+• NOUVEAU : Mode Galerie — LazyColumn avec plusieurs scènes 3D live
+• NOUVEAU : 8 modèles Sketchfab (sedan, chat, phoenix, mantis, géant dansant + plus)
+• NOUVEAU : Environnement HDR studio Poly Haven pour un éclairage professionnel
+• Vérification automatique des mises à jour au lancement
+• Visuels Play Store et métadonnées bilingues (EN + FR)
+• Icône d'app affinée avec cube 3D et ombre
