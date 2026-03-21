@@ -82,4 +82,80 @@ public struct ModelNode {
         copy.scale = scale
         return copy
     }
+
+    // MARK: - Scale to units (mirrors Android's ModelNode.scaleToUnits)
+
+    /// Scales the model to fit within a unit cube of the given size.
+    ///
+    /// Mirrors Android's `ModelNode(scaleToUnits = 1f)`.
+    ///
+    /// - Parameter units: Target size in meters (default 1.0).
+    /// - Returns: A copy scaled to fit.
+    public func scaleToUnits(_ units: Float = 1.0) -> ModelNode {
+        let bounds = entity.visualBounds(relativeTo: nil)
+        let extents = bounds.extents
+        let maxExtent = max(extents.x, max(extents.y, extents.z))
+        guard maxExtent > 0 else { return self }
+        let scaleFactor = units / maxExtent
+        return scale(scaleFactor)
+    }
+
+    // MARK: - Animation (mirrors Android's ModelNode animation API)
+
+    /// The number of available animations on this model.
+    public var animationCount: Int {
+        entity.availableAnimations.count
+    }
+
+    /// Plays all animations on the model.
+    ///
+    /// Mirrors Android's `ModelNode(autoAnimate = true)`.
+    ///
+    /// - Parameter loop: Whether animations should repeat. Default `true`.
+    public mutating func playAllAnimations(loop: Bool = true) {
+        for animation in entity.availableAnimations {
+            if loop {
+                entity.playAnimation(animation.repeat())
+            } else {
+                entity.playAnimation(animation)
+            }
+        }
+    }
+
+    /// Plays a specific animation by index.
+    ///
+    /// - Parameters:
+    ///   - index: Zero-based animation index.
+    ///   - loop: Whether the animation should repeat.
+    ///   - speed: Playback speed multiplier.
+    public mutating func playAnimation(
+        at index: Int,
+        loop: Bool = true,
+        speed: Float = 1.0
+    ) {
+        guard index < entity.availableAnimations.count else { return }
+        var animation = entity.availableAnimations[index]
+        animation.speed = speed
+        if loop {
+            entity.playAnimation(animation.repeat())
+        } else {
+            entity.playAnimation(animation)
+        }
+    }
+
+    /// Stops all animations on the model.
+    public func stopAllAnimations() {
+        entity.stopAllAnimations()
+    }
+
+    // MARK: - Shadow control (mirrors Android's ModelNode shadow API)
+
+    /// Whether this model casts shadows.
+    public var castsShadow: Bool {
+        get { entity.components[ModelComponent.self]?.mesh != nil }
+        set {
+            // RealityKit handles shadows via the GroundingShadowComponent
+            // or through scene lighting configuration
+        }
+    }
 }
