@@ -42,6 +42,24 @@ jobs:
             arsceneview/build/reports/lint-results-debug.html
           if-no-files-found: ignore
 
+  kmp-test:
+    name: KMP core tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Run sceneview-core tests (JVM target)
+        run: ./gradlew :sceneview-core:androidTest --stacktrace
+
   # AR samples run on x86_64 Linux where the ARCore emulator APK is supported.
   # Apple Silicon Macs only have ARM64 QEMU and cannot run the x86 ARCore emulator APK locally.
   ar-emulator:
