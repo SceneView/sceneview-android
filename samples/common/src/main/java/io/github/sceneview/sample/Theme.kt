@@ -149,6 +149,16 @@ private val DarkColorScheme = darkColorScheme(
 
 val Typography = Typography()
 
+/**
+ * Material 3 theme shared by all SceneView sample apps.
+ *
+ * Uses dynamic colour (Material You) on Android 12+ and falls back to a
+ * purple-tinted colour scheme on older devices.
+ *
+ * @param darkTheme Whether to use the dark colour scheme. Defaults to the system setting.
+ * @param dynamicColor Whether to use Material You dynamic colours on Android 12+.
+ * @param content The composable content to theme.
+ */
 @Composable
 fun SceneviewTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
