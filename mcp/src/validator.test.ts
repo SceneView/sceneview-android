@@ -282,6 +282,83 @@ describe("api/scene-missing-engine", () => {
   });
 });
 
+// ─── api/fog-node-missing-view ────────────────────────────────────────────────
+
+describe("api/fog-node-missing-view", () => {
+  const RULE = "api/fog-node-missing-view";
+
+  it("fires when FogNode has no view parameter", () => {
+    const code = `FogNode(density = 0.1f, enabled = true)`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire when view is provided", () => {
+    const code = `FogNode(view = view, density = 0.1f)`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+
+  it("does NOT fire when FogNode is not used", () => {
+    const code = `Scene(engine = engine) { }`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+// ─── api/reflection-probe-missing-camera ─────────────────────────────────────
+
+describe("api/reflection-probe-missing-camera", () => {
+  const RULE = "api/reflection-probe-missing-camera";
+
+  it("fires when ReflectionProbeNode has no cameraPosition", () => {
+    const code = `ReflectionProbeNode(filamentScene = scene, environment = env)`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire when cameraPosition is provided", () => {
+    const code = `ReflectionProbeNode(
+      filamentScene = scene,
+      environment = env,
+      cameraPosition = cameraPos
+    )`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+// ─── api/physics-node-missing-radius ─────────────────────────────────────────
+
+describe("api/physics-node-missing-radius", () => {
+  const RULE = "api/physics-node-missing-radius";
+
+  it("fires info when PhysicsNode has no radius", () => {
+    const code = `PhysicsNode(node = sphere, mass = 1f, restitution = 0.7f)`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire when radius is provided", () => {
+    const code = `PhysicsNode(node = sphere, mass = 1f, radius = 0.15f)`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+// ─── api/dynamic-sky-outside-scene ───────────────────────────────────────────
+
+describe("api/dynamic-sky-outside-scene", () => {
+  const RULE = "api/dynamic-sky-outside-scene";
+
+  it("fires when DynamicSkyNode is used without a Scene", () => {
+    const code = `DynamicSkyNode(timeOfDay = 12f)`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire when inside a Scene", () => {
+    const code = `
+      Scene(engine = engine) {
+        DynamicSkyNode(timeOfDay = 12f)
+      }
+    `;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
 // ─── formatValidationReport ───────────────────────────────────────────────────
 
 describe("formatValidationReport", () => {
