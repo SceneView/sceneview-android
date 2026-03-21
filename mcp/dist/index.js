@@ -9,6 +9,7 @@ import { getSample, SAMPLE_IDS, SAMPLES } from "./samples.js";
 import { validateCode, formatValidationReport } from "./validator.js";
 import { MIGRATION_GUIDE } from "./migration.js";
 import { fetchKnownIssues } from "./issues.js";
+import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 let API_DOCS;
 try {
@@ -17,14 +18,15 @@ try {
 catch {
     API_DOCS = "SceneView API docs not found. Run `npm run prepare` to bundle llms.txt.";
 }
-const server = new Server({ name: "@sceneview/mcp", version: "3.0.2" }, { capabilities: { resources: {}, tools: {} } });
+const NODE_SECTIONS = parseNodeSections(API_DOCS);
+const server = new Server({ name: "@sceneview/mcp", version: "3.2.0" }, { capabilities: { resources: {}, tools: {} } });
 // ─── Resources ───────────────────────────────────────────────────────────────
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
         {
             uri: "sceneview://api",
             name: "SceneView API Reference",
-            description: "Complete SceneView 3.0.0 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
+            description: "Complete SceneView 3.2.0 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
             mimeType: "text/markdown",
         },
         {
@@ -121,6 +123,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
                 required: [],
             },
         },
+        {
+            name: "get_node_reference",
+            description: "Returns the full API reference for a specific SceneView node type or composable — parameters, types, and a usage example — parsed directly from the official llms.txt. Use this when you need the exact signature or options for a node (e.g. ModelNode, LightNode, ARScene). If the requested type is not found, the response lists all available types.",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    nodeType: {
+                        type: "string",
+                        description: 'The node type or composable name to look up, e.g. "ModelNode", "LightNode", "ARScene", "AnchorNode". Case-insensitive.',
+                    },
+                },
+                required: ["nodeType"],
+            },
+        },
     ],
 }));
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -176,7 +192,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     content: [
                         {
                             type: "text",
-                            text: `No samples found with tag "${filterTag}". Available tags: 3d, ar, model, geometry, animation, camera, environment, anchor, plane-detection, image-tracking, face-tracking, placement, gestures`,
+                            text: `No samples found with tag "${filterTag}". Available tags: 3d, ar, model, geometry, animation, camera, environment, anchor, plane-detection, image-tracking, cloud-anchor, point-cloud, placement, gestures, physics, sky, fog, lines, text, reflection, post-processing`,
                         },
                     ],
                 };
@@ -203,7 +219,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `### build.gradle.kts`,
                                 `\`\`\`kotlin`,
                                 `dependencies {`,
-                                `    implementation("io.github.sceneview:sceneview:3.0.0")`,
+                                `    implementation("io.github.sceneview:sceneview:3.2.0")`,
                                 `}`,
                                 `\`\`\``,
                                 ``,
@@ -224,7 +240,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `### build.gradle.kts`,
                                 `\`\`\`kotlin`,
                                 `dependencies {`,
-                                `    implementation("io.github.sceneview:arsceneview:3.0.0")`,
+                                `    implementation("io.github.sceneview:arsceneview:3.2.0")`,
                                 `}`,
                                 `\`\`\``,
                                 ``,
@@ -262,6 +278,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // ── get_migration_guide ───────────────────────────────────────────────────
         case "get_migration_guide": {
             return { content: [{ type: "text", text: MIGRATION_GUIDE }] };
+        }
+        // ── get_node_reference ────────────────────────────────────────────────────
+        case "get_node_reference": {
+            const nodeType = request.params.arguments?.nodeType;
+            if (!nodeType || typeof nodeType !== "string") {
+                return {
+                    content: [{ type: "text", text: "Missing required parameter: `nodeType`" }],
+                    isError: true,
+                };
+            }
+            const section = findNodeSection(NODE_SECTIONS, nodeType);
+            if (!section) {
+                const available = listNodeTypes(NODE_SECTIONS).join(", ");
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: [
+                                `No reference found for node type \`${nodeType}\`.`,
+                                ``,
+                                `**Available node types:**`,
+                                available,
+                            ].join("\n"),
+                        },
+                    ],
+                };
+            }
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: [
+                            `## \`${section.name}\` — API Reference`,
+                            ``,
+                            section.content,
+                        ].join("\n"),
+                    },
+                ],
+            };
         }
         default:
             return {

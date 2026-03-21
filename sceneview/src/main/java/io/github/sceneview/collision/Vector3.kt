@@ -8,7 +8,7 @@ import kotlin.math.sqrt
 /**
  * A Vector with 3 floats.
  */
-// TODO: Evaluate consolidating internal math. Additional bugs: b/69935335
+// Legacy Sceneform math — used by CollisionSystem. Migrate to Kotlin-Math in 3.3.0.
 class Vector3 {
     @JvmField var x: Float
     @JvmField var y: Float
