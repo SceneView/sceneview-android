@@ -28,14 +28,20 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 | Directory | Demonstrates |
 |---|---|
-| `samples/model-viewer` | 3D model, HDR environment, orbit camera |
+| `samples/model-viewer` | 3D model, HDR environment, orbit camera, animation controls |
 | `samples/ar-model-viewer` | Tap-to-place, plane detection, pinch/rotate |
+| `samples/ar-augmented-image` | Real-world image detection + video overlay |
+| `samples/ar-cloud-anchor` | Persistent cross-device cloud anchors |
+| `samples/ar-point-cloud` | ARCore feature point visualisation |
 | `samples/gltf-camera` | Cameras imported from a glTF file |
 | `samples/camera-manipulator` | Orbit / pan / zoom camera |
-| `samples/ar-augmented-image` | Real-world image detection + overlay |
-| `samples/ar-cloud-anchor` | Persistent cross-device anchors |
-| `samples/ar-point-cloud` | ARCore feature point visualisation |
-| `samples/autopilot-demo` | Autonomous AR demo |
+| `samples/autopilot-demo` | Autonomous driving HUD with traffic lights |
+| `samples/physics-demo` | Bouncing spheres with gravity and restitution |
+| `samples/dynamic-sky` | Time-of-day sun cycle + atmospheric fog |
+| `samples/line-path` | Animated sine/Lissajous curves with PathNode |
+| `samples/text-labels` | Camera-facing 3D text labels (TextNode) |
+| `samples/reflection-probe` | Zone-based IBL overrides + material picker |
+| `samples/post-processing` | Bloom, vignette, tone mapping, FXAA, SSAO |
 
 ## Module structure
 
