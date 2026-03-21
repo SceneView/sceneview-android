@@ -195,7 +195,11 @@ private fun AutopilotScene(roadOffset: Float, time: Float) {
             position = Position(x = 2.75f, y = 0.46f, z = 4.37f))
 
         // Ego wheels (4 nodes)
-        val bx = 2.75f; val by = 0.45f; val bz = 2.5f; val xs = 0.95f; val r = 0.29f
+        val bx = 2.75f
+        val by = 0.45f
+        val bz = 2.5f
+        val xs = 0.95f
+        val r = 0.29f
         CylinderNode(r, 0.2f, materialInstance = wheelMat,
             position = Position(x = bx - xs, y = by - (r + 0.04f), z = bz - 1.5f),
             rotation = Rotation(z = 90f))
