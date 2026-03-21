@@ -1,5 +1,6 @@
 package io.github.sceneview.geometries
 
+import dev.romainguy.kotlin.math.Float2
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.length
 import kotlin.math.abs
@@ -194,5 +195,162 @@ class GeometryTest {
         assertTrue(cube.hasNormals)
         assertTrue(cube.hasUvCoordinates)
         assertFalse(cube.hasColors)
+    }
+
+    // ----- Line -----
+
+    @Test
+    fun lineVertexCount() {
+        val line = generateLine()
+        assertEquals(2, line.vertices.size)
+    }
+
+    @Test
+    fun lineIndexCount() {
+        val line = generateLine()
+        assertEquals(2, line.indices.size)
+        assertEquals(0, line.indices[0])
+        assertEquals(1, line.indices[1])
+    }
+
+    @Test
+    fun lineCustomEndpoints() {
+        val start = Float3(1f, 2f, 3f)
+        val end = Float3(4f, 5f, 6f)
+        val line = generateLine(start = start, end = end)
+        assertEquals(start, line.vertices[0].position)
+        assertEquals(end, line.vertices[1].position)
+    }
+
+    @Test
+    fun lineBoundingBox() {
+        val line = generateLine(start = Float3(0f), end = Float3(2f, 4f, 6f))
+        val bb = line.boundingBox()
+        assertEquals(1f, bb.center.x, 1e-5f)
+        assertEquals(2f, bb.center.y, 1e-5f)
+        assertEquals(3f, bb.center.z, 1e-5f)
+    }
+
+    // ----- Path -----
+
+    @Test
+    fun pathVertexCount() {
+        val points = listOf(Float3(0f), Float3(1f, 0f, 0f), Float3(2f, 0f, 0f))
+        val path = generatePath(points)
+        assertEquals(3, path.vertices.size)
+    }
+
+    @Test
+    fun pathOpenIndices() {
+        val points = listOf(Float3(0f), Float3(1f, 0f, 0f), Float3(2f, 0f, 0f))
+        val path = generatePath(points, closed = false)
+        // 2 segments * 2 indices = 4
+        assertEquals(4, path.indices.size)
+        assertEquals(listOf(0, 1, 1, 2), path.indices)
+    }
+
+    @Test
+    fun pathClosedIndices() {
+        val points = listOf(Float3(0f), Float3(1f, 0f, 0f), Float3(2f, 0f, 0f))
+        val path = generatePath(points, closed = true)
+        // 3 segments * 2 indices = 6
+        assertEquals(6, path.indices.size)
+        assertEquals(listOf(0, 1, 1, 2, 2, 0), path.indices)
+    }
+
+    @Test
+    fun pathRequiresAtLeastTwoPoints() {
+        var threw = false
+        try {
+            generatePath(listOf(Float3(0f)))
+        } catch (_: IllegalArgumentException) {
+            threw = true
+        }
+        assertTrue(threw, "Should throw for fewer than 2 points")
+    }
+
+    // ----- Shape -----
+
+    @Test
+    fun shapeTriangleIndicesDivisibleByThree() {
+        val square = listOf(
+            Float2(0f, 0f),
+            Float2(1f, 0f),
+            Float2(1f, 1f),
+            Float2(0f, 1f)
+        )
+        val shape = generateShape(polygonPath = square)
+        assertTrue(shape.indices.size % 3 == 0, "Triangle indices must be divisible by 3")
+        assertTrue(shape.indices.isNotEmpty(), "Shape should produce indices")
+    }
+
+    @Test
+    fun shapeVertexCount() {
+        val triangle = listOf(
+            Float2(0f, 0f),
+            Float2(1f, 0f),
+            Float2(0.5f, 1f)
+        )
+        val shape = generateShape(polygonPath = triangle)
+        assertEquals(3, shape.vertices.size)
+    }
+
+    @Test
+    fun shapeHasNormalsAndUvs() {
+        val triangle = listOf(
+            Float2(0f, 0f),
+            Float2(1f, 0f),
+            Float2(0.5f, 1f)
+        )
+        val shape = generateShape(polygonPath = triangle)
+        assertTrue(shape.hasNormals)
+        assertTrue(shape.hasUvCoordinates)
+    }
+
+    @Test
+    fun shapeTriangleProducesOneTriangle() {
+        val triangle = listOf(
+            Float2(0f, 0f),
+            Float2(1f, 0f),
+            Float2(0.5f, 1f)
+        )
+        val shape = generateShape(polygonPath = triangle)
+        // A simple triangle should produce exactly 3 indices (1 triangle)
+        assertEquals(3, shape.indices.size)
+    }
+
+    @Test
+    fun shapeSquareProducesTwoTriangles() {
+        val square = listOf(
+            Float2(0f, 0f),
+            Float2(1f, 0f),
+            Float2(1f, 1f),
+            Float2(0f, 1f)
+        )
+        val shape = generateShape(polygonPath = square)
+        // A quad should produce 6 indices (2 triangles)
+        assertEquals(6, shape.indices.size)
+    }
+
+    @Test
+    fun shapeEmptyPolygonProducesNoIndices() {
+        val shape = generateShape(polygonPath = emptyList())
+        assertEquals(0, shape.vertices.size)
+        assertEquals(0, shape.indices.size)
+    }
+
+    @Test
+    fun shapeIndicesInBounds() {
+        val pentagon = listOf(
+            Float2(0f, 0f),
+            Float2(1f, 0f),
+            Float2(1.3f, 0.8f),
+            Float2(0.5f, 1.2f),
+            Float2(-0.3f, 0.8f)
+        )
+        val shape = generateShape(polygonPath = pentagon)
+        for (idx in shape.indices) {
+            assertTrue(idx in 0 until shape.vertices.size, "Index $idx out of bounds")
+        }
     }
 }
