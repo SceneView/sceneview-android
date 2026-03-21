@@ -70,15 +70,21 @@ Every Claude Code session MUST read this section first to stay in sync.
 - **Active branch**: `claude/identify-project-focus-FU1rl`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
-- **KMP migration (Phase 2)**: Extracted portable math module to sceneview-core
-  - `sceneview-core/commonMain/math/` — type aliases, transforms, conversions, comparisons, slerp, lookAt, color helpers
-  - `sceneview-core/commonMain/collision/` — RayHit now includes getWorldPosition() with kotlin-math
-  - `sceneview-core/commonMain/triangulation/` — Earcut now includes Float2 convenience method
-  - Added `dev.romainguy:kotlin-math:1.6.0` as `api` dependency to sceneview-core
-  - expect/actual `ulp()` for JVM and iOS
-  - Removed 14 duplicate collision files + 2 triangulation files from sceneview module
-  - sceneview module now depends on sceneview-core via `api project(':sceneview-core')`
-  - sceneview Math.kt reduced to Android/Filament-only extensions (Box, Color)
+- **KMP migration (Phase 4 complete)**:
+  - **sceneview-core commonMain** now contains:
+    - `collision/` (15 files) — Vector3, Quaternion, Matrix, Ray, Box, Sphere, Intersections
+    - `math/` (2 files) — type aliases, transforms, conversions, comparisons + expect/actual ulp
+    - `triangulation/` (2 files) — Earcut, Delaunator
+    - `logging/` (1 file) — expect/actual logWarning
+    - `rendering/` (5 files) — TransformManagerBridge, NodeTransform, Vertex, SceneNode, ResourceLoader
+    - `components/` (3 files) — Component, CameraComponent, LightComponent interfaces
+    - `gesture/` (2 files) — CameraManipulator, GestureListener with TouchEvent/TouchAction
+    - `environment/` (1 file) — Environment<L, S> generic data class
+  - kotlin-math 1.6.0 as `api` dependency
+  - Removed 14 duplicate collision files + 2 triangulation files from sceneview
+  - sceneview depends on sceneview-core via `api project(':sceneview-core')`
+  - Build: plugins DSL, default hierarchy template, native target warning suppressed
+  - **iOS strategy**: dual approach — KMP for cross-platform apps, native SwiftUI for pure iOS
 - **llms.txt**: Major update — added 6 missing node types (TextNode, BillboardNode, LineNode,
   PathNode, MeshNode, material creation), complete remember* helpers reference table,
   ARScene session lifecycle callbacks
