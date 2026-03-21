@@ -1,8 +1,17 @@
 # Marketing assets
 
-Content ready to publish for the SceneView 3.0 launch.
+Content for the SceneView launch and ongoing positioning as the #1 3D & AR library for Android.
 
-## Files
+## Showcase & positioning (new)
+
+| File | What it is | Audience |
+|---|---|---|
+| [showcase.md](showcase.md) | Full capability showcase — why SceneView is #1 | Developers evaluating 3D/AR options |
+| [comparison.md](comparison.md) | Honest comparison vs. Sceneform, Unity, raw ARCore, etc. | Developers who haven't switched yet |
+| [v4-preview.md](v4-preview.md) | v4.0 vision — multi-scene, portals, XR, KMP | Existing users + forward-looking devs |
+| [x-thread.md](x-thread.md) | Twitter/X thread — shareable highlight reel | Social media, developer community |
+
+## Launch content (3.0)
 
 | File | What it is | Where to publish |
 |---|---|---|
