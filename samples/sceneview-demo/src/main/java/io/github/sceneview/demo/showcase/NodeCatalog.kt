@@ -20,8 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import io.github.sceneview.Scene
-import io.github.sceneview.math.Position
-import io.github.sceneview.math.Size
+import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
@@ -41,8 +40,8 @@ private fun GeometryPreviewScene(
     val materialLoader = rememberMaterialLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
-        position = Position(z = 3.0f, y = 0.5f)
-        lookAt(Position(0f, 0.3f, 0f))
+        position = Float3(z = 3.0f, y = 0.5f)
+        lookAt(Float3(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
@@ -72,8 +71,8 @@ private fun ModelPreviewScene(
     val modelLoader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
-        position = Position(z = 2.5f, y = 0.2f)
-        lookAt(Position(0f, 0f, 0f))
+        position = Float3(z = 2.5f, y = 0.2f)
+        lookAt(Float3(0f, 0f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
@@ -117,8 +116,8 @@ object NodeCatalog {
                         materialLoader.createColorInstance(Color.Blue)
                     }
                     CubeNode(
-                        size = Size(1f),
-                        center = Position(0f, 0.5f, 0f),
+                        size = Float3(1f),
+                        center = Float3(0f, 0.5f, 0f),
                         materialInstance = mat
                     )
                 }
@@ -129,8 +128,8 @@ Scene {
         materialLoader.createColorInstance(Color.Blue)
     }
     CubeNode(
-        size = Size(1f),
-        center = Position(0f, 0.5f, 0f),
+        size = Float3(1f),
+        center = Float3(0f, 0.5f, 0f),
         materialInstance = mat
     )
 }""".trimIndent()
@@ -147,7 +146,7 @@ Scene {
                     }
                     SphereNode(
                         radius = 0.5f,
-                        center = Position(0f, 0.5f, 0f),
+                        center = Float3(0f, 0.5f, 0f),
                         materialInstance = mat
                     )
                 }
@@ -159,7 +158,7 @@ Scene {
     }
     SphereNode(
         radius = 0.5f,
-        center = Position(0f, 0.5f, 0f),
+        center = Float3(0f, 0.5f, 0f),
         materialInstance = mat
     )
 }""".trimIndent()
@@ -177,7 +176,7 @@ Scene {
                     CylinderNode(
                         radius = 0.3f,
                         height = 1f,
-                        center = Position(0f, 0.5f, 0f),
+                        center = Float3(0f, 0.5f, 0f),
                         materialInstance = mat
                     )
                 }
@@ -190,7 +189,7 @@ Scene {
     CylinderNode(
         radius = 0.3f,
         height = 1f,
-        center = Position(0f, 0.5f, 0f),
+        center = Float3(0f, 0.5f, 0f),
         materialInstance = mat
     )
 }""".trimIndent()
@@ -206,8 +205,8 @@ Scene {
                         materialLoader.createColorInstance(Color.Yellow)
                     }
                     PlaneNode(
-                        size = Size(1f, 1f),
-                        center = Position(0f, 0f, 0f),
+                        size = Float3(1f, 1f),
+                        center = Float3(0f, 0f, 0f),
                         materialInstance = mat
                     )
                 }
@@ -218,8 +217,8 @@ Scene {
         materialLoader.createColorInstance(Color.Yellow)
     }
     PlaneNode(
-        size = Size(1f, 1f),
-        center = Position(0f, 0f, 0f),
+        size = Float3(1f, 1f),
+        center = Float3(0f, 0f, 0f),
         materialInstance = mat
     )
 }""".trimIndent()
@@ -291,7 +290,7 @@ Scene(scene = scene) {
     ReflectionProbeNode(
         filamentScene = scene,
         environment = probeEnv,
-        position = Position(0f, 1f, 0f),
+        position = Float3(0f, 1f, 0f),
         radius = 3f
     )
 }""".trimIndent()
@@ -305,8 +304,8 @@ Scene(scene = scene) {
             category = NodeCategory.CAMERA,
             codeSnippet = """
 val cameraNode = rememberCameraNode(engine) {
-    position = Position(0f, 1f, 3f)
-    lookAt(Position(0f, 0f, 0f))
+    position = Float3(0f, 1f, 3f)
+    lookAt(Float3(0f, 0f, 0f))
 }
 Scene(cameraNode = cameraNode) {
     // scene content
@@ -323,7 +322,7 @@ Scene(cameraNode = cameraNode) {
 Scene {
     ImageNode(
         imageFileLocation = "images/logo.png",
-        size = Size(1f, 1f)
+        size = Float3(1f, 1f)
     )
 }""".trimIndent()
         ),
@@ -340,7 +339,7 @@ Scene {
         textColor = Color.WHITE,
         widthMeters = 0.6f,
         heightMeters = 0.2f,
-        position = Position(0f, 1f, 0f)
+        position = Float3(0f, 1f, 0f)
     )
 }""".trimIndent()
         ),
@@ -355,7 +354,7 @@ Scene {
         bitmap = myBitmap,
         widthMeters = 0.5f,
         heightMeters = 0.5f,
-        position = Position(0f, 1f, 0f)
+        position = Float3(0f, 1f, 0f)
     )
 }""".trimIndent()
         ),
@@ -370,8 +369,8 @@ Scene {
                         materialLoader.createColorInstance(Color.Cyan)
                     }
                     LineNode(
-                        start = Position(-0.5f, 0f, 0f),
-                        end = Position(0.5f, 1f, 0f),
+                        start = Float3(-0.5f, 0f, 0f),
+                        end = Float3(0.5f, 1f, 0f),
                         materialInstance = mat
                     )
                 }
@@ -382,8 +381,8 @@ Scene {
         materialLoader.createColorInstance(Color.Cyan)
     }
     LineNode(
-        start = Position(0f, 0f, 0f),
-        end = Position(1f, 1f, 0f),
+        start = Float3(0f, 0f, 0f),
+        end = Float3(1f, 1f, 0f),
         materialInstance = mat
     )
 }""".trimIndent()
@@ -397,9 +396,9 @@ Scene {
 Scene {
     PathNode(
         points = listOf(
-            Position(0f, 0f, 0f),
-            Position(1f, 0.5f, 0f),
-            Position(2f, 0f, 0f)
+            Float3(0f, 0f, 0f),
+            Float3(1f, 0.5f, 0f),
+            Float3(2f, 0f, 0f)
         )
     )
 }""".trimIndent()

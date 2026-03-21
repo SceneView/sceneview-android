@@ -46,8 +46,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
-import io.github.sceneview.math.Position
-import io.github.sceneview.math.Size
+import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
@@ -318,8 +317,8 @@ private fun ModelScene(
     val modelLoader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
-        position = Position(z = 2.5f, y = 0.2f)
-        lookAt(Position(0f, 0f, 0f))
+        position = Float3(z = 2.5f, y = 0.2f)
+        lookAt(Float3(0f, 0f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment(environmentPath)
@@ -356,8 +355,8 @@ private fun GeometryScene(
     val materialLoader = rememberMaterialLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
-        position = Position(z = 3.0f, y = 0.5f)
-        lookAt(Position(0f, 0.3f, 0f))
+        position = Float3(z = 3.0f, y = 0.5f)
+        lookAt(Float3(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment(environmentPath)
@@ -377,19 +376,19 @@ private fun GeometryScene(
         }
         when (shape) {
             GeometryShape.CUBE -> CubeNode(
-                size = Size(1f),
-                center = Position(0f, 0.5f, 0f),
+                size = Float3(1f),
+                center = Float3(0f, 0.5f, 0f),
                 materialInstance = mat
             )
             GeometryShape.SPHERE -> SphereNode(
                 radius = 0.5f,
-                center = Position(0f, 0.5f, 0f),
+                center = Float3(0f, 0.5f, 0f),
                 materialInstance = mat
             )
             GeometryShape.CYLINDER -> CylinderNode(
                 radius = 0.3f,
                 height = 1f,
-                center = Position(0f, 0.5f, 0f),
+                center = Float3(0f, 0.5f, 0f),
                 materialInstance = mat
             )
         }
