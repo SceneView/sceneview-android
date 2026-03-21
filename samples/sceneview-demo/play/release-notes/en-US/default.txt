@@ -1,8 +1,9 @@
 SceneView Demo v1.0.0:
-• NEW: Explore mode — full-screen interactive 3D viewer with HDR environment
-• NEW: Live 3D previews in Showcase cards (geometry, model nodes)
-• 3 model assets: DamagedHelmet (PBR), Fox (animated), Rabbit
+• NEW: Explore mode — full-screen interactive 3D viewer with dramatic studio HDR
+• NEW: Live 3D previews in Showcase cards (geometry + model nodes)
+• Pro assets: ToyCar (clearcoat paint), SheenChair (velvet fabric), IridescenceLamp (glass iridescence)
+• Rooftop night HDR environment for photorealistic product-style lighting
 • Material 3 Expressive design with spring animations
-• 18 node types documented with code snippets
+• 18 node types documented with ready-to-use code snippets
 • 17 automated QA tests
 • In-app update support

@@ -45,7 +45,7 @@ private fun GeometryPreviewScene(
         lookAt(Position(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
 
     Scene(
@@ -75,7 +75,7 @@ private fun ModelPreviewScene(
         lookAt(Position(0f, 0f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
     val modelInstance = rememberModelInstance(modelLoader, modelPath)
 
@@ -230,12 +230,12 @@ Scene {
             icon = Icons.Default.ViewInAr,
             category = NodeCategory.MODEL,
             sceneContent = {
-                ModelPreviewScene("models/damaged_helmet.glb", 1.0f)
+                ModelPreviewScene("models/toy_car.glb", 0.8f)
             },
             codeSnippet = """
 Scene {
     val modelInstance = rememberModelInstance(
-        modelLoader, "models/damaged_helmet.glb"
+        modelLoader, "models/my_model.glb"
     )
     modelInstance?.let {
         ModelNode(modelInstance = it)
