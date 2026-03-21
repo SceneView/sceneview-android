@@ -551,3 +551,260 @@ MCP server: `@sceneview/mcp`. Add to `.claude/mcp.json`:
 ```json
 { "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "@sceneview/mcp"] } } }
 ```
+
+---
+
+## sceneview-core (KMP)
+
+`sceneview-core` is a Kotlin Multiplatform module containing platform-independent logic shared between Android and iOS. It targets `jvm("android")`, `iosArm64`, `iosSimulatorArm64`, and `iosX64`. It depends on `dev.romainguy:kotlin-math:1.6.0` (exposed as `api`).
+
+The `sceneview` Android module depends on `sceneview-core` via `api project(':sceneview-core')`, so all types below are available transitively.
+
+### Math type aliases
+
+All defined in `io.github.sceneview.math`:
+
+| Type alias | Underlying type | Semantics |
+|---|---|---|
+| `Position` | `Float3` | World position in meters |
+| `Position2` | `Float2` | 2D position |
+| `Rotation` | `Float3` | Euler angles in degrees |
+| `Scale` | `Float3` | Scale factors |
+| `Direction` | `Float3` | Unit direction vector |
+| `Size` | `Float3` | Dimensions |
+| `Transform` | `Mat4` | 4x4 transform matrix |
+| `Color` | `Float4` | RGBA color (r, g, b, a) |
+
+```kotlin
+// Constructors
+Transform(position, quaternion, scale)
+Transform(position, rotation, scale)
+colorOf(r, g, b, a)
+
+// Conversions
+Rotation.toQuaternion(order = RotationsOrder.ZYX): Quaternion
+Quaternion.toRotation(order = RotationsOrder.ZYX): Rotation
+FloatArray.toPosition() / .toRotation() / .toScale() / .toDirection() / .toColor()
+
+// Interpolation
+lerp(start: Float3, end: Float3, deltaSeconds: Float): Float3
+slerp(start: Transform, end: Transform, deltaSeconds: Double, speed: Float): Transform
+
+// Comparison (float-safe)
+Float.almostEquals(other: Float): Boolean
+Float3.equals(v: Float3, delta: Float): Boolean
+```
+
+### Color utilities
+
+`io.github.sceneview.math.Color` extensions:
+
+```kotlin
+Color.toLinearSpace(): Color      // sRGB → linear (piecewise transfer function)
+Color.toSrgbSpace(): Color        // linear → sRGB
+Color.luminance(): Float          // BT.709 perceived luminance (assumes linear space)
+Color.withAlpha(alpha: Float): Color
+Color.toHsv(): Float3             // → (hue 0..360, saturation 0..1, value 0..1)
+hsvToRgb(h: Float, s: Float, v: Float): Color  // HSV → sRGB
+lerpColor(start: Color, end: Color, fraction: Float): Color  // interpolates in linear space
+```
+
+### Animation API
+
+`io.github.sceneview.animation`:
+
+**Easing functions** — `(Float) -> Float` mappers for `[0..1]` fraction:
+```kotlin
+Easing.Linear
+Easing.EaseIn       // cubic
+Easing.EaseOut      // cubic
+Easing.EaseInOut    // cubic
+Easing.spring(dampingRatio = 0.5f, stiffness = 500f)  // damped harmonic oscillator
+```
+
+**Property animation** — pure-function state machine:
+```kotlin
+val state = AnimationState(
+    startValue = 0f, endValue = 1f,
+    durationSeconds = 0.5f,
+    easing = Easing.EaseOut,
+    playbackMode = PlaybackMode.ONCE  // ONCE | LOOP | PING_PONG
+)
+val next = animate(state, deltaSeconds)  // returns updated AnimationState
+next.value      // current interpolated value
+next.fraction   // eased fraction
+next.isFinished // true when done (ONCE mode)
+```
+
+**Spring animator** — damped harmonic oscillator (0 → 1):
+```kotlin
+val spring = SpringAnimator(config = SpringConfig.BOUNCY)
+// Presets: SpringConfig.BOUNCY (underdamped), SMOOTH (critical), STIFF (snappy)
+// Custom:  SpringConfig(stiffness = 400f, dampingRatio = 0.6f, initialVelocity = 0f)
+
+// Each frame:
+val value = spring.update(deltaSeconds)  // returns current value, may overshoot for underdamped
+spring.isSettled  // true when at rest
+spring.reset()    // restart from 0
+```
+
+### Geometry generators
+
+`io.github.sceneview.geometries` — pure functions returning `GeometryData(vertices: List<Vertex>, indices: List<Int>)`:
+
+```kotlin
+generateCube(size: Float3 = Float3(1f), center: Float3 = Float3(0f)): GeometryData
+generateSphere(radius: Float = 1f, center: Float3 = Float3(0f), stacks: Int = 24, slices: Int = 24): GeometryData
+generateCylinder(radius: Float = 1f, height: Float = 2f, center: Float3 = Float3(0f), sideCount: Int = 24): GeometryData
+generatePlane(size: Float2 = Float2(1f), center: Float3 = Float3(0f), normal: Float3 = Float3(y = 1f)): GeometryData
+```
+
+**Vertex** (`io.github.sceneview.rendering`):
+```kotlin
+data class Vertex(
+    val position: Position = Position(),
+    val normal: Direction? = null,
+    val uvCoordinate: Float2? = null,
+    val color: Color? = null
+)
+```
+
+**BoundingBox**:
+```kotlin
+data class BoundingBox(val center: Position, val halfExtent: Size)
+fun GeometryData.boundingBox(): BoundingBox
+```
+
+### SceneNode interface & SceneGraph
+
+`io.github.sceneview.rendering.SceneNode` — cross-platform node contract:
+```kotlin
+interface SceneNode {
+    var name: String?
+    var isVisible: Boolean
+    var isHittable: Boolean
+
+    // Local transforms
+    var position: Position
+    var quaternion: Quaternion
+    var rotation: Rotation
+    var scale: Scale
+    var transform: Transform
+
+    // World transforms
+    var worldPosition: Position
+    var worldQuaternion: Quaternion
+    var worldRotation: Rotation
+    var worldScale: Scale
+    var worldTransform: Transform
+
+    // Hierarchy
+    val parent: SceneNode?
+    val childNodes: Set<SceneNode>
+    fun addChildNode(node: SceneNode)
+    fun removeChildNode(node: SceneNode)
+
+    // Orientation
+    fun lookAt(targetWorldPosition: Position, upDirection: Direction = Direction(y = 1.0f))
+    fun lookTowards(lookDirection: Direction, upDirection: Direction = Direction(y = 1.0f))
+
+    // Lifecycle
+    fun onAddedToScene()
+    fun onRemovedFromScene()
+    fun onFrame(deltaTime: Float)
+    fun destroy()
+}
+```
+
+`io.github.sceneview.scene.SceneGraph` — manages node hierarchy and hit testing:
+```kotlin
+class SceneGraph {
+    val rootNodes: List<SceneNode>
+    fun addNode(node: SceneNode, parent: SceneNode? = null)
+    fun removeNode(node: SceneNode)
+    fun setCollisionShape(node: SceneNode, shape: CollisionShape)
+    fun findNode(predicate: (SceneNode) -> Boolean): SceneNode?
+    fun findAllNodes(predicate: (SceneNode) -> Boolean): List<SceneNode>
+    fun dispatchFrame(deltaTime: Float)
+    fun hitTest(ray: Ray): List<HitResult>  // sorted by distance (nearest first)
+}
+
+data class HitResult(val node: SceneNode, val distance: Float, val point: Position)
+```
+
+### Collision system
+
+`io.github.sceneview.collision` — 3D collision primitives and intersection tests:
+
+| Class | Description |
+|---|---|
+| `Vector3` | 3D vector with arithmetic, dot, cross, normalize, lerp |
+| `Quaternion` | Rotation quaternion with multiply, inverse, slerp |
+| `Matrix` | 4x4 matrix (column-major float array) |
+| `Ray` | Origin + direction, `getPoint(distance)` |
+| `RayHit` | Hit result with distance and world position |
+| `Sphere` | Center + radius collision shape |
+| `Box` | Center + size + rotation collision shape |
+| `Plane` | Normal + constant collision shape |
+| `CollisionShape` | Base class — `rayIntersection(ray, rayHit): Boolean` |
+| `Intersections` | Static tests: sphere-sphere, box-box, ray-sphere, ray-box, ray-plane |
+
+### Component interfaces
+
+`io.github.sceneview.components` — cross-platform render component contracts:
+
+**CameraComponent** (`extends Component`):
+```kotlin
+interface CameraComponent {
+    val near: Float; val far: Float
+    var modelTransform: Transform
+    val viewTransform: Transform; val projectionTransform: Transform
+    val forwardDirection: Direction; val upDirection: Direction; val rightDirection: Direction
+    val worldPosition: Position; val worldQuaternion: Quaternion
+    fun setProjection(fovInDegrees: Double, aspect: Double, near: Double, far: Double)
+    fun lookAt(eye: Position, center: Position, up: Direction = Direction(y = 1.0f))
+    fun setExposure(aperture: Float, shutterSpeed: Float, sensitivity: Float)
+    fun viewToWorld(viewPosition: Float2, z: Float = 1.0f): Position
+    fun worldToView(worldPosition: Position): Float2
+    fun viewToRay(viewPosition: Float2): Ray
+}
+```
+
+**LightComponent** (`extends Component`):
+```kotlin
+interface LightComponent {
+    enum class LightType { DIRECTIONAL, POINT, FOCUSED_SPOT, SPOT, SUN }
+    val type: LightType
+    var lightPosition: Position; var lightDirection: Direction; var color: Color
+    var intensity: Float; var falloff: Float; var isShadowCaster: Boolean
+    fun setSpotLightCone(inner: Float, outer: Float)
+    fun setIntensity(watts: Float, efficiency: Float)
+    var sunAngularRadius: Float; var sunHaloSize: Float; var sunHaloFalloff: Float
+}
+```
+
+### CameraManipulator interface
+
+`io.github.sceneview.gesture.CameraManipulator` — cross-platform orbit/pan/zoom:
+```kotlin
+interface CameraManipulator {
+    fun setViewport(width: Int, height: Int)
+    fun getTransform(): Transform
+    fun grabBegin(x: Int, y: Int, strafe: Boolean)  // strafe=true for pan, false for orbit
+    fun grabUpdate(x: Int, y: Int)
+    fun grabEnd()
+    fun scrollBegin(x: Int, y: Int, separation: Float)
+    fun scrollUpdate(x: Int, y: Int, prevSeparation: Float, currSeparation: Float)
+    fun scrollEnd()
+    fun update(deltaTime: Float)
+}
+```
+
+### Triangulation
+
+`io.github.sceneview.triangulation`:
+
+| Class | Purpose |
+|---|---|
+| `Earcut` | Polygon triangulation (with holes) — returns triangle indices from 2D vertex coordinates |
+| `Delaunator` | Delaunay triangulation — computes Delaunay triangles from 2D point sets |
