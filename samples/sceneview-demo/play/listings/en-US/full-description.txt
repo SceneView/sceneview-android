@@ -13,6 +13,12 @@ Browse every node type available in SceneView: CubeNode, SphereNode, ModelNode, 
 • Ready-to-use Jetpack Compose code snippets
 • Category filtering (Geometry, Model, Light, Camera, Content, AR)
 
+🖼️ GALLERY MODE
+Stress-test real-time 3D in a scrollable list — each card renders its own live Scene:
+• Multiple 3D models and procedural geometry in a LazyColumn
+• Demonstrates SceneView's efficient resource management
+• Live rendering with HDR lighting in every card
+
 🧪 QA MODE
 Run visual regression tests to validate that every node renders correctly:
 • One-tap "Run All" to execute the full test suite

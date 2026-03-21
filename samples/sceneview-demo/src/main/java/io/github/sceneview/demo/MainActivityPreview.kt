@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -66,6 +67,7 @@ private fun NavigationShellPreview(selectedTab: Int) {
     val tabs = listOf(
         Triple("Explore", Icons.Default.Explore, "Explore"),
         Triple("Showcase", Icons.Default.ViewInAr, "Showcase"),
+        Triple("Gallery", Icons.Default.PhotoLibrary, "Gallery"),
         Triple("QA Tests", Icons.Default.BugReport, "QA Tests")
     )
 
@@ -110,7 +112,12 @@ private fun NavigationShellPreview(selectedTab: Int) {
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                2 -> QAScreen()
+                2 -> Text(
+                    "Gallery Screen\n(3D scenes — not available in preview)",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                3 -> QAScreen()
             }
         }
     }
