@@ -38,15 +38,15 @@ jobs:
 
       - name: Decode keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.DEMO_KEYSTORE_BASE64 }}
+          KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE_BASE64" | base64 -d > samples/sceneview-demo/release.keystore
 
       - name: Build release AAB
         env:
           SCENEVIEW_DEMO_KEYSTORE_FILE: release.keystore
-          SCENEVIEW_DEMO_KEYSTORE_PASSWORD: ${{ secrets.DEMO_KEYSTORE_PASSWORD }}
-          SCENEVIEW_DEMO_KEY_ALIAS: ${{ secrets.DEMO_KEY_ALIAS }}
-          SCENEVIEW_DEMO_KEY_PASSWORD: ${{ secrets.DEMO_KEY_PASSWORD }}
+          SCENEVIEW_DEMO_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          SCENEVIEW_DEMO_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          SCENEVIEW_DEMO_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
         run: ./gradlew :samples:sceneview-demo:bundleRelease
 
       - name: Upload AAB artifact
