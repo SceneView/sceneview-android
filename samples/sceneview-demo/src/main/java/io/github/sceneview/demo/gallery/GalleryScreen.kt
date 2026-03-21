@@ -295,7 +295,7 @@ private fun ModelScene(modelPath: String, scaleToUnits: Float) {
         lookAt(Position(0f, 0f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
     }
     val modelInstance = rememberModelInstance(modelLoader, modelPath)
 
@@ -328,7 +328,7 @@ private fun GeometryScene(shape: GeometryShape, color: Color) {
         lookAt(Position(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
     }
 
     Scene(
