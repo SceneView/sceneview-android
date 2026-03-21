@@ -49,6 +49,7 @@ nav:
     - Troubleshooting: troubleshooting.md
   - Guides:
     - Architecture: architecture.md
+    - Integrations: integrations.md
     - Performance: performance.md
     - Testing: testing.md
   - Features:
