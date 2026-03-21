@@ -118,6 +118,12 @@ Every Claude Code session MUST read this section first to stay in sync.
   - **Build**: `assembleDebug` ✓ · `lint` ✓ · `bundleRelease` ✓
   - **Play Store**: Metadata EN+FR, feature graphic, icon 512px, 4 screenshot mockups, release notes
   - **App icon**: Adaptive icon — isometric 3D cube on M3 purple background
+- **Website redesign** (`docs/` MkDocs + `sceneview.github.io` hosted site):
+  - MkDocs: Google-inspired palette (blue primary, clean surfaces), rounded cards, hero section
+  - Homepage: features grid with screenshots, code examples, samples gallery
+  - Parallel session working on `sceneview.github.io` repo: updating repo cards, adding Compose tag,
+    quick-start code snippets, demo app section, version badge
+  - Direction: modern, rounded, Google-like but not a copy — no colored icons, clean backgrounds
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
 
 ### Design direction
