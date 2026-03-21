@@ -26,3 +26,4 @@ samples/*/build/
 # MCP compiled test artifacts
 mcp/dist/*.test.js
 mcp/llms.txt
+sceneview-core/build/
