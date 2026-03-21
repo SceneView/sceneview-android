@@ -25,19 +25,3 @@ kotlin {
     }
 }
 
-// Expose the JVM "android" variant with Android build-type attributes so that
-// Android Gradle Plugin consumers (e.g. :sceneview, :samples:sceneview-demo) can
-// resolve the correct variant when they request the "debug" or "release" build type.
-val buildTypeAttr = Attribute.of("com.android.build.api.attributes.BuildTypeAttr", String::class.java)
-
-configurations.named("androidApiElements") {
-    attributes {
-        attribute(buildTypeAttr, "debug")
-    }
-}
-
-configurations.named("androidRuntimeElements") {
-    attributes {
-        attribute(buildTypeAttr, "debug")
-    }
-}
