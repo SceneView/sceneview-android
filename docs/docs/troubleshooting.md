@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues and fixes when working with SceneView for Android.
+Common issues and fixes when working with SceneView.
 
 ---
 

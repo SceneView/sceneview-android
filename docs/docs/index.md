@@ -1,16 +1,11 @@
-# SceneView for Android
+# SceneView
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
-[![ARSceneView](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=arsceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff)](https://discord.gg/UbNDDBTNqb)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/SceneView/sceneview-android/blob/main/LICENSE)
+<p class="hero-tagline">3D and AR as Compose UI — on Android, XR headsets, and soon iOS</p>
 
-<p class="hero-tagline">The #1 3D & AR library for Android — powered by Google Filament and ARCore</p>
-
-## 3D is just Compose UI.
+## Scenes are composables.
 
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.
-State drives the scene. Lifecycle is automatic.
+State drives the scene. Lifecycle is automatic. One API — every platform.
 
 === "3D Model Viewer"
 
@@ -43,6 +38,25 @@ State drives the scene. Lifecycle is automatic.
 
     Tap to place. Pinch to scale. Two-finger rotate. All built in.
 
+=== "XR Spatial"
+
+    ```kotlin
+    XRScene(modifier = Modifier.fillMaxSize()) {
+        ModelNode(
+            modelInstance = furniture,
+            position = Position(0f, 0f, -2f)
+        )
+        ViewNode(position = Position(0.5f, 1.5f, -1.5f)) {
+            Card {
+                Text("Tap to customize")
+                ColorPicker(onColorSelected = { /* update material */ })
+            }
+        }
+    }
+    ```
+
+    Same composable API — now in spatial computing headsets.
+
 === "Physics"
 
     ```kotlin
@@ -58,22 +72,40 @@ State drives the scene. Lifecycle is automatic.
 
     Rigid body simulation. Gravity, bounce, collision — no game engine needed.
 
-=== "Dynamic Sky + Fog"
-
-    ```kotlin
-    Scene(modifier = Modifier.fillMaxSize()) {
-        DynamicSkyNode(timeOfDay = sunHour, turbidity = 2f)
-        FogNode(view = view, density = fogAmount, color = Color(0xFFCCDDFF))
-        rememberModelInstance(modelLoader, "models/scene.glb")?.let {
-            ModelNode(modelInstance = it, scaleToUnits = 2.0f)
-        }
-    }
-    ```
-
-    Sunrise to sunset. Drive atmosphere with a Compose slider.
-
 [:octicons-rocket-24: Get started](#get-started){ .md-button .md-button--primary }
 [:octicons-book-24: Why SceneView](showcase.md){ .md-button }
+
+---
+
+## One API, every surface
+
+<div class="grid cards" markdown>
+
+-   :octicons-device-mobile-24: **Android**
+
+    ---
+
+    `Scene {}` and `ARScene {}` — Jetpack Compose composables backed by Google Filament and ARCore. Production-ready today.
+
+-   :octicons-device-desktop-24: **XR headsets**
+
+    ---
+
+    `XRScene {}` brings the same composable patterns to spatial computing. Your existing code and skills transfer directly.
+
+-   :octicons-globe-24: **Kotlin Multiplatform**
+
+    ---
+
+    iOS via Filament's Metal backend. Share scene definitions across Android and iOS from one Kotlin codebase.
+
+-   :octicons-cpu-24: **Rendering engine**
+
+    ---
+
+    Google Filament — physically-based rendering, HDR environment lighting, post-processing. 60fps on mid-range devices.
+
+</div>
 
 ---
 
@@ -95,6 +127,14 @@ State drives the scene. Lifecycle is automatic.
     }
     ```
 
+=== "XR (v4.0)"
+
+    ```kotlin
+    dependencies {
+        implementation("io.github.sceneview:sceneview-xr:4.0.0")
+    }
+    ```
+
 !!! tip "That's it"
     No XML layouts. No fragments. No OpenGL boilerplate. Just add the dependency and start composing.
 
@@ -106,42 +146,42 @@ State drives the scene. Lifecycle is automatic.
 
 <div class="grid cards" markdown>
 
--   :material-cube-outline: **3D Models**
+-   :octicons-package-24: **3D Models**
 
     ---
 
     `ModelNode` loads glTF/GLB with animations, gestures, and automatic scaling.
     Geometry primitives — `CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode` — need no asset files.
 
--   :material-lightbulb-on: **Lighting & Atmosphere**
+-   :octicons-sun-24: **Lighting & Atmosphere**
 
     ---
 
     `LightNode` (sun, point, spot, directional), `DynamicSkyNode` (time-of-day),
     `FogNode`, `ReflectionProbeNode`. All driven by Compose state.
 
--   :material-image: **Media & UI in 3D**
+-   :octicons-image-24: **Media & UI in 3D**
 
     ---
 
     `ImageNode`, `VideoNode` (with chromakey), and `ViewNode` — render **any Composable**
     directly inside 3D space. Text, buttons, cards — floating in your scene.
 
--   :material-atom: **Physics**
+-   :octicons-zap-24: **Physics**
 
     ---
 
     `PhysicsNode` — rigid body simulation with gravity, collision, and tap-to-throw.
     Interactive 3D worlds without a game engine.
 
--   :material-draw: **Drawing & Text**
+-   :octicons-paintbrush-24: **Drawing & Text**
 
     ---
 
     `LineNode`, `PathNode` for 3D polylines and animated paths.
     `TextNode`, `BillboardNode` for camera-facing labels.
 
--   :material-augmented-reality: **Full ARCore**
+-   :octicons-eye-24: **AR & spatial**
 
     ---
 
@@ -166,28 +206,37 @@ rendering engine used inside Google Search and Google Play Store.
 
 ---
 
-### AR that's just Compose
+### v4.0 — what's next
 
-`ARScene { }` wraps `Scene` with ARCore wired in. Same pattern — now in the real world.
+<div class="grid cards" markdown>
 
-```kotlin
-ARScene(
-    planeRenderer = true,
-    onSessionUpdated = { _, frame ->
-        anchor = frame.getUpdatedPlanes()
-            .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-            ?.let { frame.createAnchorOrNull(it.centerPose) }
-    }
-) {
-    anchor?.let { a ->
-        AnchorNode(anchor = a) {
-            ModelNode(modelInstance = sofa, scaleToUnits = 0.5f)
-        }
-    }
-}
-```
+-   :octicons-stack-24: **Multiple scenes**
 
-Plane detection, image tracking, face mesh, cloud anchors, geospatial API, streetscape geometry — all as composables.
+    ---
+
+    Multiple independent `Scene {}` on one screen — dashboards, feeds, product cards — each with its own camera and environment.
+
+-   :octicons-mirror-24: **Portal rendering**
+
+    ---
+
+    `PortalNode` — a window into another scene. AR portals, product showcases with custom lighting, level transitions.
+
+-   :octicons-iterations-24: **Particles & animation**
+
+    ---
+
+    `ParticleNode` for GPU particles (fire, smoke, sparkles). `AnimationController` for blending, cross-fading, and layering.
+
+-   :octicons-plug-24: **Collision detection**
+
+    ---
+
+    `CollisionNode` — declarative collision detection between scene nodes. No manual raycasting.
+
+</div>
+
+[:octicons-arrow-right-24: v4.0 preview](v4-preview.md)
 
 ---
 
@@ -195,23 +244,23 @@ Plane detection, image tracking, face mesh, cloud anchors, geospatial API, stree
 
 <div class="grid cards" markdown>
 
--   :material-cube-outline: **3D with Compose**
+-   :octicons-play-24: **3D with Compose**
 
     ---
 
     Build your first 3D scene with a rotating glTF model, HDR lighting, and orbit camera gestures.
 
-    **~25 minutes · Beginner**
+    **~25 minutes**
 
     [:octicons-arrow-right-24: Start the codelab](codelabs/codelab-3d-compose.md)
 
--   :material-augmented-reality: **AR with Compose**
+-   :octicons-play-24: **AR with Compose**
 
     ---
 
     Place 3D objects in the real world using ARCore plane detection and anchor tracking.
 
-    **~20 minutes · Beginner**
+    **~20 minutes**
 
     [:octicons-arrow-right-24: Start the codelab](codelabs/codelab-ar-compose.md)
 
@@ -276,7 +325,7 @@ Filament requires JNI calls on the main thread. `rememberModelInstance` handles 
 
 <div class="grid cards" markdown>
 
--   :material-swap-horizontal: **Coming from Sceneform?**
+-   :octicons-arrow-switch-24: **Coming from Sceneform?**
 
     ---
 
@@ -284,7 +333,7 @@ Filament requires JNI calls on the main thread. `rememberModelInstance` handles 
 
     [:octicons-arrow-right-24: Migration guide](migration.md)
 
--   :material-scale-balance: **Evaluating options?**
+-   :octicons-git-compare-24: **Evaluating options?**
 
     ---
 
@@ -296,17 +345,9 @@ Filament requires JNI calls on the main thread. `rememberModelInstance` handles 
 
 ---
 
-## What's next: v4.0
-
-The next major release brings multi-scene support, portal rendering, and Android XR spatial computing.
-
-[:octicons-arrow-right-24: v4.0 preview](v4-preview.md) · [:octicons-arrow-right-24: Full roadmap](https://github.com/SceneView/sceneview-android/blob/main/ROADMAP.md)
-
----
-
 ## Community
 
-[:simple-discord: Discord](https://discord.gg/UbNDDBTNqb){ .md-button }
-[:simple-github: GitHub](https://github.com/SceneView/sceneview-android){ .md-button .md-button--primary }
+[:octicons-comment-discussion-24: Discord](https://discord.gg/UbNDDBTNqb){ .md-button }
+[:octicons-mark-github-24: GitHub](https://github.com/SceneView/sceneview-android){ .md-button .md-button--primary }
 
-<p class="footer-note">SceneView is open source (Apache 2.0). Built on Google Filament 1.70 and ARCore 1.53. Android SDK 24+.</p>
+<p class="footer-note">SceneView is open source (Apache 2.0). Built on Google Filament and ARCore. Android SDK 24+. KMP & XR coming in v4.0.</p>

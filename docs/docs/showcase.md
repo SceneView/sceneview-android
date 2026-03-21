@@ -1,8 +1,9 @@
 # Why SceneView
 
-SceneView is the only actively maintained, Compose-native 3D and AR library for Android.
+SceneView is the only actively maintained, Compose-native 3D and AR library for Kotlin.
 It delivers Filament's physically-based rendering and ARCore's full AR capabilities through
-a declarative Kotlin API that Android developers already understand.
+a declarative API that developers already understand — and v4.0 extends that to XR headsets
+and iOS via Kotlin Multiplatform.
 
 ---
 
@@ -56,6 +57,11 @@ Orbit camera in one line:
 Scene(cameraManipulator = rememberCameraManipulator()) { ... }
 ```
 
+### Multi-platform trajectory
+
+v4.0 brings Kotlin Multiplatform support (iOS via Filament Metal backend) and `XRScene` for
+spatial computing headsets. One composable API across all target platforms.
+
 ### AI-assisted development
 
 SceneView ships with an MCP server (`@sceneview/mcp`) and a machine-readable `llms.txt` API
@@ -77,6 +83,7 @@ methods, no outdated patterns.
 | **Drawing** | `LineNode`, `PathNode` — 3D polylines, measurements, animated paths |
 | **Physics** | `PhysicsNode` — rigid body simulation, collision, gravity |
 | **AR** | `AnchorNode`, `HitResultNode`, `AugmentedImageNode`, `AugmentedFaceNode`, `CloudAnchorNode`, `StreetscapeGeometryNode` |
+| **XR** | `XRScene` — spatial computing with the same composable API |
 | **Structure** | `Node` (grouping/pivots), `CameraNode`, `MeshNode` |
 
 ---
@@ -167,9 +174,9 @@ attach 3D objects to landmarks. Front-camera AR.
 | Metric | Value |
 |---|---|
 | **Node types** | 26+ composable nodes |
-| **Rendering** | Google Filament 1.70 — PBR, 60fps mobile |
-| **AR backend** | ARCore 1.53 — latest features |
-| **Min SDK** | 24 (Android 7.0) |
+| **Rendering** | Google Filament — PBR, 60fps mobile |
+| **AR backend** | ARCore — latest features |
+| **Platforms** | Android today, XR + iOS in v4.0 |
 | **Setup** | 1 Gradle line, 0 XML |
 | **Model viewer** | ~5 lines of Kotlin |
 | **AR placement** | ~15 lines of Kotlin |
