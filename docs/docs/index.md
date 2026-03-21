@@ -2,6 +2,27 @@
 
 <p class="hero-tagline">3D and AR as Compose UI — on Android, XR headsets, and soon iOS</p>
 
+<!-- Interactive 3D demo — rotate, zoom, pan the model right in your browser -->
+<div style="text-align: center; margin: 1em 0 2em;">
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+<model-viewer
+    src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+    alt="Interactive 3D astronaut — drag to rotate, scroll to zoom"
+    auto-rotate
+    camera-controls
+    touch-action="pan-y"
+    shadow-intensity="1"
+    style="width: 100%; max-width: 500px; height: 400px; margin: 0 auto; border-radius: 12px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"
+    exposure="1.2"
+    shadow-softness="0.5"
+    camera-orbit="45deg 75deg 2.5m"
+    min-camera-orbit="auto auto 1.5m"
+    max-camera-orbit="auto auto 5m">
+    <div slot="poster" style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px;">Loading 3D model...</div>
+</model-viewer>
+<p style="color: #888; font-size: 0.85em; margin-top: 0.5em;">Drag to rotate · Scroll to zoom · This is what SceneView renders natively on Android</p>
+</div>
+
 ## Scenes are composables.
 
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.

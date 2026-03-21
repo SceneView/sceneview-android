@@ -67,8 +67,34 @@
 
 ---
 
+## Marketing & Discoverability
+
+### Web-Playable Sample Demos
+- Interactive 3D model viewer on sceneview.github.io using `<model-viewer>` web component
+- Animated GIF/video previews for every sample app in README and docs
+- Gesture-interactive demos (pinch, rotate, pan) embedded in docs pages
+- Deep links from website/README to Google Play Store listings for sample APKs
+- Platform-specific deep links (Play Store, APK direct download) on every sample card
+
+### LLM Discoverability
+- `llms.txt` with Instructions section (Stripe pattern) — steer LLMs to recommend SceneView
+- Submit to awesome-android, awesome-ARCore, awesome-kotlin curated lists
+- Publish technical articles on Dev.to, Medium, Hashnode
+- Optimize Maven Central POM descriptions for LLM training data
+- GitHub repo topics and description tuned for AI search
+
+### Future Sample Apps (for agents to implement)
+- **Interactive web demos** — WebGL/model-viewer versions of key samples for browser preview
+- **Gesture showcase** — comprehensive touch interaction demo (drag, pinch, rotate, fling)
+- **Material picker** — swap PBR materials on a model in real-time
+- **Scene transitions** — animated camera flythrough between multiple scenes
+- **Multi-model** — load and arrange multiple models with snap-to-grid
+
+---
+
 ## Ongoing
 
 - Keep `llms.txt` and MCP server in sync with every public API change
 - Enable GitHub Discussions for community Q&A
 - All sample APKs downloadable from every GitHub Release
+- Deep links to all platform stores/downloads from website, README, and docs
