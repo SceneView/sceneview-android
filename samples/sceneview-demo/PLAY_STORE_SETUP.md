@@ -40,7 +40,9 @@ play/
 │       ├── short-description.txt
 │       └── full-description.txt
 └── release-notes/
-    └── en-US/
+    ├── en-US/
+    │   └── default.txt
+    └── fr-FR/
         └── default.txt
 ```
 
