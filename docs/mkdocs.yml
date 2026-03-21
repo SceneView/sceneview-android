@@ -43,6 +43,10 @@ nav:
     - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md
     - AR with Compose: codelabs/codelab-ar-compose.md
+    - "Guide: Physics": codelabs/guide-physics.md
+    - "Guide: Dynamic sky & fog": codelabs/guide-dynamic-sky.md
+    - "Guide: Reflection probes": codelabs/guide-reflection-probes.md
+    - "Guide: Lines & text": codelabs/guide-lines-text.md
   - Migration guide: migration.md
   - Changelog: changelog.md
   - API reference:
@@ -79,9 +83,9 @@ extra:
       link: https://github.com/SceneView/sceneview-android
     - icon: fontawesome/brands/discord
       link: https://discord.gg/UbNDDBTNqb
-  analytics:
-    provider: google
-    property: G-XXXXXXXXXX
+  # analytics:
+  #   provider: google
+  #   property: G-XXXXXXXXXX  # TODO: replace with real property ID
 
 extra_css:
   - stylesheets/extra.css
