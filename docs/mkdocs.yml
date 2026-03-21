@@ -1,5 +1,5 @@
 site_name: SceneView
-site_description: 3D and AR for Jetpack Compose, powered by Google Filament and ARCore
+site_description: The #1 3D and AR library for Android — Jetpack Compose composables powered by Google Filament and ARCore
 site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview-android
 repo_name: SceneView/sceneview-android
@@ -23,6 +23,8 @@ theme:
   font:
     text: Roboto
     code: JetBrains Mono
+  icon:
+    logo: material/cube-outline
   features:
     - navigation.tabs
     - navigation.tabs.sticky
@@ -34,19 +36,26 @@ theme:
     - search.highlight
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
     - toc.follow
 
 nav:
   - Home: index.md
+  - Features:
+    - Why SceneView: showcase.md
+    - vs. Alternatives: comparison.md
+    - v4.0 Preview: v4-preview.md
   - Codelabs:
     - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md
     - AR with Compose: codelabs/codelab-ar-compose.md
-  - Migration guide: migration.md
-  - Changelog: changelog.md
-  - API reference:
+  - API:
     - API (3D — sceneview): https://sceneview.github.io/api/sceneview-android/sceneview/
     - API (AR — arsceneview): https://sceneview.github.io/api/sceneview-android/arsceneview/
+  - Samples: samples.md
+  - Contribute: contributing.md
+  - Changelog: changelog.md
+  - Migration: migration.md
 
 plugins:
   - search
@@ -71,6 +80,9 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 extra:
   social:

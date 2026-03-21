@@ -1,4 +1,4 @@
-/* SceneView CodeLab custom styles */
+/* SceneView docs — custom styles */
 
 :root {
   --md-primary-fg-color: #6c35aa;
@@ -7,15 +7,35 @@
   --md-accent-fg-color: #9c27b0;
 }
 
+/* Hero tagline on homepage */
+.hero-tagline {
+  font-size: 1.25rem;
+  color: var(--md-default-fg-color--light);
+  margin-top: -0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Footer note */
+.footer-note {
+  font-size: 0.85rem;
+  color: var(--md-default-fg-color--lighter);
+  text-align: center;
+  margin-top: 2rem;
+}
+
 /* Step numbers for codelab-style headers */
 .md-content h2 {
   counter-increment: step;
+}
+
+/* Only show step counters on codelab pages */
+.md-content[data-page="codelabs"] h2 {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.md-content h2::before {
+.md-content[data-page="codelabs"] h2::before {
   content: counter(step);
   background: var(--md-primary-fg-color);
   color: white;
@@ -63,4 +83,15 @@
 .md-content img[width] {
   display: block;
   margin: 0 auto 2rem;
+}
+
+/* Feature matrix — highlight SceneView column */
+table th:nth-child(2),
+table td:nth-child(2) {
+  font-weight: 500;
+}
+
+/* Admonition question style for FAQ */
+.md-typeset .admonition.question {
+  border-color: var(--md-primary-fg-color);
 }
