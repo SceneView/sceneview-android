@@ -320,18 +320,20 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 
 ### <a name="3d-samples"></a>Samples
 
-| Sample | What it shows |
-|---|---|
-| [Model Viewer](/samples/model-viewer) | Animated camera orbit around a glTF model, HDR environment, double-tap to scale |
-| [glTF Camera](/samples/gltf-camera) | Use a camera node imported directly from a glTF file |
-| [Camera Manipulator](/samples/camera-manipulator) | Orbit / pan / zoom camera interaction |
-| [Autopilot Demo](/samples/autopilot-demo) | Full animated scene built entirely with geometry nodes — no model files needed |
-| [Physics Demo](/samples/physics-demo) | Tap to throw balls — gravity, floor collision, sleep detection |
-| [Dynamic Sky](/samples/dynamic-sky) | Time-of-day sun + turbidity + fog controls |
-| [Post-Processing](/samples/post-processing) | Bloom, DoF, SSAO, Fog toggles |
-| [Line & Path](/samples/line-path) | 3-axis gizmo, spiral, animated sine-wave polyline |
-| [Text Labels](/samples/text-labels) | Camera-facing 3D labels on spheres — tap to cycle |
-| [Reflection Probe](/samples/reflection-probe) | Metallic sphere with IBL override |
+> **Try the samples:** [Browse all samples on the docs site](https://sceneview.github.io/samples/)
+
+| Sample | What it shows | Links |
+|---|---|---|
+| [Model Viewer](/samples/model-viewer) | Animated camera orbit around a glTF model, HDR environment, double-tap to scale | [Source](/samples/model-viewer) · [Docs](https://sceneview.github.io/samples/#model-viewer) |
+| [glTF Camera](/samples/gltf-camera) | Use a camera node imported directly from a glTF file | [Source](/samples/gltf-camera) · [Docs](https://sceneview.github.io/samples/#gltf-camera) |
+| [Camera Manipulator](/samples/camera-manipulator) | Orbit / pan / zoom camera interaction | [Source](/samples/camera-manipulator) · [Docs](https://sceneview.github.io/samples/#camera-manipulator) |
+| [Autopilot Demo](/samples/autopilot-demo) | Full animated scene built entirely with geometry nodes — no model files needed | [Source](/samples/autopilot-demo) · [Docs](https://sceneview.github.io/samples/#autopilot-demo) |
+| [Physics Demo](/samples/physics-demo) | Tap to throw balls — gravity, floor collision, sleep detection | [Source](/samples/physics-demo) · [Docs](https://sceneview.github.io/samples/#physics-demo) |
+| [Dynamic Sky](/samples/dynamic-sky) | Time-of-day sun + turbidity + fog controls | [Source](/samples/dynamic-sky) · [Docs](https://sceneview.github.io/samples/#dynamic-sky) |
+| [Post-Processing](/samples/post-processing) | Bloom, DoF, SSAO, Fog toggles | [Source](/samples/post-processing) · [Docs](https://sceneview.github.io/samples/#post-processing) |
+| [Line & Path](/samples/line-path) | 3-axis gizmo, spiral, animated sine-wave polyline | [Source](/samples/line-path) · [Docs](https://sceneview.github.io/samples/#line-path) |
+| [Text Labels](/samples/text-labels) | Camera-facing 3D labels on spheres — tap to cycle | [Source](/samples/text-labels) · [Docs](https://sceneview.github.io/samples/#text-labels) |
+| [Reflection Probe](/samples/reflection-probe) | Metallic sphere with IBL override | [Source](/samples/reflection-probe) · [Docs](https://sceneview.github.io/samples/#reflection-probe) |
 
 ---
 
@@ -487,13 +489,15 @@ ARScene(
 
 ### <a name="ar-samples"></a>Samples
 
-| Sample | What it shows |
-|---|---|
-| [AR Model Viewer](/samples/ar-model-viewer) | Tap-to-place on detected planes, model picker, animated reticle, pinch-to-scale, drag-to-rotate |
-| [AR Augmented Image](/samples/ar-augmented-image) | Overlay content on detected real-world images |
-| [AR Cloud Anchors](/samples/ar-cloud-anchor) | Host and resolve persistent cross-device anchors |
-| [AR Point Cloud](/samples/ar-point-cloud) | Visualise ARCore feature points |
-| [Autopilot Demo](/samples/autopilot-demo) | Autonomous AR scene driven entirely by Compose state |
+> **Try the samples:** [Browse all AR samples on the docs site](https://sceneview.github.io/samples/#ar-samples)
+
+| Sample | What it shows | Links |
+|---|---|---|
+| [AR Model Viewer](/samples/ar-model-viewer) | Tap-to-place on detected planes, model picker, animated reticle, pinch-to-scale, drag-to-rotate | [Source](/samples/ar-model-viewer) · [Docs](https://sceneview.github.io/samples/#ar-model-viewer) |
+| [AR Augmented Image](/samples/ar-augmented-image) | Overlay content on detected real-world images | [Source](/samples/ar-augmented-image) · [Docs](https://sceneview.github.io/samples/#ar-augmented-image) |
+| [AR Cloud Anchors](/samples/ar-cloud-anchor) | Host and resolve persistent cross-device anchors | [Source](/samples/ar-cloud-anchor) · [Docs](https://sceneview.github.io/samples/#ar-cloud-anchor) |
+| [AR Point Cloud](/samples/ar-point-cloud) | Visualise ARCore feature points | [Source](/samples/ar-point-cloud) · [Docs](https://sceneview.github.io/samples/#ar-point-cloud) |
+| [Autopilot Demo](/samples/autopilot-demo) | Autonomous AR scene driven entirely by Compose state | [Source](/samples/autopilot-demo) · [Docs](https://sceneview.github.io/samples/#autopilot-demo) |
 
 ---
 
