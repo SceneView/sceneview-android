@@ -64,7 +64,7 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-20)
+### Current state (last updated: 2026-03-21)
 
 - **Active branch**: `claude/identify-project-focus-FU1rl`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
@@ -72,14 +72,20 @@ Every Claude Code session MUST read this section first to stay in sync.
 - **llms.txt**: Major update — added 6 missing node types (TextNode, BillboardNode, LineNode,
   PathNode, MeshNode, material creation), complete remember* helpers reference table,
   ARScene session lifecycle callbacks
-- **NodeCatalog.kt**: All code snippets fixed to match actual API signatures
-- **Demo app** (`samples/sceneview-demo/`): Upgraded to Material 3 Expressive (`material3:1.5.0-alpha15`)
-  - `MaterialExpressiveTheme` + `MotionScheme.expressive()` + dynamic color
-  - ShowcaseScreen: LargeTopAppBar, filter chips, expressive cards with spring animations
-  - QAScreen: animated summary card, rounded progress bars, spring-animated test cards
-  - Navigation: bottom NavigationBar with scale animation, fade+scale transitions
-  - InAppUpdate: animated banner with rounded progress indicator
-- **Backlog priority 1**: Material 3 Expressive — polish remaining (see `ROADMAP.md` Backlog section)
+- **Demo app** (`samples/sceneview-demo/`): **Major upgrade — now a real 3D app**
+  - **3-tab architecture**: Explore (hero 3D scene), Showcase (node catalog), QA (tests)
+  - **Explore tab**: Full-screen 3D viewer with orbit camera, HDR environment, model picker
+    - 3 models: DamagedHelmet (PBR), Fox (animated), Rabbit
+    - Auto-rotating camera with infinite transition
+    - Gradient overlays, model picker chips
+  - **Showcase tab**: Live 3D previews in cards (geometry + model nodes render in real-time)
+    - Code snippets still visible below previews
+    - Category filtering with M3 FilterChips
+  - **QA tab**: Spring-animated progress bar, reset button, scale animation on cards
+  - **Material 3 Expressive**: `MaterialExpressiveTheme` + `MotionScheme.expressive()` + dynamic color
+  - **Assets**: damaged_helmet.glb, fox.glb, rabbit.glb, sky_2k.hdr
+  - **Play Store metadata**: Updated EN + FR descriptions, release notes
+- **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
 
 ### Design direction
 

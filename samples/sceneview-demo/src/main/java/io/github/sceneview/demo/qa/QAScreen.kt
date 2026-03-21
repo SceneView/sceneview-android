@@ -5,6 +5,7 @@ package io.github.sceneview.demo.qa
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -50,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
@@ -122,7 +125,7 @@ fun QAScreen() {
             scrollBehavior = scrollBehavior
         )
 
-        // Summary card — expressive styling
+        // Summary card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -165,40 +168,61 @@ fun QAScreen() {
                         )
                     }
 
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                isRunningAll = true
-                                for (test in qaTests) {
-                                    testStatuses = testStatuses + (test.id to QATestStatus.RUNNING)
-                                    delay(150)
-                                    val result = runQATest(test)
-                                    testStatuses = testStatuses + (test.id to result)
-                                }
-                                isRunningAll = false
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Reset button
+                        if (completedCount > 0 && !isRunningAll) {
+                            FilledTonalButton(
+                                onClick = {
+                                    testStatuses = qaTests.associate { it.id to QATestStatus.IDLE }
+                                },
+                                shape = RoundedCornerShape(50),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
-                        },
-                        enabled = !isRunningAll,
-                        shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        if (isRunningAll) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.5.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeCap = StrokeCap.Round
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text("Running\u2026")
-                        } else {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Run All")
+                        }
+
+                        // Run All button
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    isRunningAll = true
+                                    testStatuses = qaTests.associate { it.id to QATestStatus.IDLE }
+                                    for (test in qaTests) {
+                                        testStatuses = testStatuses + (test.id to QATestStatus.RUNNING)
+                                        delay(150)
+                                        val result = runQATest(test)
+                                        testStatuses = testStatuses + (test.id to result)
+                                    }
+                                    isRunningAll = false
+                                }
+                            },
+                            enabled = !isRunningAll,
+                            shape = RoundedCornerShape(50),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                        ) {
+                            if (isRunningAll) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.5.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeCap = StrokeCap.Round
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text("Running\u2026")
+                            } else {
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Run All")
+                            }
                         }
                     }
                 }
@@ -206,8 +230,16 @@ fun QAScreen() {
                 // Progress bar
                 if (isRunningAll || completedCount > 0) {
                     Spacer(modifier = Modifier.height(16.dp))
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = completedCount.toFloat() / totalCount.toFloat(),
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "progressAnimation"
+                    )
                     LinearProgressIndicator(
-                        progress = { completedCount.toFloat() / totalCount.toFloat() },
+                        progress = { animatedProgress },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
@@ -267,8 +299,20 @@ internal fun QATestCard(
         label = "testCardColor"
     )
 
+    // Spring scale animation on status change
+    val cardScale by animateFloatAsState(
+        targetValue = if (status == QATestStatus.RUNNING) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "cardScale"
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(cardScale),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
