@@ -65,31 +65,39 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-22)
+### Current state (last updated: 2026-03-21)
 
 - **Active branch**: `claude/identify-project-focus-FU1rl`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
-- **KMP migration (Phase 6 complete)**:
-  - **sceneview-core: 41 commonMain + 11 commonTest + 2 androidMain + 2 iosMain = 56 files**
+- **KMP migration (Phase 7 complete)**:
+  - **sceneview-core: 46 commonMain + 15 commonTest + 2 androidMain + 2 iosMain = 65 files**
   - **sceneview-core commonMain** now contains:
     - `collision/` (15 files) — Vector3, Quaternion, Matrix, Ray, Box, Sphere, Intersections
-    - `math/` (3 files) — type aliases, transforms, comparisons, Color (sRGB↔linear, HSV, luminance)
+    - `math/` (4 files) — type aliases, transforms, comparisons, Color (sRGB↔linear, HSV, luminance), CameraProjection (viewToWorld/worldToView/viewToRay, exposure)
     - `triangulation/` (2 files) — Earcut, Delaunator
     - `logging/` (1 file) — expect/actual logWarning
     - `rendering/` (5 files) — TransformManagerBridge, NodeTransform, Vertex, SceneNode, ResourceLoader
     - `components/` (3 files) — Component, CameraComponent, LightComponent interfaces
     - `gesture/` (2 files) — CameraManipulator, GestureListener with TouchEvent/TouchAction
     - `environment/` (1 file) — Environment<L, S> generic data class
-    - `animation/` (3 files) — Easing, lerp/slerp, PropertyAnimation (loop/ping-pong), SpringAnimator
+    - `animation/` (4 files) — Easing, lerp/slerp, PropertyAnimation, SpringAnimator, AnimationTimeUtils (frame↔time↔fraction)
     - `scene/` (1 file) — SceneGraph manager with hit testing, node find, frame dispatch
-    - `geometries/` (5 files) — GeometryData, Cube, Sphere, Cylinder, Plane vertex generators
+    - `geometries/` (8 files) — GeometryData, Cube, Sphere, Cylinder, Plane, Line, Path, Shape vertex generators
     - `utils/` (1 file) — Duration interval/fps calculations
   - kotlin-math 1.6.0 as `api` dependency
   - Removed 14 duplicate collision files + 2 triangulation files from sceneview
   - sceneview depends on sceneview-core via `api project(':sceneview-core')`
   - Build: plugins DSL, default hierarchy template, native target warning suppressed
   - **iOS strategy**: dual approach — KMP for cross-platform apps, native SwiftUI for pure iOS
+- **SceneViewSwift** (`SceneViewSwift/`): iOS prototype (Swift Package, iOS 18+ / visionOS 2+)
+  - `SceneView` — SwiftUI RealityView wrapper mirroring Android's `Scene {}`
+  - `ARSceneView` — ARKit + RealityKit AR skeleton with AnchorNode
+  - `ModelNode` — USDZ model loading with position/rotation/scale helpers
+  - `GeometryNode` — procedural cube/sphere/cylinder/plane via MeshResource
+  - `LightNode` — directional/point/spot light stubs
+  - `CameraControls` — orbit camera with full spherical→cartesian math, drag/pinch handling
+  - `SceneEnvironment` — HDR environment presets (studio, outdoor, sunset)
 - **llms.txt**: Major update — added 6 missing node types (TextNode, BillboardNode, LineNode,
   PathNode, MeshNode, material creation), complete remember* helpers reference table,
   ARScene session lifecycle callbacks
