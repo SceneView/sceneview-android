@@ -2,8 +2,10 @@ package io.github.sceneview.geometries
 
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.length
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class GeometryTest {
@@ -157,5 +159,40 @@ class GeometryTest {
             assertTrue(uv.x in 0f..1f, "UV x=${uv.x} out of range")
             assertTrue(uv.y in 0f..1f, "UV y=${uv.y} out of range")
         }
+    }
+
+    // ----- BoundingBox -----
+
+    @Test
+    fun cubeBoundingBox() {
+        val cube = generateCube(size = Float3(2f, 4f, 6f))
+        val bb = cube.boundingBox()
+        assertEquals(0f, bb.center.x, 1e-5f)
+        assertEquals(0f, bb.center.y, 1e-5f)
+        assertEquals(0f, bb.center.z, 1e-5f)
+        assertEquals(1f, bb.halfExtent.x, 1e-5f)
+        assertEquals(2f, bb.halfExtent.y, 1e-5f)
+        assertEquals(3f, bb.halfExtent.z, 1e-5f)
+    }
+
+    @Test
+    fun sphereBoundingBox() {
+        val sphere = generateSphere(radius = 2f, stacks = 16, slices = 16)
+        val bb = sphere.boundingBox()
+        // Center should be ~0
+        assertTrue(abs(bb.center.x) < 0.1f)
+        assertTrue(abs(bb.center.y) < 0.1f)
+        assertTrue(abs(bb.center.z) < 0.1f)
+        // Half extent should be ~radius
+        assertTrue(abs(bb.halfExtent.x - 2f) < 0.2f)
+        assertTrue(abs(bb.halfExtent.y - 2f) < 0.01f) // poles are exact
+    }
+
+    @Test
+    fun cubeHasNormalsAndUvs() {
+        val cube = generateCube()
+        assertTrue(cube.hasNormals)
+        assertTrue(cube.hasUvCoordinates)
+        assertFalse(cube.hasColors)
     }
 }
