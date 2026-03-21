@@ -8,7 +8,7 @@ class IntersectionsTest {
 
     @Test
     fun rayHitsSphere() {
-        val sphere = Sphere(Vector3(0f, 0f, 0f), 1f)
+        val sphere = Sphere(1f, Vector3(0f, 0f, 0f))
         val ray = Ray(Vector3(0f, 0f, -5f), Vector3(0f, 0f, 1f))
         val hit = RayHit()
         assertTrue(sphere.rayIntersection(ray, hit))
@@ -17,7 +17,7 @@ class IntersectionsTest {
 
     @Test
     fun rayMissesSphere() {
-        val sphere = Sphere(Vector3(0f, 0f, 0f), 1f)
+        val sphere = Sphere(1f, Vector3(0f, 0f, 0f))
         val ray = Ray(Vector3(5f, 5f, -5f), Vector3(0f, 0f, 1f))
         val hit = RayHit()
         assertFalse(sphere.rayIntersection(ray, hit))
@@ -41,15 +41,15 @@ class IntersectionsTest {
 
     @Test
     fun sphereIntersectsSphere() {
-        val a = Sphere(Vector3(0f, 0f, 0f), 1f)
-        val b = Sphere(Vector3(1.5f, 0f, 0f), 1f)
+        val a = Sphere(1f, Vector3(0f, 0f, 0f))
+        val b = Sphere(1f, Vector3(1.5f, 0f, 0f))
         assertTrue(a.shapeIntersection(b))
     }
 
     @Test
     fun sphereDoesNotIntersectDistantSphere() {
-        val a = Sphere(Vector3(0f, 0f, 0f), 1f)
-        val b = Sphere(Vector3(5f, 0f, 0f), 1f)
+        val a = Sphere(1f, Vector3(0f, 0f, 0f))
+        val b = Sphere(1f, Vector3(5f, 0f, 0f))
         assertFalse(a.shapeIntersection(b))
     }
 }
