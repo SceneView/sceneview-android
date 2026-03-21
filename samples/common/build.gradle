@@ -27,25 +27,25 @@ android {
 
 dependencies {
     // Kotlin
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0"
-    api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1"
+    api libs.kotlin.coroutines.core
+    api libs.kotlin.coroutines.android
 
     // AndroidX
-    api "androidx.core:core-ktx:1.18.0"
-    api "androidx.appcompat:appcompat:1.7.1"
+    api libs.androidx.core.ktx
+    api libs.androidx.appcompat
 
     // Compose
-    api "androidx.compose.ui:ui:1.10.5"
-    api "androidx.compose.foundation:foundation:1.10.5"
-    api 'androidx.activity:activity-compose:1.10.1'
-    api 'androidx.compose.material:material:1.10.5'
-    api "androidx.compose.ui:ui-tooling-preview:1.10.5"
-    api "androidx.navigation:navigation-compose:2.8.9"
-    debugApi "androidx.compose.ui:ui-tooling:1.10.5"
+    api libs.androidx.compose.ui
+    api libs.androidx.compose.foundation
+    api libs.androidx.activity.compose
+    api libs.androidx.compose.material
+    api libs.androidx.compose.ui.tooling.preview
+    api libs.androidx.navigation.compose
+    debugApi libs.androidx.compose.ui.tooling
 
     // Material 3
-    api "androidx.compose.material3:material3:1.3.2"
+    api libs.androidx.compose.material3
 
     // Material
-    api "com.google.android.material:material:1.12.0"
+    api libs.google.material
 }
