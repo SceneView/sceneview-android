@@ -31,6 +31,9 @@ jobs:
           ./gradlew \
             :samples:model-viewer:assembleDebug \
             :samples:ar-model-viewer:assembleDebug \
+            :samples:ar-augmented-image:assembleDebug \
+            :samples:ar-cloud-anchor:assembleDebug \
+            :samples:ar-point-cloud:assembleDebug \
             :samples:gltf-camera:assembleDebug \
             :samples:camera-manipulator:assembleDebug \
             :samples:autopilot-demo:assembleDebug \
@@ -41,6 +44,9 @@ jobs:
             :samples:text-labels:assembleDebug \
             :samples:reflection-probe:assembleDebug \
             --stacktrace
+
+      - name: Unit tests
+        run: ./gradlew :sceneview:testDebugUnitTest :arsceneview:testDebugUnitTest --stacktrace
 
       - name: Lint
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
