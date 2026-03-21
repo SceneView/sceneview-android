@@ -7,6 +7,27 @@
   --md-accent-fg-color: #9c27b0;
 }
 
+/* Force all inline emoji/icons to monochrome tinted with theme color */
+.md-typeset .twemoji svg,
+.md-typeset .gemoji img,
+.md-typeset .emojione svg,
+.md-content .twemoji svg {
+  fill: currentColor;
+  filter: none;
+}
+
+/* Grid card icons — tinted with theme primary */
+.grid.cards .twemoji svg {
+  fill: var(--md-primary-fg-color);
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Buttons — icon inherits button text color */
+.md-button .twemoji svg {
+  fill: currentColor;
+}
+
 /* Hero tagline on homepage */
 .hero-tagline {
   font-size: 1.25rem;

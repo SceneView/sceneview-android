@@ -4,7 +4,7 @@ Step-by-step guides for building 3D and AR apps with SceneView and Jetpack Compo
 
 <div class="grid cards" markdown>
 
--   :material-cube-outline: **3D with Compose**
+-   :octicons-package-24: **3D with Compose**
 
     ---
 
@@ -14,7 +14,7 @@ Step-by-step guides for building 3D and AR apps with SceneView and Jetpack Compo
 
     [:octicons-arrow-right-24: Start](codelab-3d-compose.md)
 
--   :material-augmented-reality: **AR with Compose**
+-   :octicons-eye-24: **AR with Compose**
 
     ---
 
