@@ -1,21 +1,133 @@
-/* SceneView CodeLab custom styles */
+/* SceneView docs — custom styles */
 
 :root {
   --md-primary-fg-color: #6c35aa;
   --md-primary-fg-color--light: #9c65da;
   --md-primary-fg-color--dark: #4a1d8a;
   --md-accent-fg-color: #9c27b0;
+  --sv-glow: rgba(108, 53, 170, 0.25);
 }
 
-/* Step numbers for codelab-style headers */
+/* ─── Hero section ─────────────────────────────────────────────────── */
+
+.hero-section img {
+  width: 100%;
+  max-width: 1100px;
+  display: block;
+  margin: 0 auto 1rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(108, 53, 170, 0.2);
+}
+
+.hero-tagline {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 2rem;
+}
+
+.hero-tagline h2 {
+  font-size: 2.4rem;
+  background: linear-gradient(135deg, #6c35aa, #e040fb, #00E5FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+/* Remove codelab step counter from hero and showcase pages */
+.hero-tagline h2::before,
+.showcase-grid h3::before {
+  display: none !important;
+}
+
+/* ─── Showcase grid ────────────────────────────────────────────────── */
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.showcase-grid--full {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.showcase-card {
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding-bottom: 1rem;
+}
+
+.showcase-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px var(--sv-glow);
+}
+
+.showcase-card img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  background: linear-gradient(135deg, #0a0015, #1a0a30);
+  padding: 1rem;
+  display: block;
+}
+
+.showcase-card p,
+.showcase-card h3 {
+  padding: 0 1.2rem;
+}
+
+.showcase-card h3 {
+  margin-top: 0.8rem;
+  color: var(--md-primary-fg-color);
+}
+
+.showcase-card .highlight {
+  margin: 0 1rem;
+  border-radius: 8px;
+}
+
+.showcase-link {
+  display: inline-block;
+  margin: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--md-primary-fg-color) !important;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.showcase-link:hover {
+  color: var(--md-accent-fg-color) !important;
+}
+
+/* ─── Step numbers for codelab-style headers (only on codelab pages) ── */
+
 .md-content h2 {
   counter-increment: step;
+}
+
+.md-content {
+  counter-reset: step;
+}
+
+/* Only show step counters on codelab pages */
+.md-content[data-md-component="content"] h2::before {
+  display: none;
+}
+
+/* Codelab pages get step numbers via body class */
+body[data-md-color-scheme] .md-typeset .codelab-steps h2 {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.md-content h2::before {
+body[data-md-color-scheme] .md-typeset .codelab-steps h2::before {
   content: counter(step);
   background: var(--md-primary-fg-color);
   color: white;
@@ -30,16 +142,14 @@
   flex-shrink: 0;
 }
 
-.md-content {
-  counter-reset: step;
-}
+/* ─── Code blocks ──────────────────────────────────────────────────── */
 
-/* Code blocks */
 .highlight code {
   font-size: 0.85rem;
 }
 
-/* Card grid */
+/* ─── Card grid (get started, roadmap teasers) ─────────────────────── */
+
 .grid.cards > ul {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -50,17 +160,55 @@
 
 .grid.cards > ul > li {
   border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1.5rem;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .grid.cards > ul > li:hover {
-  box-shadow: 0 4px 16px rgba(108, 53, 170, 0.15);
+  box-shadow: 0 6px 24px var(--sv-glow);
+  transform: translateY(-3px);
 }
 
-/* Hero image centering */
+/* ─── Hero image centering ─────────────────────────────────────────── */
+
 .md-content img[width] {
   display: block;
   margin: 0 auto 2rem;
+}
+
+/* ─── Smooth animations on page load ───────────────────────────────── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-section,
+.hero-tagline {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.showcase-card {
+  animation: fadeInUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.showcase-card:nth-child(1) { animation-delay: 0.1s; }
+.showcase-card:nth-child(2) { animation-delay: 0.2s; }
+.showcase-card:nth-child(3) { animation-delay: 0.3s; }
+.showcase-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* ─── Dark mode adjustments ────────────────────────────────────────── */
+
+[data-md-color-scheme="slate"] .showcase-card {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-md-color-scheme="slate"] .showcase-card img {
+  background: linear-gradient(135deg, #0a0015, #1a0a30);
+}
+
+[data-md-color-scheme="default"] .showcase-card img {
+  background: linear-gradient(135deg, #f0e8f8, #e8e0f0);
 }
