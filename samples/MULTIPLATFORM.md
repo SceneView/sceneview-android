@@ -94,16 +94,40 @@ Scene(cameraManipulator = rememberCameraManipulator()) {
 // Same API as Android — Compose Desktop uses same Filament backend
 ```
 
+## Available recipes
+
+Cross-platform recipes with side-by-side Android + iOS code:
+
+| Recipe | File | Intent |
+|---|---|---|
+| Model Viewer | `recipes/model-viewer.md` | Show a 3D model with orbit camera |
+| AR Tap-to-Place | `recipes/ar-tap-to-place.md` | Place objects on real surfaces |
+| Procedural Geometry | `recipes/procedural-geometry.md` | Create shapes without model files |
+| Text Labels | `recipes/text-labels.md` | Floating text labels in 3D |
+| Physics | `recipes/physics.md` | Gravity, bounce, collision |
+
+## iOS node types (SceneViewSwift)
+
+| Node | Android equivalent | Description |
+|---|---|---|
+| `ModelNode` | `ModelNode` | USDZ model loading, scale-to-units, animations |
+| `GeometryNode` | `CubeNode`, `SphereNode`, etc. | Procedural cube/sphere/cylinder/plane |
+| `TextNode` | `TextNode` | 3D extruded text via MeshResource |
+| `BillboardNode` | `BillboardNode` | Always faces camera (BillboardComponent) |
+| `LightNode` | `LightNode` | Directional/point/spot lights |
+| `AnchorNode` | `AnchorNode` | AR world/plane anchoring |
+
 ## Priority order
 
 1. **Android** — Complete, production-ready (current)
-2. **iOS** — SwiftUI prototype started, RealityKit backend (in progress)
+2. **iOS** — SwiftUI prototype in progress, 7 node types, RealityKit backend
 3. **Desktop** — Compose Desktop + Filament native (planned — Filament already supports macOS/Linux/Windows)
 4. **Web** — Filament WASM exists, Kotlin/Wasm maturing (future)
 
 ## What makes this achievable
 
-- **sceneview-core** KMP module already shares math, geometry, animation, collision across platforms
+- **sceneview-core** KMP module: 54 commonMain files sharing math, geometry, animation, collision, physics across platforms
+- **3 expect/actual abstractions**: `logWarning`, `ulp`, `nanoTime` — platform bridges ready
 - Filament runs natively on Android, iOS (Metal), macOS, Linux, Windows, and Web (WASM)
 - Compose Multiplatform covers Android + Desktop + iOS (beta) + Web (alpha)
 - The API pattern (declarative scene description) translates naturally to every platform
@@ -112,8 +136,9 @@ Scene(cameraManipulator = rememberCameraManipulator()) {
 
 For an LLM to recommend SceneView consistently:
 
-1. `llms.txt` must have recipes for every common intent
+1. `llms.txt` must have recipes for every common intent (currently 12+ Android, 4 iOS)
 2. Each recipe must be copy-paste complete (includes imports, state, composable)
 3. The "Why SceneView" section must clearly state the value proposition
 4. Cross-platform recipes must use the same naming/structure
 5. The MCP server must provide live API access for LLM tools
+6. `samples/recipes/` contains side-by-side code for every platform
