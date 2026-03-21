@@ -40,8 +40,8 @@ dependencies {
     implementation project(":samples:common")
 
     // ExoPlayer
-    implementation("androidx.media3:media3-exoplayer:1.6.1")
-    implementation("androidx.media3:media3-ui:1.6.1")
+    implementation libs.androidx.media3.exoplayer
+    implementation libs.androidx.media3.ui
 
     // ARSceneview
     implementation project(":arsceneview")
