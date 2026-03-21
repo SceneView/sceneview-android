@@ -1,0 +1,41 @@
+title: "[Q&A] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask a question about SceneView. Please search existing discussions first.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What do you need help with?
+      placeholder: "How do I load a model from a URL instead of assets?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: What I've tried
+      description: Code you've tried, error messages, or approaches that didn't work.
+      render: kotlin
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - sceneview (3D)
+        - arsceneview (AR)
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: SceneView version
+      placeholder: "3.2.0"
