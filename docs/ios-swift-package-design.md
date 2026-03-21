@@ -9,11 +9,13 @@ Two distribution paths:
 
 ## Why RealityKit over SceneKit?
 
-- Apple's active investment (SceneKit hasn't had major updates since 2020)
-- visionOS/Vision Pro native support
+- **SceneKit is officially deprecated** (WWDC 2025) — Apple published migration guide
+- Apple published "Bring your SceneKit project to RealityKit" (WWDC25 session 288)
+- visionOS/Vision Pro native support (SceneKit does not support visionOS)
 - Built-in AR anchoring via ARKit integration
 - PBR materials, physics, animation out of the box
 - `RealityView` in SwiftUI (iOS 18+) — no UIViewRepresentable needed
+- Future-proof: Apple's only actively developed 3D framework
 
 ## API Design — SwiftUI Declarative
 
