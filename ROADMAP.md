@@ -1,61 +1,85 @@
 # SceneView Roadmap
 
-## 3.2.0 — Physics & Interactions
+## 3.2.0 — Shipped
 
-### SDK
-- **`PhysicsNode`** — rigid body / collision via Bullet or JBullet wrapper
-- **`RaycastNode`** — tap/drag hit-testing against scene geometry (not just AR planes)
-- **Gesture improvements** — scale clamp, rotation axis lock, velocity flick on release
-- `onCollision` callback in `SceneScope`
+Everything below has been implemented and released:
 
-### Ecosystem
-- MCP tool: `get_node_reference` — look up any node type's full API from an AI assistant
-- Codelab: Physics & Interactions
-
----
-
-## 3.3.0 — Environment & Lighting
-
-### SDK
+- **`PhysicsNode`** — rigid body simulation with gravity, collision, bounce
 - **`DynamicSkyNode`** — time-of-day sun position driven by Compose state
-- **`ReflectionProbeNode`** — local cubemap reflections per region
 - **`FogNode`** — distance/height fog as composable state
-- ARCore `EnvironmentalHDR` upgrade — capture real camera feed for AR environment estimation
-
-### Ecosystem
-- Codelab: Dynamic Environments
-
----
-
-## 3.4.0 — Spatial UI
-
-### SDK
-- **`BillboardNode`** — node always faces camera (labels, tooltips, UI callouts)
-- **`TextNode`** — 3D text geometry
-- **`LineNode` / `PathNode`** — 3D polylines (measurements, AR guides, drawing)
-- `ViewNode` depth-ordering fix for edge cases with transparent Compose layers
-
-### Ecosystem
-- Codelab: Spatial UI
+- **`ReflectionProbeNode`** — local cubemap reflections per region
+- **`BillboardNode`** — camera-facing image quad
+- **`TextNode`** — camera-facing text labels rendered via Canvas
+- **`LineNode` / `PathNode`** — 3D polylines, measurements, animated paths
+- Post-processing pipeline (bloom, DoF, SSAO, fog) via Filament View
+- 6 new sample apps: dynamic-sky, physics-demo, post-processing, reflection-probe, line-path, text-labels
+- MCP server (`@sceneview/mcp`) for AI-assisted development
+- Full documentation website with 13 pages
 
 ---
 
-## 4.0.0 — Multi-scene & Platform Expansion
+## 3.3.0 — Next minor
 
-### SDK
-- Multiple independent `Scene {}` composables on the same screen sharing one `Engine`
-- **`PortalNode`** — render a secondary scene inside a 3D frame (AR portals)
-- Filament 2.x migration (when stable)
-- **`SceneView-XR`** module — Android XR / spatial computing support
+### New features
+- [ ] `AnimationController` — composable-level control over blending, cross-fading, and layered animations
+- [ ] `CollisionNode` — declarative collision detection between nodes (bounding box and sphere)
+- [ ] `GizmoNode` — visual transform handles for editor-style interaction
+- [ ] `ParticleNode` — GPU particle system composable (fire, smoke, sparkles)
+- [ ] Material editor support — runtime material parameter modification via Compose state
 
-### Ecosystem
-- `llms.txt` auto-generated from KDoc at release time
-- Kotlin Multiplatform proof of concept (iOS via Filament Metal backend)
-- GitHub Discussions enabled + triage labels for community
+### Improvements
+- [ ] Improved `PhysicsNode` — inter-node collision callbacks, constraints, joints
+- [ ] `TextNode` rich text — multiple fonts, sizes, and colors in one label
+- [ ] Performance dashboard — composable overlay showing FPS, draw calls, triangle count
+- [ ] `ModelNode` LOD — automatic level-of-detail switching based on camera distance
+- [ ] `onCollision` callback in `SceneScope`
+- [ ] Gesture improvements — scale clamp, rotation axis lock, velocity flick on release
 
 ---
 
-## Ongoing
+## 4.0.0 — Next major
 
-- Keep `llms.txt` and MCP server in sync with every public API change
-- Enable GitHub Discussions for community Q&A
+### Multi-scene
+- [ ] Multiple independent `Scene { }` composables on one screen
+- [ ] Shared `Engine` across scenes with independent cameras and environments
+- [ ] 3D content in `LazyColumn`, `Pager`, `BottomSheet`
+
+### Portal rendering
+- [ ] `PortalNode` — render a secondary scene inside a 3D frame
+- [ ] Independent lighting and environment per portal
+- [ ] AR portals — real-world windows into virtual scenes
+
+### SceneView-XR
+- [ ] `XRScene { }` composable for Android XR spatial computing
+- [ ] Passthrough AR on headsets
+- [ ] Spatial UI via `ViewNode` in XR space
+- [ ] Hand tracking input
+
+### Platform expansion
+- [ ] Kotlin Multiplatform proof of concept (iOS via Filament's Metal backend)
+- [ ] Shared scene definition across Android and iOS
+- [ ] Platform-specific renderers
+
+### Infrastructure
+- [ ] Filament 2.x migration (when stable)
+- [ ] `llms.txt` auto-generated from KDoc at release time
+
+---
+
+## Community wishlist
+
+Frequently requested features under evaluation:
+
+- [ ] Web export (Filament has a WebGL backend)
+- [ ] Networking — synchronized multi-user scenes
+- [ ] Audio spatialization — 3D positional audio tied to nodes
+- [ ] Shader graph — visual material editor with Compose preview
+
+---
+
+## How to influence the roadmap
+
+1. **Vote** — thumbs-up on [feature request issues](https://github.com/SceneView/sceneview-android/issues?q=label%3Aenhancement)
+2. **Discuss** — describe your use case in [GitHub Discussions](https://github.com/SceneView/sceneview-android/discussions)
+3. **Contribute** — PRs for roadmap items are especially welcome
+4. **Sponsor** — [GitHub Sponsors](https://github.com/sponsors/ThomasGorisse) and [Open Collective](https://opencollective.com/sceneview) fund dedicated development time

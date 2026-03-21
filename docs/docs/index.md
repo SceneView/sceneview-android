@@ -1,5 +1,10 @@
 # SceneView for Android
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
+[![ARSceneView](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=arsceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
+[![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff)](https://discord.gg/UbNDDBTNqb)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/SceneView/sceneview-android/blob/main/LICENSE)
+
 <p class="hero-tagline">The #1 3D & AR library for Android — powered by Google Filament and ARCore</p>
 
 ## 3D is just Compose UI.
@@ -7,16 +12,65 @@
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.
 State drives the scene. Lifecycle is automatic.
 
-```kotlin
-Scene(modifier = Modifier.fillMaxSize()) {
-    rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
-        ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
-    }
-    LightNode(type = LightManager.Type.SUN, apply = { intensity(100_000.0f) })
-}
-```
+=== "3D Model Viewer"
 
-Five lines. Production-quality 3D. Same Kotlin you write every day.
+    ```kotlin
+    Scene(modifier = Modifier.fillMaxSize()) {
+        rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
+            ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
+        }
+        LightNode(type = LightManager.Type.SUN, apply = { intensity(100_000.0f) })
+    }
+    ```
+
+    Five lines. Production-quality 3D. Same Kotlin you write every day.
+
+=== "AR Placement"
+
+    ```kotlin
+    ARScene(planeRenderer = true, onSessionUpdated = { _, frame ->
+        anchor = frame.getUpdatedPlanes()
+            .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
+            ?.let { frame.createAnchorOrNull(it.centerPose) }
+    }) {
+        anchor?.let { a ->
+            AnchorNode(anchor = a) {
+                ModelNode(modelInstance = sofa, scaleToUnits = 0.5f, isEditable = true)
+            }
+        }
+    }
+    ```
+
+    Tap to place. Pinch to scale. Two-finger rotate. All built in.
+
+=== "Physics"
+
+    ```kotlin
+    Scene(modifier = Modifier.fillMaxSize()) {
+        val ball = rememberModelInstance(modelLoader, "models/ball.glb")
+        ball?.let {
+            val node = ModelNode(modelInstance = it, scaleToUnits = 0.1f)
+            PhysicsNode(node = node, mass = 1f, restitution = 0.6f,
+                linearVelocity = Position(0f, 5f, -3f), floorY = 0f)
+        }
+    }
+    ```
+
+    Rigid body simulation. Gravity, bounce, collision — no game engine needed.
+
+=== "Dynamic Sky + Fog"
+
+    ```kotlin
+    Scene(modifier = Modifier.fillMaxSize()) {
+        DynamicSkyNode(timeOfDay = sunHour, turbidity = 2f)
+        FogNode(view = view, density = fogAmount, color = Color(0xFFCCDDFF))
+        rememberModelInstance(modelLoader, "models/scene.glb")?.let {
+            ModelNode(modelInstance = it, scaleToUnits = 2.0f)
+        }
+    }
+    ```
+
+    Sunrise to sunset. Drive atmosphere with a Compose slider.
 
 [:octicons-rocket-24: Get started](#get-started){ .md-button .md-button--primary }
 [:octicons-book-24: Why SceneView](showcase.md){ .md-button }

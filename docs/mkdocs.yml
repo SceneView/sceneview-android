@@ -44,8 +44,13 @@ nav:
   - Get Started:
     - Quickstart: quickstart.md
     - API Cheatsheet: cheatsheet.md
+    - Recipes: recipes.md
     - FAQ: faq.md
     - Troubleshooting: troubleshooting.md
+  - Guides:
+    - Architecture: architecture.md
+    - Performance: performance.md
+    - Testing: testing.md
   - Features:
     - Why SceneView: showcase.md
     - vs. Alternatives: comparison.md
