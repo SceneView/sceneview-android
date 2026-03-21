@@ -65,25 +65,26 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-21)
+### Current state (last updated: 2026-03-22, Phase 8)
 
 - **Active branch**: `claude/identify-project-focus-FU1rl`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
-- **KMP migration (Phase 7 complete)**:
-  - **sceneview-core: 46 commonMain + 15 commonTest + 2 androidMain + 2 iosMain = 65 files**
+- **KMP migration (Phase 8 complete)**:
+  - **sceneview-core: 50 commonMain + 16 commonTest + 2 androidMain + 2 iosMain = 70 files**
   - **sceneview-core commonMain** now contains:
     - `collision/` (15 files) — Vector3, Quaternion, Matrix, Ray, Box, Sphere, Intersections
     - `math/` (4 files) — type aliases, transforms, comparisons, Color (sRGB↔linear, HSV, luminance), CameraProjection (viewToWorld/worldToView/viewToRay, exposure)
     - `triangulation/` (2 files) — Earcut, Delaunator
     - `logging/` (1 file) — expect/actual logWarning
-    - `rendering/` (5 files) — TransformManagerBridge, NodeTransform, Vertex, SceneNode, ResourceLoader
+    - `rendering/` (6 files) — TransformManagerBridge, NodeTransform, Vertex, SceneNode, ResourceLoader, MaterialDefaults (PBR constants + render priorities)
     - `components/` (3 files) — Component, CameraComponent, LightComponent interfaces
-    - `gesture/` (2 files) — CameraManipulator, GestureListener with TouchEvent/TouchAction
+    - `gesture/` (3 files) — CameraManipulator, GestureListener with TouchEvent/TouchAction, GestureTransforms (scale damping, rotation damping)
     - `environment/` (1 file) — Environment<L, S> generic data class
-    - `animation/` (4 files) — Easing, lerp/slerp, PropertyAnimation, SpringAnimator, AnimationTimeUtils (frame↔time↔fraction)
+    - `animation/` (6 files) — Easing, lerp/slerp, PropertyAnimation, SpringAnimator, AnimationTimeUtils (frame↔time↔fraction), SmoothTransform (interpolation state machine)
     - `scene/` (1 file) — SceneGraph manager with hit testing, node find, frame dispatch
     - `geometries/` (8 files) — GeometryData, Cube, Sphere, Cylinder, Plane, Line, Path, Shape vertex generators
+    - `physics/` (1 file) — PhysicsSimulation (Euler integration, floor bounce, restitution, sleep)
     - `utils/` (1 file) — Duration interval/fps calculations
   - kotlin-math 1.6.0 as `api` dependency
   - Removed 14 duplicate collision files + 2 triangulation files from sceneview
