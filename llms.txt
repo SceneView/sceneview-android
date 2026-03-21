@@ -125,7 +125,65 @@ Scene(...) {
 // animationName = null + autoAnimate = true plays all animations.
 ```
 
-### Primitive geometry nodes
+### CubeNode
+```kotlin
+CubeNode(
+    size: Size = Size(1f),              // width, height, depth in metres
+    center: Position = Position(0f),     // offset from node position
+    materialInstance: MaterialInstance?,  // from materialLoader.createColorInstance(...)
+    position: Position = Position(),
+    rotation: Rotation = Rotation()
+)
+```
+
+### SphereNode
+```kotlin
+SphereNode(
+    radius: Float = 0.5f,
+    center: Position = Position(0f),
+    stacks: Int = 24,                   // latitude subdivisions
+    slices: Int = 24,                   // longitude subdivisions
+    materialInstance: MaterialInstance?,
+    position: Position = Position(),
+    rotation: Rotation = Rotation()
+)
+```
+
+### CylinderNode
+```kotlin
+CylinderNode(
+    radius: Float = 0.5f,
+    height: Float = 1.0f,
+    center: Position = Position(0f),
+    materialInstance: MaterialInstance?,
+    position: Position = Position(),
+    rotation: Rotation = Rotation()
+)
+```
+
+### PlaneNode
+```kotlin
+PlaneNode(
+    size: Size = Size(1f),              // width and depth in metres (height is 0)
+    center: Position = Position(0f),
+    materialInstance: MaterialInstance?,
+    position: Position = Position(),
+    rotation: Rotation = Rotation()
+)
+```
+
+### MeshNode — custom geometry
+```kotlin
+MeshNode(
+    geometry: Geometry,                 // custom vertex/index buffer geometry
+    materialInstance: MaterialInstance?,
+    position: Position = Position(),
+    rotation: Rotation = Rotation()
+)
+// Build a Geometry with Geometry.Builder for custom vertex buffers.
+```
+
+### Primitive geometry example
 ```kotlin
 Scene(...) {
     CubeNode(size = Size(0.5f, 0.5f, 0.5f), materialInstance = redMaterial)
@@ -133,6 +191,14 @@ Scene(...) {
     CylinderNode(radius = 0.2f, height = 1.0f, materialInstance = greenMaterial)
     PlaneNode(size = Size(5f, 5f), materialInstance = greyMaterial)
 }
+```
+
+### Creating materials for geometry nodes
+```kotlin
+val materialLoader = rememberMaterialLoader(engine)
+// Solid colour with PBR properties:
+val redMaterial = materialLoader.createColorInstance(Color.Red, metallic = 0f, roughness = 0.5f)
+val chromeMaterial = materialLoader.createColorInstance(Color.White, metallic = 1f, roughness = 0.1f)
 ```
 
 ### LightNode
