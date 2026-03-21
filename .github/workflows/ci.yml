@@ -51,7 +51,17 @@ jobs:
             :samples:line-path:assembleDebug \
             :samples:text-labels:assembleDebug \
             :samples:reflection-probe:assembleDebug \
-            --stacktrace
+            --stacktrace 2>&1 | tee samples-build.log || (grep -E "error:|FAILURE|e:" samples-build.log > samples-error.log && exit 1)
+
+      - name: Upload sample build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samples-build-error
+          path: |
+            samples-error.log
+            samples-build.log
+          if-no-files-found: ignore
 
       - name: Unit tests
         run: ./gradlew :sceneview:testDebugUnitTest :arsceneview:testDebugUnitTest --stacktrace
