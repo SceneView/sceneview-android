@@ -70,9 +70,9 @@ private data class ExploreModel(
 )
 
 private val exploreModels = listOf(
-    ExploreModel("Helmet", "models/damaged_helmet.glb", 1.0f, 2.5f),
-    ExploreModel("Fox", "models/fox.glb", 0.012f, 2.5f),
-    ExploreModel("Rabbit", "models/rabbit.glb", 0.008f, 2.5f),
+    ExploreModel("Toy Car", "models/toy_car.glb", 0.8f, 3.0f),
+    ExploreModel("Chair", "models/sheen_chair.glb", 0.6f, 3.5f),
+    ExploreModel("Lamp", "models/iridescence_lamp.glb", 0.5f, 3.0f),
 )
 
 @Composable
@@ -105,7 +105,7 @@ fun ExploreScreen() {
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetPath)
         val environment = rememberEnvironment(environmentLoader) {
-            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+            environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
         }
 
         val animationCount by remember(modelInstance) {
