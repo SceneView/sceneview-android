@@ -145,7 +145,7 @@ fun createEnvironment(
     indirectLight = KTX1Loader.createIndirectLight(
         environmentLoader.engine,
         environmentLoader.context.assets.readBuffer("environments/neutral/neutral_ibl.ktx"),
-    ).indirectLight
+    )
 )
 
 fun createEnvironment(
