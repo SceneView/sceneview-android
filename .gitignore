@@ -26,3 +26,6 @@ samples/*/build/
 # MCP compiled test artifacts
 mcp/dist/*.test.js
 mcp/llms.txt
+
+# MkDocs build output
+docs/site/

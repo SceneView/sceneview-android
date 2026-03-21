@@ -27,7 +27,20 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Build samples
-        run: ./gradlew :samples:model-viewer:assembleDebug :samples:ar-model-viewer:assembleDebug :samples:gltf-camera:assembleDebug :samples:autopilot-demo:assembleDebug --stacktrace
+        run: |
+          ./gradlew \
+            :samples:model-viewer:assembleDebug \
+            :samples:ar-model-viewer:assembleDebug \
+            :samples:gltf-camera:assembleDebug \
+            :samples:camera-manipulator:assembleDebug \
+            :samples:autopilot-demo:assembleDebug \
+            :samples:physics-demo:assembleDebug \
+            :samples:post-processing:assembleDebug \
+            :samples:dynamic-sky:assembleDebug \
+            :samples:line-path:assembleDebug \
+            :samples:text-labels:assembleDebug \
+            :samples:reflection-probe:assembleDebug \
+            --stacktrace
 
       - name: Lint
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
@@ -60,7 +73,13 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Build AR samples
-        run: ./gradlew :samples:ar-model-viewer:assembleDebug :samples:ar-augmented-image:assembleDebug :samples:ar-point-cloud:assembleDebug --stacktrace
+        run: |
+          ./gradlew \
+            :samples:ar-model-viewer:assembleDebug \
+            :samples:ar-augmented-image:assembleDebug \
+            :samples:ar-cloud-anchor:assembleDebug \
+            :samples:ar-point-cloud:assembleDebug \
+            --stacktrace
 
       - name: Download ARCore emulator APK
         run: |

@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  *
  * Quaternion operations are Hamiltonian using the right-hand-rule convention.
  */
-// TODO: Evaluate combining with java/com/google/ar/core/Quaternion.java
+// Legacy Sceneform quaternion — used by CollisionSystem. Migrate to Kotlin-Math in 3.3.0.
 class Quaternion {
     @JvmField var x: Float
     @JvmField var y: Float

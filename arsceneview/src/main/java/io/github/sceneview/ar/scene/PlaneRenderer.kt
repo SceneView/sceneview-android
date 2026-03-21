@@ -198,7 +198,6 @@ class PlaneRenderer(
     fun destroy() {
         visualizers.forEach { (_, planeVisualizer) -> planeVisualizer.destroy() }
 
-        // TODO: Clean
         materialInstances.forEach { engine.safeDestroyMaterialInstance(it) }
         engine.safeDestroyMaterialInstance(planeMaterial.defaultInstance)
         engine.safeDestroyMaterial(planeMaterial)

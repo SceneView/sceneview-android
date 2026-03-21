@@ -8,7 +8,7 @@ import android.util.Log
  *
  * @hide
  */
-// TODO: Evaluate consolidating internal math.
+// Legacy Sceneform math — used by CollisionSystem. Migrate to Kotlin-Math in 3.3.0.
 class Matrix {
     @JvmField
     var data = FloatArray(16)

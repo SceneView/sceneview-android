@@ -10,7 +10,7 @@ Lifecycle is automatic. State drives everything.
 
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![Filament](https://img.shields.io/badge/Filament-v1.56.0-yellow)](https://github.com/google/filament)
+[![Filament](https://img.shields.io/badge/Filament-v1.70.0-yellow)](https://github.com/google/filament)
 [![ARCore](https://img.shields.io/badge/ARCore-v1.53.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
@@ -120,7 +120,7 @@ See [MIGRATION.md](MIGRATION.md) for a step-by-step upgrade guide from 2.x.
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.0.0")
+    implementation("io.github.sceneview:sceneview:3.2.0")
 }
 ```
 
@@ -187,6 +187,14 @@ All composables available inside `Scene { }`:
 | `ImageNode(bitmap / fileLocation / resId)` | Image rendered on a plane |
 | `ViewNode(windowManager) { ComposeUI }` | **Compose UI rendered as a 3D surface** |
 | `MeshNode(primitiveType, vertexBuffer, indexBuffer)` | Custom GPU mesh |
+| `PhysicsNode(node, mass, restitution)` | Rigid body simulation — gravity, floor collision, sleep detection |
+| `DynamicSkyNode(timeOfDay, turbidity)` | Time-of-day sun light — sunrise/sunset with warm color transitions |
+| `FogNode(view, density, height, color)` | Atmospheric fog — distance and height-based volumetric effect |
+| `ReflectionProbeNode(filamentScene, environment)` | Local or global IBL (cubemap) override zones |
+| `LineNode(start, end)` | Single 3D line segment |
+| `PathNode(points, closed)` | 3D polyline through ordered points |
+| `BillboardNode(bitmap)` | Camera-facing image quad |
+| `TextNode(text, fontSize, textColor)` | Camera-facing text label — Canvas-rendered on a quad |
 | `Node()` | Pivot / group node |
 
 **Gesture sensitivity** — `Node` exposes `scaleGestureSensitivity: Float` (default `0.5`). Lower
@@ -265,6 +273,41 @@ Scene(
 }
 ```
 
+**Physics** — add gravity, bounce, and collision with two lines:
+
+```kotlin
+Scene {
+    val ball = ModelNode(modelInstance = ballInstance, position = Position(y = 3f))
+    PhysicsNode(node = ball, restitution = 0.8f, floorY = 0f)
+}
+```
+
+**Dynamic sky + fog** — time-of-day lighting and atmospheric effects, fully reactive:
+
+```kotlin
+var timeOfDay by remember { mutableFloatStateOf(8f) }
+
+Scene {
+    DynamicSkyNode(timeOfDay = timeOfDay, turbidity = 4f)
+    FogNode(view = view, density = 0.03f, height = 2f)
+    ModelNode(modelInstance = scene)
+}
+
+Slider(value = timeOfDay, onValueChange = { timeOfDay = it }, valueRange = 0f..24f)
+```
+
+**3D text labels** — camera-facing text that stays readable from any angle:
+
+```kotlin
+Scene {
+    TextNode(
+        text = "Hello World",
+        position = Position(y = 1.5f),
+        cameraPositionProvider = { cameraNode.worldPosition }
+    )
+}
+```
+
 **Surface type** — choose the backing Android surface:
 
 ```kotlin
@@ -283,6 +326,12 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 | [glTF Camera](/samples/gltf-camera) | Use a camera node imported directly from a glTF file |
 | [Camera Manipulator](/samples/camera-manipulator) | Orbit / pan / zoom camera interaction |
 | [Autopilot Demo](/samples/autopilot-demo) | Full animated scene built entirely with geometry nodes — no model files needed |
+| [Physics Demo](/samples/physics-demo) | Tap to throw balls — gravity, floor collision, sleep detection |
+| [Dynamic Sky](/samples/dynamic-sky) | Time-of-day sun + turbidity + fog controls |
+| [Post-Processing](/samples/post-processing) | Bloom, DoF, SSAO, Fog toggles |
+| [Line & Path](/samples/line-path) | 3-axis gizmo, spiral, animated sine-wave polyline |
+| [Text Labels](/samples/text-labels) | Camera-facing 3D labels on spheres — tap to cycle |
+| [Reflection Probe](/samples/reflection-probe) | Metallic sphere with IBL override |
 
 ---
 
@@ -293,7 +342,7 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 ```gradle
 dependencies {
     // Includes sceneview — no need to add both
-    implementation("io.github.sceneview:arsceneview:3.0.0")
+    implementation("io.github.sceneview:arsceneview:3.2.0")
 }
 ```
 
