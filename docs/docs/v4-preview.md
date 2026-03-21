@@ -1,6 +1,6 @@
 # SceneView 4.0 preview
 
-A look at the next major release and why it matters.
+The next major release takes SceneView beyond Android — multi-platform, spatial computing, and a more powerful scene graph.
 
 !!! info "v3.2.0 is production-ready today"
     You don't need to wait for 4.0. Everything below adds capabilities on top — it doesn't
@@ -84,9 +84,9 @@ real estate walkthroughs.
 
 ---
 
-## SceneView-XR — Android XR & spatial computing
+## SceneView-XR — spatial computing
 
-A new module for spatial computing headsets and passthrough AR.
+A new module for XR headsets and passthrough AR.
 Same composable API — now in spatial environments.
 
 ```kotlin
@@ -109,14 +109,33 @@ XRScene(modifier = Modifier.fillMaxSize()) {
 }
 ```
 
-Your existing 3D/AR skills and code patterns transfer directly to spatial computing.
+Your existing 3D/AR code patterns transfer directly to spatial computing.
+
+---
+
+## Kotlin Multiplatform
+
+Share scene definitions between Android and iOS from a single Kotlin codebase. iOS rendering via Filament's Metal backend.
+
+```kotlin
+// commonMain — shared across platforms
+@Composable
+fun ProductViewer(modelPath: String) {
+    Scene(modifier = Modifier.fillMaxSize()) {
+        rememberModelInstance(modelLoader, modelPath)?.let { instance ->
+            ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
+        }
+    }
+}
+```
+
+Write once, render natively on both platforms.
 
 ---
 
 ## Also in 4.0
 
 - **Filament 2.x migration** — improved performance, better materials, reduced memory
-- **Kotlin Multiplatform proof of concept** — iOS via Filament's Metal backend (experimental)
 - **`ParticleNode`** — GPU particle system for fire, smoke, sparkles, confetti
 - **`AnimationController`** — composable-level animation blending, cross-fading, and layering
 - **`CollisionNode`** — declarative collision detection between scene nodes
@@ -127,29 +146,29 @@ Your existing 3D/AR skills and code patterns transfer directly to spatial comput
 
 <div class="grid cards" markdown>
 
--   :material-shopping: **E-commerce teams**
+-   :octicons-package-24: **E-commerce teams**
 
     ---
 
     Multi-scene lets you embed 3D product viewers in `LazyColumn` feeds, `BottomSheet` configurators, and `Pager` carousels — all on one screen, all with independent cameras.
 
--   :material-office-building: **Real estate / architecture**
+-   :octicons-home-24: **Real estate / architecture**
 
     ---
 
     `PortalNode` lets users peek through doors into furnished rooms, walk through 3D floor plans, and compare lighting conditions — all without loading separate screens.
 
--   :material-head-snowflake: **XR teams**
+-   :octicons-device-desktop-24: **XR teams**
 
     ---
 
-    `SceneView-XR` means the same code and patterns you build for phone AR transfer directly to Android XR headsets. No new framework to learn.
+    `SceneView-XR` means the same code and patterns you build for phone AR transfer directly to XR headsets. No new framework to learn.
 
--   :material-cellphone-link: **Cross-platform teams**
+-   :octicons-globe-24: **Cross-platform teams**
 
     ---
 
-    KMP proof of concept means you can start sharing scene definitions between Android and iOS. One Kotlin codebase, two platforms.
+    Kotlin Multiplatform means you can share scene definitions between Android and iOS. One Kotlin codebase, two platforms.
 
 </div>
 
@@ -161,7 +180,7 @@ Your existing 3D/AR skills and code patterns transfer directly to spatial comput
 |---|---|
 | One Scene per screen | Multiple independent Scenes |
 | Flat scene graph | `PortalNode` — scenes within scenes |
-| Android only | KMP proof of concept (iOS) |
+| Android only | Kotlin Multiplatform (iOS) |
 | Phone/tablet only | `SceneView-XR` for spatial computing |
 
 [:octicons-arrow-right-24: Full roadmap on GitHub](https://github.com/SceneView/sceneview-android/blob/main/ROADMAP.md)

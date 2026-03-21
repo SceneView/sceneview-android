@@ -1,6 +1,6 @@
 # SceneView vs. the alternatives
 
-An honest comparison for Android developers evaluating 3D and AR options.
+An honest comparison for developers evaluating 3D and AR options.
 
 ---
 
