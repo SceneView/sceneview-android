@@ -43,6 +43,8 @@ nav:
   - Home: index.md
   - Get Started:
     - Quickstart: quickstart.md
+    - API Cheatsheet: cheatsheet.md
+    - FAQ: faq.md
     - Troubleshooting: troubleshooting.md
   - Features:
     - Why SceneView: showcase.md
