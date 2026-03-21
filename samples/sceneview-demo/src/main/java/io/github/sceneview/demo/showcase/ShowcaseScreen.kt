@@ -37,7 +37,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -80,7 +79,7 @@ fun ShowcaseScreen(updateManager: InAppUpdateManager) {
         LargeTopAppBar(
             title = {
                 Text(
-                    "SceneView",
+                    "Showcase",
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -103,7 +102,7 @@ fun ShowcaseScreen(updateManager: InAppUpdateManager) {
 
         UpdateBanner(updateManager)
 
-        // Category filter chips — rounded, expressive
+        // Category filter chips
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -260,7 +259,7 @@ internal fun NodeCard(
                 }
             }
 
-            // Code snippet — expressive expand/collapse
+            // Expanded content: live 3D preview + code snippet
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically(
@@ -273,22 +272,37 @@ internal fun NodeCard(
                     animationSpec = spring(stiffness = Spring.StiffnessMedium)
                 ) + fadeOut()
             ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    tonalElevation = 0.dp
-                ) {
-                    Text(
-                        text = node.codeSnippet,
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Column(modifier = Modifier.padding(top = 16.dp)) {
+                    // Live 3D preview (if available)
+                    if (node.sceneContent != null) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            node.sceneContent.invoke()
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    // Code snippet
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 0.dp
+                    ) {
+                        Text(
+                            text = node.codeSnippet,
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
 package io.github.sceneview.demo.showcase
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.CameraAlt
@@ -14,6 +15,87 @@ import androidx.compose.material.icons.filled.ThreeDRotation
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.WbCloudy
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import io.github.sceneview.Scene
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Size
+import io.github.sceneview.rememberCameraNode
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberEnvironment
+import io.github.sceneview.rememberEnvironmentLoader
+import io.github.sceneview.rememberMaterialLoader
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
+
+/**
+ * Reusable mini 3D scene for geometry node previews.
+ */
+@Composable
+private fun GeometryPreviewScene(
+    content: @Composable io.github.sceneview.SceneScope.() -> Unit
+) {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Position(z = 3.0f, y = 0.5f)
+        lookAt(Position(0f, 0.3f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+    }
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        materialLoader = materialLoader,
+        cameraNode = cameraNode,
+        cameraManipulator = null,
+        environment = environment,
+        content = content
+    )
+}
+
+/**
+ * Reusable mini 3D scene for model previews.
+ */
+@Composable
+private fun ModelPreviewScene(
+    modelPath: String,
+    scaleToUnits: Float = 1.0f
+) {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Position(z = 2.5f, y = 0.2f)
+        lookAt(Position(0f, 0f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+    }
+    val modelInstance = rememberModelInstance(modelLoader, modelPath)
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraNode = cameraNode,
+        environment = environment
+    ) {
+        modelInstance?.let { instance ->
+            ModelNode(
+                modelInstance = instance,
+                scaleToUnits = scaleToUnits,
+                autoAnimate = true,
+                animationLoop = true
+            )
+        }
+    }
+}
 
 /**
  * Complete catalog of all available SceneView nodes for the showcase.
@@ -21,12 +103,24 @@ import androidx.compose.material.icons.filled.WbCloudy
 object NodeCatalog {
 
     val allNodes = listOf(
-        // Geometry
+        // ── Geometry ──────────────────────────────────────────────────────
         NodeDemo(
             name = "CubeNode",
             description = "Procedural box geometry with configurable size and material.",
             icon = Icons.Default.CropSquare,
             category = NodeCategory.GEOMETRY,
+            sceneContent = {
+                GeometryPreviewScene {
+                    val mat = remember(materialLoader) {
+                        materialLoader.createColorInstance(Color.Blue)
+                    }
+                    CubeNode(
+                        size = Size(1f),
+                        center = Position(0f, 0.5f, 0f),
+                        materialInstance = mat
+                    )
+                }
+            },
             codeSnippet = """
 Scene {
     val mat = remember(materialLoader) {
@@ -44,6 +138,18 @@ Scene {
             description = "Procedural sphere geometry with configurable radius.",
             icon = Icons.Default.Circle,
             category = NodeCategory.GEOMETRY,
+            sceneContent = {
+                GeometryPreviewScene {
+                    val mat = remember(materialLoader) {
+                        materialLoader.createColorInstance(Color.Red)
+                    }
+                    SphereNode(
+                        radius = 0.5f,
+                        center = Position(0f, 0.5f, 0f),
+                        materialInstance = mat
+                    )
+                }
+            },
             codeSnippet = """
 Scene {
     val mat = remember(materialLoader) {
@@ -61,6 +167,19 @@ Scene {
             description = "Procedural cylinder geometry with radius and height.",
             icon = Icons.Default.Circle,
             category = NodeCategory.GEOMETRY,
+            sceneContent = {
+                GeometryPreviewScene {
+                    val mat = remember(materialLoader) {
+                        materialLoader.createColorInstance(Color.Green)
+                    }
+                    CylinderNode(
+                        radius = 0.3f,
+                        height = 1f,
+                        center = Position(0f, 0.5f, 0f),
+                        materialInstance = mat
+                    )
+                }
+            },
             codeSnippet = """
 Scene {
     val mat = remember(materialLoader) {
@@ -79,6 +198,18 @@ Scene {
             description = "Procedural quad / plane geometry.",
             icon = Icons.Default.Crop169,
             category = NodeCategory.GEOMETRY,
+            sceneContent = {
+                GeometryPreviewScene {
+                    val mat = remember(materialLoader) {
+                        materialLoader.createColorInstance(Color.Yellow)
+                    }
+                    PlaneNode(
+                        size = Size(1f, 1f),
+                        center = Position(0f, 0f, 0f),
+                        materialInstance = mat
+                    )
+                }
+            },
             codeSnippet = """
 Scene {
     val mat = remember(materialLoader) {
@@ -92,12 +223,15 @@ Scene {
 }""".trimIndent()
         ),
 
-        // Model
+        // ── Model ─────────────────────────────────────────────────────────
         NodeDemo(
             name = "ModelNode",
             description = "Renders glTF/GLB 3D models with animations.",
             icon = Icons.Default.ViewInAr,
             category = NodeCategory.MODEL,
+            sceneContent = {
+                ModelPreviewScene("models/damaged_helmet.glb", 1.0f)
+            },
             codeSnippet = """
 Scene {
     val modelInstance = rememberModelInstance(
@@ -109,7 +243,7 @@ Scene {
 }""".trimIndent()
         ),
 
-        // Light & Environment
+        // ── Light & Environment ───────────────────────────────────────────
         NodeDemo(
             name = "LightNode",
             description = "Directional, point, or spot light source.",
@@ -136,7 +270,7 @@ Scene {
 var timeOfDay by remember { mutableFloatStateOf(12f) }
 Scene {
     DynamicSkyNode(
-        timeOfDay = timeOfDay,  // 0-24: 6=sunrise, 12=noon, 18=sunset
+        timeOfDay = timeOfDay,
         turbidity = 2f,
         sunIntensity = 110_000f
     )
@@ -161,7 +295,7 @@ Scene(scene = scene) {
 }""".trimIndent()
         ),
 
-        // Camera
+        // ── Camera ────────────────────────────────────────────────────────
         NodeDemo(
             name = "CameraNode",
             description = "Perspective or orthographic camera for custom viewpoints.",
@@ -177,7 +311,7 @@ Scene(cameraNode = cameraNode) {
 }""".trimIndent()
         ),
 
-        // Content
+        // ── Content ───────────────────────────────────────────────────────
         NodeDemo(
             name = "ImageNode",
             description = "Displays a 2D image as a textured quad in 3D space.",
@@ -228,6 +362,18 @@ Scene {
             description = "Renders a line between two 3D points.",
             icon = Icons.Default.LinearScale,
             category = NodeCategory.CONTENT,
+            sceneContent = {
+                GeometryPreviewScene {
+                    val mat = remember(materialLoader) {
+                        materialLoader.createColorInstance(Color.Cyan)
+                    }
+                    LineNode(
+                        start = Position(-0.5f, 0f, 0f),
+                        end = Position(0.5f, 1f, 0f),
+                        materialInstance = mat
+                    )
+                }
+            },
             codeSnippet = """
 Scene {
     val mat = remember(materialLoader) {
@@ -275,7 +421,7 @@ Scene {
 }""".trimIndent()
         ),
 
-        // AR
+        // ── AR ────────────────────────────────────────────────────────────
         NodeDemo(
             name = "AnchorNode",
             description = "World-space anchor that tracks a real-world position.",

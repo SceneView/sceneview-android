@@ -1,6 +1,8 @@
-Initial release of SceneView Demo:
-• Showcase mode with interactive node catalog and code snippets
-• QA mode with visual regression test suite
-• In-app update support
-• 16 node types documented with examples
+SceneView Demo v1.0.0:
+• NEW: Explore mode — full-screen interactive 3D viewer with HDR environment
+• NEW: Live 3D previews in Showcase cards (geometry, model nodes)
+• 3 model assets: DamagedHelmet (PBR), Fox (animated), Rabbit
+• Material 3 Expressive design with spring animations
+• 18 node types documented with code snippets
 • 17 automated QA tests
+• In-app update support
