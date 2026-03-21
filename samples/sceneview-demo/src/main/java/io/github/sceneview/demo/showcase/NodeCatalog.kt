@@ -45,7 +45,8 @@ private fun GeometryPreviewScene(
         lookAt(Position(0f, 0.3f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
 
     Scene(
@@ -75,7 +76,8 @@ private fun ModelPreviewScene(
         lookAt(Position(0f, 0f, 0f))
     }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
     val modelInstance = rememberModelInstance(modelLoader, modelPath)
 

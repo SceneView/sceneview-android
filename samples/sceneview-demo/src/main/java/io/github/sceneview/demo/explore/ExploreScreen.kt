@@ -128,7 +128,8 @@ fun ExploreScreen() {
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetPath)
         val environment = key(selectedEnv.assetPath) {
             rememberEnvironment(environmentLoader) {
-                environmentLoader.createHDREnvironment(selectedEnv.assetPath)!!
+                environmentLoader.createHDREnvironment(selectedEnv.assetPath)
+                ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
             }
         }
 
