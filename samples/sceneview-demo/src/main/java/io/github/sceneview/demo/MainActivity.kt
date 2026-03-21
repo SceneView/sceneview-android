@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.github.sceneview.demo.explore.ExploreScreen
+import io.github.sceneview.demo.gallery.GalleryScreen
 import io.github.sceneview.demo.showcase.ShowcaseScreen
 import io.github.sceneview.demo.qa.QAScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
@@ -69,13 +71,14 @@ class MainActivity : ComponentActivity() {
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     data object Explore : Screen("explore", "Explore", Icons.Default.Explore)
     data object Showcase : Screen("showcase", "Showcase", Icons.Default.ViewInAr)
+    data object Gallery : Screen("gallery", "Gallery", Icons.Default.PhotoLibrary)
     data object QA : Screen("qa", "QA Tests", Icons.Default.BugReport)
 }
 
 @Composable
 fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Explore, Screen.Showcase, Screen.QA)
+    val screens = listOf(Screen.Explore, Screen.Showcase, Screen.Gallery, Screen.QA)
 
     Scaffold(
         bottomBar = {
@@ -137,6 +140,9 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
             }
             composable(Screen.Showcase.route) {
                 ShowcaseScreen(updateManager = updateManager)
+            }
+            composable(Screen.Gallery.route) {
+                GalleryScreen()
             }
             composable(Screen.QA.route) {
                 QAScreen()
