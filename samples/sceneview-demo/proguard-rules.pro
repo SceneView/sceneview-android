@@ -6,5 +6,8 @@
 # Keep ARCore
 -keep class com.google.ar.** { *; }
 
+# Keep Play Core (in-app updates)
+-keep class com.google.android.play.core.** { *; }
+
 # Keep Compose
 -dontwarn androidx.compose.**

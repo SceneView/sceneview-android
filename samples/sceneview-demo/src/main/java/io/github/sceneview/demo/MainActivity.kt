@@ -11,7 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -28,6 +28,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -44,6 +45,7 @@ import io.github.sceneview.demo.showcase.ShowcaseScreen
 import io.github.sceneview.demo.qa.QAScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.update.InAppUpdateManager
+import io.github.sceneview.demo.update.UpdateBanner
 
 class MainActivity : ComponentActivity() {
 
@@ -79,6 +81,11 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
     val navController = rememberNavController()
     val screens = listOf(Screen.Explore, Screen.Showcase, Screen.Gallery, Screen.QA)
+
+    // Auto-check for updates on launch
+    LaunchedEffect(Unit) {
+        updateManager.checkForUpdate()
+    }
 
     Scaffold(
         bottomBar = {
@@ -126,26 +133,31 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Explore.route,
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
-            exitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) },
-            popEnterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
-            popExitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) }
-        ) {
-            composable(Screen.Explore.route) {
-                ExploreScreen()
-            }
-            composable(Screen.Showcase.route) {
-                ShowcaseScreen(updateManager = updateManager)
-            }
-            composable(Screen.Gallery.route) {
-                GalleryScreen()
-            }
-            composable(Screen.QA.route) {
-                QAScreen()
+        Column(modifier = Modifier.padding(innerPadding)) {
+            // Global update banner — visible across all tabs
+            UpdateBanner(updateManager)
+
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Explore.route,
+                modifier = Modifier.weight(1f),
+                enterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
+                exitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) },
+                popEnterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
+                popExitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) }
+            ) {
+                composable(Screen.Explore.route) {
+                    ExploreScreen()
+                }
+                composable(Screen.Showcase.route) {
+                    ShowcaseScreen(updateManager = updateManager)
+                }
+                composable(Screen.Gallery.route) {
+                    GalleryScreen()
+                }
+                composable(Screen.QA.route) {
+                    QAScreen()
+                }
             }
         }
     }
