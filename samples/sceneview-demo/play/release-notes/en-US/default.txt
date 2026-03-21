@@ -3,6 +3,7 @@ SceneView Demo v1.0.0:
 • NEW: Live 3D previews in Showcase cards (geometry + model nodes)
 • Pro assets: ToyCar (clearcoat paint), SheenChair (velvet fabric), IridescenceLamp (glass iridescence)
 • Rooftop night HDR environment for photorealistic product-style lighting
+• NEW: Gallery mode — LazyColumn stress-test with multiple live 3D scenes
 • Material 3 Expressive design with spring animations
 • 18 node types documented with ready-to-use code snippets
 • 17 automated QA tests

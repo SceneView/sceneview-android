@@ -13,6 +13,12 @@ Parcourez tous les types de nodes disponibles dans SceneView : CubeNode, SphereN
 • Des extraits de code Jetpack Compose prêts à l'emploi
 • Filtrage par catégorie (Géométrie, Modèle, Lumière, Caméra, Contenu, AR)
 
+🖼️ MODE GALERIE
+Stress-test du rendu 3D temps réel dans une liste scrollable — chaque carte rend sa propre scène 3D :
+• Multiples modèles 3D et géométrie procédurale dans un LazyColumn
+• Démontre la gestion efficace des ressources de SceneView
+• Rendu live avec éclairage HDR dans chaque carte
+
 🧪 MODE QA
 Exécutez des tests de régression visuelle pour valider le rendu de chaque node :
 • Bouton « Tout exécuter » pour lancer la suite complète
