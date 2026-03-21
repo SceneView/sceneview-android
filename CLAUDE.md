@@ -72,19 +72,21 @@ Every Claude Code session MUST read this section first to stay in sync.
 - **llms.txt**: Major update — added 6 missing node types (TextNode, BillboardNode, LineNode,
   PathNode, MeshNode, material creation), complete remember* helpers reference table,
   ARScene session lifecycle callbacks
-- **Demo app** (`samples/sceneview-demo/`): **Major upgrade — now a real 3D app**
-  - **3-tab architecture**: Explore (hero 3D scene), Showcase (node catalog), QA (tests)
+- **Demo app** (`samples/sceneview-demo/`): **Play Store ready**
+  - **4-tab architecture**: Explore, Showcase, Gallery, QA
   - **Explore tab**: Full-screen 3D viewer with orbit camera, HDR environment, model picker
-    - 3 models: DamagedHelmet (PBR), Fox (animated), Rabbit
+    - Models: ToyCar, SheenChair, IridescenceLamp + 5 Sketchfab models (sedan, cat, phoenix, etc.)
     - Auto-rotating camera with infinite transition
     - Gradient overlays, model picker chips
   - **Showcase tab**: Live 3D previews in cards (geometry + model nodes render in real-time)
     - Code snippets still visible below previews
     - Category filtering with M3 FilterChips
+  - **Gallery tab**: LazyColumn stress-test with 13 live 3D scenes (models + geometry)
   - **QA tab**: Spring-animated progress bar, reset button, scale animation on cards
   - **Material 3 Expressive**: `MaterialExpressiveTheme` + `MotionScheme.expressive()` + dynamic color
-  - **Assets**: damaged_helmet.glb, fox.glb, rabbit.glb, sky_2k.hdr
-  - **Play Store metadata**: Updated EN + FR descriptions, release notes
+  - **Assets**: 11 GLB models (Khronos + Sketchfab), studio_2k.hdr (Poly Haven)
+  - **Play Store**: Metadata EN+FR, feature graphic, icon 512px, 4 screenshot mockups, release notes
+  - **App icon**: Adaptive icon — isometric 3D cube on M3 purple background
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
 
 ### Design direction
