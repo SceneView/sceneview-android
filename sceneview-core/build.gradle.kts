@@ -15,6 +15,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlin:kotlin-stdlib")
+                api("dev.romainguy:kotlin-math:1.6.0")
             }
         }
 

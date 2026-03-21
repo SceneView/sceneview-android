@@ -83,6 +83,9 @@ android {
 }
 
 dependencies {
+    // SceneView KMP core (collision, math, triangulation)
+    api project(':sceneview-core')
+
     // Android KTX
     implementation "androidx.fragment:fragment-ktx:1.8.9"
 
