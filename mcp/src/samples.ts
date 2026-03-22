@@ -68,7 +68,7 @@ fun ModelViewerScreen() {
         engine = engine,
         modelLoader = modelLoader,
         environment = rememberEnvironment(environmentLoader) {
-            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr") ?: createEnvironment(environmentLoader)
         },
         mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f },
         cameraManipulator = rememberCameraManipulator()
@@ -270,7 +270,7 @@ fun GltfCameraScreen() {
         modelLoader = modelLoader,
         cameraNode = cameraNode,
         environment = rememberEnvironment(environmentLoader) {
-            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr") ?: createEnvironment(environmentLoader)
         }
     ) {
         modelInstance?.let { instance ->
@@ -505,7 +505,7 @@ fun ReflectionProbeScreen() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     var cameraPosition by remember { mutableStateOf(Position()) }
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio.hdr")!!
+        environmentLoader.createHDREnvironment("environments/studio.hdr") ?: createEnvironment(environmentLoader)
     }
 
     Scene(

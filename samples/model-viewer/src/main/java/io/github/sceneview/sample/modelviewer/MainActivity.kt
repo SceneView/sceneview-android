@@ -42,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
 import io.github.sceneview.animation.Transition.animateRotation
+import io.github.sceneview.createEnvironment
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.rememberCameraManipulator
@@ -107,7 +108,8 @@ class MainActivity : ComponentActivity() {
                         selectedModel.assetPath
                     )
                     val environment = rememberEnvironment(environmentLoader) {
-                        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+                        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                            ?: createEnvironment(environmentLoader)
                     }
 
                     // Derive animation info from the loaded instance (null while loading).

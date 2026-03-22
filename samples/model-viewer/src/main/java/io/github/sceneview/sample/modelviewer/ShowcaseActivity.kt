@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
 import io.github.sceneview.animation.Transition.animateRotation
+import io.github.sceneview.createEnvironment
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.rememberCameraManipulator
@@ -137,7 +138,8 @@ class ShowcaseActivity : ComponentActivity() {
                                 "models/damaged_helmet.glb"
                             )
                             val environment = rememberEnvironment(environmentLoader) {
-                                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+                                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                                    ?: createEnvironment(environmentLoader)
                             }
 
                             Box(
