@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sceneview.Scene
 import io.github.sceneview.collision.CollisionSystem
+import io.github.sceneview.createEnvironment
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.toVector3
@@ -84,7 +85,8 @@ class MainActivity : ComponentActivity() {
 
                     val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
                     val environment = rememberEnvironment(environmentLoader) {
-                        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+                        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                            ?: createEnvironment(environmentLoader)
                     }
 
                     Scene(

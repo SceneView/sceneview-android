@@ -128,7 +128,7 @@ That is a production-quality, physically-based 3D viewer in under 30 lines of co
 
 ## Next steps
 
-- **Add HDR lighting** — Download a `.hdr` environment map and pass it via `rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!! }` to the `environment` parameter of `Scene`.
+- **Add HDR lighting** — Download a `.hdr` environment map and pass it via `rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/sky_2k.hdr") ?: createEnvironment(environmentLoader) }` to the `environment` parameter of `Scene`.
 - **Try AR** — Follow the [AR Compose codelab](codelabs/codelab-ar-compose.md) to place models in the real world using `ARScene`.
 - **Explore the samples** — The [samples page](samples.md) covers model animation, camera manipulation, cloud anchors, and more.
 - **Browse the API** — See the full [API reference](https://sceneview.github.io/api/) for every composable, node type, and loader.

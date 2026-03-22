@@ -61,8 +61,8 @@ open class TextNode(
         fontSize = fontSize,
         textColor = textColor,
         backgroundColor = backgroundColor,
-        bitmapWidth = 512,
-        bitmapHeight = 128
+        bitmapWidth = bitmapWidth,
+        bitmapHeight = bitmapHeight
     ),
     widthMeters = widthMeters,
     heightMeters = heightMeters,

@@ -14,7 +14,8 @@ Override the scene's image-based lighting (IBL) with a `ReflectionProbeNode` to 
 ```kotlin
 val scene = rememberScene(engine)
 val probeEnvironment = rememberEnvironment(environmentLoader) {
-    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 
 Scene(

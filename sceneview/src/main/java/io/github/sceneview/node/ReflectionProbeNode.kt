@@ -25,7 +25,7 @@ import io.github.sceneview.math.Position
  * ### Usage
  * ```kotlin
  * val environment = rememberEnvironment(environmentLoader) {
- *     environmentLoader.createHDREnvironment("environments/office.hdr")!!
+ *     environmentLoader.createHDREnvironment("environments/office.hdr") ?: createEnvironment(environmentLoader)
  * }
  *
  * Scene(
