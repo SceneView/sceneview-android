@@ -39,6 +39,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
+import io.github.sceneview.createEnvironment
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
@@ -89,7 +90,8 @@ class MainActivity : ComponentActivity() {
                     selectedCameraNode?.updateProjection(aspect = aspect, near = 0.05f, far = 5000.0f)
 
                     val environment = rememberEnvironment(environmentLoader) {
-                        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+                        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")
+                            ?: createEnvironment(environmentLoader)
                     }
 
                     Scene(

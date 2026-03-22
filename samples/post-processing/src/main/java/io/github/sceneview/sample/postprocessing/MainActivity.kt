@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.google.android.filament.View
 import io.github.sceneview.Scene
 import io.github.sceneview.animation.Transition.animateRotation
+import io.github.sceneview.createEnvironment
 import io.github.sceneview.createView
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -130,7 +131,8 @@ fun PostProcessingScreen() {
 
     val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+            ?: createEnvironment(environmentLoader)
     }
 
     // Custom View — enables shadowing so SSAO contact shadows work.

@@ -155,7 +155,8 @@ fun ModelViewerScreen() {
     val modelLoader = rememberModelLoader(engine)
     val model = rememberModelInstance(modelLoader, "models/helmet.glb")
     val environment = rememberEnvironment(rememberEnvironmentLoader(engine)) {
-        createHDREnvironment("environments/sky_2k.hdr")!!
+        createHDREnvironment("environments/sky_2k.hdr")
+            ?: createEnvironment(environmentLoader)
     }
 
     Scene(

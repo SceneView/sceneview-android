@@ -186,7 +186,8 @@ Browse all studio HDRIs: [polyhaven.com/hdris/studio](https://polyhaven.com/hdri
 
 ```kotlin
 val environment = rememberEnvironment(rememberEnvironmentLoader(engine)) {
-    createHDREnvironment("environments/studio_small_03_2k.hdr")!!
+    createHDREnvironment("environments/studio_small_03_2k.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 
 Scene(

@@ -63,7 +63,8 @@ Scene(
     engine = engine,
     modelLoader = modelLoader,
     environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+            ?: createEnvironment(environmentLoader)
     },
     cameraManipulator = rememberCameraManipulator(),
     mainLightNode = rememberMainLightNode(engine) { intensity = 100_000.0f }

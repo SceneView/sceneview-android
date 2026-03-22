@@ -174,7 +174,7 @@ LightNode(
 val environmentLoader = rememberEnvironmentLoader(engine)
 Scene(
     environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr") ?: createEnvironment(environmentLoader)
     }
 ) { … }
 \`\`\`

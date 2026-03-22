@@ -139,7 +139,8 @@ fun ModelViewerScreen() {
     // Loaded asynchronously — null until ready, then recomposition places it in the scene
     val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+            ?: createEnvironment(environmentLoader)
     }
 
     Scene(

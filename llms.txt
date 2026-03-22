@@ -68,7 +68,8 @@ fun My3DScreen() {
         modelLoader = modelLoader,
         cameraManipulator = rememberCameraManipulator(),
         environment = rememberEnvironment(environmentLoader) {
-            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
         },
         mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
     ) {
