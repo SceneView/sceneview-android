@@ -917,7 +917,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      *
      * ```kotlin
      * val probeEnv = rememberEnvironment(environmentLoader) {
-     *     environmentLoader.createHDREnvironment("environments/office.hdr")!!
+     *     environmentLoader.createHDREnvironment("environments/office.hdr") ?: createEnvironment(environmentLoader)
      * }
      * var cameraPos by remember { mutableStateOf(Position()) }
      *
