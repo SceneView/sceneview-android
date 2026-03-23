@@ -1,0 +1,269 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" width="900" height="360">
+  <defs>
+    <!-- Android phone screen gradient -->
+    <linearGradient id="grad-android" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C4DFF"/>
+      <stop offset="100%" stop-color="#448AFF"/>
+    </linearGradient>
+    <!-- iOS phone screen gradient -->
+    <linearGradient id="grad-ios" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E040FB"/>
+      <stop offset="100%" stop-color="#7C4DFF"/>
+    </linearGradient>
+    <!-- Tablet screen gradient -->
+    <linearGradient id="grad-tablet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8EAF6"/>
+      <stop offset="100%" stop-color="#C5CAE9"/>
+    </linearGradient>
+    <!-- XR visor rainbow shimmer -->
+    <linearGradient id="grad-xr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#E040FB" stop-opacity="0.5"/>
+      <stop offset="25%" stop-color="#448AFF" stop-opacity="0.5"/>
+      <stop offset="50%" stop-color="#69F0AE" stop-opacity="0.5"/>
+      <stop offset="75%" stop-color="#FFD740" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#E040FB" stop-opacity="0.5"/>
+    </linearGradient>
+    <!-- Automotive HUD gradient -->
+    <linearGradient id="grad-auto" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#0D1117"/>
+      <stop offset="100%" stop-color="#1A2332"/>
+    </linearGradient>
+    <!-- TV warm interior gradient -->
+    <linearGradient id="grad-tv" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFF3E0"/>
+      <stop offset="100%" stop-color="#FFE0B2"/>
+    </linearGradient>
+    <!-- Subtle inner shadow filter -->
+    <filter id="inner-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feFlood flood-color="#000" flood-opacity="0.06" result="color"/>
+      <feComposite in="color" in2="SourceGraphic" operator="in" result="shadow"/>
+      <feOffset dx="0" dy="1" result="offset"/>
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feComposite in="blur" in2="SourceGraphic" operator="atop"/>
+    </filter>
+    <!-- Sphere radial gradient for iOS -->
+    <radialGradient id="sphere-ios" cx="0.4" cy="0.35" r="0.5">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#CE93D8" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Cube highlight for tablet -->
+    <linearGradient id="cube-highlight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5C6BC0" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#3F51B5" stop-opacity="0.15"/>
+    </linearGradient>
+    <!-- HUD cyan glow -->
+    <linearGradient id="hud-glow" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#00E5FF" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Clip for Dynamic Island -->
+    <clipPath id="clip-ios-screen">
+      <path d="M0,8 Q0,0 8,0 L46,0 Q54,0 54,8 L54,92 Q54,100 46,100 L8,100 Q0,100 0,92 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="360" fill="#FFFBFE"/>
+
+  <!-- Subtle connecting arc line below devices -->
+  <path d="M 68,290 Q 250,310 450,312 Q 650,310 832,290"
+        fill="none" stroke="#CAC4D0" stroke-width="0.5"
+        stroke-dasharray="4,4" opacity="0.7"/>
+
+  <!-- ============================================ -->
+  <!-- 1. ANDROID PHONE (left edge, scale 0.9)     -->
+  <!-- ============================================ -->
+  <g transform="translate(68, 140) scale(0.9)">
+    <!-- Device body -->
+    <rect x="0" y="0" width="54" height="100" rx="10" ry="10" fill="#E6E1E5"/>
+    <!-- Inner shadow layer -->
+    <rect x="1" y="1" width="52" height="98" rx="9" ry="9" fill="#DFDAE0"/>
+    <rect x="2" y="2" width="50" height="96" rx="8" ry="8" fill="#E6E1E5"/>
+    <!-- Screen -->
+    <rect x="3" y="4" width="48" height="92" rx="7" ry="7" fill="url(#grad-android)"/>
+    <!-- Abstract 3D hexagon shape on screen -->
+    <g transform="translate(27, 48)">
+      <polygon points="0,-14 12,-7 12,7 0,14 -12,7 -12,-7"
+               fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round" opacity="0.55"/>
+      <polygon points="0,-9 8,-4.5 8,4.5 0,9 -8,4.5 -8,-4.5"
+               fill="#ffffff" opacity="0.15"/>
+    </g>
+    <!-- Label -->
+    <text x="27" y="120" text-anchor="middle" fill="#49454F"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="10" font-weight="500">Android</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- 2. iPHONE (scale 0.92)                      -->
+  <!-- ============================================ -->
+  <g transform="translate(192, 136) scale(0.92)">
+    <!-- Device body -->
+    <rect x="0" y="0" width="54" height="100" rx="10" ry="10" fill="#E6E1E5"/>
+    <!-- Inner shadow layers -->
+    <rect x="1" y="1" width="52" height="98" rx="9" ry="9" fill="#DFDAE0"/>
+    <rect x="2" y="2" width="50" height="96" rx="8" ry="8" fill="#E6E1E5"/>
+    <!-- Screen -->
+    <rect x="3" y="4" width="48" height="92" rx="7" ry="7" fill="url(#grad-ios)"/>
+    <!-- Dynamic Island notch -->
+    <rect x="17" y="6" width="20" height="6" rx="3" ry="3" fill="#1C1B1F"/>
+    <!-- Sphere shape on screen -->
+    <circle cx="27" cy="50" r="14" fill="#ffffff" opacity="0.12"/>
+    <circle cx="27" cy="50" r="14" fill="url(#sphere-ios)"/>
+    <ellipse cx="24" cy="46" rx="5" ry="3.5" fill="#ffffff" opacity="0.2"/>
+    <!-- Label -->
+    <text x="27" y="120" text-anchor="middle" fill="#49454F"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="10" font-weight="500">iOS v4.1</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- 3. TABLET (scale 0.95)                      -->
+  <!-- ============================================ -->
+  <g transform="translate(315, 152) scale(0.95)">
+    <!-- Device body -->
+    <rect x="0" y="0" width="120" height="80" rx="8" ry="8" fill="#E6E1E5"/>
+    <!-- Inner shadow layers -->
+    <rect x="1" y="1" width="118" height="78" rx="7" ry="7" fill="#DFDAE0"/>
+    <rect x="2" y="2" width="116" height="76" rx="6" ry="6" fill="#E6E1E5"/>
+    <!-- Screen -->
+    <rect x="4" y="4" width="112" height="72" rx="5" ry="5" fill="url(#grad-tablet)"/>
+    <!-- Isometric cube wireframe -->
+    <g transform="translate(60, 38)" stroke="#5C6BC0" stroke-width="0.8" fill="none" opacity="0.5">
+      <!-- Front face -->
+      <polygon points="0,-16 14,-8 14,8 0,16 -14,8 -14,-8"/>
+      <!-- Top face -->
+      <polygon points="0,-16 14,-8 0,0 -14,-8"/>
+      <!-- Right face -->
+      <polygon points="14,-8 14,8 0,16 0,0"/>
+      <!-- Back edges -->
+      <line x1="0" y1="0" x2="0" y2="16"/>
+      <line x1="0" y1="0" x2="-14" y2="-8"/>
+      <line x1="0" y1="0" x2="14" y2="-8"/>
+    </g>
+    <!-- Subtle cube fill -->
+    <g transform="translate(60, 38)" opacity="0.08">
+      <polygon points="0,-16 14,-8 0,0 -14,-8" fill="#3F51B5"/>
+      <polygon points="14,-8 14,8 0,16 0,0" fill="#5C6BC0"/>
+      <polygon points="-14,-8 0,0 0,16 -14,8" fill="#7986CB"/>
+    </g>
+    <!-- Label -->
+    <text x="60" y="100" text-anchor="middle" fill="#49454F"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="10" font-weight="500">Tablet</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- 4. XR HEADSET (center, full scale)          -->
+  <!-- ============================================ -->
+  <g transform="translate(490, 170) scale(1)">
+    <!-- Headset body — wide rounded shape -->
+    <rect x="0" y="0" width="90" height="40" rx="18" ry="18" fill="#E6E1E5"/>
+    <!-- Inner shadow layers -->
+    <rect x="1" y="1" width="88" height="38" rx="17" ry="17" fill="#DFDAE0"/>
+    <rect x="2" y="2" width="86" height="36" rx="16" ry="16" fill="#E6E1E5"/>
+    <!-- Visor area -->
+    <rect x="5" y="5" width="80" height="30" rx="14" ry="14" fill="#1C1B1F" opacity="0.85"/>
+    <!-- Rainbow shimmer on visor -->
+    <rect x="5" y="5" width="80" height="30" rx="14" ry="14" fill="url(#grad-xr)"/>
+    <!-- Visor center divider (subtle) -->
+    <line x1="45" y1="9" x2="45" y2="31" stroke="#ffffff" stroke-width="0.4" opacity="0.2"/>
+    <!-- Strap lines -->
+    <line x1="-6" y1="16" x2="2" y2="18" stroke="#CAC4D0" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-6" y1="24" x2="2" y2="22" stroke="#CAC4D0" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="88" y1="18" x2="96" y2="16" stroke="#CAC4D0" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="88" y1="22" x2="96" y2="24" stroke="#CAC4D0" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Label -->
+    <text x="45" y="62" text-anchor="middle" fill="#49454F"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="10" font-weight="500">XR</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- 5. AUTOMOTIVE DISPLAY (scale 0.95)          -->
+  <!-- ============================================ -->
+  <g transform="translate(628, 168) scale(0.95)">
+    <!-- Dashboard curve hint -->
+    <path d="M -2,0 Q 65,-4 132,0 L130,50 Q65,52 0,50 Z" rx="6" ry="6" fill="#E6E1E5"/>
+    <!-- Inner shadow -->
+    <path d="M 0,2 Q 65,-2 130,2 L128,48 Q65,50 2,48 Z" fill="#DFDAE0"/>
+    <path d="M 2,3 Q 65,0 128,3 L126,47 Q65,49 4,47 Z" fill="#E6E1E5"/>
+    <!-- Screen -->
+    <rect x="4" y="4" width="122" height="42" rx="4" ry="4" fill="url(#grad-auto)"/>
+    <!-- HUD glow from bottom -->
+    <rect x="4" y="4" width="122" height="42" rx="4" ry="4" fill="url(#hud-glow)"/>
+    <!-- Road perspective lines -->
+    <g stroke="#00E5FF" stroke-width="0.5" opacity="0.4">
+      <line x1="65" y1="18" x2="30" y2="44"/>
+      <line x1="65" y1="18" x2="100" y2="44"/>
+      <line x1="65" y1="18" x2="65" y2="44" stroke-dasharray="2,2"/>
+    </g>
+    <!-- Speed arc hint -->
+    <path d="M 20,36 Q 65,22 110,36" fill="none" stroke="#00E5FF" stroke-width="0.6" opacity="0.3"/>
+    <!-- Small HUD elements -->
+    <rect x="14" y="10" width="16" height="3" rx="1.5" fill="#00E5FF" opacity="0.25"/>
+    <rect x="100" y="10" width="16" height="3" rx="1.5" fill="#00E5FF" opacity="0.25"/>
+    <!-- Label -->
+    <text x="65" y="72" text-anchor="middle" fill="#49454F"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="10" font-weight="500">Automotive</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- 6. TV / DESKTOP (right edge, scale 0.9)     -->
+  <!-- ============================================ -->
+  <g transform="translate(768, 150) scale(0.9)">
+    <!-- TV body -->
+    <rect x="0" y="0" width="140" height="85" rx="6" ry="6" fill="#E6E1E5"/>
+    <!-- Inner shadow layers -->
+    <rect x="1" y="1" width="138" height="83" rx="5" ry="5" fill="#DFDAE0"/>
+    <rect x="2" y="2" width="136" height="81" rx="4" ry="4" fill="#E6E1E5"/>
+    <!-- Screen -->
+    <rect x="4" y="4" width="132" height="77" rx="3" ry="3" fill="url(#grad-tv)"/>
+    <!-- Warm interior scene hint — abstract shapes -->
+    <rect x="50" y="30" width="40" height="48" rx="2" fill="#FFE0B2" opacity="0.6"/>
+    <rect x="54" y="34" width="32" height="16" rx="1" fill="#FFCC80" opacity="0.4"/>
+    <rect x="20" y="50" width="22" height="28" rx="2" fill="#FFCC80" opacity="0.35"/>
+    <rect x="98" y="45" width="26" height="33" rx="2" fill="#FFCC80" opacity="0.3"/>
+    <!-- Window light -->
+    <rect x="56" y="12" width="28" height="18" rx="1" fill="#FFF8E1" opacity="0.5"/>
+    <line x1="70" y1="12" x2="70" y2="30" stroke="#FFE0B2" stroke-width="0.5" opacity="0.6"/>
+    <line x1="56" y1="21" x2="84" y2="21" stroke="#FFE0B2" stroke-width="0.5" opacity="0.6"/>
+    <!-- Stand/pedestal -->
+    <rect x="52" y="87" width="36" height="3" rx="1.5" ry="1.5" fill="#D6D1D5"/>
+    <rect x="62" y="85" width="16" height="4" rx="1" ry="1" fill="#D6D1D5"/>
+    <!-- Label -->
+    <text x="70" y="112" text-anchor="middle" fill="#49454F"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="10" font-weight="500">TV · Desktop</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- FRAMEWORK BADGES                             -->
+  <!-- ============================================ -->
+
+  <!-- React Native badge near Android phone -->
+  <g transform="translate(46, 128)">
+    <!-- Dotted connector line -->
+    <line x1="32" y1="12" x2="48" y2="28" stroke="#CAC4D0" stroke-width="0.5"
+          stroke-dasharray="2,2" opacity="0.7"/>
+    <!-- Badge pill -->
+    <rect x="0" y="0" width="64" height="18" rx="9" ry="9" fill="#F4EFF4"/>
+    <text x="32" y="12.5" text-anchor="middle" fill="#625B71"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="8" font-weight="500">React Native</text>
+  </g>
+
+  <!-- Flutter badge near iPhone -->
+  <g transform="translate(222, 124)">
+    <!-- Dotted connector line -->
+    <line x1="22" y1="16" x2="14" y2="30" stroke="#CAC4D0" stroke-width="0.5"
+          stroke-dasharray="2,2" opacity="0.7"/>
+    <!-- Badge pill -->
+    <rect x="0" y="0" width="48" height="18" rx="9" ry="9" fill="#F4EFF4"/>
+    <text x="24" y="12.5" text-anchor="middle" fill="#625B71"
+          font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="8" font-weight="500">Flutter</text>
+  </g>
+
+</svg>

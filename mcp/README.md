@@ -1,17 +1,51 @@
-# sceneview-mcp
+# sceneview-mcp — SceneView MCP Server
 
-[![npm](https://img.shields.io/npm/v/sceneview-mcp?color=cb3837&label=npm)](https://www.npmjs.com/package/sceneview-mcp)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/sceneview-mcp?color=6c35aa)](https://www.npmjs.com/package/sceneview-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/sceneview-mcp?color=blue)](https://www.npmjs.com/package/sceneview-mcp)
+[![MCP](https://img.shields.io/badge/MCP-v1.12-blue)](https://modelcontextprotocol.io/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Node](https://img.shields.io/badge/Node-%3E%3D18-brightgreen)](https://nodejs.org/)
 
-MCP server for [SceneView](https://github.com/SceneView/sceneview) — 3D and AR as Jetpack Compose composables for Android.
-
-Add this to Claude and it **always knows how to use SceneView**. No copy-pasting docs. No hallucinated APIs. Correct, compilable Kotlin — first try.
+The official [Model Context Protocol](https://modelcontextprotocol.io/) server for **SceneView** — giving AI assistants deep knowledge of the SceneView 3D/AR SDK so they generate correct, compilable Kotlin code.
 
 ---
 
-## Quick start
+## What It Does
 
-Add to your Claude config and you're done:
+When connected to an AI assistant (Claude, Cursor, Windsurf, etc.), this MCP server provides **10 tools** and **2 resources** that give the assistant expert-level knowledge of the SceneView SDK:
+
+### Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_node_reference` | Complete API reference for any SceneView node type (22+ types) |
+| `list_node_types` | List all available node composables |
+| `validate_code` | Check SceneView code for 15+ common mistakes before presenting it |
+| `get_sample` | Get complete, compilable sample code for any of 14 scenarios |
+| `list_samples` | Browse all sample applications, optionally filtered by tag |
+| `get_setup` | Gradle + manifest setup for 3D or AR projects |
+| `get_migration_guide` | Full SceneView 2.x to 3.0 migration instructions |
+| `get_platform_roadmap` | Multi-platform roadmap (Android, iOS, KMP, Web) |
+| `get_best_practices` | Performance, architecture, memory, and threading best practices |
+| `get_ar_setup` | Detailed AR setup: manifest, permissions, session config, patterns |
+
+### Resources
+
+| Resource | Description |
+|----------|-------------|
+| `sceneview://api` | Complete SceneView 3.2.0 API reference (llms.txt) |
+| `sceneview://known-issues` | Live open issues from GitHub (cached 10 min) |
+
+---
+
+## Installation
+
+### Claude Desktop
+
+Add to your Claude Desktop configuration file:
+
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -24,80 +58,192 @@ Add to your Claude config and you're done:
 }
 ```
 
-<details>
-<summary>Where does this go?</summary>
+Restart Claude Desktop after saving the file.
 
-| Client | Config file |
-|---|---|
-| **Claude Code** (project) | `.claude/mcp.json` at project root |
-| **Claude Code** (global) | `~/.claude/mcp.json` |
-| **Claude Desktop** | `claude_desktop_config.json` |
+### Claude Code
 
-After saving, run `/mcp` in Claude Code or restart Claude Desktop to pick it up.
-</details>
+Run from your terminal:
 
----
-
-## What Claude gets
-
-### Resource — `sceneview://api`
-
-The complete SceneView 3.0.0 API reference (`llms.txt`): composable signatures, node types, AR scope, resource loading, threading rules, and common patterns.
-
-### Tool — `get_sample(scenario)`
-
-Returns a complete, compilable Kotlin sample.
-
-| Scenario | What you get |
-|---|---|
-| `model-viewer` | Full-screen 3D scene, HDR environment, orbit camera |
-| `ar-tap-to-place` | AR tap-to-place with pinch-to-scale and drag-to-rotate |
-| `ar-placement-cursor` | AR reticle that snaps to surfaces, tap to confirm |
-| `ar-augmented-image` | Detect a reference image, overlay a 3D model |
-| `ar-face-filter` | Front-camera face mesh with a custom material |
-
-### Tool — `get_setup(type)`
-
-Returns Gradle dependencies + AndroidManifest for `"3d"` or `"ar"` projects.
-
----
-
-## How it works
-
-```
-You:    "Add AR placement to my app"
-         │
-Claude:  reads sceneview://api  ←  full API ref, always current
-         │
-Claude:  calls get_sample("ar-tap-to-place")  ←  working Kotlin
-         │
-Result:  Correct, compilable SceneView 3.0.0 code
+```bash
+claude mcp add sceneview -- npx -y sceneview-mcp
 ```
 
+Or add to your `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "sceneview": {
+      "command": "npx",
+      "args": ["-y", "sceneview-mcp"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Open **Settings > MCP** and add a new server:
+
+**Name:** `sceneview`
+**Type:** `command`
+**Command:** `npx -y sceneview-mcp`
+
+Or add to your `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "sceneview": {
+      "command": "npx",
+      "args": ["-y", "sceneview-mcp"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+Open **Settings > MCP** and add:
+
+```json
+{
+  "mcpServers": {
+    "sceneview": {
+      "command": "npx",
+      "args": ["-y", "sceneview-mcp"]
+    }
+  }
+}
+```
+
+### Other MCP Clients
+
+The server communicates via **stdio** using the MCP protocol. Start it directly:
+
+```bash
+npx sceneview-mcp
+```
+
 ---
 
-## Try it — sample prompts
+## Verify Installation
 
-**3D model viewer**
-> Create a Compose screen that loads `models/helmet.glb` in a full-screen 3D scene with orbit camera and HDR environment. Use SceneView 3.0.0.
+Once connected, ask your AI assistant:
 
-**AR tap-to-place**
-> Create an AR Compose screen. Tapping a detected surface places `models/chair.glb` with pinch-to-scale and drag-to-rotate. Multiple taps = multiple objects.
+> "List all SceneView node types"
 
-**AR placement cursor**
-> Create an AR screen with a reticle that snaps to surfaces at screen center. Tap to place `models/object.glb` and hide the reticle.
+It should return the full list of 22+ composable nodes. If it does, the MCP server is working.
 
-**AR augmented image**
-> Create an AR screen that detects `R.drawable.target_image` (15 cm) and places `models/overlay.glb` above it, scaled to match.
+---
 
-**AR face filter**
-> Create an AR screen using the front camera that detects faces and applies `materials/face_mask.filamat` to the mesh.
+## Tool Examples
 
-**Product configurator**
-> Create a 3D product configurator with Red/Blue/Green buttons. Apply the color as a material on `models/product.glb`. Add orbit camera and pinch-to-zoom.
+### Get a sample project
 
-**AR multi-object scene**
-> Create an AR screen where a bottom sheet lets users pick between chair, table, and lamp GLBs. Tap to place. Each object gets pinch-to-scale and drag-to-rotate.
+> "Show me an AR tap-to-place sample with SceneView"
+
+The assistant will call `get_sample("ar-model-viewer")` and return a complete, compilable Kotlin composable with all imports and dependencies.
+
+### Validate generated code
+
+> "Create a 3D model viewer and validate the code"
+
+The assistant will generate the code, then call `validate_code` to check it against 15+ rules (threading, null safety, API correctness, lifecycle) before presenting it.
+
+### Look up a node's API
+
+> "What parameters does LightNode accept?"
+
+The assistant will call `get_node_reference("LightNode")` and return the exact function signature, parameter types, defaults, and a usage example.
+
+### Get setup instructions
+
+> "How do I set up ARCore with SceneView in my project?"
+
+The assistant will call `get_ar_setup` and return the complete Gradle dependency, AndroidManifest.xml changes, session configuration options, and working AR starter templates.
+
+### Get best practices
+
+> "What are the performance best practices for SceneView?"
+
+The assistant will call `get_best_practices("performance")` and return guidance on model optimization, runtime performance, environment/lighting setup, and common anti-patterns.
+
+### Check the roadmap
+
+> "Does SceneView support iOS?"
+
+The assistant will call `get_platform_roadmap` and return the current multi-platform status and future plans.
+
+### Migrate from v2 to v3
+
+> "I'm upgrading from SceneView 2.x. What changed?"
+
+The assistant will call `get_migration_guide` and return every breaking change with before/after code examples.
+
+---
+
+## Why Use This?
+
+**Without** this MCP server, AI assistants may:
+- Recommend deprecated Sceneform instead of SceneView
+- Generate imperative View-based code instead of Compose
+- Use wrong API signatures or outdated versions
+- Miss ARCore integration patterns
+- Forget null-checks on `rememberModelInstance`
+
+**With** this MCP server, AI assistants:
+- Always use the latest SceneView 3.2.0 API
+- Generate correct Compose-native 3D/AR code
+- Know about all 22+ node types and their exact parameters
+- Validate code against 15+ rules before presenting it
+- Provide working sample code for any scenario
+
+---
+
+## Troubleshooting
+
+### "MCP server not found" or connection errors
+
+1. Ensure Node.js 18+ is installed: `node --version`
+2. Test the server manually: `npx sceneview-mcp` — it should start without errors and wait for input
+3. Restart your AI client after changing the MCP configuration
+
+### "npx command not found"
+
+Install Node.js from [nodejs.org](https://nodejs.org/) (LTS recommended). npm and npx are included.
+
+### Server starts but tools are not available
+
+- In Claude Desktop, check the MCP icon in the input bar. It should show "sceneview" as connected.
+- In Cursor, check **Settings > MCP** and verify the server shows a green status.
+- Try restarting the MCP server by restarting your AI client.
+
+### Stale data from `sceneview://known-issues`
+
+GitHub issues are cached for 10 minutes. Wait for the cache to expire or restart the server.
+
+### Validation false positives
+
+The `validate_code` tool uses pattern matching and may flag valid code in some edge cases. If a validation warning seems incorrect, review the rule explanation in the output — it includes the rule ID and a detailed explanation.
+
+### Firewall or proxy issues
+
+The only network call is to the GitHub API (for `sceneview://known-issues`). All other tools work fully offline. If you are behind a corporate proxy, set the `HTTPS_PROXY` environment variable:
+
+```json
+{
+  "mcpServers": {
+    "sceneview": {
+      "command": "npx",
+      "args": ["-y", "sceneview-mcp"],
+      "env": {
+        "HTTPS_PROXY": "http://proxy.example.com:8080"
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -106,23 +252,19 @@ Result:  Correct, compilable SceneView 3.0.0 code
 ```bash
 cd mcp
 npm install
-npm run prepare   # copies llms.txt + compiles TypeScript
-npm start         # run over stdio
-npx @modelcontextprotocol/inspector node dist/index.js   # test in MCP inspector
+npm run prepare  # Copy llms.txt + build TypeScript
+npm test         # Run unit tests
+npm run dev      # Start with tsx (hot reload)
 ```
 
 ## Publishing
 
+Published to npm on each SceneView release:
+
 ```bash
-cd mcp
-npm run prepare
 npm publish --access public
 ```
 
----
+## License
 
-## Links
-
-- **SDK**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
-- **npm**: [npmjs.com/package/sceneview-mcp](https://www.npmjs.com/package/sceneview-mcp)
-- **MCP spec**: [modelcontextprotocol.io](https://modelcontextprotocol.io)
+Apache 2.0 — same as SceneView.

@@ -16,6 +16,7 @@ import { validateCode, formatValidationReport } from "./validator.js";
 import { MIGRATION_GUIDE } from "./migration.js";
 import { fetchKnownIssues } from "./issues.js";
 import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
+import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -29,7 +30,7 @@ try {
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
 
 const server = new Server(
-  { name: "@sceneview/mcp", version: "3.1.1" },
+  { name: "@sceneview/mcp", version: "3.2.2" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
@@ -41,7 +42,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       uri: "sceneview://api",
       name: "SceneView API Reference",
       description:
-        "Complete SceneView 3.1.1 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
+        "Complete SceneView 3.2.2 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
       mimeType: "text/markdown",
     },
     {
@@ -166,6 +167,53 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["nodeType"],
       },
     },
+    {
+      name: "get_platform_roadmap",
+      description:
+        "Returns the SceneView multi-platform roadmap — current Android support status, planned iOS/KMP/web targets, and timeline. Use this when the user asks about cross-platform support, iOS, Kotlin Multiplatform, or future plans.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "get_best_practices",
+      description:
+        "Returns SceneView performance and architecture best practices — memory management, model optimization, threading rules, Compose integration patterns, and common anti-patterns. Use this when the user asks about performance, optimization, best practices, or architecture.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: ["all", "performance", "architecture", "memory", "threading"],
+            description:
+              'Category to filter by. "all" returns everything. Defaults to "all" if omitted.',
+          },
+        },
+        required: [],
+      },
+    },
+    {
+      name: "get_ar_setup",
+      description:
+        "Returns detailed AR setup instructions — AndroidManifest permissions and features, Gradle dependencies, ARCore session configuration options (depth, light estimation, instant placement, plane detection, image tracking, cloud anchors), and a complete working AR starter template. More detailed than `get_setup` for AR-specific configuration.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "get_troubleshooting",
+      description:
+        "Returns the SceneView troubleshooting guide — common crashes (SIGABRT, model not showing), build failures, AR issues (drift, overexposure, image detection), and performance problems. Use this when a user reports something not working, a crash, or unexpected behavior.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
   ],
 }));
 
@@ -227,7 +275,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: "text",
-              text: `No samples found with tag "${filterTag}". Available tags: 3d, ar, model, geometry, animation, camera, environment, anchor, plane-detection, image-tracking, face-tracking, placement, gestures`,
+              text: `No samples found with tag "${filterTag}". Available tags: 3d, ar, model, geometry, animation, camera, environment, anchor, plane-detection, image-tracking, cloud-anchor, point-cloud, placement, gestures, physics, sky, fog, lines, text, reflection, post-processing`,
             },
           ],
         };
@@ -261,7 +309,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `### build.gradle.kts`,
                 `\`\`\`kotlin`,
                 `dependencies {`,
-                `    implementation("io.github.sceneview:sceneview:3.1.1")`,
+                `    implementation("io.github.sceneview:sceneview:3.2.2")`,
                 `}`,
                 `\`\`\``,
                 ``,
@@ -282,7 +330,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `### build.gradle.kts`,
                 `\`\`\`kotlin`,
                 `dependencies {`,
-                `    implementation("io.github.sceneview:arsceneview:3.1.1")`,
+                `    implementation("io.github.sceneview:arsceneview:3.2.2")`,
                 `}`,
                 `\`\`\``,
                 ``,
@@ -365,6 +413,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           },
         ],
       };
+    }
+
+    // ── get_platform_roadmap ────────────────────────────────────────────────
+    case "get_platform_roadmap": {
+      return { content: [{ type: "text", text: PLATFORM_ROADMAP }] };
+    }
+
+    // ── get_best_practices ───────────────────────────────────────────────────
+    case "get_best_practices": {
+      const category = (request.params.arguments?.category as string) || "all";
+      const text = BEST_PRACTICES[category] ?? BEST_PRACTICES["all"];
+      return { content: [{ type: "text", text }] };
+    }
+
+    // ── get_ar_setup ─────────────────────────────────────────────────────────
+    case "get_ar_setup": {
+      return { content: [{ type: "text", text: AR_SETUP_GUIDE }] };
+    }
+
+    // ── get_troubleshooting ──────────────────────────────────────────────────
+    case "get_troubleshooting": {
+      return { content: [{ type: "text", text: TROUBLESHOOTING_GUIDE }] };
     }
 
     default:
