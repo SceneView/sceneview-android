@@ -1,0 +1,4 @@
+module SceneViewSwift {
+    header "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/SceneViewSwift-Swift.h"
+    requires objc
+}

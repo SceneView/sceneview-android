@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sceneview-website",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "/Users/thomasgorisse/Projects/sceneview.github.io"],
+      "port": 8080
+    },
+    {
+      "name": "mkdocs",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "mkdocs", "serve", "--dev-addr", "127.0.0.1:8000"],
+      "port": 8000
+    },
+    {
+      "name": "mcp-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/thomasgorisse/Projects/sceneview-android/mcp"],
+      "port": 3000
+    }
+  ]
+}

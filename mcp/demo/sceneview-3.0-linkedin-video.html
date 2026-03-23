@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SceneView 3.0 – LinkedIn Video</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e1a; overflow: hidden; font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif; }
+  #container { width: 1080px; height: 1080px; position: relative; overflow: hidden; }
+  canvas#three-canvas { position: absolute; top: 0; left: 0; opacity: 0; transition: none; }
+
+  /* Overlay layers */
+  .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* Title card */
+  #title-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #title-card .version { font-size: 28px; font-weight: 700; color: #6366f1; letter-spacing: 4px; text-transform: uppercase; }
+  #title-card h1 { font-size: 72px; font-weight: 800; color: white; margin-top: 12px; }
+  #title-card h2 { font-size: 38px; font-weight: 600; color: #38bdf8; margin-top: 16px; }
+  #title-card .sub { font-size: 22px; color: #7880a0; margin-top: 40px; }
+  #title-card .badge { display: flex; gap: 16px; margin-top: 28px; }
+  #title-card .badge span { background: rgba(30,33,60,0.9); color: #c4c8d8; font-family: 'SF Mono', monospace; font-size: 15px; padding: 8px 18px; border-radius: 20px; }
+
+  /* Hook caption */
+  #hook-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #hook-card .line { font-size: 48px; font-weight: 800; color: white; text-align: center; line-height: 1.4; }
+  #hook-card .strike { text-decoration: line-through; color: #ef4444; opacity: 0.6; }
+
+  /* Split view */
+  #split-view { display: none; }
+  .step-label { position: absolute; top: 24px; left: 24px; right: 24px; display: flex; align-items: center; }
+  .step-label .num { color: #6366f1; font-size: 20px; font-weight: 700; }
+  .step-label .txt { color: white; font-size: 20px; font-weight: 700; margin-left: 8px; }
+  .step-label .tag { margin-left: auto; background: rgba(99,102,241,0.15); color: #6366f1; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 12px; }
+
+  /* Code panels */
+  .code-panel { position: absolute; top: 74px; width: 496px; height: 460px; background: #0c1022; border-radius: 14px; overflow: hidden; }
+  .code-panel.left { left: 24px; }
+  .code-panel.right { right: 24px; }
+  .code-panel.full { left: 24px; width: 1032px; }
+  .code-chrome { height: 32px; background: #141a2e; display: flex; align-items: center; padding: 0 12px; }
+  .code-chrome .dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  .code-chrome .dot.r { background: #ff5f56; }
+  .code-chrome .dot.y { background: #ffbd2e; }
+  .code-chrome .dot.g { background: #27c93f; }
+  .code-chrome .title { color: #7880a0; font-size: 12px; margin-left: auto; margin-right: auto; font-weight: 600; }
+  .code-body { padding: 12px 14px; font-family: 'SF Mono', 'Menlo', monospace; font-size: 14px; line-height: 1.5; white-space: pre; overflow: hidden; }
+  .kw { color: #c084fc; }
+  .str { color: #fde047; }
+  .fn { color: #4ade80; }
+  .cm { color: #465070; }
+  .type { color: #60a5fa; }
+  .num { color: #f97316; }
+  .txt { color: #e0e4ec; }
+  .ann { color: #22d3ee; }
+  .dim { color: #7880a0; }
+  .cursor { display: inline-block; width: 9px; height: 17px; background: white; animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Result panel (bottom half of split) */
+  .result-panel { position: absolute; bottom: 24px; left: 24px; right: 24px; height: 500px; background: #080c14; border-radius: 14px; border: 2px solid #1a2040; overflow: hidden; }
+
+  /* Emulator inside result */
+  .emu-screen { width: 100%; height: 100%; position: relative; }
+
+  /* Line count badge */
+  .line-count { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 22px; font-weight: 700; opacity: 0; z-index: 10; }
+  .line-count .old { color: #ef4444; }
+  .line-count .new { color: #22c55e; }
+  .line-count .vs { color: #7880a0; margin: 0 12px; }
+
+  /* Transition labels */
+  #transition-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 56px; font-weight: 800; color: white; opacity: 0; z-index: 10; text-shadow: 0 0 40px rgba(99,102,241,0.5); text-align: center; line-height: 1.3; }
+
+  /* Insight cards */
+  #insight-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #insight-card .line { font-size: 44px; font-weight: 800; color: white; text-align: center; margin: 8px 0; }
+  #insight-card .accent { color: #38bdf8; }
+  #insight-card .dim { color: #465070; }
+
+  /* End card */
+  #end-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #end-card .logo { font-size: 56px; font-weight: 800; color: white; }
+  #end-card .ver { font-size: 56px; font-weight: 800; color: #6366f1; margin-left: 12px; }
+  #end-card .tagline { font-size: 24px; color: #38bdf8; margin-top: 16px; }
+  #end-card .gradle { background: rgba(30,33,60,0.9); color: #22c55e; font-family: monospace; font-size: 17px; padding: 12px 28px; border-radius: 20px; margin-top: 32px; }
+  #end-card .features { color: #788090; font-size: 18px; margin-top: 36px; line-height: 2.2; text-align: center; }
+  #end-card .features b { color: #c4c8d8; }
+  #end-card .author { color: #465070; font-size: 16px; margin-top: 36px; }
+  #end-card .gh { color: #6366f1; font-family: monospace; font-size: 15px; margin-top: 6px; }
+
+  /* Progress bar */
+  #progress { position: absolute; bottom: 0; left: 0; height: 3px; background: #6366f1; z-index: 20; }
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="three-canvas" width="1080" height="1080"></canvas>
+
+  <!-- Title card -->
+  <div id="title-card" class="overlay">
+    <div class="version">Introducing</div>
+    <h1>SceneView 3.0</h1>
+    <h2>3D is just Compose UI</h2>
+    <div class="sub">Jetpack Compose · Filament · ARCore</div>
+    <div class="badge">
+      <span>Scene { }</span>
+      <span>ARScene { }</span>
+      <span>ModelNode</span>
+    </div>
+  </div>
+
+  <!-- Hook card -->
+  <div id="hook-card" class="overlay">
+    <div class="line" id="hook-line-1"></div>
+    <div class="line" id="hook-line-2" style="margin-top: 16px;"></div>
+  </div>
+
+  <!-- Split view -->
+  <div id="split-view" class="overlay">
+    <div class="step-label">
+      <span class="num" id="step-num">Example 1</span>
+      <span class="txt" id="step-txt">3D Model Viewer</span>
+      <span class="tag" id="step-tag">sceneview:3.0.0</span>
+    </div>
+    <div class="code-panel left" id="panel-left">
+      <div class="code-chrome">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title" id="panel-left-title">Before (v2.x)</div>
+      </div>
+      <div class="code-body" id="panel-left-body"></div>
+    </div>
+    <div class="code-panel right" id="panel-right">
+      <div class="code-chrome">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title" id="panel-right-title">After (v3.0)</div>
+      </div>
+      <div class="code-body" id="panel-right-body"></div>
+    </div>
+    <div class="result-panel" id="result-panel">
+      <canvas id="result-canvas" width="1032" height="496"></canvas>
+    </div>
+    <div class="line-count" id="line-count"></div>
+  </div>
+
+  <!-- Transition label -->
+  <div id="transition-label"></div>
+
+  <!-- Insight cards -->
+  <div id="insight-card" class="overlay"></div>
+
+  <!-- End card -->
+  <div id="end-card" class="overlay">
+    <div style="display:flex;align-items:baseline;">
+      <span class="logo">SceneView</span>
+      <span class="ver">3.0</span>
+    </div>
+    <div class="tagline">3D & AR as Jetpack Compose composables</div>
+    <div class="gradle">implementation("io.github.sceneview:sceneview:3.0.0")</div>
+    <div class="features">
+      <b>Scene { }</b> for 3D · <b>ARScene { }</b> for AR<br>
+      Nodes are composables · State drives the scene<br>
+      Google Filament rendering · ARCore integration<br>
+      Open source · MIT License
+    </div>
+    <div class="author">@ThomasGorisse</div>
+    <div class="gh">github.com/SceneView/sceneview-android</div>
+  </div>
+
+  <div id="progress"></div>
+</div>
+
+<script src="three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE.JS — Product viewer scene (rotating watch/shoe)
+// ═══════════════════════════════════════════════════════════════════════════
+const canvas3d = document.getElementById('three-canvas');
+const scene3d = new THREE.Scene();
+scene3d.background = new THREE.Color(0x0a0e1a);
+const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+cam.position.set(0, 1.5, 4.5);
+cam.lookAt(0, 0.4, 0);
+const ren = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true });
+ren.setSize(1080, 1080);
+ren.shadowMap.enabled = true;
+ren.shadowMap.type = THREE.PCFSoftShadowMap;
+ren.toneMapping = THREE.ACESFilmicToneMapping;
+ren.toneMappingExposure = 0.9;
+
+// Lighting
+scene3d.add(new THREE.AmbientLight(0x2233aa, 0.4));
+const key = new THREE.DirectionalLight(0xfff5e6, 2.0);
+key.position.set(3, 8, 5); key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+scene3d.add(key);
+const rim = new THREE.DirectionalLight(0x6366f1, 0.8);
+rim.position.set(-3, 4, -3); scene3d.add(rim);
+const fill = new THREE.DirectionalLight(0x38bdf8, 0.4);
+fill.position.set(-2, 2, 4); scene3d.add(fill);
+
+// Ground plane
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(20, 20),
+  new THREE.MeshStandardMaterial({ color: 0x0c1022, roughness: 0.95 })
+);
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
+scene3d.add(ground);
+
+// Grid
+const gridH = new THREE.GridHelper(10, 40, 0x1a2040, 0x141830);
+scene3d.add(gridH);
+
+// Product model — a stylized watch (geometric)
+const watchGroup = new THREE.Group();
+
+// Watch body
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0xc8ccd8, roughness: 0.15, metalness: 0.9 });
+const body = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.18, 48), bodyMat);
+body.position.y = 0.7; body.castShadow = true;
+watchGroup.add(body);
+
+// Watch face
+const faceMat = new THREE.MeshStandardMaterial({ color: 0x0c1022, roughness: 0.3, metalness: 0.5 });
+const face = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.02, 48), faceMat);
+face.position.y = 0.79; watchGroup.add(face);
+
+// Bezel ring
+const bezelMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.1, metalness: 0.95 });
+const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.04, 16, 48), bezelMat);
+bezel.rotation.x = Math.PI / 2; bezel.position.y = 0.79;
+watchGroup.add(bezel);
+
+// Hour markers
+for (let i = 0; i < 12; i++) {
+  const angle = (i / 12) * Math.PI * 2;
+  const marker = new THREE.Mesh(
+    new THREE.BoxGeometry(0.03, 0.01, i % 3 === 0 ? 0.1 : 0.06),
+    new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 0.5 })
+  );
+  marker.position.set(Math.sin(angle) * 0.52, 0.80, Math.cos(angle) * 0.52);
+  marker.rotation.y = -angle;
+  watchGroup.add(marker);
+}
+
+// Hour hand
+const hourHand = new THREE.Mesh(
+  new THREE.BoxGeometry(0.025, 0.008, 0.28),
+  new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8 })
+);
+hourHand.position.set(0, 0.805, 0.1);
+watchGroup.add(hourHand);
+
+// Minute hand
+const minHand = new THREE.Mesh(
+  new THREE.BoxGeometry(0.018, 0.008, 0.38),
+  new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8 })
+);
+minHand.position.set(0, 0.808, 0.15);
+minHand.rotation.y = Math.PI * 0.3;
+watchGroup.add(minHand);
+
+// Second hand
+const secHand = new THREE.Mesh(
+  new THREE.BoxGeometry(0.008, 0.006, 0.42),
+  new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.3 })
+);
+secHand.position.y = 0.812;
+watchGroup.add(secHand);
+
+// Crown
+const crown = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.06, 0.06, 0.12, 16),
+  bodyMat
+);
+crown.rotation.z = Math.PI / 2; crown.position.set(0.78, 0.7, 0);
+watchGroup.add(crown);
+
+// Band hints
+for (const z of [-0.85, 0.85]) {
+  const band = new THREE.Mesh(
+    new THREE.BoxGeometry(0.32, 0.06, 0.35),
+    new THREE.MeshStandardMaterial({ color: 0x1a1e2e, roughness: 0.7 })
+  );
+  band.position.set(0, 0.7, z); watchGroup.add(band);
+}
+
+scene3d.add(watchGroup);
+
+// Second model — a shoe (geometric)
+const shoeGroup = new THREE.Group();
+const shoeMat = new THREE.MeshStandardMaterial({ color: 0x6366f1, roughness: 0.35, metalness: 0.1 });
+// Sole
+const sole = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 1.0), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 }));
+sole.position.y = 0.04; shoeGroup.add(sole);
+// Upper
+const upper = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.85), shoeMat);
+upper.position.set(0, 0.19, -0.05); shoeGroup.add(upper);
+// Toe cap
+const toe = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), shoeMat);
+toe.position.set(0, 0.08, 0.42); toe.scale.set(1, 0.6, 1); shoeGroup.add(toe);
+// Accent stripe
+const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.14, 0.6), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 0.3 }));
+stripe.position.set(0.183, 0.18, 0); shoeGroup.add(stripe);
+const stripe2 = stripe.clone(); stripe2.position.x = -0.183; shoeGroup.add(stripe2);
+
+shoeGroup.position.set(2.5, 0, 0);
+shoeGroup.visible = false;
+scene3d.add(shoeGroup);
+
+// Furniture — sofa (geometric)
+const sofaGroup = new THREE.Group();
+const sofaMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.6 });
+// Seat
+sofaGroup.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 0.7), sofaMat); m.position.set(0, 0.35, 0); m.castShadow = true; return m; })());
+// Back
+sofaGroup.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.15), sofaMat); m.position.set(0, 0.6, -0.28); m.castShadow = true; return m; })());
+// Arms
+for (const x of [-0.73, 0.73]) {
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.35, 0.7), sofaMat);
+  arm.position.set(x, 0.42, 0); arm.castShadow = true; sofaGroup.add(arm);
+}
+// Legs
+for (const x of [-0.65, 0.65]) for (const z of [-0.25, 0.25]) {
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.22, 8), new THREE.MeshStandardMaterial({ color: 0x1a1e2e, roughness: 0.5 }));
+  leg.position.set(x, 0.11, z); sofaGroup.add(leg);
+}
+
+sofaGroup.position.set(-2.5, 0, 0);
+sofaGroup.visible = false;
+scene3d.add(sofaGroup);
+
+// Floating Compose Card (ViewNode demo)
+const cardGroup = new THREE.Group();
+const cardBg = new THREE.Mesh(
+  new THREE.BoxGeometry(0.8, 0.5, 0.02),
+  new THREE.MeshStandardMaterial({ color: 0x1a2040, roughness: 0.3, transparent: true, opacity: 0.95 })
+);
+cardGroup.add(cardBg);
+// Accent bar on card
+const accentBar = new THREE.Mesh(
+  new THREE.BoxGeometry(0.8, 0.03, 0.025),
+  new THREE.MeshStandardMaterial({ color: 0x6366f1, emissive: 0x6366f1, emissiveIntensity: 0.5 })
+);
+accentBar.position.y = 0.24; cardGroup.add(accentBar);
+// Price text (simulated as box)
+const priceBox = new THREE.Mesh(
+  new THREE.BoxGeometry(0.35, 0.08, 0.025),
+  new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 0.3 })
+);
+priceBox.position.set(-0.15, 0.1, 0.01); cardGroup.add(priceBox);
+// Button
+const btnBox = new THREE.Mesh(
+  new THREE.BoxGeometry(0.3, 0.1, 0.025),
+  new THREE.MeshStandardMaterial({ color: 0x6366f1, emissive: 0x6366f1, emissiveIntensity: 0.4 })
+);
+btnBox.position.set(0, -0.12, 0.01); cardGroup.add(btnBox);
+
+cardGroup.position.set(-1.5, 1.0, 0.5);
+cardGroup.visible = false;
+scene3d.add(cardGroup);
+
+let activeModel = 'watch'; // 'watch', 'product', 'ar'
+
+function update3D(t) {
+  if (activeModel === 'watch') {
+    watchGroup.visible = true; shoeGroup.visible = false; sofaGroup.visible = false; cardGroup.visible = false;
+    watchGroup.rotation.y = t * 0.5;
+    secHand.rotation.y = t * 2;
+    cam.position.set(0, 1.5, 4.5);
+    cam.lookAt(0, 0.5, 0);
+  } else if (activeModel === 'product') {
+    watchGroup.visible = false; shoeGroup.visible = true; sofaGroup.visible = false; cardGroup.visible = false;
+    shoeGroup.position.set(0, 0, 0);
+    shoeGroup.rotation.y = t * 0.6;
+    shoeGroup.position.y = Math.sin(t * 1.5) * 0.05;
+    cam.position.set(0, 0.8, 2.5);
+    cam.lookAt(0, 0.2, 0);
+  } else if (activeModel === 'ar') {
+    watchGroup.visible = false; shoeGroup.visible = false; sofaGroup.visible = true; cardGroup.visible = true;
+    sofaGroup.position.set(0, 0, 0);
+    sofaGroup.rotation.y = t * 0.15;
+    cardGroup.position.set(-0.2, 1.2, 0.8);
+    cardGroup.rotation.y = Math.sin(t * 0.3) * 0.15;
+    cardGroup.position.y = 1.2 + Math.sin(t * 1.2) * 0.03;
+    cam.position.set(1.5, 1.4, 3.5);
+    cam.lookAt(0, 0.5, 0);
+  }
+  ren.render(scene3d, cam);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2D RESULT CANVAS — mini app mockups
+// ═══════════════════════════════════════════════════════════════════════════
+const resCanvas = document.getElementById('result-canvas');
+const rctx = resCanvas.getContext('2d');
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath(); ctx.fill();
+}
+
+function drawModelViewer(t) {
+  const W = 1032, H = 496;
+  rctx.fillStyle = '#080c14'; rctx.fillRect(0, 0, W, H);
+
+  // Simulated 3D viewport area
+  const cx = W / 2, cy = H / 2;
+
+  // Grid
+  rctx.strokeStyle = '#141830';
+  rctx.lineWidth = 1;
+  for (let i = 0; i < W; i += 30) {
+    rctx.beginPath(); rctx.moveTo(i, 0); rctx.lineTo(i, H); rctx.stroke();
+  }
+  for (let i = 0; i < H; i += 30) {
+    rctx.beginPath(); rctx.moveTo(0, i); rctx.lineTo(W, i); rctx.stroke();
+  }
+
+  // Rotating watch silhouette
+  const angle = t * 0.8;
+  const r = 100;
+
+  // Watch body
+  rctx.fillStyle = '#2a3050';
+  rctx.beginPath();
+  rctx.arc(cx, cy, r, 0, Math.PI * 2);
+  rctx.fill();
+
+  // Bezel
+  rctx.strokeStyle = '#6366f1';
+  rctx.lineWidth = 4;
+  rctx.beginPath();
+  rctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+  rctx.stroke();
+
+  // Hour markers
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + angle;
+    const inner = i % 3 === 0 ? r - 22 : r - 16;
+    rctx.strokeStyle = '#38bdf8';
+    rctx.lineWidth = i % 3 === 0 ? 3 : 2;
+    rctx.beginPath();
+    rctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    rctx.lineTo(cx + Math.cos(a) * (r - 8), cy + Math.sin(a) * (r - 8));
+    rctx.stroke();
+  }
+
+  // Hands
+  const hAngle = angle * 0.1 + Math.PI;
+  const mAngle = angle * 0.6 + Math.PI * 0.7;
+  const sAngle = t * 2;
+
+  // Hour
+  rctx.strokeStyle = '#e2e8f0'; rctx.lineWidth = 4; rctx.lineCap = 'round';
+  rctx.beginPath(); rctx.moveTo(cx, cy); rctx.lineTo(cx + Math.cos(hAngle) * 45, cy + Math.sin(hAngle) * 45); rctx.stroke();
+  // Minute
+  rctx.lineWidth = 3;
+  rctx.beginPath(); rctx.moveTo(cx, cy); rctx.lineTo(cx + Math.cos(mAngle) * 65, cy + Math.sin(mAngle) * 65); rctx.stroke();
+  // Second
+  rctx.strokeStyle = '#ef4444'; rctx.lineWidth = 1.5;
+  rctx.beginPath(); rctx.moveTo(cx, cy); rctx.lineTo(cx + Math.cos(sAngle) * 75, cy + Math.sin(sAngle) * 75); rctx.stroke();
+
+  // Centre dot
+  rctx.fillStyle = '#e2e8f0';
+  rctx.beginPath(); rctx.arc(cx, cy, 4, 0, Math.PI * 2); rctx.fill();
+
+  // HDR glow
+  const grd = rctx.createRadialGradient(cx, cy, r, cx, cy, r + 80);
+  grd.addColorStop(0, 'rgba(99,102,241,0.15)');
+  grd.addColorStop(1, 'rgba(99,102,241,0)');
+  rctx.fillStyle = grd;
+  rctx.fillRect(0, 0, W, H);
+
+  // Label
+  rctx.fillStyle = '#7880a0';
+  rctx.font = '14px system-ui';
+  rctx.fillText('↻ Drag to orbit  ⊕ Pinch to zoom', 20, H - 20);
+  rctx.fillText('HDR Environment + Orbit Camera', W - 300, H - 20);
+}
+
+function drawProductPage(t) {
+  const W = 1032, H = 496;
+  rctx.fillStyle = '#0c1022'; rctx.fillRect(0, 0, W, H);
+
+  // Mock app UI — product detail page
+  // Top bar
+  rctx.fillStyle = '#141a2e'; roundRect(rctx, 0, 0, W, 44, 0);
+  rctx.fillStyle = '#7880a0'; rctx.font = 'bold 16px system-ui';
+  rctx.fillText('←  Product Details', 16, 28);
+  rctx.fillText('♡', W - 40, 28);
+
+  // 3D viewport area (where Image() was replaced by Scene{})
+  const vpW = 460, vpH = 360;
+  const vpX = 24, vpY = 60;
+  rctx.fillStyle = '#080c14'; roundRect(rctx, vpX, vpY, vpW, vpH, 12);
+
+  // Grid in viewport
+  rctx.strokeStyle = '#0f1520'; rctx.lineWidth = 1;
+  for (let i = vpX; i < vpX + vpW; i += 25) { rctx.beginPath(); rctx.moveTo(i, vpY); rctx.lineTo(i, vpY + vpH); rctx.stroke(); }
+  for (let i = vpY; i < vpY + vpH; i += 25) { rctx.beginPath(); rctx.moveTo(vpX, i); rctx.lineTo(vpX + vpW, i); rctx.stroke(); }
+
+  // Rotating shoe in viewport
+  const cx = vpX + vpW / 2, cy = vpY + vpH / 2;
+  const angle = t * 0.5;
+
+  // Shoe sole
+  rctx.save();
+  rctx.translate(cx, cy + 20);
+  rctx.rotate(Math.sin(angle) * 0.3);
+  rctx.fillStyle = '#e2e8f0'; roundRect(rctx, -60, 15, 120, 12, 4);
+  rctx.fillStyle = '#6366f1'; roundRect(rctx, -55, -20, 110, 38, 8);
+  // Accent
+  rctx.fillStyle = '#38bdf8'; rctx.fillRect(-55, -5, 110, 3);
+  rctx.restore();
+
+  // "Scene{}" badge
+  rctx.fillStyle = 'rgba(99,102,241,0.15)';
+  roundRect(rctx, vpX + 8, vpY + 8, 80, 24, 8);
+  rctx.fillStyle = '#6366f1'; rctx.font = 'bold 12px monospace';
+  rctx.fillText('Scene { }', vpX + 16, vpY + 24);
+
+  // Right side — product info
+  const infoX = vpX + vpW + 32;
+  rctx.fillStyle = '#c4c8d8'; rctx.font = 'bold 28px system-ui';
+  rctx.fillText('Air Runner Pro', infoX, 110);
+  rctx.fillStyle = '#7880a0'; rctx.font = '16px system-ui';
+  rctx.fillText('Performance Running Shoe', infoX, 138);
+
+  // Stars
+  rctx.fillStyle = '#fde047'; rctx.font = '18px system-ui';
+  rctx.fillText('★★★★★', infoX, 170);
+  rctx.fillStyle = '#7880a0'; rctx.font = '14px system-ui';
+  rctx.fillText('  4.8 (2,341 reviews)', infoX + 100, 170);
+
+  // Price
+  rctx.fillStyle = '#22c55e'; rctx.font = 'bold 36px system-ui';
+  rctx.fillText('$179', infoX, 220);
+  rctx.fillStyle = '#7880a0'; rctx.font = '16px system-ui'; rctx.fillText('  Free shipping', infoX + 100, 220);
+
+  // Color options
+  rctx.fillStyle = '#7880a0'; rctx.font = '14px system-ui';
+  rctx.fillText('Color', infoX, 260);
+  const colors = ['#6366f1', '#ef4444', '#22c55e', '#1a1e2e'];
+  colors.forEach((c, i) => {
+    rctx.fillStyle = c;
+    rctx.beginPath(); rctx.arc(infoX + 16 + i * 36, 282, 12, 0, Math.PI * 2); rctx.fill();
+    if (i === 0) { rctx.strokeStyle = '#38bdf8'; rctx.lineWidth = 2; rctx.stroke(); }
+  });
+
+  // Size
+  rctx.fillStyle = '#7880a0'; rctx.font = '14px system-ui';
+  rctx.fillText('Size', infoX, 320);
+  ['8', '9', '10', '11', '12'].forEach((s, i) => {
+    rctx.fillStyle = i === 2 ? '#6366f1' : '#1a2040';
+    roundRect(rctx, infoX + i * 56, 330, 48, 32, 8);
+    rctx.fillStyle = i === 2 ? 'white' : '#7880a0';
+    rctx.font = 'bold 14px system-ui';
+    rctx.fillText(s, infoX + i * 56 + 18, 351);
+  });
+
+  // Add to Cart button
+  rctx.fillStyle = '#6366f1'; roundRect(rctx, infoX, 390, 300, 48, 12);
+  rctx.fillStyle = 'white'; rctx.font = 'bold 18px system-ui';
+  rctx.fillText('Add to Cart', infoX + 100, 420);
+
+  // AR try-on button
+  rctx.fillStyle = 'rgba(99,102,241,0.15)'; roundRect(rctx, infoX + 320, 390, 160, 48, 12);
+  rctx.fillStyle = '#6366f1'; rctx.font = 'bold 16px system-ui';
+  rctx.fillText('👁 View in AR', infoX + 340, 420);
+}
+
+function drawARScene(t) {
+  const W = 1032, H = 496;
+
+  // Camera feed simulation (muted green-gray tones)
+  rctx.fillStyle = '#1a2010'; rctx.fillRect(0, 0, W, H);
+
+  // Floor texture (AR plane)
+  rctx.fillStyle = '#222818';
+  for (let y = H * 0.4; y < H; y += 3) {
+    const perspective = (y - H * 0.4) / (H * 0.6);
+    const noise = Math.sin(y * 0.5 + t) * 2;
+    rctx.fillRect(0, y, W, 1 + perspective);
+  }
+
+  // Detected plane grid overlay
+  const planeY = H * 0.5;
+  rctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+  rctx.lineWidth = 1;
+  for (let i = 0; i < 20; i++) {
+    const py = planeY + i * 12;
+    const spread = (i / 20) * 200;
+    rctx.beginPath();
+    rctx.moveTo(W/2 - 300 - spread, py);
+    rctx.lineTo(W/2 + 300 + spread, py);
+    rctx.stroke();
+  }
+  for (let i = -10; i < 10; i++) {
+    rctx.beginPath();
+    rctx.moveTo(W/2 + i * 30, planeY);
+    rctx.lineTo(W/2 + i * 60, H);
+    rctx.stroke();
+  }
+
+  // Placed sofa (simplified side view)
+  const sx = W / 2 - 80, sy = planeY - 30;
+  rctx.fillStyle = '#22c55e';
+  roundRect(rctx, sx, sy, 160, 30, 4); // seat
+  roundRect(rctx, sx, sy - 40, 160, 42, 4); // back
+  roundRect(rctx, sx - 8, sy - 20, 16, 50, 3); // left arm
+  roundRect(rctx, sx + 152, sy - 20, 16, 50, 3); // right arm
+
+  // Floating card next to sofa (ViewNode)
+  const cardX = sx + 190, cardY = sy - 90;
+  rctx.fillStyle = 'rgba(26, 32, 64, 0.92)';
+  roundRect(rctx, cardX, cardY, 160, 100, 10);
+  // Card accent
+  rctx.fillStyle = '#6366f1'; rctx.fillRect(cardX, cardY, 160, 4);
+  // Card content
+  rctx.fillStyle = '#c4c8d8'; rctx.font = 'bold 14px system-ui';
+  rctx.fillText('Sofa Pro', cardX + 12, cardY + 28);
+  rctx.fillStyle = '#22c55e'; rctx.font = 'bold 20px system-ui';
+  rctx.fillText('€ 599', cardX + 12, cardY + 56);
+  rctx.fillStyle = '#6366f1'; roundRect(rctx, cardX + 12, cardY + 68, 136, 24, 6);
+  rctx.fillStyle = 'white'; rctx.font = 'bold 12px system-ui';
+  rctx.fillText('Buy in AR', cardX + 48, cardY + 84);
+
+  // Connecting line
+  rctx.strokeStyle = 'rgba(99,102,241,0.4)'; rctx.lineWidth = 1;
+  rctx.setLineDash([4, 4]);
+  rctx.beginPath(); rctx.moveTo(sx + 160, sy - 10); rctx.lineTo(cardX, cardY + 50); rctx.stroke();
+  rctx.setLineDash([]);
+
+  // AR HUD
+  rctx.fillStyle = 'rgba(5,10,20,0.75)'; roundRect(rctx, 12, 12, W - 24, 32, 10);
+  rctx.fillStyle = '#38bdf8'; rctx.font = 'bold 13px system-ui';
+  rctx.fillText('AR SESSION', 24, 34);
+  rctx.fillStyle = '#22c55e'; rctx.fillText('TRACKING', W - 110, 34);
+  rctx.fillStyle = '#22c55e'; rctx.beginPath(); rctx.arc(W - 36, 28, 5, 0, Math.PI * 2); rctx.fill();
+
+  // Plane detected badge
+  rctx.fillStyle = 'rgba(34,197,94,0.15)'; roundRect(rctx, 12, H - 44, 180, 32, 10);
+  rctx.fillStyle = '#22c55e'; rctx.font = 'bold 13px system-ui';
+  rctx.fillText('✓ Plane detected', 24, H - 22);
+
+  // Anchor badge
+  rctx.fillStyle = 'rgba(99,102,241,0.15)'; roundRect(rctx, 200, H - 44, 170, 32, 10);
+  rctx.fillStyle = '#6366f1'; rctx.font = 'bold 13px system-ui';
+  rctx.fillText('⚓ AnchorNode', 212, H - 22);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CODE SNIPPETS
+// ═══════════════════════════════════════════════════════════════════════════
+const OLD_CODE = `<span class="cm">// SceneView 2.x — Fragment + XML</span>
+<span class="kw">class</span> <span class="type">ModelFragment</span> : <span class="type">Fragment</span>() {
+    <span class="kw">private lateinit var</span> sceneView: <span class="type">SceneView</span>
+    <span class="kw">private var</span> modelNode: <span class="type">ModelNode</span>?
+
+    <span class="kw">override fun</span> <span class="fn">onViewCreated</span>(...) {
+        sceneView = view.<span class="fn">findViewById</span>(R.id.sceneView)
+        sceneView.lifecycle = <span class="kw">this</span>.lifecycle
+        <span class="fn">loadModel</span>()
+    }
+
+    <span class="kw">private fun</span> <span class="fn">loadModel</span>() {
+        sceneView.modelLoader
+            .<span class="fn">loadModelInstanceAsync</span>(<span class="str">"model.glb"</span>)
+            { instance ->
+                modelNode = <span class="type">ModelNode</span>(instance)
+                sceneView.<span class="fn">addChildNode</span>(modelNode!!)
+            }
+    }
+
+    <span class="kw">override fun</span> <span class="fn">onDestroy</span>() {
+        modelNode?.<span class="fn">destroy</span>()
+        sceneView.<span class="fn">destroy</span>()
+        <span class="kw">super</span>.<span class="fn">onDestroy</span>()
+    }
+}
+<span class="cm">// + fragment_scene.xml layout file</span>`;
+
+const NEW_CODE_VIEWER = `<span class="cm">// SceneView 3.0 — Pure Compose</span>
+<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">ModelViewer</span>() {
+    <span class="fn">Scene</span>(
+        modifier = <span class="type">Modifier</span>.<span class="fn">fillMaxSize</span>(),
+        cameraManipulator = <span class="fn">rememberCameraManipulator</span>()
+    ) {
+        <span class="fn">rememberModelInstance</span>(
+            modelLoader, <span class="str">"models/watch.glb"</span>
+        )?.<span class="fn">let</span> {
+            <span class="fn">ModelNode</span>(
+                modelInstance = it,
+                scaleToUnits = <span class="num">1.0f</span>,
+                autoAnimate = <span class="kw">true</span>
+            )
+        }
+    }
+}`;
+
+const NEW_CODE_PRODUCT = `<span class="cm">// Replace Image() with Scene{}</span>
+<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">ProductDetail</span>(shoe: <span class="type">ModelInstance</span>) {
+    <span class="type">Column</span> {
+        <span class="fn">Scene</span>(
+            modifier = <span class="type">Modifier</span>.<span class="fn">height</span>(<span class="num">300</span>.dp).<span class="fn">fillMaxWidth</span>(),
+            cameraManipulator = <span class="fn">rememberCameraManipulator</span>()
+        ) {
+            <span class="fn">ModelNode</span>(
+                modelInstance = shoe,
+                scaleToUnits = <span class="num">1.0f</span>,
+                autoAnimate = <span class="kw">true</span>
+            )
+        }
+        <span class="fn">Text</span>(<span class="str">"Air Runner Pro"</span>, style = <span class="type">MaterialTheme</span>.typography.titleLarge)
+        <span class="fn">Text</span>(<span class="str">"$179"</span>, color = <span class="type">Color</span>.Green)
+        <span class="fn">Button</span>(onClick = {}) { <span class="fn">Text</span>(<span class="str">"Add to Cart"</span>) }
+    }
+}`;
+
+const NEW_CODE_AR = `<span class="cm">// AR tap-to-place + Compose UI in 3D</span>
+<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">ARFurniture</span>() {
+    <span class="kw">var</span> anchor <span class="kw">by</span> <span class="fn">remember</span> { <span class="fn">mutableStateOf</span>&lt;<span class="type">Anchor</span>?&gt;(<span class="kw">null</span>) }
+    <span class="fn">ARScene</span>(
+        planeRenderer = <span class="kw">true</span>,
+        onSessionUpdated = { _, frame ->
+            anchor = anchor ?: frame.<span class="fn">getUpdatedPlanes</span>()
+                .<span class="fn">firstOrNull</span>()
+                ?.<span class="fn">let</span> { frame.<span class="fn">createAnchorOrNull</span>(it.centerPose) }
+        }
+    ) {
+        anchor?.<span class="fn">let</span> {
+            <span class="fn">AnchorNode</span>(anchor = it) {
+                <span class="fn">ModelNode</span>(sofa, scaleToUnits = <span class="num">0.5f</span>, isEditable = <span class="kw">true</span>)
+                <span class="fn">ViewNode</span>(windowManager) {
+                    <span class="fn">Card</span> {
+                        <span class="fn">Text</span>(<span class="str">"Sofa Pro — € 599"</span>)
+                        <span class="fn">Button</span>(onClick = {}) { <span class="fn">Text</span>(<span class="str">"Buy in AR"</span>) }
+                    }
+                }
+            }
+        }
+    }
+}`;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIMELINE DIRECTOR
+// ═══════════════════════════════════════════════════════════════════════════
+const DURATION = 50;
+const els = {
+  titleCard: document.getElementById('title-card'),
+  hookCard: document.getElementById('hook-card'),
+  hookLine1: document.getElementById('hook-line-1'),
+  hookLine2: document.getElementById('hook-line-2'),
+  splitView: document.getElementById('split-view'),
+  panelLeft: document.getElementById('panel-left'),
+  panelRight: document.getElementById('panel-right'),
+  panelLeftTitle: document.getElementById('panel-left-title'),
+  panelRightTitle: document.getElementById('panel-right-title'),
+  panelLeftBody: document.getElementById('panel-left-body'),
+  panelRightBody: document.getElementById('panel-right-body'),
+  resultPanel: document.getElementById('result-panel'),
+  stepNum: document.getElementById('step-num'),
+  stepTxt: document.getElementById('step-txt'),
+  stepTag: document.getElementById('step-tag'),
+  lineCount: document.getElementById('line-count'),
+  transLabel: document.getElementById('transition-label'),
+  insightCard: document.getElementById('insight-card'),
+  endCard: document.getElementById('end-card'),
+  progress: document.getElementById('progress'),
+  canvas3d: canvas3d,
+};
+
+function typeText(full, elapsed, cps = 30) {
+  const n = Math.min(full.length, Math.floor(elapsed * cps));
+  return full.substring(0, n);
+}
+
+function typeHTML(full, elapsed, cps = 50) {
+  // Type visible characters, always output complete HTML tags
+  const target = Math.floor(elapsed * cps);
+  let visible = 0;
+  let cutIdx = 0;
+  let inTag = false;
+  for (let i = 0; i < full.length; i++) {
+    if (full[i] === '<') inTag = true;
+    if (!inTag) visible++;
+    if (full[i] === '>') inTag = false;
+    cutIdx = i + 1;
+    if (visible >= target && !inTag) break;
+  }
+  let result = full.substring(0, cutIdx);
+  // Close any unclosed <span> tags
+  const opens = (result.match(/<span[^>]*>/g) || []).length;
+  const closes = (result.match(/<\/span>/g) || []).length;
+  for (let i = 0; i < opens - closes; i++) result += '</span>';
+  return result;
+}
+
+function fadeIn(t, start, dur) { return Math.min(1, Math.max(0, (t - start) / dur)); }
+function fadeOut(t, start, dur) { return Math.max(0, 1 - (t - start) / dur); }
+
+let startTime = null;
+function tick(now) {
+  if (!startTime) startTime = now;
+  const t = (now - startTime) / 1000;
+  if (t > DURATION + 2) return;
+
+  els.progress.style.width = Math.min(100, t / DURATION * 100) + '%';
+
+  // Reset everything
+  els.titleCard.style.opacity = 0; els.titleCard.style.display = 'none';
+  els.hookCard.style.opacity = 0; els.hookCard.style.display = 'none';
+  els.splitView.style.display = 'none';
+  els.transLabel.style.opacity = 0;
+  els.insightCard.style.opacity = 0; els.insightCard.style.display = 'none';
+  els.endCard.style.opacity = 0; els.endCard.style.display = 'none';
+  els.canvas3d.style.opacity = 0;
+  els.lineCount.style.opacity = 0;
+
+  // ── SCENE 1: Title card (0–4s) ──
+  if (t < 4) {
+    els.titleCard.style.display = 'flex';
+    els.titleCard.style.opacity = t < 0.8 ? t / 0.8 : (t > 3.2 ? fadeOut(t, 3.2, 0.8) : 1);
+  }
+
+  // ── SCENE 2: Hook (4–7.5s) ──
+  else if (t < 7.5) {
+    const st = t - 4;
+    els.hookCard.style.display = 'flex';
+    els.hookCard.style.opacity = fadeIn(t, 4, 0.5);
+    els.hookLine1.innerHTML = '<span class="strike">~500 lines of boilerplate</span>';
+    if (st > 1.2) {
+      els.hookLine2.innerHTML = '→ 15 lines of Compose';
+      els.hookLine2.style.color = '#22c55e';
+    }
+  }
+
+  // ── SCENE 3: Example 1 — Before vs After (7.5–18s) ──
+  else if (t < 18) {
+    const st = t - 7.5;
+    els.splitView.style.display = 'block';
+    els.stepNum.textContent = 'Example 1:';
+    els.stepTxt.textContent = '3D Model Viewer';
+    els.stepTag.textContent = 'sceneview:3.0.0';
+
+    // Layout: two code panels side by side, result panel below
+    els.panelLeft.style.display = 'block';
+    els.panelLeft.style.width = '496px';
+    els.panelLeft.style.height = '460px';
+    els.panelRight.style.display = 'block';
+    els.panelRight.style.width = '496px';
+    els.panelRight.style.height = '460px';
+    els.resultPanel.style.display = 'block';
+
+    els.panelLeftTitle.textContent = 'Before (v2.x) — Fragment + XML';
+    els.panelRightTitle.textContent = 'After (v3.0) — Pure Compose';
+
+    // Type old code (appears fast, dimmed)
+    els.panelLeftBody.innerHTML = st > 0.3 ? typeHTML(OLD_CODE, st - 0.3, 80) : '';
+    els.panelLeftBody.style.opacity = '0.6';
+
+    // Type new code
+    els.panelRightBody.innerHTML = st > 1.5 ? typeHTML(NEW_CODE_VIEWER, st - 1.5, 60) + '<span class="cursor"></span>' : '<span class="cursor"></span>';
+    els.panelRightBody.style.opacity = '1';
+
+    // Result panel — model viewer
+    if (st > 3) {
+      els.resultPanel.style.opacity = fadeIn(st, 3, 0.5);
+      drawModelViewer(st - 3);
+    } else {
+      els.resultPanel.style.opacity = 0;
+    }
+
+    // Line count badge
+    if (st > 5) {
+      els.lineCount.style.opacity = fadeIn(st, 5, 0.5);
+      els.lineCount.innerHTML = '<span class="old">~30 lines + XML layout</span><span class="vs">→</span><span class="new">15 lines. That\'s it.</span>';
+    }
+  }
+
+  // ── SCENE 4: Example 2 — Product Page (18–28s) ──
+  else if (t < 28) {
+    const st = t - 18;
+    els.splitView.style.display = 'block';
+    els.stepNum.textContent = 'Example 2:';
+    els.stepTxt.textContent = 'Product Page — Replace Image() with Scene{}';
+    els.stepTag.textContent = 'e-commerce';
+
+    // Single code panel on top
+    els.panelLeft.style.display = 'block';
+    els.panelLeft.style.width = '1032px';
+    els.panelLeft.className = 'code-panel full';
+    els.panelRight.style.display = 'none';
+    els.resultPanel.style.display = 'block';
+
+    els.panelLeftTitle.textContent = 'ProductDetail.kt';
+    els.panelLeftBody.innerHTML = st > 0.3 ? typeHTML(NEW_CODE_PRODUCT, st - 0.3, 55) + '<span class="cursor"></span>' : '<span class="cursor"></span>';
+    els.panelLeftBody.style.opacity = '1';
+
+    // Product page result
+    if (st > 3) {
+      els.resultPanel.style.opacity = fadeIn(st, 3, 0.5);
+      drawProductPage(st - 3);
+    } else {
+      els.resultPanel.style.opacity = 0;
+    }
+
+    // Line count badge
+    if (st > 5) {
+      els.lineCount.style.opacity = fadeIn(st, 5, 0.5);
+      els.lineCount.innerHTML = '<span class="new">Your product page. One Scene{} instead of Image().</span>';
+    }
+  }
+
+  // ── SCENE 5: Example 3 — AR + ViewNode (28–38s) ──
+  else if (t < 38) {
+    const st = t - 28;
+    els.splitView.style.display = 'block';
+    els.stepNum.textContent = 'Example 3:';
+    els.stepTxt.textContent = 'AR Placement + Compose UI in 3D';
+    els.stepTag.textContent = 'arsceneview:3.0.0';
+
+    // Single code panel
+    els.panelLeft.style.display = 'block';
+    els.panelLeft.style.width = '1032px';
+    els.panelLeft.className = 'code-panel full';
+    els.panelRight.style.display = 'none';
+    els.resultPanel.style.display = 'block';
+
+    els.panelLeftTitle.textContent = 'ARFurniture.kt';
+    els.panelLeftBody.innerHTML = st > 0.3 ? typeHTML(NEW_CODE_AR, st - 0.3, 50) + '<span class="cursor"></span>' : '<span class="cursor"></span>';
+    els.panelLeftBody.style.opacity = '1';
+
+    // AR scene result
+    if (st > 3.5) {
+      els.resultPanel.style.opacity = fadeIn(st, 3.5, 0.5);
+      drawARScene(st - 3.5);
+    } else {
+      els.resultPanel.style.opacity = 0;
+    }
+
+    if (st > 5.5) {
+      els.lineCount.style.opacity = fadeIn(st, 5.5, 0.5);
+      els.lineCount.innerHTML = '<span class="new">AR + ViewNode. Same Compose pattern.</span>';
+    }
+  }
+
+  // ── SCENE 6: Key insight cards (38–44s) ──
+  else if (t < 44) {
+    const st = t - 38;
+    els.insightCard.style.display = 'flex';
+    els.insightCard.style.opacity = 1;
+
+    // Flash cards, 1.5s each
+    let html = '';
+    if (st < 1.5) {
+      html = '<div class="line">Nodes are <span class="accent">composables</span>.</div>';
+    } else if (st < 3) {
+      html = '<div class="line">State drives the <span class="accent">scene</span>.</div>';
+    } else if (st < 4.5) {
+      html = '<div class="line">Lifecycle is <span class="accent">automatic</span>.</div>';
+    } else {
+      html = '<div class="line" style="font-size:56px;">It\'s just <span class="accent">Compose</span>.</div>';
+    }
+    els.insightCard.innerHTML = html;
+
+    // Flash effect on transitions
+    const phase = st % 1.5;
+    if (phase < 0.15) {
+      els.insightCard.style.opacity = phase / 0.15;
+    }
+  }
+
+  // ── SCENE 7: 3D showcase + End card (44–50s) ──
+  else {
+    const st = t - 44;
+    if (st < 2.5) {
+      // Quick 3D showcase
+      activeModel = 'watch';
+      update3D(st);
+      els.canvas3d.style.opacity = st < 0.5 ? st / 0.5 : (st > 2 ? fadeOut(st, 2, 0.5) : 1);
+    } else {
+      // End card
+      els.canvas3d.style.opacity = 0;
+      els.endCard.style.display = 'flex';
+      els.endCard.style.opacity = fadeIn(st, 2.5, 0.8);
+    }
+  }
+
+  // Reset panel classes when not in product/AR view
+  if (t < 18 || (t >= 18 && t < 28) || (t >= 28 && t < 38)) {
+    // handled above
+  }
+  if (t >= 7.5 && t < 18) {
+    els.panelLeft.className = 'code-panel left';
+  }
+
+  requestAnimationFrame(tick);
+}
+
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

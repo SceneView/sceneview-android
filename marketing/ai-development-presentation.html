@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building an AI-Native Engineering Ecosystem</title>
+<style>
+  /* ── Design tokens ─────────────────────────────────────────── */
+  :root {
+    --bg:           #f8fafc;
+    --surface:      #ffffff;
+    --surface2:     #f1f5f9;
+    --border:       #e2e8f0;
+    --accent:       #4f46e5;
+    --accent-light: #eef2ff;
+    --accent-mid:   #c7d2fe;
+    --text:         #0f172a;
+    --muted:        #64748b;
+    --muted-light:  #94a3b8;
+    --success:      #059669;
+    --warning:      #b45309;
+    --danger:       #dc2626;
+    font-size: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── Slide engine ───────────────────────────────────────────── */
+  .deck { width: 100%; height: 100%; position: relative; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 44px 72px;
+    opacity: 0;
+    transform: translateX(40px);
+    transition: opacity .38s cubic-bezier(.4,0,.2,1), transform .38s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .slide.active { opacity: 1; transform: translateX(0);   pointer-events: all; }
+  .slide.out    { opacity: 0; transform: translateX(-40px); }
+
+  /* Thin accent line at top */
+  .slide::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-mid) 100%);
+  }
+
+  /* ── Typography ─────────────────────────────────────────────── */
+  .eyebrow {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -.03em;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-size: clamp(1.3rem, 2.4vw, 1.85rem);
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: var(--muted);
+    text-align: center;
+    max-width: 580px;
+    line-height: 1.75;
+    margin-bottom: 28px;
+  }
+
+  .accent-word { color: var(--accent); }
+
+  /* ── Divider ────────────────────────────────────────────────── */
+  .divider {
+    width: 32px; height: 2px;
+    border-radius: 2px;
+    background: var(--accent-mid);
+    margin: 14px auto;
+  }
+
+  /* ── Slide header ───────────────────────────────────────────── */
+  .slide-header { width: 100%; margin-bottom: 22px; }
+
+  /* ── Icons — single tintable color ──────────────────────────── */
+  /* All icons use --accent color; no semantic red/green/amber variants */
+  .icon-box {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: var(--accent-light);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .icon-box svg { width: 18px; height: 18px; }
+
+  .icon-lg {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--accent-light);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+  }
+  .icon-lg svg { width: 22px; height: 22px; }
+
+  /* Numbered step circles */
+  .step-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: .68rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── Cards ──────────────────────────────────────────────────── */
+  .grid { display: grid; width: 100%; gap: 12px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+
+  .card-title {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .card-body {
+    font-size: .76rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── Code block ─────────────────────────────────────────────── */
+  pre {
+    background: #0f172a;
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: .73rem;
+    line-height: 1.75;
+    color: #cbd5e1;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .kw  { color: #f472b6; }
+  .fn  { color: #93c5fd; }
+  .str { color: #86efac; }
+  .cm  { color: #475569; font-style: italic; }
+  .ty  { color: #c4b5fd; }
+
+  /* ── Stat blocks ────────────────────────────────────────────── */
+  .stat-row { display: flex; gap: 14px; width: 100%; }
+
+  .stat {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 14px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+
+  .stat-num {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -.04em;
+    line-height: 1;
+    margin-bottom: 4px;
+    color: var(--accent);
+  }
+
+  .stat-label { font-size: .72rem; color: var(--muted); font-weight: 500; }
+
+  /* ── Tags ───────────────────────────────────────────────────── */
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+
+  .tag {
+    font-size: .65rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .tag.accent { background: var(--accent-light); border-color: var(--accent-mid); color: var(--accent); }
+
+  /* ── Tool stack rows ────────────────────────────────────────── */
+  .tool-stack { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+
+  .tool-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+
+  .tool-name {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text);
+    flex-shrink: 0;
+    min-width: 140px;
+  }
+
+  .tool-desc { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+
+  /* ── Lesson rows ────────────────────────────────────────────── */
+  .lessons { display: flex; flex-direction: column; gap: 9px; width: 100%; }
+
+  .lesson {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 13px 16px;
+    border-radius: 10px;
+    border-left: 2px solid var(--border);
+    background: var(--surface);
+  }
+
+  /* Subtle left-border tints — not saturated colors */
+  .lesson.good  { border-color: #6ee7b7; }
+  .lesson.bad   { border-color: #fca5a5; }
+
+  .lesson-text  { font-size: .83rem; line-height: 1.55; }
+  .lesson-title { font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .lesson-body  { color: var(--muted); }
+
+  /* ── Columns ────────────────────────────────────────────────── */
+  .cols { display: flex; gap: 32px; width: 100%; align-items: flex-start; }
+  .col  { flex: 1; }
+
+  /* ── List ───────────────────────────────────────────────────── */
+  .list { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+  .list-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: .85rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  /* ── Quote ──────────────────────────────────────────────────── */
+  .quote-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 44px;
+    max-width: 740px;
+    box-shadow: 0 2px 16px rgba(79,70,229,.06);
+    position: relative;
+    text-align: center;
+  }
+
+  .quote-mark {
+    font-size: 4.5rem;
+    line-height: 1;
+    color: var(--accent);
+    opacity: .12;
+    position: absolute;
+    top: 8px; left: 20px;
+    font-family: Georgia, serif;
+    pointer-events: none;
+  }
+
+  .quote-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.65;
+    color: var(--text);
+  }
+
+  /* ── Profile card ───────────────────────────────────────────── */
+  .profile {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 22px;
+    max-width: 500px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+
+  .avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .profile-name { font-size: .95rem; font-weight: 700; margin-bottom: 2px; }
+  .profile-role { font-size: .78rem; color: var(--muted); }
+
+  /* ── Badge ──────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    padding: 4px 11px;
+    border-radius: 20px;
+    background: var(--accent-light);
+    border: 1px solid var(--accent-mid);
+    color: var(--accent);
+    margin-bottom: 18px;
+  }
+
+  /* ── Screenshot frames ──────────────────────────────────────── */
+  .phone-frame {
+    width: 130px;
+    background: #1e293b;
+    border-radius: 26px;
+    padding: 9px 7px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.18), 0 0 0 1px rgba(255,255,255,.07);
+    flex-shrink: 0;
+  }
+
+  .phone-frame img {
+    width: 100%;
+    border-radius: 18px;
+    display: block;
+    object-fit: cover;
+  }
+
+  .screen-frame {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,.12), 0 0 0 1px var(--border);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .screen-frame img {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .screenshots-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .img-caption {
+    font-size: .68rem;
+    color: var(--muted-light);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* ── Timeline ───────────────────────────────────────────────── */
+  .timeline { width: 100%; display: flex; flex-direction: column; gap: 0; }
+
+  .tl-item {
+    display: flex; gap: 14px;
+    align-items: flex-start;
+    padding-bottom: 14px;
+    position: relative;
+  }
+
+  .tl-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 17px; top: 37px;
+    width: 2px;
+    height: calc(100% - 16px);
+    background: var(--border);
+  }
+
+  .tl-dot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    border: 2px solid var(--accent-mid);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .tl-dot svg { width: 16px; height: 16px; }
+
+  .tl-content { flex: 1; padding-top: 7px; }
+  .tl-label   { font-size: .88rem; font-weight: 700; margin-bottom: 2px; }
+  .tl-sub     { font-size: .76rem; color: var(--muted); }
+
+  /* ── Navigation ─────────────────────────────────────────────── */
+  .nav {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 7px 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  }
+
+  .nav button {
+    background: none; border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: .95rem;
+    padding: 4px 7px;
+    border-radius: 5px;
+    transition: color .15s, background .15s;
+  }
+  .nav button:hover { color: var(--accent); background: var(--accent-light); }
+
+  .nav-dots { display: flex; gap: 5px; }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: background .2s, width .2s;
+  }
+  .dot.active { background: var(--accent); width: 16px; border-radius: 3px; }
+
+  .slide-counter { font-size: .7rem; color: var(--muted); min-width: 30px; text-align: center; }
+
+  /* ── Keyboard hint ──────────────────────────────────────────── */
+  .key-hint {
+    position: fixed;
+    bottom: 22px;
+    right: 28px;
+    font-size: .65rem;
+    color: var(--muted-light);
+    letter-spacing: .04em;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── SVG icon sprite (tintable via currentColor) ─────────── -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+  </symbol>
+  <symbol id="ic-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+  </symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 0 3-3h7z"/>
+  </symbol>
+  <symbol id="ic-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/>
+    <path d="M18 8H6a4 4 0 0 0-4 4v1a4 4 0 0 0 4 4h12a4 4 0 0 0 4-4v-1a4 4 0 0 0-4-4z"/>
+  </symbol>
+  <symbol id="ic-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+  </symbol>
+  <symbol id="ic-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+  </symbol>
+  <symbol id="ic-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+    <polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+  </symbol>
+  <symbol id="ic-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+    <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+  </symbol>
+  <symbol id="ic-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+  </symbol>
+  <symbol id="ic-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+  </symbol>
+  <symbol id="ic-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+  </symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+  </symbol>
+  <symbol id="ic-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </symbol>
+  <symbol id="ic-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  </symbol>
+</svg>
+
+<div class="deck" id="deck">
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 1 — Title
+══════════════════════════════════════════════════════════ -->
+<div class="slide active">
+  <div class="badge">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Internal · March 2026
+  </div>
+
+  <h1>Building an AI-Native<br><span class="accent-word">Engineering Ecosystem</span></h1>
+
+  <p class="subtitle">
+    A real-world experiment across an entire SDK lifecycle —<br>
+    architecture, code, tests, docs, CI/CD, and marketing —<br>
+    and a concrete framework for rolling this out across our repos.
+  </p>
+
+  <div class="divider"></div>
+
+  <div class="profile">
+    <div class="avatar">TG</div>
+    <div>
+      <div class="profile-name">Thomas Gorisse</div>
+      <div class="profile-role">Octopus Community SDK &nbsp;·&nbsp; SceneView (open source, personal)</div>
+      <div class="tags">
+        <span class="tag accent">Android SDK</span>
+        <span class="tag accent">3D / AR</span>
+        <span class="tag">Open Source</span>
+        <span class="tag">AI Experiment</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 2 — Why SceneView was the right test bed
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">The test bed</div>
+    <h2>Why SceneView — and why it was low risk</h2>
+  </div>
+
+  <div class="cols">
+    <div class="col">
+      <div class="list">
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-package"/></svg></div>
+          <span>Personal open-source Android 3D/AR library. Published on Maven Central, thousands of users — but <strong>no commercial risk</strong> to the company</span>
+        </div>
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-layers"/></svg></div>
+          <span>Real, non-trivial challenge: <strong>full SDK rewrite</strong> from a legacy View-based API to Jetpack Compose composables — same complexity class as our B2B SDK work</span>
+        </div>
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-wrench"/></svg></div>
+          <span>Covers every phase: <strong>architecture → code → tests → docs → CI/CD → release → marketing</strong>. A complete vertical slice of the engineering lifecycle</span>
+        </div>
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-terminal"/></svg></div>
+          <span>Tool used: <strong>Claude Code</strong> (Anthropic's coding agent) — not just code generation, but continuous autonomous contributor across all phases</span>
+        </div>
+      </div>
+    </div>
+    <div class="col" style="display:flex; flex-direction:column; gap:10px; align-items:center">
+      <div class="screenshots-row">
+        <div>
+          <div class="phone-frame">
+            <img src="./screenshot-robot-camera.png" alt="AR robot with camera controls" onerror="this.parentElement.style.display='none'">
+          </div>
+          <div class="img-caption">AR robot · 4 embedded glTF cameras</div>
+        </div>
+        <div>
+          <div class="phone-frame">
+            <img src="./screenshot-robot-rooftop.png" alt="AR robot with rooftop environment" onerror="this.parentElement.style.display='none'">
+          </div>
+          <div class="img-caption">Night rooftop environment</div>
+        </div>
+      </div>
+      <p style="font-size:.7rem; color:var(--muted); text-align:center; max-width:240px">
+        Both samples built entirely with AI assistance — from architecture to the final render
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 3 — Concrete output
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">Concrete output</div>
+    <h2>What got shipped — in roughly 3 days of sessions</h2>
+  </div>
+
+  <div class="stat-row" style="margin-bottom:14px">
+    <div class="stat">
+      <div class="stat-num">151</div>
+      <div class="stat-label">AI-assisted commits</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">3.0 → 3.1</div>
+      <div class="stat-label">Versions shipped</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">89</div>
+      <div class="stat-label">MCP server tests generated</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">705</div>
+      <div class="stat-label">Lines of AI reference docs</div>
+    </div>
+  </div>
+
+  <div class="grid grid-4">
+    <div class="card">
+      <div class="icon-lg"><svg><use href="#ic-layers"/></svg></div>
+      <div class="card-title">Full Compose rewrite</div>
+      <div class="card-body">SceneScope DSL, all node types, lifecycle model, threading architecture</div>
+    </div>
+    <div class="card">
+      <div class="icon-lg"><svg><use href="#ic-plug"/></svg></div>
+      <div class="card-title">MCP server</div>
+      <div class="card-body">Published npm package — any AI gets full SDK context in one tool call</div>
+    </div>
+    <div class="card">
+      <div class="icon-lg"><svg><use href="#ic-file-text"/></svg></div>
+      <div class="card-title">Full docs site</div>
+      <div class="card-body">KDoc, MkDocs, 2 codelabs, CHANGELOG, MIGRATION guide</div>
+    </div>
+    <div class="card">
+      <div class="icon-lg"><svg><use href="#ic-rocket"/></svg></div>
+      <div class="card-title">CI/CD + marketing</div>
+      <div class="card-body">GitHub Actions, Maven publish, LinkedIn video, Medium article</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 4 — The MCP server result
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">Standout result</div>
+    <h2>The SDK now teaches AI how to use it</h2>
+  </div>
+
+  <div class="cols" style="align-items:center">
+    <div class="col" style="display:flex; flex-direction:column; gap:12px">
+      <div class="screen-frame">
+        <img src="../mcp/demo/sceneview-mcp-linkedin-thumb.png" alt="SceneView MCP — Claude Code adding traffic lights to a 3D scene" onerror="this.parentElement.style.display='none'">
+      </div>
+      <div class="img-caption">Claude Code generating 3D scene code with live feedback via the MCP server</div>
+    </div>
+    <div class="col">
+      <div class="list">
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-plug"/></svg></div>
+          <span><strong>@sceneview/mcp</strong> — published npm package implementing the Model Context Protocol. Any AI assistant can install it and immediately get full SDK context.</span>
+        </div>
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-database"/></svg></div>
+          <span>Exposes: API reference, live GitHub issues, working code samples, and a <strong>code validator</strong> that checks AI-generated code against known API patterns.</span>
+        </div>
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-book"/></svg></div>
+          <span>In the demo: <em>"Add traffic lights to the scene"</em> → Claude reads MCP, writes correct typed Kotlin, renders immediately. <strong>No SDK knowledge required beforehand.</strong></span>
+        </div>
+        <div class="list-item">
+          <div class="icon-box"><svg><use href="#ic-users"/></svg></div>
+          <span>Every downstream developer using our SDK + any AI assistant gets this context. <strong>The investment compounds across all users, forever.</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 5 — The AI infrastructure stack
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">The infrastructure</div>
+    <h2>Five layers — each one permanent, each one compounding</h2>
+  </div>
+
+  <div class="tool-stack">
+    <div class="tool-row">
+      <div class="icon-box"><svg><use href="#ic-file-text"/></svg></div>
+      <span class="tool-name">CLAUDE.md</span>
+      <span class="tool-desc">Project instructions checked into the repo. Architecture decisions, threading rules, API conventions, known gotchas. Loaded automatically into every session — no re-explaining across conversations or team members.</span>
+    </div>
+    <div class="tool-row">
+      <div class="icon-box"><svg><use href="#ic-book"/></svg></div>
+      <span class="tool-name">llms.txt</span>
+      <span class="tool-desc">Machine-readable API reference at the repo root. Any AI reads it and instantly becomes a competent user of the SDK. Zero integration friction for any AI-assisted contributor or customer.</span>
+    </div>
+    <div class="tool-row">
+      <div class="icon-box"><svg><use href="#ic-plug"/></svg></div>
+      <span class="tool-name">MCP server</span>
+      <span class="tool-desc">Exposes docs, live GitHub issues, code validator, and working samples as callable tools. Published npm package — integrates in any MCP-compatible AI IDE or assistant.</span>
+    </div>
+    <div class="tool-row">
+      <div class="icon-box"><svg><use href="#ic-terminal"/></svg></div>
+      <span class="tool-name">/skills (slash cmds)</span>
+      <span class="tool-desc">Custom Claude Code workflows: /review, /document, /test, /contribute. The full contribution pipeline runs autonomously. Standardised across all contributors — human or AI.</span>
+    </div>
+    <div class="tool-row">
+      <div class="icon-box"><svg><use href="#ic-database"/></svg></div>
+      <span class="tool-name">Auto-memory</span>
+      <span class="tool-desc">Persistent memory files per project: decisions made, bugs found and fixed, domain-specific traps. The AI accumulates knowledge across sessions — no context reset means no repeated mistakes.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 6 — What genuinely worked
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">Honest assessment — what worked</div>
+    <h2>High-confidence outcomes where AI delivered</h2>
+  </div>
+
+  <div class="lessons">
+    <div class="lesson good">
+      <div class="icon-box"><svg><use href="#ic-layers"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">Architecture &amp; API design</div>
+        <div class="lesson-body">The complete Compose DSL — scope, node types, lifecycle model — was designed iteratively in conversation. High-level intent ("nodes should behave like Compose children") translated into production Kotlin architecture in hours, not days.</div>
+      </div>
+    </div>
+    <div class="lesson good">
+      <div class="icon-box"><svg><use href="#ic-rocket"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">The release pipeline — zero drudgery</div>
+        <div class="lesson-body">CHANGELOG, MIGRATION guide, KDoc landing pages, 2 full codelabs, GitHub Actions CI/CD from scratch, Maven Central publish workflow — generated and working. Not a single YAML file written manually.</div>
+      </div>
+    </div>
+    <div class="lesson good">
+      <div class="icon-box"><svg><use href="#ic-volume"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">Marketing content that matches the product voice</div>
+        <div class="lesson-body">LinkedIn post, Medium article, YouTube script, video storyboard with shot-by-shot production notes — all in one session, all with the right developer tone. The actual LinkedIn video was produced directly from the AI-generated storyboard.</div>
+      </div>
+    </div>
+    <div class="lesson good">
+      <div class="icon-box"><svg><use href="#ic-plug"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">Building AI tooling into the SDK ecosystem</div>
+        <div class="lesson-body">The MCP server, llms.txt, CLAUDE.md — the SDK now teaches AI how to use it. Every user who builds with the SDK + any AI assistant gets accurate, full context automatically. The feedback loop compounds permanently with zero additional effort.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 7 — Where human judgment remained essential
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">Honest assessment — the limits</div>
+    <h2>Where human judgment remained essential</h2>
+  </div>
+
+  <div class="lessons">
+    <div class="lesson bad">
+      <div class="icon-box"><svg><use href="#ic-package"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">Build system hallucinations</div>
+        <div class="lesson-body">Confidently wrote dependency versions that don't exist: Kotlin 2.3.10, AGP 9.1.0, Filament 1.70.0. Each broke the build silently. Fix: a strict version catalog as the single source of truth, verified against real published releases.</div>
+      </div>
+    </div>
+    <div class="lesson bad">
+      <div class="icon-box"><svg><use href="#ic-wrench"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">Native/binary API surface gaps</div>
+        <div class="lesson-body">Applied Filament 1.57.x patterns to a 1.56.x codebase — causing silent SIGABRT crashes on dispose. AI doesn't know what it doesn't know about compiled native libraries. Domain expertise to catch this is non-negotiable.</div>
+      </div>
+    </div>
+    <div class="lesson bad">
+      <div class="icon-box"><svg><use href="#ic-monitor"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">Hardware-specific bugs</div>
+        <div class="lesson-body">The new Compose Scene rendered pure black on the Apple M3 OpenGL ES emulator. Required several sessions to diagnose — a surface lifecycle issue specific to that config. Without a physical device to reproduce, AI reasoning alone isn't sufficient.</div>
+      </div>
+    </div>
+    <div class="lesson bad">
+      <div class="icon-box"><svg><use href="#ic-refresh"/></svg></div>
+      <div class="lesson-text">
+        <div class="lesson-title">Context loss between sessions</div>
+        <div class="lesson-body">Each conversation started cold. Without intentionally-built memory files and CLAUDE.md, the same mistakes recurred. The infrastructure (slide 5) solves this — but it requires discipline to set up and maintain. It's not automatic.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 8 — The core insight
+══════════════════════════════════════════════════════════ -->
+<div class="slide" style="gap:20px">
+  <div class="eyebrow" style="text-align:center">The insight that changes the ROI calculation</div>
+
+  <div class="quote-wrap">
+    <div class="quote-mark">"</div>
+    <p class="quote-text">
+      The real leverage isn't using AI to write code.<br>
+      It's building infrastructure that makes AI<br>
+      <span class="accent-word">permanently smarter about your domain.</span>
+    </p>
+  </div>
+
+  <div class="grid grid-3" style="max-width:720px">
+    <div class="card" style="text-align:center">
+      <div class="icon-lg" style="margin:0 auto 10px"><svg><use href="#ic-file-text"/></svg></div>
+      <div class="card-title">CLAUDE.md</div>
+      <div class="card-body">Rules that never need repeating. Every session starts with full project context.</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="icon-lg" style="margin:0 auto 10px"><svg><use href="#ic-book"/></svg></div>
+      <div class="card-title">llms.txt</div>
+      <div class="card-body">API surface readable by any AI. Zero friction for every new contributor.</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="icon-lg" style="margin:0 auto 10px"><svg><use href="#ic-plug"/></svg></div>
+      <div class="card-title">MCP server</div>
+      <div class="card-body">Domain knowledge as callable tools. Live docs, samples, issue context — on demand.</div>
+    </div>
+  </div>
+
+  <p style="font-size:.82rem; color:var(--muted); text-align:center; max-width:600px; line-height:1.7">
+    Once this layer exists, every future session — ours and every customer's —<br>
+    starts with full context. <strong style="color:var(--text)">The compounding effect is the multiplier.</strong>
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 9 — Applying to Octopus Community
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">Applying this to our repos</div>
+    <h2>A prioritised action plan for Octopus Community</h2>
+  </div>
+
+  <div class="list" style="max-width:800px">
+    <div class="list-item">
+      <div class="step-num">1</div>
+      <div><strong>Add CLAUDE.md to each active repo.</strong> Architecture decisions, API conventions, threading constraints, known gotchas. This is the foundation. Everything else builds on it. Time: 1–2h per repo.</div>
+    </div>
+    <div class="list-item">
+      <div class="step-num">2</div>
+      <div><strong>Write an llms.txt for each public SDK surface.</strong> Machine-readable API reference. Any AI — ours and any customer's — becomes a competent user instantly. Direct competitive differentiation for an SDK company.</div>
+    </div>
+    <div class="list-item">
+      <div class="step-num">3</div>
+      <div><strong>Define shared /skills (slash commands).</strong> /review, /document, /test, /contribute. Standardise the contribution pipeline across all repos. AI can run it autonomously and consistently.</div>
+    </div>
+    <div class="list-item">
+      <div class="step-num">4</div>
+      <div><strong>Ship an MCP server for the Octopus SDK.</strong> Expose our docs, integration samples, changelog, and live issues as MCP resources. Our SDK becomes a first-class citizen in AI-powered IDEs — for our whole developer audience.</div>
+    </div>
+    <div class="list-item" style="opacity:.75">
+      <div class="step-num" style="background:var(--muted-light)">5</div>
+      <div><strong>Strict version catalog per repo.</strong> The #1 source of AI build errors is hallucinated dependency versions. One catalog file, verified against real releases. Pin everything.</div>
+    </div>
+    <div class="list-item" style="opacity:.75">
+      <div class="step-num" style="background:var(--muted-light)">6</div>
+      <div><strong>Maintain memory files for domain-specific gotchas.</strong> Native API quirks, platform-specific bugs, lifecycle traps. AI encounters them repeatedly without this. Write them down once; eliminate recurring mistakes permanently.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 10 — Timeline / next steps
+══════════════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="eyebrow">Proposed next steps</div>
+    <h2>From experiment to standard practice</h2>
+  </div>
+
+  <div class="timeline" style="max-width:720px; width:100%">
+    <div class="tl-item">
+      <div class="tl-dot"><svg><use href="#ic-zap"/></svg></div>
+      <div class="tl-content">
+        <div class="tl-label">Week 1 — Foundation (1–2 days of work)</div>
+        <div class="tl-sub">CLAUDE.md in all active repos · shared /skills library · version catalog audit · designate one repo as the pilot</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"><svg><use href="#ic-file-text"/></svg></div>
+      <div class="tl-content">
+        <div class="tl-label">Month 1 — AI documentation layer</div>
+        <div class="tl-sub">llms.txt for the Octopus SDK · standardise review/document/test pipeline · first fully AI-driven PR through the pipeline</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"><svg><use href="#ic-plug"/></svg></div>
+      <div class="tl-content">
+        <div class="tl-label">Month 2–3 — MCP server</div>
+        <div class="tl-sub">Octopus Community MCP server · SDK docs, integration samples, changelog as tool calls · publish for customers and partners</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"><svg><use href="#ic-users"/></svg></div>
+      <div class="tl-content">
+        <div class="tl-label">Ongoing — Team practice</div>
+        <div class="tl-sub">AI as standard contributor on all repos · memory maintained per project · quarterly review of what AI handles autonomously vs. what it escalates</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 18px; width:100%; max-width:720px">
+    <p style="font-size:.82rem; color:var(--muted); line-height:1.65">
+      <strong style="color:var(--text)">Discussion:</strong>&nbsp;
+      Which repo should we pilot first?
+      What domain knowledge have we never written down that AI keeps getting wrong?
+      What does "AI as a standard contributor" mean for our PR review process?
+    </p>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<nav class="nav" id="nav">
+  <button onclick="go(-1)" title="Previous (←)">&#8592;</button>
+  <div class="nav-dots" id="dots"></div>
+  <button onclick="go(1)"  title="Next (→)">&#8594;</button>
+  <span class="slide-counter" id="counter">1 / 10</span>
+</nav>
+
+<div class="key-hint">← → to navigate</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsEl  = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  let cur = 0;
+
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => show(i);
+    dotsEl.appendChild(d);
+  });
+
+  function show(n) {
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('out');
+    setTimeout(() => slides[cur].classList.remove('out'), 420);
+    cur = (n + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    dotsEl.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+    counter.textContent = `${cur + 1} / ${slides.length}`;
+  }
+
+  function go(dir) { show(cur + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                     { e.preventDefault(); go(-1); }
+  });
+
+  let tx = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    const dx = tx - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) go(dx > 0 ? 1 : -1);
+  });
+</script>
+</body>
+</html>

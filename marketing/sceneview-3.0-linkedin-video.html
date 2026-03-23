@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SceneView 3.0 – LinkedIn Video</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e1a; overflow: hidden; font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif; }
+  #container { width: 1920px; height: 1080px; position: relative; overflow: hidden; transform-origin: top left; }
+  canvas#three-canvas { position: absolute; top: 0; left: 0; opacity: 0; transition: none; }
+
+  .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* Title card */
+  #title-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #title-card .version { font-size: 32px; font-weight: 700; color: #6366f1; letter-spacing: 4px; text-transform: uppercase; }
+  #title-card h1 { font-size: 88px; font-weight: 800; color: white; margin-top: 12px; }
+  #title-card h2 { font-size: 44px; font-weight: 600; color: #38bdf8; margin-top: 16px; }
+  #title-card .sub { font-size: 24px; color: #7880a0; margin-top: 40px; }
+  #title-card .badge { display: flex; gap: 16px; margin-top: 28px; }
+  #title-card .badge span { background: rgba(30,33,60,0.9); color: #c4c8d8; font-family: 'SF Mono', monospace; font-size: 17px; padding: 10px 22px; border-radius: 20px; }
+
+  /* Split view */
+  #split-view { display: none; }
+  .step-label { position: absolute; top: 24px; left: 0; right: 0; width: 1920px; display: flex; align-items: center; padding: 0 24px; }
+  .step-label .num { color: #6366f1; font-size: 24px; font-weight: 700; }
+  .step-label .txt { color: white; font-size: 24px; font-weight: 700; margin-left: 10px; }
+  .step-label .tag { margin-left: auto; background: rgba(99,102,241,0.15); color: #6366f1; font-size: 16px; font-weight: 700; padding: 6px 16px; border-radius: 12px; }
+
+  /* Code panel (left side — 50%) */
+  .code-panel { position: absolute; top: 70px; left: 24px; width: 924px; height: 980px; background: #0c1022; border-radius: 14px; overflow: hidden; }
+  .code-chrome { height: 36px; background: #141a2e; display: flex; align-items: center; padding: 0 14px; }
+  .code-chrome .dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  .code-chrome .dot.r { background: #ff5f56; }
+  .code-chrome .dot.y { background: #ffbd2e; }
+  .code-chrome .dot.g { background: #27c93f; }
+  .code-chrome .title { color: #7880a0; font-size: 13px; margin-left: auto; margin-right: auto; font-weight: 600; }
+  .code-body { padding: 18px 20px; font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace; font-size: 20px; line-height: 1.7; white-space: pre; overflow: hidden; color: #c4c8d8; }
+  .kw { color: #c084fc; }
+  .str { color: #a8db8f; }
+  .fn { color: #4ade80; }
+  .cm { color: #546080; }
+  .type { color: #60a5fa; }
+  .num { color: #f97316; }
+  .ann { color: #22d3ee; }
+  .op { color: #7880a0; }
+  .cursor { display: inline-block; width: 9px; height: 22px; background: white; animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Result panel (right side — 50%) */
+  .result-panel { position: absolute; top: 70px; left: 972px; width: 924px; height: 980px; background: #080c14; border-radius: 14px; border: 1px solid #1a2040; overflow: hidden; }
+
+  /* Caption badge */
+  .caption { position: absolute; bottom: 20px; left: 972px; width: 924px; text-align: center; font-size: 24px; font-weight: 700; color: #22c55e; opacity: 0; z-index: 10; white-space: nowrap; }
+
+  /* Insight cards */
+  #insight-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #insight-card .line { font-size: 60px; font-weight: 800; color: white; text-align: center; margin: 8px 0; }
+  #insight-card .accent { color: #38bdf8; }
+
+  /* End card */
+  #end-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #end-card .logo { font-size: 68px; font-weight: 800; color: white; }
+  #end-card .ver { font-size: 68px; font-weight: 800; color: #6366f1; margin-left: 12px; }
+  #end-card .tagline { font-size: 28px; color: #38bdf8; margin-top: 16px; }
+  #end-card .gradle { background: rgba(30,33,60,0.9); color: #22c55e; font-family: monospace; font-size: 18px; padding: 12px 28px; border-radius: 20px; margin-top: 32px; }
+  #end-card .features { color: #788090; font-size: 20px; margin-top: 36px; line-height: 2.2; text-align: center; }
+  #end-card .features b { color: #c4c8d8; }
+  #end-card .author { color: #465070; font-size: 16px; margin-top: 36px; }
+  #end-card .gh { color: #6366f1; font-family: monospace; font-size: 15px; margin-top: 6px; }
+
+  /* Progress bar */
+  #progress { position: absolute; bottom: 0; left: 0; height: 3px; background: #6366f1; z-index: 20; }
+</style>
+</head>
+<body>
+<audio id="soundtrack" src="pathos.mp3" preload="auto"></audio>
+<div id="container">
+  <canvas id="three-canvas" width="924" height="980"></canvas>
+
+  <!-- Title card -->
+  <div id="title-card" class="overlay">
+    <div class="version">Introducing</div>
+    <h1>SceneView 3.0</h1>
+    <h2>3D & AR as Compose composables</h2>
+    <div class="sub">Jetpack Compose · Filament · ARCore</div>
+    <div class="badge">
+      <span>Scene { }</span>
+      <span>ARScene { }</span>
+      <span>ModelNode</span>
+    </div>
+  </div>
+
+  <!-- Split view: code + result -->
+  <div id="split-view" class="overlay">
+    <div class="step-label">
+      <span class="num" id="step-num"></span>
+      <span class="txt" id="step-txt"></span>
+      <span class="tag" id="step-tag"></span>
+    </div>
+    <div class="code-panel" id="code-panel">
+      <div class="code-chrome">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title" id="code-title"></div>
+      </div>
+      <div class="code-body" id="code-body"></div>
+    </div>
+    <div class="result-panel" id="result-panel">
+      <canvas id="result-canvas" width="924" height="980"></canvas>
+    </div>
+    <div class="caption" id="caption"></div>
+  </div>
+
+  <!-- Insight cards -->
+  <div id="insight-card" class="overlay"></div>
+
+  <!-- End card -->
+  <div id="end-card" class="overlay">
+    <div style="display:flex;align-items:baseline;">
+      <span class="logo">SceneView</span>
+      <span class="ver">3.0</span>
+    </div>
+    <div class="tagline">3D & AR as Jetpack Compose composables</div>
+    <div class="gradle">implementation("io.github.sceneview:sceneview:3.0.0")</div>
+    <div class="features">
+      <b>Scene { }</b> for 3D · <b>ARScene { }</b> for AR<br>
+      Nodes are composables · State drives the scene<br>
+      Google Filament rendering · ARCore integration<br>
+      <b>MCP server</b> for AI-assisted development<br>
+      Open source · MIT License
+    </div>
+    <div class="author">@ThomasGorisse</div>
+    <div class="gh">github.com/SceneView</div>
+  </div>
+
+  <div id="progress"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE.JS — 3D scenes (watch, shoe, sofa)
+// ═══════════════════════════════════════════════════════════════════════════
+const canvas3d = document.getElementById('three-canvas');
+const scene3d = new THREE.Scene();
+scene3d.background = new THREE.Color(0x080c14);
+const cam = new THREE.PerspectiveCamera(35, 924/980, 0.1, 100);
+const ren = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true, alpha: false });
+ren.setSize(924, 980);
+ren.shadowMap.enabled = true;
+ren.shadowMap.type = THREE.PCFSoftShadowMap;
+ren.toneMapping = THREE.ACESFilmicToneMapping;
+ren.toneMappingExposure = 1.0;
+
+// Lights
+scene3d.add(new THREE.AmbientLight(0x334466, 0.5));
+const keyLight = new THREE.DirectionalLight(0xfff5e6, 2.2);
+keyLight.position.set(3, 6, 5); keyLight.castShadow = true; keyLight.shadow.mapSize.set(1024, 1024);
+scene3d.add(keyLight);
+const rimLight = new THREE.DirectionalLight(0x6366f1, 1.0);
+rimLight.position.set(-4, 4, -2); scene3d.add(rimLight);
+const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+fillLight.position.set(-2, 2, 4); scene3d.add(fillLight);
+
+// Ground plane + grid
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(20,20), new THREE.MeshStandardMaterial({color:0x080c14,roughness:0.95}));
+ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene3d.add(ground);
+const grid = new THREE.GridHelper(10,40,0x1a2040,0x101428);
+scene3d.add(grid);
+
+// ── WATCH MODEL ──
+const watchG = new THREE.Group();
+const chromeMat = new THREE.MeshStandardMaterial({color:0xd0d4e0,roughness:0.12,metalness:0.92});
+const darkMat = new THREE.MeshStandardMaterial({color:0x0a0e18,roughness:0.3,metalness:0.5});
+// Case body
+watchG.add((() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.72,0.2,64),chromeMat); m.position.y=0.7; m.castShadow=true; return m; })());
+// Face (dark)
+watchG.add((() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.64,0.64,0.02,64),darkMat); m.position.y=0.81; return m; })());
+// Bezel ring
+watchG.add((() => { const m = new THREE.Mesh(new THREE.TorusGeometry(0.70,0.035,20,64),new THREE.MeshStandardMaterial({color:0xe8ecf4,roughness:0.08,metalness:0.96})); m.rotation.x=Math.PI/2; m.position.y=0.81; return m; })());
+// Hour markers
+for(let i=0;i<12;i++){const a=(i/12)*Math.PI*2;const len=i%3===0?0.12:0.06;const w=i%3===0?0.035:0.02;const mk=new THREE.Mesh(new THREE.BoxGeometry(w,0.008,len),new THREE.MeshStandardMaterial({color:0x38bdf8,emissive:0x38bdf8,emissiveIntensity:0.6}));mk.position.set(Math.sin(a)*0.52,0.82,Math.cos(a)*0.52);mk.rotation.y=-a;watchG.add(mk);}
+// Hands
+const secH = new THREE.Mesh(new THREE.BoxGeometry(0.008,0.006,0.46),new THREE.MeshStandardMaterial({color:0xef4444,emissive:0xef4444,emissiveIntensity:0.4}));
+secH.position.y=0.83; watchG.add(secH);
+const minH = new THREE.Mesh(new THREE.BoxGeometry(0.02,0.008,0.36),new THREE.MeshStandardMaterial({color:0xe2e8f0,metalness:0.8,roughness:0.2}));
+minH.position.set(0,0.825,0.14); minH.rotation.y=Math.PI*0.3; watchG.add(minH);
+const hrH = new THREE.Mesh(new THREE.BoxGeometry(0.028,0.008,0.24),new THREE.MeshStandardMaterial({color:0xe2e8f0,metalness:0.8,roughness:0.2}));
+hrH.position.set(0,0.82,0.08); watchG.add(hrH);
+// Center dot
+watchG.add((() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.025,16,16),new THREE.MeshStandardMaterial({color:0xffffff,metalness:0.9})); m.position.y=0.835; return m; })());
+// Crown
+watchG.add((() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.14,20),chromeMat); m.rotation.z=Math.PI/2; m.position.set(0.82,0.7,0); m.castShadow=true; return m; })());
+// Strap lugs
+for(let z of [-1,1]){watchG.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.26,0.08,0.12),chromeMat); m.position.set(0,0.68,z*0.78); m.castShadow=true; return m; })());}
+// Strap
+const strapMat = new THREE.MeshStandardMaterial({color:0x1a1a2e,roughness:0.85,metalness:0.1});
+for(let z of [-1,1]){watchG.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.06,0.7),strapMat); m.position.set(0,0.66,z*1.2); m.castShadow=true; return m; })());}
+watchG.visible = false;
+scene3d.add(watchG);
+
+// ── SHOE MODEL (loaded from Khronos glTF-Sample-Assets) ──
+const shoeG = new THREE.Group();
+shoeG.visible = false;
+scene3d.add(shoeG);
+
+// Procedural fallback shoe (shown immediately, hidden when GLB loads)
+const shoeFallback = new THREE.Group();
+const soleMat = new THREE.MeshStandardMaterial({color:0x1a1a2e,roughness:0.7});
+const midMat = new THREE.MeshStandardMaterial({color:0xf0f0f0,roughness:0.35});
+const upperMat = new THREE.MeshStandardMaterial({color:0x6366f1,roughness:0.5});
+const accentMat = new THREE.MeshStandardMaterial({color:0x38bdf8,roughness:0.3});
+// Outsole
+shoeFallback.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(1.4,0.1,0.5),soleMat); m.position.y=0.05; m.castShadow=true; return m; })());
+// Midsole
+shoeFallback.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(1.36,0.12,0.48),midMat); m.position.y=0.12; m.castShadow=true; return m; })());
+// Upper body
+shoeFallback.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.35,0.44),upperMat); m.position.set(-0.1,0.36,0); m.castShadow=true; return m; })());
+// Toe
+shoeFallback.add((() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.24,24,16,0,Math.PI*2,0,Math.PI/2),upperMat); m.position.set(0.58,0.18,0); m.scale.set(1.1,0.85,1.0); m.castShadow=true; return m; })());
+// Swoosh stripes
+for(let s of [-1,1]) shoeFallback.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.035,0.02),accentMat); m.position.set(0.05,0.34,s*0.23); m.rotation.z=-0.12; return m; })());
+shoeG.add(shoeFallback);
+
+// Load real shoe model
+const gltfLoader = new THREE.GLTFLoader();
+let shoeLoaded = false;
+gltfLoader.load(
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb',
+  (gltf) => {
+    const model = gltf.scene;
+    // Center and scale the model
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 1.2 / maxDim;
+    model.scale.setScalar(scale);
+    model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
+    model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+    shoeFallback.visible = false;
+    shoeG.add(model);
+    shoeLoaded = true;
+  },
+  undefined,
+  (error) => {
+    console.warn('Failed to load shoe model:', error);
+    // Fallback stays visible on error
+  }
+);
+
+// ── SOFA MODEL ──
+const sofaG = new THREE.Group();
+const fabricMat = new THREE.MeshStandardMaterial({color:0x3b82f6,roughness:0.82,metalness:0.05});
+const cushionMat = new THREE.MeshStandardMaterial({color:0x4f8ff7,roughness:0.78,metalness:0.05});
+const legMat = new THREE.MeshStandardMaterial({color:0x8b6914,roughness:0.4,metalness:0.3});
+// Base frame
+sofaG.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.18,0.85),fabricMat); m.position.y=0.35; m.castShadow=true; return m; })());
+// Seat cushions (3)
+for(let i=-1;i<=1;i++){sofaG.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.62,0.12,0.75),cushionMat); m.position.set(i*0.65,0.5,0.02); m.castShadow=true; return m; })());}
+// Back rest
+sofaG.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.55,0.15),fabricMat); m.position.set(0,0.72,-0.36); m.castShadow=true; return m; })());
+// Back cushions (3)
+for(let i=-1;i<=1;i++){sofaG.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.4,0.12),cushionMat); m.position.set(i*0.65,0.74,-0.28); m.castShadow=true; return m; })());}
+// Armrests
+for(let x of [-1,1]){sofaG.add((() => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.42,0.85),fabricMat); m.position.set(x*1.07,0.47,0); m.castShadow=true; return m; })());}
+// Legs
+for(let x of [-0.9,0.9]){for(let z of [-0.32,0.32]){sofaG.add((() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.025,0.26,12),legMat); m.position.set(x,0.13,z); m.castShadow=true; return m; })());}}
+// Throw pillows
+sofaG.add((() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.14,16,16),new THREE.MeshStandardMaterial({color:0xfbbf24,roughness:0.75})); m.position.set(-0.7,0.68,-0.15); m.scale.set(1,1,0.5); return m; })());
+sofaG.add((() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.12,16,16),new THREE.MeshStandardMaterial({color:0xf87171,roughness:0.75})); m.position.set(0.75,0.66,-0.15); m.scale.set(1,1,0.5); return m; })());
+sofaG.visible = false;
+scene3d.add(sofaG);
+
+// ── AR plane mesh (for AR scene) ──
+const arPlaneMat = new THREE.MeshStandardMaterial({color:0x38bdf8,transparent:true,opacity:0.08,side:THREE.DoubleSide});
+const arPlane = new THREE.Mesh(new THREE.PlaneGeometry(6,6),arPlaneMat);
+arPlane.rotation.x=-Math.PI/2; arPlane.position.y=0.001; arPlane.visible=false;
+scene3d.add(arPlane);
+// AR grid overlay
+const arGrid = new THREE.GridHelper(6,24,0x38bdf8,0x38bdf8);
+arGrid.material.transparent=true; arGrid.material.opacity=0.12; arGrid.position.y=0.002; arGrid.visible=false;
+scene3d.add(arGrid);
+
+// Render helper — sets up scene for a specific model
+function render3D(mode, t) {
+  watchG.visible = (mode === 'watch');
+  shoeG.visible = (mode === 'shoe');
+  sofaG.visible = (mode === 'sofa');
+  arPlane.visible = (mode === 'sofa');
+  arGrid.visible = (mode === 'sofa');
+  grid.visible = (mode !== 'sofa');
+  ground.material.color.setHex(mode === 'sofa' ? 0x0c1018 : 0x080c14);
+  scene3d.background.setHex(mode === 'sofa' ? 0x0c1018 : 0x080c14);
+
+  if (mode === 'watch') {
+    watchG.rotation.y = t * 0.4;
+    secH.rotation.y = t * 1.8;
+    minH.rotation.y = t * 0.05;
+    cam.position.set(Math.sin(t*0.3)*1.8, 2.4, Math.cos(t*0.3)*3.6);
+    cam.lookAt(0, 0.55, 0);
+  } else if (mode === 'shoe') {
+    shoeG.rotation.y = -0.5 + Math.sin(t * 0.3) * 0.5;
+    shoeG.rotation.x = Math.sin(t * 0.5) * 0.06;
+    shoeG.position.y = Math.sin(t * 0.6) * 0.02;
+    cam.position.set(0.8, 1.0, 2.4);
+    cam.lookAt(0, 0.3, 0);
+  } else if (mode === 'sofa') {
+    sofaG.rotation.y = -0.3 + Math.sin(t * 0.25) * 0.15;
+    cam.position.set(1.8, 1.6, 3.2);
+    cam.lookAt(0, 0.35, 0);
+  }
+  ren.render(scene3d, cam);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2D RESULT CANVAS — composites 3D render + UI overlays
+// ═══════════════════════════════════════════════════════════════════════════
+const resCanvas = document.getElementById('result-canvas');
+const rctx = resCanvas.getContext('2d');
+
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();ctx.fill();}
+
+function drawWatch(t) {
+  render3D('watch', t);
+  const W=924,H=980;
+  rctx.drawImage(canvas3d, 0, 0, W, H);
+  const grd=rctx.createRadialGradient(W/2,H/2,120,W/2,H/2,400);
+  grd.addColorStop(0,'rgba(99,102,241,0.06)'); grd.addColorStop(1,'rgba(0,0,0,0)');
+  rctx.fillStyle=grd; rctx.fillRect(0,0,W,H);
+  rctx.fillStyle='rgba(5,10,20,0.7)'; rr(rctx,16,H-48,380,36,10);
+  rctx.fillStyle='#465070'; rctx.font='15px system-ui'; rctx.fillText('Orbit camera · HDR environment · Auto-animate',28,H-24);
+}
+
+function drawProduct(t) {
+  const W=924,H=980;
+  rctx.fillStyle='#0c1022'; rctx.fillRect(0,0,W,H);
+  // App bar
+  rctx.fillStyle='#141a2e'; rr(rctx,0,0,W,50,0);
+  rctx.fillStyle='#7880a0'; rctx.font='bold 18px system-ui'; rctx.fillText('←  Product Details',20,32);
+
+  // 3D viewport — large, takes most of the panel
+  const vpW=W-40,vpH=560,vpX=20,vpY=66;
+  render3D('shoe', t);
+  rctx.save();
+  rctx.beginPath();
+  rctx.moveTo(vpX+12,vpY); rctx.lineTo(vpX+vpW-12,vpY);
+  rctx.quadraticCurveTo(vpX+vpW,vpY,vpX+vpW,vpY+12);
+  rctx.lineTo(vpX+vpW,vpY+vpH-12);
+  rctx.quadraticCurveTo(vpX+vpW,vpY+vpH,vpX+vpW-12,vpY+vpH);
+  rctx.lineTo(vpX+12,vpY+vpH);
+  rctx.quadraticCurveTo(vpX,vpY+vpH,vpX,vpY+vpH-12);
+  rctx.lineTo(vpX,vpY+12);
+  rctx.quadraticCurveTo(vpX,vpY,vpX+12,vpY);
+  rctx.clip();
+  rctx.drawImage(canvas3d, 0, 80, 924, 650, vpX, vpY, vpW, vpH);
+  rctx.restore();
+
+  // Scene badge
+  rctx.fillStyle='rgba(99,102,241,0.15)'; rr(rctx,vpX+10,vpY+10,96,28,8);
+  rctx.fillStyle='#6366f1'; rctx.font='bold 14px monospace'; rctx.fillText('Scene { }',vpX+20,vpY+28);
+  // Orbit hint
+  rctx.fillStyle='rgba(99,102,241,0.15)'; rr(rctx,vpX+vpW-110,vpY+vpH-36,100,28,8);
+  rctx.fillStyle='#7880a0'; rctx.font='13px system-ui'; rctx.fillText('↻ Drag to orbit',vpX+vpW-102,vpY+vpH-16);
+
+  // Product info (below viewport)
+  const ix=vpX+20;
+  const iy=vpY+vpH+28;
+  rctx.fillStyle='#e2e8f0'; rctx.font='bold 28px system-ui'; rctx.fillText('Air Runner Pro',ix,iy);
+  rctx.fillStyle='#7880a0'; rctx.font='15px system-ui'; rctx.fillText('Running Shoe · Unisex',ix+260,iy);
+  rctx.fillStyle='#fde047'; rctx.font='15px system-ui'; rctx.fillText('★★★★★  4.8 (2.4k)',ix,iy+30);
+  rctx.fillStyle='#22c55e'; rctx.font='bold 34px system-ui'; rctx.fillText('$179',ix,iy+72);
+  rctx.fillStyle='#546070'; rctx.font='14px system-ui'; rctx.fillText('Free shipping · 30-day returns',ix+110,iy+72);
+  // Color swatches
+  ['#6366f1','#ef4444','#22c55e','#f97316'].forEach((c,i)=>{
+    rctx.fillStyle=c; rctx.beginPath(); rctx.arc(ix+i*38+14,iy+108,12,0,Math.PI*2); rctx.fill();
+    if(i===0){rctx.strokeStyle='#fff';rctx.lineWidth=2;rctx.beginPath();rctx.arc(ix+14,iy+108,12,0,Math.PI*2);rctx.stroke();}
+  });
+  // Buttons
+  rctx.fillStyle='#6366f1'; rr(rctx,ix+200,iy+96,180,36,10);
+  rctx.fillStyle='white'; rctx.font='bold 14px system-ui'; rctx.fillText('Add to Cart',ix+252,iy+120);
+  rctx.fillStyle='rgba(99,102,241,0.15)'; rr(rctx,ix+396,iy+96,150,36,10);
+  rctx.fillStyle='#6366f1'; rctx.font='bold 13px system-ui'; rctx.fillText('⬡  View in AR',ix+424,iy+120);
+}
+
+function drawAR(t) {
+  const W=924,H=980;
+  render3D('sofa', t);
+  rctx.drawImage(canvas3d, 0, 0, W, H);
+
+  // AR grid dots
+  rctx.fillStyle='rgba(56,189,248,0.15)';
+  for(let i=0;i<40;i++){const x=150+Math.random()*624,y=450+Math.random()*250;rctx.beginPath();rctx.arc(x,y,1.5,0,Math.PI*2);rctx.fill();}
+
+  // Dashed selection ring
+  const cx=W/2-20,cy=H/2+80;
+  rctx.strokeStyle='rgba(99,102,241,0.5)'; rctx.lineWidth=2; rctx.setLineDash([6,6]);
+  rctx.beginPath(); rctx.ellipse(cx,cy+40,160,40,0,0,Math.PI*2); rctx.stroke();
+  rctx.setLineDash([]);
+
+  // Move handles
+  const handleY=cy-90;
+  rctx.fillStyle='rgba(99,102,241,0.7)'; rctx.beginPath(); rctx.arc(cx,handleY,10,0,Math.PI*2); rctx.fill();
+  rctx.strokeStyle='rgba(99,102,241,0.5)'; rctx.lineWidth=1.5;
+  for(let a=0;a<4;a++){const ang=a*Math.PI/2;rctx.beginPath();rctx.moveTo(cx+Math.cos(ang)*14,handleY+Math.sin(ang)*14);rctx.lineTo(cx+Math.cos(ang)*28,handleY+Math.sin(ang)*28);rctx.stroke();}
+
+  // Price card (ViewNode)
+  const cx2=cx+200,cy2=cy-150;
+  rctx.fillStyle='rgba(15,20,36,0.92)'; rr(rctx,cx2,cy2,190,130,14);
+  rctx.strokeStyle='rgba(99,102,241,0.3)'; rctx.lineWidth=1;
+  rctx.beginPath(); rctx.moveTo(cx2+14,cy2); rctx.lineTo(cx2+190-14,cy2); rctx.quadraticCurveTo(cx2+190,cy2,cx2+190,cy2+14); rctx.lineTo(cx2+190,cy2+130-14); rctx.quadraticCurveTo(cx2+190,cy2+130,cx2+190-14,cy2+130); rctx.lineTo(cx2+14,cy2+130); rctx.quadraticCurveTo(cx2,cy2+130,cx2,cy2+130-14); rctx.lineTo(cx2,cy2+14); rctx.quadraticCurveTo(cx2,cy2,cx2+14,cy2); rctx.stroke();
+  rctx.fillStyle='#6366f1'; rctx.fillRect(cx2,cy2,190,3);
+  rctx.fillStyle='#e2e8f0'; rctx.font='bold 16px system-ui'; rctx.fillText('Sofa Pro',cx2+16,cy2+28);
+  rctx.fillStyle='#7880a0'; rctx.font='13px system-ui'; rctx.fillText('3-seater · Blue',cx2+16,cy2+48);
+  rctx.fillStyle='#22c55e'; rctx.font='bold 26px system-ui'; rctx.fillText('€ 599',cx2+16,cy2+82);
+  rctx.fillStyle='#6366f1'; rr(rctx,cx2+16,cy2+96,158,26,6);
+  rctx.fillStyle='white'; rctx.font='bold 13px system-ui'; rctx.fillText('Buy in AR',cx2+56,cy2+114);
+  // Connector line
+  rctx.strokeStyle='rgba(99,102,241,0.35)'; rctx.lineWidth=1; rctx.setLineDash([4,4]);
+  rctx.beginPath(); rctx.moveTo(cx+90,cy-60); rctx.lineTo(cx2,cy2+65); rctx.stroke(); rctx.setLineDash([]);
+
+  // AR HUD top bar
+  rctx.fillStyle='rgba(5,10,20,0.8)'; rr(rctx,12,12,W-24,42,12);
+  rctx.fillStyle='#38bdf8'; rctx.font='bold 16px system-ui'; rctx.fillText('AR SESSION',24,40);
+  rctx.fillStyle='#7880a0'; rctx.font='14px system-ui'; rctx.fillText('arsceneview:3.0.0',170,40);
+  rctx.fillStyle='#22c55e'; rctx.font='bold 15px system-ui'; rctx.fillText('TRACKING',W-130,40);
+  rctx.fillStyle='#22c55e'; rctx.beginPath(); rctx.arc(W-44,32,6,0,Math.PI*2); rctx.fill();
+  // Bottom status
+  rctx.fillStyle='rgba(5,10,20,0.7)'; rr(rctx,12,H-50,240,40,12);
+  rctx.fillStyle='#22c55e'; rctx.font='bold 15px system-ui'; rctx.fillText('✓ Plane detected',24,H-24);
+  rctx.fillStyle='rgba(5,10,20,0.7)'; rr(rctx,W-210,H-50,200,40,12);
+  rctx.fillStyle='#7880a0'; rctx.font='14px system-ui'; rctx.fillText('Pinch to resize',W-190,H-24);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CODE SNIPPETS — short, clean, Compose-only
+// ═══════════════════════════════════════════════════════════════════════════
+const CODE_VIEWER = `<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">ModelViewer</span>() {
+    <span class="fn">Scene</span>(
+        modifier <span class="op">=</span> <span class="type">Modifier</span>.<span class="fn">fillMaxSize</span>(),
+        cameraManipulator <span class="op">=</span> <span class="fn">rememberCameraManipulator</span>()
+    ) {
+        <span class="fn">ModelNode</span>(
+            <span class="fn">rememberModelInstance</span>(modelLoader, <span class="str">"watch.glb"</span>),
+            scaleToUnits <span class="op">=</span> <span class="num">1.0f</span>,
+            autoAnimate <span class="op">=</span> <span class="kw">true</span>
+        )
+    }
+}`;
+
+const CODE_PRODUCT = `<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">ProductDetail</span>(shoe: <span class="type">ModelInstance</span>) {
+    <span class="type">Column</span> {
+        <span class="fn">Scene</span>(
+            modifier <span class="op">=</span> <span class="type">Modifier</span>.<span class="fn">height</span>(<span class="num">300</span>.dp).<span class="fn">fillMaxWidth</span>(),
+            cameraManipulator <span class="op">=</span> <span class="fn">rememberCameraManipulator</span>()
+        ) {
+            <span class="fn">ModelNode</span>(shoe, scaleToUnits <span class="op">=</span> <span class="num">1.0f</span>, autoAnimate <span class="op">=</span> <span class="kw">true</span>)
+        }
+        <span class="fn">Text</span>(<span class="str">"Air Runner Pro"</span>, style <span class="op">=</span> <span class="type">MaterialTheme</span>.typography.titleLarge)
+        <span class="fn">Text</span>(<span class="str">"$179"</span>, color <span class="op">=</span> <span class="type">Color</span>.Green)
+        <span class="fn">Button</span>(onClick <span class="op">=</span> {}) { <span class="fn">Text</span>(<span class="str">"Add to Cart"</span>) }
+    }
+}`;
+
+const CODE_AR = `<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">ARFurniture</span>() {
+    <span class="kw">var</span> anchor <span class="kw">by</span> <span class="fn">remember</span> { <span class="fn">mutableStateOf</span><span class="op">&lt;</span><span class="type">Anchor</span>?<span class="op">&gt;</span>(<span class="kw">null</span>) }
+    <span class="fn">ARScene</span>(
+        planeRenderer <span class="op">=</span> <span class="kw">true</span>,
+        onSessionUpdated <span class="op">=</span> { _, frame <span class="op">-></span>
+            anchor <span class="op">=</span> anchor <span class="op">?:</span> frame.<span class="fn">firstPlaneAnchor</span>()
+        }
+    ) {
+        anchor?.<span class="fn">let</span> {
+            <span class="fn">AnchorNode</span>(it) {
+                <span class="fn">ModelNode</span>(sofa, scaleToUnits <span class="op">=</span> <span class="num">0.5f</span>, isEditable <span class="op">=</span> <span class="kw">true</span>)
+                <span class="fn">ViewNode</span>(windowManager) {
+                    <span class="fn">Card</span> { <span class="fn">Text</span>(<span class="str">"€ 599"</span>); <span class="fn">Button</span>({}) { <span class="fn">Text</span>(<span class="str">"Buy in AR"</span>) } }
+                }
+            }
+        }
+    }
+}`;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIMELINE
+// ═══════════════════════════════════════════════════════════════════════════
+const DURATION = 56;
+const els = {
+  title: document.getElementById('title-card'),
+  split: document.getElementById('split-view'),
+  codePanel: document.getElementById('code-panel'),
+  codeTitle: document.getElementById('code-title'),
+  codeBody: document.getElementById('code-body'),
+  resultPanel: document.getElementById('result-panel'),
+  stepNum: document.getElementById('step-num'),
+  stepTxt: document.getElementById('step-txt'),
+  stepTag: document.getElementById('step-tag'),
+  caption: document.getElementById('caption'),
+  insight: document.getElementById('insight-card'),
+  end: document.getElementById('end-card'),
+  progress: document.getElementById('progress'),
+  canvas3d: canvas3d,
+};
+
+function typeHTML(full, elapsed, cps) {
+  const target = Math.floor(elapsed * cps);
+  let vis = 0, cut = 0, inTag = false;
+  for (let i = 0; i < full.length; i++) {
+    if (full[i] === '<') inTag = true;
+    if (!inTag) vis++;
+    if (full[i] === '>') inTag = false;
+    cut = i + 1;
+    if (vis >= target && !inTag) break;
+  }
+  let r = full.substring(0, cut);
+  const o = (r.match(/<span[^>]*>/g)||[]).length;
+  const c = (r.match(/<\/span>/g)||[]).length;
+  for (let i = 0; i < o - c; i++) r += '</span>';
+  return r;
+}
+
+function fade(t,s,d){return Math.min(1,Math.max(0,(t-s)/d));}
+
+let t0 = null;
+function tick(now) {
+  if (!t0) t0 = now;
+  const t = (now - t0) / 1000;
+  if (t > DURATION + 2) return;
+
+  // Audio fade-out in last 4 seconds
+  const audio = document.getElementById('soundtrack');
+  if (audio) {
+    if (t > DURATION - 4) audio.volume = Math.max(0, (DURATION - t) / 4);
+    else audio.volume = 1;
+  }
+
+  els.progress.style.width = Math.min(100, t / DURATION * 100) + '%';
+
+  // Reset
+  els.title.style.opacity = 0; els.title.style.display = 'none';
+  els.split.style.display = 'none';
+  els.insight.style.opacity = 0; els.insight.style.display = 'none';
+  els.end.style.opacity = 0; els.end.style.display = 'none';
+  els.canvas3d.style.opacity = 0;
+  els.caption.style.opacity = 0;
+
+  // ── Title (0–4s) ──
+  if (t < 4) {
+    els.title.style.display = 'flex';
+    els.title.style.opacity = t < 0.8 ? t/0.8 : (t > 3.2 ? Math.max(0,1-(t-3.2)/0.8) : 1);
+  }
+
+  // ── Example 1: Model Viewer (4–18s) ──
+  else if (t < 18) {
+    const s = t - 4;
+    els.split.style.display = 'block';
+    els.stepNum.textContent = '3D Model Viewer';
+    els.stepTxt.textContent = '— 11 lines';
+    els.stepTag.textContent = 'sceneview:3.0.0';
+    els.codeTitle.textContent = 'ModelViewer.kt';
+    els.codeBody.innerHTML = typeHTML(CODE_VIEWER, Math.min(s, 10), 32) + (s < 10 ? '<span class="cursor"></span>' : '');
+    if (s > 3) { els.resultPanel.style.opacity = fade(s,3,0.5); drawWatch(s-3); }
+    else els.resultPanel.style.opacity = 0;
+    if (s > 5) { els.caption.style.opacity = fade(s,5,0.4); els.caption.textContent = 'Full 3D viewer. That\'s it.'; }
+  }
+
+  // ── Example 2: Product Page (18–32s) ──
+  else if (t < 32) {
+    const s = t - 18;
+    els.split.style.display = 'block';
+    els.stepNum.textContent = 'Product Page';
+    els.stepTxt.textContent = '— replace Image() with Scene{}';
+    els.stepTag.textContent = 'e-commerce';
+    els.codeTitle.textContent = 'ProductDetail.kt';
+    els.codeBody.innerHTML = typeHTML(CODE_PRODUCT, Math.min(s, 11), 48) + (s < 11 ? '<span class="cursor"></span>' : '');
+    if (s > 3) { els.resultPanel.style.opacity = fade(s,3,0.5); drawProduct(s-3); }
+    else els.resultPanel.style.opacity = 0;
+    if (s > 5) { els.caption.style.opacity = fade(s,5,0.4); els.caption.textContent = 'Scene{} instead of Image(). Same layout.'; }
+  }
+
+  // ── Example 3: AR + ViewNode (32–46s) ──
+  else if (t < 46) {
+    const s = t - 32;
+    els.split.style.display = 'block';
+    els.stepNum.textContent = 'AR Furniture';
+    els.stepTxt.textContent = '— tap to place + Compose Card in 3D';
+    els.stepTag.textContent = 'arsceneview:3.0.0';
+    els.codeTitle.textContent = 'ARFurniture.kt';
+    els.codeBody.innerHTML = typeHTML(CODE_AR, Math.min(s, 11), 55) + (s < 11 ? '<span class="cursor"></span>' : '');
+    if (s > 4) { els.resultPanel.style.opacity = fade(s,4,0.5); drawAR(s-4); }
+    else els.resultPanel.style.opacity = 0;
+    if (s > 6) { els.caption.style.opacity = fade(s,6,0.4); els.caption.textContent = 'AR + ViewNode. Same Compose pattern.'; }
+  }
+
+  // ── Insight cards (46–52s) — single text cycling ──
+  else if (t < 52) {
+    const s = t - 46;
+    els.insight.style.display = 'flex';
+    els.insight.style.opacity = 1;
+    let h = '';
+    if (s < 1.5) h = '<div class="line">Nodes are <span class="accent">composables</span>.</div>';
+    else if (s < 3) h = '<div class="line">State drives the <span class="accent">scene</span>.</div>';
+    else if (s < 4.5) h = '<div class="line">Lifecycle is <span class="accent">automatic</span>.</div>';
+    else h = '<div class="line" style="font-size:56px;">It\'s just <span class="accent">Compose</span>.</div>';
+    els.insight.innerHTML = h;
+    const ph = s % 1.5;
+    if (ph < 0.12) els.insight.style.opacity = ph / 0.12;
+  }
+
+  // ── End card (52–56s) ──
+  else {
+    const s = t - 52;
+    els.end.style.display = 'flex';
+    els.end.style.opacity = fade(s, 0, 0.8);
+  }
+
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// Start soundtrack
+const audio = document.getElementById('soundtrack');
+if (audio) { audio.currentTime = 255; audio.play().catch(() => {}); }
+
+// Auto-scale to fit viewport
+function fitToScreen() {
+  const c = document.getElementById('container');
+  const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  if (s < 1) c.style.transform = 'scale(' + s + ')';
+  else c.style.transform = '';
+}
+fitToScreen();
+window.addEventListener('resize', fitToScreen);
+</script>
+</body>
+</html>

@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R&D Report — AI-Assisted SDK Development · SceneView</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+    --accent: #4f46e5;
+    --accent-light: #eef2ff;
+    --accent-mid: #c7d2fe;
+    --text: #0f172a;
+    --muted: #64748b;
+    --muted-light: #94a3b8;
+    --success: #059669;
+    --danger: #dc2626;
+    font-size: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 64px 40px 120px;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    margin-bottom: 48px;
+  }
+
+  .report-meta {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 20px;
+    font-size: .75rem;
+    color: var(--muted);
+    letter-spacing: .03em;
+  }
+
+  .report-meta span { display: flex; align-items: center; gap: 5px; }
+
+  .report-title {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    line-height: 1.2;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .report-subtitle {
+    font-size: .95rem;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.7;
+  }
+
+  /* ── Section ── */
+  .section {
+    margin-bottom: 56px;
+  }
+
+  .section-label {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--text);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  h3 {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  p {
+    font-size: .9rem;
+    color: var(--muted);
+    line-height: 1.75;
+    margin-bottom: 12px;
+  }
+
+  p:last-child { margin-bottom: 0; }
+
+  strong { color: var(--text); font-weight: 600; }
+
+  /* ── Stats row ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -.04em;
+    line-height: 1;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: .72rem;
+    color: var(--muted);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  /* ── Screenshots ── */
+  .screenshots {
+    display: flex;
+    gap: 20px;
+    margin: 24px 0;
+    align-items: flex-end;
+  }
+
+  .shot-group {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  .phone {
+    width: 120px;
+    background: #1e293b;
+    border-radius: 22px;
+    padding: 8px 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15), 0 0 0 1px rgba(255,255,255,.07);
+    flex-shrink: 0;
+  }
+
+  .phone img {
+    width: 100%;
+    border-radius: 15px;
+    display: block;
+  }
+
+  .screen {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,0,0,.1), 0 0 0 1px var(--border);
+    flex: 1;
+  }
+
+  .screen img {
+    width: 100%;
+    display: block;
+  }
+
+  .shot-caption {
+    font-size: .72rem;
+    color: var(--muted-light);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .shot-wrap {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Deliverable list ── */
+  .deliverables {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .deliverable {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: .85rem;
+  }
+
+  .deliverable:last-child { border-bottom: none; }
+
+  .del-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-light);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .del-icon svg { width: 16px; height: 16px; }
+
+  .del-name { font-weight: 600; color: var(--text); flex: 1; }
+
+  .del-detail { font-size: .78rem; color: var(--muted); flex: 2; }
+
+  .del-badge {
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid var(--accent-mid);
+    white-space: nowrap;
+  }
+
+  /* ── Finding cards ── */
+  .findings {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .finding {
+    display: flex;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+  }
+
+  .finding.good { border-left-color: #6ee7b7; }
+  .finding.bad  { border-left-color: #fca5a5; }
+
+  .finding-body { font-size: .85rem; line-height: 1.6; }
+  .finding-title { font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .finding-text  { color: var(--muted); }
+
+  .find-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--accent-light);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .find-icon svg { width: 16px; height: 16px; }
+
+  /* ── Code block ── */
+  pre {
+    background: #0f172a;
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: .75rem;
+    line-height: 1.75;
+    color: #cbd5e1;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .kw { color: #f472b6; }
+  .fn { color: #93c5fd; }
+  .str { color: #86efac; }
+  .cm { color: #475569; font-style: italic; }
+  .ty { color: #c4b5fd; }
+
+  /* ── Infrastructure table ── */
+  .infra {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .infra-row {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .infra-row:last-child { border-bottom: none; }
+
+  .infra-key {
+    padding: 14px 16px;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--bg);
+    border-right: 1px solid var(--border-light);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .infra-key svg { width: 15px; height: 15px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+  .infra-val {
+    padding: 14px 16px;
+    font-size: .82rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  /* ── Recommendation list ── */
+  .recs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rec {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .rec-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .rec-body { font-size: .88rem; line-height: 1.65; }
+  .rec-title { font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .rec-text  { color: var(--muted); }
+
+  /* ── Callout ── */
+  .callout {
+    background: var(--accent-light);
+    border: 1px solid var(--accent-mid);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: .87rem;
+    color: var(--text);
+    line-height: 1.7;
+    margin: 20px 0;
+  }
+
+  .callout strong { color: var(--accent); }
+
+  /* ── Two-col layout ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* ── Commit timeline snippet ── */
+  .commit-list {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+    font-size: .78rem;
+  }
+
+  .commit {
+    display: flex;
+    gap: 12px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border-light);
+    align-items: baseline;
+  }
+
+  .commit:last-child { border-bottom: none; }
+
+  .commit-hash {
+    font-family: 'SF Mono', monospace;
+    color: var(--accent);
+    font-size: .72rem;
+    flex-shrink: 0;
+    width: 56px;
+  }
+
+  .commit-msg { color: var(--text); flex: 1; }
+  .commit-date { color: var(--muted-light); font-size: .7rem; flex-shrink: 0; }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  /* ── Footer ── */
+  .report-footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: .75rem;
+    color: var(--muted-light);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<!-- SVG sprite -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+  </symbol>
+  <symbol id="ic-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+  </symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 0 3-3h7z"/>
+  </symbol>
+  <symbol id="ic-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/>
+    <path d="M18 8H6a4 4 0 0 0-4 4v1a4 4 0 0 0 4 4h12a4 4 0 0 0 4-4v-1a4 4 0 0 0-4-4z"/>
+  </symbol>
+  <symbol id="ic-terminal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+  </symbol>
+  <symbol id="ic-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+  </symbol>
+  <symbol id="ic-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+    <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+  </symbol>
+  <symbol id="ic-git-commit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/>
+  </symbol>
+  <symbol id="ic-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+  </symbol>
+  <symbol id="ic-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+  </symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+  </symbol>
+  <symbol id="ic-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+  </symbol>
+  <symbol id="ic-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </symbol>
+  <symbol id="ic-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+  </symbol>
+</svg>
+
+<div class="page">
+
+  <!-- ── Header ── -->
+  <header class="report-header">
+    <div class="report-meta">
+      <span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        17 March 2026
+      </span>
+      <span>Confidential · Internal</span>
+      <span>Author: Thomas Gorisse</span>
+    </div>
+    <h1 class="report-title">R&D Report — AI-Assisted SDK Development</h1>
+    <p class="report-subtitle">
+      A 3-day experiment using Claude Code as the primary contributor across the full SceneView SDK lifecycle:
+      architecture, code, tests, documentation, CI/CD, and marketing launch.
+      This report summarises what was built, what worked, what didn't, and what it means for our repos.
+    </p>
+  </header>
+
+
+  <!-- ── 1. Context ── -->
+  <section class="section">
+    <div class="section-label">Context</div>
+    <h2>Why SceneView — and why it was the right test bed</h2>
+
+    <p>
+      SceneView is my personal open-source Android 3D/AR library, built on Google Filament and ARCore.
+      It has thousands of users on Maven Central but carries <strong>zero commercial risk to the company</strong>.
+      That made it the ideal environment to run a real experiment before applying any learnings to our B2B SDK work.
+    </p>
+    <p>
+      The task was non-trivial: a <strong>complete rewrite</strong> of the SDK from a legacy View-based API
+      (imperative, lifecycle-heavy, boilerplate-laden) to pure <strong>Jetpack Compose composables</strong> —
+      the same complexity class as major work we'd undertake on our own repos.
+      The tool used throughout: <strong>Claude Code</strong> (Anthropic's terminal-based coding agent).
+    </p>
+
+    <div class="two-col" style="margin-top:20px">
+      <div>
+        <h3 style="margin-bottom:8px; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)">Before (v2.x)</h3>
+        <pre><span class="cm">// Imperative, manual lifecycle</span>
+<span class="kw">class</span> <span class="ty">MyFragment</span> : <span class="ty">ArFragment</span>() {
+  <span class="kw">override fun</span> <span class="fn">onSessionUpdated</span>(...) {
+    <span class="kw">val</span> node = <span class="ty">ModelNode</span>()
+    node.<span class="fn">loadModelAsync</span>(ctx, uri) {
+      <span class="cm">// callback hell</span>
+    }
+    scene.<span class="fn">addChild</span>(node)
+    <span class="cm">// don't forget destroy() on pause!</span>
+  }
+}</pre>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)">After (v3.0)</h3>
+        <pre><span class="cm">// Declarative, lifecycle-automatic</span>
+<span class="ty">ARScene</span>(<span class="fn">modifier</span> = <span class="ty">Modifier</span>.<span class="fn">fillMaxSize</span>()) {
+  anchor?.<span class="fn">let</span> { a ->
+    <span class="ty">AnchorNode</span>(<span class="fn">anchor</span> = a) {
+      <span class="ty">ModelNode</span>(
+        <span class="fn">modelInstance</span> = helmet,
+        <span class="fn">scaleToUnits</span> = <span class="num">0.5f</span>
+      )
+    }
+  } <span class="cm">// cleanup is automatic</span>
+}</pre>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── 2. Output ── -->
+  <section class="section">
+    <div class="section-label">Output</div>
+    <h2>What got shipped in ~3 days of sessions</h2>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">151</div>
+        <div class="stat-label">AI-assisted<br>commits</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">3.0→3.1</div>
+        <div class="stat-label">Major versions<br>shipped</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">89</div>
+        <div class="stat-label">Unit tests<br>generated</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">705</div>
+        <div class="stat-label">Lines of AI<br>reference doc</div>
+      </div>
+    </div>
+
+    <div class="deliverables">
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-layers"/></svg></div>
+        <span class="del-name">Full Compose rewrite</span>
+        <span class="del-detail">SceneScope DSL, all node composables (Model, Light, Cube, Sphere, Cylinder, Plane, Image, View, Mesh), SceneNodeManager lifecycle, threading model</span>
+        <span class="del-badge">Core SDK</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-rocket"/></svg></div>
+        <span class="del-name">8 working sample apps</span>
+        <span class="del-detail">model-viewer, ar-model-viewer, gltf-camera, camera-manipulator, ar-augmented-image, ar-cloud-anchor, ar-point-cloud, autopilot-demo — all rewritten as Compose Activities</span>
+        <span class="del-badge">Samples</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-plug"/></svg></div>
+        <span class="del-name">MCP server — @sceneview/mcp</span>
+        <span class="del-detail">Published npm package. Exposes full API docs, live GitHub issues, code validator, and working samples as MCP tool calls. Any AI assistant integrates the SDK in seconds.</span>
+        <span class="del-badge">AI tooling</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-file-text"/></svg></div>
+        <span class="del-name">Full documentation site</span>
+        <span class="del-detail">MkDocs Material site, Dokka KDoc for both modules, CHANGELOG.md, MIGRATION.md, 2 codelabs (3D + AR), README for every sample</span>
+        <span class="del-badge">Docs</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-terminal"/></svg></div>
+        <span class="del-name">CI/CD from scratch</span>
+        <span class="del-detail">GitHub Actions workflows for build, test, publish to Maven Central, Dokka to GitHub Pages — fully automated, zero manual YAML written</span>
+        <span class="del-badge">Infrastructure</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-volume"/></svg></div>
+        <span class="del-name">Marketing launch content</span>
+        <span class="del-detail">LinkedIn launch video + post (3 caption variants), Medium article (paste-ready), YouTube script + storyboard, MkDocs codelabs published to GitHub Pages</span>
+        <span class="del-badge">Marketing</span>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <h3 style="margin-bottom:10px; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)">Sample commits — March 15–17</h3>
+      <div class="commit-list">
+        <div class="commit"><span class="commit-hash">ee98052</span><span class="commit-msg">feat(samples): replace helmet with animated BrainStem in gltf-camera sample</span><span class="commit-date">Mar 17</span></div>
+        <div class="commit"><span class="commit-hash">e113839</span><span class="commit-msg">feat: 3.1.0 — VideoNode, reactive animation API, ViewNode2 → ViewNode rename</span><span class="commit-date">Mar 17</span></div>
+        <div class="commit"><span class="commit-hash">acac63b</span><span class="commit-msg">test(mcp): add 89 unit tests for validator, samples, migration guide, and issues</span><span class="commit-date">Mar 17</span></div>
+        <div class="commit"><span class="commit-hash">3472afa</span><span class="commit-msg">feat(mcp): add validate_code, list_samples, get_migration_guide tools</span><span class="commit-date">Mar 17</span></div>
+        <div class="commit"><span class="commit-hash">22f3868</span><span class="commit-msg">fix: use ToneMapper.Linear in ARScene to prevent overlit camera background</span><span class="commit-date">Mar 17</span></div>
+        <div class="commit"><span class="commit-hash">b007e80</span><span class="commit-msg">test: add instrumented tests for SceneNodeManager and ImageNode</span><span class="commit-date">Mar 17</span></div>
+        <div class="commit"><span class="commit-hash">1346b49</span><span class="commit-msg">chore: redesign GitHub workflows from scratch</span><span class="commit-date">Mar 17</span></div>
+        <div class="commit"><span class="commit-hash">7edc67c</span><span class="commit-msg">docs: add CLAUDE.md, llms.txt, MCP server, and version catalog</span><span class="commit-date">Mar 15</span></div>
+        <div class="commit"><span class="commit-hash">5761c89</span><span class="commit-msg">feat: rewrite Scene and ARScene as Jetpack Compose composables</span><span class="commit-date">Mar 15</span></div>
+        <div class="commit"><span class="commit-hash">19e83e6</span><span class="commit-msg">marketing: add launch content for SceneView 3.0</span><span class="commit-date">Mar 15</span></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── 3. Visual results ── -->
+  <section class="section">
+    <div class="section-label">Visual results</div>
+    <h2>What the samples produce</h2>
+
+    <p>
+      Both samples below were built entirely with AI assistance — including architecture decisions,
+      the glTF camera integration, and the HDR environment setup.
+      The gltf-camera sample demonstrates live camera switching imported directly from the 3D file.
+    </p>
+
+    <div class="screenshots">
+      <div class="shot-wrap">
+        <div style="display:flex; gap:12px">
+          <div class="phone">
+            <img src="./screenshot-robot-camera.png" alt="AR robot — 4 embedded glTF camera views" onerror="this.parentElement.style.background='#f1f5f9'">
+          </div>
+          <div class="phone">
+            <img src="./screenshot-robot-rooftop.png" alt="AR robot — night rooftop HDR environment" onerror="this.parentElement.style.background='#f1f5f9'">
+          </div>
+        </div>
+        <div class="shot-caption">
+          gltf-camera sample: animated BrainStem robot with 4 embedded camera angles (Front / Profile / Aerial / Close-up)<br>
+          and a cinematic night rooftop HDR environment — both AI-generated
+        </div>
+      </div>
+
+      <div class="shot-wrap" style="flex:1">
+        <div class="screen">
+          <img src="../mcp/demo/sceneview-mcp-linkedin-thumb.png" alt="SceneView MCP — Claude Code adding traffic lights to a 3D scene" onerror="this.parentElement.style.background:'#f1f5f9'">
+        </div>
+        <div class="shot-caption">
+          MCP server demo: Claude Code receives the prompt <em>"Add traffic lights to the autopilot scene"</em>,
+          queries the MCP server for API context, and generates correct typed Kotlin that renders immediately.
+          No SDK knowledge required beforehand.
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" style="margin-top:20px">
+      <img src="./sceneview-3.0-thumbnail.png" alt="SceneView 3.0 launch video thumbnail" onerror="this.parentElement.style.display='none'">
+    </div>
+    <div class="shot-caption" style="margin-top:8px">
+      SceneView 3.0 launch video thumbnail — generated by AI from the storyboard it wrote, filmed against the running samples
+    </div>
+  </section>
+
+
+  <!-- ── 4. AI infrastructure ── -->
+  <section class="section">
+    <div class="section-label">AI Infrastructure</div>
+    <h2>The five-layer stack built to make AI permanently smarter</h2>
+
+    <p>
+      The most important insight from this experiment: one-off AI code generation has limited value.
+      The real leverage comes from building a <strong>persistent layer of domain knowledge</strong>
+      that every future AI session — and every user's AI session — benefits from automatically.
+    </p>
+
+    <div class="infra" style="margin-top:16px">
+      <div class="infra-row">
+        <div class="infra-key">
+          <svg><use href="#ic-file-text"/></svg>
+          CLAUDE.md
+        </div>
+        <div class="infra-val">
+          Project instructions checked into the repo. Architecture decisions, threading rules (Filament JNI must run on main thread), API conventions, known gotchas.
+          Loaded into every Claude session automatically. No re-explaining across conversations or team members.
+        </div>
+      </div>
+      <div class="infra-row">
+        <div class="infra-key">
+          <svg><use href="#ic-book"/></svg>
+          llms.txt
+        </div>
+        <div class="infra-val">
+          705-line machine-readable API reference at the repo root. Complete composable signatures, all node types, resource loading patterns, threading rules, common recipes.
+          Any AI reads it and instantly becomes a competent SDK user — for our users as much as for us.
+        </div>
+      </div>
+      <div class="infra-row">
+        <div class="infra-key">
+          <svg><use href="#ic-plug"/></svg>
+          MCP server
+        </div>
+        <div class="infra-val">
+          <code style="font-size:.78rem; background:var(--bg); padding:1px 5px; border-radius:4px; color:var(--accent)">@sceneview/mcp</code> — published npm package.
+          Exposes API docs, live GitHub issues, a code validator, and full working samples as MCP tool calls.
+          Any MCP-compatible AI assistant (Claude, Cursor, Windsurf, etc.) integrates the SDK context in one command.
+        </div>
+      </div>
+      <div class="infra-row">
+        <div class="infra-key">
+          <svg><use href="#ic-terminal"/></svg>
+          /skills
+        </div>
+        <div class="infra-val">
+          Custom Claude Code slash commands: <code style="font-size:.78rem; background:var(--bg); padding:1px 5px; border-radius:4px; color:var(--accent)">/review</code>,
+          <code style="font-size:.78rem; background:var(--bg); padding:1px 5px; border-radius:4px; color:var(--accent)">/document</code>,
+          <code style="font-size:.78rem; background:var(--bg); padding:1px 5px; border-radius:4px; color:var(--accent)">/test</code>,
+          <code style="font-size:.78rem; background:var(--bg); padding:1px 5px; border-radius:4px; color:var(--accent)">/contribute</code>.
+          The full contribution pipeline runs autonomously — from code review to KDoc to PR — without manual steps.
+          Standardised across all contributors.
+        </div>
+      </div>
+      <div class="infra-row">
+        <div class="infra-key">
+          <svg><use href="#ic-database"/></svg>
+          Auto-memory
+        </div>
+        <div class="infra-val">
+          Persistent markdown memory files per project: decisions made, bugs found and fixed, domain-specific traps.
+          Survives conversation resets. The AI accumulates project knowledge over time and stops making the same mistakes.
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>The compounding effect:</strong> Once this layer exists, every future session — ours and every customer's —
+      starts with full project context. The cost of building it is paid once. The benefit recurs indefinitely.
+    </div>
+  </section>
+
+
+  <!-- ── 5. What worked / what didn't ── -->
+  <section class="section">
+    <div class="section-label">Findings</div>
+    <h2>What worked — and where human judgment remained essential</h2>
+
+    <h3 style="margin-bottom:10px">Where AI delivered with high confidence</h3>
+    <div class="findings" style="margin-bottom:24px">
+      <div class="finding good">
+        <div class="find-icon"><svg><use href="#ic-layers"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">Architecture &amp; API design</div>
+          <div class="finding-text">The complete Compose DSL — SceneScope, node hierarchy, lifecycle model — was designed iteratively in conversation. High-level intent translated into correct, idiomatic Kotlin architecture in hours. This is where AI's ability to hold an entire codebase in context is strongest.</div>
+        </div>
+      </div>
+      <div class="finding good">
+        <div class="find-icon"><svg><use href="#ic-rocket"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">The release pipeline — zero drudgery</div>
+          <div class="finding-text">CHANGELOG, MIGRATION guide, KDoc landing pages, 2 full codelabs, GitHub Actions CI/CD from scratch, Maven Central publish workflow — generated and working. Not a single YAML file written manually. This category — structured, high-effort, low-creativity work — is where AI ROI is highest.</div>
+        </div>
+      </div>
+      <div class="finding good">
+        <div class="find-icon"><svg><use href="#ic-volume"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">Marketing content</div>
+          <div class="finding-text">LinkedIn post, Medium article, YouTube script, video storyboard with shot-by-shot production notes — all in one session, all with the right developer tone. The actual LinkedIn video was produced directly from the AI-generated storyboard. On par with what a junior content hire would produce.</div>
+        </div>
+      </div>
+      <div class="finding good">
+        <div class="find-icon"><svg><use href="#ic-plug"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">Building AI tooling into the SDK ecosystem</div>
+          <div class="finding-text">The MCP server, llms.txt, CLAUDE.md — the SDK now teaches AI how to use it. Every developer building with SceneView + any AI assistant gets full, accurate SDK context automatically, with no extra friction. A meaningful differentiator for an open-source library.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom:10px">Where human judgment remained essential</h3>
+    <div class="findings">
+      <div class="finding bad">
+        <div class="find-icon"><svg><use href="#ic-package"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">Build system hallucinations</div>
+          <div class="finding-text">Claude confidently wrote dependency versions that don't exist: Kotlin 2.3.10, AGP 9.1.0, Filament 1.70.0. Each broke the build silently with no obvious error. Fix: a strict version catalog as the single source of truth, every version verified against real published releases.</div>
+        </div>
+      </div>
+      <div class="finding bad">
+        <div class="find-icon"><svg><use href="#ic-wrench"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">Native / binary API surface gaps</div>
+          <div class="finding-text">Applied Filament 1.57.x JNI patterns to a 1.56.x codebase — causing SIGABRT crashes on dispose. The AI applied the wrong API without knowing it. This is a known class of failure: AI training data doesn't distinguish between minor-version API changes in compiled native libraries. Domain expertise is non-negotiable here.</div>
+        </div>
+      </div>
+      <div class="finding bad">
+        <div class="find-icon"><svg><use href="#ic-monitor"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">Hardware-specific rendering bugs</div>
+          <div class="finding-text">The new Compose Scene rendered pure black on the Apple M3 OpenGL ES emulator — a surface lifecycle issue specific to that GPU/driver combination. Multiple sessions were spent diagnosing it through reasoning alone. Without a device to test against, AI reasoning is not sufficient for this class of bug.</div>
+        </div>
+      </div>
+      <div class="finding bad">
+        <div class="find-icon"><svg><use href="#ic-refresh"/></svg></div>
+        <div class="finding-body">
+          <div class="finding-title">Context loss between sessions</div>
+          <div class="finding-text">Each conversation starts cold. Without the infrastructure described in section 4, the same mistakes recurred across sessions. The CLAUDE.md + persistent memory files solve this — but they require intentional setup and discipline to maintain. They don't build themselves.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── 6. Recommendations ── -->
+  <section class="section">
+    <div class="section-label">Recommendations</div>
+    <h2>What to apply to our repos — in priority order</h2>
+
+    <p>
+      The following actions are ordered by impact-to-effort ratio.
+      Steps 1–3 can be done in a few days and unlock most of the value.
+      Steps 4–6 are medium-term investments with strong compounding returns.
+    </p>
+
+    <div class="recs" style="margin-top:20px">
+      <div class="rec">
+        <div class="rec-num">1</div>
+        <div class="rec-body">
+          <div class="rec-title">Add CLAUDE.md to each active repo <span style="font-size:.72rem; font-weight:400; color:var(--muted-light)">— 1–2h per repo</span></div>
+          <div class="rec-text">Architecture decisions, API conventions, threading constraints, and the domain-specific gotchas that are never written down anywhere. This is the foundation. Every subsequent AI interaction starts smarter. It also serves as onboarding documentation for new developers.</div>
+        </div>
+      </div>
+      <div class="rec">
+        <div class="rec-num">2</div>
+        <div class="rec-body">
+          <div class="rec-title">Write a version catalog and pin every dependency <span style="font-size:.72rem; font-weight:400; color:var(--muted-light)">— half a day</span></div>
+          <div class="rec-text">The single biggest source of AI build errors. A single <code style="font-size:.8rem; background:var(--bg); padding:1px 5px; border-radius:4px">libs.versions.toml</code> file verified against actual published versions eliminates the entire class of hallucinated-version failures.</div>
+        </div>
+      </div>
+      <div class="rec">
+        <div class="rec-num">3</div>
+        <div class="rec-body">
+          <div class="rec-title">Define shared /skills — /review, /document, /test, /contribute <span style="font-size:.72rem; font-weight:400; color:var(--muted-light)">— 1 day</span></div>
+          <div class="rec-text">Standardise the contribution pipeline across all repos. AI can run the full cycle autonomously. Once defined, every contributor — human or AI — follows the same process. Reduces PR review friction significantly.</div>
+        </div>
+      </div>
+      <div class="rec">
+        <div class="rec-num">4</div>
+        <div class="rec-body">
+          <div class="rec-title">Write llms.txt for the Octopus Community SDK <span style="font-size:.72rem; font-weight:400; color:var(--muted-light)">— 1–2 days</span></div>
+          <div class="rec-text">Machine-readable API reference for the public SDK surface. Any AI — ours and any customer's — instantly becomes a competent user of our SDK. For a B2B SDK company, this is a direct differentiator: customers who use AI-assisted development get a better experience with our SDK than with competitors who don't have one.</div>
+        </div>
+      </div>
+      <div class="rec">
+        <div class="rec-num">5</div>
+        <div class="rec-body">
+          <div class="rec-title">Publish an Octopus Community MCP server <span style="font-size:.72rem; font-weight:400; color:var(--muted-light)">— 2–3 weeks</span></div>
+          <div class="rec-text">Expose our docs, integration samples, changelog, and live issues as MCP tools. Our SDK becomes a first-class citizen in AI-powered IDEs (Claude, Cursor, Windsurf, etc.) for our entire developer audience. Reduces support load. Increases developer success rate. This is what we should ship alongside every major SDK release.</div>
+        </div>
+      </div>
+      <div class="rec">
+        <div class="rec-num">6</div>
+        <div class="rec-body">
+          <div class="rec-title">Maintain memory files for domain-specific gotchas <span style="font-size:.72rem; font-weight:400; color:var(--muted-light)">— ongoing</span></div>
+          <div class="rec-text">Every time AI makes a mistake that isn't documented anywhere — a platform-specific bug, a lifecycle trap, an API footgun — write it down in a memory file. The next session (and every future session) won't repeat it. This is the knowledge base that makes the whole system smarter over time.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── 7. Proposed next steps ── -->
+  <section class="section">
+    <div class="section-label">Next steps</div>
+    <h2>Proposed timeline</h2>
+
+    <div class="deliverables">
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-code"/></svg></div>
+        <span class="del-name" style="min-width:140px">Week 1</span>
+        <span class="del-detail">CLAUDE.md in all active repos · shared /skills library · version catalog audit · designate one repo as the AI pilot</span>
+        <span class="del-badge">Quick win</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-file-text"/></svg></div>
+        <span class="del-name" style="min-width:140px">Month 1</span>
+        <span class="del-detail">llms.txt for the Octopus SDK · standardise the review/document/test pipeline · first fully AI-driven PR through the pipeline end-to-end</span>
+        <span class="del-badge">Foundation</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-plug"/></svg></div>
+        <span class="del-name" style="min-width:140px">Month 2–3</span>
+        <span class="del-detail">Octopus Community MCP server · SDK docs, integration samples, changelog as tool calls · publish alongside next SDK release</span>
+        <span class="del-badge">Ecosystem</span>
+      </div>
+      <div class="deliverable">
+        <div class="del-icon"><svg><use href="#ic-git-commit"/></svg></div>
+        <span class="del-name" style="min-width:140px">Ongoing</span>
+        <span class="del-detail">AI as standard contributor on all repos · memory maintained per project · quarterly review of what AI handles vs. what it escalates to humans</span>
+        <span class="del-badge">Practice</span>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:24px">
+      <strong>Discussion questions for alignment:</strong><br>
+      Which repo should we pilot first?
+      What's the domain knowledge we've never written down that AI keeps getting wrong?
+      What does "AI as a standard contributor" mean for our PR review process — do we treat AI commits differently?
+    </div>
+  </section>
+
+
+  <footer class="report-footer">
+    <span>Thomas Gorisse · Octopus Community · March 2026</span>
+    <span>SceneView R&D — github.com/SceneView/sceneview-android</span>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width: 1920px; height: 1080px; background: #0a0e1a; font-family: -apple-system, system-ui, sans-serif; overflow: hidden; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const W = 1920, H = 1080;
+
+// Background
+ctx.fillStyle = '#0a0e1a';
+ctx.fillRect(0, 0, W, H);
+
+// Subtle radial glow
+const glow = ctx.createRadialGradient(W/2, H/2 - 60, 100, W/2, H/2 - 60, 600);
+glow.addColorStop(0, 'rgba(99,102,241,0.08)');
+glow.addColorStop(0.5, 'rgba(56,189,248,0.03)');
+glow.addColorStop(1, 'rgba(0,0,0,0)');
+ctx.fillStyle = glow;
+ctx.fillRect(0, 0, W, H);
+
+// Grid lines (subtle)
+ctx.strokeStyle = 'rgba(99,102,241,0.04)';
+ctx.lineWidth = 0.5;
+for (let x = 0; x < W; x += 60) {
+  ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+}
+for (let y = 0; y < H; y += 60) {
+  ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+}
+
+// "Introducing" label
+ctx.fillStyle = '#6366f1';
+ctx.font = '600 28px system-ui';
+ctx.textAlign = 'center';
+ctx.fillText('Introducing', W/2, 280);
+
+// "SceneView" in white, "3.0" in indigo
+ctx.font = '800 120px system-ui';
+ctx.fillStyle = 'white';
+const sv = 'SceneView ';
+const svW = ctx.measureText(sv).width;
+const v3 = '3.0';
+const v3W = ctx.measureText(v3).width;
+const totalW = svW + v3W;
+const startX = W/2 - totalW/2;
+ctx.textAlign = 'left';
+ctx.fillText(sv, startX, 420);
+ctx.fillStyle = '#6366f1';
+ctx.fillText(v3, startX + svW, 420);
+
+// Tagline
+ctx.textAlign = 'center';
+ctx.fillStyle = '#38bdf8';
+ctx.font = '600 38px system-ui';
+ctx.fillText('3D & AR as Jetpack Compose composables', W/2, 490);
+
+// Code snippet box
+const codeX = W/2 - 380, codeY = 540, codeW = 760, codeH = 200;
+ctx.fillStyle = 'rgba(12,16,34,0.9)';
+ctx.beginPath();
+ctx.moveTo(codeX+14, codeY); ctx.lineTo(codeX+codeW-14, codeY);
+ctx.quadraticCurveTo(codeX+codeW, codeY, codeX+codeW, codeY+14);
+ctx.lineTo(codeX+codeW, codeY+codeH-14);
+ctx.quadraticCurveTo(codeX+codeW, codeY+codeH, codeX+codeW-14, codeY+codeH);
+ctx.lineTo(codeX+14, codeY+codeH);
+ctx.quadraticCurveTo(codeX, codeY+codeH, codeX, codeY+codeH-14);
+ctx.lineTo(codeX, codeY+14);
+ctx.quadraticCurveTo(codeX, codeY, codeX+14, codeY);
+ctx.closePath();
+ctx.fill();
+// Border
+ctx.strokeStyle = 'rgba(99,102,241,0.2)';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+// Code text
+const lines = [
+  [{t:'Scene', c:'#4ade80'}, {t:'(modifier = ', c:'#c4c8d8'}, {t:'Modifier', c:'#60a5fa'}, {t:'.fillMaxSize()) {', c:'#c4c8d8'}],
+  [{t:'    ', c:''}, {t:'ModelNode', c:'#4ade80'}, {t:'(', c:'#c4c8d8'}],
+  [{t:'        rememberModelInstance', c:'#4ade80'}, {t:'(modelLoader, ', c:'#c4c8d8'}, {t:'"model.glb"', c:'#a8db8f'}, {t:')', c:'#c4c8d8'}],
+  [{t:'    )', c:'#c4c8d8'}],
+  [{t:'}', c:'#c4c8d8'}],
+];
+ctx.font = '20px "SF Mono", "Fira Code", monospace';
+ctx.textAlign = 'left';
+let ly = codeY + 40;
+for (const line of lines) {
+  let lx = codeX + 30;
+  for (const tok of line) {
+    if (!tok.t) continue;
+    ctx.fillStyle = tok.c;
+    ctx.fillText(tok.t, lx, ly);
+    lx += ctx.measureText(tok.t).width;
+  }
+  ly += 32;
+}
+
+// Badges row
+ctx.textAlign = 'center';
+const badges = [
+  { label: 'Scene { }', color: '#6366f1' },
+  { label: 'ARScene { }', color: '#38bdf8' },
+  { label: 'ModelNode', color: '#4ade80' },
+];
+const badgeY = 790;
+for (let i = 0; i < 3; i++) {
+  const bx = W/2 - 260 + i * 260;
+  ctx.fillStyle = 'rgba(30,33,60,0.8)';
+  const bw = 180;
+  ctx.beginPath();
+  ctx.moveTo(bx-bw/2+20, badgeY); ctx.lineTo(bx+bw/2-20, badgeY);
+  ctx.quadraticCurveTo(bx+bw/2, badgeY, bx+bw/2, badgeY+20);
+  ctx.lineTo(bx+bw/2, badgeY+44-20);
+  ctx.quadraticCurveTo(bx+bw/2, badgeY+44, bx+bw/2-20, badgeY+44);
+  ctx.lineTo(bx-bw/2+20, badgeY+44);
+  ctx.quadraticCurveTo(bx-bw/2, badgeY+44, bx-bw/2, badgeY+44-20);
+  ctx.lineTo(bx-bw/2, badgeY+20);
+  ctx.quadraticCurveTo(bx-bw/2, badgeY, bx-bw/2+20, badgeY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = badges[i].color + '30';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = badges[i].color;
+  ctx.font = 'bold 18px monospace';
+  ctx.fillText(badges[i].label, bx, badgeY + 27);
+}
+
+// Bottom line
+ctx.fillStyle = '#465070';
+ctx.font = '18px system-ui';
+ctx.fillText('Jetpack Compose · Google Filament · ARCore · Open Source', W/2, 880);
+
+// Bottom accent line
+ctx.fillStyle = '#6366f1';
+ctx.fillRect(0, H - 4, W, 4);
+
+// Export
+setTimeout(() => {
+  const link = document.createElement('a');
+  link.download = 'sceneview-3.0-thumbnail.png';
+  link.href = c.toDataURL('image/png');
+  link.click();
+  document.body.style.background = '#22c55e';
+  document.body.innerHTML = '<div style="color:white;font:bold 40px system-ui;display:flex;align-items:center;justify-content:center;height:100vh">✅ Thumbnail downloaded!</div>';
+}, 500);
+</script>
+</body>
+</html>
