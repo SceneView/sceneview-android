@@ -1,4 +1,4 @@
 app_identifier("io.github.sceneview.demo.ios")
-apple_id(ENV["APPLE_ID"] || "")          # Ton Apple ID — exporter APPLE_ID=ton@email.com
-itc_team_id(ENV["ITC_TEAM_ID"] || "")   # App Store Connect team ID
-team_id(ENV["APPLE_TEAM_ID"] || "")     # Developer Portal team ID
+apple_id(ENV["APPLE_ID"] || "")   # Exporter: export APPLE_ID=thomas@digitalmateapp.com
+itc_team_id("DA855LVD7A")         # App Store Connect — DIGITAL MATE
+team_id("DA855LVD7A")             # Developer Portal — DIGITAL MATE
