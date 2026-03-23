@@ -1,0 +1,15 @@
+version: "Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)"
+options: "cb1ce2eefbd145b8b1b0b08b355b0488"
+build_time: [1774230713, 535280000]
+inputs:
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/ARSceneView.swift": [1774230349, 187039684]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Camera/CameraControls.swift": [1774228399, 600658158]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Environment/Environment.swift": [1774228399, 604851295]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/BillboardNode.swift": [1774230709, 410260364]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/GeometryNode.swift": [1774228399, 557918078]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LightNode.swift": [1774228399, 559985668]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LineNode.swift": [1774230709, 414907713]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/ModelNode.swift": [1774228399, 551644227]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/PathNode.swift": [1774230709, 417779139]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/TextNode.swift": [1774228399, 555448280]
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/SceneView.swift": [1774230313, 894870460]

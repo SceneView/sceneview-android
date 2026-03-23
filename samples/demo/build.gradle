@@ -1,0 +1,50 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace "io.github.sceneview.demo"
+
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "io.github.sceneview.demo"
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(System.getenv("KEYSTORE_PATH") ?: "/tmp/upload.keystore")
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "AZmHjopUyiYf4vmPwaOvM"
+            keyAlias System.getenv("KEY_ALIAS") ?: "sceneview-demo"
+            keyPassword System.getenv("KEY_PASSWORD") ?: "AZmHjopUyiYf4vmPwaOvM"
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose true
+    }
+}
+
+dependencies {
+    implementation project(":samples:common")
+    implementation project(":sceneview")
+}

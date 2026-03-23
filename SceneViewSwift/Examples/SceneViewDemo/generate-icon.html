@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SceneView iOS Demo - App Icon Generator</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            font-family: -apple-system, sans-serif;
+            color: white;
+        }
+        canvas {
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .controls {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            background: #6750A4;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #7B61C4; }
+        .info {
+            margin-top: 16px;
+            opacity: 0.6;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h2>SceneView iOS Demo Icon</h2>
+    <canvas id="icon" width="1024" height="1024"></canvas>
+    <div class="controls">
+        <button onclick="downloadIcon()">Download 1024x1024 PNG</button>
+        <button onclick="downloadIcon(180)">Download 180x180 (iPhone)</button>
+    </div>
+    <p class="info">Right-click canvas to save, or use buttons above</p>
+
+    <script>
+        const canvas = document.getElementById('icon');
+        const ctx = canvas.getContext('2d');
+        const W = 1024;
+        const H = 1024;
+
+        function drawIcon() {
+            // Background gradient (M3 purple)
+            const bg = ctx.createLinearGradient(0, 0, W, H);
+            bg.addColorStop(0, '#7B61C4');
+            bg.addColorStop(0.5, '#6750A4');
+            bg.addColorStop(1, '#4A3880');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // Subtle radial glow
+            const glow = ctx.createRadialGradient(W/2, H*0.4, 0, W/2, H*0.4, W*0.6);
+            glow.addColorStop(0, 'rgba(255,255,255,0.12)');
+            glow.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Isometric cube
+            const cx = W / 2;
+            const cy = H / 2 - 20;
+            const size = 240;
+
+            // Isometric angles
+            const cos30 = Math.cos(Math.PI / 6);
+            const sin30 = Math.sin(Math.PI / 6);
+
+            // Top face
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - size);
+            ctx.lineTo(cx + size * cos30, cy - size * sin30);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(cx - size * cos30, cy - size * sin30);
+            ctx.closePath();
+            const topGrad = ctx.createLinearGradient(cx, cy - size, cx, cy);
+            topGrad.addColorStop(0, '#E8DEF8');
+            topGrad.addColorStop(1, '#D0BCFF');
+            ctx.fillStyle = topGrad;
+            ctx.fill();
+
+            // Left face
+            ctx.beginPath();
+            ctx.moveTo(cx - size * cos30, cy - size * sin30);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(cx, cy + size);
+            ctx.lineTo(cx - size * cos30, cy + size - size * sin30);
+            ctx.closePath();
+            const leftGrad = ctx.createLinearGradient(cx - size, cy, cx, cy);
+            leftGrad.addColorStop(0, '#9A82DB');
+            leftGrad.addColorStop(1, '#B69DF8');
+            ctx.fillStyle = leftGrad;
+            ctx.fill();
+
+            // Right face
+            ctx.beginPath();
+            ctx.moveTo(cx + size * cos30, cy - size * sin30);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(cx, cy + size);
+            ctx.lineTo(cx + size * cos30, cy + size - size * sin30);
+            ctx.closePath();
+            const rightGrad = ctx.createLinearGradient(cx, cy, cx + size, cy);
+            rightGrad.addColorStop(0, '#7B61C4');
+            rightGrad.addColorStop(1, '#6750A4');
+            ctx.fillStyle = rightGrad;
+            ctx.fill();
+
+            // Cube edges
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 3;
+
+            // Top face edges
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - size);
+            ctx.lineTo(cx + size * cos30, cy - size * sin30);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(cx - size * cos30, cy - size * sin30);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Left face edges
+            ctx.beginPath();
+            ctx.moveTo(cx - size * cos30, cy - size * sin30);
+            ctx.lineTo(cx - size * cos30, cy + size - size * sin30);
+            ctx.lineTo(cx, cy + size);
+            ctx.lineTo(cx, cy);
+            ctx.stroke();
+
+            // Right face edges
+            ctx.beginPath();
+            ctx.moveTo(cx + size * cos30, cy - size * sin30);
+            ctx.lineTo(cx + size * cos30, cy + size - size * sin30);
+            ctx.lineTo(cx, cy + size);
+            ctx.stroke();
+
+            // "iOS" label at bottom
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = 'bold 64px -apple-system, SF Pro Display, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('SceneView', cx, H - 100);
+
+            ctx.font = '36px -apple-system, SF Pro Display, sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillText('iOS', cx, H - 56);
+        }
+
+        function downloadIcon(targetSize) {
+            const size = targetSize || 1024;
+            if (size === 1024) {
+                const link = document.createElement('a');
+                link.download = `SceneViewDemo-Icon-${size}x${size}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } else {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = size;
+                tempCanvas.height = size;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(canvas, 0, 0, size, size);
+                const link = document.createElement('a');
+                link.download = `SceneViewDemo-Icon-${size}x${size}.png`;
+                link.href = tempCanvas.toDataURL('image/png');
+                link.click();
+            }
+        }
+
+        drawIcon();
+    </script>
+</body>
+</html>
