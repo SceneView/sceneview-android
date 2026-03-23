@@ -114,3 +114,9 @@ extra:
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/m3-expressive.css
+  - stylesheets/m3-enhancements.css
+  - stylesheets/m3-flagship.css
+
+extra_javascript:
+  - assets/javascripts/m3-interactions.js
