@@ -43,8 +43,8 @@ describe("MIGRATION_GUIDE", () => {
   });
 
   it("covers gradle dependency changes", () => {
-    expect(MIGRATION_GUIDE).toContain("io.github.sceneview:sceneview:3.2.0");
-    expect(MIGRATION_GUIDE).toContain("io.github.sceneview:arsceneview:3.2.0");
+    expect(MIGRATION_GUIDE).toContain("io.github.sceneview:sceneview:3.2.2");
+    expect(MIGRATION_GUIDE).toContain("io.github.sceneview:arsceneview:3.2.2");
   });
 
   it("includes a migration checklist", () => {
