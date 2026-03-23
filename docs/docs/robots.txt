@@ -3,8 +3,8 @@ Allow: /
 
 Sitemap: https://sceneview.github.io/sitemap.xml
 
-# SceneView — The #1 3D & AR SDK for Android
-# Compose-native 3D scenes powered by Google Filament and ARCore
+# SceneView — The #1 3D & AR SDK for Android and iOS
+# Cross-platform: Jetpack Compose on Android, SwiftUI on iOS, shared core via Kotlin Multiplatform
 # https://github.com/SceneView/sceneview
 # https://sceneview.github.io
 

@@ -13,7 +13,7 @@
       "height": 192
     },
     "image": "https://sceneview.github.io/assets/images/hero-banner.svg",
-    "description": "The #1 open-source 3D & AR SDK for Android — Compose-native scenes powered by Google Filament and ARCore.",
+    "description": "The #1 open-source 3D & AR SDK for Android and iOS — Compose-native on Android, SwiftUI-native on iOS, shared core via Kotlin Multiplatform.",
     "foundingDate": "2021",
     "founder": {
       "@type": "Person",
@@ -52,16 +52,16 @@
       "glTF",
       "PBR Rendering"
     ],
-    "slogan": "The #1 3D & AR SDK for Android"
+    "slogan": "The #1 3D & AR SDK for Android and iOS"
   },
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "@id": "https://sceneview.github.io/#website",
-    "name": "SceneView — 3D & AR SDK for Android",
-    "alternateName": ["SceneView SDK", "SceneView Android", "SceneView 3D", "SceneView AR", "SceneView Compose"],
+    "name": "SceneView — 3D & AR SDK for Android and iOS",
+    "alternateName": ["SceneView SDK", "SceneView Android", "SceneView iOS", "SceneView 3D", "SceneView AR", "SceneView Compose", "SceneView SwiftUI"],
     "url": "https://sceneview.github.io",
-    "description": "The modern, Compose-native 3D and AR SDK for Android. Build immersive 3D scenes and augmented reality experiences with Jetpack Compose, powered by Google Filament and ARCore.",
+    "description": "The modern, cross-platform 3D and AR SDK for Android and iOS. Build immersive 3D scenes and augmented reality experiences with Jetpack Compose on Android and SwiftUI on iOS.",
     "inLanguage": "en",
     "publisher": {
       "@id": "https://sceneview.github.io/#organization"
@@ -80,12 +80,12 @@
     "@type": "SoftwareApplication",
     "@id": "https://sceneview.github.io/#software",
     "name": "SceneView SDK",
-    "alternateName": ["SceneView", "SceneView Android", "sceneview-android"],
-    "description": "The #1 Android 3D & AR SDK — Jetpack Compose composables powered by Google Filament and ARCore. Drop-in Scene{} and ARScene{} for model viewing, AR placement, physics, dynamic environments, and immersive experiences.",
+    "alternateName": ["SceneView", "SceneView Android", "SceneView iOS", "sceneview", "SceneViewSwift"],
+    "description": "The #1 open-source 3D & AR SDK for Android and iOS — Jetpack Compose on Android, SwiftUI on iOS, shared core via Kotlin Multiplatform. Drop-in Scene{}/ARScene{} on Android and SceneView/ARSceneView on iOS for model viewing, AR placement, physics, and immersive experiences.",
     "url": "https://sceneview.github.io",
     "applicationCategory": "DeveloperApplication",
     "applicationSubCategory": "3D Rendering & Augmented Reality SDK",
-    "operatingSystem": "Android 7.0+ (API 24)",
+    "operatingSystem": "Android 7.0+ (API 24), iOS 17+",
     "softwareVersion": "3.2.0",
     "datePublished": "2021-06-01",
     "dateModified": "2026-03-23",
@@ -173,21 +173,26 @@
       "@id": "https://sceneview.github.io/#organization"
     },
     "isAccessibleForFree": true,
-    "programmingLanguage": ["Kotlin", "Java"],
-    "runtimePlatform": "Android",
+    "programmingLanguage": ["Kotlin", "Swift", "Java"],
+    "runtimePlatform": ["Android", "iOS"],
     "softwareRequirements": [
-      "Android SDK API 24+",
+      "Android SDK API 24+ (Android)",
+      "iOS 17+ (iOS)",
       "Kotlin 2.1.21",
-      "Jetpack Compose",
-      "Google Filament 1.70.0",
-      "ARCore 1.53.0 (for AR features)"
+      "Jetpack Compose (Android)",
+      "SwiftUI (iOS)",
+      "Google Filament 1.70.0 (Android)",
+      "RealityKit (iOS)",
+      "ARCore 1.53.0 (Android AR)",
+      "ARKit (iOS AR)"
     ],
     "keywords": [
-      "3D", "AR", "Android", "Jetpack Compose", "Filament", "ARCore", "glTF",
-      "augmented reality", "3D rendering", "Kotlin", "scene graph", "model viewer",
-      "product visualization", "AR placement", "physics simulation", "PBR rendering",
-      "HDR lighting", "Sceneform replacement", "Android XR", "spatial computing",
-      "Compose 3D", "3D SDK", "AR SDK", "Android 3D", "mobile AR"
+      "3D", "AR", "Android", "iOS", "Jetpack Compose", "SwiftUI", "Filament", "RealityKit",
+      "ARCore", "ARKit", "glTF", "USDZ", "augmented reality", "3D rendering", "Kotlin", "Swift",
+      "Kotlin Multiplatform", "scene graph", "model viewer", "product visualization",
+      "AR placement", "physics simulation", "PBR rendering", "HDR lighting",
+      "Sceneform replacement", "Android XR", "spatial computing",
+      "Compose 3D", "3D SDK", "AR SDK", "cross-platform 3D", "mobile AR"
     ],
     "codeRepository": "https://github.com/SceneView/sceneview"
   },
@@ -196,12 +201,12 @@
     "@type": "SoftwareSourceCode",
     "@id": "https://sceneview.github.io/#sourcecode",
     "name": "SceneView",
-    "description": "Open-source 3D & AR SDK for Android — Compose-native scenes powered by Google Filament and ARCore.",
+    "description": "Open-source 3D & AR SDK for Android and iOS — Compose-native on Android, SwiftUI-native on iOS, shared core via Kotlin Multiplatform.",
     "url": "https://github.com/SceneView/sceneview",
     "codeRepository": "https://github.com/SceneView/sceneview",
     "codeSampleType": "full solution",
-    "programmingLanguage": ["Kotlin", "Java"],
-    "runtimePlatform": "Android",
+    "programmingLanguage": ["Kotlin", "Swift", "Java"],
+    "runtimePlatform": ["Android", "iOS"],
     "targetProduct": {
       "@id": "https://sceneview.github.io/#software"
     },
@@ -227,7 +232,7 @@
         "name": "What is SceneView?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SceneView is the #1 open-source 3D and AR SDK for Android. It provides Compose-native declarative APIs (Scene{} and ARScene{}) to build immersive 3D scenes and augmented reality experiences, powered by Google Filament for rendering and ARCore for AR tracking. It is the official successor to the deprecated Google Sceneform."
+          "text": "SceneView is the #1 open-source 3D and AR SDK for Android and iOS. On Android, it provides Compose-native declarative APIs (Scene{} and ARScene{}) powered by Google Filament and ARCore. On iOS, it provides SwiftUI views (SceneView and ARSceneView) powered by RealityKit and ARKit. A shared Kotlin Multiplatform core handles math, collision, animation, and geometry across platforms. It is the official successor to the deprecated Google Sceneform."
         }
       },
       {
@@ -267,7 +272,7 @@
         "name": "What platforms does SceneView support?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SceneView currently supports Android (API 24+, all architectures). The v4.0 roadmap includes Kotlin Multiplatform (KMP) expansion to iOS (via Filament Metal), desktop, and web. SceneView also provides an MCP server for AI assistant integration."
+          "text": "SceneView supports Android (API 24+) with Jetpack Compose, Filament, and ARCore, and iOS (17+) with SwiftUI, RealityKit, and ARKit. A shared Kotlin Multiplatform core (sceneview-core) provides cross-platform math, collision, animation, and geometry. SceneView also provides an MCP server for AI assistant integration."
         }
       },
       {
@@ -275,7 +280,7 @@
         "name": "How does SceneView compare to Unity or Unreal for Android 3D?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SceneView adds only ~5MB to APK size compared to ~50MB for Unity and ~100MB for Unreal. SceneView is Compose-native, meaning it integrates naturally with Jetpack Compose UI, while Unity and Unreal require bridge layers. SceneView has a much lower learning curve and is purpose-built for Android, making it the best choice for non-game 3D and AR apps."
+          "text": "SceneView adds only ~5MB to APK size compared to ~50MB for Unity and ~100MB for Unreal. SceneView is Compose-native on Android and SwiftUI-native on iOS, meaning it integrates naturally with each platform's native UI framework, while Unity and Unreal require bridge layers. SceneView has a much lower learning curve, making it the best choice for non-game 3D and AR apps."
         }
       },
       {
@@ -283,7 +288,7 @@
         "name": "What 3D file formats does SceneView support?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "SceneView natively supports glTF 2.0 and GLB (binary glTF) formats, which are the industry-standard 3D file formats. glTF supports PBR materials, animations, morph targets, and skinned meshes. Models can be loaded from local assets, URLs, or Android content URIs."
+          "text": "SceneView natively supports glTF 2.0 and GLB (binary glTF) on Android, and USDZ on iOS. glTF supports PBR materials, animations, morph targets, and skinned meshes. Models can be loaded from local assets, URLs, or platform-specific content URIs."
         }
       },
       {

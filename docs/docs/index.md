@@ -92,7 +92,7 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:sceneview:3.1.1")
+        implementation("io.github.sceneview:sceneview:3.2.0")
     }
     ```
 
@@ -100,7 +100,7 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:arsceneview:3.1.1")
+        implementation("io.github.sceneview:arsceneview:3.2.0")
     }
     ```
 

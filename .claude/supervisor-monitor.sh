@@ -1,6 +1,6 @@
 #!/bin/bash
 # Supervisor monitor — detects finished tasks, new commits, blocked processes
-REPO="/Users/thomasgorisse/Projects/sceneview-android"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
 STATE="$REPO/.claude/supervisor-state.json"
 EVENTS=""
 

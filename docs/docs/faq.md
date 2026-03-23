@@ -8,7 +8,7 @@ SceneView is a Jetpack Compose library for 3D and AR on Android. It wraps Google
 
 ### Is it free?
 
-Yes. SceneView is open source under the [Apache 2.0 license](https://github.com/SceneView/sceneview-android/blob/main/LICENSE). Free for personal and commercial use.
+Yes. SceneView is open source under the [Apache 2.0 license](https://github.com/SceneView/sceneview/blob/main/LICENSE). Free for personal and commercial use.
 
 ### What's the relationship to Sceneform?
 
