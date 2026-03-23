@@ -2,12 +2,14 @@
 
 # SceneView
 
-<p class="sv-tagline">3D and AR as Compose UI. Build immersive experiences with the same tools you already know.</p>
+<p class="sv-tagline">3D and AR as declarative UI — Android, iOS, macOS, and visionOS. Build immersive experiences with the tools you already know.</p>
 
 <div class="sv-stats" markdown>
 <span class="sv-stat">Jetpack Compose</span>
-<span class="sv-stat">Google Filament</span>
-<span class="sv-stat">ARCore</span>
+<span class="sv-stat">SwiftUI</span>
+<span class="sv-stat">Filament</span>
+<span class="sv-stat">RealityKit</span>
+<span class="sv-stat">ARCore / ARKit</span>
 <span class="sv-stat">Kotlin Multiplatform</span>
 </div>
 
@@ -88,7 +90,7 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
 
 ## Install
 
-=== "3D only"
+=== "Android — 3D only"
 
     ```kotlin
     dependencies {
@@ -96,12 +98,21 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
     }
     ```
 
-=== "3D + AR"
+=== "Android — 3D + AR"
 
     ```kotlin
     dependencies {
         implementation("io.github.sceneview:arsceneview:3.2.0")
     }
+    ```
+
+=== "iOS / macOS / visionOS"
+
+    ```swift
+    // Package.swift
+    dependencies: [
+        .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "0.1.0")
+    ]
     ```
 
 ---
@@ -186,9 +197,11 @@ Pass Compose state into node parameters. The scene updates on the next frame. To
 
 The Filament engine, model loaders, environment, camera — all are `remember`-ed values with automatic cleanup. Create them, use them, forget about them.
 
-### Kotlin Multiplatform ready
+### Multi-platform, native renderers
 
-The core math, geometry, animation, and collision modules are fully cross-platform in `sceneview-core`. Shared logic for Android and iOS — renderer-independent.
+Android uses Filament. Apple platforms (iOS, macOS, visionOS) use RealityKit. Shared
+logic (math, collision, geometry, animations) lives in `sceneview-core` via Kotlin Multiplatform.
+Each platform gets native performance and native tooling — no compromises.
 
 ---
 
