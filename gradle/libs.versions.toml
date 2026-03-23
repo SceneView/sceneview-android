@@ -1,7 +1,7 @@
 [versions]
 agp = "8.11.1"
-kotlin = "2.1.21"
-composeCompiler = "2.1.21"
+kotlin = "2.3.20"
+composeCompiler = "2.3.20"
 coreKtx = "1.18.0"
 appcompat = "1.7.1"
 fragmentKtx = "1.8.9"
