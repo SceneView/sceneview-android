@@ -1,5 +1,42 @@
 # Changelog
 
+## 3.2.0 — Cross-platform, iOS support, KMP core
+
+### New: SceneViewSwift (iOS)
+
+SceneView now supports iOS via **SwiftUI + RealityKit** (`SceneViewSwift` Swift Package).
+
+- `SceneView` — RealityView wrapper with orbit camera, default lighting, drag/pinch/tap gestures
+- `ARSceneView` — ARWorldTrackingConfiguration, plane detection, tap-to-place, coaching overlay
+- `ModelNode` — USDZ loading with animations, collision, scaleToUnits
+- `GeometryNode` — cube, sphere, cylinder, cone, plane with PBR materials
+- `TextNode`, `BillboardNode`, `LineNode`, `PathNode`, `LightNode`, `AnchorNode`
+- `CameraControls` — orbit with inertia, auto-rotation, elevation clamping
+- `SceneEnvironment` — 6 HDR presets
+- iOS 17+ / visionOS 1+, demo app (Explore, Shapes, AR), 35+ unit tests
+- CI: GitHub Actions workflow for iOS (macOS 15, Xcode 16)
+
+### New: sceneview-core (Kotlin Multiplatform)
+
+- 79 files: collision, math, geometry, animation, triangulation, physics — fully cross-platform
+- Targets: android, iosArm64, iosSimulatorArm64, iosX64
+- kotlin-math 1.6.0 as API dependency
+- expect/actual abstractions: `logWarning`, `ulp`, `nanoTime`
+
+### SDK
+
+- Filament updated to 1.70.0
+- Cross-platform recipes: 5 side-by-side Android + iOS examples
+- Demo app: Play Store ready, 4-tab architecture (Explore, Showcase, Gallery, QA)
+- MCP server published as `@sceneview/mcp` on npm
+
+### Ecosystem
+
+- `llms.txt` expanded with full iOS API reference
+- GitHub issue/PR templates updated for iOS and KMP modules
+
+---
+
 ## 3.1.2 — Sample polish, CI fixes, maintenance tooling
 
 ### Fixes

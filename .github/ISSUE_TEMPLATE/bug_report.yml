@@ -46,7 +46,9 @@ body:
       options:
         - sceneview (3D only)
         - arsceneview (AR)
-        - Both
+        - SceneViewSwift (iOS)
+        - sceneview-core (KMP)
+        - Both / Multiple
     validations:
       required: true
 

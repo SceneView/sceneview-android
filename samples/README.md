@@ -1,7 +1,7 @@
 # SceneView Samples — Recipe Index
 
 This directory contains sample apps demonstrating SceneView capabilities.
-Each sample is a self-contained Android project.
+Android samples are self-contained Gradle projects. iOS samples are in `SceneViewSwift/Examples/`.
 
 ## Quick reference — "I want to..."
 
@@ -186,12 +186,36 @@ fun MultiModelScene() {
 }
 ```
 
+### iOS (SceneViewSwift)
+
+| Sample | Description |
+|---|---|
+| `SceneViewSwift/Examples/SceneViewDemo/` | 3-tab iOS demo: Explore (3D viewer), Shapes (all primitives), AR (tap-to-place) |
+
+### Cross-Platform Recipes
+
+Side-by-side Android + iOS implementations in `samples/recipes/`:
+
+| Recipe | Description |
+|---|---|
+| `model-viewer` | Load and display a 3D model with orbit camera |
+| `ar-tap-to-place` | AR plane detection + tap to place a model |
+| `procedural-geometry` | Procedural shapes with PBR materials |
+| `text-labels` | 3D text and billboard labels |
+| `physics` | Tap-to-spawn with gravity and bounce |
+
 ## Shared module
 
-`samples/common/` contains shared helpers (theme, icons, navigation) used across all samples.
+`samples/common/` contains shared helpers (theme, icons, navigation) used across all Android samples.
 
 ## Running a sample
+
+### Android
 
 ```bash
 ./gradlew :samples:model-viewer:installDebug
 ```
+
+### iOS
+
+Open `SceneViewSwift/Examples/SceneViewDemo/` in Xcode 16+ and run on a simulator or device.

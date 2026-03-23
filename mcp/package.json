@@ -1,7 +1,7 @@
 {
   "name": "sceneview-mcp",
   "version": "3.1.2",
-  "description": "MCP server for SceneView — 3D and AR with Jetpack Compose for Android. Give Claude the full SceneView SDK so it writes correct, compilable Kotlin.",
+  "description": "MCP server for SceneView — 3D and AR SDK for Android (Jetpack Compose) and iOS (SwiftUI). Give Claude the full SceneView SDK so it writes correct, compilable code.",
   "keywords": [
     "mcp",
     "model-context-protocol",

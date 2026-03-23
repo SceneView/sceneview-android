@@ -10,7 +10,7 @@ Lifecycle is automatic. State drives everything.
 
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![Filament](https://img.shields.io/badge/Filament-v1.56.0-yellow)](https://github.com/google/filament)
+[![Filament](https://img.shields.io/badge/Filament-v1.70.0-yellow)](https://github.com/google/filament)
 [![ARCore](https://img.shields.io/badge/ARCore-v1.53.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
@@ -35,10 +35,11 @@ Scene(modifier = Modifier.fillMaxSize()) {
     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
     }
-    LightNode(type = LightManager.Type.SUN) {
+    LightNode(apply = {
+        type(LightManager.Type.SUN)
         intensity(100_000f)
         castShadows(true)
-    }
+    })
 }
 ```
 
@@ -120,7 +121,7 @@ See [MIGRATION.md](MIGRATION.md) for a step-by-step upgrade guide from 2.x.
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.0.0")
+    implementation("io.github.sceneview:sceneview:3.2.0")
 }
 ```
 
@@ -179,7 +180,7 @@ All composables available inside `Scene { }`:
 | Composable | Description |
 |---|---|
 | `ModelNode(modelInstance, scaleToUnits?)` | Renders a glTF/GLB model. Set `isEditable = true` to enable pinch-to-scale and drag-to-rotate. |
-| `LightNode(type)` | Directional, point, spot, or sun light |
+| `LightNode(apply = { type(…); intensity(…) })` | Directional, point, spot, or sun light |
 | `CameraNode()` | Named camera (e.g. imported from a glTF) |
 | `CubeNode(size, materialInstance?)` | Box geometry |
 | `SphereNode(radius, materialInstance?)` | Sphere geometry |
@@ -294,7 +295,7 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 ```gradle
 dependencies {
     // Includes sceneview — no need to add both
-    implementation("io.github.sceneview:arsceneview:3.0.0")
+    implementation("io.github.sceneview:arsceneview:3.2.0")
 }
 ```
 
@@ -446,6 +447,42 @@ ARScene(
 | [AR Cloud Anchors](/samples/ar-cloud-anchor) | Host and resolve persistent cross-device anchors |
 | [AR Point Cloud](/samples/ar-point-cloud) | Visualise ARCore feature points |
 | [Autopilot Demo](/samples/autopilot-demo) | Autonomous AR scene driven entirely by Compose state |
+
+---
+
+## iOS — SceneViewSwift
+
+SceneView also supports iOS via **SwiftUI + RealityKit**. The `SceneViewSwift` package provides
+the same declarative API patterns: `SceneView`, `ARSceneView`, `ModelNode`, `GeometryNode`,
+`LightNode`, `TextNode`, `BillboardNode`, and more.
+
+```swift
+import SceneViewSwift
+
+struct ModelViewer: View {
+    @State private var model: ModelNode?
+
+    var body: some View {
+        SceneView { content in
+            if let model { content.addChild(model.entity) }
+        }
+        .environment(.studio)
+        .cameraControls(.orbit)
+        .task { model = try? await ModelNode.load("robot.usdz") }
+    }
+}
+```
+
+See [`SceneViewSwift/`](SceneViewSwift/) for the full iOS library and demo app.
+
+---
+
+## Kotlin Multiplatform — sceneview-core
+
+The `sceneview-core` module is a KMP library targeting Android and iOS with shared
+platform-independent logic: collision detection, math, geometry, animation, triangulation,
+and physics. Android's `sceneview` module depends on it, and it powers the portable parts
+of both platforms.
 
 ---
 

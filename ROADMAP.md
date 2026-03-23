@@ -1,6 +1,27 @@
 # SceneView Roadmap
 
-## 3.2.0 — Physics & Interactions
+## Completed
+
+### iOS — SceneViewSwift (Phase 10, shipped)
+
+SceneView now supports iOS via **SwiftUI + RealityKit** (`SceneViewSwift` package).
+
+- 11 Swift files: `SceneView`, `ARSceneView`, `ModelNode`, `GeometryNode`, `TextNode`,
+  `BillboardNode`, `LineNode`, `PathNode`, `LightNode`, `CameraControls`, `SceneEnvironment`, `AnchorNode`
+- iOS 17+ / visionOS 1+, Swift Package Manager
+- iOS Demo app (3-tab: Explore, Shapes, AR)
+- 35+ unit tests, CI via GitHub Actions (macOS 15, Xcode 16)
+
+### Kotlin Multiplatform — sceneview-core (Phase 9, shipped)
+
+- 79 files across `commonMain`, `commonTest`, `androidMain`, `iosMain`
+- Collision, math, geometry, animation, triangulation, physics — all cross-platform
+- `kotlin-math 1.6.0` as API dependency
+- Targets: `android`, `iosArm64`, `iosSimulatorArm64`, `iosX64`
+
+---
+
+## 3.3.0 — Physics & Interactions
 
 ### SDK
 - **`PhysicsNode`** — rigid body / collision via Bullet or JBullet wrapper
@@ -14,7 +35,7 @@
 
 ---
 
-## 3.3.0 — Environment & Lighting
+## 3.4.0 — Environment & Lighting
 
 ### SDK
 - **`DynamicSkyNode`** — time-of-day sun position driven by Compose state
@@ -27,13 +48,12 @@
 
 ---
 
-## 3.4.0 — Spatial UI
+## 3.5.0 — Spatial UI
 
 ### SDK
-- **`BillboardNode`** — node always faces camera (labels, tooltips, UI callouts)
-- **`TextNode`** — 3D text geometry
-- **`LineNode` / `PathNode`** — 3D polylines (measurements, AR guides, drawing)
 - `ViewNode` depth-ordering fix for edge cases with transparent Compose layers
+- Enhanced `BillboardNode` / `TextNode` / `LineNode` / `PathNode` on Android
+  (iOS equivalents already shipped in SceneViewSwift)
 
 ### Ecosystem
 - Codelab: Spatial UI
@@ -50,7 +70,6 @@
 
 ### Ecosystem
 - `llms.txt` auto-generated from KDoc at release time
-- Kotlin Multiplatform proof of concept (iOS via Filament Metal backend)
 - GitHub Discussions enabled + triage labels for community
 
 ---
@@ -59,11 +78,12 @@
 
 | Priority | Task | Status |
 |----------|------|--------|
-| 1 | **Material 3 Expressive design** — Clean, professional UI using `MaterialExpressiveTheme`, `MotionScheme.expressive()`, fully rounded shapes, spring animations, dynamic color, and expressive components (FloatingToolbar, LoadingIndicator, ButtonGroup) across the entire demo app | In progress |
+| 1 | **Material 3 Expressive design** — Clean, professional UI using `MaterialExpressiveTheme`, `MotionScheme.expressive()`, fully rounded shapes, spring animations, dynamic color, and expressive components across the entire demo app | In progress |
 
 ---
 
 ## Ongoing
 
 - Keep `llms.txt` and MCP server in sync with every public API change
+- Keep SceneViewSwift API surface aligned with Android SDK changes
 - Enable GitHub Discussions for community Q&A
