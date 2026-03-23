@@ -320,3 +320,51 @@
 .md-footer {
   border-top: 1px solid var(--sv-outline);
 }
+
+/* ─── Showcase Gallery (horizontal scroll) ─── */
+
+.showcase-gallery {
+  display: flex;
+  overflow-x: auto;
+  gap: 1.25rem;
+  padding: 1rem 0 1.5rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.showcase-gallery::-webkit-scrollbar {
+  height: 6px;
+}
+
+.showcase-gallery::-webkit-scrollbar-thumb {
+  background: var(--sv-outline);
+  border-radius: 3px;
+}
+
+.showcase-item {
+  flex: 0 0 220px;
+  text-align: center;
+  scroll-snap-align: start;
+}
+
+.showcase-item__img {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  border-radius: var(--sv-radius-lg);
+  border: 1px solid var(--sv-outline);
+  background: var(--sv-surface-variant);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.showcase-item:hover .showcase-item__img {
+  transform: translateY(-4px);
+  box-shadow: var(--sv-shadow-lg);
+}
+
+.showcase-item__label {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--sv-on-surface-variant);
+}
