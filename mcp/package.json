@@ -13,18 +13,22 @@
     "filament",
     "jetpack-compose",
     "claude",
-    "ai"
+    "ai",
+    "augmented-reality",
+    "kotlin",
+    "compose",
+    "google-filament"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "SceneView (https://github.com/SceneView)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SceneView/sceneview-android.git",
+    "url": "https://github.com/SceneView/sceneview.git",
     "directory": "mcp"
   },
-  "homepage": "https://github.com/SceneView/sceneview-android/tree/main/mcp#readme",
+  "homepage": "https://sceneview.github.io/ai-development/",
   "bugs": {
-    "url": "https://github.com/SceneView/sceneview-android/issues"
+    "url": "https://github.com/SceneView/sceneview/issues"
   },
   "type": "module",
   "bin": {
