@@ -1,28 +1,31 @@
-site_name: SceneView
-site_description: Compose-native 3D & AR library powered by Google Filament and ARCore
+site_name: SceneView — 3D & AR SDK for Android
+site_description: "The #1 open-source 3D & AR SDK for Android. Compose-native scenes powered by Google Filament and ARCore. Drop-in Scene{} and ARScene{} composables for model viewing, AR placement, physics, and immersive experiences."
 site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview
 repo_name: SceneView/sceneview
 edit_uri: edit/main/docs/docs/
+copyright: Copyright &copy; 2021-2026 Thomas Gorisse — Apache 2.0 License
 
 theme:
   name: material
   palette:
     - scheme: default
-      primary: white
-      accent: blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: black
-      accent: blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   font:
     text: Google Sans
     code: JetBrains Mono
+  icon:
+    logo: material/cube-outline
   features:
     - navigation.tabs
     - navigation.tabs.sticky
@@ -30,26 +33,57 @@ theme:
     - navigation.expand
     - navigation.top
     - navigation.indexes
+    - navigation.instant
+    - navigation.instant.progress
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
     - toc.follow
+    - announce.dismiss
 
 nav:
   - Home: index.md
+  - Try the Demo: try.md
+  - Get Started:
+    - Quickstart: quickstart.md
+    - API Cheatsheet: cheatsheet.md
+    - Recipes: recipes.md
+    - FAQ: faq.md
+    - Troubleshooting: troubleshooting.md
+  - Guides:
+    - Architecture: architecture.md
+    - Integrations: integrations.md
+    - Performance: performance.md
+    - Testing: testing.md
+  - Features:
+    - Why SceneView: showcase.md
+    - Use Cases: use-cases.md
+    - AI-Assisted Development: ai-development.md
+    - vs. Alternatives: comparison.md
+    - v4.0 Preview: v4-preview.md
   - Codelabs:
     - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md
     - AR with Compose: codelabs/codelab-ar-compose.md
-  - Migration guide: migration.md
-  - Changelog: changelog.md
-  - API reference:
+    - Dynamic Sky: codelabs/guide-dynamic-sky.md
+    - Lines & Text: codelabs/guide-lines-text.md
+    - Physics: codelabs/guide-physics.md
+    - Reflection Probes: codelabs/guide-reflection-probes.md
+  - API:
     - API (3D — sceneview): https://sceneview.github.io/api/sceneview/sceneview/
     - API (AR — arsceneview): https://sceneview.github.io/api/sceneview/arsceneview/
+  - Samples: samples.md
+  - Contribute: contributing.md
+  - Changelog: changelog.md
+  - Migration: migration.md
 
 plugins:
   - search
+  - social
 
 markdown_extensions:
   - admonition
@@ -71,16 +105,36 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
 
 extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/SceneView/sceneview
+      name: SceneView on GitHub
     - icon: fontawesome/brands/discord
       link: https://discord.gg/UbNDDBTNqb
+      name: SceneView Discord
+    - icon: fontawesome/brands/npm
+      link: https://www.npmjs.com/package/@sceneview/mcp
+      name: SceneView MCP on npm
   analytics:
     provider: google
     property: G-XXXXXXXXXX
+  generator: false
+  version:
+    provider: mike
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/m3-expressive.css
+  - stylesheets/m3-enhancements.css
+  - stylesheets/m3-flagship.css
+
+extra_javascript:
+  - assets/javascripts/m3-interactions.js
