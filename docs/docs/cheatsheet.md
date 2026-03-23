@@ -24,7 +24,8 @@ val environmentLoader = rememberEnvironmentLoader(engine)
 
 val model = rememberModelInstance(modelLoader, "models/file.glb")  // null while loading
 val env = rememberEnvironment(environmentLoader) {
-    createHDREnvironment("environments/sky.hdr")!!
+    createHDREnvironment("environments/sky.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 
 val cameraManipulator = rememberCameraManipulator()

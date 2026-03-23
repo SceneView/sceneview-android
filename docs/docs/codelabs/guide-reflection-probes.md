@@ -26,7 +26,8 @@ fun ReflectionScreen() {
     val environmentLoader = rememberEnvironmentLoader(engine)
 
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/studio.hdr")!!
+        environmentLoader.createHDREnvironment("environments/studio.hdr")
+            ?: createEnvironment(environmentLoader)
     }
 
     var cameraPosition by remember { mutableStateOf(Position()) }
@@ -63,10 +64,12 @@ Use `radius` to create zones with different reflections — e.g., indoor vs outd
 
 ```kotlin
 val outdoorEnv = rememberEnvironment(environmentLoader) {
-    environmentLoader.createHDREnvironment("environments/sky.hdr")!!
+    environmentLoader.createHDREnvironment("environments/sky.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 val indoorEnv = rememberEnvironment(environmentLoader) {
-    environmentLoader.createHDREnvironment("environments/office.hdr")!!
+    environmentLoader.createHDREnvironment("environments/office.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 
 Scene(

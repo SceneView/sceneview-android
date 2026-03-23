@@ -163,7 +163,8 @@ val mainLight = rememberMainLightNode(engine) {
 
 ```kotlin
 val environment = rememberEnvironment(environmentLoader) {
-    createHDREnvironment("environments/studio.hdr")!!
+    createHDREnvironment("environments/studio.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 ```
 

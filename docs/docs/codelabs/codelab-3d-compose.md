@@ -149,7 +149,8 @@ Scene(
 
 ```kotlin
 val environment = rememberEnvironment(environmentLoader) {
-    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 
 Scene(
@@ -267,7 +268,8 @@ fun ModelViewerScreen() {
 
     val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+            ?: createEnvironment(environmentLoader)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
