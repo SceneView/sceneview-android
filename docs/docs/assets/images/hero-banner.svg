@@ -1,125 +1,281 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" width="1200" height="500">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" fill="none">
   <defs>
-    <linearGradient id="hero-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0a0015"/>
-      <stop offset="30%" stop-color="#1a0a30"/>
-      <stop offset="70%" stop-color="#0f1a3a"/>
-      <stop offset="100%" stop-color="#050a1a"/>
+    <linearGradient id="hb-bg" x1="0" y1="0" x2="1200" y2="500">
+      <stop offset="0%" stop-color="#F5F3FF"/>
+      <stop offset="35%" stop-color="#FFF7ED"/>
+      <stop offset="65%" stop-color="#ECFEFF"/>
+      <stop offset="100%" stop-color="#FFF1F2"/>
     </linearGradient>
-    <linearGradient id="hero-accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#6c35aa"/>
-      <stop offset="50%" stop-color="#e040fb"/>
-      <stop offset="100%" stop-color="#00E5FF"/>
+    <linearGradient id="hb-phone-screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F3FF"/><stop offset="100%" stop-color="#EDE9FE"/>
     </linearGradient>
-    <linearGradient id="code-bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1e1e2e"/>
-      <stop offset="100%" stop-color="#11111b"/>
+    <linearGradient id="hb-sneaker" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7B61FF"/><stop offset="100%" stop-color="#A78BFA"/>
     </linearGradient>
-    <filter id="hero-glow">
-      <feGaussianBlur stdDeviation="20" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <linearGradient id="hb-hud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/><stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+    <linearGradient id="hb-speed-arc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#06B6D4"/><stop offset="100%" stop-color="#7B61FF"/>
+    </linearGradient>
+    <linearGradient id="hb-tablet-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F0FDFA"/><stop offset="100%" stop-color="#F5F3FF"/>
+    </linearGradient>
+    <linearGradient id="hb-heart" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#EF4444"/><stop offset="100%" stop-color="#B91C1C"/>
+    </linearGradient>
+    <linearGradient id="hb-xr-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E1B4B"/><stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <filter id="hb-shadow" x="-6%" y="-6%" width="112%" height="118%">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#7B61FF" flood-opacity="0.15"/>
     </filter>
-    <filter id="soft-glow">
-      <feGaussianBlur stdDeviation="3"/>
+    <filter id="hb-shadow-sm" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.1"/>
+    </filter>
+    <filter id="hb-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="500" fill="url(#hero-bg)"/>
+  <rect width="1200" height="500" rx="24" fill="url(#hb-bg)"/>
 
-  <!-- Subtle grid -->
-  <g opacity="0.04" stroke="white" stroke-width="0.5">
-    <line x1="0" y1="100" x2="1200" y2="100"/><line x1="0" y1="200" x2="1200" y2="200"/>
-    <line x1="0" y1="300" x2="1200" y2="300"/><line x1="0" y1="400" x2="1200" y2="400"/>
-    <line x1="200" y1="0" x2="200" y2="500"/><line x1="400" y1="0" x2="400" y2="500"/>
-    <line x1="600" y1="0" x2="600" y2="500"/><line x1="800" y1="0" x2="800" y2="500"/>
-    <line x1="1000" y1="0" x2="1000" y2="500"/>
-  </g>
-
-  <!-- Floating 3D objects - left side -->
-  <g transform="translate(150,250)">
-    <!-- Orbiting particles -->
-    <circle cx="0" cy="0" r="120" fill="none" stroke="#6c35aa" stroke-width="0.5" opacity="0.3" stroke-dasharray="4,8"/>
-    <circle cx="0" cy="0" r="80" fill="none" stroke="#e040fb" stroke-width="0.5" opacity="0.2" stroke-dasharray="3,6"/>
-
-    <!-- Central 3D cube (wireframe) -->
-    <g opacity="0.8" stroke="url(#hero-accent)" stroke-width="1.5" fill="none">
-      <!-- Front face -->
-      <polygon points="-35,-35 35,-35 35,35 -35,35"/>
-      <!-- Back face (offset) -->
-      <polygon points="-20,-50 50,-50 50,20 -20,20" opacity="0.4"/>
-      <!-- Connecting edges -->
-      <line x1="-35" y1="-35" x2="-20" y2="-50" opacity="0.5"/>
-      <line x1="35" y1="-35" x2="50" y2="-50" opacity="0.5"/>
-      <line x1="35" y1="35" x2="50" y2="20" opacity="0.5"/>
-      <line x1="-35" y1="35" x2="-20" y2="20" opacity="0.5"/>
+  <!-- ===== PHONE — E-commerce 3D Viewer (center, hero) ===== -->
+  <g transform="translate(465, 30)" filter="url(#hb-shadow)">
+    <rect x="0" y="0" width="160" height="310" rx="22" fill="#1A1A1A"/>
+    <rect x="2" y="2" width="156" height="306" rx="20" fill="#2A2A2A"/>
+    <rect x="10" y="16" width="140" height="278" rx="5" fill="url(#hb-phone-screen)"/>
+    <rect x="50" y="4" width="60" height="14" rx="7" fill="#1A1A1A"/>
+    <!-- Content -->
+    <text x="80" y="36" font-family="system-ui" font-size="8" fill="#1A1A1A" text-anchor="middle" font-weight="700">Nike Air Max</text>
+    <!-- Sneaker in viewport -->
+    <rect x="18" y="44" width="124" height="110" rx="14" fill="#F5F3FF"/>
+    <g transform="translate(38, 60)">
+      <ellipse cx="42" cy="75" rx="35" ry="6" fill="#DDD6FE" opacity="0.5"/>
+      <path d="M8,58 Q2,35 20,25 Q38,15 56,20 Q70,25 72,38 L72,50 L4,55 Z" fill="url(#hb-sneaker)"/>
+      <path d="M8,58 Q0,54 4,48 L72,44 Q78,50 74,58 Z" fill="#E9D5FF"/>
+      <path d="M16,45 Q35,33 65,28" stroke="white" stroke-width="2.5" fill="none" opacity="0.8" stroke-linecap="round"/>
     </g>
-
-    <!-- Floating spheres -->
-    <circle cx="90" cy="-60" r="12" fill="#6c35aa" opacity="0.6" filter="url(#hero-glow)">
-      <animate attributeName="cy" values="-60;-70;-60" dur="3s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="-80" cy="50" r="8" fill="#e040fb" opacity="0.5" filter="url(#hero-glow)">
-      <animate attributeName="cy" values="50;40;50" dur="2.5s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="60" cy="80" r="6" fill="#00E5FF" opacity="0.4" filter="url(#hero-glow)">
-      <animate attributeName="cy" values="80;70;80" dur="2s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="-100" cy="-30" r="4" fill="#FFD54F" opacity="0.4">
-      <animate attributeName="cy" values="-30;-40;-30" dur="3.5s" repeatCount="indefinite"/>
-    </circle>
+    <!-- Color swatches -->
+    <g transform="translate(32, 166)">
+      <circle cx="0" cy="0" r="7" fill="#7B61FF" stroke="white" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#7B61FF" stroke-width="1"/>
+      <circle cx="20" cy="0" r="7" fill="#1A1A1A" stroke="white" stroke-width="1.5"/>
+      <circle cx="40" cy="0" r="7" fill="#EF4444" stroke="white" stroke-width="1.5"/>
+      <circle cx="60" cy="0" r="7" fill="#F5F5F4" stroke="#DDD" stroke-width="1.5"/>
+      <circle cx="80" cy="0" r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+    </g>
+    <!-- Size pills -->
+    <g transform="translate(18, 186)">
+      <text x="8" y="8" font-family="system-ui" font-size="6" fill="#666" font-weight="600">Size</text>
+      <rect x="34" y="-2" width="22" height="14" rx="7" fill="#F5F3FF" stroke="#E9D5FF"/>
+      <text x="45" y="8" font-family="system-ui" font-size="6" fill="#666" text-anchor="middle">8</text>
+      <rect x="60" y="-2" width="22" height="14" rx="7" fill="#7B61FF"/>
+      <text x="71" y="8" font-family="system-ui" font-size="6" fill="white" text-anchor="middle" font-weight="600">9</text>
+      <rect x="86" y="-2" width="22" height="14" rx="7" fill="#F5F3FF" stroke="#E9D5FF"/>
+      <text x="97" y="8" font-family="system-ui" font-size="6" fill="#666" text-anchor="middle">10</text>
+    </g>
+    <!-- Buttons -->
+    <rect x="18" y="210" width="60" height="22" rx="11" fill="linear-gradient(135deg, #7B61FF, #A78BFA)"/>
+    <rect x="18" y="210" width="60" height="22" rx="11" fill="#7B61FF"/>
+    <text x="48" y="225" font-family="system-ui" font-size="7" fill="white" text-anchor="middle" font-weight="700">View in AR</text>
+    <rect x="82" y="210" width="60" height="22" rx="11" fill="#1A1A1A"/>
+    <text x="112" y="225" font-family="system-ui" font-size="7" fill="white" text-anchor="middle" font-weight="700">Add to Cart</text>
+    <!-- Price -->
+    <text x="80" y="252" font-family="system-ui" font-size="16" fill="#7B61FF" text-anchor="middle" font-weight="800">$189</text>
+    <!-- Nav dots -->
+    <rect x="55" y="282" width="50" height="3" rx="1.5" fill="#CCC"/>
   </g>
 
-  <!-- Right side - Code editor mockup -->
-  <g transform="translate(700,60)">
-    <rect width="420" height="380" rx="12" fill="url(#code-bg)" opacity="0.9" stroke="rgba(108,53,170,0.3)" stroke-width="1"/>
-
-    <!-- Title bar -->
-    <rect width="420" height="36" rx="12" fill="rgba(0,0,0,0.3)"/>
-    <rect y="24" width="420" height="12" fill="rgba(0,0,0,0.3)"/>
-    <circle cx="20" cy="18" r="5" fill="#ff5f56"/>
-    <circle cx="38" cy="18" r="5" fill="#ffbd2e"/>
-    <circle cx="56" cy="18" r="5" fill="#27c93f"/>
-    <text x="210" y="23" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-family="JetBrains Mono, monospace" font-size="11">ModelViewerScreen.kt</text>
-
-    <!-- Code content -->
-    <g transform="translate(20,56)" font-family="JetBrains Mono, monospace" font-size="13">
-      <text y="0" fill="#c792ea">@Composable</text>
-      <text y="22" fill="#82aaff">fun <tspan fill="#eeffff">ModelViewerScreen</tspan><tspan fill="#89ddff">() {</tspan></text>
-      <text y="52" fill="#676e95">  // 3D scene — same pattern as Column { }</text>
-      <text y="74" fill="#82aaff">  Scene<tspan fill="#89ddff">(</tspan></text>
-      <text y="96" fill="#eeffff">    modifier <tspan fill="#89ddff">=</tspan> Modifier<tspan fill="#89ddff">.</tspan><tspan fill="#82aaff">fillMaxSize</tspan><tspan fill="#89ddff">()</tspan></text>
-      <text y="118" fill="#89ddff">  ) {</text>
-      <text y="148" fill="#676e95">    // Model loads async — null until ready</text>
-      <text y="170" fill="#eeffff">    <tspan fill="#82aaff">rememberModelInstance</tspan><tspan fill="#89ddff">(</tspan></text>
-      <text y="192" fill="#eeffff">      modelLoader<tspan fill="#89ddff">,</tspan> <tspan fill="#c3e88d">"models/helmet.glb"</tspan></text>
-      <text y="214" fill="#89ddff">    )?.</tspan><text x="30" y="214" fill="#82aaff">let</text><text x="55" y="214" fill="#89ddff"> { instance -></text>
-      <text y="244" fill="#eeffff">      <tspan fill="#ffcb6b">ModelNode</tspan><tspan fill="#89ddff">(</tspan></text>
-      <text y="266" fill="#eeffff">        modelInstance <tspan fill="#89ddff">=</tspan> instance<tspan fill="#89ddff">,</tspan></text>
-      <text y="288" fill="#eeffff">        scaleToUnits <tspan fill="#89ddff">=</tspan> <tspan fill="#f78c6c">1.0f</tspan></text>
-      <text y="310" fill="#89ddff">      )</text>
+  <!-- ===== CAR DASHBOARD — left ===== -->
+  <g transform="translate(30, 80)" filter="url(#hb-shadow-sm)">
+    <rect x="0" y="0" width="380" height="190" rx="18" fill="#111827"/>
+    <rect x="2" y="2" width="376" height="186" rx="16" fill="#0F172A" stroke="#1E293B" stroke-width="0.5"/>
+    <rect x="10" y="10" width="360" height="170" rx="10" fill="url(#hb-hud)"/>
+    <!-- Road -->
+    <g opacity="0.5">
+      <path d="M100,180 L160,80 L200,80 L160,180 Z" fill="#334155" opacity="0.5"/>
+      <path d="M160,180 L200,80 L220,80 L200,180 Z" fill="#334155" opacity="0.6"/>
+      <path d="M200,180 L220,80 L240,80 L240,180 Z" fill="#334155" opacity="0.6"/>
+      <path d="M240,180 L240,80 L260,80 L280,180 Z" fill="#334155" opacity="0.6"/>
+      <line x1="175" y1="180" x2="200" y2="100" stroke="#06B6D4" stroke-width="1" stroke-dasharray="6,4" opacity="0.4"/>
+      <line x1="255" y1="180" x2="240" y2="100" stroke="#06B6D4" stroke-width="1" stroke-dasharray="6,4" opacity="0.4"/>
+    </g>
+    <!-- Nav arrow -->
+    <g filter="url(#hb-glow)">
+      <path d="M200,150 L215,115 L230,150 Z" fill="#06B6D4" opacity="0.7"/>
+    </g>
+    <!-- Speed -->
+    <g transform="translate(145, 20)">
+      <path d="M0,40 A40,40 0 0,1 80,40" stroke="#1E293B" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M0,40 A40,40 0 0,1 60,8" stroke="url(#hb-speed-arc)" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <text x="40" y="38" font-family="system-ui" font-size="24" fill="white" text-anchor="middle" font-weight="700">72</text>
+      <text x="40" y="50" font-family="system-ui" font-size="7" fill="#94A3B8" text-anchor="middle">km/h</text>
+    </g>
+    <!-- Battery -->
+    <g transform="translate(20, 20)">
+      <rect x="0" y="0" width="60" height="16" rx="8" fill="rgba(16,185,129,0.15)"/>
+      <rect x="6" y="5" width="28" height="6" rx="3" fill="#1E293B"/>
+      <rect x="6" y="5" width="22" height="6" rx="3" fill="#10B981"/>
+      <text x="40" y="12" font-family="system-ui" font-size="7" fill="#10B981" font-weight="600">82%</text>
+      <text x="0" y="32" font-family="system-ui" font-size="7" fill="#64748B">Range</text>
+      <text x="0" y="42" font-family="system-ui" font-size="10" fill="white" font-weight="700">342 km</text>
+    </g>
+    <!-- Mini map -->
+    <g transform="translate(300, 20)">
+      <rect x="0" y="0" width="55" height="45" rx="10" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+      <line x1="8" y1="22" x2="47" y2="22" stroke="#334155" stroke-width="1.5"/>
+      <line x1="28" y1="8" x2="28" y2="38" stroke="#334155" stroke-width="1.5"/>
+      <path d="M28,38 L28,22 L47,22" stroke="#06B6D4" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="28" cy="32" r="3" fill="#06B6D4"/>
+      <circle cx="28" cy="32" r="1.5" fill="white"/>
+    </g>
+    <!-- Traffic light -->
+    <g transform="translate(20, 140)">
+      <rect x="0" y="0" width="70" height="20" rx="10" fill="rgba(34,197,94,0.12)"/>
+      <circle cx="12" cy="10" r="4" fill="#22C55E"/>
+      <text x="22" y="14" font-family="system-ui" font-size="7" fill="#22C55E" font-weight="600">Green 12s</text>
+    </g>
+    <!-- ADAS bar -->
+    <g transform="translate(100, 162)">
+      <rect x="0" y="0" width="170" height="14" rx="7" fill="rgba(6,182,212,0.1)"/>
+      <text x="85" y="10" font-family="system-ui" font-size="6" fill="#67E8F9" text-anchor="middle">Lane Assist  ·  ACC 80  ·  Autopilot</text>
     </g>
   </g>
 
-  <!-- Center text -->
-  <g transform="translate(420,180)">
-    <text x="0" y="0" fill="white" font-family="system-ui" font-size="18" font-weight="300" letter-spacing="6" opacity="0.5">SCENEVIEW</text>
-    <text x="0" y="50" fill="white" font-family="system-ui" font-size="42" font-weight="700">3D is just</text>
-    <text x="0" y="100" font-family="system-ui" font-size="42" font-weight="700" fill="url(#hero-accent)">Compose UI.</text>
-    <text x="0" y="145" fill="rgba(255,255,255,0.5)" font-family="system-ui" font-size="16" font-weight="300">Filament + ARCore + Jetpack Compose</text>
+  <!-- ===== TABLET — Medical (right) ===== -->
+  <g transform="translate(680, 65)" filter="url(#hb-shadow-sm)">
+    <rect x="0" y="0" width="280" height="210" rx="16" fill="#E5E5E5"/>
+    <rect x="2" y="2" width="276" height="206" rx="14" fill="#F5F5F5"/>
+    <rect x="12" y="14" width="256" height="182" rx="4" fill="url(#hb-tablet-bg)"/>
+    <circle cx="140" cy="8" r="2.5" fill="#D4D4D4"/>
+    <!-- Toolbar -->
+    <rect x="12" y="14" width="256" height="24" fill="#FAFAFA"/>
+    <text x="24" y="30" font-family="system-ui" font-size="8" fill="#0F172A" font-weight="700">3D Anatomy Lab</text>
+    <!-- Sidebar -->
+    <rect x="12" y="38" width="60" height="158" fill="#FAFAFA"/>
+    <g transform="translate(18, 46)">
+      <rect x="0" y="0" width="48" height="18" rx="9" fill="#0D9488"/>
+      <text x="24" y="12" font-family="system-ui" font-size="6" fill="white" text-anchor="middle" font-weight="600">Heart</text>
+      <rect x="0" y="22" width="48" height="18" rx="9" fill="white" stroke="#E5E7EB"/>
+      <text x="24" y="34" font-family="system-ui" font-size="6" fill="#666" text-anchor="middle">Lungs</text>
+      <rect x="0" y="44" width="48" height="18" rx="9" fill="white" stroke="#E5E7EB"/>
+      <text x="24" y="56" font-family="system-ui" font-size="6" fill="#666" text-anchor="middle">Brain</text>
+    </g>
+    <!-- Heart model -->
+    <g transform="translate(115, 60)">
+      <ellipse cx="30" cy="90" rx="25" ry="5" fill="#FEE2E2" opacity="0.4"/>
+      <path d="M25,10 Q22,-6 15,5 Q12,12 18,16" fill="#DC2626"/>
+      <path d="M35,10 Q42,-3 42,12 Q42,18 38,16" fill="#EF4444"/>
+      <path d="M16,16 Q5,30 12,55 Q18,72 30,80 Q34,72 38,58 L30,22 Z" fill="url(#hb-heart)"/>
+      <path d="M30,22 L38,58 Q42,72 45,68 Q55,50 48,30 Q44,16 38,16 Z" fill="#EF4444"/>
+      <path d="M22,28 Q20,40 24,50" stroke="white" stroke-width="1.5" fill="none" opacity="0.3" stroke-linecap="round"/>
+      <!-- Annotation -->
+      <line x1="42" y1="35" x2="60" y2="25" stroke="#0D9488" stroke-width="0.7" stroke-dasharray="2,1"/>
+      <rect x="60" y="16" width="50" height="16" rx="8" fill="white" stroke="#0D9488" stroke-width="0.7"/>
+      <text x="85" y="28" font-family="system-ui" font-size="5" fill="#0D9488" text-anchor="middle" font-weight="600">Right Ventricle</text>
+    </g>
+    <!-- Right panel -->
+    <rect x="208" y="38" width="60" height="158" fill="#FAFAFA"/>
+    <g transform="translate(214, 50)">
+      <text x="0" y="0" font-family="system-ui" font-size="6" fill="#0F172A" font-weight="700">Properties</text>
+      <text x="0" y="14" font-family="system-ui" font-size="5" fill="#94A3B8">Opacity</text>
+      <rect x="0" y="18" width="48" height="3" rx="1.5" fill="#E5E7EB"/>
+      <rect x="0" y="18" width="34" height="3" rx="1.5" fill="#0D9488"/>
+      <circle cx="34" cy="19.5" r="4" fill="white" stroke="#0D9488" stroke-width="1"/>
+      <text x="0" y="36" font-family="system-ui" font-size="5" fill="#94A3B8">Cross Section</text>
+      <rect x="0" y="40" width="48" height="3" rx="1.5" fill="#E5E7EB"/>
+      <rect x="0" y="40" width="20" height="3" rx="1.5" fill="#7B61FF"/>
+      <circle cx="20" cy="41.5" r="4" fill="white" stroke="#7B61FF" stroke-width="1"/>
+    </g>
   </g>
 
-  <!-- Bottom gradient line -->
-  <rect x="0" y="496" width="1200" height="4" fill="url(#hero-accent)" opacity="0.6"/>
+  <!-- ===== TV — Real Estate Tour (bottom right) ===== -->
+  <g transform="translate(750, 310)" filter="url(#hb-shadow-sm)">
+    <rect x="0" y="0" width="220" height="130" rx="8" fill="#1A1A1A"/>
+    <rect x="3" y="3" width="214" height="114" rx="4" fill="#FAF5EE"/>
+    <!-- Stand -->
+    <rect x="80" y="122" width="60" height="5" rx="1" fill="#666"/>
+    <rect x="65" y="127" width="90" height="4" rx="2" fill="#888"/>
+    <!-- Room render inside -->
+    <rect x="8" y="8" width="204" height="104" rx="2" fill="#FFFCF5"/>
+    <path d="M8,112 L8,40 L110,8 L212,40 L212,112 Z" fill="#F5F0EB"/>
+    <path d="M8,112 L110,75 L212,112 Z" fill="#E8DDD0"/>
+    <!-- Furniture silhouettes -->
+    <rect x="65" y="65" width="80" height="25" rx="4" fill="#D97706" opacity="0.5"/>
+    <ellipse cx="110" cy="58" rx="12" ry="5" fill="#92400E" opacity="0.35"/>
+    <!-- Window -->
+    <rect x="140" y="28" width="30" height="30" rx="2" fill="#E0F2FE" stroke="#D5C8B8" stroke-width="0.5"/>
+    <!-- Tour label -->
+    <rect x="55" y="94" width="110" height="16" rx="8" fill="rgba(217,119,6,0.1)"/>
+    <text x="110" y="105" font-family="system-ui" font-size="6" fill="#D97706" text-anchor="middle" font-weight="600">Virtual Tour — Living Room</text>
+  </g>
 
-  <!-- Floating particles across -->
-  <circle cx="500" cy="80" r="2" fill="#6c35aa" opacity="0.3">
-    <animate attributeName="cy" values="80;60;80" dur="4s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="900" cy="420" r="3" fill="#e040fb" opacity="0.2">
-    <animate attributeName="cy" values="420;400;420" dur="3s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="350" cy="450" r="2" fill="#00E5FF" opacity="0.25">
-    <animate attributeName="cy" values="450;430;450" dur="3.5s" repeatCount="indefinite"/>
-  </circle>
+  <!-- ===== XR HEADSET — bottom center ===== -->
+  <g transform="translate(415, 370)" filter="url(#hb-shadow-sm)">
+    <!-- Headset body (goggles shape) -->
+    <rect x="0" y="0" width="260" height="110" rx="30" fill="#1A1A1A"/>
+    <rect x="3" y="3" width="254" height="104" rx="28" fill="#222"/>
+    <!-- Left lens -->
+    <rect x="16" y="14" width="108" height="82" rx="14" fill="url(#hb-xr-bg)"/>
+    <!-- Right lens -->
+    <rect x="136" y="14" width="108" height="82" rx="14" fill="url(#hb-xr-bg)"/>
+    <!-- Left lens content — floating card -->
+    <g transform="translate(28, 28)">
+      <rect x="0" y="0" width="82" height="54" rx="8" fill="rgba(123,97,255,0.12)" stroke="#7B61FF" stroke-width="0.5"/>
+      <!-- Mini 3D object -->
+      <g transform="translate(25, 8)">
+        <path d="M0,15 L15,22 L30,15 L30,0 L15,-7 L0,0 Z" fill="#7B61FF" opacity="0.6"/>
+        <path d="M30,15 L30,0 L15,-7 L15,8 Z" fill="#6D28D9" opacity="0.6"/>
+        <path d="M0,0 L15,-7 L30,0 L15,8 Z" fill="#A78BFA" opacity="0.6"/>
+      </g>
+      <text x="41" y="46" font-family="system-ui" font-size="6" fill="#A78BFA" text-anchor="middle" font-weight="600">Tap to customize</text>
+    </g>
+    <!-- Right lens content — furniture in space -->
+    <g transform="translate(148, 28)">
+      <rect x="0" y="10" width="82" height="44" rx="8" fill="rgba(6,182,212,0.08)" stroke="#06B6D4" stroke-width="0.5"/>
+      <!-- Mini sofa -->
+      <g transform="translate(25, 18)">
+        <rect x="0" y="4" width="30" height="12" rx="3" fill="#D97706" opacity="0.6"/>
+        <rect x="0" y="0" width="30" height="6" rx="2" fill="#F59E0B" opacity="0.6"/>
+      </g>
+      <text x="41" y="46" font-family="system-ui" font-size="6" fill="#67E8F9" text-anchor="middle" font-weight="600">Spatial preview</text>
+    </g>
+    <!-- Nose bridge -->
+    <rect x="122" y="60" width="16" height="30" rx="8" fill="#1A1A1A"/>
+    <!-- Headband hint -->
+    <rect x="-5" y="40" width="10" height="30" rx="3" fill="#333"/>
+    <rect x="255" y="40" width="10" height="30" rx="3" fill="#333"/>
+  </g>
+
+  <!-- ===== Floating badges ===== -->
+  <g transform="translate(42, 310)">
+    <rect x="0" y="0" width="120" height="28" rx="14" fill="white" filter="url(#hb-shadow-sm)"/>
+    <text x="60" y="19" font-family="system-ui" font-size="9" fill="#7B61FF" text-anchor="middle" font-weight="700">Android Auto</text>
+  </g>
+  <g transform="translate(180, 340)">
+    <rect x="0" y="0" width="80" height="28" rx="14" fill="white" filter="url(#hb-shadow-sm)"/>
+    <text x="40" y="19" font-family="system-ui" font-size="9" fill="#0D9488" text-anchor="middle" font-weight="700">60fps</text>
+  </g>
+  <g transform="translate(280, 310)">
+    <rect x="0" y="0" width="100" height="28" rx="14" fill="white" filter="url(#hb-shadow-sm)"/>
+    <text x="50" y="19" font-family="system-ui" font-size="9" fill="#F472B6" text-anchor="middle" font-weight="700">Compose UI</text>
+  </g>
+  <g transform="translate(1000, 300)">
+    <rect x="0" y="0" width="85" height="28" rx="14" fill="white" filter="url(#hb-shadow-sm)"/>
+    <text x="42" y="19" font-family="system-ui" font-size="9" fill="#D97706" text-anchor="middle" font-weight="700">ARCore</text>
+  </g>
+  <g transform="translate(1080, 340)">
+    <rect x="0" y="0" width="90" height="28" rx="14" fill="white" filter="url(#hb-shadow-sm)"/>
+    <text x="45" y="19" font-family="system-ui" font-size="9" fill="#7B61FF" text-anchor="middle" font-weight="700">Filament</text>
+  </g>
+
+  <!-- Device labels -->
+  <text x="545" y="365" font-family="system-ui" font-size="9" fill="#7B61FF" text-anchor="middle" font-weight="600">Phone</text>
+  <text x="230" y="290" font-family="system-ui" font-size="9" fill="#06B6D4" text-anchor="middle" font-weight="600">Car Dashboard</text>
+  <text x="820" y="290" font-family="system-ui" font-size="9" fill="#0D9488" text-anchor="middle" font-weight="600">Tablet</text>
+  <text x="860" y="458" font-family="system-ui" font-size="9" fill="#D97706" text-anchor="middle" font-weight="600">TV</text>
+  <text x="545" y="498" font-family="system-ui" font-size="9" fill="#A78BFA" text-anchor="middle" font-weight="600">XR Headset</text>
 </svg>

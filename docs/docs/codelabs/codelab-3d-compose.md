@@ -1,5 +1,7 @@
 # CodeLab: Your first 3D scene with SceneView 3.0
 
+<img src="../assets/images/showcase-model-viewer.svg" alt="What you'll build: a 3D model viewer" width="200" style="border-radius: 28px; float: right; margin-left: 1rem; margin-bottom: 1rem;">
+
 **Time:** ~25 minutes
 **Level:** Beginner (requires Kotlin + Jetpack Compose basics)
 **What you'll build:** A 3D model viewer with orbit camera, HDR lighting, and a double-tap-to-scale gesture
@@ -312,4 +314,4 @@ That's ~35 lines. A production-quality 3D model viewer with orbit camera, HDR li
 - **Add geometry** → Try `CubeNode`, `SphereNode`, `CylinderNode` in the scene block
 - **Embed in a screen** → Replace any `Image()` in your app with this `Box` wrapping a `Scene`
 - **Explore samples** → The [model-viewer](/samples/model-viewer), [gltf-camera](/samples/gltf-camera), and [camera-manipulator](/samples/camera-manipulator) samples show more patterns
-- **Read the API docs** → [sceneview.github.io/api/sceneview-android/sceneview](https://sceneview.github.io/api/sceneview-android/sceneview/)
+- **Read the API docs** → [sceneview.github.io/api/sceneview/sceneview](https://sceneview.github.io/api/sceneview/sceneview/)
