@@ -1,0 +1,593 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftPackageTests.xctest/Contents/MacOS/SceneViewSwiftPackageTests",
+      "packagePath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift",
+      "productName" : "SceneViewSwiftPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.SceneViewSwift-debug.module" : {
+      "executable" : "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "fileList" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/sources",
+      "importPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/ARSceneView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Camera/CameraControls.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Environment/Environment.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/BillboardNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/GeometryNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LightNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LineNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/ModelNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/PathNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/TextNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/SceneView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "SceneViewSwift",
+      "moduleOutputPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.swiftmodule",
+      "objects" : [
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/ARSceneView.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/CameraControls.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/Environment.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/BillboardNode.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/GeometryNode.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/LightNode.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/LineNode.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/ModelNode.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/PathNode.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/TextNode.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/SceneView.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx10.13",
+        "-swift-version",
+        "5",
+        "-enable-batch-mode",
+        "-index-store-path",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-module-cache-path",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/SceneViewSwift-Swift.h",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "sceneviewswift"
+      ],
+      "outputFileMapPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/ARSceneView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/CameraControls.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/Environment.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/BillboardNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/GeometryNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/LightNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/LineNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/ModelNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/PathNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/TextNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/SceneView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.swiftmodule"
+        }
+      ],
+      "sources" : [
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/ARSceneView.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Camera/CameraControls.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Environment/Environment.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/BillboardNode.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/GeometryNode.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LightNode.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LineNode.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/ModelNode.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/PathNode.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/TextNode.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/SceneView.swift"
+      ],
+      "tempsPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.SceneViewSwiftTests-debug.module" : {
+      "executable" : "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "fileList" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/sources",
+      "importPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsEdgeCaseTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneEnvironmentTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneViewSwiftTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "SceneViewSwiftTests",
+      "moduleOutputPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.swiftmodule",
+      "objects" : [
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsEdgeCaseTests.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsTests.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneEnvironmentTests.swift.o",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneViewSwiftTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx10.13",
+        "-swift-version",
+        "5",
+        "-enable-batch-mode",
+        "-index-store-path",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-module-cache-path",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "sceneviewswift"
+      ],
+      "outputFileMapPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsEdgeCaseTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneEnvironmentTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneViewSwiftTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.swiftmodule"
+        }
+      ],
+      "sources" : [
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsEdgeCaseTests.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsTests.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneEnvironmentTests.swift",
+        "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneViewSwiftTests.swift"
+      ],
+      "tempsPath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "SceneViewSwift" : [
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "-module-name",
+      "SceneViewSwift",
+      "-package-name",
+      "sceneviewswift",
+      "-incremental",
+      "-c",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/ARSceneView.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Camera/CameraControls.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Environment/Environment.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/BillboardNode.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/GeometryNode.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LightNode.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LineNode.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/ModelNode.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/PathNode.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/TextNode.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/SceneView.swift",
+      "-I",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug",
+      "-target",
+      "arm64-apple-macosx10.13",
+      "-swift-version",
+      "5",
+      "-enable-batch-mode",
+      "-index-store-path",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-module-cache-path",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/SceneViewSwift-Swift.h",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "sceneviewswift",
+      "-driver-use-frontend-path",
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+    ],
+    "SceneViewSwiftTests" : [
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc",
+      "-module-name",
+      "SceneViewSwiftTests",
+      "-package-name",
+      "sceneviewswift",
+      "-incremental",
+      "-c",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsEdgeCaseTests.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsTests.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneEnvironmentTests.swift",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneViewSwiftTests.swift",
+      "-I",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug",
+      "-target",
+      "arm64-apple-macosx10.13",
+      "-swift-version",
+      "5",
+      "-enable-batch-mode",
+      "-index-store-path",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-module-cache-path",
+      "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-sdk",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "sceneviewswift",
+      "-driver-use-frontend-path",
+      "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "SceneViewSwift" : [
+
+    ],
+    "SceneViewSwiftTests" : [
+      "SceneViewSwift"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "writeCommands" : {
+    "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/ARSceneView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Camera/CameraControls.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Environment/Environment.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/BillboardNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/GeometryNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LightNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/LineNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/ModelNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/PathNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/Nodes/TextNode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Sources/SceneViewSwift/SceneView.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/sources"
+    },
+    "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/ARSceneView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/BillboardNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/CameraControls.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/Environment.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/GeometryNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/LightNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/LineNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/ModelNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/PathNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/SceneView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwift.build/TextNode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsEdgeCaseTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneEnvironmentTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneViewSwiftTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsEdgeCaseTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneEnvironmentTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneViewSwiftTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/sources"
+    },
+    "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Library/Developer/CommandLineTools/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+    }
+  }
+}

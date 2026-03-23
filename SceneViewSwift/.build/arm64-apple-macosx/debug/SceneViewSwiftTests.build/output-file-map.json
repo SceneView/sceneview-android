@@ -1,0 +1,29 @@
+{
+  "": {
+    "swift-dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/master.swiftdeps"
+  },
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsEdgeCaseTests.swift": {
+    "dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsEdgeCaseTests.d",
+    "object": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsEdgeCaseTests.swift.o",
+    "swiftmodule": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsEdgeCaseTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsEdgeCaseTests.swiftdeps"
+  },
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/CameraControlsTests.swift": {
+    "dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsTests.d",
+    "object": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsTests.swift.o",
+    "swiftmodule": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/CameraControlsTests.swiftdeps"
+  },
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneEnvironmentTests.swift": {
+    "dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneEnvironmentTests.d",
+    "object": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneEnvironmentTests.swift.o",
+    "swiftmodule": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneEnvironmentTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneEnvironmentTests.swiftdeps"
+  },
+  "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/Tests/SceneViewSwiftTests/SceneViewSwiftTests.swift": {
+    "dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneViewSwiftTests.d",
+    "object": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneViewSwiftTests.swift.o",
+    "swiftmodule": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneViewSwiftTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/thomasgorisse/Projects/sceneview-android/SceneViewSwift/.build/arm64-apple-macosx/debug/SceneViewSwiftTests.build/SceneViewSwiftTests.swiftdeps"
+  }
+}

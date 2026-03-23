@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SceneView MCP – LinkedIn Video</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e1a; overflow: hidden; font-family: 'SF Pro Display', -apple-system, system-ui, sans-serif; }
+  #container { width: 1080px; height: 1080px; position: relative; overflow: hidden; }
+  canvas#three-canvas { position: absolute; top: 0; left: 0; opacity: 0; transition: none; }
+
+  /* Overlay layers */
+  .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* Title card */
+  #title-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #title-card h1 { font-size: 52px; font-weight: 800; color: white; }
+  #title-card h2 { font-size: 52px; font-weight: 800; color: #38bdf8; margin-top: 8px; }
+  #title-card .sub { font-size: 24px; color: #7880a0; margin-top: 32px; }
+  #title-card .badge { background: rgba(30,33,60,0.9); color: white; font-family: 'SF Mono', monospace; font-size: 17px; padding: 8px 20px; border-radius: 20px; margin-top: 28px; }
+
+  /* Split view */
+  #split-view { display: none; }
+  .step-label { position: absolute; top: 24px; left: 24px; font-size: 20px; font-weight: 700; }
+  .step-label .num { color: #6366f1; }
+  .step-label .txt { color: white; margin-left: 8px; }
+
+  /* Terminal */
+  .terminal { position: absolute; left: 24px; top: 74px; width: 496px; height: 936px; background: #0c1022; border-radius: 14px; overflow: hidden; }
+  .terminal-chrome { height: 32px; background: #141a2e; display: flex; align-items: center; padding: 0 12px; }
+  .terminal-chrome .dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  .terminal-chrome .dot.r { background: #ff5f56; }
+  .terminal-chrome .dot.y { background: #ffbd2e; }
+  .terminal-chrome .dot.g { background: #27c93f; }
+  .terminal-chrome .title { color: #7880a0; font-size: 12px; margin-left: auto; margin-right: auto; font-weight: 600; }
+  .terminal-body { padding: 12px 14px; font-family: 'SF Mono', 'Menlo', monospace; font-size: 17px; line-height: 1.5; white-space: pre-wrap; }
+  .terminal-body .prompt { color: #22c55e; }
+  .terminal-body .you { color: #38bdf8; font-weight: 700; }
+  .terminal-body .claude { color: #6366f1; font-weight: 700; }
+  .terminal-body .dim { color: #7880a0; }
+  .terminal-body .success { color: #22c55e; }
+  .terminal-body .user-text { color: #e0e4ec; }
+  .cursor { display: inline-block; width: 10px; height: 18px; background: white; animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Emulator panel */
+  .emu-panel { position: absolute; right: 24px; top: 74px; width: 496px; height: 936px; background: #080c14; border-radius: 14px; border: 2px solid #1a2040; overflow: hidden; }
+
+  /* 2D scene (simplified CSS version) */
+  #scene-2d { position: absolute; width: 100%; height: 100%; }
+  .road-2d { position: absolute; left: 22%; width: 56%; height: 100%; background: #1e2436; }
+  .lane-edge { position: absolute; width: 3px; height: 100%; background: white; }
+  .lane-edge.left { left: 22%; }
+  .lane-edge.right { right: 22%; }
+
+  /* Code overlay */
+  .code-overlay { position: absolute; bottom: 10px; left: 24px; width: 496px; height: 220px; background: rgba(18,22,36,0.95); border-radius: 10px; padding: 10px; font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.4; overflow: hidden; opacity: 0; color: #c4c8d8; }
+  .code-overlay .kw { color: #c084fc; }
+  .code-overlay .str { color: #fde047; }
+  .code-overlay .fn { color: #4ade80; }
+  .code-overlay .cm { color: #465070; }
+  .code-overlay .type { color: #60a5fa; }
+
+  /* Transition label */
+  #transition-label { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 56px; font-weight: 800; color: white; opacity: 0; z-index: 10; text-shadow: 0 0 40px rgba(99,102,241,0.5); }
+  #scene-label { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 36px; font-weight: 800; color: white; opacity: 0; z-index: 10; }
+  #scene-sublabel { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 20px; color: #7880a0; opacity: 0; z-index: 10; white-space: nowrap; }
+
+  /* HUD overlay for 3D scene */
+  #hud-3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 5; }
+  .hud-top { position: absolute; top: 12px; left: 14px; right: 14px; height: 32px; background: rgba(5,10,20,0.85); border-radius: 10px; display: flex; align-items: center; padding: 0 14px; }
+  .hud-top .autopilot { color: #38bdf8; font-weight: 700; font-size: 14px; }
+  .hud-top .following { color: #788090; font-size: 10px; font-family: monospace; margin: 0 auto; }
+  .hud-top .active { color: #22c55e; font-weight: 700; font-size: 14px; }
+  .hud-top .dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-left: 8px; }
+  .hud-speed { position: absolute; bottom: 20px; left: 20px; background: rgba(5,10,20,0.85); border-radius: 12px; padding: 8px 14px; }
+  .hud-speed .num { font-size: 36px; font-weight: 700; color: white; }
+  .hud-speed .unit { font-size: 12px; color: #788090; font-family: monospace; }
+  .hud-speed .limit { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: 700; }
+  .hud-detect { position: absolute; bottom: 20px; right: 20px; background: rgba(5,10,20,0.85); border-radius: 10px; padding: 8px 12px; font-size: 11px; }
+  .hud-detect .title { color: #465070; font-weight: 700; font-size: 10px; margin-bottom: 4px; }
+  .hud-detect .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+  .hud-detect .swatch { width: 8px; height: 8px; display: inline-block; }
+  .hud-detect .lbl { color: #788090; font-family: monospace; }
+  .hud-detect .cnt { color: white; font-weight: 700; font-family: monospace; margin-left: auto; }
+
+  /* End card */
+  #end-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #end-card h1 { font-size: 40px; font-weight: 800; color: white; }
+  #end-card .tagline { font-size: 22px; color: #38bdf8; margin-top: 12px; }
+  #end-card .npm { background: rgba(30,33,60,0.9); color: #22c55e; font-family: monospace; font-size: 17px; padding: 10px 24px; border-radius: 20px; margin-top: 24px; }
+  #end-card .features { color: #788090; font-size: 17px; margin-top: 32px; line-height: 2; text-align: center; }
+  #end-card .author { color: #465070; font-size: 16px; margin-top: 32px; }
+  #end-card .gh { color: #465070; font-family: monospace; font-size: 13px; margin-top: 4px; }
+
+  /* Progress bar */
+  #progress { position: absolute; bottom: 0; left: 0; height: 3px; background: #6366f1; z-index: 20; }
+</style>
+</head>
+<body>
+<div id="container">
+  <!-- Three.js canvas (injected by script) -->
+  <canvas id="three-canvas" width="1080" height="1080"></canvas>
+
+  <!-- Title card -->
+  <div id="title-card" class="overlay">
+    <h1>Autopilot Vision</h1>
+    <h2>in 3D</h2>
+    <div class="sub">Powered by SceneView MCP</div>
+    <div class="badge">claude code + sceneview mcp</div>
+  </div>
+
+  <!-- Split view (steps 1 & 2) -->
+  <div id="split-view" class="overlay">
+    <div class="step-label"><span class="num" id="step-num">Step 1:</span><span class="txt" id="step-txt">"Add traffic lights"</span></div>
+    <div class="terminal">
+      <div class="terminal-chrome">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">Claude Code</div>
+      </div>
+      <div class="terminal-body" id="term-body"></div>
+    </div>
+    <div class="emu-panel" id="emu-panel">
+      <canvas id="emu-canvas" width="492" height="932"></canvas>
+    </div>
+    <div class="code-overlay" id="code-overlay"></div>
+  </div>
+
+  <!-- 3D HUD -->
+  <div id="hud-3d">
+    <div class="hud-top">
+      <span class="autopilot">AUTOPILOT</span>
+      <span class="following">FOLLOWING DIST: COMFORTABLE</span>
+      <span class="active">ACTIVE</span>
+      <div class="dot"></div>
+    </div>
+    <div class="hud-speed">
+      <span class="num">68</span><br><span class="unit">km/h</span>
+      <div class="limit">120</div>
+    </div>
+    <div class="hud-detect">
+      <div class="title">DETECTED</div>
+      <div class="row"><span class="swatch" style="background:#22d3ee"></span><span class="lbl">Cars</span><span class="cnt">3</span></div>
+      <div class="row"><span class="swatch" style="background:#f97316"></span><span class="lbl">Bus</span><span class="cnt">1</span></div>
+      <div class="row"><span class="swatch" style="background:#f97316"></span><span class="lbl">Truck</span><span class="cnt">1</span></div>
+      <div class="row"><span class="swatch" style="background:#10b981"></span><span class="lbl">Bikes</span><span class="cnt">2</span></div>
+      <div class="row"><span class="swatch" style="background:#fb7185"></span><span class="lbl">Persons</span><span class="cnt">3</span></div>
+    </div>
+  </div>
+
+  <!-- Transition labels -->
+  <div id="transition-label">2D &gt;&gt; 3D</div>
+  <div id="scene-label">This is SceneView</div>
+  <div id="scene-sublabel">From flat mockup to real-time 3D</div>
+
+  <!-- End card -->
+  <div id="end-card" class="overlay">
+    <h1>SceneView MCP</h1>
+    <div class="tagline">AI-powered 3D & AR for Compose</div>
+    <div class="npm">npx sceneview-mcp</div>
+    <div class="features">
+      Works with Claude Code<br>
+      Jetpack Compose + Filament<br>
+      3D scenes & AR experiences
+    </div>
+    <div class="author">@ThomasGorisse</div>
+    <div class="gh">github.com/SceneView/sceneview-android</div>
+  </div>
+
+  <div id="progress"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE.JS AUTOPILOT 3D SCENE
+// ═══════════════════════════════════════════════════════════════════════════
+const canvas3d = document.getElementById('three-canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020408);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+camera.position.set(2.75, 5.5, 12.0);
+camera.lookAt(2.75, 0.3, -8);
+const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true });
+renderer.setSize(1080, 1080);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.6;
+
+scene.add(new THREE.AmbientLight(0x101828, 0.3));
+const sun = new THREE.DirectionalLight(0xfffaf0, 1.8);
+sun.position.set(4, 15, 10); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 80;
+sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
+sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
+scene.add(sun);
+scene.add(new THREE.DirectionalLight(0x3388ff, 0.15).translateX(-5).translateY(10));
+scene.fog = new THREE.FogExp2(0x020408, 0.012);
+
+function mat(c, r=0.5, m=0) { return new THREE.MeshStandardMaterial({color:c, roughness:r, metalness:m}); }
+function emMat(c) { return new THREE.MeshStandardMaterial({color:c, emissive: new THREE.Color(c), emissiveIntensity:2, roughness:0.1}); }
+function bx(w,h,d,mt,pos,cs=true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mt);
+  m.position.set(...pos); m.castShadow=cs; m.receiveShadow=true; return m;
+}
+
+// Ground
+const gnd = new THREE.Mesh(new THREE.PlaneGeometry(60,60), mat(0x0A0F0A, 0.95));
+gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.02; gnd.receiveShadow=true; scene.add(gnd);
+
+// Road
+const rd = new THREE.Mesh(new THREE.PlaneGeometry(12,60), mat(0x1E2436, 0.88));
+rd.rotation.x=-Math.PI/2; rd.position.set(0,-0.01,-15); rd.receiveShadow=true; scene.add(rd);
+
+// Lane lines
+function addLn(x,w,l) { const m=new THREE.Mesh(new THREE.PlaneGeometry(w,l), mat(0xFFFFFF,0.25)); m.rotation.x=-Math.PI/2; m.position.set(x,0.005,-15); scene.add(m); }
+addLn(-5.5, 0.12, 60); addLn(5.5, 0.12, 60); addLn(4.7, 0.08, 60);
+
+// Centre dashes
+const dashGrp = new THREE.Group();
+for(let i=0;i<16;i++){const d=new THREE.Mesh(new THREE.PlaneGeometry(0.12,1.8),mat(0xFFCC00,0.25));d.rotation.x=-Math.PI/2;d.position.set(0,0.006,8-i*4);dashGrp.add(d);}
+scene.add(dashGrp);
+
+// Ego car
+const ego = new THREE.Group();
+ego.add(bx(1.85,0.60,3.70,mat(0xE2E8F0,0.15),[0,0.30,0]));
+ego.add(bx(1.50,0.42,1.70,mat(0xC8D2E1,0.20),[0,0.72,-0.3]));
+ego.add(bx(1.65,0.12,0.07,mat(0xFF3333,0.10),[0,0.35,1.85]));
+for(const wx of[-0.75,0.75])for(const wz of[-1.2,1.2]){const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.29,0.29,0.22,16),mat(0x141419,0.90));wh.rotation.z=Math.PI/2;wh.position.set(wx,0.05,wz);wh.castShadow=true;ego.add(wh);}
+ego.position.set(2.75,0,2.5); scene.add(ego);
+
+// Truck
+const truck = new THREE.Group();
+truck.add(bx(2.4,1.55,6.5,mat(0xF97316,0.20),[0,0.78,0]));
+for(const wx of[-1,1])for(const wz of[-2.5,2.5]){const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.25,16),mat(0x141419,0.90));wh.rotation.z=Math.PI/2;wh.position.set(wx,0.05,wz);wh.castShadow=true;truck.add(wh);}
+truck.position.set(2.75,0,-15); scene.add(truck);
+
+// Oncoming
+function mkCar(c,bus=false){const g=new THREE.Group();const m=mat(c,0.20);if(bus){g.add(bx(2.5,1.80,7.0,m,[0,0.90,0]));}else{g.add(bx(1.85,0.60,3.70,m,[0,0.30,0]));const lc=new THREE.Color(c).lerp(new THREE.Color(0xffffff),0.3);g.add(bx(1.50,0.42,1.70,mat(lc,0.20),[0,0.72,0]));}return g;}
+const oncs=[];
+const o1=mkCar(0x22D3EE);o1.position.set(-2.75,0,5);scene.add(o1);oncs.push({m:o1,s:1.5,o:0});
+const o2=mkCar(0x22D3EE);o2.position.set(-2.75,0,-5);scene.add(o2);oncs.push({m:o2,s:1.3,o:18});
+const bus=mkCar(0xF97316,true);bus.position.set(-2.75,0,-20);scene.add(bus);oncs.push({m:bus,s:0.9,o:30});
+const behind=mkCar(0x22D3EE);behind.position.set(2.75,0,8);scene.add(behind);
+
+// Cyclists
+const cycs=[];
+for(let i=0;i<2;i++){const g=new THREE.Group();g.add(bx(0.22,0.80,1.0,mat(0x10B981,0.30),[0,0.40,0]));g.add(bx(0.40,0.55,0.30,mat(0xFB7185,0.40),[0,0.95,0]));const h=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,8),mat(0xFB7185,0.40));h.position.set(0,1.30,0);g.add(h);g.position.set(5.1,0,4-i*8);g.castShadow=true;scene.add(g);cycs.push({m:g,o:i*15});}
+
+// Pedestrians
+const peds=[];
+for(let i=0;i<3;i++){const g=new THREE.Group();g.add(bx(0.40,1.20,0.30,mat(0xFB7185,0.40),[0,0.60,0]));const h=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8),mat(0xFB7185,0.40));h.position.set(0,1.35,0);g.add(h);g.position.set(6.5+i*0.2,0,3-i*5);g.castShadow=true;scene.add(g);peds.push({m:g,o:i*12});}
+
+// Traffic light
+const tlG=new THREE.Group();
+tlG.add(bx(0.15,5.0,0.15,mat(0x32373F,0.50),[6.3,2.5,0]));
+tlG.add(bx(3.4,0.15,0.15,mat(0x32373F,0.50),[4.6,5.0,0]));
+tlG.add(bx(0.35,0.90,0.35,mat(0x191C23,0.30),[3.5,4.5,0]));
+const rL=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),emMat(0xFF3333));rL.position.set(3.5,4.75,0.18);tlG.add(rL);
+const yL=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),emMat(0xFFCC00));yL.position.set(3.5,4.50,0.18);tlG.add(yL);
+const gL=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),emMat(0x22C55E));gL.position.set(3.5,4.25,0.18);tlG.add(gL);
+const rGl=new THREE.PointLight(0xFF3333,0,5);rGl.position.copy(rL.position);tlG.add(rGl);
+const yGl=new THREE.PointLight(0xFFCC00,0,5);yGl.position.copy(yL.position);tlG.add(yGl);
+const gGl=new THREE.PointLight(0x22C55E,0,5);gGl.position.copy(gL.position);tlG.add(gGl);
+tlG.position.z=-12;scene.add(tlG);
+
+function update3D(t) {
+  dashGrp.children.forEach((d,i)=>{d.position.z=8-i*4+(t*3)%4;});
+  truck.position.z=-15+Math.sin(t*0.25)*7;
+  const rs=(t*5)%50;
+  oncs.forEach(v=>{v.m.position.z=10-((rs*v.s+v.o)%50)+10;});
+  behind.position.z=6+(rs*0.3)%8;
+  cycs.forEach((c,i)=>{c.m.position.z=8-((rs*0.18+c.o)%30)+5;c.m.position.y=Math.sin(t*4+i)*0.08;});
+  peds.forEach((p,i)=>{p.m.position.z=5-((rs*0.12+p.o)%30)+5;p.m.position.y=Math.sin(t*3.5+i*2)*0.05;});
+  const cy=t%24;const rOn=cy>=17,yOn=cy>=14&&cy<17,gOn=cy<14;
+  rL.material.emissiveIntensity=rOn?3:0.05;yL.material.emissiveIntensity=yOn?3:0.05;gL.material.emissiveIntensity=gOn?3:0.05;
+  rGl.intensity=rOn?2:0;yGl.intensity=yOn?2:0;gGl.intensity=gOn?2:0;
+  renderer.render(scene, camera);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2D EMULATOR CANVAS (top-down scene)
+// ═══════════════════════════════════════════════════════════════════════════
+const emuCanvas = document.getElementById('emu-canvas');
+const ectx = emuCanvas.getContext('2d');
+
+function draw2D(t, hasTL, speed) {
+  const W=492, H=932;
+  ectx.fillStyle='#080c14'; ectx.fillRect(0,0,W,H);
+  // Road
+  const rl=W*0.22, rr=W*0.78, rw=rr-rl;
+  ectx.fillStyle='#1e2436'; ectx.fillRect(rl,0,rw,H);
+  // Edge lines
+  ectx.fillStyle='white'; ectx.fillRect(rl,0,3,H); ectx.fillRect(rr-3,0,3,H);
+  // Bike lane
+  ectx.fillStyle='#555'; ectx.fillRect(rr-rw*0.15,0,2,H);
+  // Centre dashes
+  ectx.fillStyle='#ffcc00';
+  const dashOff=(t*80)%40;
+  for(let i=-2;i<H/40+3;i++){const dy=i*40+dashOff;if(dy>=0&&dy<=H-20)ectx.fillRect(W/2-2,dy,4,20);}
+  // Oncoming
+  const cx=rl+rw*0.25;
+  [[1.2,'#22d3ee',24,46],[0.8,'#f97316',30,70]].forEach(([sp,col,cw,ch],i)=>{
+    const cy=((t*sp*60+i*180)%(H+100))-50;
+    ectx.fillStyle=col; roundRect(ectx,cx-cw/2,cy-ch/2,cw,ch,6);
+  });
+  // Ego car
+  const ex=rl+rw*0.72, ey=H*0.62;
+  ectx.fillStyle='#e2e8f0'; roundRect(ectx,ex-16,ey-30,32,60,8);
+  ectx.fillStyle='#c8d2e1'; roundRect(ectx,ex-12,ey-15,24,25,5);
+  ectx.fillStyle='#ef4444'; ectx.fillRect(ex-14,ey+26,6,4); ectx.fillRect(ex+8,ey+26,6,4);
+  // Truck
+  const ty=H*0.25+Math.sin(t*0.5)*20;
+  ectx.fillStyle='#f97316'; roundRect(ectx,ex-18,ty-38,36,76,6);
+  // Behind
+  ectx.fillStyle='#22d3ee'; roundRect(ectx,ex-14,H*0.85-22,28,44,6);
+  // Cyclists
+  for(let i=0;i<2;i++){const by=((t*25+i*120)%(H+60))-30;ectx.fillStyle='#10b981';roundRect(ectx,rr-rw*0.15+12-4,by-10,8,20,3);}
+  // Pedestrians
+  for(let i=0;i<3;i++){const py=((t*15+i*90)%(H+40))-20;ectx.fillStyle='#fb7185';roundRect(ectx,rr+15-5,py-12,10,24,4);}
+  // Traffic light
+  if(hasTL){
+    const tx=rr+6, tly=H*0.15;
+    ectx.fillStyle='#282832'; ectx.fillRect(tx,tly,4,60); ectx.fillRect(tx-40,tly,40,4);
+    const bxx=tx-35;
+    ectx.fillStyle='#141420'; roundRect(ectx,bxx-8,tly-30,16,36,4);
+    const cyc=t%6;
+    ectx.fillStyle=cyc>4?'#ef4444':'#321414'; fillCircle(ectx,bxx,tly-22,5);
+    ectx.fillStyle=(3.5<cyc&&cyc<=4)?'#ffcc00':'#322d0a'; fillCircle(ectx,bxx,tly-10,5);
+    ectx.fillStyle=cyc<=3.5?'#22c55e':'#0a3214'; fillCircle(ectx,bxx,tly+1,5);
+  }
+  // HUD
+  ectx.fillStyle='rgba(5,10,20,0.85)';
+  roundRect(ectx,14,H-60,70,48,10);
+  ectx.fillStyle='white'; ectx.font='bold 32px system-ui'; ectx.fillText(speed,22,H-24);
+  ectx.fillStyle='#788090'; ectx.font='11px monospace'; ectx.fillText('km/h',22,H-14);
+  // AUTOPILOT bar
+  ectx.fillStyle='rgba(5,10,20,0.85)'; roundRect(ectx,10,8,W-20,26,8);
+  ectx.fillStyle='#38bdf8'; ectx.font='bold 11px system-ui'; ectx.fillText('AUTOPILOT',18,24);
+  ectx.fillStyle='#22c55e'; ectx.fillText('ACTIVE',W-75,24);
+  fillCircle(ectx,W-32,18,4);
+}
+
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();ctx.fill();}
+function fillCircle(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIMELINE DIRECTOR
+// ═══════════════════════════════════════════════════════════════════════════
+const DURATION = 40;
+const els = {
+  titleCard: document.getElementById('title-card'),
+  splitView: document.getElementById('split-view'),
+  termBody: document.getElementById('term-body'),
+  stepNum: document.getElementById('step-num'),
+  stepTxt: document.getElementById('step-txt'),
+  codeOverlay: document.getElementById('code-overlay'),
+  emuPanel: document.getElementById('emu-panel'),
+  transLabel: document.getElementById('transition-label'),
+  sceneLabel: document.getElementById('scene-label'),
+  sceneSub: document.getElementById('scene-sublabel'),
+  hud3d: document.getElementById('hud-3d'),
+  endCard: document.getElementById('end-card'),
+  progress: document.getElementById('progress'),
+  canvas3d: canvas3d,
+};
+
+function typeText(full, elapsed, cps=12) {
+  const n = Math.min(full.length, Math.floor(elapsed * cps));
+  return full.substring(0, n);
+}
+
+const CODE1 = `<span class="cm">// Traffic light — gantry at z = -12</span>
+<span class="kw">private val</span> tlPole = cube(
+  <span class="str">Size(0.15f, 5.0f, 0.15f)</span>,
+  <span class="fn">tlBoxMat</span>,
+  <span class="type">Position(x=6.3f, y=2.5f, z=-12f)</span>
+)
+<span class="kw">private val</span> tlArm = cube(
+  <span class="str">Size(3.4f, 0.15f, 0.15f)</span>,
+  <span class="fn">tlBoxMat</span>,
+  <span class="type">Position(x=4.6f, y=5.0f, z=-12f)</span>
+)`;
+
+const CODE2 = `<span class="cm">// Reduce animation speed</span>
+<span class="kw">val</span> speed <span class="kw">by</span> t.animateFloat(
+  <span class="str">initialValue = 60f</span>,
+  <span class="str">targetValue = 75f</span>,
+  <span class="kw">animationSpec</span> = infiniteRepeatable(
+    <span class="fn">tween(18_000,</span>
+    <span class="fn">  easing = LinearEasing)</span>,
+    <span class="type">RepeatMode.Reverse</span>
+  )
+)`;
+
+let startTime = null;
+function tick(now) {
+  if (!startTime) startTime = now;
+  const t = (now - startTime) / 1000;
+  if (t > DURATION + 2) return;
+
+  els.progress.style.width = Math.min(100, t / DURATION * 100) + '%';
+
+  // ── SCENE 1: Title (0–3.5s) ──
+  if (t < 3.5) {
+    els.titleCard.style.display = 'flex';
+    els.titleCard.style.opacity = Math.min(1, t / 0.8);
+    els.splitView.style.display = 'none';
+    els.canvas3d.style.opacity = 0;
+    els.endCard.style.opacity = 0;
+    els.hud3d.style.opacity = 0;
+  }
+  // ── SCENE 2: Step 1 (3.5–13s) ──
+  else if (t < 13) {
+    const st = t - 3.5;
+    els.titleCard.style.opacity = 0;
+    els.titleCard.style.display = 'none';
+    els.splitView.style.display = 'block';
+    els.stepNum.textContent = 'Step 1:';
+    els.stepTxt.textContent = '"Add traffic lights"';
+
+    // Terminal
+    let html = '<span class="prompt">$ claude</span>\n\n';
+    if (st > 0.8) {
+      html += '<span class="you">You:</span>\n';
+      html += '  <span class="user-text">' + typeText('Add traffic lights to the autopilot scene', st - 1.0) + '</span><span class="cursor"></span>\n';
+    }
+    if (st > 5.5) {
+      html += '\n<span class="claude">Claude:</span>\n';
+      html += '  <span class="dim">' + typeText("I'll add a traffic light gantry with", st - 5.5) + '</span>\n';
+      if (st > 6.5) html += '  <span class="dim">' + typeText("cycling red/yellow/green lights...", st - 6.5) + '</span>\n';
+    }
+    if (st > 7.5) html += '\n  <span class="success">✓ Updated AutopilotSceneView.kt</span>\n';
+    els.termBody.innerHTML = html;
+
+    // Code overlay
+    if (st > 7.5 && st < 10) {
+      els.codeOverlay.style.opacity = st < 8 ? (st-7.5)*2 : (st > 9.2 ? Math.max(0,1-(st-9.2)*1.2) : 1);
+      els.codeOverlay.innerHTML = CODE1;
+    } else {
+      els.codeOverlay.style.opacity = 0;
+    }
+
+    // 2D scene
+    draw2D(st * 0.8, st > 8.0, '95');
+  }
+  // ── SCENE 3: Step 2 (13–22s) ──
+  else if (t < 22) {
+    const st = t - 13;
+    els.splitView.style.display = 'block';
+    els.stepNum.textContent = 'Step 2:';
+    els.stepTxt.textContent = '"Make it go slower"';
+
+    let html = '<span class="prompt">$ claude</span>\n\n';
+    html += '<span class="you">You:</span>\n  <span class="dim">Add traffic lights to the autopilot scene</span>\n\n';
+    html += '<span class="claude">Claude:</span>\n  <span class="success">✓ Updated AutopilotSceneView.kt</span>\n\n';
+    if (st > 0.5) {
+      html += '<span class="you">You:</span>\n';
+      html += '  <span class="user-text">' + typeText('Make the car go slower, around 65 km/h', st - 0.8) + '</span><span class="cursor"></span>\n';
+    }
+    if (st > 4.5) {
+      html += '\n<span class="claude">Claude:</span>\n';
+      html += '  <span class="dim">' + typeText("I'll reduce the animation speed and", st - 4.5) + '</span>\n';
+      if (st > 5.5) html += '  <span class="dim">' + typeText("lower the target velocity range...", st - 5.5) + '</span>\n';
+    }
+    if (st > 6.5) html += '\n  <span class="success">✓ Speed reduced to 60-75 km/h range</span>\n';
+    els.termBody.innerHTML = html;
+
+    if (st > 6.5 && st < 9) {
+      els.codeOverlay.style.opacity = st < 7 ? (st-6.5)*2 : (st > 8.2 ? Math.max(0,1-(st-8.2)*1.2) : 1);
+      els.codeOverlay.innerHTML = CODE2;
+    } else { els.codeOverlay.style.opacity = 0; }
+
+    const spd = st > 7 ? Math.round(95 - Math.min(1,(st-7)/2)*30) : 95;
+    const tf = st < 7 ? 0.8 : 0.8 - Math.min(1,(st-7)/2)*0.4;
+    draw2D(st * tf, true, String(spd));
+  }
+  // ── SCENE 4: 2D → 3D transformation (22–31s) ──
+  else if (t < 31) {
+    const st = t - 22;
+    els.splitView.style.display = 'none';
+    els.codeOverlay.style.opacity = 0;
+    els.endCard.style.opacity = 0;
+
+    // Crossfade
+    let blend = 0;
+    if (st < 2) blend = 0;
+    else if (st < 4.5) blend = (st - 2) / 2.5;
+    else blend = 1;
+
+    // 3D
+    update3D(st + 8);
+    els.canvas3d.style.opacity = blend;
+    els.hud3d.style.opacity = blend;
+
+    // 2D emulator as full-screen during transition
+    if (blend < 1) {
+      els.emuPanel.style.display = 'block';
+      els.emuPanel.style.position = 'absolute';
+      els.emuPanel.style.left = '30px'; els.emuPanel.style.top = '80px';
+      els.emuPanel.style.width = '1020px'; els.emuPanel.style.height = '960px';
+      emuCanvas.width = 1020; emuCanvas.height = 960;
+      draw2D(st * 0.5 + 8, true, '68');
+      els.emuPanel.style.opacity = 1 - blend;
+    } else {
+      els.emuPanel.style.opacity = 0;
+    }
+
+    // Labels
+    if (st > 1 && st < 5.5) {
+      const a = st < 1.5 ? (st-1)*2 : (st > 4.5 ? Math.max(0,1-(st-4.5)) : 1);
+      els.transLabel.style.opacity = a;
+    } else { els.transLabel.style.opacity = 0; }
+
+    if (st > 5) {
+      els.sceneLabel.style.opacity = Math.min(1, (st-5)/0.6);
+    } else { els.sceneLabel.style.opacity = 0; }
+
+    if (st > 6) {
+      els.sceneSub.style.opacity = Math.min(1, (st-6)/0.6);
+    } else { els.sceneSub.style.opacity = 0; }
+  }
+  // ── SCENE 5: End card (31–40s) ──
+  else {
+    const st = t - 31;
+    els.splitView.style.display = 'none';
+    els.canvas3d.style.opacity = 0;
+    els.hud3d.style.opacity = 0;
+    els.transLabel.style.opacity = 0;
+    els.sceneLabel.style.opacity = 0;
+    els.sceneSub.style.opacity = 0;
+    els.endCard.style.display = 'flex';
+    els.endCard.style.opacity = Math.min(1, st / 0.8);
+  }
+
+  requestAnimationFrame(tick);
+}
+
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
