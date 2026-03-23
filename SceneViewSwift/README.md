@@ -1,8 +1,9 @@
 # SceneViewSwift
 
-3D and AR scenes in SwiftUI, powered by RealityKit. The iOS companion to [SceneView for Android](https://github.com/SceneView/sceneview).
+3D and AR scenes in SwiftUI, powered by RealityKit. The Apple companion to [SceneView for Android](https://github.com/SceneView/sceneview).
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![visionOS 1+](https://img.shields.io/badge/visionOS-1%2B-blue)
 
 ## Installation
