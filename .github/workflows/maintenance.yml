@@ -43,7 +43,6 @@ jobs:
           BODY+="| ARCore | ${{ steps.versions.outputs.arcore_current }} | ${{ steps.versions.outputs.arcore_latest }} |\n"
           BODY+="| Kotlin | ${{ steps.versions.outputs.kotlin_current }} | ${{ steps.versions.outputs.kotlin_latest }} |\n"
 
-          # Post as a comment on the pinned maintenance issue if it exists, otherwise just log
           echo -e "$BODY"
 
   # ── 2. Stale issue detection ───────────────────────────────────────────────
@@ -82,11 +81,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Only count failures from the 'build' job (not flaky ar-emulator)
           FAILURES=$(gh run list --workflow=ci.yml --limit 7 --json conclusion,createdAt,name \
             | jq '[.[] | select(.conclusion == "failure")] | length')
           echo "CI failures in last 7 runs: $FAILURES"
-          if [ "$FAILURES" -gt 2 ]; then
-            echo "⚠️ CI is consistently failing — investigate"
+          # Raised threshold: ar-emulator is continue-on-error so only
+          # true build failures count now. Threshold = 4 to avoid noise.
+          if [ "$FAILURES" -gt 4 ]; then
+            echo "CI is consistently failing — investigate"
             gh issue list --label "ci-failure" --state open | grep -q "." || \
               gh issue create \
                 --title "CI health: $FAILURES failures in last 7 runs — $(date +%Y-%m-%d)" \

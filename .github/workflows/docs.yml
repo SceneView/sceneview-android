@@ -28,30 +28,51 @@ jobs:
         with:
           python-version: '3.x'
 
-      - run: pip install mkdocs-material
+      - name: Install dependencies
+        run: |
+          pip install mkdocs-material
+          pip install mkdocs-social-plugin || true
 
       - name: Sync content into docs
         run: |
-          # Codelabs from marketing
-          cp marketing/codelabs/codelab-3d-compose.md docs/docs/codelabs/codelab-3d-compose.md
-          cp marketing/codelabs/codelab-ar-compose.md docs/docs/codelabs/codelab-ar-compose.md
+          # Codelabs from marketing (skip if missing)
+          if [ -d marketing/codelabs ]; then
+            mkdir -p docs/docs/codelabs
+            cp marketing/codelabs/codelab-3d-compose.md docs/docs/codelabs/codelab-3d-compose.md 2>/dev/null || true
+            cp marketing/codelabs/codelab-ar-compose.md docs/docs/codelabs/codelab-ar-compose.md 2>/dev/null || true
+          fi
 
           # Root docs
-          cp MIGRATION.md docs/docs/migration.md
-          cp CHANGELOG.md docs/docs/changelog.md
-          cp CONTRIBUTING.md docs/docs/contributing.md
+          cp MIGRATION.md docs/docs/migration.md 2>/dev/null || true
+          cp CHANGELOG.md docs/docs/changelog.md 2>/dev/null || true
+          cp CONTRIBUTING.md docs/docs/contributing.md 2>/dev/null || true
 
       - name: Build site
         run: mkdocs build --config-file docs/mkdocs.yml --site-dir site
 
       - name: Copy extra site files
         run: |
-          cp docs/docs/robots.txt site/robots.txt
-          cp docs/docs/manifest.json site/manifest.json
-          cp docs/docs/structured-data.json site/structured-data.json
-          cp docs/docs/llms.txt site/llms.txt
-          cp docs/docs/llms-full.txt site/llms-full.txt
+          # Copy extra files if they exist
+          for f in robots.txt manifest.json structured-data.json llms.txt llms-full.txt; do
+            [ -f "docs/docs/$f" ] && cp "docs/docs/$f" "site/$f" || true
+          done
+
+          # Security policy
+          mkdir -p site/.well-known
+          if [ -f "docs/docs/.well-known/security.txt" ]; then
+            cp docs/docs/.well-known/security.txt site/.well-known/security.txt
+          fi
+
+          # Ensure GitHub Pages doesn't process with Jekyll
           touch site/.nojekyll
+
+          # Verify the build produced content
+          FILE_COUNT=$(find site -type f | wc -l)
+          echo "Site contains $FILE_COUNT files"
+          if [ "$FILE_COUNT" -lt 10 ]; then
+            echo "ERROR: Site build produced fewer than 10 files. Aborting deploy."
+            exit 1
+          fi
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -61,5 +82,5 @@ jobs:
           publish_branch: main
           publish_dir: ./site
           destination_dir: .
-          full_commit_message: Deploy docs site
+          full_commit_message: 'Deploy docs site — ${{ github.sha }}'
           enable_jekyll: false
