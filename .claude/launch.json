@@ -16,7 +16,7 @@
     {
       "name": "mcp-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "/Users/thomasgorisse/Projects/sceneview-android/mcp"],
+      "runtimeArgs": ["run", "dev", "--prefix", "mcp"],
       "port": 3000
     }
   ]
