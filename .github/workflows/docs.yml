@@ -44,6 +44,15 @@ jobs:
       - name: Build site
         run: mkdocs build --config-file docs/mkdocs.yml --site-dir site
 
+      - name: Copy extra site files
+        run: |
+          cp docs/docs/robots.txt site/robots.txt
+          cp docs/docs/manifest.json site/manifest.json
+          cp docs/docs/structured-data.json site/structured-data.json
+          cp docs/docs/llms.txt site/llms.txt
+          cp docs/docs/llms-full.txt site/llms-full.txt
+          touch site/.nojekyll
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:

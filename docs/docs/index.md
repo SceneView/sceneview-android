@@ -675,7 +675,7 @@ fun ProductDetail(modelPath: String) {
 ---
 
 <!-- Strong bottom CTA — visually distinct, per Evil Martians recommendation -->
-<div class="bottom-cta">
+<div class="bottom-cta" markdown>
 
 ## Start building in 5 minutes
 
