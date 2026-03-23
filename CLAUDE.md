@@ -1,4 +1,4 @@
-# SceneView for Android — Claude Code guide
+# SceneView — Claude Code guide
 
 ## Project purpose
 
@@ -14,8 +14,8 @@ the documentation until it can.
 
 ## About
 
-SceneView provides 3D and AR as Jetpack Compose composables for Android, built on
-Google Filament and ARCore.
+SceneView provides 3D and AR as declarative UI for Android (Jetpack Compose, Filament,
+ARCore) and iOS (SwiftUI, RealityKit, ARKit), with shared logic in Kotlin Multiplatform.
 
 ## Full API reference
 
@@ -24,8 +24,8 @@ composable signatures, node types, resource loading, threading rules, and common
 
 ## When writing any SceneView code
 
-- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.1.1`)
-- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.1.1`)
+- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.2.0`)
+- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.2.0`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case

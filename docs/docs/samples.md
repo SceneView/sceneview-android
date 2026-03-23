@@ -3,7 +3,7 @@
 15 working sample apps ship with the repository. Clone and run them to see SceneView in action.
 
 ```bash
-git clone https://github.com/SceneView/sceneview-android.git
+git clone https://github.com/SceneView/sceneview.git
 ```
 
 Open in Android Studio, select a sample module, and run on a device or emulator.

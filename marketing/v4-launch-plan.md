@@ -92,7 +92,7 @@ implementation("io.github.sceneview:sceneview:4.0.0")
 
 Docs: sceneview.github.io
 Discord: discord.gg/UbNDDBTNqb
-Star us: github.com/SceneView/sceneview-android
+Star us: github.com/SceneView/sceneview
 
 ---
 
@@ -112,7 +112,7 @@ This matters because 3D is no longer a special case. It's just another Compose c
 Same API. Same Kotlin. Now limitless.
 
 Docs → sceneview.github.io
-Source → github.com/SceneView/sceneview-android
+Source → github.com/SceneView/sceneview
 
 #Android #JetpackCompose #Kotlin #3D #AR #XR #OpenSource
 

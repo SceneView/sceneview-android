@@ -1,6 +1,6 @@
 # SceneView vs. the alternatives
 
-*An honest comparison for Android developers evaluating 3D and AR options.*
+*An honest comparison for developers evaluating 3D and AR options on Android and iOS.*
 
 ---
 
@@ -187,13 +187,13 @@ No new ARCore features (geospatial, streetscape, depth). The community fork ("Sc
 Maintained") has unresolved compatibility issues including 16 KB page size compliance required
 by Android 15 (API 35). SceneView was created as Sceneform's successor — the migration path
 is straightforward and documented in
-[MIGRATION.md](https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md).
+[MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGRATION.md).
 
-### "What about Kotlin Multiplatform / iOS?"
+### "What about iOS?"
 
-SceneView is Android-first today. A KMP proof of concept (iOS via Filament's Metal backend)
-is on the v4.0 roadmap. For cross-platform AR today, Unity or Babylon Native are options —
-but they don't integrate with Compose.
+SceneView now supports iOS with SwiftUI, RealityKit, and ARKit (SceneViewSwift package).
+A shared Kotlin Multiplatform core (sceneview-core) provides cross-platform math, collision,
+animation, and geometry. Each platform uses its native rendering engine and UI framework.
 
 ### "Is it production-ready?"
 
@@ -217,7 +217,7 @@ If you have an existing Sceneform app, the migration is documented step by step:
 | `onResume` / `onPause` / `onDestroy` | Automatic (Compose lifecycle) |
 | `node.setParent(null); node.destroy()` | Remove from composition (conditional) |
 
-Full guide: [MIGRATION.md](https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md)
+Full guide: [MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGRATION.md)
 
 ---
 
@@ -231,9 +231,9 @@ Full guide: [MIGRATION.md](https://github.com/SceneView/sceneview-android/blob/m
 | A custom rendering engine | Raw ARCore + OpenGL/Vulkan |
 | Nothing — it's a 2D app | Nothing (but SceneView makes "subtle 3D" trivial) |
 
-For the vast majority of Android apps that want to add 3D or AR, SceneView is the answer.
-It's the only library that treats 3D as a first-class Compose citizen.
+For the vast majority of Android and iOS apps that want to add 3D or AR, SceneView is the answer.
+It's the only library that treats 3D as a first-class citizen in both Jetpack Compose and SwiftUI.
 
 ---
 
-*[github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android) — Apache 2.0 — built on Filament & ARCore*
+*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — built on Filament & ARCore*

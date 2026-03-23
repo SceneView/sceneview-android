@@ -77,7 +77,7 @@ Scene {
 
 That's it. No boilerplate. No lifecycle. Just Compose.
 
-➡ github.com/SceneView/sceneview-android
+➡ github.com/SceneView/sceneview
 #AndroidDev #JetpackCompose #AR
 ```
 

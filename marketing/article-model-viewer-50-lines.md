@@ -1,6 +1,6 @@
 # Building a 3D Model Viewer in 50 Lines of Jetpack Compose
 
-*Tags: Android, JetpackCompose, 3D, Kotlin, Tutorial*
+*Tags: Android, iOS, JetpackCompose, SwiftUI, 3D, Kotlin, Swift, Tutorial*
 
 ---
 
@@ -195,7 +195,7 @@ Scene(
 
 ## Full source
 
-The complete model viewer sample (with model picker chips, environment switcher, and animation controls) is in the [SceneView repository](https://github.com/SceneView/sceneview-android/tree/main/samples/model-viewer).
+The complete model viewer sample (with model picker chips, environment switcher, and animation controls) is in the [SceneView repository](https://github.com/SceneView/sceneview/tree/main/samples/model-viewer).
 
 ---
 

@@ -273,8 +273,8 @@ You built a tap-to-place AR app in ~50 lines of Compose. Here's what you used:
 - **[3D Model Viewer codelab →](#)** — Orbit camera, HDR environment, model switching
 - **[Cloud Anchors →](#)** — Share AR scenes between devices
 - **[TextNode →](#)** — Add 3D labels to your scene
-- **[GitHub samples →](https://github.com/SceneView/sceneview-android/tree/main/samples)** — 14 complete sample apps
+- **[GitHub samples →](https://github.com/SceneView/sceneview/tree/main/samples)** — 14 complete sample apps
 
 ---
 
-*Built with [SceneView](https://github.com/SceneView/sceneview-android) — Apache License 2.0*
+*Built with [SceneView](https://github.com/SceneView/sceneview) — Apache License 2.0*

@@ -71,7 +71,7 @@ less than quality and freshness.
 ## Meta Descriptions (sceneview.github.io pages)
 
 **Homepage**
-> SceneView — open-source 3D & AR for Jetpack Compose. Built on Google Filament and ARCore. Add a 3D model or AR scene to your Android app in under 10 lines of Kotlin. MIT license.
+> SceneView — open-source 3D & AR SDK for Android and iOS. Jetpack Compose on Android, SwiftUI on iOS, shared core via Kotlin Multiplatform. Add a 3D model or AR scene to your app in under 10 lines. Apache 2.0 license.
 
 **Docs / Getting Started**
 > Get started with SceneView in 5 minutes. Add the Gradle dependency, drop a GLB model in assets, write 10 lines of Compose. Full API reference included.
@@ -83,7 +83,7 @@ less than quality and freshness.
 > 14 SceneView sample apps: 3D model viewer, AR tap-to-place, physics demo, text labels, post-processing, cloud anchors, and more. Each with full source code on GitHub.
 
 **GitHub README**
-> SceneView — 3D & AR as Jetpack Compose composables for Android. Google Filament + ARCore. 19+ node types. No lifecycle boilerplate. AI-first design. MIT license.
+> SceneView — cross-platform 3D & AR SDK for Android and iOS. Jetpack Compose + Filament + ARCore on Android. SwiftUI + RealityKit + ARKit on iOS. 26+ node types. No boilerplate. AI-first design. Apache 2.0 license.
 
 ---
 

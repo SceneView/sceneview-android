@@ -1,6 +1,6 @@
-# SceneView — The #1 3D & AR Library for Android
+# SceneView — The #1 3D & AR Library for Android and iOS
 
-*Why thousands of Android developers chose SceneView — and why you should too.*
+*Why thousands of developers chose SceneView — and why you should too.*
 
 ---
 
@@ -247,9 +247,9 @@ No XML. No fragments. No lifecycle callbacks. No OpenGL boilerplate. Just Compos
 
 ## Links
 
-- **GitHub**: [github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android)
+- **GitHub**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
 - **Maven Central**: `io.github.sceneview:sceneview:3.2.0`
-- **API docs**: [sceneview.github.io](https://sceneview.github.io/api/sceneview-android/sceneview/)
+- **API docs**: [sceneview.github.io](https://sceneview.github.io/api/sceneview/sceneview/)
 - **Discord**: [discord.gg/UbNDDBTNqb](https://discord.gg/UbNDDBTNqb)
 - **MCP server**: `npx sceneview-mcp` for AI-assisted development
 - **Samples**: 15 working sample apps in the repository

@@ -12,7 +12,7 @@ Suggested updates for the SceneView GitHub repositories and organization.
 
 **Topics/tags to add:**
 
-`android`, `kotlin`, `jetpack-compose`, `3d`, `ar`, `augmented-reality`, `arcore`, `filament`, `sceneview`, `gltf`, `compose`, `physics`, `pbr-rendering`
+`android`, `ios`, `kotlin`, `swift`, `jetpack-compose`, `swiftui`, `3d`, `ar`, `augmented-reality`, `arcore`, `arkit`, `filament`, `realitykit`, `sceneview`, `gltf`, `usdz`, `compose`, `physics`, `pbr-rendering`, `kotlin-multiplatform`
 
 ---
 
@@ -23,16 +23,16 @@ If you have a `SceneView/.github` repo with a profile README, update it:
 ```markdown
 # SceneView
 
-The #1 3D & AR library for Android.
+The #1 3D & AR library for Android and iOS.
 
-SceneView brings Google Filament and ARCore into Jetpack Compose.
+SceneView brings Google Filament and ARCore into Jetpack Compose on Android, and RealityKit and ARKit into SwiftUI on iOS.
 Nodes are composables. State drives the scene. Lifecycle is automatic.
 
 ## Repositories
 
 | Repository | What it is |
 |---|---|
-| [sceneview-android](https://github.com/SceneView/sceneview-android) | Core SDK — `Scene {}` and `ARScene {}` composables for Android |
+| [sceneview](https://github.com/SceneView/sceneview) | Core SDK — `Scene {}` and `ARScene {}` composables for Android |
 | [sceneview.github.io](https://github.com/SceneView/sceneview.github.io) | Documentation website |
 
 ## Quick start
@@ -42,7 +42,7 @@ Add the dependency and start composing:
     implementation("io.github.sceneview:sceneview:3.2.0")
 
 - [Documentation](https://sceneview.github.io)
-- [Samples](https://github.com/SceneView/sceneview-android/tree/main/samples)
+- [Samples](https://github.com/SceneView/sceneview/tree/main/samples)
 - [Discord](https://discord.gg/UbNDDBTNqb)
 ```
 
@@ -93,7 +93,7 @@ implementation("io.github.sceneview:sceneview:X.Y.Z")
 implementation("io.github.sceneview:arsceneview:X.Y.Z")
 ```
 
-[Full changelog](https://github.com/SceneView/sceneview-android/blob/main/CHANGELOG.md) · [Documentation](https://sceneview.github.io)
+[Full changelog](https://github.com/SceneView/sceneview/blob/main/CHANGELOG.md) · [Documentation](https://sceneview.github.io)
 ```
 
 ---

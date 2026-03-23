@@ -1,4 +1,4 @@
-# Twitter/X Thread — SceneView: #1 3D & AR for Android
+# Twitter/X Thread — SceneView: #1 3D & AR SDK
 
 *Copy-paste each numbered block as a separate tweet. Thread format.*
 
@@ -18,7 +18,7 @@ Scene {
 }
 ```
 
-A thread on why it's the #1 3D & AR library for Android:
+A thread on why it's the #1 3D & AR library for Android and iOS:
 
 ---
 
@@ -137,15 +137,14 @@ But replacing `Image()` with `Scene {}` on a product page? That's 10 extra lines
 
 ---
 
-**11/12 — What's next: v4.0**
+**11/12 — Now cross-platform**
 
-Coming in v4.0:
-- Multiple `Scene {}` composables on one screen
-- `PortalNode` — a scene inside a scene (AR portals)
-- `SceneView-XR` — Android XR spatial computing
-- Kotlin Multiplatform proof of concept (iOS)
+SceneView now supports:
+- Android: Jetpack Compose + Filament + ARCore
+- iOS: SwiftUI + RealityKit + ARKit
+- Shared core: Kotlin Multiplatform (math, collision, animation, geometry)
 
-The platform is expanding.
+One SDK, two platforms, native on both.
 
 ---
 
@@ -160,7 +159,7 @@ implementation("io.github.sceneview:arsceneview:3.2.0")
 
 Open source. Apache 2.0.
 
-github.com/SceneView/sceneview-android
+github.com/SceneView/sceneview
 
 #AndroidDev #JetpackCompose #3D #AR #Kotlin #SceneView
 
