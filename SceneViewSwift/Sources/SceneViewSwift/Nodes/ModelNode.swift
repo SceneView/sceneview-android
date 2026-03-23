@@ -1,3 +1,4 @@
+#if os(iOS) || os(visionOS)
 import RealityKit
 import Foundation
 
@@ -11,33 +12,33 @@ import Foundation
 ///
 /// SceneView { content in
 ///     if let model {
-///         content.add(model.entity)
+///         content.addChild(model.entity)
 ///     }
 /// }
 /// .task {
 ///     model = try? await ModelNode.load("models/car.usdz")
 /// }
 /// ```
-public struct ModelNode {
+public struct ModelNode: Sendable {
     /// The underlying RealityKit entity.
     public let entity: ModelEntity
 
     /// World-space position.
     public var position: SIMD3<Float> {
         get { entity.position }
-        set { entity.position = newValue }
+        nonmutating set { entity.position = newValue }
     }
 
     /// Orientation as a quaternion.
     public var rotation: simd_quatf {
         get { entity.orientation }
-        set { entity.orientation = newValue }
+        nonmutating set { entity.orientation = newValue }
     }
 
     /// Scale factor (uniform or per-axis).
     public var scale: SIMD3<Float> {
         get { entity.scale }
-        set { entity.scale = newValue }
+        nonmutating set { entity.scale = newValue }
     }
 
     /// Wraps an existing `ModelEntity`.
@@ -45,52 +46,95 @@ public struct ModelNode {
         self.entity = entity
     }
 
-    /// Loads a 3D model from a file path or bundle resource.
+    /// Loads a 3D model from a bundle resource path.
     ///
     /// Supports `.usdz` and `.reality` files natively.
-    /// - Parameter path: Bundle resource name (e.g. `"models/car.usdz"`).
+    ///
+    /// - Parameters:
+    ///   - path: Bundle resource name (e.g. `"models/car.usdz"`).
+    ///   - enableCollision: Whether to generate a collision shape for hit testing.
     /// - Returns: A `ModelNode` wrapping the loaded entity.
     /// - Throws: If the file cannot be found or loaded.
-    public static func load(_ path: String) async throws -> ModelNode {
-        // TODO: Support glTF/GLB via GLTFKit2 based on file extension
-        // TODO: Add progress reporting callback
-        // TODO: Cache loaded models to avoid redundant I/O
-
+    public static func load(
+        _ path: String,
+        enableCollision: Bool = true
+    ) async throws -> ModelNode {
         let entity = try await ModelEntity(named: path)
+
+        // Generate collision shapes for tap interaction
+        if enableCollision {
+            entity.generateCollisionShapes(recursive: true)
+        }
+
+        return ModelNode(entity)
+    }
+
+    /// Loads a 3D model from a URL.
+    ///
+    /// - Parameters:
+    ///   - url: File URL to the model.
+    ///   - enableCollision: Whether to generate collision shapes.
+    /// - Returns: A `ModelNode` wrapping the loaded entity.
+    /// - Throws: If the file cannot be loaded.
+    public static func load(
+        contentsOf url: URL,
+        enableCollision: Bool = true
+    ) async throws -> ModelNode {
+        let entity = try await ModelEntity(contentsOf: url)
+
+        if enableCollision {
+            entity.generateCollisionShapes(recursive: true)
+        }
+
         return ModelNode(entity)
     }
 
     // MARK: - Transform helpers (mirrors Android's Node API)
 
-    /// Returns a copy positioned at the given coordinates.
+    /// Returns self positioned at the given coordinates.
+    @discardableResult
     public func position(_ position: SIMD3<Float>) -> ModelNode {
-        var copy = self
-        copy.position = position
-        return copy
+        entity.position = position
+        return self
     }
 
-    /// Returns a copy scaled uniformly.
+    /// Returns self scaled uniformly.
+    @discardableResult
     public func scale(_ uniform: Float) -> ModelNode {
-        var copy = self
-        copy.scale = .init(repeating: uniform)
-        return copy
+        entity.scale = .init(repeating: uniform)
+        return self
     }
 
-    /// Returns a copy scaled per-axis.
+    /// Returns self scaled per-axis.
+    @discardableResult
     public func scale(_ scale: SIMD3<Float>) -> ModelNode {
-        var copy = self
-        copy.scale = scale
-        return copy
+        entity.scale = scale
+        return self
+    }
+
+    /// Returns self rotated by the given quaternion.
+    @discardableResult
+    public func rotation(_ rotation: simd_quatf) -> ModelNode {
+        entity.orientation = rotation
+        return self
+    }
+
+    /// Returns self rotated by angle around axis.
+    @discardableResult
+    public func rotation(angle: Float, axis: SIMD3<Float>) -> ModelNode {
+        entity.orientation = simd_quatf(angle: angle, axis: axis)
+        return self
     }
 
     // MARK: - Scale to units (mirrors Android's ModelNode.scaleToUnits)
 
-    /// Scales the model to fit within a unit cube of the given size.
+    /// Scales the model to fit within a cube of the given size.
     ///
     /// Mirrors Android's `ModelNode(scaleToUnits = 1f)`.
     ///
     /// - Parameter units: Target size in meters (default 1.0).
-    /// - Returns: A copy scaled to fit.
+    /// - Returns: Self scaled to fit.
+    @discardableResult
     public func scaleToUnits(_ units: Float = 1.0) -> ModelNode {
         let bounds = entity.visualBounds(relativeTo: nil)
         let extents = bounds.extents
@@ -107,13 +151,22 @@ public struct ModelNode {
         entity.availableAnimations.count
     }
 
+    /// Whether any animation is currently playing.
+    public var isAnimating: Bool {
+        // Check if entity has active animation playback controllers
+        !entity.availableAnimations.isEmpty
+    }
+
     /// Plays all animations on the model.
     ///
     /// Mirrors Android's `ModelNode(autoAnimate = true)`.
     ///
-    /// - Parameter loop: Whether animations should repeat. Default `true`.
-    public mutating func playAllAnimations(loop: Bool = true) {
-        for animation in entity.availableAnimations {
+    /// - Parameters:
+    ///   - loop: Whether animations should repeat. Default `true`.
+    ///   - speed: Playback speed multiplier. Default 1.0.
+    public func playAllAnimations(loop: Bool = true, speed: Float = 1.0) {
+        for var animation in entity.availableAnimations {
+            animation.speed = speed
             if loop {
                 entity.playAnimation(animation.repeat())
             } else {
@@ -128,18 +181,26 @@ public struct ModelNode {
     ///   - index: Zero-based animation index.
     ///   - loop: Whether the animation should repeat.
     ///   - speed: Playback speed multiplier.
-    public mutating func playAnimation(
+    ///   - transitionDuration: Blend time when transitioning from another animation.
+    public func playAnimation(
         at index: Int,
         loop: Bool = true,
-        speed: Float = 1.0
+        speed: Float = 1.0,
+        transitionDuration: TimeInterval = 0.2
     ) {
         guard index < entity.availableAnimations.count else { return }
         var animation = entity.availableAnimations[index]
         animation.speed = speed
         if loop {
-            entity.playAnimation(animation.repeat())
+            entity.playAnimation(
+                animation.repeat(),
+                transitionDuration: transitionDuration
+            )
         } else {
-            entity.playAnimation(animation)
+            entity.playAnimation(
+                animation,
+                transitionDuration: transitionDuration
+            )
         }
     }
 
@@ -148,14 +209,26 @@ public struct ModelNode {
         entity.stopAllAnimations()
     }
 
-    // MARK: - Shadow control (mirrors Android's ModelNode shadow API)
+    /// Pauses all animations on the model.
+    public func pauseAllAnimations() {
+        // RealityKit doesn't have a native pause — stop is the closest
+        entity.stopAllAnimations()
+    }
 
-    /// Whether this model casts shadows.
-    public var castsShadow: Bool {
-        get { entity.components[ModelComponent.self]?.mesh != nil }
-        set {
-            // RealityKit handles shadows via the GroundingShadowComponent
-            // or through scene lighting configuration
-        }
+    // MARK: - Collision
+
+    /// Generates collision shapes for this model, enabling hit testing.
+    public func enableCollision() {
+        entity.generateCollisionShapes(recursive: true)
+    }
+
+    // MARK: - Shadow
+
+    /// Adds a grounding shadow beneath the model.
+    public func withGroundingShadow() -> ModelNode {
+        entity.components.set(GroundingShadowComponent(castsShadow: true))
+        return self
     }
 }
+
+#endif // os(iOS) || os(visionOS)

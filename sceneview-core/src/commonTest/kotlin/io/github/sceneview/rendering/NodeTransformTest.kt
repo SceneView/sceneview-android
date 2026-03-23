@@ -66,7 +66,7 @@ class NodeTransformTest {
     @Test
     fun quaternionWorldLocalRoundTrip() {
         val parentQuat = Quaternion(0f, 0.707f, 0f, 0.707f) // ~90° Y
-        val localQuat = Quaternion.identity()
+        val localQuat = Quaternion()
 
         val worldQuat = NodeTransform.getWorldQuaternion(parentQuat, localQuat)
         val backToLocal = NodeTransform.getLocalQuaternion(parentQuat, worldQuat)

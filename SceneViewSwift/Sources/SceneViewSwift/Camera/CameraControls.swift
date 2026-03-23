@@ -1,10 +1,11 @@
+#if os(iOS) || os(visionOS)
 import SwiftUI
 import RealityKit
 
 /// Camera interaction mode for the 3D scene.
 ///
 /// Mirrors SceneView Android's camera manipulator modes.
-public enum CameraControlMode {
+public enum CameraControlMode: Sendable {
     /// Orbit around a target point. Drag to rotate, pinch to zoom.
     case orbit
 
@@ -18,7 +19,7 @@ public enum CameraControlMode {
 /// Manages camera orbit, pan, and zoom via SwiftUI gestures.
 ///
 /// Mirrors SceneView Android's `CameraManipulator` — handles touch-to-orbit
-/// conversion and smooth damping.
+/// conversion with inertia and smooth damping.
 ///
 /// ```swift
 /// SceneView { content in
@@ -26,7 +27,7 @@ public enum CameraControlMode {
 /// }
 /// .cameraControls(.orbit)
 /// ```
-public struct CameraControls {
+public struct CameraControls: Sendable {
     /// Current control mode.
     public var mode: CameraControlMode
 
@@ -42,20 +43,6 @@ public struct CameraControls {
     /// Vertical orbit angle in radians, clamped to avoid gimbal lock.
     public var elevation: Float = Float.pi / 6  // 30 degrees
 
-    /// Damping factor for smooth camera movement (0 = instant, 1 = no movement).
-    public var damping: Float = 0.9
-
-    // TODO: Min/max zoom distance
-    // TODO: Orbit speed sensitivity
-    // TODO: Auto-rotate option (matches Android's autoOrbit)
-    // TODO: Inertia after gesture ends
-
-    public init(mode: CameraControlMode = .orbit) {
-        self.mode = mode
-    }
-
-    // MARK: - Gesture Handling
-
     /// Minimum orbit radius (zoom-in limit).
     public var minRadius: Float = 0.5
 
@@ -64,6 +51,24 @@ public struct CameraControls {
 
     /// Orbit drag sensitivity (radians per screen point).
     public var sensitivity: Float = 0.005
+
+    /// Whether auto-rotation is active.
+    public var isAutoRotating: Bool = false
+
+    /// Auto-rotation speed in radians per second.
+    public var autoRotateSpeed: Float = 0.3
+
+    /// Inertia velocity for smooth deceleration after drag ends.
+    public var inertiaVelocity: CGSize = .zero
+
+    /// Inertia damping factor (0 = instant stop, 0.99 = very slow deceleration).
+    public var inertiaDamping: Float = 0.92
+
+    public init(mode: CameraControlMode = .orbit) {
+        self.mode = mode
+    }
+
+    // MARK: - Computed Camera Position
 
     /// Computes the camera position from current orbit parameters.
     ///
@@ -87,12 +92,10 @@ public struct CameraControls {
         let eye = cameraPosition()
         let up = SIMD3<Float>(0, 1, 0)
 
-        // Forward = normalize(target - eye)
         let forward = simd_normalize(target - eye)
         let right = simd_normalize(simd_cross(forward, up))
         let correctedUp = simd_cross(right, forward)
 
-        // Build column-major transform
         return simd_float4x4(columns: (
             SIMD4<Float>(right.x, correctedUp.x, -forward.x, 0),
             SIMD4<Float>(right.y, correctedUp.y, -forward.y, 0),
@@ -101,15 +104,25 @@ public struct CameraControls {
         ))
     }
 
-    /// Updates orbit angles from a drag gesture translation.
+    /// Returns the inverse rotation to apply to the scene root entity
+    /// (rotating content is equivalent to orbiting the camera).
+    public func sceneRotation() -> simd_quatf {
+        let yaw = simd_quatf(angle: -azimuth, axis: [0, 1, 0])
+        let pitch = simd_quatf(angle: -elevation, axis: [1, 0, 0])
+        return yaw * pitch
+    }
+
+    // MARK: - Gesture Handling
+
+    /// Updates orbit angles from a drag gesture delta.
     ///
-    /// - Parameter translation: The drag delta in screen points.
-    public mutating func handleDrag(_ translation: CGSize) {
-        azimuth -= Float(translation.width) * sensitivity
-        elevation += Float(translation.height) * sensitivity
-        // Clamp elevation to avoid gimbal lock (±85°)
-        let maxElev = Float.pi / 2 - 0.087 // ~85°
-        elevation = min(max(elevation, -maxElev), maxElev)
+    /// - Parameter delta: The drag delta in screen points (incremental, not total).
+    public mutating func handleDrag(_ delta: CGSize) {
+        azimuth -= Float(delta.width) * sensitivity
+        elevation += Float(delta.height) * sensitivity
+        clampElevation()
+        // Store velocity for inertia
+        inertiaVelocity = delta
     }
 
     /// Updates orbit radius from a magnification gesture.
@@ -119,4 +132,42 @@ public struct CameraControls {
         orbitRadius /= Float(scale)
         orbitRadius = min(max(orbitRadius, minRadius), maxRadius)
     }
+
+    /// Applies inertia deceleration. Call this on each frame after drag ends.
+    ///
+    /// - Returns: `true` while inertia is still active.
+    @discardableResult
+    public mutating func applyInertia() -> Bool {
+        let threshold: CGFloat = 0.01
+        guard abs(inertiaVelocity.width) > threshold
+                || abs(inertiaVelocity.height) > threshold else {
+            inertiaVelocity = .zero
+            return false
+        }
+
+        azimuth -= Float(inertiaVelocity.width) * sensitivity
+        elevation += Float(inertiaVelocity.height) * sensitivity
+        clampElevation()
+
+        inertiaVelocity.width *= CGFloat(inertiaDamping)
+        inertiaVelocity.height *= CGFloat(inertiaDamping)
+        return true
+    }
+
+    /// Advances auto-rotation by the given time delta.
+    ///
+    /// - Parameter dt: Time elapsed since last frame in seconds.
+    public mutating func applyAutoRotation(dt: Float) {
+        guard isAutoRotating else { return }
+        azimuth += autoRotateSpeed * dt
+    }
+
+    // MARK: - Private
+
+    private mutating func clampElevation() {
+        let maxElev = Float.pi / 2 - 0.087  // ~85 degrees
+        elevation = min(max(elevation, -maxElev), maxElev)
+    }
 }
+
+#endif // os(iOS) || os(visionOS)
