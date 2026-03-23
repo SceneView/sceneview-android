@@ -10,7 +10,7 @@ from your Kotlin code all the way down to the GPU.
 SceneView is a stack of five layers.  Each layer only talks to the one directly below it,
 keeping responsibilities clean and dependencies one-directional.
 
-```
+```text
  ┌──────────────────────────────────────────────────┐
  │          Your Android App (Kotlin/Compose)        │
  ├──────────────────────────────────────────────────┤
@@ -124,7 +124,7 @@ maintains an idempotent `managedNodes` set to prevent double-add/remove.
 
 ### How the threading works in practice
 
-```
+```text
   ┌────────────────────┐      ┌──────────────────────┐
   │   Dispatchers.IO   │      │   Main Thread         │
   │                    │      │                      │
@@ -190,7 +190,7 @@ LaunchedEffect(engine, renderer, view, scene) {
 SceneView ties every Filament resource to Compose's lifecycle through `remember` +
 `DisposableEffect`, following a consistent pattern:
 
-```
+```text
 remember { create resource }  →  DisposableEffect { onDispose { destroy resource } }
 ```
 
@@ -228,7 +228,7 @@ registered models when the loader itself is disposed.
 
 Every frame follows this sequence:
 
-```
+```text
  1.  Compose recomposition
      └─ SideEffect pushes updated node properties to Filament entities
 
@@ -261,7 +261,7 @@ For AR scenes (`ARScene`), step 2 additionally:
 
 SceneView is split into two Gradle modules with a strict dependency direction:
 
-```
+```text
  ┌─────────────────────┐         ┌─────────────────────────┐
  │     sceneview/       │◀────────│     arsceneview/         │
  │                     │ depends │                         │

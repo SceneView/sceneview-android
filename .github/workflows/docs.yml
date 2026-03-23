@@ -11,6 +11,10 @@ on:
       - 'CONTRIBUTING.md'
       - 'ROADMAP.md'
       - 'llms.txt'
+      - 'sceneview/Module.md'
+      - 'arsceneview/Module.md'
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:

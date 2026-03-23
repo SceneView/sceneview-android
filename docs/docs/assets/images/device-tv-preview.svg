@@ -1,0 +1,345 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 340" fill="none">
+  <defs>
+    <!-- Screen background — warm interior ambient -->
+    <linearGradient id="screen-bg" x1="260" y1="22" x2="260" y2="284" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF8F0"/>
+      <stop offset="100%" stop-color="#F5EDE4"/>
+    </linearGradient>
+    <!-- Wall -->
+    <linearGradient id="wall-grad" x1="260" y1="22" x2="260" y2="175" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF5EB"/>
+      <stop offset="70%" stop-color="#F5ECDF"/>
+      <stop offset="100%" stop-color="#EDE3D4"/>
+    </linearGradient>
+    <!-- Floor wood -->
+    <linearGradient id="floor-grad" x1="260" y1="175" x2="260" y2="284" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D4A574"/>
+      <stop offset="40%" stop-color="#CFA070"/>
+      <stop offset="100%" stop-color="#C4956A"/>
+    </linearGradient>
+    <!-- Floor sheen -->
+    <linearGradient id="floor-sheen" x1="260" y1="175" x2="260" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Window sky -->
+    <linearGradient id="window-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E0F2FE"/>
+      <stop offset="100%" stop-color="#BFDBFE"/>
+    </linearGradient>
+    <!-- Sofa body -->
+    <radialGradient id="sofa-body" cx="0.5" cy="0.3" r="0.7">
+      <stop offset="0%" stop-color="#7B8794"/>
+      <stop offset="100%" stop-color="#555F6B"/>
+    </radialGradient>
+    <!-- Sofa cushion -->
+    <radialGradient id="sofa-cushion" cx="0.5" cy="0.3" r="0.6">
+      <stop offset="0%" stop-color="#8892A0"/>
+      <stop offset="100%" stop-color="#6B7280"/>
+    </radialGradient>
+    <!-- Lamp glow on wall -->
+    <radialGradient id="lamp-wall-glow" cx="70" cy="100" r="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF9C4" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#FFF9C4" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#FFF9C4" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Lamp shade glow -->
+    <radialGradient id="lamp-shade-glow" cx="0.5" cy="0.6" r="0.5">
+      <stop offset="0%" stop-color="#FFFDE7"/>
+      <stop offset="100%" stop-color="#FEF3C7"/>
+    </radialGradient>
+    <!-- Glass table top -->
+    <linearGradient id="glass-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F0F9FF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#E0F2FE" stop-opacity="0.3"/>
+    </linearGradient>
+    <!-- Rug -->
+    <radialGradient id="rug-fill" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#D4C5E8"/>
+      <stop offset="70%" stop-color="#C4B5D8"/>
+      <stop offset="100%" stop-color="#B0A0C8"/>
+    </radialGradient>
+    <!-- TV bezel edge highlight -->
+    <linearGradient id="bezel-highlight" x1="260" y1="10" x2="260" y2="290" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3A3A3C"/>
+      <stop offset="100%" stop-color="#1C1C1E"/>
+    </linearGradient>
+    <!-- Screen vignette -->
+    <radialGradient id="screen-vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="70%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.06"/>
+    </radialGradient>
+    <!-- Bookshelf wood -->
+    <linearGradient id="shelf-wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#A0886A"/>
+      <stop offset="100%" stop-color="#8B7355"/>
+    </linearGradient>
+    <!-- Shadows -->
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+    <filter id="furniture-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <!-- Screen reflection -->
+    <linearGradient id="screen-reflect" x1="16" y1="16" x2="504" y2="284" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.04"/>
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ===================== TV FRAME ===================== -->
+  <!-- TV outer bezel -->
+  <rect x="10" y="10" width="500" height="280" rx="12" fill="url(#bezel-highlight)" filter="url(#soft-shadow)"/>
+  <!-- Inner bezel rim -->
+  <rect x="12" y="12" width="496" height="276" rx="11" fill="#1C1C1E"/>
+  <!-- Bezel top edge shine -->
+  <rect x="14" y="12" width="492" height="1" rx="0.5" fill="#4A4A4C" opacity="0.4"/>
+
+  <!-- ===================== SCREEN AREA ===================== -->
+  <clipPath id="screen-clip">
+    <rect x="16" y="16" width="488" height="268" rx="6"/>
+  </clipPath>
+  <g clip-path="url(#screen-clip)">
+    <!-- Screen base -->
+    <rect x="16" y="16" width="488" height="268" rx="6" fill="url(#screen-bg)"/>
+
+    <!-- === WALL === -->
+    <rect x="16" y="16" width="488" height="162" fill="url(#wall-grad)"/>
+    <!-- Lamp warm glow on wall -->
+    <circle cx="70" cy="100" r="80" fill="url(#lamp-wall-glow)"/>
+
+    <!-- === BASEBOARD === -->
+    <rect x="16" y="172" width="488" height="6" fill="#E0D0BC"/>
+    <rect x="16" y="172" width="488" height="1" fill="#C8B8A4" opacity="0.5"/>
+
+    <!-- === FLOOR === -->
+    <rect x="16" y="178" width="488" height="106" fill="url(#floor-grad)"/>
+    <!-- Floor sheen -->
+    <rect x="16" y="178" width="488" height="50" fill="url(#floor-sheen)"/>
+    <!-- Floor plank lines — horizontal -->
+    <g stroke="#C4956A" stroke-width="0.3" opacity="0.4">
+      <line x1="16" y1="200" x2="504" y2="200"/>
+      <line x1="16" y1="222" x2="504" y2="222"/>
+      <line x1="16" y1="244" x2="504" y2="244"/>
+      <line x1="16" y1="266" x2="504" y2="266"/>
+    </g>
+    <!-- Floor plank joints — vertical, staggered -->
+    <g stroke="#C4956A" stroke-width="0.25" opacity="0.3">
+      <line x1="100" y1="178" x2="100" y2="200"/>
+      <line x1="220" y1="178" x2="220" y2="200"/>
+      <line x1="340" y1="178" x2="340" y2="200"/>
+      <line x1="460" y1="178" x2="460" y2="200"/>
+      <line x1="160" y1="200" x2="160" y2="222"/>
+      <line x1="280" y1="200" x2="280" y2="222"/>
+      <line x1="400" y1="200" x2="400" y2="222"/>
+      <line x1="70" y1="222" x2="70" y2="244"/>
+      <line x1="190" y1="222" x2="190" y2="244"/>
+      <line x1="310" y1="222" x2="310" y2="244"/>
+      <line x1="430" y1="222" x2="430" y2="244"/>
+      <line x1="130" y1="244" x2="130" y2="266"/>
+      <line x1="250" y1="244" x2="250" y2="266"/>
+      <line x1="370" y1="244" x2="370" y2="266"/>
+    </g>
+
+    <!-- === WINDOW (left side of wall) === -->
+    <g transform="translate(60, 40)">
+      <!-- Window recess shadow -->
+      <rect x="-3" y="-3" width="96" height="116" rx="2" fill="#D8CDB8" opacity="0.4"/>
+      <!-- Window pane — sky gradient -->
+      <rect x="0" y="0" width="90" height="110" rx="2" fill="url(#window-sky)"/>
+      <!-- Window frame -->
+      <rect x="0" y="0" width="90" height="110" rx="2" fill="none" stroke="#B8A898" stroke-width="1.5"/>
+      <!-- Window mullions -->
+      <line x1="45" y1="0" x2="45" y2="110" stroke="#B8A898" stroke-width="1.2"/>
+      <line x1="0" y1="55" x2="90" y2="55" stroke="#B8A898" stroke-width="1.2"/>
+      <!-- Light rays from window onto floor -->
+    </g>
+    <!-- Window light spill on floor -->
+    <polygon points="60,178 150,178 180,284 30,284" fill="#FFF8E7" opacity="0.08"/>
+
+    <!-- === PLANT near window === -->
+    <g transform="translate(165, 130)">
+      <!-- Pot -->
+      <path d="M-6 12 L-8 0 L8 0 L6 12 Z" fill="#8B6914"/>
+      <rect x="-8" y="-2" width="16" height="3" rx="1" fill="#9A7720"/>
+      <!-- Leaves -->
+      <ellipse cx="0" cy="-8" rx="8" ry="10" fill="#6B8E23" opacity="0.85"/>
+      <ellipse cx="-5" cy="-5" rx="5" ry="8" fill="#7DA032" opacity="0.7" transform="rotate(-20 -5 -5)"/>
+      <ellipse cx="5" cy="-6" rx="5" ry="7" fill="#5E8020" opacity="0.7" transform="rotate(15 5 -6)"/>
+    </g>
+
+    <!-- === FLOOR LAMP (left side) === -->
+    <g transform="translate(50, 55)">
+      <!-- Pole -->
+      <rect x="-1" y="40" width="2" height="120" fill="#8B8B8B"/>
+      <!-- Base -->
+      <ellipse cx="0" cy="160" rx="12" ry="4" fill="#6B6B6B"/>
+      <ellipse cx="0" cy="159" rx="10" ry="3" fill="#8B8B8B"/>
+      <!-- Shade -->
+      <path d="M-16 28 Q-18 36 -12 44 L12 44 Q18 36 16 28 Z" fill="url(#lamp-shade-glow)" stroke="#E8D8B8" stroke-width="0.5"/>
+      <!-- Warm glow beneath shade -->
+      <ellipse cx="0" cy="44" rx="10" ry="4" fill="#FFF9C4" opacity="0.5"/>
+      <!-- Bulb hint -->
+      <circle cx="0" cy="38" r="3" fill="#FFFDE7" opacity="0.7"/>
+    </g>
+
+    <!-- === RUG under coffee table === -->
+    <ellipse cx="260" cy="246" rx="95" ry="28" fill="url(#rug-fill)" opacity="0.6"/>
+    <!-- Rug inner pattern rings -->
+    <ellipse cx="260" cy="246" rx="75" ry="21" fill="none" stroke="#B0A0C8" stroke-width="0.8" opacity="0.35"/>
+    <ellipse cx="260" cy="246" rx="52" ry="14" fill="none" stroke="#B0A0C8" stroke-width="0.5" opacity="0.25"/>
+
+    <!-- === SOFA (center) === -->
+    <g transform="translate(180, 185)" filter="url(#furniture-shadow)">
+      <!-- Sofa shadow on floor -->
+      <ellipse cx="80" cy="62" rx="85" ry="8" fill="#000" opacity="0.08"/>
+      <!-- Sofa back -->
+      <rect x="5" y="0" width="150" height="30" rx="8" fill="url(#sofa-body)"/>
+      <!-- Sofa back top highlight -->
+      <rect x="8" y="2" width="144" height="6" rx="3" fill="#8892A0" opacity="0.4"/>
+      <!-- Left armrest -->
+      <rect x="-8" y="4" width="18" height="48" rx="7" fill="#5E6875"/>
+      <rect x="-6" y="6" width="14" height="10" rx="4" fill="#6B7684" opacity="0.5"/>
+      <!-- Right armrest -->
+      <rect x="150" y="4" width="18" height="48" rx="7" fill="#5E6875"/>
+      <rect x="152" y="6" width="14" height="10" rx="4" fill="#6B7684" opacity="0.5"/>
+      <!-- Seat -->
+      <rect x="4" y="26" width="152" height="26" rx="6" fill="url(#sofa-cushion)"/>
+      <!-- Cushion dividers -->
+      <line x1="55" y1="28" x2="55" y2="50" stroke="#5E6875" stroke-width="0.8" opacity="0.5"/>
+      <line x1="105" y1="28" x2="105" y2="50" stroke="#5E6875" stroke-width="0.8" opacity="0.5"/>
+      <!-- Cushion highlights -->
+      <rect x="10" y="29" width="40" height="8" rx="4" fill="#9AA3B0" opacity="0.25"/>
+      <rect x="60" y="29" width="40" height="8" rx="4" fill="#9AA3B0" opacity="0.25"/>
+      <rect x="110" y="29" width="36" height="8" rx="4" fill="#9AA3B0" opacity="0.25"/>
+      <!-- Throw pillow left -->
+      <ellipse cx="25" cy="14" rx="14" ry="10" fill="#E8C97A" opacity="0.6" transform="rotate(-8 25 14)"/>
+      <!-- Throw pillow right -->
+      <ellipse cx="135" cy="14" rx="13" ry="10" fill="#7BA5C4" opacity="0.5" transform="rotate(6 135 14)"/>
+      <!-- Sofa legs -->
+      <rect x="14" y="50" width="4" height="8" rx="1" fill="#3A3A3C"/>
+      <rect x="142" y="50" width="4" height="8" rx="1" fill="#3A3A3C"/>
+    </g>
+
+    <!-- === COFFEE TABLE (in front of sofa) === -->
+    <g transform="translate(225, 242)">
+      <!-- Table shadow -->
+      <ellipse cx="35" cy="16" rx="38" ry="4" fill="#000" opacity="0.06"/>
+      <!-- Table top — glass -->
+      <rect x="0" y="0" width="70" height="5" rx="2" fill="url(#glass-top)" stroke="#C8D8E8" stroke-width="0.5" opacity="0.7"/>
+      <!-- Glass reflection -->
+      <rect x="5" y="1" width="30" height="1.5" rx="0.75" fill="#FFFFFF" opacity="0.2"/>
+      <!-- Legs -->
+      <rect x="6" y="5" width="2" height="11" fill="#4A4A4A"/>
+      <rect x="62" y="5" width="2" height="11" fill="#4A4A4A"/>
+      <!-- Items on table -->
+      <rect x="22" y="-4" width="12" height="4" rx="1" fill="#D4A574" opacity="0.5"/> <!-- book -->
+      <circle cx="50" cy="-2" r="4" fill="#B8D8E8" opacity="0.35"/> <!-- decorative bowl -->
+    </g>
+
+    <!-- === BOOKSHELF (right wall) === -->
+    <g transform="translate(420, 45)">
+      <!-- Shelf frame -->
+      <rect x="0" y="0" width="60" height="120" rx="2" fill="url(#shelf-wood)"/>
+      <!-- Shelf dividers -->
+      <rect x="2" y="28" width="56" height="2" fill="#8B7355"/>
+      <rect x="2" y="58" width="56" height="2" fill="#8B7355"/>
+      <rect x="2" y="88" width="56" height="2" fill="#8B7355"/>
+      <!-- Middle divider -->
+      <rect x="29" y="2" width="2" height="116" fill="#8B7355" opacity="0.5"/>
+      <!-- Books — top shelf -->
+      <rect x="5" y="6" width="5" height="20" rx="0.5" fill="#C06050"/>
+      <rect x="11" y="8" width="4" height="18" rx="0.5" fill="#5080A0"/>
+      <rect x="16" y="5" width="5" height="21" rx="0.5" fill="#80A060"/>
+      <rect x="22" y="7" width="4" height="19" rx="0.5" fill="#D4A060"/>
+      <rect x="33" y="6" width="5" height="20" rx="0.5" fill="#7060A0"/>
+      <rect x="39" y="9" width="4" height="17" rx="0.5" fill="#A08060"/>
+      <rect x="44" y="5" width="5" height="21" rx="0.5" fill="#6090A0"/>
+      <rect x="50" y="8" width="5" height="18" rx="0.5" fill="#C07080"/>
+      <!-- Books — second shelf -->
+      <rect x="5" y="32" width="4" height="24" rx="0.5" fill="#A07050"/>
+      <rect x="10" y="34" width="5" height="22" rx="0.5" fill="#5070B0"/>
+      <rect x="16" y="33" width="4" height="23" rx="0.5" fill="#C0A050"/>
+      <rect x="34" y="32" width="5" height="24" rx="0.5" fill="#60A080"/>
+      <rect x="40" y="35" width="4" height="21" rx="0.5" fill="#B06060"/>
+      <rect x="45" y="33" width="5" height="23" rx="0.5" fill="#7080B0"/>
+      <!-- Small decorative object second shelf -->
+      <circle cx="26" cy="52" r="4" fill="#D4C0A0" opacity="0.6"/>
+      <!-- Books — third shelf -->
+      <rect x="5" y="63" width="5" height="23" rx="0.5" fill="#8070A0"/>
+      <rect x="11" y="65" width="4" height="21" rx="0.5" fill="#A09060"/>
+      <rect x="16" y="62" width="5" height="24" rx="0.5" fill="#5090B0"/>
+      <rect x="34" y="63" width="4" height="23" rx="0.5" fill="#C08060"/>
+      <rect x="39" y="66" width="5" height="20" rx="0.5" fill="#60A060"/>
+      <rect x="45" y="62" width="5" height="24" rx="0.5" fill="#A06080"/>
+      <!-- Small plant on third shelf -->
+      <rect x="23" y="80" width="6" height="5" rx="1" fill="#8B6914" opacity="0.6"/>
+      <ellipse cx="26" cy="77" rx="5" ry="5" fill="#6B8E23" opacity="0.5"/>
+      <!-- Bottom shelf — larger items -->
+      <rect x="6" y="92" width="22" height="24" rx="1" fill="#D4C4B0" opacity="0.4"/> <!-- box -->
+      <rect x="34" y="95" width="6" height="21" rx="0.5" fill="#8080A0"/>
+      <rect x="41" y="93" width="5" height="23" rx="0.5" fill="#A07060"/>
+      <rect x="47" y="96" width="5" height="20" rx="0.5" fill="#6080C0"/>
+    </g>
+
+    <!-- === UI OVERLAY: Room navigation dots === -->
+    <g transform="translate(220, 274)">
+      <!-- Pill background -->
+      <rect x="-10" y="-5" width="100" height="12" rx="6" fill="#000000" opacity="0.3"/>
+      <!-- Dots -->
+      <circle cx="8" cy="1" r="2.5" fill="#6B7280" opacity="0.4"/>
+      <circle cx="24" cy="1" r="2.5" fill="#374151"/> <!-- active -->
+      <circle cx="40" cy="1" r="2.5" fill="#6B7280" opacity="0.4"/>
+      <circle cx="56" cy="1" r="2.5" fill="#6B7280" opacity="0.4"/>
+    </g>
+    <!-- "Living Room" label -->
+    <text x="260" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="8" fill="#6B7280" text-anchor="middle" opacity="0.7">Living Room</text>
+
+    <!-- === CURSOR (remote pointer) === -->
+    <g transform="translate(275, 185)" opacity="0.2">
+      <circle cx="0" cy="0" r="8" fill="none" stroke="#000000" stroke-width="1.2"/>
+      <circle cx="0" cy="0" r="1.5" fill="#000000"/>
+    </g>
+
+    <!-- Screen vignette overlay -->
+    <rect x="16" y="16" width="488" height="268" rx="6" fill="url(#screen-vignette)"/>
+    <!-- Screen reflection -->
+    <rect x="16" y="16" width="488" height="268" rx="6" fill="url(#screen-reflect)"/>
+  </g>
+
+  <!-- Power LED -->
+  <circle cx="260" cy="287" r="1.2" fill="#34C759" opacity="0.6"/>
+
+  <!-- TV bezel edge highlight -->
+  <rect x="10" y="10" width="500" height="280" rx="12" fill="none" stroke="#4A4A4C" stroke-width="0.3" opacity="0.2"/>
+
+  <!-- ===================== TV STAND ===================== -->
+  <!-- Neck/support -->
+  <rect x="240" y="290" width="40" height="16" rx="2" fill="#374151"/>
+  <!-- Top plate -->
+  <rect x="200" y="290" width="120" height="4" rx="2" fill="#374151"/>
+  <!-- Base -->
+  <rect x="210" y="306" width="100" height="6" rx="3" fill="#4B5563"/>
+  <!-- Base highlight -->
+  <rect x="215" y="306" width="90" height="1.5" rx="0.75" fill="#6B7280" opacity="0.3"/>
+
+  <!-- ===================== REMOTE (right of TV) ===================== -->
+  <g transform="translate(500, 300)">
+    <!-- Remote body -->
+    <rect x="0" y="0" width="10" height="30" rx="3" fill="#374151"/>
+    <!-- Circular pad -->
+    <circle cx="5" cy="10" r="3.5" fill="none" stroke="#6B7280" stroke-width="0.6"/>
+    <circle cx="5" cy="10" r="1" fill="#6B7280"/>
+    <!-- Buttons -->
+    <rect x="2.5" y="18" width="5" height="2" rx="1" fill="#6B7280" opacity="0.5"/>
+    <rect x="2.5" y="22" width="5" height="2" rx="1" fill="#6B7280" opacity="0.5"/>
+  </g>
+
+  <!-- ===================== Compose Desktop badge ===================== -->
+  <g transform="translate(24, 24)">
+    <rect width="116" height="22" rx="6" fill="#1C1C1E" opacity="0.75"/>
+    <text x="12" y="15" font-family="system-ui, monospace" font-size="9" fill="#D97706" font-weight="600">Compose Desktop</text>
+  </g>
+</svg>
