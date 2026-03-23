@@ -4,13 +4,13 @@
 
 > ## 3D is just Compose UI.
 
-SceneView 3.0 brings the full power of Google Filament and ARCore into Jetpack Compose.
+SceneView brings 3D and AR into Jetpack Compose (Android) and SwiftUI (iOS).
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.
 Lifecycle is automatic. State drives everything.
 
 [![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![Filament](https://img.shields.io/badge/Filament-v1.56.0-yellow)](https://github.com/google/filament)
+[![Filament](https://img.shields.io/badge/Filament-v1.70.0-yellow)](https://github.com/google/filament)
 [![ARCore](https://img.shields.io/badge/ARCore-v1.53.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
@@ -120,7 +120,7 @@ See [MIGRATION.md](MIGRATION.md) for a step-by-step upgrade guide from 2.x.
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.0.0")
+    implementation("io.github.sceneview:sceneview:3.2.0")
 }
 ```
 
@@ -294,7 +294,7 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 ```gradle
 dependencies {
     // Includes sceneview — no need to add both
-    implementation("io.github.sceneview:arsceneview:3.0.0")
+    implementation("io.github.sceneview:arsceneview:3.2.0")
 }
 ```
 
@@ -446,6 +446,62 @@ ARScene(
 | [AR Cloud Anchors](/samples/ar-cloud-anchor) | Host and resolve persistent cross-device anchors |
 | [AR Point Cloud](/samples/ar-point-cloud) | Visualise ARCore feature points |
 | [Autopilot Demo](/samples/autopilot-demo) | Autonomous AR scene driven entirely by Compose state |
+
+---
+
+## iOS (SwiftUI + RealityKit)
+
+SceneView is also available for iOS via the **SceneViewSwift** package, built on SwiftUI and
+RealityKit. Same concepts — declarative scene building, model loading, gesture controls — using
+native Apple frameworks.
+
+```swift
+// Package.swift
+dependencies: [
+    .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "0.1.0")
+]
+```
+
+```swift
+SceneView { root in
+    let model = try? await ModelNode.load("helmet.usdz")
+    model?.scaleToUnits(1.0)
+    if let model { root.addChild(model.entity) }
+}
+.environment(.studio)
+.cameraControls(.orbit)
+```
+
+See the [`SceneViewSwift/`](SceneViewSwift/) directory for the full library, demo app, and documentation.
+
+### Kotlin Multiplatform (`sceneview-core`)
+
+The core math, collision, geometry, animation, and physics modules are shared across Android and
+iOS via Kotlin Multiplatform in [`sceneview-core/`](sceneview-core/). This includes `Vector3`,
+`Quaternion`, `Ray`, `Box`, `Sphere`, `Earcut`, `Delaunator`, spring animations, and more.
+
+### Platform parity
+
+| Feature | Android | iOS |
+|---|---|---|
+| 3D scene composable | `Scene { }` | `SceneView { }` |
+| AR scene | `ARScene { }` | `ARSceneView(...)` |
+| Model loading | glTF/GLB | USDZ |
+| Procedural geometry | CubeNode, SphereNode, CylinderNode, PlaneNode | GeometryNode (cube, sphere, cylinder, cone, plane) |
+| Text | TextNode | TextNode |
+| Billboards | BillboardNode | BillboardNode |
+| Lines | LineNode | LineNode |
+| Lighting | LightNode | LightNode |
+| Orbit camera | rememberCameraManipulator() | .cameraControls(.orbit) |
+| Environment/HDR | rememberEnvironment() | .environment(.studio) |
+| Gesture editing | isEditable = true | Drag/pinch/tap built-in |
+| Physics | PhysicsNode | -- |
+| Dynamic sky | DynamicSkyNode | -- |
+| Augmented images | AugmentedImageNode | -- |
+| Face tracking | AugmentedFaceNode | -- |
+| Cloud anchors | CloudAnchorNode | -- |
+| Renderer | Google Filament | Apple RealityKit |
+| AR framework | Google ARCore | Apple ARKit |
 
 ---
 

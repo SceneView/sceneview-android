@@ -23,7 +23,7 @@ RESET='\033[0m'
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
 DEMO_MODULE=":samples:sceneview-demo"
 DEMO_PKG="io.github.sceneview.demo"
-GITHUB_REPO="SceneView/sceneview-android"
+GITHUB_REPO="SceneView/sceneview"
 
 banner() {
   echo ""

@@ -72,17 +72,17 @@
   --m3-duration-extra-long: 800ms;
 
   /* Typography scale — Google Sans Display inspired by m3.material.io */
-  --m3-display-large: 700 57px/64px 'Google Sans Display', 'Google Sans', system-ui, sans-serif;
-  --m3-display-medium: 600 45px/52px 'Google Sans Display', 'Google Sans', system-ui, sans-serif;
-  --m3-display-small: 600 36px/44px 'Google Sans Display', 'Google Sans', system-ui, sans-serif;
-  --m3-headline-large: 600 32px/40px 'Google Sans', system-ui, sans-serif;
-  --m3-headline-medium: 600 28px/36px 'Google Sans', system-ui, sans-serif;
-  --m3-headline-small: 600 24px/32px 'Google Sans', system-ui, sans-serif;
-  --m3-title-large: 600 22px/28px 'Google Sans', system-ui, sans-serif;
-  --m3-title-medium: 600 16px/24px 'Google Sans', system-ui, sans-serif;
-  --m3-body-large: 400 16px/24px 'Google Sans Text', 'Google Sans', system-ui, sans-serif;
-  --m3-body-medium: 400 14px/20px 'Google Sans Text', 'Google Sans', system-ui, sans-serif;
-  --m3-label-large: 500 14px/20px 'Google Sans Text', 'Google Sans', system-ui, sans-serif;
+  --m3-display-large: 700 57px/64px 'Inter', system-ui, sans-serif;
+  --m3-display-medium: 600 45px/52px 'Inter', system-ui, sans-serif;
+  --m3-display-small: 600 36px/44px 'Inter', system-ui, sans-serif;
+  --m3-headline-large: 600 32px/40px 'Inter', system-ui, sans-serif;
+  --m3-headline-medium: 600 28px/36px 'Inter', system-ui, sans-serif;
+  --m3-headline-small: 600 24px/32px 'Inter', system-ui, sans-serif;
+  --m3-title-large: 600 22px/28px 'Inter', system-ui, sans-serif;
+  --m3-title-medium: 600 16px/24px 'Inter', system-ui, sans-serif;
+  --m3-body-large: 400 16px/24px 'Inter', system-ui, sans-serif;
+  --m3-body-medium: 400 14px/20px 'Inter', system-ui, sans-serif;
+  --m3-label-large: 500 14px/20px 'Inter', system-ui, sans-serif;
 }
 
 /* ── Dark Mode Tokens ───────────────────────────────────────── */
