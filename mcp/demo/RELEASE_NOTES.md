@@ -2,7 +2,7 @@
 
 ## What is it?
 
-`sceneview-mcp` is an MCP (Model Context Protocol) server that gives AI assistants — Claude Code, Claude Desktop, and any MCP-compatible client — direct access to the SceneView 3D/AR SDK for Android.
+`sceneview-mcp` is an MCP (Model Context Protocol) server that gives AI assistants — Claude Code, Claude Desktop, and any MCP-compatible client — direct access to the SceneView 3D & AR SDK for Android and iOS.
 
 One config line. Then just describe the app you want.
 
@@ -42,5 +42,5 @@ Add to `.claude/mcp.json` (project), `~/.claude/mcp.json` (global), or `claude_d
 ## Links
 
 - npm: https://www.npmjs.com/package/sceneview-mcp
-- SDK: https://github.com/SceneView/sceneview-android
+- SDK: https://github.com/SceneView/sceneview
 - MCP spec: https://modelcontextprotocol.io

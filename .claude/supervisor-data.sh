@@ -1,7 +1,7 @@
 #!/bin/bash
 # Generates supervisor-data.json for the dashboard
-OUT="/Users/thomasgorisse/Projects/sceneview-android/.claude/supervisor-data.json"
-REPO="/Users/thomasgorisse/Projects/sceneview-android"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+OUT="$REPO/.claude/supervisor-data.json"
 NOW=$(date '+%H:%M:%S')
 
 # Count agents & mcps
