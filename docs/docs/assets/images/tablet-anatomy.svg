@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 320" font-family="'SF Pro Display', 'Inter', system-ui, sans-serif">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#0F1B2D"/>
+      <stop offset="100%" stop-color="#1A2744"/>
+    </linearGradient>
+
+    <!-- Heart main body radial gradient - volumetric 3D effect -->
+    <radialGradient id="heartBody" cx="0.35" cy="0.3" r="0.65" fx="0.3" fy="0.25">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="45%" stop-color="#991B1B"/>
+      <stop offset="100%" stop-color="#7F1D1D"/>
+    </radialGradient>
+
+    <!-- Aorta cylindrical gradient -->
+    <linearGradient id="aortaGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#B91C1C"/>
+      <stop offset="35%" stop-color="#EF4444"/>
+      <stop offset="70%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#991B1B"/>
+    </linearGradient>
+
+    <!-- Pulmonary artery cylindrical gradient -->
+    <linearGradient id="pulmonaryGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1E40AF"/>
+      <stop offset="35%" stop-color="#60A5FA"/>
+      <stop offset="70%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1E3A8A"/>
+    </linearGradient>
+
+    <!-- Vein red gradient -->
+    <linearGradient id="veinRed" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#991B1B"/>
+      <stop offset="40%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#B91C1C"/>
+    </linearGradient>
+
+    <!-- Vein blue gradient -->
+    <linearGradient id="veinBlue" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="40%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+
+    <!-- Opacity slider gradient -->
+    <linearGradient id="opacitySlider" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#DC2626" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#DC2626"/>
+    </linearGradient>
+
+    <!-- Label pill background -->
+    <linearGradient id="labelBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F172A" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.75"/>
+    </linearGradient>
+
+    <!-- Shadow filter for heart -->
+    <filter id="heartShadow" x="-50%" y="-20%" width="200%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+    </filter>
+
+    <!-- Subtle glow for active button -->
+    <filter id="btnGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+    </filter>
+
+    <!-- Dot pattern -->
+    <pattern id="dotGrid" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="8" r="0.6" fill="#1E293B" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- === BACKGROUND === -->
+  <rect width="420" height="320" fill="url(#bgGrad)"/>
+
+  <!-- Dot grid background -->
+  <rect x="80" y="30" width="260" height="260" fill="url(#dotGrid)"/>
+
+  <!-- === TOP BAR === -->
+  <rect x="0" y="0" width="420" height="28" fill="#0F172A" opacity="0.5"/>
+  <text x="16" y="18" font-size="11" font-weight="700" fill="#FFFFFF" letter-spacing="0.3">3D Anatomy Lab</text>
+  <text x="404" y="18" text-anchor="end" font-size="9" fill="#94A3B8">Heart — Cardiovascular System</text>
+
+  <!-- === LEFT SIDEBAR === -->
+  <rect x="0" y="28" width="80" height="292" fill="#0F172A" opacity="0.4"/>
+  <line x1="80" y1="28" x2="80" y2="320" stroke="#1E293B" stroke-width="0.5"/>
+
+  <!-- Sidebar tool buttons -->
+  <!-- Rotate (active) -->
+  <g transform="translate(28, 48)">
+    <rect x="0" y="0" width="24" height="24" rx="6" fill="#3B82F6" opacity="0.2"/>
+    <rect x="0" y="0" width="24" height="24" rx="6" fill="none" stroke="#3B82F6" stroke-width="0.8"/>
+    <!-- Rotate icon: circular arrow -->
+    <path d="M8 8 A5 5 0 1 1 8 18" fill="none" stroke="#3B82F6" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M6 7 L8 8 L7 10" fill="none" stroke="#3B82F6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="12" y="34" text-anchor="middle" font-size="5.5" fill="#93C5FD">Rotate</text>
+  </g>
+
+  <!-- Slice -->
+  <g transform="translate(28, 98)">
+    <rect x="0" y="0" width="24" height="24" rx="6" fill="#1E293B" opacity="0.5"/>
+    <!-- Slice icon: knife line -->
+    <line x1="6" y1="18" x2="18" y2="6" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="14" y1="6" x2="18" y2="6" stroke="#64748B" stroke-width="1" stroke-linecap="round"/>
+    <text x="12" y="34" text-anchor="middle" font-size="5.5" fill="#64748B">Slice</text>
+  </g>
+
+  <!-- Labels -->
+  <g transform="translate(28, 148)">
+    <rect x="0" y="0" width="24" height="24" rx="6" fill="#1E293B" opacity="0.5"/>
+    <!-- Labels icon: tag -->
+    <path d="M7 8 L14 8 L18 12 L14 16 L7 16 Z" fill="none" stroke="#64748B" stroke-width="1" stroke-linejoin="round"/>
+    <circle cx="10" cy="12" r="1" fill="#64748B"/>
+    <text x="12" y="34" text-anchor="middle" font-size="5.5" fill="#64748B">Labels</text>
+  </g>
+
+  <!-- Opacity -->
+  <g transform="translate(28, 198)">
+    <rect x="0" y="0" width="24" height="24" rx="6" fill="#1E293B" opacity="0.5"/>
+    <!-- Opacity icon: layered circles -->
+    <circle cx="10" cy="10" r="4" fill="none" stroke="#64748B" stroke-width="0.8" opacity="0.5"/>
+    <circle cx="14" cy="14" r="4" fill="none" stroke="#64748B" stroke-width="0.8"/>
+    <text x="12" y="34" text-anchor="middle" font-size="5.5" fill="#64748B">Opacity</text>
+  </g>
+
+  <!-- === HEART SHADOW === -->
+  <ellipse cx="212" cy="235" rx="50" ry="10" fill="#000" opacity="0.1" filter="url(#heartShadow)"/>
+
+  <!-- === 3D HEART MODEL === -->
+  <g transform="translate(210, 165)">
+
+    <!-- Rotation gizmo (subtle, behind heart) -->
+    <line x1="-12" y1="0" x2="12" y2="0" stroke="#EF4444" stroke-width="0.6" opacity="0.25"/>
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="#22C55E" stroke-width="0.6" opacity="0.25"/>
+    <line x1="-8" y1="8" x2="8" y2="-8" stroke="#3B82F6" stroke-width="0.6" opacity="0.25"/>
+
+    <!-- === Main heart body === -->
+    <!-- Left ventricle lobe -->
+    <path d="M-2,-15 C-10,-50 -65,-52 -62,-18 C-60,8 -40,38 -12,58 C-5,63 0,65 2,62"
+          fill="url(#heartBody)" stroke="#7F1D1D" stroke-width="0.3"/>
+    <!-- Right ventricle lobe -->
+    <path d="M2,-15 C10,-50 65,-52 62,-18 C60,8 40,38 12,58 C5,63 0,65 -2,62"
+          fill="url(#heartBody)" stroke="#7F1D1D" stroke-width="0.3"/>
+
+    <!-- Ventricle center crease -->
+    <path d="M0,-12 C-1,5 -2,25 0,58" fill="none" stroke="#7F1D1D" stroke-width="1" opacity="0.5"/>
+
+    <!-- Left ventricle deeper shadow -->
+    <path d="M-8,10 C-20,5 -38,8 -45,-2 C-38,18 -25,35 -10,48 Z"
+          fill="#7F1D1D" opacity="0.3"/>
+
+    <!-- Right ventricle deeper shadow -->
+    <path d="M8,10 C20,5 38,8 45,-2 C38,18 25,35 10,48 Z"
+          fill="#7F1D1D" opacity="0.25"/>
+
+    <!-- Surface muscle texture lines -->
+    <path d="M-25,-8 C-18,0 -10,4 -5,-2" fill="none" stroke="#7F1D1D" stroke-width="0.5" opacity="0.4"/>
+    <path d="M18,-5 C22,3 30,8 38,2" fill="none" stroke="#7F1D1D" stroke-width="0.5" opacity="0.4"/>
+    <path d="M-15,20 C-8,25 -2,22 5,18" fill="none" stroke="#7F1D1D" stroke-width="0.5" opacity="0.35"/>
+
+    <!-- Specular highlights (wet/glossy tissue) -->
+    <ellipse cx="-22" cy="-20" rx="12" ry="8" fill="#FFFFFF" opacity="0.15" transform="rotate(-20,-22,-20)"/>
+    <ellipse cx="15" cy="-28" rx="8" ry="5" fill="#FFFFFF" opacity="0.12" transform="rotate(15,15,-28)"/>
+    <ellipse cx="-8" cy="15" rx="6" ry="3" fill="#FFFFFF" opacity="0.1" transform="rotate(-10,-8,15)"/>
+
+    <!-- === AORTA (large curved tube from top-center curving right) === -->
+    <path d="M-5,-22 C-8,-38 -2,-55 12,-60 C22,-63 32,-55 30,-45"
+          fill="none" stroke="url(#aortaGrad)" stroke-width="7" stroke-linecap="round"/>
+    <!-- Aorta highlight -->
+    <path d="M-5,-22 C-8,-38 -2,-55 12,-60 C22,-63 32,-55 30,-45"
+          fill="none" stroke="#FCA5A5" stroke-width="2.5" stroke-opacity="0.25" stroke-linecap="round"/>
+
+    <!-- === PULMONARY ARTERY (tube from top-left, blue) === -->
+    <path d="M8,-20 C12,-32 22,-42 35,-44 C42,-45 48,-38 45,-32"
+          fill="none" stroke="url(#pulmonaryGrad)" stroke-width="5" stroke-linecap="round"/>
+    <!-- Pulmonary highlight -->
+    <path d="M8,-20 C12,-32 22,-42 35,-44 C42,-45 48,-38 45,-32"
+          fill="none" stroke="#93C5FD" stroke-width="1.5" stroke-opacity="0.25" stroke-linecap="round"/>
+
+    <!-- === VEINS === -->
+    <!-- Superior vena cava (blue, left side) -->
+    <path d="M-18,-18 C-22,-30 -28,-42 -35,-52"
+          fill="none" stroke="url(#veinBlue)" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Inferior vein (red, right side) -->
+    <path d="M-40,-8 C-48,-12 -52,-5 -48,2"
+          fill="none" stroke="url(#veinRed)" stroke-width="2.5" stroke-linecap="round"/>
+
+    <!-- Small vessel (blue, right) -->
+    <path d="M42,-8 C50,-12 54,-4 50,3"
+          fill="none" stroke="url(#veinBlue)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- === ANNOTATION LINES === -->
+
+  <!-- Aorta annotation -->
+  <line x1="222" y1="108" x2="290" y2="72" stroke="#64748B" stroke-width="0.8"/>
+  <circle cx="222" cy="108" r="3" fill="#64748B"/>
+  <rect x="278" y="62" width="42" height="20" rx="10" fill="url(#labelBg)"/>
+  <text x="299" y="76" text-anchor="middle" font-size="9" font-weight="500" fill="#E2E8F0">Aorta</text>
+
+  <!-- Left Ventricle annotation -->
+  <line x1="185" y1="178" x2="118" y2="210" stroke="#64748B" stroke-width="0.8"/>
+  <circle cx="185" cy="178" r="3" fill="#64748B"/>
+  <rect x="90" y="200" width="72" height="20" rx="10" fill="url(#labelBg)"/>
+  <text x="126" y="214" text-anchor="middle" font-size="9" font-weight="500" fill="#E2E8F0">Left Ventricle</text>
+
+  <!-- Pulmonary Artery annotation -->
+  <line x1="248" y1="125" x2="310" y2="108" stroke="#64748B" stroke-width="0.8"/>
+  <circle cx="248" cy="125" r="3" fill="#64748B"/>
+  <rect x="298" y="98" width="90" height="20" rx="10" fill="url(#labelBg)"/>
+  <text x="343" y="112" text-anchor="middle" font-size="9" font-weight="500" fill="#E2E8F0">Pulmonary Artery</text>
+
+  <!-- === BOTTOM BAR === -->
+  <rect x="0" y="296" width="420" height="24" fill="#0F172A" opacity="0.5"/>
+
+  <!-- Opacity slider -->
+  <text x="16" y="312" font-size="8" fill="#94A3B8">Opacity: 80%</text>
+  <rect x="100" y="306" width="100" height="4" rx="2" fill="#1E293B"/>
+  <rect x="100" y="306" width="100" height="4" rx="2" fill="url(#opacitySlider)"/>
+  <circle cx="180" cy="308" r="5" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5"/>
+
+  <!-- Mesh stats -->
+  <text x="404" y="312" text-anchor="end" font-size="7" fill="#475569">24,831 vertices · 49,204 triangles</text>
+</svg>

@@ -3,6 +3,7 @@ package io.github.sceneview.sample.gltfcamera
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -47,15 +48,16 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.sample.SceneviewTheme
 
-private const val kAperture = 16f
-private const val kShutterSpeed = 1f / 125f
-private const val kSensitivity = 100f
+private const val APERTURE = 16f
+private const val SHUTTER_SPEED = 1f / 125f
+private const val SENSITIVITY = 100f
 
 class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         setContent {
             SceneviewTheme {
@@ -74,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     var modelNode by remember { mutableStateOf<ModelNode?>(null) }
                     val cameraNodes = remember(modelNode) {
                         modelNode?.cameraNodes?.also { nodes ->
-                            nodes.forEach { it.setExposure(kAperture, kShutterSpeed, kSensitivity) }
+                            nodes.forEach { it.setExposure(APERTURE, SHUTTER_SPEED, SENSITIVITY) }
                         } ?: emptyList()
                     }
 
