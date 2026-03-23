@@ -79,7 +79,7 @@ class ARSession(
         ) {
             config.lightEstimationMode = Config.LightEstimationMode.DISABLED
         }
-        hasAugmentedImageDatabase = (config.augmentedImageDatabase.numImages ?: 0) > 0
+        hasAugmentedImageDatabase = (config.augmentedImageDatabase?.numImages ?: 0) > 0
 
         onConfigChanged(this, config)
     }

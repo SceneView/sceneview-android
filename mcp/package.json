@@ -1,28 +1,46 @@
 {
   "name": "sceneview-mcp",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "description": "MCP server for SceneView — 3D and AR with Jetpack Compose for Android. Give Claude the full SceneView SDK so it writes correct, compilable Kotlin.",
   "keywords": [
     "mcp",
+    "mcp-server",
     "model-context-protocol",
     "sceneview",
     "android",
     "ar",
     "arcore",
     "3d",
+    "3d-rendering",
     "filament",
+    "google-filament",
     "jetpack-compose",
+    "compose",
+    "kotlin",
+    "augmented-reality",
+    "mixed-reality",
+    "glb",
+    "gltf",
+    "pbr",
+    "scene-graph",
+    "ai",
+    "ai-tools",
     "claude",
-    "ai"
+    "cursor",
+    "windsurf",
+    "llm",
+    "code-generation",
+    "android-development",
+    "mobile-ar"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "SceneView (https://github.com/SceneView)",
   "repository": {
     "type": "git",
     "url": "https://github.com/SceneView/sceneview.git",
     "directory": "mcp"
   },
-  "homepage": "https://github.com/SceneView/sceneview/tree/main/mcp#readme",
+  "homepage": "https://sceneview.github.io/ai-development/",
   "bugs": {
     "url": "https://github.com/SceneView/sceneview/issues"
   },
@@ -37,6 +55,7 @@
     "dist/node-reference.js",
     "dist/samples.js",
     "dist/validator.js",
+    "dist/guides.js",
     "llms.txt"
   ],
   "engines": {

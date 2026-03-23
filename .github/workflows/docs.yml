@@ -5,9 +5,16 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
-      - 'marketing/codelabs/**'
+      - 'marketing/**'
       - 'CHANGELOG.md'
       - 'MIGRATION.md'
+      - 'CONTRIBUTING.md'
+      - 'ROADMAP.md'
+      - 'llms.txt'
+      - 'sceneview/Module.md'
+      - 'arsceneview/Module.md'
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -25,13 +32,26 @@ jobs:
 
       - name: Sync content into docs
         run: |
+          # Codelabs from marketing
           cp marketing/codelabs/codelab-3d-compose.md docs/docs/codelabs/codelab-3d-compose.md
           cp marketing/codelabs/codelab-ar-compose.md docs/docs/codelabs/codelab-ar-compose.md
+
+          # Root docs
           cp MIGRATION.md docs/docs/migration.md
           cp CHANGELOG.md docs/docs/changelog.md
+          cp CONTRIBUTING.md docs/docs/contributing.md
 
       - name: Build site
         run: mkdocs build --config-file docs/mkdocs.yml --site-dir site
+
+      - name: Copy extra site files
+        run: |
+          cp docs/docs/robots.txt site/robots.txt
+          cp docs/docs/manifest.json site/manifest.json
+          cp docs/docs/structured-data.json site/structured-data.json
+          cp docs/docs/llms.txt site/llms.txt
+          cp docs/docs/llms-full.txt site/llms-full.txt
+          touch site/.nojekyll
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

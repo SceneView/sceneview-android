@@ -135,7 +135,7 @@ fun PhysicsNode(
     floorY: Float = 0f,
     radius: Float = 0f
 ) {
-    val body = remember(node) {
+    val body = remember(node, mass, restitution, floorY, radius) {
         PhysicsBody(
             node = node,
             mass = mass,

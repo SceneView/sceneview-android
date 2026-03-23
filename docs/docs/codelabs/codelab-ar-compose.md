@@ -1,5 +1,7 @@
 # CodeLab: AR with Jetpack Compose — SceneView 3.0
 
+<img src="../assets/images/showcase-ar-placement.svg" alt="What you'll build: AR model placement" width="200" style="border-radius: 28px; float: right; margin-left: 1rem; margin-bottom: 1rem;">
+
 **Time:** ~20 minutes
 **Prerequisites:** Complete the [3D CodeLab](codelab-3d-compose.md) first, or have basic SceneView knowledge
 **What you'll build:** An AR scene that detects horizontal planes and places a 3D model anchored to the physical world
@@ -12,7 +14,7 @@
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.0.0")
+    implementation("io.github.sceneview:arsceneview:3.2.0")
 }
 ```
 

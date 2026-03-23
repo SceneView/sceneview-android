@@ -89,6 +89,10 @@ jobs:
         working-directory: mcp
         run: npm run prepare
 
+      - name: Test
+        working-directory: mcp
+        run: npm test
+
       - name: Publish
         working-directory: mcp
         run: npm publish --access public

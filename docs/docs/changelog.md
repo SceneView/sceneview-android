@@ -1,5 +1,111 @@
 # Changelog
 
+## 3.2.1 — Distribution, CI, documentation & tech debt sweep
+
+### Distribution
+- **APK workflow** — new `build-apks.yml` GitHub Action builds all 14 sample APKs and attaches them to every GitHub Release (debug-signed, sideloadable)
+
+### CI
+- Build step now covers **all 14 sample apps** (was 4); AR emulator job includes `ar-cloud-anchor`
+
+### Documentation
+- **`llms.txt`** — added 8 missing v3.2.0 node types: PhysicsNode, DynamicSkyNode, FogNode, ReflectionProbeNode, LineNode, PathNode, BillboardNode, TextNode; added 6 new samples to table
+- **`ROADMAP.md`** — consolidated: v3.2.0 marked as shipped, v3.3.0/v3.4.0 updated with correct remaining scope
+
+### Code quality
+- **Zero TODO/FIXME comments** in both `sceneview/` and `arsceneview/` SDK modules (was 14)
+- Legacy collision math classes annotated with migration target (3.3.0)
+- Bridge conversion functions documented with KDoc linking to migration plan
+
+### Samples
+- All 14 sample `build.gradle` files migrated to **Gradle version catalog** (`libs.*`) — no more hardcoded versions
+- `enableEdgeToEdge()` added to all 14 sample activities for modern Android layout
+- Fixed outdated media3 (1.6.1 → 1.9.2) and material3 (1.3.2 → 1.4.0) in samples
+- **`reflection-probe`** — probe on/off toggle, material picker (Chrome/Gold/Copper/Rough), roughness slider, companion spheres, dark floor
+- **`line-path`** — amplitude/frequency sliders, Lissajous curve pattern, pattern selector chips
+- **`physics-demo`** — colored balls (6 colors), ball counter, bounciness slider, styled floor
+- **`text-labels`** — 5 planets with real names/sizes, 3-mode label cycling (Name → Size → Both), tap counter
+- **`README.md`** — added v3.2.0 nodes to DSL table, 6 new samples, Physics/Sky/Fog/TextNode code examples
+- **`MIGRATION.md`** — added v3.1→v3.2 migration notes
+
+---
+
+## 3.2.0 — New node types: Physics, Sky, Fog, Reflections, Lines, Labels
+
+### New SDK nodes
+- **`PhysicsNode`** — rigid body simulation; gravity, floor collision, sleep detection; physics-demo sample (tap-to-throw)
+- **`DynamicSkyNode`** — time-of-day sun light (direction, colour, intensity) driven by `timeOfDay: Float`; turbidity controls sunrise/sunset warmth
+- **`FogNode`** — reactive `View.fogOptions` wrapper (density, height falloff, colour); zero-cost when disabled
+- **`ReflectionProbeNode`** — overrides scene IBL with a baked cubemap; global or local zone mode (activates within `radius` metres)
+- **`LineNode`** / **`PathNode`** — Filament `LINES` primitive; live GPU buffer updates via `updateGeometry()`
+- **`BillboardNode`** — camera-facing quad via `onFrame` + `lookAt`
+- **`TextNode`** — extends `BillboardNode`; Canvas-rendered text bitmap; reactive `text`, `fontSize`, `textColor`, `backgroundColor`
+
+### New SceneScope DSL composables
+`PhysicsNode {}`, `DynamicSkyNode {}`, `FogNode {}`, `ReflectionProbeNode {}`, `LineNode {}`, `PathNode {}`, `BillboardNode {}`, `TextNode {}`
+
+### New samples
+| Sample | Demonstrates |
+|---|---|
+| `samples/physics-demo` | Tap-to-throw balls, floor collision, sleep |
+| `samples/post-processing` | Bloom, DoF, SSAO, Fog toggles |
+| `samples/dynamic-sky` | Time-of-day + turbidity + fog controls |
+| `samples/line-path` | 3-axis gizmo, spiral, animated sine-wave PathNode |
+| `samples/text-labels` | Camera-facing labels on 3D spheres; tap to cycle |
+| `samples/reflection-probe` | Metallic sphere with IBL override |
+
+### Sample improvements
+- `model-viewer`: animation playback controls (play/pause, next, name label)
+- `ar-model-viewer`: persistent plane mesh; gesture docs (`isEditable = true` handles pinch-scale + two-finger rotate)
+
+### Ecosystem
+- **MCP `get_node_reference` tool** — `@sceneview/mcp` server parses `llms.txt`; exposes `get_node_reference { nodeType }` and `list_node_types` for AI assistant integration
+
+### Dependencies
+- Filament 1.56.0 → **1.70.0**
+- Kotlin 2.1.21 → **2.3.20**
+
+---
+
+## 3.1.2 — Sample polish, CI fixes, maintenance tooling
+
+### Fixes
+- `autopilot-demo`: remove deprecated `engine` parameter from `PlaneNode`, `CubeNode`, `CylinderNode` constructors (API aligned with composable node design)
+- CI: fix AR emulator stability — wait for launcher, dismiss ANR dialogs, kill Pixel Launcher before screenshots
+
+### Sample improvements
+- `model-viewer`: scale up Damaged Helmet 0.25 → 1.0; add Fox model (CC0, KhronosGroup glTF-Sample-Assets) with model picker chip row
+- `camera-manipulator`: scale up model 0.25 → 1.0; add gesture hint bar (Drag·Orbit / Pinch·Zoom / Pan·Move)
+
+### Developer tooling
+- `/maintain` Claude Code skill + daily maintenance GitHub Action for automated SDK upkeep
+- AR emulator CI job using x86\_64 Linux + ARCore emulator APK for screenshot verification
+- `ROADMAP.md` added covering 3.2–4.0 milestones
+
+## 3.1.1 — Build compatibility patch
+
+- Downgrade AGP from 8.13.2 → 8.11.1 for Android Studio compatibility
+- Update AGP classpath in root `build.gradle` to match
+- Refresh `gltf-camera` sample: animated BrainStem character + futuristic rooftop night environment
+
+## 3.1.0 — VideoNode, reactive animation API
+
+### New features
+- `VideoNode` — render a video stream (MediaPlayer / ExoPlayer) as a textured 3D surface
+- Reactive animation API — drive node animations from Compose state
+- `ViewNode` rename — `ViewNode2` unified into `ViewNode`
+
+### Fixes
+- `ToneMapper.Linear` in `ARScene` prevents overlit camera background
+- `ImageNode` SIGABRT: destroy `MaterialInstance` before texture on dispose
+- `cameraNode` registered with `SceneNodeManager` so HUD-parented nodes render correctly
+- Entities removed from scene before destroy to prevent SIGABRT
+- `UiHelper` API corrected for Filament 1.56.0
+
+### AI tooling
+- MCP server: `validate_code`, `list_samples`, `get_migration_guide` tools + live Issues resource
+- 89 unit tests for MCP validator, samples, migration guide, and issues modules
+
 ## 3.0.0 — Compose-native rewrite
 
 ### Breaking changes

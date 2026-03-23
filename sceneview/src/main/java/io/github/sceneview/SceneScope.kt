@@ -366,6 +366,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         stacks: Int = Sphere.DEFAULT_STACKS,
         slices: Int = Sphere.DEFAULT_SLICES,
         materialInstance: MaterialInstance? = null,
+        position: Position = Position(x = 0f),
         apply: SphereNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -381,6 +382,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         }
         SideEffect {
             node.updateGeometry(radius = radius, center = center, stacks = stacks, slices = slices)
+            node.position = position
         }
         NodeLifecycle(node, content)
     }
