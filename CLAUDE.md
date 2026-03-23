@@ -3,8 +3,8 @@
 > Compose-native 3D and AR SDK for Android, built on Google Filament and ARCore.
 > The official successor to Google Sceneform (deprecated 2021).
 
-**Version:** 3.2.0
-**Maven:** `io.github.sceneview:sceneview:3.2.0` / `io.github.sceneview:arsceneview:3.2.0`
+**Version:** 3.2.2
+**Maven:** `io.github.sceneview:sceneview:3.2.2` / `io.github.sceneview:arsceneview:3.2.2`
 **Min SDK:** 24 | **Target SDK:** 36 | **Java:** 17
 **Kotlin:** 2.1.21 | **Compose UI:** 1.10.5 | **Filament:** 1.56.0 | **ARCore:** 1.53.0
 

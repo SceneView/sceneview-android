@@ -46,8 +46,8 @@ describe("every sample", () => {
 
     it(`${id}: dependency is a valid sceneview artifact`, () => {
       expect([
-        "io.github.sceneview:sceneview:3.2.0",
-        "io.github.sceneview:arsceneview:3.2.0",
+        "io.github.sceneview:sceneview:3.2.2",
+        "io.github.sceneview:arsceneview:3.2.2",
       ]).toContain(sample.dependency);
     });
   }
@@ -58,7 +58,7 @@ describe("AR samples", () => {
 
   it("all AR samples use arsceneview dependency", () => {
     for (const id of arIds) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.2.0");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.2.2");
     }
   });
 
@@ -84,7 +84,7 @@ describe("3D samples", () => {
 
   it("all 3D samples use sceneview dependency", () => {
     for (const id of d3Ids) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.2.0");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.2.2");
     }
   });
 
