@@ -2,13 +2,55 @@ name: Build sample APKs
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
+  build-demo:
+    name: Build demo APK (quick — always available)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Build SceneView Demo APK
+        run: ./gradlew :samples:sceneview-demo:assembleDebug --console=plain
+
+      - name: Collect demo APK
+        run: |
+          mkdir -p dist
+          apk=$(find samples/sceneview-demo/build/outputs/apk/debug -name "*.apk" | head -1)
+          cp "$apk" dist/sceneview-demo.apk
+
+      - name: Upload demo APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sceneview-demo-apk
+          path: dist/sceneview-demo.apk
+          retention-days: 90
+
+      - name: Attach demo APK to GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/sceneview-demo.apk
+
   build-samples:
-    name: Build sample APKs
+    name: Build all sample APKs
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,6 +70,7 @@ jobs:
       - name: Build all sample APKs
         run: |
           ./gradlew \
+            :samples:sceneview-demo:assembleDebug \
             :samples:model-viewer:assembleDebug \
             :samples:camera-manipulator:assembleDebug \
             :samples:gltf-camera:assembleDebug \
@@ -47,9 +90,9 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p dist
-          for sample in model-viewer camera-manipulator gltf-camera autopilot-demo \
-                        physics-demo post-processing dynamic-sky line-path \
-                        text-labels reflection-probe \
+          for sample in sceneview-demo model-viewer camera-manipulator gltf-camera \
+                        autopilot-demo physics-demo post-processing dynamic-sky \
+                        line-path text-labels reflection-probe \
                         ar-model-viewer ar-augmented-image ar-cloud-anchor ar-point-cloud; do
             apk=$(find "samples/$sample/build/outputs/apk/debug" -name "*.apk" | head -1)
             if [ -n "$apk" ]; then

@@ -1,57 +1,184 @@
 # SceneView
 
-<p class="hero-tagline">3D and AR as Compose UI — on Android, XR headsets, and soon iOS</p>
+<p class="hero-tagline">3D & AR for every platform — native Android, native iOS, React Native, Flutter, and beyond.</p>
 
-<!-- Interactive 3D demo — rotate, zoom, pan the model right in your browser -->
-<div style="text-align: center; margin: 1em 0 2em;">
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-<model-viewer
-    src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-    alt="Interactive 3D astronaut — drag to rotate, scroll to zoom"
-    auto-rotate
-    camera-controls
-    touch-action="pan-y"
-    shadow-intensity="1"
-    style="width: 100%; max-width: 500px; height: 400px; margin: 0 auto; border-radius: 12px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"
-    exposure="1.2"
-    shadow-softness="0.5"
-    camera-orbit="45deg 75deg 2.5m"
-    min-camera-orbit="auto auto 1.5m"
-    max-camera-orbit="auto auto 5m">
-    <div slot="poster" style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px;">Loading 3D model...</div>
-</model-viewer>
-<p style="color: #888; font-size: 0.85em; margin-top: 0.5em;">Drag to rotate · Scroll to zoom · This is what SceneView renders natively on Android</p>
+<div class="platform-badges" markdown>
+<span class="platform-badge platform-badge--android">Android Native</span>
+<span class="platform-badge platform-badge--ios">iOS Native <small>v4.1</small></span>
+<span class="platform-badge platform-badge--xr">XR Headsets</span>
+<span class="platform-badge platform-badge--react">React Native</span>
+<span class="platform-badge platform-badge--flutter">Flutter</span>
+<span class="platform-badge platform-badge--desktop">TV · Auto · Desktop</span>
 </div>
 
-## Scenes are composables.
+[:octicons-arrow-right-24: Start building](#get-started){ .md-button .md-button--primary }
+[:octicons-download-24: Try the demo](try.md){ .md-button .md-button--primary }
+[:octicons-mark-github-24: View on GitHub](https://github.com/SceneView/sceneview-android){ .md-button }
+
+<!-- Platform devices hero — shows every supported form factor -->
+<div class="infographic">
+<img src="assets/images/hero-devices.svg" alt="SceneView runs on Android phones, tablets, iOS, XR headsets, automotive, TV, React Native, and Flutter" loading="lazy">
+</div>
+
+---
+
+<!-- Tech ecosystem bar -->
+<div class="tech-logos">
+<span class="tech-logo">Jetpack Compose</span>
+<span class="tech-logo">SwiftUI</span>
+<span class="tech-logo">Google Filament</span>
+<span class="tech-logo">ARCore</span>
+<span class="tech-logo">ARKit</span>
+<span class="tech-logo">Kotlin Multiplatform</span>
+<span class="tech-logo">glTF / GLB</span>
+</div>
+
+<!-- Key numbers -->
+<div class="stat-row">
+<span class="stat-pill"><strong>26+</strong> built-in nodes</span>
+<span class="stat-pill"><strong>60fps</strong> on mid-range devices</span>
+<span class="stat-pill"><strong>6</strong> platforms supported</span>
+<span class="stat-pill"><strong>Apache 2.0</strong> open source</span>
+</div>
+
+---
+
+## See what you can build
+
+SceneView powers production apps in e-commerce, automotive, healthcare, and more. Same composable API — from a 5" phone to a 65" TV to XR headsets.
+
+<!-- Visual showcase wall — 3 large illustrations side by side -->
+<div class="visual-wall">
+
+<div class="visual-card">
+<img src="assets/images/industry-ecommerce.svg" alt="3D product viewer with AR try-on" class="visual-card__img" loading="lazy">
+<div class="visual-card__badge">Made with SceneView</div>
+<h3>E-commerce</h3>
+<p>3D product viewers with 360° rotation and AR try-on. Drop a <code>Scene {}</code> where you'd use an <code>Image()</code>.</p>
+</div>
+
+<div class="visual-card">
+<img src="assets/images/industry-education.svg" alt="Interactive 3D education with globe and solar system" class="visual-card__img" loading="lazy">
+<div class="visual-card__badge">Made with SceneView</div>
+<h3>Education & STEM</h3>
+<p>Interactive 3D globes, solar systems, molecular viewers, anatomy labs — bring learning to life with <code>Scene {}</code>.</p>
+</div>
+
+<div class="visual-card">
+<img src="assets/images/industry-automotive.svg" alt="Automotive HUD with 3D navigation" class="visual-card__img" loading="lazy">
+<div class="visual-card__badge">Made with SceneView</div>
+<h3>Automotive HUD</h3>
+<p>Heads-up displays, 3D navigation arrows, speed overlays on Android Automotive. Multiple <code>Scene {}</code> on one screen.</p>
+</div>
+
+<div class="visual-card">
+<img src="assets/images/device-xr-preview.svg" alt="XR spatial computing showroom" class="visual-card__img" loading="lazy">
+<div class="visual-card__badge">Made with SceneView</div>
+<h3>XR spatial computing</h3>
+<p>Floating 3D models with Compose UI panels in spatial space. <code>XRScene {}</code> + <code>ViewNode</code> for cards, buttons, pickers.</p>
+</div>
+
+</div>
+
+<!-- More industry use cases -->
+<div class="industry-grid">
+
+<div class="industry-card">
+<img src="assets/images/industry-medical.svg" alt="Medical training app with interactive 3D anatomy" class="industry-card__img">
+<div class="industry-card__content">
+<h3>Healthcare & education</h3>
+<p>Interactive 3D anatomy models, molecular structures, and mechanical assemblies. Students control everything with standard Compose UI — sliders, buttons, toggles.</p>
+</div>
+</div>
+
+<div class="industry-card">
+<img src="assets/images/industry-realestate.svg" alt="Real estate AR furniture placement" class="industry-card__img">
+<div class="industry-card__content">
+<h3>Real estate</h3>
+<p>Walk through 3D floor plans, preview renovations in AR, compare lighting conditions. <code>PortalNode</code> lets users peek through doors into furnished rooms.</p>
+</div>
+</div>
+
+<div class="industry-card">
+<img src="assets/images/industry-gaming.svg" alt="3D mobile game with physics and level editor" class="industry-card__img">
+<div class="industry-card__content">
+<h3>Gaming & entertainment</h3>
+<p>Build 3D mobile games without a game engine. <code>PhysicsNode</code> for collisions, dynamic lighting, Compose UI overlays for HUD — all at 60fps on mid-range devices.</p>
+</div>
+</div>
+
+
+</div>
+
+---
+
+## How it works
 
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.
-State drives the scene. Lifecycle is automatic. One API — every platform.
+State drives the scene. Lifecycle is automatic.
 
-=== "3D Model Viewer"
+<!-- Visual flow diagram -->
+<div class="infographic">
+<img src="assets/images/infographic-how-it-works.svg" alt="3 steps: Write Compose, Add 3D Nodes, Ship everywhere" loading="lazy">
+</div>
+
+<!-- Composable tree diagram -->
+<div class="infographic infographic--small">
+<img src="assets/images/infographic-composable-tree.svg" alt="Scene tree: Scene contains ModelNode, LightNode, AnchorNode — same pattern as Column/Row" loading="lazy">
+</div>
+
+=== "Product viewer"
 
     ```kotlin
-    Scene(modifier = Modifier.fillMaxSize()) {
-        rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
-            ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
+    @Composable
+    fun ProductViewer() {
+        val engine = rememberEngine()
+        val modelLoader = rememberModelLoader(engine)
+        val shoe = rememberModelInstance(modelLoader, "models/shoe.glb")
+
+        Scene(
+            modifier = Modifier.fillMaxWidth().height(300.dp),
+            engine = engine,
+            cameraManipulator = rememberCameraManipulator()
+        ) {
+            shoe?.let {
+                ModelNode(modelInstance = it, scaleToUnits = 1.0f, autoAnimate = true)
+            }
+            LightNode(type = LightManager.Type.SUN, apply = { intensity(100_000.0f) })
         }
-        LightNode(type = LightManager.Type.SUN, apply = { intensity(100_000.0f) })
     }
     ```
 
-    Five lines. Production-quality 3D. Same Kotlin you write every day.
+    Ten lines. Your users can rotate, zoom, and inspect a product in 3D — inside your existing Compose layout.
 
-=== "AR Placement"
+=== "AR placement"
 
     ```kotlin
-    ARScene(planeRenderer = true, onSessionUpdated = { _, frame ->
-        anchor = frame.getUpdatedPlanes()
-            .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-            ?.let { frame.createAnchorOrNull(it.centerPose) }
-    }) {
-        anchor?.let { a ->
-            AnchorNode(anchor = a) {
-                ModelNode(modelInstance = sofa, scaleToUnits = 0.5f, isEditable = true)
+    @Composable
+    fun FurniturePlacement() {
+        var anchor by remember { mutableStateOf<Anchor?>(null) }
+        val engine = rememberEngine()
+        val modelLoader = rememberModelLoader(engine)
+        val sofa = rememberModelInstance(modelLoader, "models/sofa.glb")
+
+        ARScene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            planeRenderer = true,
+            onSessionUpdated = { _, frame ->
+                if (anchor == null) {
+                    anchor = frame.getUpdatedPlanes()
+                        .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
+                        ?.let { frame.createAnchorOrNull(it.centerPose) }
+                }
+            }
+        ) {
+            anchor?.let { a ->
+                AnchorNode(anchor = a) {
+                    sofa?.let {
+                        ModelNode(modelInstance = it, scaleToUnits = 0.5f, isEditable = true)
+                    }
+                }
             }
         }
     }
@@ -59,18 +186,21 @@ State drives the scene. Lifecycle is automatic. One API — every platform.
 
     Tap to place. Pinch to scale. Two-finger rotate. All built in.
 
-=== "XR Spatial"
+=== "XR spatial"
 
     ```kotlin
-    XRScene(modifier = Modifier.fillMaxSize()) {
-        ModelNode(
-            modelInstance = furniture,
-            position = Position(0f, 0f, -2f)
-        )
-        ViewNode(position = Position(0.5f, 1.5f, -1.5f)) {
-            Card {
-                Text("Tap to customize")
-                ColorPicker(onColorSelected = { /* update material */ })
+    @Composable
+    fun SpatialShowroom() {
+        XRScene(modifier = Modifier.fillMaxSize()) {
+            ModelNode(
+                modelInstance = furniture,
+                position = Position(0f, 0f, -2f)
+            )
+            ViewNode(position = Position(0.5f, 1.5f, -1.5f)) {
+                Card {
+                    Text("Tap to customize")
+                    ColorPicker(onColorSelected = { /* update material */ })
+                }
             }
         }
     }
@@ -78,55 +208,70 @@ State drives the scene. Lifecycle is automatic. One API — every platform.
 
     Same composable API — now in spatial computing headsets.
 
-=== "Physics"
+=== "iOS (v4.0)"
 
-    ```kotlin
-    Scene(modifier = Modifier.fillMaxSize()) {
-        val ball = rememberModelInstance(modelLoader, "models/ball.glb")
-        ball?.let {
-            val node = ModelNode(modelInstance = it, scaleToUnits = 0.1f)
-            PhysicsNode(node = node, mass = 1f, restitution = 0.6f,
-                linearVelocity = Position(0f, 5f, -3f), floorY = 0f)
+    ```swift
+    struct ProductViewer: View {
+        var body: some View {
+            SceneView {
+                ModelNode("models/shoe.usdz", scaleToUnits: 1.0)
+                    .playAllAnimations()
+                LightNode(.directional)
+            }
+            .cameraControls(.orbit)
         }
     }
     ```
 
-    Rigid body simulation. Gravity, bounce, collision — no game engine needed.
+    Same mental model — SwiftUI + RealityKit under the hood. Share your scene graph via Kotlin Multiplatform.
 
-[:octicons-rocket-24: Get started](#get-started){ .md-button .md-button--primary }
-[:octicons-book-24: Why SceneView](showcase.md){ .md-button }
+[:octicons-arrow-right-24: v4.0 multi-platform roadmap](v4-preview.md){ .md-button }
 
 ---
 
-## One API, every surface
+## Ask AI, get a 3D scene
 
-<div class="grid cards" markdown>
+The most AI-friendly 3D library. Ships with an MCP server and `llms.txt` API reference — so Claude, Cursor, and Copilot always have the current API.
 
--   :octicons-device-mobile-24: **Android**
+<div class="prompt-showcase">
+<div class="prompt-showcase__header">💬 You describe it → AI writes the code → SceneView renders it</div>
+<div class="prompt-showcase__prompt">
+"Add a 3D product viewer to my shopping app. Users should rotate the sneaker model and tap a button to see it in AR in their room."
+</div>
+<div class="prompt-showcase__arrow">↓</div>
+<div class="prompt-showcase__result">
 
-    ---
+```kotlin
+@Composable
+fun ProductDetail(modelPath: String) {
+    var showAR by remember { mutableStateOf(false) }
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val model = rememberModelInstance(modelLoader, modelPath)
 
-    `Scene {}` and `ARScene {}` — Jetpack Compose composables backed by Google Filament and ARCore. Production-ready today.
-
--   :octicons-device-desktop-24: **XR headsets**
-
-    ---
-
-    `XRScene {}` brings the same composable patterns to spatial computing. Your existing code and skills transfer directly.
-
--   :octicons-globe-24: **Kotlin Multiplatform**
-
-    ---
-
-    iOS via Filament's Metal backend. Share scene definitions across Android and iOS from one Kotlin codebase.
-
--   :octicons-cpu-24: **Rendering engine**
-
-    ---
-
-    Google Filament — physically-based rendering, HDR environment lighting, post-processing. 60fps on mid-range devices.
+    if (showAR) {
+        ARScene(modifier = Modifier.fillMaxSize(), engine = engine, planeRenderer = true,
+            onSessionUpdated = { _, frame -> /* anchor placement */ }
+        ) { /* AR content */ }
+    } else {
+        Scene(modifier = Modifier.fillMaxWidth().height(350.dp), engine = engine,
+            cameraManipulator = rememberCameraManipulator()
+        ) {
+            model?.let { ModelNode(modelInstance = it, scaleToUnits = 1.0f) }
+        }
+    }
+    Button(onClick = { showAR = !showAR }) { Text(if (showAR) "Back to 3D" else "View in AR") }
+}
+```
 
 </div>
+</div>
+
+<span class="feature-chip feature-chip--primary">MCP server included</span>
+<span class="feature-chip feature-chip--secondary">llms.txt API reference</span>
+<span class="feature-chip feature-chip--tertiary">Works with Claude · Cursor · Copilot</span>
+
+[:octicons-arrow-right-24: AI-assisted development](ai-development.md){ .md-button }
 
 ---
 
@@ -163,7 +308,12 @@ State drives the scene. Lifecycle is automatic. One API — every platform.
 
 ## What you get
 
-### 26+ composable node types
+### 26+ composable node types — visual overview
+
+<!-- Node types visual catalog -->
+<div class="infographic">
+<img src="assets/images/visual-node-types.svg" alt="8 node types: ModelNode, LightNode, CubeNode, AnchorNode, VideoNode, TextNode, PathNode, ViewNode" loading="lazy">
+</div>
 
 <div class="grid cards" markdown>
 
@@ -174,12 +324,16 @@ State drives the scene. Lifecycle is automatic. One API — every platform.
     `ModelNode` loads glTF/GLB with animations, gestures, and automatic scaling.
     Geometry primitives — `CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode` — need no asset files.
 
+    [:octicons-arrow-right-24: Model loading guide](recipes.md#loading-display)
+
 -   :octicons-sun-24: **Lighting & Atmosphere**
 
     ---
 
     `LightNode` (sun, point, spot, directional), `DynamicSkyNode` (time-of-day),
     `FogNode`, `ReflectionProbeNode`. All driven by Compose state.
+
+    [:octicons-arrow-right-24: Lighting recipes](recipes.md#lighting-environment)
 
 -   :octicons-image-24: **Media & UI in 3D**
 
@@ -188,12 +342,16 @@ State drives the scene. Lifecycle is automatic. One API — every platform.
     `ImageNode`, `VideoNode` (with chromakey), and `ViewNode` — render **any Composable**
     directly inside 3D space. Text, buttons, cards — floating in your scene.
 
+    [:octicons-arrow-right-24: ViewNode recipes](recipes.md#viewnode-compose-inside-3d-space)
+
 -   :octicons-zap-24: **Physics**
 
     ---
 
     `PhysicsNode` — rigid body simulation with gravity, collision, and tap-to-throw.
     Interactive 3D worlds without a game engine.
+
+    [:octicons-arrow-right-24: Physics guide](codelabs/guide-physics.md)
 
 -   :octicons-paintbrush-24: **Drawing & Text**
 
@@ -202,6 +360,8 @@ State drives the scene. Lifecycle is automatic. One API — every platform.
     `LineNode`, `PathNode` for 3D polylines and animated paths.
     `TextNode`, `BillboardNode` for camera-facing labels.
 
+    [:octicons-arrow-right-24: Lines & text guide](codelabs/guide-lines-text.md)
+
 -   :octicons-eye-24: **AR & spatial**
 
     ---
@@ -209,55 +369,232 @@ State drives the scene. Lifecycle is automatic. One API — every platform.
     `AnchorNode`, `AugmentedImageNode`, `AugmentedFaceNode`, `CloudAnchorNode`,
     `StreetscapeGeometryNode`. Plane detection, geospatial, environmental HDR.
 
+    [:octicons-arrow-right-24: AR codelab](codelabs/codelab-ar-compose.md)
+
+-   :octicons-cpu-24: **Production rendering — Filament**
+
+    ---
+
+    Built on [Google Filament](https://github.com/google/filament) — PBR, HDR environment lighting,
+    bloom, depth-of-field, SSAO. 60fps on mid-range devices.
+
+    [:octicons-arrow-right-24: Performance guide](performance.md)
+
 </div>
 
 [:octicons-arrow-right-24: Full feature showcase](showcase.md)
 
 ---
 
-### Production rendering
+### See it in action
 
-Built on [Google Filament](https://github.com/google/filament) — the same physically-based
-rendering engine used inside Google Search and Google Play Store.
-
-- **PBR** with metallic/roughness workflow
-- **HDR environment lighting** from `.hdr` and `.ktx` files
-- **Post-processing**: bloom, depth-of-field, SSAO, fog
-- **60fps** on mid-range devices
-
----
-
-### v4.0 — what's next
-
-<div class="grid cards" markdown>
-
--   :octicons-stack-24: **Multiple scenes**
-
-    ---
-
-    Multiple independent `Scene {}` on one screen — dashboards, feeds, product cards — each with its own camera and environment.
-
--   :octicons-mirror-24: **Portal rendering**
-
-    ---
-
-    `PortalNode` — a window into another scene. AR portals, product showcases with custom lighting, level transitions.
-
--   :octicons-iterations-24: **Particles & animation**
-
-    ---
-
-    `ParticleNode` for GPU particles (fire, smoke, sparkles). `AnimationController` for blending, cross-fading, and layering.
-
--   :octicons-plug-24: **Collision detection**
-
-    ---
-
-    `CollisionNode` — declarative collision detection between scene nodes. No manual raycasting.
-
+<!-- ───── Android Phone ───── -->
+<div class="device-section">
+<div class="device-section__header">
+<span class="device-section__icon">📱</span>
+<span class="device-section__title">Android Phone</span>
+<span class="device-section__badge device-section__badge--ready">Shipping today</span>
 </div>
 
-[:octicons-arrow-right-24: v4.0 preview](v4-preview.md)
+<p class="device-section__subtitle">Real app screenshots</p>
+<div class="showcase-gallery">
+<div class="showcase-item">
+<div class="showcase-item__wrapper">
+<img src="assets/images/screenshot-camera-manipulator.png" alt="Camera Manipulator — real screenshot" class="showcase-item__img showcase-item__img--screenshot" loading="lazy">
+<span class="showcase-item__made-badge">Made with SceneView</span>
+</div>
+<div class="showcase-item__label">Camera Manipulator</div>
+<div class="showcase-item__desc">Orbit, zoom, pan gestures on PBR model</div>
+</div>
+<div class="showcase-item">
+<div class="showcase-item__wrapper">
+<img src="assets/images/screenshot-gltf-camera.png" alt="glTF Camera — real screenshot" class="showcase-item__img showcase-item__img--screenshot" loading="lazy">
+<span class="showcase-item__made-badge">Made with SceneView</span>
+</div>
+<div class="showcase-item__label">glTF Camera</div>
+<div class="showcase-item__desc">Imported camera positions, sunset HDR</div>
+</div>
+<div class="showcase-item">
+<div class="showcase-item__wrapper">
+<img src="assets/images/screenshot-autopilot.png" alt="Autopilot HUD — real screenshot" class="showcase-item__img showcase-item__img--screenshot" loading="lazy">
+<span class="showcase-item__made-badge">Made with SceneView</span>
+</div>
+<div class="showcase-item__label">Autopilot HUD</div>
+<div class="showcase-item__desc">3D road, speed, detection overlay</div>
+</div>
+</div>
+
+<p class="device-section__subtitle">Feature previews</p>
+<div class="showcase-gallery">
+<div class="showcase-item">
+<img src="assets/images/showcase-model-viewer.svg" alt="3D Model Viewer" class="showcase-item__img">
+<div class="showcase-item__label">Model Viewer</div>
+<div class="showcase-item__desc">HDR lighting, orbit camera, animation playback</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-ar-placement.svg" alt="AR Placement" class="showcase-item__img">
+<div class="showcase-item__label">AR Placement</div>
+<div class="showcase-item__desc">Plane detection, pinch to scale, tap to place</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-physics.svg" alt="Physics Demo" class="showcase-item__img">
+<div class="showcase-item__label">Physics Demo</div>
+<div class="showcase-item__desc">Rigid bodies, gravity, collision, tap to throw</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-dynamic-sky.svg" alt="Dynamic Sky" class="showcase-item__img">
+<div class="showcase-item__label">Dynamic Sky</div>
+<div class="showcase-item__desc">Time-of-day cycle, turbidity, atmospheric fog</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-post-processing.svg" alt="Post-Processing" class="showcase-item__img">
+<div class="showcase-item__label">Post-Processing</div>
+<div class="showcase-item__desc">Bloom, vignette, ACES tone mapping, FXAA</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-camera.svg" alt="Camera Controls" class="showcase-item__img">
+<div class="showcase-item__label">Camera Controls</div>
+<div class="showcase-item__desc">Orbit, pan, zoom with gesture sensitivity</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-line-paths.svg" alt="Line Paths" class="showcase-item__img">
+<div class="showcase-item__label">Line Paths</div>
+<div class="showcase-item__desc">Lissajous curves, sine waves, animated paths</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-text-labels.svg" alt="Text Labels" class="showcase-item__img">
+<div class="showcase-item__label">Text Labels</div>
+<div class="showcase-item__desc">Billboard labels, extruded 3D text, anchored</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-reflection.svg" alt="Reflection Probes" class="showcase-item__img">
+<div class="showcase-item__label">Reflection Probes</div>
+<div class="showcase-item__desc">Zone IBL, chrome, glass, gold materials</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-ar-pointcloud.svg" alt="AR Point Cloud" class="showcase-item__img">
+<div class="showcase-item__label">AR Point Cloud</div>
+<div class="showcase-item__desc">ARCore feature points, confidence coloring</div>
+</div>
+</div>
+</div>
+
+<!-- ───── Android Tablet ───── -->
+<div class="device-section">
+<div class="device-section__header">
+<span class="device-section__icon">📋</span>
+<span class="device-section__title">Android Tablet</span>
+<span class="device-section__badge device-section__badge--ready">Shipping today</span>
+</div>
+<div class="showcase-gallery">
+<div class="showcase-item showcase-item--wide">
+<img src="assets/images/tablet-anatomy.svg" alt="3D anatomy lab on tablet" class="showcase-item__img showcase-item__img--landscape">
+<div class="showcase-item__label">3D Anatomy Lab</div>
+<div class="showcase-item__desc">Interactive heart model, annotations, opacity controls</div>
+</div>
+<div class="showcase-item showcase-item--wide">
+<img src="assets/images/tablet-floorplan.svg" alt="3D floor plans on tablet" class="showcase-item__img showcase-item__img--landscape">
+<div class="showcase-item__label">3D Floor Plans</div>
+<div class="showcase-item__desc">Isometric rooms, measurements, AR staging</div>
+</div>
+<div class="showcase-item showcase-item--wide">
+<img src="assets/images/tablet-solar.svg" alt="Solar system explorer on tablet" class="showcase-item__img showcase-item__img--landscape">
+<div class="showcase-item__label">Solar System Explorer</div>
+<div class="showcase-item__desc">Interactive planets, orbit rings, STEM education</div>
+</div>
+<div class="showcase-item showcase-item--wide">
+<img src="assets/images/tablet-leveleditor.svg" alt="3D level editor on tablet" class="showcase-item__img showcase-item__img--landscape">
+<div class="showcase-item__label">3D Level Editor</div>
+<div class="showcase-item__desc">Isometric block placement, tool palette, play mode</div>
+</div>
+</div>
+</div>
+
+<!-- ───── Android Automotive ───── -->
+<div class="device-section">
+<div class="device-section__header">
+<span class="device-section__icon">🚗</span>
+<span class="device-section__title">Android Automotive</span>
+<span class="device-section__badge device-section__badge--ready">Shipping today</span>
+</div>
+<div class="showcase-gallery">
+<div class="showcase-item showcase-item--wide">
+<img src="assets/images/auto-hud-wide.svg" alt="Widescreen car HUD with 3D navigation" class="showcase-item__img showcase-item__img--landscape">
+<div class="showcase-item__label">Head-Up Display</div>
+<div class="showcase-item__desc">3D navigation, speed arc, lane assist, traffic lights</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/auto-companion.svg" alt="Phone companion app for vehicle" class="showcase-item__img">
+<div class="showcase-item__label">Companion App</div>
+<div class="showcase-item__desc">Live 3D vehicle model, climate, battery status</div>
+</div>
+<div class="showcase-item">
+<img src="assets/images/showcase-autopilot.svg" alt="Autopilot HUD" class="showcase-item__img">
+<div class="showcase-item__label">Autopilot HUD</div>
+<div class="showcase-item__desc">3D road overlay, turn-by-turn, ADAS indicators</div>
+</div>
+</div>
+</div>
+
+<!-- ───── XR Headsets ───── -->
+<div class="device-section device-section--clickable">
+<a href="v4-preview/" class="device-section__link">
+<div class="device-section__header">
+<span class="device-section__icon">🥽</span>
+<span class="device-section__title">XR Headsets</span>
+<span class="device-section__badge device-section__badge--coming">v4.0</span>
+<span class="device-section__arrow">:octicons-arrow-right-24:</span>
+</div>
+</a>
+<p class="device-section__desc">Same composable API — <code>XRScene { }</code> for spatial computing. Floating Compose UI via <code>ViewNode</code>.</p>
+<div class="showcase-gallery">
+<div class="showcase-item showcase-item--wide">
+<img src="assets/images/device-xr-preview.svg" alt="XR spatial computing with floating UI panels" class="showcase-item__img showcase-item__img--landscape">
+<div class="showcase-item__label">Spatial Showroom</div>
+<div class="showcase-item__desc">Floating 3D models + Compose UI panels in space</div>
+</div>
+</div>
+</div>
+
+<!-- ───── iOS ───── -->
+<div class="device-section device-section--clickable">
+<a href="v4-preview/" class="device-section__link">
+<div class="device-section__header">
+<span class="device-section__icon">🍎</span>
+<span class="device-section__title">iOS</span>
+<span class="device-section__badge device-section__badge--coming">v4.1</span>
+<span class="device-section__arrow">:octicons-arrow-right-24:</span>
+</div>
+</a>
+<p class="device-section__desc">Kotlin Multiplatform + Filament Metal backend. Share your scene graph across Android and iOS.</p>
+<div class="showcase-gallery">
+<div class="showcase-item">
+<img src="assets/images/device-ios-preview.svg" alt="SceneView running on iPhone" class="showcase-item__img">
+<div class="showcase-item__label">iOS Product Viewer</div>
+<div class="showcase-item__desc">SwiftUI + RealityKit, same API patterns</div>
+</div>
+</div>
+</div>
+
+<!-- ───── TV · Desktop ───── -->
+<div class="device-section device-section--clickable">
+<a href="v4-preview/" class="device-section__link">
+<div class="device-section__header">
+<span class="device-section__icon">🖥️</span>
+<span class="device-section__title">TV · Desktop</span>
+<span class="device-section__badge device-section__badge--coming">v4.0</span>
+<span class="device-section__arrow">:octicons-arrow-right-24:</span>
+</div>
+</a>
+<p class="device-section__desc">Compose Multiplatform opens the door to Android TV, Desktop JVM, and every screen Kotlin reaches.</p>
+<div class="showcase-gallery">
+<div class="showcase-item showcase-item--wide">
+<img src="assets/images/device-tv-preview.svg" alt="3D virtual tour on TV screen" class="showcase-item__img showcase-item__img--landscape">
+<div class="showcase-item__label">Virtual Showroom</div>
+<div class="showcase-item__desc">Living room tour with room navigation, remote control</div>
+</div>
+</div>
+</div>
 
 ---
 
@@ -289,36 +626,6 @@ rendering engine used inside Google Search and Google Play Store.
 
 ---
 
-## Key concepts
-
-### Nodes are composables
-
-Every 3D object — models, lights, geometry, cameras — is a `@Composable` function inside `Scene { }`. No manual `addChildNode()` or `destroy()` calls. Nodes enter the scene on composition and are cleaned up when they leave.
-
-### State drives the scene
-
-Pass Compose state into node parameters. The scene updates on the next frame. Toggle a `Boolean` to show/hide a node. Animate a `Float` for smooth transitions. Update a `mutableStateOf<Anchor?>` to place content in AR.
-
-### Everything is `remember`
-
-The Filament engine, model loaders, environment, camera — all are `remember`-ed values with automatic cleanup:
-
-```kotlin
-val engine = rememberEngine()
-val modelLoader = rememberModelLoader(engine)
-val model = rememberModelInstance(modelLoader, "models/product.glb")
-val environment = rememberEnvironment(rememberEnvironmentLoader(engine)) {
-    createHDREnvironment("environments/sky_2k.hdr")!!
-}
-// All resources destroyed automatically when composable leaves the tree
-```
-
-### Thread safety by default
-
-Filament requires JNI calls on the main thread. `rememberModelInstance` handles the IO-to-main-thread transition automatically. You never think about it.
-
----
-
 ## Samples
 
 15 working sample apps ship with the repository:
@@ -328,17 +635,18 @@ Filament requires JNI calls on the main thread. `rememberModelInstance` handles 
 | `model-viewer` | 3D model, HDR environment, orbit camera, animation playback |
 | `ar-model-viewer` | Tap-to-place, plane detection, pinch/rotate gestures |
 | `camera-manipulator` | Orbit / pan / zoom camera with gesture hints |
-| `gltf-camera` | Cameras imported from a glTF file |
 | `dynamic-sky` | Time-of-day sun, turbidity, fog controls |
-| `reflection-probe` | Metallic surfaces with cubemap reflections |
 | `physics-demo` | Tap-to-throw balls, collision, gravity |
 | `post-processing` | Bloom, depth-of-field, SSAO, fog toggles |
-| `line-path` | 3D line drawing, gizmos, spirals, animated paths |
-| `text-labels` | Camera-facing text labels on 3D objects |
 | `ar-augmented-image` | Real-world image detection + overlay |
 | `ar-cloud-anchor` | Persistent cross-device anchors |
-| `ar-point-cloud` | ARCore feature point visualization |
-| `autopilot-demo` | Autonomous AR demo |
+| `ar-point-cloud` | ARCore feature point visualisation |
+| `autopilot-demo` | Autonomous driving HUD |
+| `gltf-camera` | Cameras imported from a glTF file |
+| `line-path` | Animated sine/Lissajous curves with PathNode |
+| `text-labels` | Camera-facing 3D text labels (TextNode) |
+| `reflection-probe` | Zone-based IBL overrides + material picker |
+| `sceneview-demo` | Full showcase: Explore, Showcase, Gallery tabs |
 
 ---
 
@@ -366,9 +674,17 @@ Filament requires JNI calls on the main thread. `rememberModelInstance` handles 
 
 ---
 
-## Community
+<!-- Strong bottom CTA — visually distinct, per Evil Martians recommendation -->
+<div class="bottom-cta">
 
-[:octicons-comment-discussion-24: Discord](https://discord.gg/UbNDDBTNqb){ .md-button }
-[:octicons-mark-github-24: GitHub](https://github.com/SceneView/sceneview-android){ .md-button .md-button--primary }
+## Start building in 5 minutes
 
-<p class="footer-note">SceneView is open source (Apache 2.0). Built on Google Filament and ARCore. Android SDK 24+. KMP & XR coming in v4.0.</p>
+One Gradle line. No XML. No OpenGL. Just Compose.
+
+[:octicons-arrow-right-24: Start building now](quickstart.md){ .md-button .md-button--primary }
+[:octicons-comment-discussion-24: Join Discord](https://discord.gg/UbNDDBTNqb){ .md-button }
+[:octicons-mark-github-24: Star on GitHub](https://github.com/SceneView/sceneview-android){ .md-button }
+
+</div>
+
+<p class="footer-note">SceneView is open source (Apache 2.0). Built on Google Filament and ARCore. Android SDK 24+.<br>v4.0: Kotlin Multiplatform (iOS) · XR headsets · Android Automotive · TV · Desktop</p>
