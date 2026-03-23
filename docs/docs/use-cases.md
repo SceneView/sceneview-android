@@ -55,7 +55,8 @@ fun ProductViewer(productGlb: String) {
         modelLoader = modelLoader,
         cameraManipulator = rememberCameraManipulator(),
         environment = rememberEnvironment(rememberEnvironmentLoader(engine)) {
-            createHDREnvironment("environments/studio.hdr")!!
+            createHDREnvironment("environments/studio.hdr")
+                ?: createEnvironment(environmentLoader)
         }
     ) {
         model?.let {

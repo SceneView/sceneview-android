@@ -802,7 +802,8 @@ fun rememberMainLightNode(
  * The [environment] factory lambda runs once and is memoised. Use it to load an HDR file:
  * ```kotlin
  * val environment = rememberEnvironment(environmentLoader) {
- *     environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+ *     environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+ *         ?: createEnvironment(environmentLoader)
  * }
  * ```
  *
