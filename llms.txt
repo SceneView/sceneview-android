@@ -1158,8 +1158,8 @@ interface CameraManipulator {
 
 ## Cross-Platform (Kotlin Multiplatform + iOS)
 
-SceneView is expanding to support iOS via SwiftUI + RealityKit, with shared
-logic in `sceneview-core` (Kotlin Multiplatform).
+SceneView supports iOS via SwiftUI + RealityKit (`SceneViewSwift` package), with shared
+logic in `sceneview-core` (Kotlin Multiplatform). iOS 18+ / visionOS 2+.
 
 ### iOS Setup (Swift Package)
 
@@ -1170,7 +1170,80 @@ dependencies: [
 ]
 ```
 
-### iOS: Model Viewer
+### iOS: SceneView (3D viewport)
+
+`SceneView` is a SwiftUI `RealityView` wrapper with built-in orbit camera, default
+directional + fill lighting, drag/pinch/tap gestures, and environment support.
+
+```swift
+SceneView { root in root.addChild(entity) }
+    .environment(.studio)
+    .cameraControls(.orbit)
+    .onEntityTapped { entity in print("Tapped: \(entity)") }
+    .autoRotate(speed: 0.3)
+```
+
+**Signature:**
+```swift
+public struct SceneView: View {
+    public init(_ content: @escaping @Sendable (Entity) -> Void)
+    public func environment(_ environment: SceneEnvironment) -> SceneView
+    public func cameraControls(_ mode: CameraControlMode) -> SceneView  // .orbit | .pan | .firstPerson
+    public func onEntityTapped(_ handler: @escaping (Entity) -> Void) -> SceneView
+    public func autoRotate(speed: Float = 0.3) -> SceneView
+}
+```
+
+### iOS: ARSceneView (augmented reality)
+
+`ARSceneView` is a `UIViewRepresentable` wrapping `ARView` with `ARWorldTrackingConfiguration`,
+plane detection (horizontal/vertical/both), tap-to-place via raycast, coaching overlay, and
+scene reconstruction. iOS only (not visionOS).
+
+```swift
+ARSceneView(
+    planeDetection: .horizontal,
+    showPlaneOverlay: true,
+    showCoachingOverlay: true,
+    onTapOnPlane: { position in
+        // position is SIMD3<Float> world-space hit point
+    }
+)
+.content { arView in
+    // Add content to the ARView
+}
+```
+
+**Signature:**
+```swift
+public struct ARSceneView: UIViewRepresentable {
+    public init(
+        planeDetection: PlaneDetectionMode = .horizontal,  // .none | .horizontal | .vertical | .both
+        showPlaneOverlay: Bool = true,
+        showCoachingOverlay: Bool = true,
+        onTapOnPlane: ((SIMD3<Float>) -> Void)? = nil
+    )
+    public func content(_ builder: @escaping (ARView) -> Void) -> ARSceneView
+    public func onSessionUpdated(_ handler: @escaping (ARSession) -> Void) -> ARSceneView
+}
+```
+
+### iOS: AnchorNode (AR anchoring)
+
+```swift
+public struct AnchorNode: Sendable {
+    public let entity: AnchorEntity
+    public static func world(position: SIMD3<Float>) -> AnchorNode
+    public static func plane(alignment: PlaneAlignment = .horizontal, minimumBounds: SIMD2<Float> = .init(0.1, 0.1)) -> AnchorNode
+    public func add(_ child: Entity)
+    public func remove(_ child: Entity)
+}
+```
+
+### iOS: ModelNode (3D models)
+
+Loads USDZ/Reality files with collision generation, scaleToUnits, animations (play all /
+play at index / stop / pause), grounding shadow, and fluent transform helpers.
 
 ```swift
 import SceneViewSwift
@@ -1179,75 +1252,298 @@ struct ModelViewer: View {
     @State private var model: ModelNode?
 
     var body: some View {
-        SceneView { content in
-            if let model {
-                content.add(model.entity)
-            }
+        SceneView { root in
+            if let model { root.addChild(model.entity) }
         }
-        .cameraControls(.orbit)
         .environment(.studio)
-        .task {
-            var node = try? await ModelNode.load("models/helmet.usdz")
-            node = node?.scaleToUnits(1.0)
-            node?.playAllAnimations()
-            model = node
-        }
-    }
-}
-```
-
-### iOS: Procedural Geometry
-
-```swift
-struct ProceduralScene: View {
-    var body: some View {
-        SceneView { content in
-            content.add(GeometryNode.cube(size: 0.5).entity)
-            content.add(GeometryNode.sphere(radius: 0.3, color: .blue)
-                .position(.init(x: 1, y: 0, z: 0)).entity)
-            content.add(GeometryNode.cylinder(radius: 0.2, height: 0.8, color: .green)
-                .position(.init(x: -1, y: 0, z: 0)).entity)
-        }
         .cameraControls(.orbit)
-    }
-}
-```
-
-### iOS: 3D Text Labels
-
-```swift
-struct TextLabels: View {
-    var body: some View {
-        SceneView { content in
-            let label = TextNode(text: "Hello 3D!", fontSize: 0.1, color: .white)
-                .position(.init(x: 0, y: 1, z: -2))
-            content.add(label.entity)
-
-            let billboard = BillboardNode(
-                child: TextNode(text: "Always facing you", fontSize: 0.08).entity
-            ).position(.init(x: 0, y: 2, z: -2))
-            content.add(billboard.entity)
+        .task {
+            model = try? await ModelNode.load("car.usdz", enableCollision: true)
+            model?.scaleToUnits(1.0)
+            model?.playAllAnimations(loop: true, speed: 1.0)
         }
     }
 }
 ```
 
-### iOS: AR Tap-to-Place
+**Signature:**
+```swift
+public struct ModelNode: Sendable {
+    public let entity: ModelEntity
+    public var position: SIMD3<Float>
+    public var rotation: simd_quatf
+    public var scale: SIMD3<Float>
+
+    public init(_ entity: ModelEntity)
+    public static func load(_ path: String, enableCollision: Bool = true) async throws -> ModelNode
+    public static func load(contentsOf url: URL, enableCollision: Bool = true) async throws -> ModelNode
+
+    // Transform (fluent, @discardableResult)
+    public func position(_ position: SIMD3<Float>) -> ModelNode
+    public func scale(_ uniform: Float) -> ModelNode
+    public func scale(_ scale: SIMD3<Float>) -> ModelNode
+    public func rotation(_ rotation: simd_quatf) -> ModelNode
+    public func rotation(angle: Float, axis: SIMD3<Float>) -> ModelNode
+    public func scaleToUnits(_ units: Float = 1.0) -> ModelNode
+
+    // Animation
+    public var animationCount: Int
+    public func playAllAnimations(loop: Bool = true, speed: Float = 1.0)
+    public func playAnimation(at index: Int, loop: Bool = true, speed: Float = 1.0, transitionDuration: TimeInterval = 0.2)
+    public func stopAllAnimations()
+    public func pauseAllAnimations()
+
+    public func enableCollision()
+    public func withGroundingShadow() -> ModelNode
+}
+```
+
+### iOS: GeometryNode (procedural shapes)
+
+Cube (with cornerRadius), sphere, cylinder, cone, plane. Simple color or PBR material.
+Collision auto-generated on all shapes.
 
 ```swift
+SceneView { root in
+    root.addChild(GeometryNode.cube(size: 0.5, color: .red).entity)
+    root.addChild(GeometryNode.sphere(radius: 0.3, material: .pbr(color: .gray, metallic: 1.0, roughness: 0.2)).entity)
+    root.addChild(GeometryNode.cylinder(radius: 0.2, height: 0.8, color: .green)
+        .position(.init(x: -1, y: 0, z: 0)).entity)
+    root.addChild(GeometryNode.cone(height: 0.5, radius: 0.3, color: .yellow).entity)
+    root.addChild(GeometryNode.plane(width: 2.0, depth: 2.0, color: .gray).entity)
+}
+.cameraControls(.orbit)
+```
+
+**Signature:**
+```swift
+public struct GeometryNode: Sendable {
+    public let entity: ModelEntity
+
+    // Shapes (simple color)
+    public static func cube(size: Float = 1.0, color: SimpleMaterial.Color = .white, cornerRadius: Float = 0) -> GeometryNode
+    public static func sphere(radius: Float = 0.5, color: SimpleMaterial.Color = .white) -> GeometryNode
+    public static func cylinder(radius: Float = 0.5, height: Float = 1.0, color: SimpleMaterial.Color = .white) -> GeometryNode
+    public static func cone(height: Float = 1.0, radius: Float = 0.5, color: SimpleMaterial.Color = .white) -> GeometryNode
+    public static func plane(width: Float = 1.0, depth: Float = 1.0, color: SimpleMaterial.Color = .white) -> GeometryNode
+
+    // Shapes (PBR material)
+    public static func cube(size: Float = 1.0, material: GeometryMaterial, cornerRadius: Float = 0) -> GeometryNode
+    public static func sphere(radius: Float = 0.5, material: GeometryMaterial) -> GeometryNode
+
+    // Transform (fluent)
+    public func position(_ position: SIMD3<Float>) -> GeometryNode
+    public func scale(_ uniform: Float) -> GeometryNode
+    public func withGroundingShadow() -> GeometryNode
+}
+
+public enum GeometryMaterial: Sendable {
+    case simple(color: SimpleMaterial.Color)
+    case pbr(color: SimpleMaterial.Color, metallic: Float = 0.0, roughness: Float = 0.5)
+    case unlit(color: SimpleMaterial.Color)
+}
+```
+
+### iOS: LightNode (scene lighting)
+
+Directional, point, and spot lights using real RealityKit light components.
+Color presets: `.white`, `.warm` (~3200K), `.cool` (~6500K), `.custom(r:g:b:)`.
+
+```swift
+SceneView { root in
+    let sun = LightNode.directional(color: .warm, intensity: 1000, castsShadow: true)
+    sun.entity.look(at: .zero, from: [2, 4, 2], relativeTo: nil)
+    root.addChild(sun.entity)
+
+    let lamp = LightNode.point(color: .white, intensity: 500, attenuationRadius: 5.0)
+        .position(.init(x: 0, y: 2, z: 0))
+    root.addChild(lamp.entity)
+}
+```
+
+**Signature:**
+```swift
+public struct LightNode: Sendable {
+    public let entity: Entity
+    public var position: SIMD3<Float>
+    public var rotation: simd_quatf
+
+    public static func directional(color: LightNode.Color = .white, intensity: Float = 1000, castsShadow: Bool = true) -> LightNode
+    public static func point(color: LightNode.Color = .white, intensity: Float = 1000, attenuationRadius: Float = 10.0) -> LightNode
+    public static func spot(color: LightNode.Color = .white, intensity: Float = 1000, innerAngle: Float = .pi/6, outerAngle: Float = .pi/4, attenuationRadius: Float = 10.0) -> LightNode
+
+    public func position(_ position: SIMD3<Float>) -> LightNode
+    public func lookAt(_ target: SIMD3<Float>) -> LightNode
+
+    public enum Color: Sendable { case white, warm, cool, custom(r: Float, g: Float, b: Float) }
+}
+```
+
+### iOS: TextNode (3D text)
+
+3D extruded text via `MeshResource.generateText`. Supports centering, custom fonts,
+and text updates preserving transform.
+
+```swift
+SceneView { root in
+    let label = TextNode(text: "Hello 3D!", fontSize: 0.1, color: .white, depth: 0.01)
+        .centered()
+        .position(.init(x: 0, y: 1, z: -2))
+    root.addChild(label.entity)
+}
+```
+
+**Signature:**
+```swift
+public struct TextNode: Sendable {
+    public let entity: ModelEntity
+    public let text: String
+
+    public init(text: String, fontSize: Float = 0.05, color: SimpleMaterial.Color = .white, depth: Float = 0.01, alignment: CTTextAlignment = .center)
+    public init(text: String, font: MeshResource.Font, color: SimpleMaterial.Color = .white, depth: Float = 0.01)
+
+    public func position(_ position: SIMD3<Float>) -> TextNode
+    public func scale(_ uniform: Float) -> TextNode
+    public func centered() -> TextNode
+    public func withText(_ newText: String, fontSize: Float = 0.05, depth: Float = 0.01) -> TextNode
+}
+```
+
+### iOS: BillboardNode (always-faces-camera)
+
+Wraps any entity with `BillboardComponent` so it always faces the viewer.
+Convenience `.text()` factory for floating labels.
+
+```swift
+SceneView { root in
+    let billboard = BillboardNode.text("Always facing you", fontSize: 0.05, color: .white)
+        .position(.init(x: 0, y: 2, z: -2))
+    root.addChild(billboard.entity)
+
+    // Or wrap any entity:
+    let custom = BillboardNode(child: someEntity)
+    root.addChild(custom.entity)
+}
+```
+
+**Signature:**
+```swift
+public struct BillboardNode: Sendable {
+    public let entity: Entity
+    public init(child: Entity)
+    public static func text(_ text: String, fontSize: Float = 0.05, color: SimpleMaterial.Color = .white) -> BillboardNode
+    public func position(_ position: SIMD3<Float>) -> BillboardNode
+    public func scale(_ uniform: Float) -> BillboardNode
+}
+```
+
+### iOS: LineNode (line segment + axis gizmo)
+
+Line segment rendered as a thin cylinder. Includes axis gizmo factory (X=red, Y=green, Z=blue).
+
+```swift
+SceneView { root in
+    let line = LineNode(from: .zero, to: .init(x: 1, y: 1, z: 0), thickness: 0.005, color: .red)
+    root.addChild(line.entity)
+
+    // RGB axis gizmo
+    for axis in LineNode.axisGizmo(at: .zero, length: 0.5) {
+        root.addChild(axis.entity)
+    }
+}
+```
+
+**Signature:**
+```swift
+public struct LineNode: Sendable {
+    public let entity: ModelEntity
+    public init(from: SIMD3<Float>, to: SIMD3<Float>, thickness: Float = 0.005, color: SimpleMaterial.Color = .white)
+    public static func axisGizmo(at origin: SIMD3<Float> = .zero, length: Float = 0.5, thickness: Float = 0.005) -> [LineNode]
+}
+```
+
+### iOS: CameraControls (orbit / pan / first-person)
+
+Orbit camera with spherical-to-cartesian math, drag/pinch handling, elevation clamping,
+inertia with damping, and auto-rotation support.
+
+```swift
+public enum CameraControlMode: Sendable { case orbit, pan, firstPerson }
+
+public struct CameraControls: Sendable {
+    public var mode: CameraControlMode
+    public var target: SIMD3<Float>
+    public var orbitRadius: Float         // default 5.0
+    public var azimuth: Float             // horizontal angle (radians)
+    public var elevation: Float           // vertical angle (radians), default π/6
+    public var minRadius: Float           // zoom-in limit, default 0.5
+    public var maxRadius: Float           // zoom-out limit, default 50.0
+}
+```
+
+### iOS: SceneEnvironment (HDR lighting)
+
+6 HDR presets with `EnvironmentResource` loading and thread-safe caching.
+
+```swift
+// Use a preset
+SceneView { ... }.environment(.studio)
+
+// Available presets: .studio, .outdoor, .sunset, .night, .warm, .autumn
+
+// Custom HDR environment
+SceneView { ... }.environment(.custom(name: "My Env", hdrFile: "custom.hdr", intensity: 1.0, showSkybox: true))
+```
+
+**Signature:**
+```swift
+public struct SceneEnvironment: Sendable {
+    public let name: String
+    public let hdrResource: String?
+    public var intensity: Float
+    public var showSkybox: Bool
+
+    public init(name: String, hdrResource: String? = nil, intensity: Float = 1.0, showSkybox: Bool = true)
+    public static func custom(name: String, hdrFile: String, intensity: Float = 1.0, showSkybox: Bool = true) -> SceneEnvironment
+    public func load() async throws -> EnvironmentResource
+
+    // Presets
+    public static let studio: SceneEnvironment     // neutral studio
+    public static let outdoor: SceneEnvironment    // warm daylight
+    public static let sunset: SceneEnvironment     // golden hour
+    public static let night: SceneEnvironment      // dark rooftop
+    public static let warm: SceneEnvironment       // cozy, orange tone
+    public static let autumn: SceneEnvironment     // soft natural outdoor
+    public static let allPresets: [SceneEnvironment]
+}
+```
+
+### iOS: Complete AR Tap-to-Place Example
+
+```swift
+import SceneViewSwift
+
 struct ARTapToPlace: View {
     @State private var model: ModelNode?
+    @State private var placedEntities: [Entity] = []
 
     var body: some View {
-        ARSceneView(planeDetection: .horizontal) { content in
-            if let model {
-                let anchor = AnchorNode.plane(alignment: .horizontal)
-                anchor.add(model.entity)
+        ARSceneView(
+            planeDetection: .horizontal,
+            onTapOnPlane: { position in
+                if let model {
+                    let anchor = AnchorNode.world(position: position)
+                    anchor.add(model.entity.clone(recursive: true))
+                    // Add anchor to scene via content builder
+                }
             }
+        )
+        .content { arView in
+            // Initial AR scene setup
         }
         .task {
-            model = try? await ModelNode.load("models/chair.usdz")
-                .scaleToUnits(0.5)
+            model = try? await ModelNode.load("chair.usdz")
+            model?.scaleToUnits(0.5)
         }
     }
 }
@@ -1257,19 +1553,30 @@ struct ARTapToPlace: View {
 
 | Concept | Android (Compose) | iOS (SwiftUI) |
 |---|---|---|
-| 3D scene | `Scene { }` | `SceneView { }` |
-| AR scene | `ARScene { }` | `ARSceneView { }` |
+| 3D scene | `Scene { }` | `SceneView { root in }` |
+| AR scene | `ARScene { }` | `ARSceneView(planeDetection:onTapOnPlane:)` |
 | Load model | `rememberModelInstance(loader, "m.glb")` | `ModelNode.load("m.usdz")` |
+| Scale to fit | `ModelNode(scaleToUnits = 1f)` | `.scaleToUnits(1.0)` |
+| Play animations | `modelNode.playAnimation()` | `.playAllAnimations(loop:speed:)` |
 | Orbit camera | `rememberCameraManipulator()` | `.cameraControls(.orbit)` |
+| Auto-rotate | N/A | `.autoRotate(speed: 0.3)` |
 | Environment | `rememberEnvironment(loader) { }` | `.environment(.studio)` |
-| Cube | `CubeNode(size)` | `GeometryNode.cube(size:)` |
-| Sphere | `SphereNode(radius)` | `GeometryNode.sphere(radius:)` |
-| Text | `TextNode(text = "...")` | `TextNode(text: "...")` |
-| Billboard | `BillboardNode { }` | `BillboardNode(child:)` |
-| Anchor | `AnchorNode(anchor) { }` | `AnchorNode.plane()` |
+| Cube | `CubeNode(size)` | `GeometryNode.cube(size:color:cornerRadius:)` |
+| Sphere | `SphereNode(radius)` | `GeometryNode.sphere(radius:color:)` |
+| Cylinder | `CylinderNode(radius, height)` | `GeometryNode.cylinder(radius:height:color:)` |
+| Cone | N/A | `GeometryNode.cone(height:radius:color:)` |
+| Plane | `PlaneNode(size)` | `GeometryNode.plane(width:depth:color:)` |
+| PBR material | `materialLoader.createMaterial()` | `.pbr(color:metallic:roughness:)` |
+| Text | `TextNode(text = "...")` | `TextNode(text:fontSize:color:depth:)` |
+| Billboard | `BillboardNode { }` | `BillboardNode(child:)` / `.text("...")` |
+| Line | `LineNode(from, to)` | `LineNode(from:to:thickness:color:)` |
+| Light | `LightNode(apply = { })` | `LightNode.directional(color:intensity:castsShadow:)` |
+| Anchor (world) | `AnchorNode(anchor) { }` | `AnchorNode.world(position:)` |
+| Anchor (plane) | `AnchorNode(anchor) { }` | `AnchorNode.plane(alignment:)` |
+| Tap on entity | `onTap = { node -> }` | `.onEntityTapped { entity in }` |
 | Renderer | Google Filament | Apple RealityKit |
 | AR framework | Google ARCore | Apple ARKit |
-| Model format | glTF/GLB | USDZ (+ glTF via GLTFKit2) |
+| Model format | glTF/GLB | USDZ / Reality |
 
 ### Shared KMP Module (`sceneview-core`)
 

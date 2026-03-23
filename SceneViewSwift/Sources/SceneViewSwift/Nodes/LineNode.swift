@@ -1,5 +1,5 @@
+#if os(iOS) || os(visionOS)
 import RealityKit
-import Foundation
 
 /// A node that renders a line segment between two 3D points.
 ///
@@ -16,8 +16,7 @@ import Foundation
 ///     content.add(line.entity)
 /// }
 /// ```
-@available(iOS 18.0, visionOS 2.0, *)
-public struct LineNode {
+public struct LineNode: Sendable {
     /// The underlying RealityKit entity.
     public let entity: ModelEntity
 
@@ -87,3 +86,5 @@ public struct LineNode {
         ]
     }
 }
+
+#endif // os(iOS) || os(visionOS)
