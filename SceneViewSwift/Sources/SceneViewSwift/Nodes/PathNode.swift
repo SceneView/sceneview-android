@@ -1,5 +1,6 @@
 #if os(iOS) || os(visionOS)
 import RealityKit
+import UIKit
 
 /// A node that renders a polyline path through multiple 3D points.
 ///

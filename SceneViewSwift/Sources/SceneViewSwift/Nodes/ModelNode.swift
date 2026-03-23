@@ -55,6 +55,7 @@ public struct ModelNode: Sendable {
     ///   - enableCollision: Whether to generate a collision shape for hit testing.
     /// - Returns: A `ModelNode` wrapping the loaded entity.
     /// - Throws: If the file cannot be found or loaded.
+    @MainActor
     public static func load(
         _ path: String,
         enableCollision: Bool = true
@@ -76,6 +77,7 @@ public struct ModelNode: Sendable {
     ///   - enableCollision: Whether to generate collision shapes.
     /// - Returns: A `ModelNode` wrapping the loaded entity.
     /// - Throws: If the file cannot be loaded.
+    @MainActor
     public static func load(
         contentsOf url: URL,
         enableCollision: Bool = true
@@ -165,13 +167,14 @@ public struct ModelNode: Sendable {
     ///   - loop: Whether animations should repeat. Default `true`.
     ///   - speed: Playback speed multiplier. Default 1.0.
     public func playAllAnimations(loop: Bool = true, speed: Float = 1.0) {
-        for var animation in entity.availableAnimations {
-            animation.speed = speed
+        for animation in entity.availableAnimations {
+            let controller: AnimationPlaybackController
             if loop {
-                entity.playAnimation(animation.repeat())
+                controller = entity.playAnimation(animation.repeat())
             } else {
-                entity.playAnimation(animation)
+                controller = entity.playAnimation(animation)
             }
+            controller.speed = speed
         }
     }
 
@@ -189,19 +192,20 @@ public struct ModelNode: Sendable {
         transitionDuration: TimeInterval = 0.2
     ) {
         guard index < entity.availableAnimations.count else { return }
-        var animation = entity.availableAnimations[index]
-        animation.speed = speed
+        let animation = entity.availableAnimations[index]
+        let controller: AnimationPlaybackController
         if loop {
-            entity.playAnimation(
+            controller = entity.playAnimation(
                 animation.repeat(),
                 transitionDuration: transitionDuration
             )
         } else {
-            entity.playAnimation(
+            controller = entity.playAnimation(
                 animation,
                 transitionDuration: transitionDuration
             )
         }
+        controller.speed = speed
     }
 
     /// Stops all animations on the model.

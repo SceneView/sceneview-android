@@ -1,5 +1,6 @@
 #if os(iOS) || os(visionOS)
 import RealityKit
+import UIKit
 import Foundation
 
 /// Procedural geometry node for creating primitive shapes.

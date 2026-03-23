@@ -124,7 +124,7 @@ private struct FeatureRow: View {
             }
         } icon: {
             Image(systemName: icon)
-                .foregroundStyle(.accent)
+                .foregroundStyle(.tint)
         }
     }
 }

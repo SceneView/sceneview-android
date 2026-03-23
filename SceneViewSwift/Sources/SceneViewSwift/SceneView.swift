@@ -107,7 +107,35 @@ private struct SceneViewRepresentation: View {
 
     var body: some View {
         RealityView { realityContent in
-            setupScene(realityContent)
+            guard !isSetUp else { return }
+            isSetUp = true
+
+            realityContent.add(rootEntity)
+            realityContent.add(iblEntity)
+
+            let sun = DirectionalLight()
+            sun.light = DirectionalLightComponent(
+                color: .white,
+                intensity: 1000,
+                isRealWorldProxy: false
+            )
+            sun.shadow = DirectionalLightComponent.Shadow(
+                maximumDistance: 8,
+                depthBias: 5.0
+            )
+            sun.look(at: .zero, from: [2, 4, 3], relativeTo: nil)
+            realityContent.add(sun)
+
+            let fill = DirectionalLight()
+            fill.light = DirectionalLightComponent(
+                color: .white,
+                intensity: 300,
+                isRealWorldProxy: false
+            )
+            fill.look(at: .zero, from: [-1, -2, -1], relativeTo: nil)
+            realityContent.add(fill)
+
+            content(rootEntity)
         } update: { _ in
             applyCamera()
         }
@@ -135,46 +163,6 @@ private struct SceneViewRepresentation: View {
             guard let env = sceneEnvironment else { return }
             await loadEnvironment(env)
         }
-    }
-
-    // MARK: - Scene Setup
-
-    private func setupScene(_ realityContent: RealityViewContent) {
-        guard !isSetUp else { return }
-        isSetUp = true
-
-        // Root entity holds all user content
-        realityContent.add(rootEntity)
-
-        // IBL entity (will be configured when environment loads)
-        realityContent.add(iblEntity)
-
-        // Default directional light (sun)
-        let sun = DirectionalLight()
-        sun.light = DirectionalLightComponent(
-            color: .white,
-            intensity: 1000,
-            isRealWorldProxy: false
-        )
-        sun.shadow = DirectionalLightComponent.Shadow(
-            maximumDistance: 8,
-            depthBias: 5.0
-        )
-        sun.look(at: .zero, from: [2, 4, 3], relativeTo: nil)
-        realityContent.add(sun)
-
-        // Fill light to soften shadows
-        let fill = DirectionalLight()
-        fill.light = DirectionalLightComponent(
-            color: .white,
-            intensity: 300,
-            isRealWorldProxy: false
-        )
-        fill.look(at: .zero, from: [-1, -2, -1], relativeTo: nil)
-        realityContent.add(fill)
-
-        // Populate user content
-        content(rootEntity)
     }
 
     // MARK: - Environment IBL

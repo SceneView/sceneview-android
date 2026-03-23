@@ -1,5 +1,6 @@
 #if os(iOS) || os(visionOS)
 import RealityKit
+import UIKit
 
 /// A node that renders a line segment between two 3D points.
 ///

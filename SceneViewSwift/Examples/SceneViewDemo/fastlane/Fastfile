@@ -1,0 +1,147 @@
+default_platform(:ios)
+
+PROJECT      = "SceneViewDemo.xcodeproj"
+SCHEME       = "SceneViewDemo"
+WORKSPACE    = nil  # pas de .xcworkspace, on utilise .xcodeproj directement
+BUNDLE_ID    = "io.github.sceneview.demo.ios"
+
+platform :ios do
+
+  # ─── before_all ────────────────────────────────────────────────────────────
+  before_all do
+    # S'assurer que CocoaPods / dépendances sont à jour (ici SPM, rien à faire)
+  end
+
+  # ─── Lane: tests ───────────────────────────────────────────────────────────
+  desc "Run unit tests on the iPhone 16 simulator"
+  lane :tests do
+    run_tests(
+      project:     PROJECT,
+      scheme:      SCHEME,
+      destination: "platform=iOS Simulator,name=iPhone 16 Pro,OS=latest",
+      clean:       true
+    )
+  end
+
+  # ─── Lane: build ───────────────────────────────────────────────────────────
+  desc "Build the app (no archive) — vérifier que tout compile"
+  lane :build do
+    gym(
+      project:                 PROJECT,
+      scheme:                  SCHEME,
+      destination:             "generic/platform=iOS Simulator",
+      skip_package_ipa:        true,
+      skip_archive:            true,
+      clean:                   true,
+      build_path:              "build",
+      derived_data_path:       "build/DerivedData"
+    )
+    UI.success "✅ Build OK"
+  end
+
+  # ─── Lane: beta (TestFlight) ────────────────────────────────────────────────
+  desc "Build + upload to TestFlight"
+  lane :beta do
+    # Bump build number automatiquement
+    increment_build_number(
+      xcodeproj: PROJECT
+    )
+
+    # Build .ipa signé
+    gym(
+      project:                 PROJECT,
+      scheme:                  SCHEME,
+      destination:             "generic/platform=iOS",
+      export_method:           "app-store",
+      export_options:          {
+        uploadSymbols:  true,
+        compileBitcode: false
+      },
+      clean:                   true,
+      output_directory:        "build/export",
+      output_name:             "SceneViewDemo",
+      build_path:              "build",
+      derived_data_path:       "build/DerivedData"
+    )
+
+    # Upload vers TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: "Nouvelle version SceneView Demo iOS"
+    )
+
+    UI.success "🚀 Build uploadé sur TestFlight !"
+  end
+
+  # ─── Lane: release (App Store) ─────────────────────────────────────────────
+  desc "Build + submit for App Store review"
+  lane :release do
+    # Bump version si besoin
+    increment_version_number(
+      xcodeproj:      PROJECT,
+      bump_type:      "patch"
+    )
+    increment_build_number(
+      xcodeproj: PROJECT
+    )
+
+    # Build
+    gym(
+      project:         PROJECT,
+      scheme:          SCHEME,
+      destination:     "generic/platform=iOS",
+      export_method:   "app-store",
+      clean:           true,
+      output_directory: "build/export",
+      output_name:     "SceneViewDemo"
+    )
+
+    # Submit for review
+    deliver(
+      submit_for_review:          true,
+      automatic_release:          false,
+      force:                      true,
+      skip_screenshots:           true,
+      skip_metadata:              false,
+      metadata_path:              "./fastlane/metadata"
+    )
+
+    UI.success "🎉 App soumise pour review App Store !"
+  end
+
+  # ─── Lane: screenshots ─────────────────────────────────────────────────────
+  desc "Generate App Store screenshots on simulators"
+  lane :screenshots do
+    capture_ios_screenshots(
+      project:      PROJECT,
+      scheme:       "SceneViewDemoUITests",
+      devices:      [
+        "iPhone 16 Pro Max",
+        "iPhone 16",
+        "iPad Pro 13-inch (M4)"
+      ],
+      languages:    ["en-US", "fr-FR"],
+      output_directory: "./fastlane/screenshots"
+    )
+    frame_screenshots(white: false)
+  end
+
+  # ─── Lane: metadata ────────────────────────────────────────────────────────
+  desc "Upload metadata (description, keywords) to App Store Connect"
+  lane :metadata do
+    deliver(
+      skip_binary_upload: true,
+      skip_screenshots:   true,
+      force:              true
+    )
+  end
+
+  # ─── after_all ──────────────────────────────────────────────────────────────
+  after_all do |lane|
+    UI.success "Lane '#{lane}' terminée avec succès ✅"
+  end
+
+  error do |lane, exception|
+    UI.error "❌ Erreur dans la lane '#{lane}': #{exception.message}"
+  end
+end

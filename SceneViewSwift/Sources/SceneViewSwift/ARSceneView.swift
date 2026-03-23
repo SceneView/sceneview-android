@@ -157,7 +157,7 @@ public struct ARSceneView: UIViewRepresentable {
             self.planeDetection = planeDetection
         }
 
-        @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
+        @objc @MainActor func handleTap(_ recognizer: UITapGestureRecognizer) {
             guard let arView = recognizer.view as? ARView else { return }
             let location = recognizer.location(in: arView)
 
@@ -222,10 +222,8 @@ public struct AnchorNode: Sendable {
         alignment: PlaneAlignment = .horizontal,
         minimumBounds: SIMD2<Float> = .init(0.1, 0.1)
     ) -> AnchorNode {
-        let arAlignment: AnchorEntity.Alignment =
-            alignment == .horizontal ? .horizontal : .vertical
         let anchor = AnchorEntity(
-            plane: arAlignment,
+            plane: alignment == .horizontal ? .horizontal : .vertical,
             minimumBounds: minimumBounds
         )
         return AnchorNode(entity: anchor)
@@ -242,6 +240,7 @@ public struct AnchorNode: Sendable {
     }
 
     /// Removes all child entities from this anchor.
+    @MainActor
     public func removeAll() {
         for child in entity.children {
             entity.removeChild(child)
