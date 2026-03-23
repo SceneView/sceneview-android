@@ -31,3 +31,6 @@ samples/*/build/
 mcp/dist/*.test.js
 mcp/llms.txt
 sceneview-core/build/
+
+# Swift build artifacts
+SceneViewSwift/.build/
