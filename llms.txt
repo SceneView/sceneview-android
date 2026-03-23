@@ -1,12 +1,12 @@
 # SceneView
 
-SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament, ARCore) and iOS (SwiftUI, RealityKit, ARKit), with shared core logic via Kotlin Multiplatform. It provides composables for rendering interactive 3D scenes, loading models, and building AR experiences.
+SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament, ARCore) and Apple platforms — iOS, macOS, visionOS (SwiftUI, RealityKit, ARKit) — with shared core logic via Kotlin Multiplatform. Each platform uses its native renderer: Filament on Android, RealityKit on Apple.
 
 **Android — Maven artifacts (version 3.2.0):**
 - 3D only: `io.github.sceneview:sceneview:3.2.0`
 - AR + 3D: `io.github.sceneview:arsceneview:3.2.0`
 
-**iOS — Swift Package:**
+**Apple (iOS 17+ / macOS 14+ / visionOS 1+) — Swift Package:**
 - `https://github.com/SceneView/SceneViewSwift.git` (from: "0.1.0")
 
 **Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.10 | **Compose BOM compatible**
@@ -1160,12 +1160,18 @@ interface CameraManipulator {
 
 ---
 
-## Cross-Platform (Kotlin Multiplatform + iOS)
+## Cross-Platform (Kotlin Multiplatform + Apple)
 
-SceneView supports iOS via SwiftUI + RealityKit (`SceneViewSwift` package), with shared
-logic in `sceneview-core` (Kotlin Multiplatform). iOS 18+ / visionOS 2+.
+SceneView supports Apple platforms via SwiftUI + RealityKit (`SceneViewSwift` package), with shared
+logic in `sceneview-core` (Kotlin Multiplatform). iOS 17+ / macOS 14+ / visionOS 1+.
 
-### iOS Setup (Swift Package)
+Architecture: native renderer per platform — Filament on Android, RealityKit on Apple.
+KMP shares logic (math, collision, geometry, animations), not rendering.
+
+SceneViewSwift is consumable by: Swift native (SPM), Flutter (PlatformView),
+React Native (Turbo Module / Fabric), KMP Compose iOS (UIKitView).
+
+### Apple Setup (Swift Package)
 
 ```swift
 // Package.swift
@@ -1555,7 +1561,7 @@ struct ARTapToPlace: View {
 
 ### Platform Mapping
 
-| Concept | Android (Compose) | iOS (SwiftUI) |
+| Concept | Android (Compose) | Apple — iOS / macOS / visionOS (SwiftUI) |
 |---|---|---|
 | 3D scene | `Scene { }` | `SceneView { root in }` |
 | AR scene | `ARScene { }` | `ARSceneView(planeDetection:onTapOnPlane:)` |
@@ -1579,12 +1585,14 @@ struct ARTapToPlace: View {
 | Anchor (plane) | `AnchorNode(anchor) { }` | `AnchorNode.plane(alignment:)` |
 | Tap on entity | `onTap = { node -> }` | `.onEntityTapped { entity in }` |
 | Renderer | Google Filament | Apple RealityKit |
-| AR framework | Google ARCore | Apple ARKit |
+| AR framework | Google ARCore | Apple ARKit (iOS only) |
 | Model format | glTF/GLB | USDZ / Reality |
+| Desktop | -- | macOS 14+ |
+| Spatial computing | -- | visionOS 1+ |
 
 ### Shared KMP Module (`sceneview-core`)
 
-Pure Kotlin logic shared between Android and iOS:
+Pure Kotlin logic shared between Android and Apple platforms:
 - **Math**: Position, Rotation, Scale, Transform, Color, CameraProjection
 - **Collision**: Ray, Box, Sphere, intersections
 - **Geometry**: Cube, Sphere, Cylinder, Plane, Line, Path vertex generation

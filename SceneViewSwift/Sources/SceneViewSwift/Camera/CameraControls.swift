@@ -1,4 +1,4 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(macOS) || os(visionOS)
 import SwiftUI
 import RealityKit
 
