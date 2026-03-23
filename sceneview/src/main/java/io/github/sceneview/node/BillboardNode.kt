@@ -9,8 +9,8 @@ import io.github.sceneview.math.Size
  * A node that always faces the camera (billboard behaviour).
  *
  * A [BillboardNode] is an [ImageNode] (flat quad with a bitmap texture) that rotates toward the
- * camera every frame. Pass a [Bitmap] to display on the quad; call [setBitmap] to update it at any
- * time.
+ * camera every frame. Pass a [Bitmap] to display on the quad; call [setBitmap] to update it at
+ * any time.
  *
  * Usage inside a [io.github.sceneview.SceneScope]:
  * ```kotlin
