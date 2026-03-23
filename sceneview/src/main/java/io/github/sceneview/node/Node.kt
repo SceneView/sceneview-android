@@ -775,7 +775,11 @@ open class Node(
      * then this is null. If multiple nodes are overlapping the test node, then this could be any of
      * them.
      */
-    fun overlapTest() = collisionSystem!!.intersects(collider!!)?.node
+    fun overlapTest(): Node? {
+        val cs = collisionSystem ?: return null
+        val c = collider ?: return null
+        return cs.intersects(c)?.node
+    }
 
     /**
      * Tests to see if a node is overlapping any other nodes within the scene using
@@ -784,9 +788,13 @@ open class Node(
      * @return A list of all nodes that are overlapping this node. If no node is overlapping the
      * test node, then the list is empty.
      */
-    fun overlapTestAll() = buildList {
-        collisionSystem!!.intersectsAll(collider!!) {
-            add(it.node)
+    fun overlapTestAll(): List<Node> {
+        val cs = collisionSystem ?: return emptyList()
+        val c = collider ?: return emptyList()
+        return buildList {
+            cs.intersectsAll(c) {
+                add(it.node)
+            }
         }
     }
 
