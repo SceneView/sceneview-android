@@ -1,6 +1,10 @@
-# SceneView 4.0 preview
+---
+title: v4 Preview — Multi-Platform
+---
 
-The next major release takes SceneView beyond Android — multi-platform, spatial computing, and a more powerful scene graph.
+# SceneView v4 Preview — Multi-Platform
+
+> **Status**: Design phase. The v4 milestone is about expanding SceneView beyond Android while maintaining the Compose-first philosophy.
 
 !!! info "v3.2.0 is production-ready today"
     You don't need to wait for 4.0. Everything below adds capabilities on top — it doesn't
@@ -17,6 +21,38 @@ The next major release takes SceneView beyond Android — multi-platform, spatia
 | **3.1** | `rememberModelInstance`, camera manipulator, gesture polish |
 | **3.2** | Physics, dynamic sky, fog, reflections, lines, text, post-processing |
 | **4.0** | Multi-scene, portals, XR, Kotlin Multiplatform |
+
+---
+
+## What's Coming
+
+### Kotlin Multiplatform Core
+
+SceneView v4 will extract the platform-independent layers (scene graph, math, asset loading, physics) into a Kotlin Multiplatform module. This means:
+
+- **Shared scene graph** across Android, iOS, Desktop, and Web
+- **Shared asset pipeline** for glTF/GLB loading
+- **Shared math library** already based on kotlin-math
+- **Platform-specific renderers** using Filament's native backends
+
+### Android XR Support
+
+With Android XR launching, SceneView v4 will add:
+
+- `XRScene { }` composable for immersive 6DoF experiences
+- Spatial anchors and hand tracking
+- Eye tracking-aware rendering
+- Passthrough AR on XR headsets
+
+### New Platforms
+
+| Platform | Composable | Renderer |
+|---|---|---|
+| Android | `Scene { }` | Filament (OpenGL ES / Vulkan) |
+| Android XR | `XRScene { }` | Filament (Vulkan) |
+| iOS | `SceneView { }` (SwiftUI) | Filament (Metal) |
+| Desktop | `Scene { }` (Compose Desktop) | Filament (OpenGL / Vulkan) |
+| Web | `Scene { }` (Compose HTML) | Filament (WebGPU) |
 
 ---
 
@@ -131,6 +167,19 @@ fun ProductViewer(modelPath: String) {
 
 Write once, render natively on both platforms.
 
+### API Evolution
+
+The v4 API will be backwards-compatible with v3 for Android. New platforms will use the same node DSL:
+
+```kotlin
+// Same code works on Android, Desktop, and Web via KMP
+Scene(modifier = Modifier.fillMaxSize()) {
+    rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
+        ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
+    }
+}
+```
+
 ---
 
 ## Also in 4.0
@@ -139,6 +188,18 @@ Write once, render natively on both platforms.
 - **`ParticleNode`** — GPU particle system for fire, smoke, sparkles, confetti
 - **`AnimationController`** — composable-level animation blending, cross-fading, and layering
 - **`CollisionNode`** — declarative collision detection between scene nodes
+
+---
+
+## Timeline
+
+| Milestone | Target | Scope |
+|---|---|---|
+| v3.3 | Q2 2026 | Collision system rewrite, performance optimizations |
+| v3.4 | Q3 2026 | Android XR preview, API stabilization |
+| v4.0-alpha | Q4 2026 | KMP core extraction, Desktop preview |
+| v4.0-beta | Q1 2027 | iOS preview, Web preview |
+| v4.0 | Q2 2027 | Stable multi-platform release |
 
 ---
 
@@ -180,7 +241,15 @@ Write once, render natively on both platforms.
 |---|---|
 | One Scene per screen | Multiple independent Scenes |
 | Flat scene graph | `PortalNode` — scenes within scenes |
-| Android only | Kotlin Multiplatform (iOS) |
+| Android only | Kotlin Multiplatform (iOS, Desktop, Web) |
 | Phone/tablet only | `SceneView-XR` for spatial computing |
+
+---
+
+## How to Get Involved
+
+- **Join the discussion**: [Discord #v4-planning](https://discord.gg/UbNDDBTNqb)
+- **Contribute**: Check [CONTRIBUTING.md](../contributing/) for guidelines
+- **Sponsor**: Help fund multi-platform development on [Open Collective](https://opencollective.com/sceneview)
 
 [:octicons-arrow-right-24: Full roadmap on GitHub](https://github.com/SceneView/sceneview-android/blob/main/ROADMAP.md)
