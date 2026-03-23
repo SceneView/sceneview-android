@@ -227,7 +227,7 @@ thumbnail to a spatial computing experience, all with the same composable API.
 
 ## Timeline
 
-v4.0 is on the [roadmap](https://github.com/SceneView/sceneview-android/blob/main/ROADMAP.md)
+v4.0 is on the [roadmap](https://github.com/SceneView/sceneview/blob/main/ROADMAP.md)
 as the next major release following the 3.x feature series. Follow the repo for updates.
 
 **You don't need to wait for 4.0.** Everything in v3.2.0 is production-ready today.
@@ -241,4 +241,4 @@ implementation("io.github.sceneview:arsceneview:3.2.0")
 
 ---
 
-*[github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android) — Apache 2.0 — the #1 3D & AR library for Android*
+*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — the #1 3D & AR library for Android*

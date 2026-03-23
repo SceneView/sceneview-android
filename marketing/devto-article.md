@@ -212,7 +212,7 @@ implementation("io.github.sceneview:arsceneview:3.2.0")
 
 15 sample apps. Full API docs. MCP server for AI-assisted development.
 
-- **GitHub**: [github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android)
+- **GitHub**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
 - **Docs**: [sceneview.github.io](https://sceneview.github.io)
 - **Discord**: [discord.gg/UbNDDBTNqb](https://discord.gg/UbNDDBTNqb)
 

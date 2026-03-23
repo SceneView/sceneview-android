@@ -218,7 +218,7 @@ The 3.x roadmap continues with:
 
 ## Resources
 
-- **GitHub:** [github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android)
+- **GitHub:** [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
 - **API Reference:** `llms.txt` in the repo root
 - **Samples:** 14 demo apps included
 - **Demo app:** SceneView Demo on Google Play

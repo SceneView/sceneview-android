@@ -187,7 +187,7 @@ No new ARCore features (geospatial, streetscape, depth). The community fork ("Sc
 Maintained") has unresolved compatibility issues including 16 KB page size compliance required
 by Android 15 (API 35). SceneView was created as Sceneform's successor — the migration path
 is straightforward and documented in
-[MIGRATION.md](https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md).
+[MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGRATION.md).
 
 ### "What about Kotlin Multiplatform / iOS?"
 
@@ -217,7 +217,7 @@ If you have an existing Sceneform app, the migration is documented step by step:
 | `onResume` / `onPause` / `onDestroy` | Automatic (Compose lifecycle) |
 | `node.setParent(null); node.destroy()` | Remove from composition (conditional) |
 
-Full guide: [MIGRATION.md](https://github.com/SceneView/sceneview-android/blob/main/MIGRATION.md)
+Full guide: [MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGRATION.md)
 
 ---
 
@@ -236,4 +236,4 @@ It's the only library that treats 3D as a first-class Compose citizen.
 
 ---
 
-*[github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android) — Apache 2.0 — built on Filament & ARCore*
+*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — built on Filament & ARCore*

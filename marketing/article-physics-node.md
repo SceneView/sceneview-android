@@ -170,7 +170,7 @@ The complete physics demo — with a Material 3 top bar, hint text, and per-ball
 `samples/physics-demo/`
 
 ```
-git clone https://github.com/SceneView/sceneview-android
+git clone https://github.com/SceneView/sceneview
 ./gradlew :samples:physics-demo:installDebug
 ```
 
@@ -178,4 +178,4 @@ git clone https://github.com/SceneView/sceneview-android
 
 *Next: [TextNode & BillboardNode — Adding Labels to Your AR Scene →](#)*
 
-*SceneView is open-source (MIT License). Star the repo if this was useful: [github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android)*
+*SceneView is open-source (MIT License). Star the repo if this was useful: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)*

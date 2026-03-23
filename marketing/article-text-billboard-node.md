@@ -257,10 +257,10 @@ Both demos are in the SceneView repository:
 - `samples/ar-model-viewer/` — AR tap-to-place with gesture docs
 
 ```
-git clone https://github.com/SceneView/sceneview-android
+git clone https://github.com/SceneView/sceneview
 ./gradlew :samples:text-labels:installDebug
 ```
 
 ---
 
-*SceneView is open-source (MIT License). [github.com/SceneView/sceneview-android](https://github.com/SceneView/sceneview-android)*
+*SceneView is open-source (MIT License). [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)*

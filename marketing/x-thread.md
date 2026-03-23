@@ -160,7 +160,7 @@ implementation("io.github.sceneview:arsceneview:3.2.0")
 
 Open source. Apache 2.0.
 
-github.com/SceneView/sceneview-android
+github.com/SceneView/sceneview
 
 #AndroidDev #JetpackCompose #3D #AR #Kotlin #SceneView
 

@@ -32,7 +32,7 @@ Nodes are composables. State drives the scene. Lifecycle is automatic.
 
 | Repository | What it is |
 |---|---|
-| [sceneview-android](https://github.com/SceneView/sceneview-android) | Core SDK — `Scene {}` and `ARScene {}` composables for Android |
+| [sceneview](https://github.com/SceneView/sceneview) | Core SDK — `Scene {}` and `ARScene {}` composables for Android |
 | [sceneview.github.io](https://github.com/SceneView/sceneview.github.io) | Documentation website |
 
 ## Quick start
@@ -42,7 +42,7 @@ Add the dependency and start composing:
     implementation("io.github.sceneview:sceneview:3.2.0")
 
 - [Documentation](https://sceneview.github.io)
-- [Samples](https://github.com/SceneView/sceneview-android/tree/main/samples)
+- [Samples](https://github.com/SceneView/sceneview/tree/main/samples)
 - [Discord](https://discord.gg/UbNDDBTNqb)
 ```
 
@@ -93,7 +93,7 @@ implementation("io.github.sceneview:sceneview:X.Y.Z")
 implementation("io.github.sceneview:arsceneview:X.Y.Z")
 ```
 
-[Full changelog](https://github.com/SceneView/sceneview-android/blob/main/CHANGELOG.md) · [Documentation](https://sceneview.github.io)
+[Full changelog](https://github.com/SceneView/sceneview/blob/main/CHANGELOG.md) · [Documentation](https://sceneview.github.io)
 ```
 
 ---

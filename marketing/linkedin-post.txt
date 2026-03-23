@@ -28,6 +28,6 @@ Open source · MIT License
 implementation("io.github.sceneview:sceneview:3.0.0")
 implementation("io.github.sceneview:arsceneview:3.0.0")
 
-GitHub → github.com/SceneView/sceneview-android
+GitHub → github.com/SceneView/sceneview
 
 #AndroidDev #JetpackCompose #3D #AR #ARCore #Filament #OpenSource #Kotlin

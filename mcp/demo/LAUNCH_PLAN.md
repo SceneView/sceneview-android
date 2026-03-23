@@ -49,16 +49,16 @@ Timing: weekday, 9–10 AM PST (peak Android dev audience).
 
 **Reddit** (pick 2–3):
 - r/androiddev — "I built an MCP server that gives Claude the full SceneView 3D/AR SDK. Ask it to build an AR app and the Kotlin actually compiles."
-- r/ClaudeAI — "sceneview-mcp: one config line and Claude can build working AR Android apps"
+- r/ClaudeAI — "sceneview-mcp: one config line and Claude can build working 3D/AR apps for Android and iOS"
 - r/MachineLearning — only if you have the demo video, otherwise skip
 
 **Discord:**
 - SceneView Discord — announcement from `narration.md`
 - Kotlin Slack #android — short mention + npm link
-- Claude / MCP Discord (if exists) — "New MCP server for Android 3D/AR development"
+- Claude / MCP Discord (if exists) — "New MCP server for cross-platform 3D/AR development (Android + iOS)"
 
 **Hacker News:**
-- "Show HN: sceneview-mcp — MCP server that lets Claude build AR Android apps"
+- "Show HN: sceneview-mcp — MCP server that lets Claude build 3D/AR apps for Android and iOS"
 - Link to GitHub, not npm
 - Best time: 6–8 AM PST on a weekday
 
@@ -91,7 +91,7 @@ Expand the narration into a short blog post. Structure:
 ## Metrics to track
 
 - npm weekly downloads (check at npmjs.com after 7 days)
-- GitHub stars on sceneview-android (track delta)
+- GitHub stars on sceneview (track delta)
 - GitHub issues mentioning MCP
 - Tweet impressions / engagement
 - Reddit upvotes
