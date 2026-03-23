@@ -65,100 +65,22 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-23, Phase 10 — iOS Native)
+### Current state (last updated: 2026-03-23)
 
-- **Active branch**: `claude/identify-project-focus-FU1rl`
-- **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
+- **Active branch**: `main`
+- **Latest release**: v3.2.0 (Maven Central)
+- **Project philosophy**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
-- **KMP migration (Phase 9 complete)**:
-  - **sceneview-core: 54 commonMain + 19 commonTest + 3 androidMain + 3 iosMain = 79 files**
-  - **sceneview-core commonMain** now contains:
-    - `collision/` (15 files) — Vector3, Quaternion, Matrix, Ray, Box, Sphere, Intersections
-    - `math/` (5 files) — type aliases, transforms, comparisons, Color (sRGB↔linear, HSV, luminance), CameraProjection (viewToWorld/worldToView/viewToRay, exposure), TransformConversions (local↔world coordinate space)
-    - `triangulation/` (2 files) — Earcut, Delaunator
-    - `logging/` (1 file) — expect/actual logWarning
-    - `rendering/` (7 files) — TransformManagerBridge, NodeTransform, Vertex, SceneNode, ResourceLoader, MaterialDefaults (PBR constants + render priorities), AssetPath (value class for asset paths)
-    - `components/` (3 files) — Component, CameraComponent, LightComponent interfaces
-    - `gesture/` (3 files) — CameraManipulator, GestureListener with TouchEvent/TouchAction, GestureTransforms (scale damping, rotation damping)
-    - `environment/` (1 file) — Environment<L, S> generic data class
-    - `animation/` (8 files) — Easing, lerp/slerp, PropertyAnimation, SpringAnimator, AnimationTimeUtils (frame↔time↔fraction), SmoothTransform (interpolation state machine), AnimationPlayback (playback state + time computation + scaleToFitUnits)
-    - `scene/` (1 file) — SceneGraph manager with hit testing, node find, frame dispatch
-    - `geometries/` (8 files) — GeometryData, Cube, Sphere, Cylinder, Plane, Line, Path, Shape vertex generators
-    - `physics/` (1 file) — PhysicsSimulation (Euler integration, floor bounce, restitution, sleep)
-    - `utils/` (2 files) — Duration interval/fps calculations, TimeSource (expect/actual nanoTime)
-  - **expect/actual abstractions** (3 total): `logWarning`, `ulp`, `nanoTime`
-  - kotlin-math 1.6.0 as `api` dependency
-  - Removed 14 duplicate collision files + 2 triangulation files from sceneview
-  - sceneview depends on sceneview-core via `api project(':sceneview-core')`
-  - Build: plugins DSL, default hierarchy template, native target warning suppressed
-  - **iOS strategy**: dual approach — KMP for cross-platform apps, native SwiftUI for pure iOS
-- **SceneViewSwift** (`SceneViewSwift/`): iOS library (Swift Package, iOS 17+ / visionOS 1+, **11 files** — fully implemented)
-  - `SceneView` — full RealityView wrapper with orbit camera, default lighting (sun + fill), drag/pinch/tap gestures, environment support, auto-rotate
-  - `ARSceneView` — UIViewRepresentable wrapping ARView, ARWorldTrackingConfiguration, plane detection, tap-to-place raycast, coaching overlay, scene reconstruction
-  - `ModelNode` — USDZ loading (by name or URL), collision generation, scaleToUnits, animations (playAll/playAt/stop/pause), grounding shadow
-  - `GeometryNode` — cube (with cornerRadius), sphere, cylinder, cone, plane; PBR material support (.simple/.pbr/.unlit), auto collision
-  - `TextNode` — 3D extruded text via MeshResource.generateText, centering, custom font
-  - `BillboardNode` — always-faces-camera via BillboardComponent, convenience `.text()` factory
-  - `LineNode` — line segment (thin cylinder) + axisGizmo factory (X=red, Y=green, Z=blue)
-  - `LightNode` — DirectionalLight/PointLight/SpotLight with real RealityKit components, shadow config, color presets (.white/.warm/.cool/.custom)
-  - `CameraControls` — orbit camera with inertia, auto-rotation, elevation clamping, configurable sensitivity
-  - `SceneEnvironment` — 6 HDR presets with EnvironmentResource loading + thread-safe cache
-  - `AnchorNode` — world position and plane anchors for AR content placement
-  - **iOS Demo app** (`SceneViewSwift/Examples/SceneViewDemo/`): 3-tab app (Explore, Shapes, AR) with Xcode project
-  - **Build**: `swift build` ✓ (macOS CLT), needs Xcode 16+ for full iOS build
-- **llms.txt**: Cross-platform — added iOS recipes (model-viewer, procedural, text, AR),
-  platform mapping table, KMP shared module description
-- **Cross-platform recipes** (`samples/recipes/`): 5 side-by-side Android + iOS recipes
-  - model-viewer, ar-tap-to-place, procedural-geometry, text-labels, physics
-- **Demo app** (`samples/sceneview-demo/`): **Play Store ready**
-  - **4-tab architecture**: Explore, Showcase, Gallery, QA
-  - **Explore tab**: Full-screen 3D viewer with orbit camera, environment + model picker chips
-    - 8 models: ToyCar, SheenChair, IridescenceLamp (Khronos), GeishaMask, SpaceHelmet,
-      SealStatuette, RobotMantis, KawaiiMeka (Sketchfab)
-    - 6-environment HDR switcher: Night / Studio / Warm / Sunset / Outdoor / Autumn
-    - Auto-rotating camera, gradient overlays
-  - **Showcase tab**: Live 3D previews per node type, category filter chips, code snippets
-  - **Gallery tab**: 14 cards — 6 realistic models + 5 animated + 3 procedural geometry,
-    each card uses a curated HDR environment matching its mood
-  - **QA tab**: Stress-test scenes, spring animations
-  - **Material 3 Expressive**: `MaterialExpressiveTheme` + dynamic color
-  - **Models** (11 GLB): 3 Khronos PBR demos + 3 realistic Sketchfab + 5 animated Sketchfab
-  - **Environments** (6 HDR): rooftop_night, studio, studio_warm, outdoor_cloudy, sunset, autumn_field
-  - **Build**: `assembleDebug` ✓ · `lint` ✓ · `bundleRelease` ✓
-  - **Play Store**: Metadata EN+FR, feature graphic, icon 512px, 4 screenshot mockups, release notes
-  - **App icon**: Adaptive icon — isometric 3D cube on M3 purple background
-- **Website redesign** (`docs/` MkDocs + `sceneview.github.io` hosted site):
-  - MkDocs: Google-inspired palette (blue primary, clean surfaces), rounded cards, hero section
-  - Homepage: features grid with screenshots, code examples, samples gallery
-  - Parallel session working on `sceneview.github.io` repo: updating repo cards, adding Compose tag,
-    quick-start code snippets, demo app section, version badge
-  - Direction: modern, rounded, Google-like but not a copy — no colored icons, clean backgrounds
-- **Phase 10 — iOS Native** (2026-03-23):
-  - All 11 Swift files fully implemented (no more stubs/TODOs)
-  - SceneView: real IBL loading via ImageBasedLightComponent, auto-rotate with Task loop, fixed pinch zoom (cumulative→delta)
-  - ARSceneView: proper UIViewRepresentable with dynamic content via `(position, arView)` callback
-  - New: PathNode (polyline, circle, grid factories)
-  - iOS Demo app: 4 Explore scenes (Shapes, Metallic, 3D Text, Gizmo) + 9 shape types + AR tap-to-place
-  - Tests: 35+ unit tests (CameraControls, CameraControlsEdgeCases, SceneEnvironment)
-  - CI: `.github/workflows/ios.yml` — macOS 15, Xcode 16, build + test + demo
-  - App Store: `APP_STORE_SETUP.md` with metadata EN/FR, ExportOptions.plist, icon generator
-  - Build: `swift build` passes clean on macOS CLT
-  - **Needs Xcode 16+** for full iOS simulator build and App Store upload
+- **Cross-platform**: Android (Jetpack Compose + Filament) and iOS (SwiftUI + RealityKit)
+- **KMP core** (`sceneview-core/`): collision, math, triangulation, animation, geometry,
+  physics shared across Android and iOS via Kotlin Multiplatform
+- **SceneViewSwift** (`SceneViewSwift/`): iOS library — Swift Package, iOS 17+ / visionOS 1+,
+  11 Swift files, demo app, 35+ unit tests
+- **Demo app** (`samples/sceneview-demo/`): Play Store ready, 4-tab architecture (Explore,
+  Showcase, Gallery, QA), Material 3 Expressive
+- **MCP server** (`mcp/`): published npm package for AI assistant integration
+- **Website**: `docs/` (MkDocs) + `sceneview.github.io`
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
-
-### Design direction
-
-- **Material 3 Expressive** everywhere — fully rounded shapes, spring/physics animations, dynamic color
-- Clean, professional, modern look
-- Use expressive components when available: FloatingToolbar, LoadingIndicator, ButtonGroup
-
-### Decisions already made
-
-- M3 1.5.0-alpha15 (latest expressive alpha) over stable 1.3.x
-- Dynamic color (Android 12+) with custom light/dark fallback palette
-- `MotionScheme.expressive()` as default motion scheme
-- LargeTopAppBar with exit-until-collapsed scroll behavior on both screens
-- Spring-based animations (DampingRatioLowBouncy) for card expand/collapse
 
 ### How to update this section
 
