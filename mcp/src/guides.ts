@@ -179,6 +179,85 @@ export const BEST_PRACTICES: Record<string, string> = {
 
 // ─── AR Setup Guide ───────────────────────────────────────────────────────────
 
+// ─── Troubleshooting Guide ────────────────────────────────────────────────────
+
+export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
+
+## Common Crashes
+
+### SIGABRT / Native Crash on Destroy
+**Cause:** Destroying Filament resources in wrong order or from wrong thread.
+**Fix:**
+- Never call \`engine.destroy()\` manually when using \`rememberEngine()\`
+- Never call \`node.destroy()\` on composable nodes — Compose handles lifecycle
+- If using imperative API: destroy MaterialInstance before Texture, then Engine last
+- All Filament calls must be on the main thread
+
+### Model Not Showing / Invisible
+**Check list:**
+1. \`rememberModelInstance\` returns null while loading — are you null-checking it?
+2. Is the model path correct? Assets go in \`src/main/assets/models/\`
+3. Is \`scaleToUnits\` too small or too large? Try \`1.0f\`
+4. Is there a light in the scene? Add: \`LightNode(type = LightNode.Type.DIRECTIONAL)\`
+5. Is the camera pointing at the model? Default camera is at origin looking -Z
+
+### AR Camera Feed Shows but No Planes Detected
+**Fix:**
+- Ensure camera permission is granted at runtime (not just in manifest)
+- Point the device at a textured surface (plain white walls are hard to track)
+- Check \`planeFindingMode\` is not \`DISABLED\`
+- Wait 2-3 seconds for ARCore to initialize tracking
+
+### "ARCore not installed" on Device
+**Fix:**
+- Ensure \`<meta-data android:name="com.google.ar.core" android:value="required" />\` is in manifest
+- Install Google Play Services for AR from Play Store
+- Some emulators don't support ARCore — test on a real device
+
+### Build Fails: "Cannot find Filament material"
+**Fix:**
+- Pre-compiled materials are in \`src/main/assets/materials/\`
+- Don't delete assets when cleaning — they're checked into the repository
+- If \`filamentPluginEnabled=true\` in gradle.properties, you need the Filament desktop tools installed
+
+### Gradle Sync Fails
+**Fix:**
+- Ensure Java 17 is set: \`compileOptions { sourceCompatibility = JavaVersion.VERSION_17 }\`
+- Use compatible AGP/Gradle versions (AGP 8.11.1 + Gradle 8.11.1)
+- Clear Gradle cache: \`./gradlew clean && rm -rf ~/.gradle/caches\`
+
+## Performance Issues
+
+### Low FPS / Jank
+- Reduce model polygon count (< 100K triangles)
+- Use KTX2 compressed textures (1024x1024 max)
+- Avoid per-frame allocations in \`onFrame\` callbacks
+- Disable post-processing if not needed: \`Scene(postProcessing = false)\`
+- Profile with Android GPU Inspector
+
+### High Memory Usage
+- Don't create multiple Engine instances — reuse \`rememberEngine()\`
+- Limit concurrent model loads (max 3-4 simultaneously)
+- Use smaller HDR environments (2K, not 4K)
+- Release unused environments: let them leave composition
+
+## AR-Specific Issues
+
+### Anchor Drift / Objects Moving
+- Use \`AnchorNode\` instead of setting \`worldPosition\` manually
+- ARCore anchors are world-locked; plain nodes follow the coordinate system which shifts during tracking
+- For persistent anchors across sessions, use \`CloudAnchorNode\`
+
+### AR Objects Too Bright / Overexposed
+- Set \`toneMapper = ToneMapper.Linear\` on the AR scene view
+- Default tone mapping enhances contrast which looks wrong on the camera feed
+
+### Augmented Images Not Detected
+- Image must be >= 300x300 pixels with good contrast and detail
+- Specify physical width when registering: \`addImage("name", bitmap, 0.15f)\` (meters)
+- Only one image database per session — add all images before starting
+`;
+
 export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide
 
 ## 1. Gradle Dependencies
