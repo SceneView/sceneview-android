@@ -1,6 +1,6 @@
-# SceneView — The #1 3D & AR Library for Android
+# SceneView — The #1 3D & AR Library for Android and iOS
 
-*Why thousands of Android developers chose SceneView — and why you should too.*
+*Why thousands of developers chose SceneView — and why you should too.*
 
 ---
 

@@ -1,6 +1,6 @@
 # SceneView 4.0 — What's coming
 
-*A look at the next major release and why it matters for Android 3D & AR.*
+*A look at the next major release and why it matters for cross-platform 3D & AR.*
 
 ---
 
@@ -150,13 +150,12 @@ This is transparent to SceneView users — the composable API stays the same.
 
 ---
 
-### Kotlin Multiplatform proof of concept
+### Kotlin Multiplatform — already shipping
 
-An experimental KMP target using Filament's Metal backend for iOS.
-Same `Scene {}` composable, rendering natively on both platforms.
-
-This is a proof of concept in 4.0 — not production-ready — but it signals the direction:
-**one 3D composable API, multiple platforms.**
+SceneView already supports iOS via the SceneViewSwift package (SwiftUI + RealityKit + ARKit),
+with a shared Kotlin Multiplatform core (sceneview-core) providing cross-platform math, collision,
+animation, and geometry. v4.0 deepens this integration with more shared logic and tighter
+platform parity.
 
 ---
 
@@ -207,7 +206,7 @@ immediately with v3.2.0:
 
 ## The v4.0 vision
 
-SceneView started as "make 3D easy on Android." v3.0 proved that 3D could work like Compose.
+SceneView started as "make 3D easy on mobile." v3.0 proved that 3D could work like Compose.
 v3.2 added physics, atmosphere, and spatial UI.
 
 v4.0 is about removing the last limitations:
@@ -216,12 +215,12 @@ v4.0 is about removing the last limitations:
 |---|---|
 | One Scene per screen | Multiple independent Scenes |
 | Flat scene graph | `PortalNode` — scenes within scenes |
-| Android only | KMP proof of concept (iOS) |
+| Separate iOS package | Deeper KMP integration |
 | Phone/tablet only | `SceneView-XR` for spatial computing |
 | Filament 1.x | Filament 2.x (when stable) |
 
-The goal: **SceneView becomes the standard way to do 3D on Android** — from a product
-thumbnail to a spatial computing experience, all with the same composable API.
+The goal: **SceneView becomes the standard way to do 3D on Android and iOS** — from a product
+thumbnail to a spatial computing experience, all with native platform APIs.
 
 ---
 
@@ -241,4 +240,4 @@ implementation("io.github.sceneview:arsceneview:3.2.0")
 
 ---
 
-*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — the #1 3D & AR library for Android*
+*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — the #1 3D & AR SDK for Android and iOS*

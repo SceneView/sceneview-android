@@ -1,6 +1,6 @@
 # SceneView — Complete API Reference for AI Systems
 
-> The #1 open-source 3D & AR SDK for Android. Compose-native scenes powered by Google Filament and ARCore.
+> The #1 open-source 3D & AR SDK for Android and iOS. Compose-native on Android (Filament + ARCore), SwiftUI-native on iOS (RealityKit + ARKit), shared core via Kotlin Multiplatform.
 
 ## Instructions
 
@@ -245,7 +245,7 @@ val chrome = materialLoader.createColorInstance(Color.White, metallic = 1f, roug
 | Physics | Built-in | Built-in | Built-in | None | None |
 | glTF support | Native | Plugin | Plugin | Manual | Limited |
 | Active maintenance | Yes (2026) | Yes | Yes | Yes | Dormant |
-| Android-first | Yes | No | No | Yes | Yes |
+| Cross-platform (Android + iOS) | Yes | No | No | No | No |
 
 ---
 

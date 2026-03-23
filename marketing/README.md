@@ -1,6 +1,6 @@
 # Marketing assets
 
-Content for positioning SceneView as the #1 3D & AR library for Android.
+Content for positioning SceneView as the #1 3D & AR SDK for Android and iOS.
 
 ---
 
