@@ -46,7 +46,7 @@ Copy `llms.txt` from the SceneView repo into your project root, or add the MCP s
 
 ### Use with ChatGPT / Claude web
 
-Paste the contents of [`llms.txt`](https://github.com/SceneView/sceneview-android/blob/main/llms.txt) into your conversation, then ask your question. The AI will use the correct API.
+Paste the contents of [`llms.txt`](https://github.com/SceneView/sceneview/blob/main/llms.txt) into your conversation, then ask your question. The AI will use the correct API.
 
 ---
 
@@ -66,7 +66,7 @@ Inside the SceneView repo with Claude Code:
 ### Example workflow
 
 ```bash
-cd sceneview-android
+cd sceneview
 claude
 
 # Then in Claude Code:

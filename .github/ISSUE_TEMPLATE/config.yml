@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Question / How-to
+  - name: Question / How-to (Android & iOS)
     url: https://github.com/SceneView/sceneview/discussions
-    about: Ask a question or start a discussion
+    about: Ask a question or start a discussion about Android or iOS
   - name: Discord
     url: https://discord.gg/UbNDDBTNqb
     about: Real-time help on Discord

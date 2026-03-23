@@ -1,10 +1,13 @@
-# SceneView for Android
+# SceneView
 
-SceneView is a Compose-first 3D and AR SDK for Android, built on Filament (Google's real-time rendering engine) and ARCore. It provides declarative composables for rendering interactive 3D scenes, loading glTF/GLB models, and building AR experiences.
+SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament, ARCore) and iOS (SwiftUI, RealityKit, ARKit), with shared core logic via Kotlin Multiplatform. It provides composables for rendering interactive 3D scenes, loading models, and building AR experiences.
 
-**Maven artifacts (version 3.1.1):**
-- 3D only: `io.github.sceneview:sceneview:3.1.1`
-- AR + 3D: `io.github.sceneview:arsceneview:3.1.1`
+**Android — Maven artifacts (version 3.2.0):**
+- 3D only: `io.github.sceneview:sceneview:3.2.0`
+- AR + 3D: `io.github.sceneview:arsceneview:3.2.0`
+
+**iOS — Swift Package:**
+- `https://github.com/SceneView/SceneViewSwift.git` (from: "0.1.0")
 
 **Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.10 | **Compose BOM compatible**
 
@@ -15,8 +18,8 @@ SceneView is a Compose-first 3D and AR SDK for Android, built on Filament (Googl
 ### build.gradle (app module)
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.1.1")   // 3D only
-    implementation("io.github.sceneview:arsceneview:3.1.1") // AR (includes sceneview)
+    implementation("io.github.sceneview:sceneview:3.2.0")   // 3D only
+    implementation("io.github.sceneview:arsceneview:3.2.0") // AR (includes sceneview)
 }
 ```
 

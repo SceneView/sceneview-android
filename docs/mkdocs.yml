@@ -1,5 +1,5 @@
-site_name: SceneView — 3D & AR SDK for Android
-site_description: "The #1 open-source 3D & AR SDK for Android. Compose-native scenes powered by Google Filament and ARCore. Drop-in Scene{} and ARScene{} composables for model viewing, AR placement, physics, and immersive experiences."
+site_name: SceneView — 3D & AR SDK
+site_description: "The #1 open-source 3D & AR SDK for Android and iOS. Compose-native scenes powered by Google Filament and ARCore on Android, SwiftUI and RealityKit on iOS. Drop-in Scene{} and ARScene{} composables for model viewing, AR placement, physics, and immersive experiences."
 site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview
 repo_name: SceneView/sceneview
@@ -22,7 +22,7 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   font:
-    text: Google Sans
+    text: Inter
     code: JetBrains Mono
   icon:
     logo: material/cube-outline
@@ -123,9 +123,9 @@ extra:
     - icon: fontawesome/brands/npm
       link: https://www.npmjs.com/package/@sceneview/mcp
       name: SceneView MCP on npm
-  analytics:
-    provider: google
-    property: G-XXXXXXXXXX
+  # analytics:
+  #   provider: google
+  #   property: G-XXXXXXXXXX
   generator: false
   version:
     provider: mike
@@ -133,8 +133,3 @@ extra:
 extra_css:
   - stylesheets/extra.css
   - stylesheets/m3-expressive.css
-  - stylesheets/m3-enhancements.css
-  - stylesheets/m3-flagship.css
-
-extra_javascript:
-  - assets/javascripts/m3-interactions.js
