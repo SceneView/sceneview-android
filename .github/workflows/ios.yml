@@ -1,0 +1,62 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'SceneViewSwift/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'SceneViewSwift/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Test (iOS)
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve Swift packages
+        working-directory: SceneViewSwift
+        run: swift package resolve
+
+      - name: Build Swift Package (iOS)
+        working-directory: SceneViewSwift
+        run: |
+          xcodebuild build \
+            -scheme SceneViewSwift \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+            -skipMacroValidation \
+            | tail -20
+
+      - name: Run tests (iOS Simulator)
+        working-directory: SceneViewSwift
+        run: |
+          xcodebuild test \
+            -scheme SceneViewSwift \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+            -skipMacroValidation \
+            | tail -30
+
+      - name: Build Demo App
+        working-directory: SceneViewSwift/Examples/SceneViewDemo
+        run: |
+          xcodebuild build \
+            -project SceneViewDemo.xcodeproj \
+            -scheme SceneViewDemo \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+            -skipMacroValidation \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | tail -20

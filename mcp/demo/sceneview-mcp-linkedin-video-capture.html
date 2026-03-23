@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SceneView MCP – LinkedIn Video (Capture)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e1a; overflow: hidden; font-family: Inter, 'SF Pro Display', -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+  #container { width: 1080px; height: 1080px; position: relative; overflow: hidden; }
+  canvas#three-canvas { position: absolute; top: 0; left: 0; opacity: 0; }
+
+  .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* ── Title card ── */
+  #title-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+  #title-card h1 { font-size: 52px; font-weight: 800; color: white; }
+  #title-card h2 { font-size: 52px; font-weight: 800; color: #38bdf8; margin-top: 8px; }
+  #title-card .sub { font-size: 24px; color: #7880a0; margin-top: 32px; }
+  #title-card .badge { background: rgba(30,33,60,0.9); color: white; font-family: 'SF Mono', monospace; font-size: 17px; padding: 8px 20px; border-radius: 20px; margin-top: 28px; }
+
+  /* Translucent geometric shapes behind title */
+  #title-shapes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+  /* ── Split view ── */
+  #split-view { display: none; }
+  .step-label { position: absolute; top: 24px; left: 24px; font-size: 20px; font-weight: 700; z-index: 6; }
+  .step-label .num { color: #6366f1; }
+  .step-label .txt { color: white; margin-left: 8px; }
+
+  .terminal { position: absolute; left: 24px; top: 74px; width: 496px; height: 936px; background: #0c1022; border-radius: 14px; overflow: hidden; }
+  .terminal-chrome { height: 32px; background: #141a2e; display: flex; align-items: center; padding: 0 12px; }
+  .terminal-chrome .dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  .terminal-chrome .dot.r { background: #ff5f56; }
+  .terminal-chrome .dot.y { background: #ffbd2e; }
+  .terminal-chrome .dot.g { background: #27c93f; }
+  .terminal-chrome .title { color: #7880a0; font-size: 12px; margin-left: auto; margin-right: auto; font-weight: 600; }
+  .terminal-body { padding: 12px 14px; font-family: 'SF Mono', 'Menlo', monospace; font-size: 17px; line-height: 1.5; white-space: pre-wrap; }
+  .terminal-body .prompt { color: #22c55e; }
+  .terminal-body .you { color: #38bdf8; font-weight: 700; }
+  .terminal-body .claude { color: #6366f1; font-weight: 700; }
+  .terminal-body .dim { color: #7880a0; }
+  .terminal-body .success { color: #22c55e; }
+  .terminal-body .user-text { color: #e0e4ec; }
+  .cursor { display: inline-block; width: 10px; height: 18px; background: white; vertical-align: text-bottom; }
+
+  .emu-panel { position: absolute; right: 24px; top: 74px; width: 496px; height: 936px; background: #080c14; border-radius: 14px; border: 2px solid #1a2040; overflow: hidden; }
+
+  /* Annotation callouts on emulator */
+  #annotation { position: absolute; z-index: 8; opacity: 0; pointer-events: none; }
+  .ann-pill { background: rgba(99,102,241,0.85); color: white; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 16px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .ann-pill .ann-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+
+  /* Transparent code bg behind emulator during 2D scenes */
+  #emu-code-bg {
+    position: absolute; right: 24px; top: 74px; width: 496px; height: 936px;
+    z-index: 0; opacity: 0; pointer-events: none;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 13px; line-height: 1.65; white-space: pre;
+    color: rgba(180, 190, 220, 0.10);
+    padding: 30px 14px;
+    overflow: hidden; border-radius: 14px;
+  }
+  #emu-code-bg .kw { color: rgba(192, 132, 252, 0.16); }
+  #emu-code-bg .fn { color: rgba(74, 222, 128, 0.16); }
+  #emu-code-bg .str { color: rgba(253, 224, 71, 0.14); }
+  #emu-code-bg .type { color: rgba(96, 165, 250, 0.16); }
+  #emu-code-bg .cm { color: rgba(70, 80, 112, 0.18); }
+  #emu-code-bg .ann { color: rgba(251, 113, 133, 0.16); }
+
+  /* Old small code overlay (still used for brief flash) */
+  .code-overlay { position: absolute; bottom: 10px; left: 24px; width: 496px; height: 220px; background: rgba(18,22,36,0.95); border-radius: 10px; padding: 10px; font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.4; overflow: hidden; opacity: 0; color: #c4c8d8; z-index: 6; }
+  .code-overlay .kw { color: #c084fc; }
+  .code-overlay .str { color: #fde047; }
+  .code-overlay .fn { color: #4ade80; }
+  .code-overlay .cm { color: #465070; }
+  .code-overlay .type { color: #60a5fa; }
+
+  /* ── Transition scan overlay ── */
+  #transition-canvas {
+    position: absolute; top: 0; left: 0; width: 1080px; height: 1080px;
+    z-index: 7; pointer-events: none; opacity: 0;
+  }
+  #transition-label {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 8; opacity: 0; pointer-events: none; text-align: center;
+  }
+  #transition-label .tl-main {
+    font-size: 28px; font-weight: 800; color: white;
+    text-shadow: 0 0 40px rgba(99,102,241,0.8), 0 0 80px rgba(99,102,241,0.4);
+    letter-spacing: 2px;
+  }
+  #transition-label .tl-sub {
+    font-size: 16px; color: #38bdf8; margin-top: 8px; font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  /* ── Device mockup frames during 3D scene ── */
+  #device-showcase { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 8; pointer-events: none; opacity: 0; }
+  .device-frame {
+    position: absolute; overflow: hidden; opacity: 0; transition: none;
+    background: #050a19;
+  }
+  .device-frame canvas {
+    display: block; width: 100%; height: 100%;
+  }
+  .device-frame .device-label {
+    position: absolute; bottom: -36px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.7); font-size: 15px; font-weight: 700; white-space: nowrap;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  /* Tablet — landscape, thick bezel */
+  .device-tablet {
+    width: 460px; height: 320px; border-radius: 20px;
+    left: 40px; top: 120px;
+    border: 5px solid rgba(180, 185, 210, 0.5);
+    box-shadow: 0 0 50px rgba(99,102,241,0.2), 0 0 100px rgba(99,102,241,0.08), inset 0 0 40px rgba(0,0,0,0.5);
+  }
+  .device-tablet::before {
+    content: ''; position: absolute; top: 50%; right: -12px; transform: translateY(-50%);
+    width: 4px; height: 36px; background: rgba(180,185,210,0.35); border-radius: 3px;
+  }
+  .device-tablet::after {
+    content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 8px; border-radius: 50%; background: rgba(180,185,210,0.2);
+  }
+  /* Phone — portrait, modern notch design */
+  .device-phone {
+    width: 200px; height: 410px; border-radius: 30px;
+    right: 80px; top: 80px;
+    border: 5px solid rgba(180, 185, 210, 0.5);
+    box-shadow: 0 0 50px rgba(56,189,248,0.2), 0 0 100px rgba(56,189,248,0.08), inset 0 0 40px rgba(0,0,0,0.5);
+  }
+  .device-phone::before {
+    content: ''; position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 20px; background: rgba(5,10,25,0.9);
+    border-radius: 0 0 14px 14px; border: 2px solid rgba(180,185,210,0.25);
+    border-top: none;
+  }
+  .device-phone::after {
+    content: ''; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 4px; background: rgba(180,185,210,0.25); border-radius: 3px;
+  }
+  /* Car display — wide infotainment screen with dashboard */
+  .device-car-wrap {
+    position: absolute; left: 50%; bottom: 160px; transform: translateX(-50%);
+    width: 580px; height: 310px; opacity: 0;
+  }
+  .device-car {
+    position: absolute; top: 0; left: 30px; right: 30px;
+    width: auto; height: 220px; border-radius: 14px;
+    border: 5px solid rgba(180, 185, 210, 0.4);
+    box-shadow: 0 0 50px rgba(34,197,94,0.15), 0 0 100px rgba(34,197,94,0.06), inset 0 0 40px rgba(0,0,0,0.5);
+    background: #050a19; overflow: hidden;
+  }
+  /* Dashboard shelf below car screen */
+  .car-dashboard {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+    background: linear-gradient(180deg, rgba(25,30,50,0.9) 0%, rgba(15,18,35,0.95) 100%);
+    border-radius: 0 0 30px 30px;
+  }
+  .car-dashboard::before {
+    content: ''; position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+    width: 260px; height: 3px; background: rgba(180,185,210,0.12); border-radius: 2px;
+  }
+  /* Ventilation slots */
+  .car-vent {
+    position: absolute; top: 35px; width: 50px; height: 18px;
+    border: 2px solid rgba(180,185,210,0.10); border-radius: 4px;
+  }
+  .car-vent.left { left: 100px; }
+  .car-vent.right { right: 100px; }
+  .car-vent::before, .car-vent::after {
+    content: ''; position: absolute; left: 6px; right: 6px; height: 1px;
+    background: rgba(180,185,210,0.08);
+  }
+  .car-vent::before { top: 4px; }
+  .car-vent::after { top: 9px; }
+  /* Steering wheel hint */
+  .car-steering {
+    position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+    width: 100px; height: 50px; border: 4px solid rgba(180,185,210,0.12);
+    border-radius: 50px 50px 0 0; border-bottom: none;
+  }
+  .car-label {
+    position: absolute; bottom: -42px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.75); font-size: 16px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+  }
+
+  /* Result badge */
+  #result-badge {
+    position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+    z-index: 9; opacity: 0; pointer-events: none;
+    background: rgba(34,197,94,0.15); border: 2px solid rgba(34,197,94,0.4);
+    border-radius: 24px; padding: 8px 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  #result-badge .rb-check { color: #22c55e; font-size: 20px; font-weight: 800; }
+  #result-badge .rb-text { color: rgba(255,255,255,0.8); font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+
+  /* Connecting text between devices */
+  #device-connector {
+    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.55); font-size: 18px; font-weight: 700;
+    letter-spacing: 3px; opacity: 0; z-index: 9; white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  /* Big transparent Compose code bg overlay for 3D + end card */
+  #compose-code-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 200%;
+    z-index: 3; opacity: 0; pointer-events: none;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 19px; line-height: 1.8; white-space: pre;
+    color: rgba(180, 190, 220, 0.13);
+    padding: 80px 40px;
+    overflow: hidden;
+  }
+  #compose-code-bg .kw { color: rgba(192, 132, 252, 0.20); }
+  #compose-code-bg .fn { color: rgba(74, 222, 128, 0.20); }
+  #compose-code-bg .str { color: rgba(253, 224, 71, 0.18); }
+  #compose-code-bg .type { color: rgba(96, 165, 250, 0.20); }
+  #compose-code-bg .cm { color: rgba(70, 80, 112, 0.25); }
+  #compose-code-bg .ann { color: rgba(251, 113, 133, 0.20); }
+
+  /* HUD */
+  #hud-3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 5; }
+  .hud-top { position: absolute; top: 12px; left: 14px; right: 14px; height: 32px; background: rgba(5,10,20,0.85); border-radius: 10px; display: flex; align-items: center; padding: 0 14px; }
+  .hud-top .autopilot { color: #38bdf8; font-weight: 700; font-size: 14px; }
+  .hud-top .following { color: #788090; font-size: 10px; font-family: monospace; margin: 0 auto; }
+  .hud-top .active { color: #22c55e; font-weight: 700; font-size: 14px; }
+  .hud-top .dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-left: 8px; }
+  .hud-speed { position: absolute; bottom: 20px; left: 20px; background: rgba(5,10,20,0.85); border-radius: 12px; padding: 8px 14px; }
+  .hud-speed .num { font-size: 36px; font-weight: 700; color: white; }
+  .hud-speed .unit { font-size: 12px; color: #788090; font-family: monospace; }
+  .hud-speed .limit { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: 700; }
+  .hud-detect { position: absolute; bottom: 20px; right: 20px; background: rgba(5,10,20,0.85); border-radius: 10px; padding: 8px 12px; font-size: 11px; }
+  .hud-detect .title { color: #465070; font-weight: 700; font-size: 10px; margin-bottom: 4px; }
+  .hud-detect .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+  .hud-detect .swatch { width: 8px; height: 8px; display: inline-block; }
+  .hud-detect .lbl { color: #788090; font-family: monospace; }
+  .hud-detect .cnt { color: white; font-weight: 700; font-family: monospace; margin-left: auto; }
+
+  /* ── Impact phrases (one per screen) ── */
+  #impact-phrase {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 6; opacity: 0; pointer-events: none;
+  }
+  #impact-phrase .phrase-main {
+    font-size: 58px; font-weight: 900; color: white; text-align: center;
+    line-height: 1.25; letter-spacing: -0.5px;
+  }
+  #impact-phrase .phrase-accent { color: #38bdf8; }
+  #impact-phrase .phrase-dim { color: #788090; font-weight: 600; }
+
+  /* ── End card ── */
+  #end-card { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; z-index: 6; }
+  #end-card h1 { font-size: 58px; font-weight: 900; color: white; letter-spacing: -0.5px; }
+  #end-card h1 .blue { color: #38bdf8; }
+  #end-card .tagline { font-size: 22px; color: #4ade80; margin-top: 14px; font-weight: 700; }
+  #end-card .npm { color: #4ade80; font-family: 'SF Mono', 'Menlo', monospace; font-size: 18px; margin-top: 28px; letter-spacing: 0.5px; }
+  #end-card .features { color: #94a0b8; font-size: 19px; margin-top: 36px; line-height: 2.4; text-align: center; font-weight: 500; }
+  #end-card .features b { color: #e0e4ec; font-weight: 700; }
+  #end-card .repo { color: #6366f1; font-family: 'SF Mono', 'Menlo', monospace; font-size: 15px; margin-top: 36px; font-weight: 600; }
+  #end-card .author { color: #556080; font-size: 15px; margin-top: 10px; font-weight: 600; }
+
+  #progress { position: absolute; bottom: 0; left: 0; height: 3px; background: #6366f1; z-index: 20; }
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="three-canvas" width="1080" height="1080"></canvas>
+
+  <!-- Title card -->
+  <div id="title-card" class="overlay">
+    <canvas id="title-shapes" width="1080" height="1080"></canvas>
+    <h1 style="z-index:1;position:relative">Autopilot Vision</h1>
+    <h2 style="z-index:1;position:relative">in 3D</h2>
+    <div class="sub" style="z-index:1;position:relative">Powered by SceneView MCP</div>
+    <div class="badge" style="z-index:1;position:relative">claude code + sceneview mcp</div>
+  </div>
+
+  <!-- Split view (steps 1 & 2) -->
+  <div id="split-view" class="overlay">
+    <div class="step-label"><span class="num" id="step-num">Step 1:</span><span class="txt" id="step-txt"></span></div>
+    <div class="terminal">
+      <div class="terminal-chrome">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <div class="title">Claude Code</div>
+      </div>
+      <div class="terminal-body" id="term-body"></div>
+    </div>
+    <div id="emu-code-bg"></div>
+    <div class="emu-panel" id="emu-panel">
+      <canvas id="emu-canvas" width="492" height="932"></canvas>
+    </div>
+    <div id="annotation"></div>
+    <div class="code-overlay" id="code-overlay"></div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud-3d">
+    <div class="hud-top">
+      <span class="autopilot">AUTOPILOT</span>
+      <span class="following">FOLLOWING DIST: COMFORTABLE</span>
+      <span class="active">ACTIVE</span>
+      <div class="dot"></div>
+    </div>
+    <div class="hud-speed">
+      <span class="num" id="hud-speed-num">68</span><br><span class="unit">km/h</span>
+      <div class="limit">120</div>
+    </div>
+    <div class="hud-detect">
+      <div class="title">DETECTED</div>
+      <div class="row"><span class="swatch" style="background:#22d3ee"></span><span class="lbl">Cars</span><span class="cnt">3</span></div>
+      <div class="row"><span class="swatch" style="background:#f97316"></span><span class="lbl">Bus</span><span class="cnt">1</span></div>
+      <div class="row"><span class="swatch" style="background:#f97316"></span><span class="lbl">Truck</span><span class="cnt">1</span></div>
+      <div class="row"><span class="swatch" style="background:#10b981"></span><span class="lbl">Bikes</span><span class="cnt">2</span></div>
+      <div class="row"><span class="swatch" style="background:#fb7185"></span><span class="lbl">Persons</span><span class="cnt">3</span></div>
+    </div>
+  </div>
+
+  <!-- Transition scan effect -->
+  <canvas id="transition-canvas" width="1080" height="1080"></canvas>
+  <div id="transition-label">
+    <div class="tl-main">LIVE 3D RESULT</div>
+    <div class="tl-sub">Built from your conversation</div>
+  </div>
+
+  <!-- Result badge -->
+  <div id="result-badge">
+    <span class="rb-check">&#10003;</span>
+    <span class="rb-text">Live Result</span>
+  </div>
+
+  <!-- Device mockup frames -->
+  <div id="device-showcase">
+    <div class="device-frame device-tablet">
+      <canvas id="tablet-canvas" width="450" height="310"></canvas>
+      <div class="device-label">Tablet</div>
+    </div>
+    <div class="device-frame device-phone">
+      <canvas id="phone-canvas" width="190" height="400"></canvas>
+      <div class="device-label">Phone</div>
+    </div>
+    <div class="device-car-wrap">
+      <div class="device-frame device-car">
+        <canvas id="car-canvas" width="510" height="210"></canvas>
+      </div>
+      <div class="car-dashboard">
+        <div class="car-vent left"></div>
+        <div class="car-vent right"></div>
+      </div>
+      <div class="car-steering"></div>
+      <div class="car-label">Car Display</div>
+    </div>
+  </div>
+  <div id="device-connector">Your scene &mdash; any screen</div>
+
+  <!-- Big transparent Compose code scrolling behind 3D + end card -->
+  <div id="compose-code-bg"></div>
+
+  <!-- Impact phrases (one per screen) -->
+  <div id="impact-phrase">
+    <div class="phrase-main" id="phrase-text"></div>
+  </div>
+
+  <!-- End card -->
+  <div id="end-card" class="overlay">
+    <h1>SceneView <span class="blue">MCP</span></h1>
+    <div class="tagline">3D & AR as Jetpack Compose composables</div>
+    <div class="npm">npx sceneview-mcp</div>
+    <div class="features">
+      <b>Describe</b> what you want &middot; AI builds it<br>
+      <b>Phone</b> &middot; <b>Tablet</b> &middot; <b>Desktop</b> &middot; <b>TV</b> &middot; <b>Car</b><br>
+      Open source &middot; MIT License
+    </div>
+    <div class="repo">github.com/SceneView</div>
+    <div class="author">@ThomasGorisse</div>
+  </div>
+
+  <div id="progress"></div>
+</div>
+
+<script src="three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE.JS AUTOPILOT 3D SCENE
+// ═══════════════════════════════════════════════════════════════════════════
+const canvas3d = document.getElementById('three-canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020408);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+camera.position.set(2.75, 5.5, 12.0);
+camera.lookAt(2.75, 0.3, -8);
+const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(1080, 1080);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.6;
+
+scene.add(new THREE.AmbientLight(0x101828, 0.3));
+const sun = new THREE.DirectionalLight(0xfffaf0, 1.8);
+sun.position.set(4, 15, 10); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 80;
+sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
+sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x3388ff, 0.15);
+fill.position.set(-5, 10, -5);
+scene.add(fill);
+scene.fog = new THREE.FogExp2(0x020408, 0.012);
+
+function mat(c, r=0.5, m=0) { return new THREE.MeshStandardMaterial({color:c, roughness:r, metalness:m}); }
+function emMat(c) { return new THREE.MeshStandardMaterial({color:c, emissive: new THREE.Color(c), emissiveIntensity:2, roughness:0.1}); }
+function bx(w,h,d,mt,pos,cs=true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mt);
+  m.position.set(...pos); m.castShadow=cs; m.receiveShadow=true; return m;
+}
+
+const gnd = new THREE.Mesh(new THREE.PlaneGeometry(60,60), mat(0x0A0F0A, 0.95));
+gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.02; gnd.receiveShadow=true; scene.add(gnd);
+
+const rd = new THREE.Mesh(new THREE.PlaneGeometry(12,60), mat(0x1E2436, 0.88));
+rd.rotation.x=-Math.PI/2; rd.position.set(0,-0.01,-15); rd.receiveShadow=true; scene.add(rd);
+
+function addLn(x,w,l) { const m=new THREE.Mesh(new THREE.PlaneGeometry(w,l), mat(0xFFFFFF,0.25)); m.rotation.x=-Math.PI/2; m.position.set(x,0.005,-15); scene.add(m); }
+addLn(-5.5, 0.12, 60); addLn(5.5, 0.12, 60); addLn(4.7, 0.08, 60);
+
+const dashGrp = new THREE.Group();
+for(let i=0;i<16;i++){const d=new THREE.Mesh(new THREE.PlaneGeometry(0.12,1.8),mat(0xFFCC00,0.25));d.rotation.x=-Math.PI/2;d.position.set(0,0.006,8-i*4);dashGrp.add(d);}
+scene.add(dashGrp);
+
+const ego = new THREE.Group();
+ego.add(bx(1.85,0.60,3.70,mat(0xE2E8F0,0.15),[0,0.30,0]));
+ego.add(bx(1.50,0.42,1.70,mat(0xC8D2E1,0.20),[0,0.72,-0.3]));
+ego.add(bx(1.65,0.12,0.07,mat(0xFF3333,0.10),[0,0.35,1.85]));
+for(const wx of[-0.75,0.75])for(const wz of[-1.2,1.2]){const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.29,0.29,0.22,16),mat(0x141419,0.90));wh.rotation.z=Math.PI/2;wh.position.set(wx,0.05,wz);wh.castShadow=true;ego.add(wh);}
+ego.position.set(2.75,0,2.5); scene.add(ego);
+
+const truck = new THREE.Group();
+truck.add(bx(2.4,1.55,6.5,mat(0xF97316,0.20),[0,0.78,0]));
+for(const wx of[-1,1])for(const wz of[-2.5,2.5]){const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.25,16),mat(0x141419,0.90));wh.rotation.z=Math.PI/2;wh.position.set(wx,0.05,wz);wh.castShadow=true;truck.add(wh);}
+truck.position.set(2.75,0,-15); scene.add(truck);
+
+function mkCar(c,isBus=false){const g=new THREE.Group();const m=mat(c,0.20);if(isBus){g.add(bx(2.5,1.80,7.0,m,[0,0.90,0]));}else{g.add(bx(1.85,0.60,3.70,m,[0,0.30,0]));const lc=new THREE.Color(c).lerp(new THREE.Color(0xffffff),0.3);g.add(bx(1.50,0.42,1.70,mat(lc,0.20),[0,0.72,0]));}return g;}
+const oncs=[];
+const o1=mkCar(0x22D3EE);o1.position.set(-2.75,0,5);scene.add(o1);oncs.push({m:o1,s:1.5,o:0});
+const o2=mkCar(0x22D3EE);o2.position.set(-2.75,0,-5);scene.add(o2);oncs.push({m:o2,s:1.3,o:18});
+const bus=mkCar(0xF97316,true);bus.position.set(-2.75,0,-20);scene.add(bus);oncs.push({m:bus,s:0.9,o:30});
+const behind=mkCar(0x22D3EE);behind.position.set(2.75,0,8);scene.add(behind);
+
+const cycs=[];
+for(let i=0;i<2;i++){const g=new THREE.Group();g.add(bx(0.22,0.80,1.0,mat(0x10B981,0.30),[0,0.40,0]));g.add(bx(0.40,0.55,0.30,mat(0xFB7185,0.40),[0,0.95,0]));const h=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,8),mat(0xFB7185,0.40));h.position.set(0,1.30,0);g.add(h);g.position.set(5.1,0,4-i*8);g.castShadow=true;scene.add(g);cycs.push({m:g,o:i*15});}
+
+const peds=[];
+for(let i=0;i<3;i++){const g=new THREE.Group();g.add(bx(0.40,1.20,0.30,mat(0xFB7185,0.40),[0,0.60,0]));const h=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8),mat(0xFB7185,0.40));h.position.set(0,1.35,0);g.add(h);g.position.set(6.5+i*0.2,0,3-i*5);g.castShadow=true;scene.add(g);peds.push({m:g,o:i*12});}
+
+const tlG=new THREE.Group();
+tlG.add(bx(0.15,5.0,0.15,mat(0x32373F,0.50),[6.3,2.5,0]));
+tlG.add(bx(3.4,0.15,0.15,mat(0x32373F,0.50),[4.6,5.0,0]));
+tlG.add(bx(0.35,0.90,0.35,mat(0x191C23,0.30),[3.5,4.5,0]));
+const rL=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),emMat(0xFF3333));rL.position.set(3.5,4.75,0.18);tlG.add(rL);
+const yL=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),emMat(0xFFCC00));yL.position.set(3.5,4.50,0.18);tlG.add(yL);
+const gL=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),emMat(0x22C55E));gL.position.set(3.5,4.25,0.18);tlG.add(gL);
+const rGl=new THREE.PointLight(0xFF3333,0,5);rGl.position.copy(rL.position);tlG.add(rGl);
+const yGl=new THREE.PointLight(0xFFCC00,0,5);yGl.position.copy(yL.position);tlG.add(yGl);
+const gGl=new THREE.PointLight(0x22C55E,0,5);gGl.position.copy(gL.position);tlG.add(gGl);
+tlG.position.z=-12;scene.add(tlG);
+
+function update3D(t) {
+  dashGrp.children.forEach((d,i)=>{d.position.z=8-i*4+(t*3)%4;});
+  truck.position.z=-15+Math.sin(t*0.25)*7;
+  const rs=(t*5)%50;
+  oncs.forEach(v=>{v.m.position.z=10-((rs*v.s+v.o)%50)+10;});
+  behind.position.z=6+(rs*0.3)%8;
+  cycs.forEach((c,i)=>{c.m.position.z=8-((rs*0.18+c.o)%30)+5;c.m.position.y=Math.sin(t*4+i)*0.08;});
+  peds.forEach((p,i)=>{p.m.position.z=5-((rs*0.12+p.o)%30)+5;p.m.position.y=Math.sin(t*3.5+i*2)*0.05;});
+  const cy=t%24;const rOn=cy>=17,yOn=cy>=14&&cy<17,gOn=cy<14;
+  rL.material.emissiveIntensity=rOn?3:0.05;yL.material.emissiveIntensity=yOn?3:0.05;gL.material.emissiveIntensity=gOn?3:0.05;
+  rGl.intensity=rOn?2:0;yGl.intensity=yOn?2:0;gGl.intensity=gOn?2:0;
+  renderer.render(scene, camera);
+}
+update3D(0);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TITLE SHAPES (translucent wireframe cubes/spheres)
+// ═══════════════════════════════════════════════════════════════════════════
+const tsCanvas = document.getElementById('title-shapes');
+const tsCtx = tsCanvas.getContext('2d');
+
+function drawTitleShapes(t) {
+  tsCtx.clearRect(0, 0, 1080, 1080);
+  const a = 0.08;
+  // Rotating wireframe cubes
+  const shapes = [
+    { x: 180, y: 280, size: 120, rot: t * 0.4, color: '99,102,241' },
+    { x: 880, y: 750, size: 100, rot: -t * 0.3 + 1, color: '56,189,248' },
+    { x: 750, y: 200, size: 80, rot: t * 0.5 + 2, color: '34,197,94' },
+    { x: 250, y: 820, size: 90, rot: -t * 0.35 + 3, color: '251,113,133' },
+    { x: 540, y: 160, size: 60, rot: t * 0.6, color: '192,132,252' },
+    { x: 540, y: 920, size: 70, rot: -t * 0.45, color: '96,165,250' },
+  ];
+  shapes.forEach(s => {
+    tsCtx.save();
+    tsCtx.translate(s.x, s.y);
+    tsCtx.rotate(s.rot);
+    tsCtx.strokeStyle = `rgba(${s.color}, ${a})`;
+    tsCtx.lineWidth = 2;
+    const h = s.size / 2;
+    // Front face
+    tsCtx.strokeRect(-h, -h, s.size, s.size);
+    // Back face offset
+    const off = s.size * 0.3;
+    tsCtx.strokeRect(-h + off, -h - off, s.size, s.size);
+    // Connecting lines
+    tsCtx.beginPath();
+    [[-h,-h], [h,-h], [h,h], [-h,h]].forEach(([px,py]) => {
+      tsCtx.moveTo(px, py); tsCtx.lineTo(px + off, py - off);
+    });
+    tsCtx.stroke();
+    tsCtx.restore();
+  });
+  // Floating circles (AR tracking dots)
+  for (let i = 0; i < 8; i++) {
+    const cx = 100 + Math.sin(t * 0.3 + i * 1.2) * 400 + 440;
+    const cy = 100 + Math.cos(t * 0.25 + i * 0.9) * 400 + 440;
+    tsCtx.beginPath();
+    tsCtx.arc(cx, cy, 3, 0, Math.PI * 2);
+    tsCtx.fillStyle = `rgba(99, 102, 241, ${a * 0.6})`;
+    tsCtx.fill();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2D EMULATOR CANVAS
+// ═══════════════════════════════════════════════════════════════════════════
+const emuCanvas = document.getElementById('emu-canvas');
+const ectx = emuCanvas.getContext('2d');
+
+function draw2D(t, hasTL, speed, cw, ch) {
+  const W = cw || 492, H = ch || 932;
+  emuCanvas.width = W; emuCanvas.height = H;
+  ectx.fillStyle='#080c14'; ectx.fillRect(0,0,W,H);
+  const rl=W*0.22, rr=W*0.78, rw=rr-rl;
+  ectx.fillStyle='#1e2436'; ectx.fillRect(rl,0,rw,H);
+  ectx.fillStyle='white'; ectx.fillRect(rl,0,3,H); ectx.fillRect(rr-3,0,3,H);
+  ectx.fillStyle='#555'; ectx.fillRect(rr-rw*0.15,0,2,H);
+  ectx.fillStyle='#ffcc00';
+  const dashOff=(t*80)%40;
+  for(let i=-2;i<H/40+3;i++){const dy=i*40+dashOff;if(dy>=0&&dy<=H-20)ectx.fillRect(W/2-2,dy,4,20);}
+  const cx=rl+rw*0.25;
+  [[1.2,'#22d3ee',24,46],[0.8,'#f97316',30,70]].forEach(([sp,col,caw,cah],i)=>{
+    const cy=((t*sp*60+i*180)%(H+100))-50;
+    ectx.fillStyle=col; roundRect(ectx,cx-caw/2,cy-cah/2,caw,cah,6);
+  });
+  const ex=rl+rw*0.72, ey=H*0.62;
+  ectx.fillStyle='#e2e8f0'; roundRect(ectx,ex-16,ey-30,32,60,8);
+  ectx.fillStyle='#c8d2e1'; roundRect(ectx,ex-12,ey-15,24,25,5);
+  ectx.fillStyle='#ef4444'; ectx.fillRect(ex-14,ey+26,6,4); ectx.fillRect(ex+8,ey+26,6,4);
+  const ty=H*0.25+Math.sin(t*0.5)*20;
+  ectx.fillStyle='#f97316'; roundRect(ectx,ex-18,ty-38,36,76,6);
+  ectx.fillStyle='#22d3ee'; roundRect(ectx,ex-14,H*0.85-22,28,44,6);
+  for(let i=0;i<2;i++){const by=((t*25+i*120)%(H+60))-30;ectx.fillStyle='#10b981';roundRect(ectx,rr-rw*0.15+12-4,by-10,8,20,3);}
+  for(let i=0;i<3;i++){const py=((t*15+i*90)%(H+40))-20;ectx.fillStyle='#fb7185';roundRect(ectx,rr+15-5,py-12,10,24,4);}
+  if(hasTL){
+    const tx=rr+6, tly=H*0.15;
+    ectx.fillStyle='#282832'; ectx.fillRect(tx,tly,4,60); ectx.fillRect(tx-40,tly,40,4);
+    const bxx=tx-35;
+    ectx.fillStyle='#141420'; roundRect(ectx,bxx-8,tly-30,16,36,4);
+    const cyc=t%6;
+    ectx.fillStyle=cyc>4?'#ef4444':'#321414'; fillCircle(ectx,bxx,tly-22,5);
+    ectx.fillStyle=(3.5<cyc&&cyc<=4)?'#ffcc00':'#322d0a'; fillCircle(ectx,bxx,tly-10,5);
+    ectx.fillStyle=cyc<=3.5?'#22c55e':'#0a3214'; fillCircle(ectx,bxx,tly+1,5);
+  }
+  ectx.fillStyle='rgba(5,10,20,0.85)'; roundRect(ectx,14,H-60,70,48,10);
+  ectx.fillStyle='white'; ectx.font='bold 32px system-ui'; ectx.fillText(speed,22,H-24);
+  ectx.fillStyle='#788090'; ectx.font='11px monospace'; ectx.fillText('km/h',22,H-14);
+  ectx.fillStyle='rgba(5,10,20,0.85)'; roundRect(ectx,10,8,W-20,26,8);
+  ectx.fillStyle='#38bdf8'; ectx.font='bold 11px system-ui'; ectx.fillText('AUTOPILOT',18,24);
+  ectx.fillStyle='#22c55e'; ectx.fillText('ACTIVE',W-75,24);
+  fillCircle(ectx,W-32,18,4);
+}
+
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();ctx.fill();}
+function fillCircle(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEVICE CONTENT — crop + draw the live 3D canvas into each device
+// ═══════════════════════════════════════════════════════════════════════════
+const tabletCvs = document.getElementById('tablet-canvas');
+const phoneCvs = document.getElementById('phone-canvas');
+const carCvs = document.getElementById('car-canvas');
+const tabletCtx = tabletCvs.getContext('2d');
+const phoneCtx = phoneCvs.getContext('2d');
+const carCtx = carCvs.getContext('2d');
+
+function drawAllDevices() {
+  // Draw the 3D scene (already rendered on canvas3d) cropped into each device
+  const src = canvas3d;
+  // Tablet (landscape) — crop center region
+  tabletCtx.drawImage(src, 80, 100, 900, 620, 0, 0, 450, 310);
+  // Phone (portrait) — crop center-right narrower region
+  phoneCtx.drawImage(src, 350, 50, 420, 880, 0, 0, 190, 400);
+  // Car (wide landscape) — crop wide center strip
+  carCtx.drawImage(src, 40, 200, 1000, 410, 0, 0, 510, 210);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CODE SNIPPETS & COMPOSE BG
+// ═══════════════════════════════════════════════════════════════════════════
+const CODE1 = `<span class="cm">// Traffic light gantry</span>
+<span class="fn">TrafficLightNode</span>(
+    position = <span class="type">Position</span>(
+        x = <span class="str">6.3f</span>,
+        y = <span class="str">0f</span>,
+        z = <span class="str">-12f</span>
+    ),
+    cycle = <span class="fn">rememberTrafficCycle</span>(
+        green = <span class="str">14.seconds</span>,
+        yellow = <span class="str">3.seconds</span>,
+        red = <span class="str">7.seconds</span>
+    )
+)`;
+
+const CODE2 = `<span class="cm">// Reduce vehicle speed</span>
+<span class="kw">val</span> speed <span class="kw">by</span> transition.<span class="fn">animateFloat</span>(
+    initialValue = <span class="str">60f</span>,
+    targetValue = <span class="str">75f</span>,
+    animationSpec = <span class="fn">infiniteRepeatable</span>(
+        <span class="fn">tween</span>(
+            durationMillis = <span class="str">18_000</span>,
+            easing = <span class="type">LinearEasing</span>
+        ),
+        <span class="type">RepeatMode</span>.Reverse
+    )
+)`;
+
+const COMPOSE_CODE_BG = `<span class="ann">@Composable</span>
+<span class="kw">fun</span> <span class="fn">AutopilotScene</span>() {
+    <span class="kw">val</span> engine = <span class="fn">rememberEngine</span>()
+    <span class="kw">val</span> modelLoader = <span class="fn">rememberModelLoader</span>(engine)
+    <span class="kw">val</span> materialLoader = <span class="fn">rememberMaterialLoader</span>(engine)
+
+    <span class="fn">Scene</span>(
+        modifier = <span class="type">Modifier</span>.<span class="fn">fillMaxSize</span>(),
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraNode = <span class="fn">rememberCameraNode</span>(engine) {
+            position = <span class="type">Position</span>(
+                x = <span class="str">2.75f</span>, y = <span class="str">4.0f</span>, z = <span class="str">11.0f</span>
+            )
+            <span class="fn">lookAt</span>(
+                eye = <span class="type">Position</span>(<span class="str">2.75f</span>, <span class="str">4.0f</span>, <span class="str">11.0f</span>),
+                target = <span class="type">Position</span>(<span class="str">2.75f</span>, <span class="str">0.5f</span>, <span class="str">-10.0f</span>)
+            )
+        },
+        environment = <span class="fn">rememberEnvironment</span>(engine)
+    ) {
+        <span class="cm">// Road — 12 units wide, 5 lanes</span>
+        <span class="fn">CubeNode</span>(
+            size = <span class="type">Size</span>(<span class="str">12f</span>, <span class="str">0.02f</span>, <span class="str">80f</span>),
+            materialInstance = <span class="fn">rememberMaterialInstance</span>(
+                materialLoader = materialLoader,
+                assetFileLocation = <span class="str">"materials/road.filamat"</span>
+            ),
+            position = <span class="type">Position</span>(<span class="str">0f</span>, <span class="str">0f</span>, <span class="str">-20f</span>)
+        )
+
+        <span class="cm">// Ego vehicle</span>
+        <span class="kw">val</span> egoModel = <span class="fn">rememberModelInstance</span>(
+            modelLoader = modelLoader,
+            assetFileLocation = <span class="str">"models/ego_car.glb"</span>
+        )
+        egoModel?.<span class="fn">let</span> { model ->
+            <span class="fn">ModelNode</span>(
+                modelInstance = model,
+                scaleToUnits = <span class="str">1.8f</span>,
+                position = <span class="type">Position</span>(
+                    x = <span class="str">2.75f</span>, y = <span class="str">0f</span>, z = <span class="str">2.5f</span>
+                )
+            )
+        }
+
+        <span class="cm">// Traffic light gantry</span>
+        <span class="fn">TrafficLightNode</span>(
+            position = <span class="type">Position</span>(
+                x = <span class="str">6.3f</span>, y = <span class="str">0f</span>, z = <span class="str">-12f</span>
+            ),
+            cycle = <span class="fn">rememberTrafficCycle</span>(
+                green = <span class="str">14.seconds</span>,
+                yellow = <span class="str">3.seconds</span>,
+                red = <span class="str">7.seconds</span>
+            )
+        )
+
+        <span class="cm">// Animated vehicle speed</span>
+        <span class="kw">val</span> transition = <span class="fn">rememberInfiniteTransition</span>(
+            label = <span class="str">"speed"</span>
+        )
+        <span class="kw">val</span> speed <span class="kw">by</span> transition.<span class="fn">animateFloat</span>(
+            initialValue = <span class="str">60f</span>,
+            targetValue = <span class="str">75f</span>,
+            animationSpec = <span class="fn">infiniteRepeatable</span>(
+                animation = <span class="fn">tween</span>(
+                    durationMillis = <span class="str">18_000</span>,
+                    easing = <span class="type">LinearEasing</span>
+                ),
+                repeatMode = <span class="type">RepeatMode</span>.Reverse
+            ),
+            label = <span class="str">"vehicleSpeed"</span>
+        )
+
+        <span class="cm">// Oncoming traffic</span>
+        <span class="fn">VehicleNode</span>(
+            modelLoader = modelLoader,
+            assetFileLocation = <span class="str">"models/sedan.glb"</span>,
+            lane = <span class="type">Lane</span>.Oncoming,
+            speed = speed
+        )
+
+        <span class="cm">// Truck oscillating ahead</span>
+        <span class="fn">VehicleNode</span>(
+            modelLoader = modelLoader,
+            assetFileLocation = <span class="str">"models/truck.glb"</span>,
+            lane = <span class="type">Lane</span>.SameDirection,
+            oscillation = <span class="str">7f</span>,
+            apply = { <span class="fn">intensity</span>(<span class="str">100_000f</span>) }
+        )
+
+        <span class="cm">// Light node for sun</span>
+        <span class="fn">LightNode</span>(
+            engine = engine,
+            apply = {
+                <span class="fn">intensity</span>(<span class="str">160_000f</span>)
+                <span class="fn">color</span>(<span class="type">Color</span>.White)
+            }
+        )
+    }
+}`;
+
+const composeCodeEl = document.getElementById('compose-code-bg');
+composeCodeEl.innerHTML = COMPOSE_CODE_BG;
+
+const emuCodeBgEl = document.getElementById('emu-code-bg');
+emuCodeBgEl.innerHTML = COMPOSE_CODE_BG;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIMELINE DIRECTOR
+// ═══════════════════════════════════════════════════════════════════════════
+const DURATION = 40;
+const els = {
+  titleCard: document.getElementById('title-card'),
+  splitView: document.getElementById('split-view'),
+  termBody: document.getElementById('term-body'),
+  stepNum: document.getElementById('step-num'),
+  stepTxt: document.getElementById('step-txt'),
+  codeOverlay: document.getElementById('code-overlay'),
+  emuPanel: document.getElementById('emu-panel'),
+  deviceShowcase: document.getElementById('device-showcase'),
+  deviceConnector: document.getElementById('device-connector'),
+  deviceFrames: document.querySelectorAll('.device-frame'),
+  carWrap: document.querySelector('.device-car-wrap'),
+  transCanvas: document.getElementById('transition-canvas'),
+  transLabel: document.getElementById('transition-label'),
+  resultBadge: document.getElementById('result-badge'),
+  hud3d: document.getElementById('hud-3d'),
+  impactPhrase: document.getElementById('impact-phrase'),
+  phraseText: document.getElementById('phrase-text'),
+  endCard: document.getElementById('end-card'),
+  progress: document.getElementById('progress'),
+  canvas3d: canvas3d,
+  annotation: document.getElementById('annotation'),
+  hudSpeedNum: document.getElementById('hud-speed-num'),
+};
+
+function typeText(full, elapsed, cps=12) {
+  const n = Math.min(full.length, Math.floor(elapsed * cps));
+  return full.substring(0, n);
+}
+
+function cursorHtml(t) {
+  return Math.floor(t * 2) % 2 === 0 ? '<span class="cursor"></span>' : '';
+}
+
+// Smooth easing
+function easeInOut(x) { return x < 0.5 ? 2*x*x : 1 - Math.pow(-2*x+2, 2)/2; }
+
+// Transition scan effect canvas
+const transCtx = document.getElementById('transition-canvas').getContext('2d');
+function drawTransitionScan(progress) {
+  // progress: 0→1, the scan line sweeps left to right
+  transCtx.clearRect(0, 0, 1080, 1080);
+  const x = progress * 1080;
+  const glowWidth = 120;
+  // Bright scan line
+  const grad = transCtx.createLinearGradient(x - glowWidth, 0, x + glowWidth, 0);
+  grad.addColorStop(0, 'rgba(99,102,241,0)');
+  grad.addColorStop(0.35, 'rgba(99,102,241,0.08)');
+  grad.addColorStop(0.48, 'rgba(99,102,241,0.35)');
+  grad.addColorStop(0.50, 'rgba(200,210,255,0.9)');
+  grad.addColorStop(0.52, 'rgba(99,102,241,0.35)');
+  grad.addColorStop(0.65, 'rgba(99,102,241,0.08)');
+  grad.addColorStop(1, 'rgba(99,102,241,0)');
+  transCtx.fillStyle = grad;
+  transCtx.fillRect(x - glowWidth, 0, glowWidth * 2, 1080);
+  // Horizontal grid lines that sweep with it
+  transCtx.strokeStyle = 'rgba(99,102,241,0.12)';
+  transCtx.lineWidth = 1;
+  for (let y = 0; y < 1080; y += 60) {
+    const startX = Math.max(0, x - 300);
+    const endX = Math.min(1080, x + 60);
+    if (endX > startX) {
+      transCtx.beginPath();
+      transCtx.moveTo(startX, y);
+      transCtx.lineTo(endX, y);
+      transCtx.stroke();
+    }
+  }
+}
+
+window.renderAtTime = function(t) {
+  els.progress.style.width = Math.min(100, t / DURATION * 100) + '%';
+
+  // Reset all
+  els.titleCard.style.display = 'none'; els.titleCard.style.opacity = 0;
+  els.splitView.style.display = 'none';
+  els.canvas3d.style.opacity = 0;
+  els.endCard.style.display = 'none'; els.endCard.style.opacity = 0;
+  els.hud3d.style.opacity = 0;
+  els.codeOverlay.style.opacity = 0;
+  els.deviceShowcase.style.opacity = 0;
+  els.deviceConnector.style.opacity = 0;
+  els.deviceFrames.forEach(f => f.style.opacity = 0);
+  els.carWrap.style.opacity = 0;
+  els.transCanvas.style.opacity = 0;
+  els.transLabel.style.opacity = 0;
+  els.resultBadge.style.opacity = 0;
+  els.impactPhrase.style.opacity = 0;
+  composeCodeEl.style.opacity = 0;
+  composeCodeEl.style.transform = '';
+  emuCodeBgEl.style.opacity = 0;
+  els.annotation.style.opacity = 0;
+  els.emuPanel.style.opacity = 1;
+  els.emuPanel.style.display = 'block';
+  els.emuPanel.style.position = 'absolute';
+  els.emuPanel.style.left = ''; els.emuPanel.style.top = '';
+  els.emuPanel.style.width = ''; els.emuPanel.style.height = '';
+  els.emuPanel.style.right = '24px'; els.emuPanel.style.top = '74px';
+  els.emuPanel.style.width = '496px'; els.emuPanel.style.height = '936px';
+  els.emuPanel.style.borderRadius = '14px';
+  els.emuPanel.style.border = '2px solid #1a2040';
+
+  // ── SCENE 1: Title (0–2.5s) ──
+  if (t < 2.5) {
+    els.titleCard.style.display = 'flex';
+    els.titleCard.style.opacity = t < 0.6 ? t / 0.6 : (t > 2.0 ? Math.max(0, 1 - (t - 2.0) * 2) : 1);
+    els.emuPanel.style.display = 'none';
+    drawTitleShapes(t);
+  }
+  // ── SCENE 2: Step 1 — "Add traffic lights" (2.5–12s) ──
+  else if (t < 12) {
+    const st = t - 2.5;
+    els.splitView.style.display = 'block';
+    els.stepNum.textContent = 'Step 1:';
+    els.stepTxt.textContent = '"Add traffic lights"';
+
+    // Translucent code behind emulator
+    emuCodeBgEl.style.opacity = 0.6;
+    emuCodeBgEl.style.transform = 'translateY(-' + (st * 10) + 'px)';
+
+    let html = '<span class="prompt">$ claude</span>\n\n';
+    if (st > 0.6) {
+      html += '<span class="you">You:</span>\n';
+      html += '  <span class="user-text">' + typeText('Add traffic lights to the autopilot scene', st - 0.8) + '</span>' + cursorHtml(t) + '\n';
+    }
+    if (st > 5) {
+      html += '\n<span class="claude">Claude:</span>\n';
+      html += '  <span class="dim">' + typeText("I'll add a traffic light gantry with", st - 5) + '</span>\n';
+      if (st > 6) html += '  <span class="dim">' + typeText("cycling red/yellow/green lights...", st - 6) + '</span>\n';
+    }
+    if (st > 7) html += '\n  <span class="success">\u2713 Updated AutopilotSceneView.kt</span>\n';
+    els.termBody.innerHTML = html;
+
+    // Code overlay flash
+    if (st > 7 && st < 9.5) {
+      els.codeOverlay.style.opacity = st < 7.5 ? (st-7)*2 : (st > 8.7 ? Math.max(0,1-(st-8.7)*1.5) : 1);
+      els.codeOverlay.innerHTML = CODE1;
+    }
+
+    // Annotation: highlight traffic light appearing
+    if (st > 7.5 && st < 9.5) {
+      const annA = st < 8 ? (st-7.5)*2 : (st > 9 ? Math.max(0,1-(st-9)*2) : 1);
+      els.annotation.style.opacity = annA;
+      els.annotation.style.right = '40px';
+      els.annotation.style.top = '200px';
+      els.annotation.style.left = '';
+      els.annotation.innerHTML = '<div class="ann-pill"><div class="ann-dot"></div>Traffic light added</div>';
+    }
+
+    draw2D(st * 0.8, st > 7.5, '95');
+  }
+  // ── SCENE 3: Step 2 — "Make it go slower" (12–21s) ──
+  else if (t < 21) {
+    const st = t - 12;
+    els.splitView.style.display = 'block';
+    els.stepNum.textContent = 'Step 2:';
+    els.stepTxt.textContent = '"Make it go slower"';
+
+    emuCodeBgEl.style.opacity = 0.6;
+    emuCodeBgEl.style.transform = 'translateY(-' + ((st + 9.5) * 10) + 'px)';
+
+    let html = '<span class="prompt">$ claude</span>\n\n';
+    html += '<span class="you">You:</span>\n  <span class="dim">Add traffic lights to the autopilot scene</span>\n\n';
+    html += '<span class="claude">Claude:</span>\n  <span class="success">\u2713 Updated AutopilotSceneView.kt</span>\n\n';
+    if (st > 0.5) {
+      html += '<span class="you">You:</span>\n';
+      html += '  <span class="user-text">' + typeText('Make the car go slower, around 65 km/h', st - 0.7) + '</span>' + cursorHtml(t) + '\n';
+    }
+    if (st > 4) {
+      html += '\n<span class="claude">Claude:</span>\n';
+      html += '  <span class="dim">' + typeText("I'll reduce the animation speed and", st - 4) + '</span>\n';
+      if (st > 5) html += '  <span class="dim">' + typeText("lower the target velocity range...", st - 5) + '</span>\n';
+    }
+    if (st > 6) html += '\n  <span class="success">\u2713 Speed reduced to 60-75 km/h range</span>\n';
+    els.termBody.innerHTML = html;
+
+    if (st > 6 && st < 8.5) {
+      els.codeOverlay.style.opacity = st < 6.5 ? (st-6)*2 : (st > 7.8 ? Math.max(0,1-(st-7.8)*1.5) : 1);
+      els.codeOverlay.innerHTML = CODE2;
+    }
+
+    // Annotation: speed changing
+    if (st > 6.5 && st < 8.5) {
+      const annA = st < 7 ? (st-6.5)*2 : (st > 8 ? Math.max(0,1-(st-8)*2) : 1);
+      els.annotation.style.opacity = annA;
+      els.annotation.style.right = '';
+      els.annotation.style.left = '545px';
+      els.annotation.style.top = '930px';
+      els.annotation.innerHTML = '<div class="ann-pill"><div class="ann-dot"></div>Speed: 95 \u2192 65 km/h</div>';
+    }
+
+    const spd = st > 6.5 ? Math.round(95 - Math.min(1,(st-6.5)/2)*30) : 95;
+    const tf = st < 6.5 ? 0.8 : 0.8 - Math.min(1,(st-6.5)/2)*0.4;
+    draw2D(st * tf, true, String(spd));
+  }
+  // ── SCENE 4: 2D → 3D with scan transition + device showcase (21–30s) ──
+  else if (t < 30) {
+    const st = t - 21;
+
+    // Phase 1 (0–1s): Full-screen 2D, "RENDERING 3D" label fades in
+    // Phase 2 (1–3.5s): Scan line sweeps left→right, 3D fades in behind it
+    // Phase 3 (3.5–4.5s): Scan fades out, pure 3D with HUD
+    // Phase 4 (5–9s): Device frames + result badge appear
+
+    update3D(st + 8);
+
+    // Scan sweep progress (1s–3.5s)
+    let scanP = 0;
+    if (st >= 1 && st < 3.5) scanP = easeInOut((st - 1) / 2.5);
+    else if (st >= 3.5) scanP = 1;
+
+    // 3D blend follows the scan (starts slightly behind the scan)
+    let blend = 0;
+    if (st < 1) blend = 0;
+    else if (st < 3.5) blend = easeInOut(Math.max(0, (st - 1.2) / 2.3));
+    else blend = 1;
+
+    els.canvas3d.style.opacity = blend;
+    els.hud3d.style.opacity = blend > 0.7 ? Math.min(1, (blend - 0.7) / 0.3) : 0;
+
+    const spdVal = Math.round(68 + Math.sin(st * 0.3) * 5);
+    els.hudSpeedNum.textContent = spdVal;
+
+    // 2D fullscreen behind
+    if (blend < 1) {
+      els.emuPanel.style.display = 'block';
+      els.emuPanel.style.position = 'absolute';
+      els.emuPanel.style.left = '0'; els.emuPanel.style.top = '0';
+      els.emuPanel.style.right = '';
+      els.emuPanel.style.width = '1080px'; els.emuPanel.style.height = '1080px';
+      els.emuPanel.style.borderRadius = '0';
+      els.emuPanel.style.border = 'none';
+      draw2D(st * 0.5 + 8, true, '68', 1080, 1080);
+      els.emuPanel.style.opacity = 1 - blend;
+    } else {
+      els.emuPanel.style.opacity = 0;
+      els.emuPanel.style.display = 'none';
+    }
+
+    // "RENDERING 3D" label
+    if (st < 4) {
+      let labelA = 0;
+      if (st < 0.6) labelA = st / 0.6;
+      else if (st < 3) labelA = 1;
+      else labelA = Math.max(0, 1 - (st - 3) / 1);
+      els.transLabel.style.opacity = labelA;
+    }
+
+    // Scan line overlay
+    if (st >= 0.8 && st < 4) {
+      els.transCanvas.style.opacity = st < 1 ? (st - 0.8) / 0.2 : (st > 3.5 ? Math.max(0, 1 - (st - 3.5) * 2) : 1);
+      drawTransitionScan(scanP);
+    }
+
+    // Result badge — "✓ Live Result"
+    if (st > 4.2) {
+      els.resultBadge.style.opacity = Math.min(1, (st - 4.2) / 0.8);
+    }
+
+    // Device frames appearing sequentially with live content
+    if (st > 5) {
+      els.deviceShowcase.style.opacity = 1;
+      drawAllDevices();
+      // Tablet
+      const tabletA = Math.min(1, (st - 5) / 0.7);
+      els.deviceFrames[0].style.opacity = tabletA;
+      // Phone
+      if (st > 5.7) {
+        els.deviceFrames[1].style.opacity = Math.min(1, (st - 5.7) / 0.7);
+      }
+      // Car display (full wrap with dashboard)
+      if (st > 6.4) {
+        const carA = Math.min(1, (st - 6.4) / 0.7);
+        els.carWrap.style.opacity = carA;
+        els.deviceFrames[2].style.opacity = carA;
+      }
+      // Connector text
+      if (st > 7.2) {
+        els.deviceConnector.style.opacity = Math.min(1, (st - 7.2) / 0.8);
+      }
+    }
+
+    // Compose code bg
+    if (st > 4) {
+      composeCodeEl.style.opacity = Math.min(1, (st - 4) / 2);
+      composeCodeEl.style.transform = 'translateY(-' + ((st - 4) * 18) + 'px)';
+    }
+  }
+  // ── SCENE 5: Impact phrases + End card (30–40s) ──
+  else {
+    const st = t - 30;
+    els.emuPanel.style.display = 'none';
+
+    // Keep compose code bg visible and scrolling
+    composeCodeEl.style.opacity = 1;
+    const scrollY = (9 - 4) * 18 + st * 18;
+    composeCodeEl.style.transform = 'translateY(-' + scrollY + 'px)';
+
+    // Impact phrases — one per screen, centered, large, simple language
+    const phrases = [
+      { html: '<span class="phrase-accent">Describe</span> what you want.<br>AI builds it.', start: 0, end: 2 },
+      { html: 'No <span class="phrase-accent">3D skills</span> needed.', start: 2, end: 4 },
+      { html: '<span class="phrase-accent">Phone.</span><br><span class="phrase-accent">Tablet.</span><br><span class="phrase-accent">Desktop.</span><br><span class="phrase-accent">TV.</span> <span class="phrase-accent">Car.</span><br><span class="phrase-dim">Any screen.</span>', start: 4, end: 6.5 },
+      { html: 'From <span class="phrase-accent">idea</span><br>to <span class="phrase-accent">3D</span> in minutes.', start: 6.5, end: 8 },
+    ];
+
+    let showingPhrase = false;
+    for (const p of phrases) {
+      if (st >= p.start && st < p.end) {
+        const pst = st - p.start;
+        const dur = p.end - p.start;
+        // Fade in 0.4s, hold, fade out 0.4s
+        let a = 1;
+        if (pst < 0.4) a = pst / 0.4;
+        else if (pst > dur - 0.4) a = Math.max(0, (dur - pst) / 0.4);
+        els.impactPhrase.style.opacity = a;
+        els.phraseText.innerHTML = p.html;
+        showingPhrase = true;
+        break;
+      }
+    }
+
+    // End card appears after all phrases
+    if (st >= 8) {
+      els.endCard.style.display = 'flex';
+      els.endCard.style.opacity = Math.min(1, (st - 8) / 0.8);
+    }
+  }
+};
+
+window.SCENE_READY = true;
+</script>
+</body>
+</html>

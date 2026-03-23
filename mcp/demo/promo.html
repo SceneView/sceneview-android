@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SceneView MCP — Promo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            width: 1080px;
+            height: 1080px;
+            background: radial-gradient(ellipse at center, #ffffff 0%, #f5f7fa 100%);
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            color: #202124;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* ===== BEAT CONTAINERS ===== */
+        .beat {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            top: 0;
+            left: 0;
+        }
+
+        /* ===== HOOK ===== */
+        .beat-hook {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .hook-main {
+            font-size: 72px;
+            font-weight: 700;
+            color: #202124;
+            text-align: center;
+            line-height: 1.1;
+            letter-spacing: -1px;
+        }
+
+        .hook-mcp {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hook-sub {
+            font-size: 36px;
+            font-weight: 400;
+            color: #5f6368;
+            text-align: center;
+        }
+
+        /* ===== SUBTITLE BEAT ===== */
+        .beat-subtitle {
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .subtitle-main {
+            font-size: 56px;
+            font-weight: 700;
+            color: #202124;
+            text-align: center;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle-accent {
+            color: #4285f4;
+        }
+
+        .subtitle-desc {
+            font-size: 28px;
+            font-weight: 400;
+            color: #5f6368;
+            text-align: center;
+            max-width: 700px;
+        }
+
+        /* ===== SETUP BEAT ===== */
+        .beat-setup {
+            flex-direction: column;
+            gap: 32px;
+            padding: 60px;
+        }
+
+        .setup-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #9aa0a6;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .config-block {
+            background: linear-gradient(135deg, #fafbfc, #f0f2f5);
+            border: 1px solid #e8eaed;
+            border-radius: 16px;
+            padding: 32px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            line-height: 1.8;
+            color: #202124;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08),
+                        0 16px 32px rgba(0,0,0,0.12), 0 32px 64px rgba(0,0,0,0.08);
+            position: relative;
+            max-width: 700px;
+        }
+
+        .config-block::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 44px;
+            background: #f0f1f3;
+            border-bottom: 1px solid #e8eaed;
+            border-radius: 16px 16px 0 0;
+            z-index: 1;
+        }
+
+        .config-block::after {
+            content: '';
+            position: absolute;
+            top: 14px; left: 12px;
+            width: 10px; height: 10px;
+            background: #ea4335;
+            border-radius: 50%;
+            box-shadow: 16px 0 0 #fbbc04, 32px 0 0 #34a853;
+            z-index: 2;
+        }
+
+        .config-content {
+            position: relative;
+            z-index: 3;
+            padding-top: 20px;
+        }
+
+        .config-filename {
+            position: absolute;
+            top: 13px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            color: #9aa0a6;
+            z-index: 3;
+        }
+
+        .setup-hint {
+            font-size: 22px;
+            font-weight: 500;
+            color: #5f6368;
+            text-align: center;
+        }
+
+        /* ===== DEMO LAYOUT ===== */
+        .beat-demo {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            padding: 60px;
+            gap: 40px;
+            align-items: stretch;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .beat-demo::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(66,133,244,0.03) 25%, rgba(66,133,244,0.03) 26%, transparent 27%, transparent 74%, rgba(66,133,244,0.03) 75%, rgba(66,133,244,0.03) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(66,133,244,0.03) 25%, rgba(66,133,244,0.03) 26%, transparent 27%, transparent 74%, rgba(66,133,244,0.03) 75%, rgba(66,133,244,0.03) 76%, transparent 77%, transparent);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .beat-demo > * { position: relative; z-index: 1; }
+
+        .demo-top {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .claude-bubble {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 20px 20px 20px 4px;
+            font-size: 18px;
+            font-weight: 500;
+            max-width: 900px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08),
+                        0 16px 32px rgba(0,0,0,0.12), 0 32px 64px rgba(124,58,237,0.1);
+            line-height: 1.5;
+            position: relative;
+            padding-left: 52px;
+        }
+
+        .claude-bubble::before {
+            content: 'C';
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .demo-body {
+            display: flex;
+            gap: 40px;
+            flex: 1;
+            align-items: center;
+        }
+
+        .code-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .code-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #9aa0a6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .code-block {
+            background: linear-gradient(135deg, #fafbfc, #f0f2f5);
+            border: 1px solid #e8eaed;
+            border-radius: 12px;
+            padding: 24px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #202124;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08),
+                        0 16px 32px rgba(0,0,0,0.12), 0 32px 64px rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 36px;
+            background: #f0f1f3;
+            border-bottom: 1px solid #e8eaed;
+            z-index: 1;
+        }
+
+        .code-block::after {
+            content: '';
+            position: absolute;
+            top: 11px; left: 10px;
+            width: 8px; height: 8px;
+            background: #ea4335;
+            border-radius: 50%;
+            box-shadow: 14px 0 0 #fbbc04, 28px 0 0 #34a853;
+            z-index: 2;
+        }
+
+        .code-content {
+            position: relative;
+            z-index: 3;
+            padding-top: 16px;
+        }
+
+        .code-line {
+            display: flex;
+            align-items: baseline;
+        }
+
+        .code-line-number {
+            color: #b4b7ba;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            min-width: 28px;
+            text-align: right;
+            padding-right: 14px;
+            user-select: none;
+        }
+
+        .code-keyword { color: #cf222e; font-weight: 500; }
+        .code-type { color: #6639ba; font-weight: 500; }
+        .code-string { color: #0a3069; }
+        .code-number { color: #0550ae; }
+        .code-prop { color: #202124; }
+        .code-punct { color: #57606a; }
+        .code-comment { color: #6e7681; font-style: italic; }
+
+        /* Phone mockup */
+        .phone-mockup {
+            width: 280px;
+            min-width: 280px;
+            height: 560px;
+            background: white;
+            border: 8px solid #1a1a1a;
+            border-radius: 36px;
+            padding: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08),
+                        0 16px 32px rgba(0,0,0,0.12), 0 32px 64px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px; height: 24px;
+            background: #000;
+            border-radius: 0 0 16px 16px;
+            z-index: 20;
+        }
+
+        .phone-status {
+            position: absolute;
+            top: 6px;
+            left: 14px; right: 14px;
+            height: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 25;
+        }
+
+        .phone-battery {
+            width: 18px; height: 9px;
+            border: 1px solid white;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .phone-battery::after {
+            content: '';
+            position: absolute;
+            top: 1px; left: 1px;
+            width: 11px; height: 7px;
+            background: white;
+            border-radius: 1px;
+        }
+
+        .phone-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        /* ===== 3D Model Viewer phone content ===== */
+        .model-viewer-scene {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            perspective: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .helmet-3d {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: helmetRotate 6s linear infinite;
+        }
+
+        @keyframes helmetRotate {
+            0% { transform: rotateY(0deg) rotateX(5deg); }
+            100% { transform: rotateY(360deg) rotateX(5deg); }
+        }
+
+        .helmet-dome {
+            width: 120px;
+            height: 80px;
+            background: linear-gradient(135deg, #c0a060, #d4b878, #a88840);
+            border-radius: 60px 60px 30px 30px;
+            position: absolute;
+            top: 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 4px 12px rgba(255,255,255,0.2);
+        }
+
+        .helmet-visor {
+            width: 80px;
+            height: 30px;
+            background: linear-gradient(180deg, rgba(40,40,60,0.9), rgba(20,20,40,0.7));
+            border-radius: 40px 40px 20px 20px;
+            position: absolute;
+            top: 50px;
+            left: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 4px rgba(255,255,255,0.1);
+        }
+
+        .helmet-shadow {
+            width: 100px;
+            height: 20px;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.25), transparent);
+            filter: blur(8px);
+            position: absolute;
+            bottom: -15px;
+            left: 10px;
+        }
+
+        .model-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #202124;
+            text-align: center;
+        }
+
+        .model-sublabel {
+            font-size: 11px;
+            color: #5f6368;
+            text-align: center;
+        }
+
+        .orbit-hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #9aa0a6;
+        }
+
+        .orbit-icon {
+            width: 20px; height: 20px;
+            border: 2px solid #9aa0a6;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .orbit-icon::after {
+            content: '';
+            position: absolute;
+            top: 3px; left: 6px;
+            width: 0; height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 6px solid #9aa0a6;
+        }
+
+        /* ===== AR phone content ===== */
+        .ar-camera-bg {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(160deg, #e8e0d4 0%, #d4ccc0 40%, #c8c0b4 100%);
+        }
+
+        .ar-grid {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(66,133,244,0.1) 25%, rgba(66,133,244,0.1) 26%, transparent 27%, transparent 74%, rgba(66,133,244,0.1) 75%, rgba(66,133,244,0.1) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(66,133,244,0.1) 25%, rgba(66,133,244,0.1) 26%, transparent 27%, transparent 74%, rgba(66,133,244,0.1) 75%, rgba(66,133,244,0.1) 76%, transparent 77%, transparent);
+            background-size: 30px 30px;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .ar-badge {
+            position: absolute;
+            top: 36px; left: 12px;
+            background: #4285f4;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(66,133,244,0.3);
+        }
+
+        .sofa-3d {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+        }
+
+        .sofa-seat {
+            width: 160px;
+            height: 48px;
+            background: linear-gradient(135deg, #4285f4, #669df7);
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(66,133,244,0.4), inset 0 -3px 6px rgba(0,0,0,0.15);
+        }
+
+        .sofa-back {
+            width: 160px;
+            height: 36px;
+            background: linear-gradient(180deg, #3b78e7, #4285f4);
+            border-radius: 10px 10px 0 0;
+            margin-bottom: -4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .sofa-arm-l, .sofa-arm-r {
+            width: 16px;
+            height: 48px;
+            background: #3b78e7;
+            border-radius: 6px;
+            position: absolute;
+            bottom: 0;
+        }
+
+        .sofa-arm-l { left: -12px; }
+        .sofa-arm-r { right: -12px; }
+
+        .sofa-shadow {
+            width: 140px;
+            height: 12px;
+            background: radial-gradient(ellipse, rgba(0,0,0,0.2), transparent);
+            filter: blur(6px);
+            margin-top: 8px;
+            margin-left: 10px;
+        }
+
+        .tap-indicator {
+            position: absolute;
+            bottom: 160px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tap-circle {
+            width: 36px; height: 36px;
+            border: 2px solid #4285f4;
+            border-radius: 50%;
+            animation: tapPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes tapPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 0.3; }
+        }
+
+        .tap-label {
+            font-size: 9px;
+            color: #4285f4;
+            font-weight: 600;
+        }
+
+        /* ===== CHECKMARK ===== */
+        .checkmark {
+            font-size: 40px;
+            font-weight: 700;
+            color: #34a853;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .checkmark-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #34a853;
+        }
+
+        /* ===== CTA ===== */
+        .beat-cta {
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .cta-title {
+            font-size: 64px;
+            font-weight: 700;
+            color: #202124;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+
+        .cta-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .cta-link {
+            background: linear-gradient(135deg, #fafbfc, #f0f2f5);
+            border: 1px solid #e8eaed;
+            border-radius: 12px;
+            padding: 16px 28px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            color: #202124;
+            font-weight: 500;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08),
+                        0 16px 32px rgba(0,0,0,0.12);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .cta-icon {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: white;
+        }
+
+        .cta-npm { background: #cb3837; }
+        .cta-gh { background: #24292e; }
+
+        .cta-tagline {
+            font-size: 28px;
+            font-weight: 500;
+            color: #5f6368;
+            text-align: center;
+        }
+
+        .accent-line {
+            width: 200px;
+            height: 4px;
+            background: linear-gradient(90deg, #4285f4, #7c3aed);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+
+    <script>
+        // Time-based animation: all timings in seconds
+        const FPS = 30;
+        const DURATION = 30; // total seconds
+        const canvas = document.getElementById('canvas');
+        let startTime = null;
+
+        // Convert seconds to "frame units" (30 units per second) for animation math
+        function timeToFrame(sec) { return sec * FPS; }
+
+        // Current virtual frame based on wall-clock time
+        let frame = 0;
+
+        // ============ MATH UTILITIES ============
+        function lerp(a, b, t) { return a + (b - a) * t; }
+        function clamp01(t) { return Math.max(0, Math.min(1, t)); }
+
+        function ease(t) {
+            t = clamp01(t);
+            const mt = 1 - t;
+            return (mt**3)*0 + 3*(mt**2)*t*0.25 + 3*mt*(t**2)*0.25 + (t**3)*1;
+        }
+
+        function spring(t, damping = 0.7, freq = 4) {
+            t = clamp01(t);
+            return 1 - Math.exp(-damping * t) * Math.cos(freq * t * Math.PI);
+        }
+
+        function fadeIn(frame, start, dur) {
+            return ease(clamp01((frame - start) / dur));
+        }
+
+        function slideIn(frame, start, dur, fromPx) {
+            return lerp(fromPx, 0, ease(clamp01((frame - start) / dur)));
+        }
+
+        function scaleIn(frame, start, dur, from = 0.5) {
+            return lerp(from, 1, spring(clamp01((frame - start) / dur)));
+        }
+
+        function progress(frame, start, end) {
+            return clamp01((frame - start) / (end - start));
+        }
+
+        function typeOut(text, frame, start, dur) {
+            const p = progress(frame, start, start + dur);
+            return text.substring(0, Math.floor(p * text.length));
+        }
+
+        function driftZoom(frame, start, end) {
+            const t = progress(frame, start, end);
+            return lerp(1.0, 1.06, t * 0.3 + Math.sin(t * Math.PI * 2) * 0.03);
+        }
+
+        // ============ HELPERS ============
+        function clearCanvas() { canvas.innerHTML = ''; }
+
+        function createBeat(cls) {
+            const beat = document.createElement('div');
+            beat.className = `beat ${cls}`;
+            canvas.appendChild(beat);
+            return beat;
+        }
+
+        function makeCodeBlock(lines, label, typedCount) {
+            const panel = document.createElement('div');
+            panel.className = 'code-panel';
+
+            const lbl = document.createElement('div');
+            lbl.className = 'code-label';
+            lbl.textContent = label;
+            panel.appendChild(lbl);
+
+            const block = document.createElement('div');
+            block.className = 'code-block';
+
+            let html = '<div class="code-content">';
+            const visibleLines = lines.slice(0, typedCount);
+            visibleLines.forEach((line, idx) => {
+                html += `<div class="code-line"><span class="code-line-number">${idx + 1}</span><span>${line}</span></div>`;
+            });
+            html += '</div>';
+            block.innerHTML = html;
+            panel.appendChild(block);
+            return panel;
+        }
+
+        // ============ BEAT 1 (0-90 / 0-3s): HOOK ============
+        function renderBeat1() {
+            clearCanvas();
+            const beat = createBeat('beat-hook');
+
+            const main = document.createElement('div');
+            main.className = 'hook-main';
+            main.innerHTML = 'SceneView <span class="hook-mcp">MCP</span>';
+
+            const sub = document.createElement('div');
+            sub.className = 'hook-sub';
+            sub.textContent = 'AI-powered 3D & AR for Android';
+
+            const scale1 = scaleIn(frame, 0, 40, 0.5);
+            const opacity1 = fadeIn(frame, 0, 40);
+            main.style.transform = `scale(${scale1})`;
+            main.style.opacity = opacity1;
+
+            const opacity2 = fadeIn(frame, 20, 35);
+            const slideY = slideIn(frame, 20, 35, 30);
+            sub.style.opacity = opacity2;
+            sub.style.transform = `translateY(${slideY}px)`;
+
+            // Fade out
+            if (frame > 65) {
+                const fo = 1 - ease(clamp01((frame - 65) / 20));
+                main.style.opacity = fo * opacity1;
+                sub.style.opacity = fo * opacity2;
+            }
+
+            beat.appendChild(main);
+            beat.appendChild(sub);
+        }
+
+        // ============ BEAT 2 (90-180 / 3-6s): VALUE PROP ============
+        function renderBeat2() {
+            clearCanvas();
+            const beat = createBeat('beat-subtitle');
+
+            const main = document.createElement('div');
+            main.className = 'subtitle-main';
+            main.innerHTML = 'Give Claude<br><span class="subtitle-accent">3D & AR</span> superpowers';
+
+            const desc = document.createElement('div');
+            desc.className = 'subtitle-desc';
+            desc.textContent = 'One MCP server. Full SceneView SDK as a tool.';
+
+            main.style.opacity = fadeIn(frame, 90, 35);
+            main.style.transform = `scale(${scaleIn(frame, 90, 35, 0.8)})`;
+
+            desc.style.opacity = fadeIn(frame, 115, 30);
+            desc.style.transform = `translateY(${slideIn(frame, 115, 30, 20)}px)`;
+
+            // Fade out
+            if (frame > 155) {
+                const fo = 1 - ease(clamp01((frame - 155) / 20));
+                main.style.opacity = fo;
+                desc.style.opacity = fo;
+            }
+
+            beat.appendChild(main);
+            beat.appendChild(desc);
+        }
+
+        // ============ BEAT 3 (180-270 / 6-9s): SETUP ============
+        function renderBeat3() {
+            clearCanvas();
+            const beat = createBeat('beat-setup');
+
+            const label = document.createElement('div');
+            label.className = 'setup-label';
+            label.textContent = 'Setup';
+            label.style.opacity = fadeIn(frame, 180, 20);
+
+            const config = document.createElement('div');
+            config.className = 'config-block';
+
+            const filename = document.createElement('div');
+            filename.className = 'config-filename';
+            filename.textContent = 'claude_desktop_config.json';
+
+            const configLines = [
+                '{',
+                '  <span class="code-string">"mcpServers"</span>: {',
+                '    <span class="code-string">"sceneview"</span>: {',
+                '      <span class="code-string">"command"</span>: <span class="code-string">"npx"</span>,',
+                '      <span class="code-string">"args"</span>: [<span class="code-string">"-y"</span>, <span class="code-string">"sceneview-mcp"</span>]',
+                '    }',
+                '  }',
+                '}'
+            ];
+
+            const typeProg = progress(frame, 195, 240);
+            const visibleCount = Math.floor(typeProg * configLines.length);
+
+            let html = '<div class="config-content">';
+            configLines.slice(0, visibleCount).forEach((line, idx) => {
+                html += `<div class="code-line"><span class="code-line-number">${idx + 1}</span><span>${line}</span></div>`;
+            });
+            html += '</div>';
+
+            config.innerHTML = html;
+            config.appendChild(filename);
+            config.style.opacity = fadeIn(frame, 190, 25);
+            config.style.transform = `scale(${scaleIn(frame, 190, 25, 0.9)})`;
+
+            const hint = document.createElement('div');
+            hint.className = 'setup-hint';
+            hint.textContent = 'That\'s it. Claude now has the full SDK.';
+            hint.style.opacity = fadeIn(frame, 240, 20);
+
+            // Fade out
+            if (frame > 250) {
+                const fo = 1 - ease(clamp01((frame - 250) / 15));
+                beat.style.opacity = fo;
+            }
+
+            beat.appendChild(label);
+            beat.appendChild(config);
+            beat.appendChild(hint);
+        }
+
+        // ============ BEAT 4 (270-480 / 9-16s): DEMO 1 — 3D MODEL VIEWER ============
+        function renderBeat4() {
+            clearCanvas();
+            const beat = createBeat('beat-demo');
+
+            const zoom = driftZoom(frame, 270, 480);
+            beat.style.transform = `scale(${zoom})`;
+
+            // Claude bubble
+            const top = document.createElement('div');
+            top.className = 'demo-top';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'claude-bubble';
+            const bubbleText = 'Build a 3D model viewer with orbit controls and HDR lighting';
+            bubble.textContent = typeOut(bubbleText, frame, 275, 45);
+            bubble.style.opacity = fadeIn(frame, 270, 20);
+            bubble.style.transform = `scale(${scaleIn(frame, 270, 20, 0.8)})`;
+            top.appendChild(bubble);
+
+            // Code + phone
+            const body = document.createElement('div');
+            body.className = 'demo-body';
+
+            const codeLines = [
+                '<span class="code-keyword">@Composable</span>',
+                '<span class="code-keyword">fun</span> <span class="code-type">ModelViewerScreen</span><span class="code-punct">() {</span>',
+                '    <span class="code-keyword">val</span> <span class="code-prop">engine</span> <span class="code-punct">=</span> <span class="code-type">rememberEngine</span><span class="code-punct">()</span>',
+                '    <span class="code-keyword">val</span> <span class="code-prop">modelLoader</span> <span class="code-punct">=</span> <span class="code-type">rememberModelLoader</span><span class="code-punct">(</span><span class="code-prop">engine</span><span class="code-punct">)</span>',
+                '',
+                '    <span class="code-type">Scene</span><span class="code-punct">(</span>',
+                '        <span class="code-prop">modifier</span> <span class="code-punct">=</span> <span class="code-type">Modifier</span><span class="code-punct">.</span><span class="code-prop">fillMaxSize</span><span class="code-punct">()</span>',
+                '    <span class="code-punct">) {</span>',
+                '        <span class="code-type">ModelNode</span><span class="code-punct">(</span>',
+                '            <span class="code-prop">modelInstance</span> <span class="code-punct">=</span> <span class="code-type">rememberModelInstance</span><span class="code-punct">(</span>',
+                '                <span class="code-prop">modelLoader</span><span class="code-punct">,</span> <span class="code-string">"helmet.glb"</span>',
+                '            <span class="code-punct">),</span>',
+                '            <span class="code-prop">scaleToUnits</span> <span class="code-punct">=</span> <span class="code-number">1.0f</span>',
+                '        <span class="code-punct">)</span>',
+                '    <span class="code-punct">}</span>',
+                '<span class="code-punct">}</span>'
+            ];
+
+            const codeTypeProg = progress(frame, 325, 410);
+            const visibleLines = Math.floor(codeTypeProg * codeLines.length);
+            const codePanel = makeCodeBlock(codeLines, 'ModelViewerScreen.kt', visibleLines);
+            codePanel.style.opacity = fadeIn(frame, 320, 20);
+
+            // Phone mockup
+            const phone = document.createElement('div');
+            phone.className = 'phone-mockup';
+            phone.style.opacity = fadeIn(frame, 370, 25);
+            phone.style.transform = `translateX(${slideIn(frame, 370, 25, 80)}px)`;
+
+            const notch = document.createElement('div');
+            notch.className = 'phone-notch';
+
+            const status = document.createElement('div');
+            status.className = 'phone-status';
+            status.innerHTML = '<div style="flex:1;text-align:center;">9:41</div><div class="phone-battery"></div>';
+
+            const content = document.createElement('div');
+            content.className = 'phone-content';
+
+            const scene = document.createElement('div');
+            scene.className = 'model-viewer-scene';
+
+            const helmet = document.createElement('div');
+            helmet.className = 'helmet-3d';
+
+            const dome = document.createElement('div');
+            dome.className = 'helmet-dome';
+            const visor = document.createElement('div');
+            visor.className = 'helmet-visor';
+            const helmetShadow = document.createElement('div');
+            helmetShadow.className = 'helmet-shadow';
+
+            helmet.appendChild(dome);
+            helmet.appendChild(visor);
+            helmet.appendChild(helmetShadow);
+            scene.appendChild(helmet);
+
+            const modelLabel = document.createElement('div');
+            modelLabel.className = 'model-label';
+            modelLabel.textContent = 'Damaged Helmet';
+            modelLabel.style.opacity = fadeIn(frame, 400, 15);
+
+            const modelSub = document.createElement('div');
+            modelSub.className = 'model-sublabel';
+            modelSub.textContent = 'HDR environment + orbit camera';
+            modelSub.style.opacity = fadeIn(frame, 410, 15);
+
+            const orbit = document.createElement('div');
+            orbit.className = 'orbit-hint';
+            orbit.innerHTML = '<div class="orbit-icon"></div> Drag to rotate';
+            orbit.style.opacity = fadeIn(frame, 420, 15);
+
+            content.appendChild(scene);
+            content.appendChild(modelLabel);
+            content.appendChild(modelSub);
+            content.appendChild(orbit);
+
+            phone.appendChild(notch);
+            phone.appendChild(status);
+            phone.appendChild(content);
+
+            body.appendChild(codePanel);
+            body.appendChild(phone);
+
+            // Checkmark
+            const check = document.createElement('div');
+            check.className = 'checkmark';
+            check.innerHTML = '&#10003; <span class="checkmark-text">Generated</span>';
+            check.style.position = 'absolute';
+            check.style.bottom = '60px';
+            check.style.right = '60px';
+            check.style.opacity = fadeIn(frame, 445, 20);
+            check.style.transform = `scale(${scaleIn(frame, 445, 20, 0.5)})`;
+
+            beat.appendChild(top);
+            beat.appendChild(body);
+            beat.appendChild(check);
+
+            // Fade out
+            if (frame > 460) {
+                const fo = 1 - ease(clamp01((frame - 460) / 15));
+                beat.style.opacity = fo;
+            }
+        }
+
+        // ============ BEAT 5 (465-720 / 15.5-24s): DEMO 2 — AR TAP-TO-PLACE ============
+        function renderBeat5() {
+            clearCanvas();
+            const beat = createBeat('beat-demo');
+
+            const zoom = driftZoom(frame, 465, 720);
+            beat.style.transform = `scale(${zoom})`;
+
+            // Claude bubble
+            const top = document.createElement('div');
+            top.className = 'demo-top';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'claude-bubble';
+            const bubbleText = 'Add AR furniture placement — tap a surface to place a sofa';
+            bubble.textContent = typeOut(bubbleText, frame, 470, 40);
+            bubble.style.opacity = fadeIn(frame, 465, 18);
+            bubble.style.transform = `scale(${scaleIn(frame, 465, 18, 0.8)})`;
+            top.appendChild(bubble);
+
+            // Code + phone
+            const body = document.createElement('div');
+            body.className = 'demo-body';
+
+            const codeLines = [
+                '<span class="code-keyword">@Composable</span>',
+                '<span class="code-keyword">fun</span> <span class="code-type">ARPlacerScreen</span><span class="code-punct">() {</span>',
+                '    <span class="code-keyword">var</span> <span class="code-prop">anchor</span> <span class="code-keyword">by</span> <span class="code-type">remember</span> <span class="code-punct">{</span>',
+                '        <span class="code-type">mutableStateOf</span><span class="code-punct">&lt;</span><span class="code-type">Anchor</span><span class="code-punct">?&gt;(</span><span class="code-keyword">null</span><span class="code-punct">)</span>',
+                '    <span class="code-punct">}</span>',
+                '',
+                '    <span class="code-type">ARScene</span><span class="code-punct">(</span>',
+                '        <span class="code-prop">planeRenderer</span> <span class="code-punct">=</span> <span class="code-keyword">true</span><span class="code-punct">,</span>',
+                '        <span class="code-prop">onTouchEvent</span> <span class="code-punct">= {</span> <span class="code-prop">hitResult</span><span class="code-punct">, _ -&gt;</span>',
+                '            <span class="code-prop">anchor</span> <span class="code-punct">=</span> <span class="code-prop">hitResult</span><span class="code-punct">.</span><span class="code-prop">createAnchor</span><span class="code-punct">()</span>',
+                '    <span class="code-punct">}) {</span>',
+                '        <span class="code-prop">anchor</span><span class="code-punct">?.</span><span class="code-keyword">let</span> <span class="code-punct">{</span>',
+                '            <span class="code-type">AnchorNode</span><span class="code-punct">(</span><span class="code-prop">anchor</span> <span class="code-punct">=</span> <span class="code-prop">it</span><span class="code-punct">) {</span>',
+                '                <span class="code-type">ModelNode</span><span class="code-punct">(</span><span class="code-string">"sofa.glb"</span><span class="code-punct">)</span>',
+                '            <span class="code-punct">}</span>',
+                '        <span class="code-punct">}</span>',
+                '    <span class="code-punct">}</span>',
+                '<span class="code-punct">}</span>'
+            ];
+
+            const codeTypeProg = progress(frame, 510, 580);
+            const visibleLines = Math.floor(codeTypeProg * codeLines.length);
+            const codePanel = makeCodeBlock(codeLines, 'ARPlacerScreen.kt', visibleLines);
+            codePanel.style.opacity = fadeIn(frame, 505, 18);
+
+            // Phone mockup — AR scene
+            const phone = document.createElement('div');
+            phone.className = 'phone-mockup';
+            phone.style.opacity = fadeIn(frame, 540, 22);
+            phone.style.transform = `translateX(${slideIn(frame, 540, 22, 80)}px)`;
+            phone.style.background = '#d4ccc0';
+
+            const notch = document.createElement('div');
+            notch.className = 'phone-notch';
+
+            const status = document.createElement('div');
+            status.className = 'phone-status';
+            status.innerHTML = '<div style="flex:1;text-align:center;">9:41</div><div class="phone-battery"></div>';
+
+            const cameraBg = document.createElement('div');
+            cameraBg.className = 'ar-camera-bg';
+
+            const arGrid = document.createElement('div');
+            arGrid.className = 'ar-grid';
+
+            const arBadge = document.createElement('div');
+            arBadge.className = 'ar-badge';
+            arBadge.textContent = 'AR MODE';
+            arBadge.style.opacity = fadeIn(frame, 555, 15);
+
+            // Sofa object
+            const sofaContainer = document.createElement('div');
+            sofaContainer.className = 'sofa-3d';
+            sofaContainer.style.opacity = fadeIn(frame, 570, 20);
+            sofaContainer.style.transform = `translateX(-50%) scale(${scaleIn(frame, 570, 25, 0.3)})`;
+
+            const sofaBack = document.createElement('div');
+            sofaBack.className = 'sofa-back';
+            const sofaSeat = document.createElement('div');
+            sofaSeat.className = 'sofa-seat';
+            const sofaArmL = document.createElement('div');
+            sofaArmL.className = 'sofa-arm-l';
+            const sofaArmR = document.createElement('div');
+            sofaArmR.className = 'sofa-arm-r';
+            const sofaShadow = document.createElement('div');
+            sofaShadow.className = 'sofa-shadow';
+
+            sofaContainer.appendChild(sofaBack);
+            sofaContainer.appendChild(sofaSeat);
+            sofaContainer.appendChild(sofaArmL);
+            sofaContainer.appendChild(sofaArmR);
+            sofaContainer.appendChild(sofaShadow);
+
+            // Tap indicator
+            const tapInd = document.createElement('div');
+            tapInd.className = 'tap-indicator';
+            tapInd.style.opacity = fadeIn(frame, 560, 15);
+
+            const tapCircle = document.createElement('div');
+            tapCircle.className = 'tap-circle';
+            const tapLabel = document.createElement('div');
+            tapLabel.className = 'tap-label';
+            tapLabel.textContent = 'TAP TO PLACE';
+            tapInd.appendChild(tapCircle);
+            tapInd.appendChild(tapLabel);
+
+            phone.appendChild(cameraBg);
+            phone.appendChild(arGrid);
+            phone.appendChild(notch);
+            phone.appendChild(status);
+            phone.appendChild(arBadge);
+            phone.appendChild(sofaContainer);
+            phone.appendChild(tapInd);
+
+            body.appendChild(codePanel);
+            body.appendChild(phone);
+
+            // Checkmark
+            const check = document.createElement('div');
+            check.className = 'checkmark';
+            check.innerHTML = '&#10003; <span class="checkmark-text">Generated</span>';
+            check.style.position = 'absolute';
+            check.style.bottom = '60px';
+            check.style.right = '60px';
+            check.style.opacity = fadeIn(frame, 620, 20);
+            check.style.transform = `scale(${scaleIn(frame, 620, 20, 0.5)})`;
+
+            beat.appendChild(top);
+            beat.appendChild(body);
+            beat.appendChild(check);
+
+            // Fade out
+            if (frame > 700) {
+                const fo = 1 - ease(clamp01((frame - 700) / 15));
+                beat.style.opacity = fo;
+            }
+        }
+
+        // ============ BEAT 6 (720-900+ / 24-30s+): CTA ============
+        function renderBeat6() {
+            clearCanvas();
+            const beat = createBeat('beat-cta');
+
+            const title = document.createElement('div');
+            title.className = 'cta-title';
+            title.innerHTML = 'SceneView <span class="hook-mcp">MCP</span>';
+            title.style.opacity = fadeIn(frame, 720, 25);
+            title.style.transform = `scale(${scaleIn(frame, 720, 25, 0.8)})`;
+
+            const line = document.createElement('div');
+            line.className = 'accent-line';
+            const lineWidth = progress(frame, 740, 770) * 100;
+            line.style.width = `${lineWidth}%`;
+            line.style.opacity = fadeIn(frame, 740, 20);
+
+            const links = document.createElement('div');
+            links.className = 'cta-links';
+
+            const npmLink = document.createElement('div');
+            npmLink.className = 'cta-link';
+            npmLink.innerHTML = '<div class="cta-icon cta-npm">n</div> npmjs.com/package/sceneview-mcp';
+            npmLink.style.opacity = fadeIn(frame, 770, 20);
+            npmLink.style.transform = `translateY(${slideIn(frame, 770, 20, 30)}px)`;
+
+            const ghLink = document.createElement('div');
+            ghLink.className = 'cta-link';
+            ghLink.innerHTML = '<div class="cta-icon cta-gh">G</div> github.com/sceneview/sceneview-android';
+            ghLink.style.opacity = fadeIn(frame, 790, 20);
+            ghLink.style.transform = `translateY(${slideIn(frame, 790, 20, 30)}px)`;
+
+            links.appendChild(npmLink);
+            links.appendChild(ghLink);
+
+            const tagline = document.createElement('div');
+            tagline.className = 'cta-tagline';
+            tagline.textContent = '3D & AR, straight from Compose.';
+            tagline.style.opacity = fadeIn(frame, 810, 25);
+
+            beat.appendChild(title);
+            beat.appendChild(line);
+            beat.appendChild(links);
+            beat.appendChild(tagline);
+        }
+
+        // ============ MAIN RENDER LOOP (WALL-CLOCK BASED) ============
+        const wallStart = Date.now();
+
+        function render() {
+            const elapsed = (Date.now() - wallStart) / 1000; // seconds
+            frame = elapsed * FPS; // virtual frame at 30fps
+
+            if (frame < 90) renderBeat1();
+            else if (frame < 180) renderBeat2();
+            else if (frame < 270) renderBeat3();
+            else if (frame < 465) renderBeat4();
+            else if (frame < 720) renderBeat5();
+            else renderBeat6();
+
+            if (elapsed < DURATION + 4) { // 4s buffer for CTA hold
+                requestAnimationFrame(render);
+            }
+        }
+
+        // Start
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
