@@ -285,6 +285,43 @@ const RULES = [
             return issues;
         },
     },
+    // ─── Deprecated Sceneform imports ───────────────────────────────────────
+    {
+        id: "migration/sceneform-import",
+        severity: "error",
+        check(code, lines) {
+            const issues = [];
+            findLines(lines, /import\s+com\.google\.ar\.sceneform/).forEach((line) => issues.push({
+                severity: "error",
+                rule: "migration/sceneform-import",
+                message: "Sceneform imports detected (`com.google.ar.sceneform.*`). Sceneform was deprecated by Google in 2021. Use `io.github.sceneview.*` imports instead — SceneView is the official successor.",
+                line,
+            }));
+            return issues;
+        },
+    },
+    // ─── Node.destroy() called manually ────────────────────────────────────
+    {
+        id: "lifecycle/manual-node-destroy",
+        severity: "warning",
+        check(code, lines) {
+            const issues = [];
+            if (!code.includes("Scene(") && !code.includes("Scene {"))
+                return issues;
+            findLines(lines, /\bnode\w*\.destroy\(\)|\.\bdestroy\(\)/).forEach((line) => {
+                const lineContent = lines[line - 1];
+                if (lineContent && !lineContent.includes("engine") && !lineContent.includes("Engine")) {
+                    issues.push({
+                        severity: "warning",
+                        rule: "lifecycle/manual-node-destroy",
+                        message: "Manual `destroy()` on a node inside a composable Scene. Compose manages node lifecycle automatically — nodes are destroyed when they leave composition. Remove the manual call to avoid double-destroy crashes.",
+                        line,
+                    });
+                }
+            });
+            return issues;
+        },
+    },
     // ─── Scene missing engine param ───────────────────────────────────────────
     {
         id: "api/scene-missing-engine",
