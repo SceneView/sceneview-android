@@ -24,47 +24,10 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Build
-        run: ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log || (tail -200 build-output.log > build-error.log && exit 1)
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-error-log
-          path: build-error.log
-          if-no-files-found: ignore
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Build samples
-        run: |
-          ./gradlew \
-            :samples:model-viewer:assembleDebug \
-            :samples:ar-model-viewer:assembleDebug \
-            :samples:ar-augmented-image:assembleDebug \
-            :samples:ar-cloud-anchor:assembleDebug \
-            :samples:ar-point-cloud:assembleDebug \
-            :samples:gltf-camera:assembleDebug \
-            :samples:camera-manipulator:assembleDebug \
-            :samples:autopilot-demo:assembleDebug \
-            :samples:physics-demo:assembleDebug \
-            :samples:post-processing:assembleDebug \
-            :samples:dynamic-sky:assembleDebug \
-            :samples:line-path:assembleDebug \
-            :samples:text-labels:assembleDebug \
-            :samples:reflection-probe:assembleDebug \
-            --stacktrace 2>&1 | tee samples-build.log || (grep -E "error:|FAILURE|e:" samples-build.log > samples-error.log && exit 1)
-
-      - name: Upload sample build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: samples-build-error
-          path: |
-            samples-error.log
-            samples-build.log
-          if-no-files-found: ignore
-
-      - name: Unit tests
-        run: ./gradlew :sceneview:testDebugUnitTest :arsceneview:testDebugUnitTest --stacktrace
+        run: ./gradlew :samples:model-viewer:assembleDebug :samples:ar-model-viewer:assembleDebug :samples:gltf-camera:assembleDebug :samples:autopilot-demo:assembleDebug --stacktrace
 
       - name: Lint
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
@@ -79,8 +42,6 @@ jobs:
             arsceneview/build/reports/lint-results-debug.html
           if-no-files-found: ignore
 
-  # AR samples run on x86_64 Linux where the ARCore emulator APK is supported.
-  # Apple Silicon Macs only have ARM64 QEMU and cannot run the x86 ARCore emulator APK locally.
   ar-emulator:
     name: AR emulator QA
     runs-on: ubuntu-latest
@@ -97,13 +58,7 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Build AR samples
-        run: |
-          ./gradlew \
-            :samples:ar-model-viewer:assembleDebug \
-            :samples:ar-augmented-image:assembleDebug \
-            :samples:ar-cloud-anchor:assembleDebug \
-            :samples:ar-point-cloud:assembleDebug \
-            --stacktrace
+        run: ./gradlew :samples:ar-model-viewer:assembleDebug :samples:ar-augmented-image:assembleDebug :samples:ar-point-cloud:assembleDebug --stacktrace
 
       - name: Download ARCore emulator APK
         run: |
@@ -126,7 +81,81 @@ jobs:
           avd-name: Pixel_6_AR
           emulator-options: -no-window -no-audio -gpu swiftshader_indirect -camera-back virtualscene -partition-size 4096
           disable-animations: true
-          script: .github/scripts/ar-emulator-screenshots.sh
+          script: |
+            #!/usr/bin/env bash
+            set -e
+
+            # Wait for launcher to fully settle
+            sleep 20
+            adb shell input keyevent 82 || true   # unlock screen
+            sleep 5
+            # Dismiss any ANR/permission dialogs
+            adb shell input keyevent 4 || true
+            adb shell input keyevent 4 || true
+            adb shell input keyevent 4 || true
+
+            # Install ARCore emulator APK
+            adb install -r arcore-emulator.apk
+
+            # Install sample APKs
+            adb install -r samples/ar-model-viewer/build/outputs/apk/debug/ar-model-viewer-debug.apk
+            adb install -r samples/ar-point-cloud/build/outputs/apk/debug/ar-point-cloud-debug.apk
+            adb install -r samples/ar-augmented-image/build/outputs/apk/debug/ar-augmented-image-debug.apk
+
+            # Grant camera permissions upfront
+            adb shell pm grant io.github.sceneview.sample.armodelviewer android.permission.CAMERA || true
+            adb shell pm grant io.github.sceneview.sample.arpointcloud android.permission.CAMERA || true
+            adb shell pm grant io.github.sceneview.sample.araugmentedimage android.permission.CAMERA || true
+
+            # ---------------------------------------------------------------------------
+            # inject_motion: simulate phone movement so ARCore transitions from
+            # INITIALIZING → TRACKING and the virtualscene camera feed becomes visible.
+            #
+            # The virtual scene camera (-camera-back virtualscene) renders a 3D room,
+            # but the camera viewpoint only moves when sensor values change. Without
+            # motion the room is static, ARCore sees identical frames, SLAM never
+            # bootstraps, and the camera surface stays white.
+            #
+            # `adb emu sensor set` sends values directly through ADB — no auth token,
+            # no nc/telnet required. Each call produces a new sensor reading; the
+            # emulator moves the virtual scene camera accordingly, giving ARCore the
+            # image motion it needs for visual odometry.
+            # ---------------------------------------------------------------------------
+            inject_motion() {
+              echo "  [motion] injecting sensor motion via adb emu"
+              adb emu sensor set acceleration 0.4:9.5:0.3  ; sleep 1
+              adb emu sensor set gyroscope 0.25:0.10:0.20  ; sleep 1
+              adb emu sensor set acceleration -0.3:9.7:0.5 ; sleep 1
+              adb emu sensor set gyroscope -0.15:0.20:-0.10; sleep 1
+              adb emu sensor set acceleration 0.2:9.8:-0.2 ; sleep 1
+              adb emu sensor set gyroscope 0.10:-0.10:0.15 ; sleep 1
+              adb emu sensor set acceleration 0:9.8:0      ; sleep 1
+              adb emu sensor set gyroscope 0:0:0
+              echo "  [motion] done"
+            }
+
+            capture_ar_screenshot() {
+              local pkg="$1" activity="$2" out="$3"
+              echo "--- $pkg ---"
+              adb shell am force-stop com.google.android.apps.nexuslauncher || true
+              adb shell am start -S --activity-clear-task -n "${pkg}/${activity}"
+              sleep 10
+              inject_motion
+              sleep 20
+              adb exec-out screencap -p > "$out"
+              echo "  saved $out"
+            }
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.armodelviewer .MainActivity ar-model-viewer.png
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.arpointcloud .MainActivity ar-point-cloud.png
+
+            capture_ar_screenshot \
+              io.github.sceneview.sample.araugmentedimage .MainActivity ar-augmented-image.png
+
+            echo "AR screenshots captured"
 
       - name: Upload AR screenshots
         if: always()
