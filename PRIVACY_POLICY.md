@@ -34,12 +34,12 @@ This app uses the following third-party services:
 ## Open Source
 
 SceneView Demo is fully open source. You can inspect the complete source code at:
-https://github.com/SceneView/sceneview-android
+https://github.com/SceneView/sceneview
 
 ## Contact
 
 If you have questions about this privacy policy, please open an issue at:
-https://github.com/SceneView/sceneview-android/issues
+https://github.com/SceneView/sceneview/issues
 
 ## Changes
 
