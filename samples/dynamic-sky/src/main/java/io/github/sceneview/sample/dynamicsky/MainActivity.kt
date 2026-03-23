@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
+import io.github.sceneview.createEnvironment
 import io.github.sceneview.createView
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
@@ -90,7 +91,8 @@ fun DynamicSkyScreen() {
     }
 
     val environment = rememberEnvironment(environmentLoader) {
-        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+            ?: createEnvironment(environmentLoader)
     }
 
     val foxInstance = rememberModelInstance(modelLoader, "models/Fox.glb")
