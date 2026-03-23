@@ -1,3 +1,4 @@
+#if os(iOS) || os(visionOS)
 import RealityKit
 import Foundation
 
@@ -14,11 +15,10 @@ import Foundation
 ///         color: .white
 ///     )
 ///     .position(.init(x: 0, y: 1, z: -2))
-///     content.add(label.entity)
+///     content.addChild(label.entity)
 /// }
 /// ```
-@available(iOS 18.0, visionOS 2.0, *)
-public struct TextNode {
+public struct TextNode: Sendable {
     /// The underlying RealityKit entity containing the text mesh.
     public let entity: ModelEntity
 
@@ -28,13 +28,13 @@ public struct TextNode {
     /// World-space position.
     public var position: SIMD3<Float> {
         get { entity.position }
-        set { entity.position = newValue }
+        nonmutating set { entity.position = newValue }
     }
 
     /// Scale factor.
     public var scale: SIMD3<Float> {
         get { entity.scale }
-        set { entity.scale = newValue }
+        nonmutating set { entity.scale = newValue }
     }
 
     /// Creates a 3D text label.
@@ -43,14 +43,12 @@ public struct TextNode {
     ///   - text: The string to display.
     ///   - fontSize: Font size in meters (world space). Default 0.05.
     ///   - color: Text color. Default white.
-    ///   - font: Font to use. Default system font.
     ///   - depth: Text extrusion depth in meters. Default 0.01.
     ///   - alignment: Text alignment for multi-line text. Default center.
     public init(
         text: String,
         fontSize: Float = 0.05,
         color: SimpleMaterial.Color = .white,
-        font: MeshResource.Font = .systemFont(ofSize: 1),
         depth: Float = 0.01,
         alignment: CTTextAlignment = .center
     ) {
@@ -69,25 +67,66 @@ public struct TextNode {
         )
         let material = SimpleMaterial(color: color, isMetallic: false)
         self.entity = ModelEntity(mesh: mesh, materials: [material])
+        self.entity.generateCollisionShapes(recursive: false)
+    }
+
+    /// Creates a 3D text label with a custom font.
+    ///
+    /// - Parameters:
+    ///   - text: The string to display.
+    ///   - font: Custom font to use.
+    ///   - color: Text color.
+    ///   - depth: Text extrusion depth.
+    public init(
+        text: String,
+        font: MeshResource.Font,
+        color: SimpleMaterial.Color = .white,
+        depth: Float = 0.01
+    ) {
+        self.text = text
+
+        let mesh = MeshResource.generateText(
+            text,
+            extrusionDepth: depth,
+            font: font,
+            containerFrame: .zero,
+            alignment: .center,
+            lineBreakMode: .byWordWrapping
+        )
+        let material = SimpleMaterial(color: color, isMetallic: false)
+        self.entity = ModelEntity(mesh: mesh, materials: [material])
+        self.entity.generateCollisionShapes(recursive: false)
     }
 
     // MARK: - Transform helpers
 
-    /// Returns a copy positioned at the given coordinates.
+    /// Returns self positioned at the given coordinates.
+    @discardableResult
     public func position(_ position: SIMD3<Float>) -> TextNode {
-        var copy = self
-        copy.position = position
-        return copy
+        entity.position = position
+        return self
     }
 
-    /// Returns a copy scaled uniformly.
+    /// Returns self scaled uniformly.
+    @discardableResult
     public func scale(_ uniform: Float) -> TextNode {
-        var copy = self
-        copy.scale = .init(repeating: uniform)
-        return copy
+        entity.scale = .init(repeating: uniform)
+        return self
     }
 
-    /// Updates the text content by generating a new mesh.
+    /// Centers the text at its current position.
+    ///
+    /// By default, RealityKit text is left-aligned at its origin.
+    /// This shifts the entity so the text bounding box center is at the position.
+    @discardableResult
+    public func centered() -> TextNode {
+        let bounds = entity.visualBounds(relativeTo: nil)
+        let center = bounds.center
+        entity.position -= center
+        return self
+    }
+
+    /// Creates a new `TextNode` with updated text content, preserving transform.
     ///
     /// - Parameters:
     ///   - newText: The new text string.
@@ -99,9 +138,10 @@ public struct TextNode {
         fontSize: Float = 0.05,
         depth: Float = 0.01
     ) -> TextNode {
-        var node = TextNode(text: newText, fontSize: fontSize, depth: depth)
-        node.position = position
-        node.scale = scale
-        return node
+        TextNode(text: newText, fontSize: fontSize, depth: depth)
+            .position(position)
+            .scale(scale.x)
     }
 }
+
+#endif // os(iOS) || os(visionOS)
