@@ -546,7 +546,8 @@ val engine = rememberEngine()
 val environmentLoader = rememberEnvironmentLoader(engine)
 
 val environment = rememberEnvironment(environmentLoader) {
-    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")!!
+    environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+        ?: createEnvironment(environmentLoader)
 }
 
 Scene(
