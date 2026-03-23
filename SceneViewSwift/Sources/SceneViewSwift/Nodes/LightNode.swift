@@ -1,5 +1,9 @@
+#if os(iOS) || os(visionOS)
 import RealityKit
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// A wrapper for adding lights to a RealityKit scene.
 ///
@@ -13,24 +17,24 @@ import Foundation
 ///         intensity: 1000,
 ///         castsShadow: true
 ///     )
+///     sun.entity.look(at: .zero, from: [2, 4, 2], relativeTo: nil)
 ///     content.add(sun.entity)
 /// }
 /// ```
-@available(iOS 18.0, visionOS 2.0, *)
-public struct LightNode {
+public struct LightNode: Sendable {
     /// The underlying RealityKit entity holding the light component.
     public let entity: Entity
 
     /// World-space position.
     public var position: SIMD3<Float> {
         get { entity.position }
-        set { entity.position = newValue }
+        nonmutating set { entity.position = newValue }
     }
 
     /// Orientation as a quaternion.
     public var rotation: simd_quatf {
         get { entity.orientation }
-        set { entity.orientation = newValue }
+        nonmutating set { entity.orientation = newValue }
     }
 
     /// Creates a directional light (like the sun).
@@ -45,16 +49,19 @@ public struct LightNode {
         intensity: Float = 1000,
         castsShadow: Bool = true
     ) -> LightNode {
-        let entity = Entity()
-        // TODO: Apply DirectionalLight component when RealityKit supports it
-        // entity.components[DirectionalLightComponent.self] = DirectionalLightComponent(
-        //     color: color.platformColor,
-        //     intensity: intensity,
-        //     isRealWorldProxy: false
-        // )
-        // entity.components[DirectionalLightComponent.Shadow.self] = castsShadow
-        //     ? DirectionalLightComponent.Shadow() : nil
-        return LightNode(entity: entity)
+        let light = DirectionalLight()
+        light.light = DirectionalLightComponent(
+            color: color.platformColor,
+            intensity: intensity,
+            isRealWorldProxy: false
+        )
+        if castsShadow {
+            light.shadow = DirectionalLightComponent.Shadow(
+                maximumDistance: 8,
+                depthBias: 5.0
+            )
+        }
+        return LightNode(entity: light)
     }
 
     /// Creates a point light (omni-directional).
@@ -69,9 +76,13 @@ public struct LightNode {
         intensity: Float = 1000,
         attenuationRadius: Float = 10.0
     ) -> LightNode {
-        let entity = Entity()
-        // TODO: Apply PointLight component
-        return LightNode(entity: entity)
+        let light = PointLight()
+        light.light = PointLightComponent(
+            color: color.platformColor,
+            intensity: intensity,
+            attenuationRadius: attenuationRadius
+        )
+        return LightNode(entity: light)
     }
 
     /// Creates a spot light.
@@ -81,30 +92,63 @@ public struct LightNode {
     ///   - intensity: Luminous intensity in lumens.
     ///   - innerAngle: Inner cone angle in radians.
     ///   - outerAngle: Outer cone angle in radians.
+    ///   - attenuationRadius: Maximum influence distance in meters.
     /// - Returns: A configured `LightNode`.
     public static func spot(
         color: LightNode.Color = .white,
         intensity: Float = 1000,
         innerAngle: Float = .pi / 6,
-        outerAngle: Float = .pi / 4
+        outerAngle: Float = .pi / 4,
+        attenuationRadius: Float = 10.0
     ) -> LightNode {
-        let entity = Entity()
-        // TODO: Apply SpotLight component
-        return LightNode(entity: entity)
+        let light = SpotLight()
+        light.light = SpotLightComponent(
+            color: color.platformColor,
+            intensity: intensity,
+            innerAngleInDegrees: innerAngle * 180 / .pi,
+            outerAngleInDegrees: outerAngle * 180 / .pi,
+            attenuationRadius: attenuationRadius
+        )
+        return LightNode(entity: light)
     }
 
     /// Returns a copy positioned at the given coordinates.
     public func position(_ position: SIMD3<Float>) -> LightNode {
-        var copy = self
-        copy.position = position
-        return copy
+        entity.position = position
+        return self
+    }
+
+    /// Points the light toward a target position.
+    public func lookAt(_ target: SIMD3<Float>) -> LightNode {
+        entity.look(at: target, from: entity.position, relativeTo: nil)
+        return self
     }
 
     /// Simple color representation for lights.
-    public enum Color {
+    public enum Color: Sendable {
         case white
-        case warm      // ~3200K
-        case cool      // ~6500K
+        case warm      // ~3200K warm tungsten
+        case cool      // ~6500K daylight
         case custom(r: Float, g: Float, b: Float)
+
+        #if canImport(UIKit)
+        var platformColor: UIColor {
+            switch self {
+            case .white:
+                return .white
+            case .warm:
+                return UIColor(red: 1.0, green: 0.87, blue: 0.68, alpha: 1.0)
+            case .cool:
+                return UIColor(red: 0.79, green: 0.88, blue: 1.0, alpha: 1.0)
+            case .custom(let r, let g, let b):
+                return UIColor(
+                    red: CGFloat(r), green: CGFloat(g),
+                    blue: CGFloat(b), alpha: 1.0
+                )
+            }
+        }
+        #endif
     }
 }
+
+#endif // os(iOS) || os(visionOS)

@@ -124,15 +124,18 @@ class PhysicsSimulationTest {
 
     @Test
     fun sleepOnNegligibleBounce() {
+        // Position at floor with tiny downward velocity.
+        // After gravity: newVy = -0.02 + (-9.8 * 0.001) ≈ -0.03
+        // newPos.y = -0.001 + (-0.03 * 0.001) < 0 → floor collision
+        // reboundVy = 0.03 * 0.3 = 0.009 < SLEEP_THRESHOLD(0.05) → sleep
         val state = PhysicsState(
-            position = Position(0f, 0.001f, 0f),
-            velocity = Position(0f, -0.01f, 0f), // Very slow
-            restitution = 0.6f,
+            position = Position(0f, -0.001f, 0f),
+            velocity = Position(0f, -0.02f, 0f),
+            restitution = 0.3f,
             floorY = 0f,
             radius = 0f
         )
         val result = simulateStep(state, 0.001f)
-        // Velocity is tiny, rebound should be below threshold
         assertTrue(result.isAsleep, "Negligible bounce should trigger sleep")
     }
 

@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 5.10
 
 import PackageDescription
 
@@ -14,8 +14,6 @@ let package = Package(
             targets: ["SceneViewSwift"]
         )
     ],
-    // TODO: Add GLTFKit2 dependency for glTF/GLB support alongside USDZ
-    // .package(url: "https://github.com/magicien/GLTFKit2.git", from: "0.3.0")
     dependencies: [],
     targets: [
         .target(

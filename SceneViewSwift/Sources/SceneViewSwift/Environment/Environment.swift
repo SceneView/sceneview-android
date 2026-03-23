@@ -1,10 +1,11 @@
+#if os(iOS) || os(visionOS)
 import RealityKit
 import Foundation
 
 /// Image-based lighting and skybox configuration for a 3D scene.
 ///
 /// Mirrors SceneView Android's `Environment` — provides preset environments
-/// and custom HDR loading.
+/// and custom HDR loading with caching.
 ///
 /// ```swift
 /// SceneView { content in
@@ -12,7 +13,7 @@ import Foundation
 /// }
 /// .environment(.studio)
 /// ```
-public struct SceneEnvironment {
+public struct SceneEnvironment: Sendable {
     /// Display name for UI pickers.
     public let name: String
 
@@ -39,19 +40,45 @@ public struct SceneEnvironment {
 
     /// Loads the IBL environment resource into a RealityKit scene.
     ///
-    /// - Returns: An `EnvironmentResource` ready to apply.
+    /// Uses a shared cache to avoid redundant I/O for repeated loads.
+    ///
+    /// - Returns: An `EnvironmentResource` ready to apply via
+    ///   `ImageBasedLightComponent`.
     /// - Throws: If the HDR file cannot be loaded.
     public func load() async throws -> EnvironmentResource {
-        // TODO: Support EXR files alongside HDR
-        // TODO: Cache loaded environments
-        // TODO: Apply intensity multiplier to the IBL
-
         if let hdrResource {
-            return try await EnvironmentResource(named: hdrResource)
+            // Check cache first
+            if let cached = EnvironmentCache.shared.get(hdrResource) {
+                return cached
+            }
+            let resource = try await EnvironmentResource(named: hdrResource)
+            EnvironmentCache.shared.set(hdrResource, resource: resource)
+            return resource
         } else {
-            // Fallback: RealityKit's default environment
+            // Default RealityKit environment
             return try await EnvironmentResource(named: "default")
         }
+    }
+
+    /// Creates a custom environment from an HDR file in the bundle.
+    ///
+    /// - Parameters:
+    ///   - name: Display name.
+    ///   - hdrFile: HDR file name in the bundle (e.g. "custom_env.hdr").
+    ///   - intensity: Light intensity multiplier.
+    ///   - showSkybox: Whether to show as background.
+    public static func custom(
+        name: String,
+        hdrFile: String,
+        intensity: Float = 1.0,
+        showSkybox: Bool = true
+    ) -> SceneEnvironment {
+        SceneEnvironment(
+            name: name,
+            hdrResource: hdrFile,
+            intensity: intensity,
+            showSkybox: showSkybox
+        )
     }
 }
 
@@ -105,3 +132,35 @@ extension SceneEnvironment {
         .studio, .outdoor, .sunset, .night, .warm, .autumn
     ]
 }
+
+// MARK: - Environment Cache
+
+/// Thread-safe cache for loaded environment resources.
+///
+/// Avoids redundant HDR file I/O when switching environments.
+final class EnvironmentCache: @unchecked Sendable {
+    static let shared = EnvironmentCache()
+
+    private var cache: [String: EnvironmentResource] = [:]
+    private let lock = NSLock()
+
+    func get(_ key: String) -> EnvironmentResource? {
+        lock.lock()
+        defer { lock.unlock() }
+        return cache[key]
+    }
+
+    func set(_ key: String, resource: EnvironmentResource) {
+        lock.lock()
+        defer { lock.unlock() }
+        cache[key] = resource
+    }
+
+    func clear() {
+        lock.lock()
+        defer { lock.unlock() }
+        cache.removeAll()
+    }
+}
+
+#endif // os(iOS) || os(visionOS)

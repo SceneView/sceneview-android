@@ -65,7 +65,7 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-22, Phase 9)
+### Current state (last updated: 2026-03-23, Phase 10 — iOS Native)
 
 - **Active branch**: `claude/identify-project-focus-FU1rl`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
@@ -92,17 +92,20 @@ Every Claude Code session MUST read this section first to stay in sync.
   - sceneview depends on sceneview-core via `api project(':sceneview-core')`
   - Build: plugins DSL, default hierarchy template, native target warning suppressed
   - **iOS strategy**: dual approach — KMP for cross-platform apps, native SwiftUI for pure iOS
-- **SceneViewSwift** (`SceneViewSwift/`): iOS prototype (Swift Package, iOS 18+ / visionOS 2+, **10 files**)
-  - `SceneView` — SwiftUI RealityView wrapper mirroring Android's `Scene {}`
-  - `ARSceneView` — ARKit + RealityKit AR skeleton with AnchorNode
-  - `ModelNode` — USDZ loading, scaleToUnits, playAllAnimations, playAnimation(at:)
-  - `GeometryNode` — procedural cube/sphere/cylinder/plane via MeshResource
-  - `TextNode` — 3D extruded text via MeshResource.generateText
-  - `BillboardNode` — always-faces-camera via BillboardComponent
-  - `LineNode` — line segment (thin cylinder) + axisGizmo factory
-  - `LightNode` — directional/point/spot light stubs
-  - `CameraControls` — orbit camera with full spherical→cartesian math, drag/pinch handling
-  - `SceneEnvironment` — 6 HDR presets (studio, outdoor, sunset, night, warm, autumn)
+- **SceneViewSwift** (`SceneViewSwift/`): iOS library (Swift Package, iOS 17+ / visionOS 1+, **11 files** — fully implemented)
+  - `SceneView` — full RealityView wrapper with orbit camera, default lighting (sun + fill), drag/pinch/tap gestures, environment support, auto-rotate
+  - `ARSceneView` — UIViewRepresentable wrapping ARView, ARWorldTrackingConfiguration, plane detection, tap-to-place raycast, coaching overlay, scene reconstruction
+  - `ModelNode` — USDZ loading (by name or URL), collision generation, scaleToUnits, animations (playAll/playAt/stop/pause), grounding shadow
+  - `GeometryNode` — cube (with cornerRadius), sphere, cylinder, cone, plane; PBR material support (.simple/.pbr/.unlit), auto collision
+  - `TextNode` — 3D extruded text via MeshResource.generateText, centering, custom font
+  - `BillboardNode` — always-faces-camera via BillboardComponent, convenience `.text()` factory
+  - `LineNode` — line segment (thin cylinder) + axisGizmo factory (X=red, Y=green, Z=blue)
+  - `LightNode` — DirectionalLight/PointLight/SpotLight with real RealityKit components, shadow config, color presets (.white/.warm/.cool/.custom)
+  - `CameraControls` — orbit camera with inertia, auto-rotation, elevation clamping, configurable sensitivity
+  - `SceneEnvironment` — 6 HDR presets with EnvironmentResource loading + thread-safe cache
+  - `AnchorNode` — world position and plane anchors for AR content placement
+  - **iOS Demo app** (`SceneViewSwift/Examples/SceneViewDemo/`): 3-tab app (Explore, Shapes, AR) with Xcode project
+  - **Build**: `swift build` ✓ (macOS CLT), needs Xcode 16+ for full iOS build
 - **llms.txt**: Cross-platform — added iOS recipes (model-viewer, procedural, text, AR),
   platform mapping table, KMP shared module description
 - **Cross-platform recipes** (`samples/recipes/`): 5 side-by-side Android + iOS recipes
@@ -130,6 +133,17 @@ Every Claude Code session MUST read this section first to stay in sync.
   - Parallel session working on `sceneview.github.io` repo: updating repo cards, adding Compose tag,
     quick-start code snippets, demo app section, version badge
   - Direction: modern, rounded, Google-like but not a copy — no colored icons, clean backgrounds
+- **Phase 10 — iOS Native** (2026-03-23):
+  - All 11 Swift files fully implemented (no more stubs/TODOs)
+  - SceneView: real IBL loading via ImageBasedLightComponent, auto-rotate with Task loop, fixed pinch zoom (cumulative→delta)
+  - ARSceneView: proper UIViewRepresentable with dynamic content via `(position, arView)` callback
+  - New: PathNode (polyline, circle, grid factories)
+  - iOS Demo app: 4 Explore scenes (Shapes, Metallic, 3D Text, Gizmo) + 9 shape types + AR tap-to-place
+  - Tests: 35+ unit tests (CameraControls, CameraControlsEdgeCases, SceneEnvironment)
+  - CI: `.github/workflows/ios.yml` — macOS 15, Xcode 16, build + test + demo
+  - App Store: `APP_STORE_SETUP.md` with metadata EN/FR, ExportOptions.plist, icon generator
+  - Build: `swift build` passes clean on macOS CLT
+  - **Needs Xcode 16+** for full iOS simulator build and App Store upload
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
 
 ### Design direction
