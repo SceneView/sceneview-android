@@ -3,7 +3,10 @@ package io.github.sceneview.sample.dynamicsky
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+<<<<<<< HEAD
 import androidx.activity.enableEdgeToEdge
+=======
+>>>>>>> origin/feat/dynamic-sky-fog-node
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +55,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+<<<<<<< HEAD
         enableEdgeToEdge()
+=======
+>>>>>>> origin/feat/dynamic-sky-fog-node
         setContent {
             SceneviewTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
