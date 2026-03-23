@@ -4,7 +4,7 @@
     {
       "name": "sceneview-website",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "/Users/thomasgorisse/Projects/sceneview.github.io"],
+      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "../sceneview.github.io"],
       "port": 8080
     },
     {
