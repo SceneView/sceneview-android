@@ -56,6 +56,8 @@ Use cameras defined inside a glTF file. The scene animates between camera viewpo
 
 ### Dynamic Sky
 
+<img src="assets/images/showcase-dynamic-sky.svg" alt="Dynamic Sky sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
+
 Time-of-day sun positioning with turbidity and fog controls. Sunrise, noon, sunset — all driven by a Compose slider.
 
 **Demonstrates:** `DynamicSkyNode`, `FogNode`, reactive lighting from Compose state
@@ -63,6 +65,8 @@ Time-of-day sun positioning with turbidity and fog controls. Sunrise, noon, suns
 ---
 
 ### Reflection Probe
+
+<img src="assets/images/showcase-reflection.svg" alt="Reflection Probe sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
 
 Metallic surfaces with local cubemap reflections that override the global environment.
 
@@ -72,6 +76,8 @@ Metallic surfaces with local cubemap reflections that override the global enviro
 
 ### Physics Demo
 
+<img src="assets/images/showcase-physics.svg" alt="Physics Demo sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
+
 Tap the screen to throw balls. They bounce off the floor and each other with rigid body physics.
 
 **Demonstrates:** `PhysicsNode`, gravity, collision detection, tap-to-throw interaction
@@ -79,6 +85,8 @@ Tap the screen to throw balls. They bounce off the floor and each other with rig
 ---
 
 ### Post-Processing
+
+<img src="assets/images/showcase-post-processing.svg" alt="Post-Processing sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
 
 Toggle visual effects: bloom, depth-of-field, SSAO, and fog. See the difference each makes.
 
@@ -88,6 +96,8 @@ Toggle visual effects: bloom, depth-of-field, SSAO, and fog. See the difference 
 
 ### Line & Path
 
+<img src="assets/images/showcase-line-paths.svg" alt="Line & Path sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
+
 3D line drawing, axis gizmos, spiral curves, and animated sine-wave paths.
 
 **Demonstrates:** `LineNode`, `PathNode`, `updateGeometry()`, GPU line primitives
@@ -95,6 +105,8 @@ Toggle visual effects: bloom, depth-of-field, SSAO, and fog. See the difference 
 ---
 
 ### Text Labels
+
+<img src="assets/images/showcase-text-labels.svg" alt="Text Labels sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
 
 Camera-facing text labels floating above 3D spheres. Tap to cycle text.
 
@@ -151,6 +163,8 @@ Detect a real-world image and overlay 3D content on it.
 
 ### AR Cloud Anchor
 
+<img src="assets/images/showcase-ar-placement.svg" alt="AR Cloud Anchor sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
+
 Host an anchor to Google Cloud and resolve it on another device. Cross-device AR persistence.
 
 **Demonstrates:** `CloudAnchorNode`, anchor hosting/resolving, `CloudAnchorState`
@@ -159,7 +173,7 @@ Host an anchor to Google Cloud and resolve it on another device. Cross-device AR
 
 ### AR Point Cloud
 
-![AR Point Cloud](screenshots/ar-point-cloud.png){ width=320 }
+<img src="assets/images/showcase-ar-pointcloud.svg" alt="AR Point Cloud sample" width="220" style="border-radius: 28px; float: right; margin-left: 1rem;">
 
 Visualize ARCore's feature points as a real-time point cloud.
 
