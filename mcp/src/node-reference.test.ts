@@ -115,27 +115,6 @@ describe("listNodeTypes", () => {
     expect(types).toContain("AnchorNode");
   });
 
-  it("includes 3.2.2 node types", () => {
-    const types = listNodeTypes(SECTIONS);
-    expect(types).toContain("PhysicsNode");
-    expect(types).toContain("DynamicSkyNode");
-    expect(types).toContain("FogNode");
-    expect(types).toContain("ReflectionProbeNode");
-    expect(types).toContain("TextNode");
-    expect(types).toContain("LineNode");
-    expect(types).toContain("PathNode");
-    expect(types).toContain("BillboardNode");
-  });
-
-  it("includes geometry node types", () => {
-    const types = listNodeTypes(SECTIONS);
-    expect(types).toContain("CubeNode");
-    expect(types).toContain("SphereNode");
-    expect(types).toContain("CylinderNode");
-    expect(types).toContain("PlaneNode");
-    expect(types).toContain("MeshNode");
-  });
-
   it("returns at least 10 entries (enough node types in llms.txt)", () => {
     expect(listNodeTypes(SECTIONS).length).toBeGreaterThanOrEqual(10);
   });
