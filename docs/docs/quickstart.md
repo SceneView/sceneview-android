@@ -132,3 +132,4 @@ That is a production-quality, physically-based 3D viewer in under 30 lines of co
 - **Try AR** — Follow the [AR Compose codelab](codelabs/codelab-ar-compose.md) to place models in the real world using `ARScene`.
 - **Explore the samples** — The [samples page](samples.md) covers model animation, camera manipulation, cloud anchors, and more.
 - **Browse the API** — See the full [API reference](https://sceneview.github.io/api/) for every composable, node type, and loader.
+- **Building for iOS?** — SceneView is also available for iOS via SwiftUI and RealityKit. See the [`SceneViewSwift`](https://github.com/SceneView/SceneViewSwift) package.

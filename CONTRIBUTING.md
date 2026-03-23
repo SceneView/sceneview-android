@@ -49,6 +49,8 @@ You can create a discussion if you have a question rather than a problem report.
 
 You can create a pull request if you know how to fix a problem, improve the documentation or implement a new feature. You just need to fork the repository, commit your changes and create a pull request from there. After the changes are merged the Discord bot will award you the **Contributor** role :tada:
 
+Contributions to any part of the project are welcome — Android (`sceneview/`, `arsceneview/`), iOS (`SceneViewSwift/`), shared KMP core (`sceneview-core/`), samples, documentation, or the MCP server.
+
 ### Title
 
 You should start the title of the pull request with an uppercase letter.
