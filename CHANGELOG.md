@@ -1,5 +1,50 @@
 # Changelog
 
+## 3.2.2 — Bug fixes, MCP enhancements, quality improvements
+
+### Bug fixes
+- **Fixed Filament version** — reverted from non-existent 1.70.0 to 1.56.0 (the latest release available)
+- **Fixed PhysicsNode recomposition** — `remember` key now includes `mass`, `restitution`, `floorY`, `radius` so changing physics parameters recreates the body correctly
+- **Fixed filename typo** — `Acitivty.kt` → `Activity.kt` in utils package
+- **Fixed CLAUDE.md version references** — corrected Kotlin (2.1.21) and Filament (1.56.0) versions to match actual build config
+
+### MCP server enhancements
+- **New tool: `get_troubleshooting`** — common crashes, build failures, AR issues, performance problems
+- **New validation rules** — `migration/sceneform-import` catches deprecated `com.google.ar.sceneform.*` imports; `lifecycle/manual-node-destroy` warns against manual `destroy()` on composable nodes
+- All 288 MCP tests passing
+
+---
+
+## 3.2.1 — Distribution, CI, documentation & tech debt sweep
+
+### Distribution
+- **APK workflow** — new `build-apks.yml` GitHub Action builds all 14 sample APKs and attaches them to every GitHub Release (debug-signed, sideloadable)
+
+### CI
+- Build step now covers **all 14 sample apps** (was 4); AR emulator job includes `ar-cloud-anchor`
+
+### Documentation
+- **`llms.txt`** — added 8 missing v3.2.0 node types: PhysicsNode, DynamicSkyNode, FogNode, ReflectionProbeNode, LineNode, PathNode, BillboardNode, TextNode; added 6 new samples to table
+- **`ROADMAP.md`** — consolidated: v3.2.0 marked as shipped, v3.3.0/v3.4.0 updated with correct remaining scope
+
+### Code quality
+- **Zero TODO/FIXME comments** in both `sceneview/` and `arsceneview/` SDK modules (was 14)
+- Legacy collision math classes annotated with migration target (3.3.0)
+- Bridge conversion functions documented with KDoc linking to migration plan
+
+### Samples
+- All 14 sample `build.gradle` files migrated to **Gradle version catalog** (`libs.*`) — no more hardcoded versions
+- `enableEdgeToEdge()` added to all 14 sample activities for modern Android layout
+- Fixed outdated media3 (1.6.1 → 1.9.2) and material3 (1.3.2 → 1.4.0) in samples
+- **`reflection-probe`** — probe on/off toggle, material picker (Chrome/Gold/Copper/Rough), roughness slider, companion spheres, dark floor
+- **`line-path`** — amplitude/frequency sliders, Lissajous curve pattern, pattern selector chips
+- **`physics-demo`** — colored balls (6 colors), ball counter, bounciness slider, styled floor
+- **`text-labels`** — 5 planets with real names/sizes, 3-mode label cycling (Name → Size → Both), tap counter
+- **`README.md`** — added v3.2.0 nodes to DSL table, 6 new samples, Physics/Sky/Fog/TextNode code examples
+- **`MIGRATION.md`** — added v3.1→v3.2 migration notes
+
+---
+
 ## 3.2.0 — New node types: Physics, Sky, Fog, Reflections, Lines, Labels
 
 ### New SDK nodes

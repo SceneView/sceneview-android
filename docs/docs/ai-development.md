@@ -1,0 +1,132 @@
+# AI-Assisted Development
+
+SceneView is the first 3D/AR library designed for AI-assisted development. Every API is documented in a machine-readable format that AI tools understand natively.
+
+---
+
+## Why this matters
+
+When you ask an AI to help you build a 3D scene, it needs to know the exact API — function names, parameter types, threading rules, common patterns. Most 3D libraries have large, complex APIs that AI tools hallucinate about.
+
+SceneView solves this with three layers:
+
+1. **`llms.txt`** — a machine-readable API reference at the repo root
+2. **`@sceneview/mcp`** — an MCP server that gives AI tools full API context
+3. **Claude Code skills** — guided workflows for contributing, reviewing, and documenting
+
+---
+
+## For app developers
+
+### Use with Claude Code
+
+Install [Claude Code](https://claude.ai/code), then in your project:
+
+```bash
+# Add SceneView MCP server to your project
+echo '{
+  "mcpServers": {
+    "sceneview": { "command": "npx", "args": ["-y", "@sceneview/mcp"] }
+  }
+}' > .claude/mcp.json
+```
+
+Now Claude has the full SceneView API. Ask it to:
+
+- "Add a 3D model viewer to my product detail screen"
+- "Add AR tap-to-place with pinch-to-scale"
+- "Add a dynamic sky with fog that changes based on a slider"
+- "Show a loading indicator while the model loads"
+
+The AI will generate correct SceneView code — no hallucinated methods, no outdated patterns.
+
+### Use with Cursor / Windsurf / other editors
+
+Copy `llms.txt` from the SceneView repo into your project root, or add the MCP server to your editor's MCP config. The AI tools will pick it up automatically.
+
+### Use with ChatGPT / Claude web
+
+Paste the contents of [`llms.txt`](https://github.com/SceneView/sceneview-android/blob/main/llms.txt) into your conversation, then ask your question. The AI will use the correct API.
+
+---
+
+## For SceneView contributors
+
+### Slash commands
+
+Inside the SceneView repo with Claude Code:
+
+| Command | What it does |
+|---|---|
+| `/contribute` | Full guided workflow — understand the codebase, make changes, prepare a PR |
+| `/review` | Check threading rules, Compose API patterns, Kotlin style, module boundaries |
+| `/document` | Generate/update KDoc for changed public APIs, update `llms.txt` |
+| `/test` | Audit test coverage and generate missing tests |
+
+### Example workflow
+
+```bash
+cd sceneview-android
+claude
+
+# Then in Claude Code:
+> /contribute
+# Claude walks you through understanding the codebase,
+# making changes, running checks, and preparing a PR.
+```
+
+---
+
+## What's in `llms.txt`
+
+A 500-line, machine-readable API reference covering:
+
+- All composable signatures with parameter types and defaults
+- Code examples for every node type
+- Threading rules and common pitfalls
+- Resource loading patterns
+- Gesture and interaction APIs
+- Math types and coordinate system
+- AR-specific APIs (anchors, image tracking, face mesh, cloud anchors)
+
+The file is maintained alongside the source code and updated with every release.
+
+---
+
+## What's in the MCP server
+
+The `@sceneview/mcp` package provides tools that AI assistants can call:
+
+- **`get_api_reference`** — returns the full `llms.txt` content
+- **`get_node_reference`** — look up a specific node type's API
+- **`get_sample_code`** — get working example code for a use case
+- **`get_threading_rules`** — threading and lifecycle rules
+
+### Setup
+
+```json
+{
+  "mcpServers": {
+    "sceneview": {
+      "command": "npx",
+      "args": ["-y", "@sceneview/mcp"]
+    }
+  }
+}
+```
+
+Works with Claude Code, Claude Desktop, Cursor, Windsurf, and any MCP-compatible tool.
+
+---
+
+## Why no other 3D library has this
+
+| Library | AI support |
+|---|---|
+| **SceneView** | `llms.txt` + MCP server + Claude Code skills |
+| Unity | Generic docs, frequent hallucinations on API |
+| Sceneform | Archived, AI trained on outdated code |
+| Raw ARCore | Low-level API, AI struggles with GL/Vulkan boilerplate |
+| Rajawali | Minimal docs, AI has no training data |
+
+SceneView's AI tooling means faster development, fewer bugs, and correct code on the first try. This is a competitive advantage that compounds — the more developers use AI tools, the more SceneView's AI-first approach matters.

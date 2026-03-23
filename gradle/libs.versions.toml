@@ -1,7 +1,7 @@
 [versions]
 agp = "8.11.1"
-kotlin = "2.3.20"
-composeCompiler = "2.3.20"
+kotlin = "2.1.21"
+composeCompiler = "2.1.21"
 coreKtx = "1.18.0"
 appcompat = "1.7.1"
 fragmentKtx = "1.8.9"
@@ -37,6 +37,7 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "composeFoundation" }
 androidx-compose-material = { group = "androidx.compose.material", name = "material", version.ref = "composeMaterial" }
 androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "composeMaterial" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "composeMaterial" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }

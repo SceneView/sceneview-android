@@ -107,8 +107,10 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         "Use view.hitTest(viewPosition)",
         replaceWith = ReplaceWith(expression = "collisionSystem.hitTest(viewPosition)")
     )
-    fun hitTestView(xViewPercent: Float = 0.5f, yViewPercent: Float = 0.5f) =
-        hitTest(viewport!!.width * xViewPercent, viewport!!.height * yViewPercent)
+    fun hitTestView(xViewPercent: Float = 0.5f, yViewPercent: Float = 0.5f): List<HitResult> {
+        val vp = viewport ?: return emptyList()
+        return hitTest(vp.width * xViewPercent, vp.height * yViewPercent)
+    }
 
     /**
      * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
@@ -142,11 +144,14 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         "Use collisionSystem.hitTest(ray)",
         replaceWith = ReplaceWith(expression = "collisionSystem.hitTest(ray)")
     )
-    fun hitTest(ray: Ray) = arrayListOf<HitResult>().apply {
-        collisionSystem!!.raycastAll(ray, this, { resultPick, collider ->
-            resultPick.node = collider.node
-        }, { HitResult() })
-    }.toList()
+    fun hitTest(ray: Ray): List<HitResult> {
+        val cs = collisionSystem ?: return emptyList()
+        return arrayListOf<HitResult>().apply {
+            cs.raycastAll(ray, this, { resultPick, collider ->
+                resultPick.node = collider.node
+            }, { HitResult() })
+        }.toList()
+    }
 
     @Deprecated(
         "Use view.motionEventToRay(motionEvent)",
@@ -204,7 +209,6 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         replaceWith = ReplaceWith(expression = "view.worldToScreen(point)")
     )
     fun worldToScreenPoint(point: Vector3): Vector3 {
-        // TODO : Move to Kotlin-Math
         val m = Matrix()
         Matrix.multiply(projectionTransform.toMatrix(), viewTransform.toMatrix(), m)
         val x = point.x
@@ -223,11 +227,12 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         screenPoint.y = (screenPoint.y / w + 1.0f) * 0.5f
 
         // To screen space.
-        screenPoint.x = screenPoint.x * viewport!!.width
-        screenPoint.y = screenPoint.y * viewport!!.height
+        val vp = viewport ?: return screenPoint
+        screenPoint.x = screenPoint.x * vp.width
+        screenPoint.y = screenPoint.y * vp.height
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        screenPoint.y = viewport!!.height - screenPoint.y
+        screenPoint.y = vp.height - screenPoint.y
         return screenPoint
     }
 
@@ -241,11 +246,12 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
         Matrix.invert(m, m)
 
         // Invert Y because screen Y points down and Sceneform Y points up.
-        y = viewport!!.height - y
+        val vp = viewport ?: return false
+        y = vp.height - y
 
         // Normalize between -1 and 1.
-        x = x / viewport!!.width * 2.0f - 1.0f
-        y = y / viewport!!.height * 2.0f - 1.0f
+        x = x / vp.width * 2.0f - 1.0f
+        y = y / vp.height * 2.0f - 1.0f
         z = 2.0f * z - 1.0f
         var w = 1.0f
         dest.x = x * m.data[0] + y * m.data[4] + z * m.data[8] + w * m.data[12]
