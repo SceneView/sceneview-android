@@ -6,6 +6,7 @@ let package = Package(
     name: "SceneViewSwift",
     platforms: [
         .iOS(.v17),
+        .macOS(.v14),
         .visionOS(.v1)
     ],
     products: [

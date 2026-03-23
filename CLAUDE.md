@@ -15,7 +15,8 @@ the documentation until it can.
 ## About
 
 SceneView provides 3D and AR as declarative UI for Android (Jetpack Compose, Filament,
-ARCore) and iOS (SwiftUI, RealityKit, ARKit), with shared logic in Kotlin Multiplatform.
+ARCore) and Apple platforms (SwiftUI, RealityKit, ARKit) — iOS, macOS, and visionOS —
+with shared logic in Kotlin Multiplatform.
 
 ## Full API reference
 
@@ -55,9 +56,10 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 | Module | Purpose |
 |---|---|
-| `sceneview-core/` | KMP module — portable collision, math, triangulation (commonMain/androidMain/iosMain) |
-| `sceneview/` | Android 3D library — `Scene`, `SceneScope`, all node types (depends on sceneview-core) |
-| `arsceneview/` | AR layer — `ARScene`, `ARSceneScope`, ARCore integration |
+| `sceneview-core/` | KMP module — portable collision, math, geometry, animation, physics (commonMain/androidMain/iosMain) |
+| `sceneview/` | Android 3D library — `Scene`, `SceneScope`, all node types (Filament renderer) |
+| `arsceneview/` | Android AR layer — `ARScene`, `ARSceneScope`, ARCore integration |
+| `SceneViewSwift/` | Apple 3D+AR library — `SceneView`, `ARSceneView` (RealityKit renderer, iOS/macOS/visionOS) |
 | `samples/common/` | Shared helpers across sample apps |
 | `mcp/` | `@sceneview/mcp` — MCP server for AI assistant integration |
 
@@ -71,11 +73,13 @@ Every Claude Code session MUST read this section first to stay in sync.
 - **Latest release**: v3.2.0 (Maven Central)
 - **Project philosophy**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
-- **Cross-platform**: Android (Jetpack Compose + Filament) and iOS (SwiftUI + RealityKit)
+- **Cross-platform strategy**: native renderer per platform — Filament (Android),
+  RealityKit (Apple: iOS, macOS, visionOS). KMP shares logic, not rendering.
 - **KMP core** (`sceneview-core/`): collision, math, triangulation, animation, geometry,
-  physics shared across Android and iOS via Kotlin Multiplatform
-- **SceneViewSwift** (`SceneViewSwift/`): iOS library — Swift Package, iOS 17+ / visionOS 1+,
-  11 Swift files, demo app, 35+ unit tests
+  physics shared across Android and Apple via Kotlin Multiplatform
+- **SceneViewSwift** (`SceneViewSwift/`): Apple library — Swift Package, iOS 17+ /
+  macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift native,
+  Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
 - **Demo app** (`samples/sceneview-demo/`): Play Store ready, 4-tab architecture (Explore,
   Showcase, Gallery, QA), Material 3 Expressive
 - **MCP server** (`mcp/`): published npm package for AI assistant integration
@@ -92,44 +96,75 @@ After completing significant work, update the "Current state" block above with:
 
 ---
 
-## KMP Roadmap (Kotlin Multiplatform → iOS)
+## Cross-platform strategy
 
-### Current KMP state
+### Architecture: native renderer per platform
 
-`sceneview-core/` already targets `android`, `iosArm64`, `iosSimulatorArm64`, `iosX64` with:
-- Collision system, triangulation (Earcut/Delaunay), logging abstraction, math utilities in `commonMain`
+```
+┌─────────────────────────────────────────────┐
+│              sceneview-core (KMP)            │
+│     math, collision, geometry, animations    │
+│         commonMain → XCFramework             │
+└──────────┬──────────────────┬───────────────┘
+           │                  │
+    ┌──────▼──────┐   ┌──────▼──────┐
+    │  sceneview  │   │SceneViewSwift│
+    │  (Android)  │   │   (Apple)    │
+    │  Filament   │   │  RealityKit  │
+    └──────┬──────┘   └──────┬──────┘
+           │                  │
+     Compose UI        SwiftUI (native)
+                       Flutter (PlatformView)
+                       React Native (Fabric)
+                       KMP Compose (UIKitView)
+```
 
-`sceneview/` and `arsceneview/` are Android-only (99 + 29 Kotlin files respectively).
+**Key decision:** KMP shares **logic** (math, collision, geometry, animations), not **rendering**.
+Each platform uses its native renderer: Filament on Android, RealityKit on Apple.
 
-### Code shareability analysis
+Rationale:
+- RealityKit is the only path to visionOS spatial computing
+- Swift Package integration (1 line SPM) vs KMP XCFramework (opaque binary, poor DX)
+- SceneViewSwift is consumable by any iOS framework (Flutter, React Native, KMP Compose)
+- No Filament dependency on Apple = smaller binary, native debugging, native tooling
 
-| Category | % of code | Action |
-|---|---|---|
-| Pure logic (math, geometry, animations, data classes) | ~25% | Move to `sceneview-core/commonMain` |
-| Filament JNI wrappers (managers, loaders, nodes) | ~40% | `androidMain` + `expect/actual` bridge for iOS |
-| Android framework (SurfaceView, MotionEvent, Context, ARCore) | ~35% | Stay in `androidMain`; needs iOS equivalents |
+### Supported platforms
 
-### Key blockers
+| Platform | Renderer | Framework | Status |
+|---|---|---|---|
+| Android | Filament | Jetpack Compose | Stable (v3.2.0) |
+| iOS | RealityKit | SwiftUI | In development |
+| macOS | RealityKit | SwiftUI | Planned (add `.macOS(.v14)` to Package.swift) |
+| visionOS | RealityKit | SwiftUI | In development (already in Package.swift) |
 
-1. **Filament iOS bindings** — No official Kotlin/Native artifacts. Requires Swift interop via `cinterop`.
-2. **Compose Multiplatform iOS** — Still in beta; iOS UI layer may need native SwiftUI fallback.
-3. **ARKit vs ARCore parity** — Cloud anchors and some ARCore features have no ARKit equivalent.
+### KMP core role
 
-### Phased plan
+`sceneview-core/` targets `android`, `iosArm64`, `iosSimulatorArm64`, `iosX64` with shared:
+- Collision system (Ray, Box, Sphere, Intersections)
+- Triangulation (Earcut, Delaunator)
+- Geometry generation (Cube, Sphere, Cylinder, Plane, Path, Line, Shape)
+- Animation (Spring, Property, Interpolation, SmoothTransform)
+- Physics simulation
+- Scene graph, math utilities, logging
+
+SceneViewSwift can consume this as an XCFramework for shared algorithms,
+while keeping RealityKit as the rendering backend.
+
+### Cross-framework iOS consumption
+
+| Framework | Integration method |
+|---|---|
+| Swift native | `import SceneViewSwift` via SPM |
+| Flutter | Plugin with `PlatformView` wrapping `SceneView`/`ARSceneView` |
+| React Native | Turbo Module / Fabric component bridging to SceneViewSwift |
+| KMP Compose | `UIKitView` in Compose iOS wrapping the underlying UIView |
+
+### Phased plan (revised)
 
 | Phase | Scope | Complexity |
 |---|---|---|
-| 1 — Core restructure | Move math/geometry/animation to `sceneview-core/commonMain`; add `expect/actual FilamentBridge` | Medium |
-| 2 — iOS surface | Filament Metal backend via Swift → Kotlin/Native `cinterop`; gesture bridges | High |
-| 3 — iOS AR (ARKit) | ARKit→ARCore API mapping for planes, image tracking, face tracking | Very High |
-| 4 — Gesture system | `expect/actual GestureBridge`; iOS: `UIGestureRecognizer` | Low |
-| 5 — Resource abstraction | `expect/actual ResourceLoader`; iOS: bundle API; migrate to Fuel KMP | Low |
-| 6 — Test & stabilize | iOS sample, CI/CD, device perf profiling | Medium |
-
-**Estimated total effort:** 12–18 weeks · ~2,500–3,500 new LoC
-**Estimated code reuse after KMP:** ~40% of `sceneview` shared between Android and iOS
-
-### MVP target
-
-- Phase 1–2 complete → basic iOS 3D rendering (no AR), ship as `sceneview:4.0.0-ios-alpha`
-- Phase 3–4 complete → ARKit integration, ship as `arsceneview:4.0.0-ios-beta`
+| 1 — SceneViewSwift stabilization | Complete 3D+AR API, add macOS target, tests, docs | Medium |
+| 2 — KMP core consumption | Build XCFramework from sceneview-core, integrate into SceneViewSwift | Medium |
+| 3 — Cross-framework bridges | Flutter plugin, React Native module | Medium |
+| 4 — visionOS spatial | Immersive spaces, hand tracking, spatial anchors | High |
+| 5 — Docs & website | Update all docs/README/site for multi-platform (iOS, macOS, visionOS) | Low |
