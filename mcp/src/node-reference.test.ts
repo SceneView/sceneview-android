@@ -115,7 +115,7 @@ describe("listNodeTypes", () => {
     expect(types).toContain("AnchorNode");
   });
 
-  it("includes 3.2.0 node types", () => {
+  it("includes 3.2.2 node types", () => {
     const types = listNodeTypes(SECTIONS);
     expect(types).toContain("PhysicsNode");
     expect(types).toContain("DynamicSkyNode");

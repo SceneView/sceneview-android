@@ -20,14 +20,14 @@ catch {
     API_DOCS = "SceneView API docs not found. Run `npm run prepare` to bundle llms.txt.";
 }
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
-const server = new Server({ name: "@sceneview/mcp", version: "3.2.0" }, { capabilities: { resources: {}, tools: {} } });
+const server = new Server({ name: "@sceneview/mcp", version: "3.2.2" }, { capabilities: { resources: {}, tools: {} } });
 // ─── Resources ───────────────────────────────────────────────────────────────
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
         {
             uri: "sceneview://api",
             name: "SceneView API Reference",
-            description: "Complete SceneView 3.2.0 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
+            description: "Complete SceneView 3.2.2 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
             mimeType: "text/markdown",
         },
         {
@@ -262,7 +262,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `### build.gradle.kts`,
                                 `\`\`\`kotlin`,
                                 `dependencies {`,
-                                `    implementation("io.github.sceneview:sceneview:3.2.0")`,
+                                `    implementation("io.github.sceneview:sceneview:3.2.2")`,
                                 `}`,
                                 `\`\`\``,
                                 ``,
@@ -283,7 +283,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `### build.gradle.kts`,
                                 `\`\`\`kotlin`,
                                 `dependencies {`,
-                                `    implementation("io.github.sceneview:arsceneview:3.2.0")`,
+                                `    implementation("io.github.sceneview:arsceneview:3.2.2")`,
                                 `}`,
                                 `\`\`\``,
                                 ``,
