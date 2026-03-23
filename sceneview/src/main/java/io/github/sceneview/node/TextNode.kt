@@ -116,8 +116,8 @@ open class TextNode(
         /**
          * Renders [text] into a new [Bitmap] using Android [Canvas].
          *
-         * The bitmap has rounded-rectangle background fills and horizontally/vertically centred
-         * text. Alpha is preserved so the material's blending mode controls transparency.
+         * The bitmap has a rounded-rectangle background and horizontally/vertically centred text.
+         * Alpha is preserved so the material's blending mode controls transparency.
          */
         fun renderTextBitmap(
             text: String,
@@ -130,7 +130,7 @@ open class TextNode(
             val bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
 
-            // Background
+            // Background with rounded corners
             val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = backgroundColor
                 style = Paint.Style.FILL
@@ -143,15 +143,13 @@ open class TextNode(
                 bgPaint
             )
 
-            // Text
+            // Centred bold text
             val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = textColor
                 textSize = fontSize
                 typeface = Typeface.DEFAULT_BOLD
                 textAlign = Paint.Align.CENTER
             }
-
-            // Vertically centre the text
             val xPos = bitmapWidth / 2f
             val yPos = (bitmapHeight / 2f) - ((textPaint.descent() + textPaint.ascent()) / 2f)
             canvas.drawText(text, xPos, yPos, textPaint)
