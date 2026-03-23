@@ -16,7 +16,7 @@ import { validateCode, formatValidationReport } from "./validator.js";
 import { MIGRATION_GUIDE } from "./migration.js";
 import { fetchKnownIssues } from "./issues.js";
 import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
-import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE } from "./guides.js";
+import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -198,6 +198,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: "get_ar_setup",
       description:
         "Returns detailed AR setup instructions — AndroidManifest permissions and features, Gradle dependencies, ARCore session configuration options (depth, light estimation, instant placement, plane detection, image tracking, cloud anchors), and a complete working AR starter template. More detailed than `get_setup` for AR-specific configuration.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "get_troubleshooting",
+      description:
+        "Returns the SceneView troubleshooting guide — common crashes (SIGABRT, model not showing), build failures, AR issues (drift, overexposure, image detection), and performance problems. Use this when a user reports something not working, a crash, or unexpected behavior.",
       inputSchema: {
         type: "object",
         properties: {},
@@ -420,6 +430,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // ── get_ar_setup ─────────────────────────────────────────────────────────
     case "get_ar_setup": {
       return { content: [{ type: "text", text: AR_SETUP_GUIDE }] };
+    }
+
+    // ── get_troubleshooting ──────────────────────────────────────────────────
+    case "get_troubleshooting": {
+      return { content: [{ type: "text", text: TROUBLESHOOTING_GUIDE }] };
     }
 
     default:

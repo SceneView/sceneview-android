@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.2.2 — Bug fixes, MCP enhancements, quality improvements
+
+### Bug fixes
+- **Fixed Filament version** — reverted from non-existent 1.70.0 to 1.56.0 (the latest release available)
+- **Fixed PhysicsNode recomposition** — `remember` key now includes `mass`, `restitution`, `floorY`, `radius` so changing physics parameters recreates the body correctly
+- **Fixed filename typo** — `Acitivty.kt` → `Activity.kt` in utils package
+- **Fixed CLAUDE.md version references** — corrected Kotlin (2.1.21) and Filament (1.56.0) versions to match actual build config
+
+### MCP server enhancements
+- **New tool: `get_troubleshooting`** — common crashes, build failures, AR issues, performance problems
+- **New validation rules** — `migration/sceneform-import` catches deprecated `com.google.ar.sceneform.*` imports; `lifecycle/manual-node-destroy` warns against manual `destroy()` on composable nodes
+- All 288 MCP tests passing
+
+---
+
 ## 3.2.1 — Distribution, CI, documentation & tech debt sweep
 
 ### Distribution
