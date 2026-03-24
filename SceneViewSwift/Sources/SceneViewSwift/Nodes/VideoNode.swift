@@ -23,7 +23,7 @@ import AVFoundation
 ///     videoNode?.play()
 /// }
 /// ```
-public struct VideoNode: Sendable {
+public struct VideoNode: @unchecked Sendable {
     /// The underlying RealityKit entity.
     public let entity: Entity
 
