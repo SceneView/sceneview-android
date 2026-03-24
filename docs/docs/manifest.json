@@ -14,32 +14,32 @@
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
     {
-      "src": "/assets/images/favicon.png",
+      "src": "/assets/images/favicon.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/assets/images/favicon.png",
+      "src": "/assets/images/favicon.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "maskable"
     }
   ],
   "screenshots": [
     {
       "src": "/screenshots/model-viewer.png",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "label": "3D Model Viewer with HDR environment and orbit camera"
     },
     {
       "src": "/screenshots/ar-model-viewer.png",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "label": "AR tap-to-place furniture with plane detection"
     },
     {
       "src": "/screenshots/autopilot-demo.png",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "label": "Automated scene animation demo"
     }
   ],
