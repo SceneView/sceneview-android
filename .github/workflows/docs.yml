@@ -1,18 +1,16 @@
-name: Deploy docs site
+name: Deploy website + docs
 
 on:
   push:
     branches: [main]
     paths:
+      - 'website/**'
       - 'docs/**'
       - 'marketing/**'
+      - 'llms.txt'
       - 'CHANGELOG.md'
       - 'MIGRATION.md'
       - 'CONTRIBUTING.md'
-      - 'ROADMAP.md'
-      - 'llms.txt'
-      - 'sceneview/Module.md'
-      - 'arsceneview/Module.md'
   release:
     types: [published]
   workflow_call:
@@ -30,68 +28,112 @@ permissions:
 
 jobs:
   build:
-    name: Build site
+    name: Build website + docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # ── 1. Build Kobweb website (marketing site — root) ──────────────────
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Build Kobweb website
+        working-directory: website
+        run: |
+          chmod +x ./gradlew
+          ./gradlew kobwebExport --stacktrace
+
+      - name: Inject responsive CSS
+        working-directory: website
+        run: |
+          ./gradlew injectResponsiveCss --stacktrace
+
+      - name: Assemble site root from Kobweb export
+        run: |
+          mkdir -p site
+
+          # Kobweb pages become the root
+          cp -r website/.kobweb/site/pages/* site/
+
+          # Kobweb resources (JS, CSS, models, images)
+          cp -r website/.kobweb/site/resources/* site/ 2>/dev/null || true
+
+          # Kobweb system files (JS runtime)
+          cp -r website/.kobweb/site/system/* site/ 2>/dev/null || true
+
+          touch site/.nojekyll
+
+      # ── 2. Build MkDocs (technical docs — /docs/) ───────────────────────
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
+      - name: Install MkDocs
         run: |
           pip install mkdocs-material
           pip install mkdocs-social-plugin || true
 
       - name: Sync content into docs
         run: |
-          # Codelabs from marketing (skip if missing)
           if [ -d marketing/codelabs ]; then
             mkdir -p docs/docs/codelabs
             cp marketing/codelabs/codelab-3d-compose.md docs/docs/codelabs/codelab-3d-compose.md 2>/dev/null || true
             cp marketing/codelabs/codelab-ar-compose.md docs/docs/codelabs/codelab-ar-compose.md 2>/dev/null || true
           fi
-
-          # Root docs
           cp MIGRATION.md docs/docs/migration.md 2>/dev/null || true
           cp CHANGELOG.md docs/docs/changelog.md 2>/dev/null || true
           cp CONTRIBUTING.md docs/docs/contributing.md 2>/dev/null || true
 
-      - name: Build site
+      - name: Build MkDocs
         run: |
           cd docs
-          mkdocs build --site-dir ../site
+          mkdocs build --site-dir ../site/docs
 
-      - name: Copy extra site files
+      # ── 3. Copy extra files ─────────────────────────────────────────────
+      - name: Copy SEO and meta files
         run: |
-          for f in CNAME robots.txt manifest.json structured-data.json llms.txt llms-full.txt; do
-            [ -f "docs/docs/$f" ] && cp "docs/docs/$f" "site/$f" || true
+          # Root-level SEO files from Kobweb public resources
+          for f in robots.txt sitemap.xml structured-data.json llms.txt llms-full.txt; do
+            [ -f "website/src/jsMain/resources/public/$f" ] && cp "website/src/jsMain/resources/public/$f" "site/$f" || true
           done
 
-          # Security policy
-          mkdir -p site/.well-known
-          if [ -f "docs/docs/.well-known/security.txt" ]; then
-            cp docs/docs/.well-known/security.txt site/.well-known/security.txt
-          fi
+          # Also copy from docs if Kobweb doesn't have them
+          for f in CNAME manifest.json llms.txt llms-full.txt; do
+            [ ! -f "site/$f" ] && [ -f "docs/docs/$f" ] && cp "docs/docs/$f" "site/$f" || true
+          done
 
-          touch site/.nojekyll
+          # 3D model for hero viewer
+          mkdir -p site/models
+          [ -f "website/src/jsMain/resources/public/models/DamagedHelmet.glb" ] && \
+            cp website/src/jsMain/resources/public/models/DamagedHelmet.glb site/models/ || true
 
-          # Verify the build produced content
-          FILE_COUNT=$(find site -type f | wc -l)
-          echo "Site contains $FILE_COUNT files"
-          if [ "$FILE_COUNT" -lt 10 ]; then
-            echo "ERROR: Site build produced fewer than 10 files. Aborting deploy."
-            exit 1
-          fi
-
-      # If Dokka API docs were uploaded by the release workflow, include them
+      # ── 4. Include Dokka API docs if available ──────────────────────────
       - name: Download Dokka API docs (if available)
         uses: actions/download-artifact@v4
         with:
           name: dokka-api-docs
           path: site/api/sceneview
         continue-on-error: true
+
+      # ── 5. Verify and upload ────────────────────────────────────────────
+      - name: Verify build
+        run: |
+          FILE_COUNT=$(find site -type f | wc -l)
+          echo "Site contains $FILE_COUNT files"
+          echo "Root files: $(ls site/)"
+          echo "Has index.html: $([ -f site/index.html ] && echo YES || echo NO)"
+          echo "Has docs/: $([ -d site/docs ] && echo YES || echo NO)"
+          if [ "$FILE_COUNT" -lt 10 ]; then
+            echo "ERROR: Site build produced fewer than 10 files. Aborting."
+            exit 1
+          fi
+          if [ ! -f site/index.html ]; then
+            echo "ERROR: No index.html in root. Kobweb export may have failed."
+            exit 1
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
