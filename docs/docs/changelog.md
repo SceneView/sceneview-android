@@ -126,7 +126,7 @@
 ### Breaking changes
 
 The entire public API has been redesigned around Jetpack Compose. There is no source-compatible
-upgrade path from 2.x; see the [Migration guide](https://sceneview.github.io/migration/) for a step-by-step walkthrough.
+upgrade path from 2.x; see the [Migration guide](migration.md) for a step-by-step walkthrough.
 
 #### `Scene` and `ARScene` — new DSL-first signature
 

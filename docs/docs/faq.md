@@ -4,7 +4,7 @@
 
 ### What is SceneView?
 
-SceneView is a Jetpack Compose library for 3D and AR on Android. It wraps Google Filament (rendering) and ARCore (augmented reality) in declarative composables — the same way you write `Column { }` or `Row { }`.
+SceneView is a declarative 3D and AR SDK for Android and Apple platforms. On Android, it wraps Google Filament (rendering) and ARCore (augmented reality) in Jetpack Compose composables — the same way you write `Column { }` or `Row { }`. On iOS, macOS, and visionOS, SceneViewSwift provides the same declarative experience using SwiftUI and RealityKit.
 
 ### Is it free?
 

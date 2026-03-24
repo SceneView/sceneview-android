@@ -194,3 +194,9 @@ materialLoader.createColorInstance(Color.Red)
 | Any composable in `Scene { }` | Direct Filament API on background thread |
 
 **Rule:** Filament JNI = main thread only. `remember*` hooks handle this for you.
+
+---
+
+## Apple platforms
+
+Building for iOS, macOS, or visionOS? See the [Apple API Cheatsheet](cheatsheet-ios.md).
