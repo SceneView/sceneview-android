@@ -10,44 +10,55 @@ export const PLATFORM_ROADMAP = `# SceneView Multi-Platform Roadmap
 
 ## Current Status (v3.3.0)
 
-| Platform | Status | Artifact |
-|----------|--------|----------|
-| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.3.0\` |
-| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.3.0\` |
-| **iOS** | Planned | — |
-| **Kotlin Multiplatform** | Planned | — |
-| **Web (Compose HTML)** | Exploratory | — |
+| Platform | Status | Artifact | Renderer |
+|----------|--------|----------|----------|
+| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.3.0\` | Filament |
+| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.3.0\` | Filament + ARCore |
+| **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.3.0"\` | RealityKit + ARKit |
+| **macOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
+| **visionOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
+| **KMP Core** | Stable | \`io.github.sceneview:sceneview-core:3.3.0\` | N/A (shared logic) |
+
+## Architecture: Native Renderers per Platform
+
+\`\`\`
+Android: Filament (OpenGL ES / Vulkan)
+Apple:   RealityKit (Metal)
+Shared:  sceneview-core (KMP) — math, collision, geometry, animations, physics
+\`\`\`
+
+KMP shares **logic**, not **rendering**. Each platform uses its native renderer.
 
 ## Android — What Ships Today
 
-- **3D rendering** via Google Filament: PBR materials, HDR environments, glTF/GLB models, post-processing (bloom, SSAO, FXAA, tone mapping, vignette).
-- **AR** via ARCore: plane detection, hit testing, anchors, cloud anchors, augmented images, depth, instant placement, light estimation, face tracking, point cloud.
+- **3D rendering** via Google Filament: PBR materials, HDR environments, glTF/GLB models, post-processing.
+- **AR** via ARCore: plane detection, hit testing, anchors, cloud anchors, augmented images, depth, light estimation, point cloud.
 - **Compose-native DSL**: all nodes are \`@Composable\` functions inside \`Scene { }\` or \`ARScene { }\`.
-- **22+ node types**: ModelNode, LightNode, AnchorNode, CameraNode, TextNode, PathNode, ViewNode, PlaneNode, SphereNode, CylinderNode, CubeNode, DynamicSkyNode, FogNode, ReflectionProbeNode, PhysicsNode, HitResultNode, AugmentedImageNode, CloudAnchorNode, and more.
-- **15 sample apps** covering model viewing, AR placement, augmented images, cloud anchors, physics, dynamic sky, text labels, line rendering, reflection probes, and post-processing.
+- **26+ node types**: ModelNode, LightNode, AnchorNode, CameraNode, TextNode, PathNode, ViewNode, PlaneNode, SphereNode, CylinderNode, CubeNode, DynamicSkyNode, FogNode, ReflectionProbeNode, PhysicsNode, BillboardNode, LineNode, and more.
 
-## iOS — Planned
+## Apple — Alpha (SceneViewSwift)
 
-SceneView for iOS will target **Swift** and **SwiftUI** with a similar declarative API. The rendering backend will be **Metal** (via Filament's Metal backend). AR will use **ARKit**.
+- **3D + AR** in SwiftUI via RealityKit — iOS 17+ / macOS 14+ / visionOS 1+
+- Node types: ModelNode, AnchorNode, GeometryNode, LightNode, CameraNode, ImageNode, VideoNode, PhysicsNode, AugmentedImageNode
+- PBR material system with textures
+- Swift Package Manager distribution
+- Consumable by: Swift native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
 
-Key design goals:
-- API parity with Android where possible (same node types, same composable patterns adapted to SwiftUI)
-- Shared glTF/GLB asset pipeline
-- Kotlin Multiplatform for shared business logic (optional)
+## KMP Core (\`sceneview-core\`)
 
-## Kotlin Multiplatform — Planned
+Shared Kotlin Multiplatform module providing:
+- Collision system (Ray, Box, Sphere, Intersections)
+- Triangulation (Earcut, Delaunator)
+- Geometry generation (Cube, Sphere, Cylinder, Plane, Path, Line, Shape)
+- Animation (Spring, Property, Interpolation, SmoothTransform)
+- Physics simulation
+- Scene graph, math utilities
 
-A shared \`sceneview-common\` module will provide:
-- Scene graph data structures
-- Math types (Position, Rotation, Scale, Quaternion)
-- Model loading abstractions
-- Animation state machines
+## Upcoming
 
-Platform-specific modules will handle rendering (Filament on Android, Metal on iOS).
-
-## Web — Exploratory
-
-A Compose HTML / Kotlin/JS target is being explored for lightweight 3D viewers using WebGL/WebGPU. This is not on a near-term roadmap.
+- **v3.4.0**: SceneViewSwift stabilization, API parity with Android core nodes
+- **v3.5.0**: KMP core XCFramework consumption in SceneViewSwift
+- **v4.0.0**: Android XR, visionOS spatial computing, cross-framework bridges (Flutter, React Native)
 
 ## How to Stay Updated
 
