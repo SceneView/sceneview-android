@@ -128,7 +128,12 @@ need to be merged to main first.
   - React Native module scaffold: `react-native/react-native-sceneview/` — TypeScript, Android ViewManager, iOS RCTViewManager
 
 - **What's next (for future sessions)**:
-  - **MERGE BRANCH TO MAIN**: push to claude/* branch, create PR via GitHub UI, merge
+  - **PRIORITY 1 — CREATE PR & MERGE TO MAIN**:
+    1. Run `gh pr create --base main --head claude/resume-sceneview-ios-PjPVi` with a summary of all 6 phases (28 commits)
+    2. If `gh` auth fails, print the URL for manual creation: `https://github.com/SceneView/sceneview/compare/main...claude/resume-sceneview-ios-PjPVi`
+    3. PR title: `feat: iOS SceneViewSwift stabilization, tests, docs, MCP, cross-framework scaffolds`
+    4. PR body should list all 6 phases with key highlights (see "What was done" above)
+    5. Once PR is created, merge it (squash or merge commit, maintainer's choice)
   - Sync llms.txt across docs/docs/llms.txt and mcp/llms.txt
   - Consider v3.4.0-alpha release tag
   - Complete Flutter/React Native bridges (currently scaffolds with TODOs)
@@ -139,7 +144,7 @@ need to be merged to main first.
 
 - **Known constraints**:
   - Cannot push directly to `main` (proxy restriction, only claude/* branches)
-  - No GitHub API token available — PRs must be created manually on GitHub
+  - No GitHub API token available — PRs must be created manually on GitHub, or use `gh auth login` first
   - Container is ephemeral — tokens/env don't persist between sessions
 
 - **Project philosophy**: SceneView is an AI-first SDK — everything optimized
