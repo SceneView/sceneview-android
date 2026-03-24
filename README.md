@@ -35,10 +35,11 @@ Scene(modifier = Modifier.fillMaxSize()) {
     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
     }
-    LightNode(type = LightManager.Type.SUN) {
+    LightNode(apply = {
+        type(LightManager.Type.SUN)
         intensity(100_000f)
         castShadows(true)
-    }
+    })
 }
 ```
 
@@ -179,7 +180,7 @@ All composables available inside `Scene { }`:
 | Composable | Description |
 |---|---|
 | `ModelNode(modelInstance, scaleToUnits?)` | Renders a glTF/GLB model. Set `isEditable = true` to enable pinch-to-scale and drag-to-rotate. |
-| `LightNode(type)` | Directional, point, spot, or sun light |
+| `LightNode(apply = { type(…); intensity(…) })` | Directional, point, spot, or sun light. **`apply` is a named parameter, not a trailing lambda.** |
 | `CameraNode()` | Named camera (e.g. imported from a glTF) |
 | `CubeNode(size, materialInstance?)` | Box geometry |
 | `SphereNode(radius, materialInstance?)` | Sphere geometry |

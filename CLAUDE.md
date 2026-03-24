@@ -51,6 +51,13 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 | `samples/ar-cloud-anchor` | Persistent cross-device anchors |
 | `samples/ar-point-cloud` | ARCore feature point visualisation |
 | `samples/autopilot-demo` | Autonomous AR demo |
+| `samples/dynamic-sky` | Time-of-day sun position, DynamicSkyNode |
+| `samples/reflection-probe` | Local cubemap reflections, material picker |
+| `samples/physics-demo` | Rigid body physics, colored balls, bounciness |
+| `samples/post-processing` | Bloom, SSAO, FXAA, tone mapping, vignette |
+| `samples/line-path` | 3D polylines, Lissajous curves, amplitude/frequency |
+| `samples/text-labels` | 3D text, planet labels, tap interaction |
+| `samples/sceneview-demo` | Play Store demo app, 4-tab Material 3 Expressive |
 
 ## Module structure
 
