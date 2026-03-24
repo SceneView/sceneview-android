@@ -133,7 +133,7 @@ external class FilamentAsset {
 }
 
 external class Animator {
-    fun applyAnimation(animationIndex: Int)
+    fun applyAnimation(animationIndex: Int, time: Double = definedExternally)
     fun updateBoneMatrices()
     fun getAnimationCount(): Int
     fun getAnimationDuration(animationIndex: Int): Double

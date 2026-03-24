@@ -40,6 +40,8 @@ class SceneView private constructor(
 ) {
     private var animationFrameId: Int? = null
     private var isRunning = false
+    private var lastTimestamp = 0.0
+    private var animationTime = 0.0
 
     private val models = mutableListOf<FilamentAsset>()
     private var assetLoader: AssetLoader? = null
@@ -255,11 +257,18 @@ class SceneView private constructor(
         // Update orbit camera
         cameraController?.update()
 
-        // Update animations
+        // Track animation time
+        val deltaSeconds = if (lastTimestamp > 0) (timestamp - lastTimestamp) / 1000.0 else 0.0
+        lastTimestamp = timestamp
+        animationTime += deltaSeconds
+
+        // Update animations with real elapsed time
         models.forEach { asset ->
             asset.animator?.let { animator ->
                 if (animator.getAnimationCount() > 0) {
-                    animator.applyAnimation(0)
+                    val duration = animator.getAnimationDuration(0)
+                    val loopedTime = if (duration > 0) animationTime % duration else 0.0
+                    animator.applyAnimation(0, loopedTime)
                     animator.updateBoneMatrices()
                 }
             }
