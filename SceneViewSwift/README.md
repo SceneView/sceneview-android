@@ -132,16 +132,20 @@ let title = TextNode(text: "SceneView", fontSize: 0.08, depth: 0.02)
 |---|---|
 | `ModelNode` | USDZ model loading with animations and collision |
 | `GeometryNode` | Procedural shapes (cube, sphere, cylinder, cone, plane) |
+| `MeshNode` | Custom mesh geometry from raw vertex data |
 | `TextNode` | 3D extruded text with centering |
 | `BillboardNode` | Always-faces-camera wrapper |
 | `LineNode` | Line segments and axis gizmos |
+| `PathNode` | Closed and open 3D paths with customizable geometry (circle, grid helpers) |
 | `LightNode` | Directional, point, and spot lights |
-| `AnchorNode` | AR world/plane anchor |
 | `CameraNode` | Programmatic camera control with orbit, fly-through, and custom modes |
 | `ImageNode` | Display images on 3D planes with automatic aspect ratio |
 | `VideoNode` | Play video content on 3D surfaces with playback controls |
 | `PhysicsNode` | Apply physics simulation (dynamic, static, kinematic) to entities |
-| `PathNode` | Closed and open 3D paths with customizable geometry (circle, grid helpers) |
+| `DynamicSkyNode` | Time-of-day sun positioning with atmospheric color model |
+| `FogNode` | Atmospheric fog (linear, exponential, height-based) |
+| `ReflectionProbeNode` | Local cubemap reflections for realistic surfaces |
+| `AnchorNode` | AR world/plane anchor |
 | `AugmentedImageNode` | Detect real-world images and place 3D content (iOS only) |
 
 ### Configuration
@@ -167,10 +171,11 @@ let title = TextNode(text: "SceneView", fontSize: 0.08, depth: 0.02)
 
 ## Example App
 
-See [`Examples/SceneViewDemo/`](Examples/SceneViewDemo/) for a full 3-tab demo:
+See [`Examples/SceneViewDemo/`](Examples/SceneViewDemo/) for a full 4-tab demo:
 - **Explore** -- 3D viewer with orbit camera and 6 HDR environments
 - **Shapes** -- All primitive shapes with live previews and code snippets
 - **AR** -- Tap-to-place objects on real surfaces
+- **About** -- SDK information and feature list
 
 ## License
 
