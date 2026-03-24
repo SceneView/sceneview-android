@@ -2154,3 +2154,89 @@ Pure Kotlin logic shared between Android and Apple platforms:
 - **Animation**: Easing, lerp/slerp, spring, smooth transform interpolation
 - **Physics**: Euler integration, floor bounce, restitution, sleep detection
 - **Triangulation**: Earcut (polygon), Delaunator (Delaunay)
+
+---
+
+## Web Platform (Alpha)
+
+SceneView for Web uses **Filament.js** — the same Filament rendering engine as Android, compiled to WebAssembly for browsers (WebGL2).
+
+### npm package
+```
+npm install @sceneview/sceneview-web
+```
+
+### Kotlin/JS API
+```kotlin
+import io.github.sceneview.web.SceneView
+import kotlinx.browser.document
+import org.w3c.dom.HTMLCanvasElement
+
+fun main() {
+    val canvas = document.getElementById("scene-canvas") as HTMLCanvasElement
+
+    SceneView.create(
+        canvas = canvas,
+        configure = {
+            camera {
+                eye(0.0, 1.5, 5.0)
+                target(0.0, 0.0, 0.0)
+                fov(45.0)
+            }
+            model("models/DamagedHelmet.glb")
+            environment("environments/sky_ibl.ktx", "environments/sky_skybox.ktx")
+        },
+        onReady = { sceneView ->
+            sceneView.startRendering()
+        }
+    )
+}
+```
+
+### HTML
+```html
+<canvas id="scene-canvas"></canvas>
+<script src="sceneview-web.js"></script>
+```
+
+### SceneView Web API
+
+| Class | Purpose |
+|---|---|
+| `SceneView` | Main entry — `create(canvas, configure, onReady)` |
+| `SceneViewBuilder` | DSL: `camera {}`, `light {}`, `model()`, `environment()` |
+| `CameraConfig` | `eye()`, `target()`, `up()`, `fov()`, `near()`, `far()`, `exposure()` |
+| `LightConfig` | `directional()`, `point()`, `spot()`, `intensity()`, `color()`, `direction()` |
+| `ModelConfig` | `url`, `scale()`, `autoAnimate()`, `onLoaded {}` |
+
+### SceneView instance methods
+
+| Method | Description |
+|---|---|
+| `startRendering()` | Begin render loop (requestAnimationFrame) |
+| `stopRendering()` | Stop render loop |
+| `loadModel(url, onLoaded?)` | Load glTF/GLB from URL |
+| `loadEnvironment(iblUrl, skyboxUrl?)` | Load IBL + skybox KTX files |
+| `destroy()` | Clean up all Filament resources |
+
+### Web constraints
+- No AR (requires native sensors — camera, compass, accelerometer)
+- WebGL2 required (~95% of browsers)
+- glTF 2.0 / GLB format only (same as Android)
+- Cross-origin asset loading requires CORS headers
+
+---
+
+## Platform Coverage Summary
+
+| Platform | Renderer | Framework | Module | Status |
+|---|---|---|---|---|
+| Android | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable |
+| Android TV | Filament | Compose TV | `samples/tv-model-viewer` | Alpha |
+| iOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
+| macOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
+| visionOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
+| Web | Filament.js | Kotlin/JS | `sceneview-web` | Alpha |
+| Flutter | Filament/RealityKit | PlatformView | `flutter/sceneview_flutter` | Alpha |
+| React Native | Filament/RealityKit | Fabric | `react-native/react-native-sceneview` | Alpha |
+| Desktop | Filament (planned) | Compose Desktop | `sceneview-desktop` | Scaffold |
