@@ -10,6 +10,18 @@ import io.github.sceneview.math.Color
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position2
 
+/**
+ * A node that renders a procedural 2D shape extruded/triangulated into 3D geometry.
+ *
+ * The shape can be defined by a polygon path (list of 2D points or an Android [android.graphics.Path]),
+ * with optional holes and Delaunay triangulation points. The resulting flat mesh faces the given
+ * [normal] direction and supports UV scaling via [uvScale].
+ *
+ * Use this for custom 2D outlines, floor plans, or any arbitrary planar shape.
+ *
+ * @see io.github.sceneview.geometries.Shape
+ * @see GeometryNode
+ */
 open class ShapeNode private constructor(
     engine: Engine,
     override val geometry: Shape,

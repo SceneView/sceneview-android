@@ -9,6 +9,18 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
+/**
+ * A node that renders a procedural flat quad (plane) geometry.
+ *
+ * The plane has the given [size] (width x height), is centred at [center], and faces the
+ * specified [normal] direction. UV coordinates are scaled by the optional [uvScale].
+ *
+ * Use the composable `SceneScope.PlaneNode(...)` for declarative usage inside a `Scene { }` block,
+ * or instantiate this class directly for imperative code.
+ *
+ * @see io.github.sceneview.geometries.Plane
+ * @see GeometryNode
+ */
 open class PlaneNode private constructor(
     engine: Engine,
     override val geometry: Plane,
