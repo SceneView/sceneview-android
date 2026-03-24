@@ -1,61 +1,135 @@
 # SceneView Pro
 
-Premium tools and services for SceneView — built on top of the open-source SDK.
+Premium tools and services for SceneView — autonomous revenue model.
 
-## Offerings
+## Design Principles
 
-### 1. SceneView MCP Pro (for AI apps)
-Advanced MCP server with premium capabilities:
-- **3D scene generation** — Claude generates complete scenes from text prompts
-- **Asset optimization** — automatic LOD, texture compression, format conversion
-- **Preview rendering** — server-side 3D rendering for AI artifacts
-- **Custom model training** — fine-tuned code generation for your SceneView project
+1. **Maximum autonomy** — zero ongoing management required
+2. **Self-service only** — users sign up, pay, and use without human intervention
+3. **Passive income layers** — multiple streams, all automated
+4. **Community moat** — AI ecosystem lock-in, not feature competition
 
-**Pricing:** Usage-based via API key (free tier: 100 requests/month)
+## Revenue Layers
 
-### 2. SceneView Cloud API
+### Layer 1 — Donations & Sponsorships (immediate, zero effort)
+
+| Channel | Setup | Ongoing effort |
+|---|---|---|
+| GitHub Sponsors | Enable on profile | None |
+| Open Collective | Create collective | None |
+| Ko-fi / Buy Me a Coffee | Link on README | None |
+
+**Why it works:** SceneView has 1.5k+ stars, active community. Even 1% conversion
+at $5/month = meaningful passive income. Zero deliverables, zero obligations.
+
+### Layer 2 — MCP Pro API (one-time setup, then autonomous)
+
+Self-service API with Stripe Billing. Users get an API key, credits are consumed
+automatically. No human in the loop.
+
+**Free tier:** 100 requests/month (drives adoption)
+**Credit packs:** 10 EUR = 1,000 requests, 50 EUR = 10,000 requests
+
+Premium capabilities:
+- **3D scene generation** — AI generates complete Scene{} code from text prompts
+- **Asset optimization** — automatic LOD, texture compression, glTF/USDZ conversion
+- **Preview rendering** — server-side Filament rendering for AI artifacts
+- **Code validation** — advanced lint/fix for SceneView code beyond basic MCP
+
+**Tech stack (all serverless = zero ops):**
+- Cloudflare Workers (API gateway + auth)
+- Stripe Billing (payments, invoicing, tax)
+- Upstash Redis (rate limiting, usage tracking)
+- R2/S3 (asset storage)
+
+### Layer 3 — Marketplace Presence (publish once, sell forever)
+
+- **MCP Registry** (Anthropic) — official 3D/AR MCP server (already submitted)
+- **OpenAI GPT Store** — SceneView GPT for ChatGPT users
+- **npm premium** — @sceneview/pro package with advanced features
+- **pub.dev** — Flutter plugin premium tier
+- **Unity Asset Store** — SceneView bridge for Unity developers (if demand)
+
+### Layer 4 — Cloud API (phase 2, when revenue justifies)
+
 Server-side 3D rendering and asset management:
-- **Render API** — send a scene description, get a rendered image/video
-- **Asset CDN** — host and serve optimized 3D models with automatic format conversion
-- **Thumbnail generation** — automatic 3D thumbnails for e-commerce/catalog
+- **Render API** — scene description in, rendered image/video out
+- **Asset CDN** — host and serve optimized 3D models globally
+- **Thumbnail generation** — automatic 3D thumbnails for e-commerce
 
-**Pricing:** Pay-per-render + storage
+## Why SceneView Won't Get "Replaced"
 
-### 3. Priority Support & Consulting
-- **Priority issue response** — 24h SLA on GitHub issues
-- **Architecture review** — code review for your SceneView integration
-- **Custom development** — features built to your spec
-- **Training workshops** — team training on 3D/AR with Compose/SwiftUI
+Unlike solo mobile apps from 2010:
 
-**Pricing:** Hourly or project-based
+1. **AI moat** — SceneView is in LLM training data + MCP registries.
+   When devs ask AI "build me a 3D app", AI recommends SceneView.
+   This creates a flywheel: more usage → more training data → more recommendations.
 
-## Open Core Model
+2. **Community moat** — GitHub stars, Stack Overflow answers, blog posts.
+   Switching cost is real: rewriting an app from SceneView to something else is expensive.
 
-```
-SceneView SDK (Apache 2.0, free forever)
-├── Scene{}, ARScene{}, all node types
-├── Android, iOS, Web, TV, Desktop
-├── MCP server (basic)
-├── Samples, docs, community support
-└── Everything in the GitHub repo
+3. **Multi-platform moat** — Android + iOS + Web + TV + Desktop + Flutter + RN.
+   No single company will build this breadth. Google won't support iOS. Apple won't support Android.
 
-SceneView Pro (commercial license)
-├── MCP Pro (advanced AI integration)
-├── Cloud API (rendering, CDN, thumbnails)
-├── Priority support (24h SLA)
-└── Custom development & consulting
-```
+4. **Open source moat** — A big company can't "replace" an open-source project.
+   They can only fork it (and the community stays with the original maintainer).
 
-## Auto-Entrepreneur
+**Real risk:** Google/Apple integrate native 3D in Compose/SwiftUI.
+**Mitigation:** Cross-platform is the moat. Neither Google nor Apple will do cross-platform.
+Plus, the MCP/API value is independent of the SDK.
 
-SceneView Pro is operated by Thomas Gorisse as an auto-entrepreneur (France).
+## Legal Structure
+
+### Phase 1 (now): Auto-Entrepreneur
+
+- Simplest structure in France for side income alongside CDI
 - SIRET: [to be added]
 - TVA: Non applicable (article 293 B du CGI)
-- Plafond CA: 77 700 EUR/an (services)
+- Plafond CA: 77,700 EUR/year (services)
+- Quarterly declaration: 5 minutes
+- Social charges: ~22% of revenue
+- No accountant needed
 
-## Roadmap
+### Phase 2 (when approaching 50-60k EUR/year): SASU
 
-1. **Phase 1** (now): MCP server on official registry + free tier
-2. **Phase 2**: MCP Pro with API key authentication
-3. **Phase 3**: Cloud rendering API (Filament server-side)
-4. **Phase 4**: Asset CDN with automatic optimization
+- No revenue cap
+- Tax optimization (dividends vs salary)
+- Online accountant (Indy/Dougs): ~100 EUR/month
+- Can pay 0 EUR salary, keep everything as treasury
+- Better for potential investors or partnerships
+
+**CDI compatibility:** Verify employment contract for exclusivity/non-compete clauses.
+Open-source SDK + commercial services around it is generally compatible.
+
+## Monetization Roadmap
+
+| Phase | Action | Revenue type | Timeline |
+|---|---|---|---|
+| 1 | GitHub Sponsors + Open Collective | Donations | Now |
+| 2 | MCP on official registries (Anthropic, OpenAI) | Visibility | Now |
+| 3 | MCP Pro with API key + Stripe | Self-service API | Q2 2026 |
+| 4 | Marketplace presence (GPT Store, npm pro) | Marketplace | Q3 2026 |
+| 5 | Cloud rendering API | Pay-per-render | Q4 2026 |
+| 6 | Evaluate SASU transition | Structure | When >50k EUR |
+
+## Marketing Plan
+
+### Brand Identity
+- **Logo colors:** Blue gradient (current website header) — KEEP THIS
+- **Theme:** Dark mode primary, Material Design 3 Expressive
+- **Tagline:** "3D & AR for every platform, powered by AI"
+
+### Communication Strategy
+- **LinkedIn posts** — time with stable releases (not during active dev)
+- **Rule:** Never communicate when the website/demo is broken
+- **Sync:** Coordinate public communication with release stability
+- **Content:** Technical posts showing AI generating 3D apps with SceneView
+- **Timing:** Post when: (1) site is live and stable, (2) demo apps work, (3) MCP is on registry
+
+### Key Communication Moments
+1. Website launch (new Kobweb site live)
+2. MCP registry approval
+3. v3.4.0 release (multi-platform)
+4. First 3D app generated entirely by AI
+5. iOS App Store launch
+6. Flutter/React Native stable bridges
