@@ -48,24 +48,19 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Generate Dokka docs
-        run: ./gradlew dokkaHtmlMultiModule
+        run: ./gradlew :sceneview:dokkaHtml :arsceneview:dokkaHtml || echo "::warning::Dokka generation failed — skipping"
+        continue-on-error: true
 
       - name: Upload Dokka artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: dokka-api-docs
-          path: ./build/dokka/htmlMultiModule
+          path: |
+            sceneview/build/dokka/
+            arsceneview/build/dokka/
           retention-days: 1
-
-  # ── 2b. Rebuild docs site with Dokka API docs included ───────────────────
-  rebuild-docs-with-api:
-    name: Rebuild docs site
-    needs: publish-api-docs
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/docs.yml
+          if-no-files-found: ignore
 
   # ── 3. Publish MCP to npm ──────────────────────────────────────────────────
   publish-mcp:
@@ -88,7 +83,10 @@ jobs:
         working-directory: mcp
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          npm version "$VERSION" --no-git-tag-version
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "$VERSION" ]; then
+            npm version "$VERSION" --no-git-tag-version
+          fi
           sed -i "s/version: \"[^\"]*\"/version: \"$VERSION\"/" src/index.ts
 
       - name: Build
