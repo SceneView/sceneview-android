@@ -18,7 +18,7 @@ When connected to an AI assistant (Claude, Cursor, Windsurf, etc.), this MCP ser
 
 | Tool | Description |
 |------|-------------|
-| `get_node_reference` | Complete API reference for any SceneView node type (22+ types) |
+| `get_node_reference` | Complete API reference for any SceneView node type (26+ types) |
 | `list_node_types` | List all available node composables |
 | `validate_code` | Check SceneView code for 15+ common mistakes before presenting it |
 | `get_sample` | Get complete, compilable sample code for any of 14 scenarios |
@@ -33,7 +33,7 @@ When connected to an AI assistant (Claude, Cursor, Windsurf, etc.), this MCP ser
 
 | Resource | Description |
 |----------|-------------|
-| `sceneview://api` | Complete SceneView 3.2.0 API reference (llms.txt) |
+| `sceneview://api` | Complete SceneView 3.3.0 API reference (llms.txt) |
 | `sceneview://known-issues` | Live open issues from GitHub (cached 10 min) |
 
 ---
@@ -133,7 +133,7 @@ Once connected, ask your AI assistant:
 
 > "List all SceneView node types"
 
-It should return the full list of 22+ composable nodes. If it does, the MCP server is working.
+It should return the full list of 26+ composable nodes. If it does, the MCP server is working.
 
 ---
 
@@ -193,9 +193,9 @@ The assistant will call `get_migration_guide` and return every breaking change w
 - Forget null-checks on `rememberModelInstance`
 
 **With** this MCP server, AI assistants:
-- Always use the latest SceneView 3.2.0 API
+- Always use the latest SceneView 3.3.0 API
 - Generate correct Compose-native 3D/AR code
-- Know about all 22+ node types and their exact parameters
+- Know about all 26+ node types and their exact parameters
 - Validate code against 15+ rules before presenting it
 - Provide working sample code for any scenario
 
