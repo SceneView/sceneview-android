@@ -2,7 +2,7 @@
 
 ## Vision
 
-SceneView aims to be the **universal 3D/AR SDK** — the go-to library for every platform where developers build spatial experiences. Our goal: **write 3D once, render everywhere.**
+SceneView aims to be the **universal 3D/AR SDK** — the go-to library for every platform where developers build spatial experiences. Native renderers per platform, shared logic via KMP.
 
 ## Platform Roadmap
 
@@ -12,61 +12,68 @@ SceneView aims to be the **universal 3D/AR SDK** — the go-to library for every
 | Android (Compose) | ✅ Stable | `io.github.sceneview:sceneview:3.3.0` | API 24 (Android 7.0) |
 | Android AR (ARCore) | ✅ Stable | `io.github.sceneview:arsceneview:3.3.0` | API 24 |
 
-### Tier 2: In Development
-| Platform | Status | Target | Renderer |
+### Tier 2: Alpha / In Development
+| Platform | Status | Artifact | Renderer |
 |---|---|---|---|
-| Android XR | 🔶 Preview | Q3 2026 | Filament + Android XR SDK |
-| Kotlin Multiplatform | 🔶 Design | Q4 2026 | Filament (shared) |
+| iOS (SwiftUI) | 🟢 Alpha | SceneViewSwift SPM `from: "3.3.0"` | RealityKit |
+| macOS (SwiftUI) | 🟢 Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
+| visionOS (SwiftUI) | 🟢 Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
 
 ### Tier 3: Planned
 | Platform | Status | Target | Approach |
 |---|---|---|---|
-| iOS (SwiftUI) | 📋 Planned | 2027 | Filament iOS + SwiftUI wrapper |
-| Web (Compose HTML) | 📋 Planned | 2027 | Filament WASM / WebGPU |
-| Desktop (Compose Desktop) | 📋 Planned | 2027 | Filament Desktop |
-| React Native | 📋 Research | 2027+ | Native module bridge |
-| Flutter | 📋 Research | 2027+ | Platform view / Texture |
+| Android XR | 🔶 Preview | Q3 2026 | Filament + Android XR SDK |
+| Flutter (iOS) | 📋 Planned | v3.5+ | PlatformView wrapping SceneViewSwift |
+| React Native (iOS) | 📋 Planned | v4.0 | Turbo Module / Fabric bridging SceneViewSwift |
+| KMP Compose (iOS) | 📋 Planned | v4.0 | UIKitView wrapping SceneViewSwift |
+| Web (Compose HTML) | 📋 Research | 2027 | Filament WASM / WebGPU |
+| Desktop (Compose Desktop) | 📋 Research | 2027 | Filament Desktop |
 
-## Architecture for Multi-Platform
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
 │                  Application Layer               │
-│    Compose UI / SwiftUI / React / Flutter        │
+│    Compose UI / SwiftUI / Flutter / React Native │
 ├─────────────────────────────────────────────────┤
-│               SceneView Platform SDK             │
-│   Scene {} · ARScene {} · Node DSL · Gestures    │
+│              SceneView Platform SDKs             │
+│                                                   │
+│   Android: Scene {} · ARScene {} (Filament)       │
+│   Apple: SceneView · ARSceneView (RealityKit)     │
 ├─────────────────────────────────────────────────┤
 │              SceneView Core (KMP)                │
-│   Scene Graph · Math · Asset Loading · Physics   │
-├─────────────────────────────────────────────────┤
-│              Google Filament (C++)                │
-│   PBR Rendering · glTF · IBL · Post-Processing   │
-├─────────────────────────────────────────────────┤
-│                 Graphics Backend                  │
-│   OpenGL ES · Vulkan · Metal · WebGPU            │
-└─────────────────────────────────────────────────┘
+│   Math · Collision · Geometry · Animation ·       │
+│   Physics · Scene Graph                           │
+│   commonMain → Android + XCFramework (Apple)      │
+├────────────────────┬────────────────────────────┤
+│  Google Filament   │       RealityKit            │
+│  (Android/Desktop) │   (iOS/macOS/visionOS)      │
+├────────────────────┼────────────────────────────┤
+│ OpenGL ES / Vulkan │         Metal               │
+└────────────────────┴────────────────────────────┘
 ```
 
-## Why Multi-Platform?
+**Key decision:** KMP shares **logic** (math, collision, geometry, animations), not **rendering**. Each platform uses its native renderer for best performance and tooling.
 
-1. **Filament already runs everywhere** — Google Filament supports Android, iOS, macOS, Linux, Windows, and WebGL/WebGPU. SceneView's value-add (scene graph, Compose DSL, asset management) can be layered on top.
+## Why This Architecture?
 
-2. **KMP enables shared core** — Kotlin Multiplatform lets us share the scene graph, math library, and asset pipeline across Android, iOS, Desktop, and Web.
+1. **Native renderers win** — RealityKit is the only path to visionOS spatial computing. Filament on Apple would mean no visionOS, no ARKit visual effects, worse DX.
 
-3. **Market demand** — Developers want a single 3D library that works across platforms. Unity/Unreal are overkill for non-game use cases. There's no lightweight alternative.
+2. **KMP shares what matters** — Math, collision, geometry, and animation algorithms are platform-agnostic. These are shared via KMP. Rendering is inherently platform-specific.
 
-4. **AI agents need multi-platform** — AI coding assistants (Claude, GPT) benefit from recommending a single SDK for all platforms rather than different libraries per platform.
+3. **SceneViewSwift is consumable by everyone** — Any iOS framework (Flutter, React Native, KMP Compose) can wrap SceneViewSwift via PlatformView/UIKitView. One native implementation, many consumers.
+
+4. **AI agents benefit** — AI coding assistants can recommend SceneView for both Android and Apple, with consistent concepts and API patterns across platforms.
 
 ## Competitive Landscape
 
-| Solution | Platforms | Weight | Compose? | Open Source |
+| Solution | Platforms | Weight | Declarative UI? | Open Source |
 |---|---|---|---|---|
-| **SceneView** | Android (now), iOS/Web/Desktop (planned) | ~5MB | ✅ Yes | ✅ Apache 2.0 |
+| **SceneView** | Android + Apple (now) | ~5MB | ✅ Compose + SwiftUI | ✅ Apache 2.0 |
 | Unity | All | 50MB+ | ❌ No | ❌ Proprietary |
 | Unreal | All | 100MB+ | ❌ No | ⚠️ Source available |
 | Three.js | Web only | N/A | ❌ No | ✅ MIT |
 | RealityKit | Apple only | N/A | ✅ SwiftUI | ❌ Proprietary |
 | Raw Filament | All | ~5MB | ❌ No | ✅ Apache 2.0 |
 
-**SceneView's unique position**: The only open-source, Compose-native, lightweight 3D SDK targeting multiple platforms. We sit between "raw Filament" (too low-level) and "Unity/Unreal" (too heavy).
+**SceneView's unique position**: The only open-source, declarative-UI-native, lightweight 3D SDK for both Android and Apple platforms. We use native renderers (Filament + RealityKit) for best-in-class performance on each platform.
