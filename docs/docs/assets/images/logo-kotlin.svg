@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 40" fill="none">
+  <path d="M4 8h16L12 20l8 12H4V8z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+  <text x="28" y="27" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="600" fill="currentColor">Kotlin</text>
+</svg>

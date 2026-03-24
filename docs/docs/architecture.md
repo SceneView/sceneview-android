@@ -1,7 +1,11 @@
 # Architecture
 
-How SceneView turns Jetpack Compose composables into real-time 3D and AR experiences,
-from your Kotlin code all the way down to the GPU.
+How SceneView turns declarative UI composables into real-time 3D and AR experiences,
+from your Kotlin/Swift code all the way down to the GPU.
+
+SceneView uses **native renderers per platform**: Filament on Android, RealityKit on Apple
+(iOS, macOS, visionOS). Shared logic (math, collision, geometry, animations) lives in
+`sceneview-core` via Kotlin Multiplatform.
 
 ---
 
@@ -306,3 +310,48 @@ Artifact: `io.github.sceneview:arsceneview`
     `LightNode`, `CubeNode`, etc.) are available inside `ARScene { }` blocks. AR-specific
     nodes are only available at the `ARSceneScope` level, not inside nested `NodeScope`
     child blocks.
+
+---
+
+## Apple platforms (iOS, macOS, visionOS)
+
+The Apple side (`SceneViewSwift/`) follows the same declarative philosophy but uses
+**RealityKit** instead of Filament, and **SwiftUI** instead of Jetpack Compose.
+
+```text
+ ┌──────────────────────────────────────────────────┐
+ │        Your App (Swift / SwiftUI)                 │
+ ├──────────────────────────────────────────────────┤
+ │   SceneViewSwift (SceneView, ARSceneView, nodes)  │
+ ├──────────────────────────────────────────────────┤
+ │        Apple RealityKit  (PBR rendering, Metal)   │
+ ├──────────────────────────────────────────────────┤
+ │     ARKit  (motion tracking, plane detection)     │
+ │          ↑ only present on iOS                    │
+ └──────────────────────────────────────────────────┘
+```
+
+| Layer | Role |
+|---|---|
+| **App** | Your SwiftUI views and state. You create `SceneView { }` or `ARSceneView()`. |
+| **SceneViewSwift** | Swift Package with `SceneView`, `ARSceneView`, all node types (`ModelNode`, `GeometryNode`, `LightNode`, etc.). Declarative API using SwiftUI view modifiers. |
+| **RealityKit** | Apple's native 3D engine. Handles PBR rendering, physics, spatial audio via Metal. |
+| **ARKit** | Apple's AR SDK. Camera tracking, plane detection, image recognition, face tracking. iOS only. |
+
+### Cross-framework consumption
+
+SceneViewSwift is the native rendering layer for all Apple platforms. Other frameworks
+consume it through their standard bridging mechanisms:
+
+| Framework | Bridge |
+|---|---|
+| Swift native | `import SceneViewSwift` via SPM |
+| Flutter | `PlatformView` wrapping `SceneView` / `ARSceneView` |
+| React Native | Turbo Module / Fabric component |
+| KMP Compose iOS | `UIKitView` wrapping the underlying UIView |
+
+### Shared logic via `sceneview-core`
+
+The Kotlin Multiplatform `sceneview-core` module provides shared algorithms (collision,
+triangulation, geometry generation, animations, physics) that both Android and Apple
+implementations can consume. On Apple, `sceneview-core` compiles to an XCFramework.

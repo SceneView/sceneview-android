@@ -4,7 +4,7 @@
 
 > ## 3D is just Compose UI.
 
-SceneView brings 3D and AR into Jetpack Compose (Android) and SwiftUI (iOS).
+SceneView brings 3D and AR into Jetpack Compose (Android) and SwiftUI (iOS, macOS, visionOS).
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.
 Lifecycle is automatic. State drives everything.
 
@@ -35,10 +35,11 @@ Scene(modifier = Modifier.fillMaxSize()) {
     rememberModelInstance(modelLoader, "models/helmet.glb")?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = true)
     }
-    LightNode(type = LightManager.Type.SUN) {
+    LightNode(apply = {
+        type(LightManager.Type.SUN)
         intensity(100_000f)
         castShadows(true)
-    }
+    })
 }
 ```
 
@@ -120,7 +121,7 @@ See [MIGRATION.md](MIGRATION.md) for a step-by-step upgrade guide from 2.x.
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.2.0")
+    implementation("io.github.sceneview:sceneview:3.3.0")
 }
 ```
 
@@ -179,7 +180,7 @@ All composables available inside `Scene { }`:
 | Composable | Description |
 |---|---|
 | `ModelNode(modelInstance, scaleToUnits?)` | Renders a glTF/GLB model. Set `isEditable = true` to enable pinch-to-scale and drag-to-rotate. |
-| `LightNode(type)` | Directional, point, spot, or sun light |
+| `LightNode(apply = { type(…); intensity(…) })` | Directional, point, spot, or sun light. **`apply` is a named parameter, not a trailing lambda.** |
 | `CameraNode()` | Named camera (e.g. imported from a glTF) |
 | `CubeNode(size, materialInstance?)` | Box geometry |
 | `SphereNode(radius, materialInstance?)` | Sphere geometry |
@@ -294,7 +295,7 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 ```gradle
 dependencies {
     // Includes sceneview — no need to add both
-    implementation("io.github.sceneview:arsceneview:3.2.0")
+    implementation("io.github.sceneview:arsceneview:3.3.0")
 }
 ```
 
@@ -449,16 +450,18 @@ ARScene(
 
 ---
 
-## iOS (SwiftUI + RealityKit)
+## Apple platforms (iOS, macOS, visionOS)
 
-SceneView is also available for iOS via the **SceneViewSwift** package, built on SwiftUI and
-RealityKit. Same concepts — declarative scene building, model loading, gesture controls — using
-native Apple frameworks.
+SceneView is available for all Apple platforms via the **SceneViewSwift** package — a native
+Swift Package built on SwiftUI and RealityKit. Same concepts as Android (declarative scene
+building, model loading, gesture controls) using native Apple frameworks.
+
+**Supported:** iOS 17+ · macOS 14+ · visionOS 1+
 
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "0.1.0")
+    .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
 ]
 ```
 
@@ -472,20 +475,57 @@ SceneView { root in
 .cameraControls(.orbit)
 ```
 
+AR on iOS:
+
+```swift
+ARSceneView(
+    planeDetection: .horizontal,
+    onTapOnPlane: { position, arView in
+        let cube = GeometryNode.cube(size: 0.1, color: .blue)
+        let anchor = AnchorNode.world(position: position)
+        anchor.add(cube.entity)
+        arView.scene.addAnchor(anchor.entity)
+    }
+)
+```
+
 See the [`SceneViewSwift/`](SceneViewSwift/) directory for the full library, demo app, and documentation.
+
+### Cross-framework iOS support
+
+SceneViewSwift is the native Apple rendering layer, consumable by any iOS framework:
+
+| Framework | Integration |
+|---|---|
+| **Swift native** | `import SceneViewSwift` via SPM |
+| **Flutter** | PlatformView wrapping SceneView/ARSceneView |
+| **React Native** | Turbo Module / Fabric component |
+| **KMP Compose** | UIKitView in Compose iOS |
+
+### Architecture: native renderer per platform
+
+Each platform uses its **native rendering engine**. Shared logic (math, collision, geometry,
+animations) lives in `sceneview-core` via Kotlin Multiplatform.
+
+```
+sceneview-core (KMP) — shared algorithms
+├── sceneview (Android) — Filament renderer
+└── SceneViewSwift (Apple) — RealityKit renderer
+```
 
 ### Kotlin Multiplatform (`sceneview-core`)
 
 The core math, collision, geometry, animation, and physics modules are shared across Android and
-iOS via Kotlin Multiplatform in [`sceneview-core/`](sceneview-core/). This includes `Vector3`,
-`Quaternion`, `Ray`, `Box`, `Sphere`, `Earcut`, `Delaunator`, spring animations, and more.
+Apple platforms via Kotlin Multiplatform in [`sceneview-core/`](sceneview-core/). This includes
+`Vector3`, `Quaternion`, `Ray`, `Box`, `Sphere`, `Earcut`, `Delaunator`, spring animations,
+and more.
 
 ### Platform parity
 
-| Feature | Android | iOS |
+| Feature | Android | iOS / macOS / visionOS |
 |---|---|---|
 | 3D scene composable | `Scene { }` | `SceneView { }` |
-| AR scene | `ARScene { }` | `ARSceneView(...)` |
+| AR scene | `ARScene { }` | `ARSceneView(...)` (iOS only) |
 | Model loading | glTF/GLB | USDZ |
 | Procedural geometry | CubeNode, SphereNode, CylinderNode, PlaneNode | GeometryNode (cube, sphere, cylinder, cone, plane) |
 | Text | TextNode | TextNode |
@@ -502,6 +542,8 @@ iOS via Kotlin Multiplatform in [`sceneview-core/`](sceneview-core/). This inclu
 | Cloud anchors | CloudAnchorNode | -- |
 | Renderer | Google Filament | Apple RealityKit |
 | AR framework | Google ARCore | Apple ARKit |
+| Desktop | -- | macOS 14+ |
+| Spatial computing | -- | visionOS 1+ |
 
 ---
 
