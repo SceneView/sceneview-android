@@ -63,7 +63,7 @@ jobs:
 
       - name: Copy extra site files
         run: |
-          for f in robots.txt manifest.json structured-data.json llms.txt llms-full.txt; do
+          for f in CNAME robots.txt manifest.json structured-data.json llms.txt llms-full.txt; do
             [ -f "docs/docs/$f" ] && cp "docs/docs/$f" "site/$f" || true
           done
 
