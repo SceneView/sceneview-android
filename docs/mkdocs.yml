@@ -50,7 +50,9 @@ nav:
   - Try the Demo: try.md
   - Get Started:
     - Quickstart: quickstart.md
+    - Quickstart (Apple): quickstart-ios.md
     - API Cheatsheet: cheatsheet.md
+    - API Cheatsheet (Apple): cheatsheet-ios.md
     - Recipes: recipes.md
     - FAQ: faq.md
     - Troubleshooting: troubleshooting.md
@@ -69,6 +71,8 @@ nav:
     - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md
     - AR with Compose: codelabs/codelab-ar-compose.md
+    - 3D with SwiftUI: codelabs/codelab-3d-swiftui.md
+    - AR with SwiftUI: codelabs/codelab-ar-swiftui.md
     - Dynamic Sky: codelabs/guide-dynamic-sky.md
     - Lines & Text: codelabs/guide-lines-text.md
     - Physics: codelabs/guide-physics.md
