@@ -132,6 +132,38 @@ const MEMORY_PRACTICES = `## Memory Management Best Practices
 `;
 const THREADING_PRACTICES = `## Threading Best Practices
 
+### Swift / RealityKit Threading Rules
+
+**RealityKit is \`@MainActor\`-bound.** All entity mutations must happen on the main thread.
+
+#### Safe Patterns (Swift)
+- **In SwiftUI:** Use \`.task { }\` — it is \`@MainActor\`-isolated by default.
+- **Standalone functions:** Annotate with \`@MainActor\` when modifying entities.
+- **Model loading:** \`ModelNode.load()\` is \`async throws\` — call it with \`try await\` inside a \`.task { }\` block.
+
+#### Anti-Patterns (Swift)
+\`\`\`swift
+// WRONG — detached task is not @MainActor
+Task.detached {
+    let model = try await ModelNode.load("car.usdz")
+    model.entity.position = .init(x: 0, y: 1, z: 0) // Race condition!
+}
+
+// CORRECT — .task { } is @MainActor in SwiftUI
+.task {
+    do {
+        let model = try await ModelNode.load("car.usdz")
+        model.entity.position = .init(x: 0, y: 1, z: 0) // Safe — main actor
+    } catch {
+        print("Load failed: \\(error)")
+    }
+}
+\`\`\`
+
+---
+
+### Android / Filament Threading Rules
+
 ### The Golden Rule
 **All Filament JNI calls must run on the main thread.** This includes:
 - \`modelLoader.createModelInstance()\`
@@ -256,8 +288,136 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 - Image must be >= 300x300 pixels with good contrast and detail
 - Specify physical width when registering: \`addImage("name", bitmap, 0.15f)\` (meters)
 - Only one image database per session — add all images before starting
+
+---
+
+## iOS-Specific Issues (SceneViewSwift)
+
+### Model Not Showing in SceneView
+**Check list:**
+1. Is the model format USDZ or .reality? RealityKit does not support GLB/glTF natively.
+2. Is \`ModelNode.load()\` called with \`try await\`? It's async — if you forget \`await\`, the model won't load.
+3. Are you adding \`.entity\` (not the wrapper)? \`root.addChild(model.entity)\`, not \`root.addChild(model)\`.
+4. Check the model path — it must be in the app bundle (add to Xcode project, ensure "Copy Bundle Resources" includes it).
+5. Is the model too large or too small? Try \`.scaleToUnits(1.0)\`.
+
+### AR Camera Shows Black Screen (iOS)
+**Fix:**
+- Check Info.plist has \`NSCameraUsageDescription\` — without it the app crashes or shows a black screen.
+- Ensure the device supports AR: \`ARWorldTrackingConfiguration.isSupported\`.
+- Test on a real device — the simulator does not support ARKit camera.
+
+### ARSceneView Crash on macOS / visionOS
+**Fix:**
+- \`ARSceneView\` uses \`ARView\` which is iOS-only. Use \`SceneView\` for 3D on macOS/visionOS.
+- For visionOS AR, use \`ARKitSession\` with \`RealityView\` directly.
+
+### Swift Concurrency Warnings
+**Fix:**
+- If you get "Non-sendable type" warnings, note that SceneViewSwift node types are marked \`@unchecked Sendable\` — RealityKit entities are main-actor-bound.
+- Always load models inside \`.task { }\` (which is \`@MainActor\`) or annotate functions with \`@MainActor\`.
+
+### SPM Package Resolution Fails
+**Fix:**
+- Ensure Xcode 15.0+ (required for iOS 17 / visionOS targets).
+- Clean derived data: Xcode → Product → Clean Build Folder, then File → Packages → Reset Package Caches.
+- Check the URL is exactly: \`https://github.com/SceneView/sceneview\`
+
+### Image Tracking Not Working (iOS)
+**Fix:**
+- Reference images need high contrast and detail — avoid solid colors or simple patterns.
+- Specify \`physicalWidth\` in meters when creating the reference image.
+- Only one set of detection images per AR session configuration.
+- The image must be physically present and visible to the camera — screenshots don't track well.
 `;
-export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide
+export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide (Android + iOS)
+
+---
+
+# iOS AR Setup (ARKit + RealityKit)
+
+## 1. SPM Dependency
+
+\`\`\`swift
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+\`\`\`
+
+## 2. Info.plist — Camera Permission
+
+\`\`\`xml
+<key>NSCameraUsageDescription</key>
+<string>This app uses the camera for augmented reality.</string>
+\`\`\`
+
+Without this entry, the app will crash on camera access.
+
+## 3. Minimum Platform
+
+AR requires **iOS 17.0+**. ARKit is not available on macOS or visionOS via \`ARSceneView\` (visionOS uses \`ARKitSession\` directly).
+
+## 4. Basic AR Template
+
+\`\`\`swift
+import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct MyARView: View {
+    @State private var model: ModelNode?
+
+    var body: some View {
+        ARSceneView(
+            planeDetection: .horizontal,
+            showCoachingOverlay: true,
+            onTapOnPlane: { position, arView in
+                guard let model else { return }
+                let anchor = AnchorNode.world(position: position)
+                anchor.add(model.entity.clone(recursive: true))
+                arView.scene.addAnchor(anchor.entity)
+            }
+        )
+        .edgesIgnoringSafeArea(.all)
+        .task {
+            model = try? await ModelNode.load("models/object.usdz")
+            model?.scaleToUnits(0.3)
+        }
+    }
+}
+\`\`\`
+
+## 5. AR Configuration Options
+
+| Parameter | Options | Default |
+|-----------|---------|---------|
+| \`planeDetection\` | \`.none\`, \`.horizontal\`, \`.vertical\`, \`.both\` | \`.horizontal\` |
+| \`showPlaneOverlay\` | \`true\` / \`false\` | \`true\` |
+| \`showCoachingOverlay\` | \`true\` / \`false\` | \`true\` |
+| \`imageTrackingDatabase\` | \`Set<ARReferenceImage>?\` | \`nil\` |
+
+## 6. Image Tracking (iOS)
+
+\`\`\`swift
+let images = AugmentedImageNode.createImageDatabase([
+    AugmentedImageNode.ReferenceImage(
+        name: "poster",
+        image: UIImage(named: "poster_ref")!,
+        physicalWidth: 0.3
+    )
+])
+
+ARSceneView(
+    imageTrackingDatabase: images,
+    onImageDetected: { name, anchor, arView in
+        let cube = GeometryNode.cube(size: 0.1, color: .blue)
+        anchor.add(cube.entity)
+        arView.scene.addAnchor(anchor.entity)
+    }
+)
+\`\`\`
+
+---
+
+# Android AR Setup (ARCore + Filament)
 
 ## 1. Gradle Dependencies
 
