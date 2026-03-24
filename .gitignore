@@ -1,7 +1,7 @@
 *.iml
 .gradle
 /local.properties
-.DS_Store
+**/.DS_Store
 /build
 /captures
 .externalNativeBuild
@@ -17,7 +17,6 @@ local.properties
 
 # MCP server
 mcp/node_modules/
-mcp/.DS_Store
 mcp/demo/*.mp4
 
 # Sample build outputs
@@ -27,3 +26,22 @@ samples/*/build/
 mcp/dist/*.test.js
 mcp/llms.txt
 sceneview-core/build/
+
+# Swift Package Manager
+SceneViewSwift/.build/
+.swiftpm/
+
+# Xcode
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# MkDocs build output
+docs/.cache/
+docs/site/
+
+# Claude Code local state
+.claude/supervisor-*.json
+.claude/supervisor-*.html
+.claude/supervisor-*.sh
+.claude/scheduled_tasks.lock

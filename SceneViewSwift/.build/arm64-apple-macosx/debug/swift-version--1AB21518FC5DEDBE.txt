@@ -1,2 +1,0 @@
-Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
-Target: arm64-apple-darwin25.3.0
