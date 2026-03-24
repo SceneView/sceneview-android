@@ -160,6 +160,45 @@ Pre-launch checklist (ALL must be green before posting anywhere):
 - Direction: 3D cube, scene graph node, or abstract geometric shape
 - Keep the blue palette (#1a73e8 / #8ab4f8)
 
+## Business Strategy (Private)
+
+### Model: Open Core
+
+```
+SceneView SDK (open source, Apache 2.0)
+  └── Free: Scene{}, ARScene{}, all node types, samples, docs, MCP
+  └── Attracts users, community, notoriety
+
+SceneView Pro (paid, via Thomas's auto-entrepreneur)
+  ├── MCP Server Premium (advanced 3D generation for AI apps)
+  ├── SceneView Cloud API (server-side rendering, asset optimization)
+  ├── Priority support / consulting
+  └── Custom integrations (enterprise)
+```
+
+### Why NOT contribute to Anthropic's repo
+- Risk of idea being rebuilt internally with no attribution/revenue
+- Apache 2.0 lets anyone use the SDK but Thomas retains IP on Pro features
+- Better position: be a **partner/vendor** than a contributor
+
+### Anthropic relationship strategy
+- **MCP marketplace listing** — get SceneView MCP listed officially
+- **AI artifact opportunity** — 3D artifacts in Claude (SceneView Web renders them)
+- **Never gift the differentiation** — open source the SDK, monetize the tooling
+- Position: "SceneView is how AI does 3D" — Anthropic becomes a customer
+
+### Thomas's situation
+- CDI at Octopus (Nantes), auto-entrepreneur on the side
+- No relocation, prefers remote/télétravail
+- Revenue goal: complementary income via auto-entrepreneur
+- If Anthropic offers full remote Nantes-compatible role: consider
+- Priority: stability + complementary revenue + technical reputation
+
+### Discord
+- SceneView Discord: https://discord.gg/UbNDDBTNqb
+- Use for community announcements, support, feedback
+- Include in all communication plans
+
 ## Source File
 
 All tokens are defined in:
