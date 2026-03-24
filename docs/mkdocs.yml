@@ -135,6 +135,9 @@ extra:
   version:
     provider: mike
 
+extra_javascript:
+  - assets/javascripts/structured-data-loader.js
+
 extra_css:
   - stylesheets/extra.css
   - stylesheets/m3-expressive.css

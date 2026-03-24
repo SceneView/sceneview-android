@@ -12,7 +12,7 @@
 
 ### Add the AR dependency
 
-```gradle
+```kotlin
 dependencies {
     implementation("io.github.sceneview:arsceneview:3.3.0")
 }
@@ -316,3 +316,4 @@ fun ARViewerScreen() {
 - **Face effects** → `AugmentedFaceNode` with front camera
 - **Hit result cursor** → `HitResultNode(xPx, yPx)` — a placement reticle that follows the center of the screen
 - **Explore samples** → See the [samples page](../samples.md) for AR model viewer, augmented image, cloud anchor, and more
+- **Building for iOS?** → See the [AR with SwiftUI codelab](codelab-ar-swiftui.md) for the equivalent experience using ARKit
