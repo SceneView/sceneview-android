@@ -382,6 +382,7 @@ public struct ModelNode: @unchecked Sendable {
     // MARK: - Shadow
 
     /// Adds a grounding shadow beneath the model.
+    @discardableResult
     public func withGroundingShadow() -> ModelNode {
         #if os(iOS) || os(visionOS)
         entity.components.set(GroundingShadowComponent(castsShadow: true))
