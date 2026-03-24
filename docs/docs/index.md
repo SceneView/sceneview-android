@@ -149,24 +149,42 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
 
 ## AR is just as easy
 
-```kotlin
-ARScene(
-    modifier = Modifier.fillMaxSize(),
-    onSessionUpdated = { session, frame ->
-        // Access ARCore frame data
-    }
-) {
-    // Place a model when the user taps a detected plane
-    val anchor = rememberAnchor()
-    anchor?.let {
-        AnchorNode(anchor = it) {
-            rememberModelInstance(modelLoader, "models/chair.glb")?.let { instance ->
-                ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
+=== "Android (Compose)"
+
+    ```kotlin
+    ARScene(
+        modifier = Modifier.fillMaxSize(),
+        onSessionUpdated = { session, frame ->
+            // Access ARCore frame data
+        }
+    ) {
+        // Place a model when the user taps a detected plane
+        val anchor = rememberAnchor()
+        anchor?.let {
+            AnchorNode(anchor = it) {
+                rememberModelInstance(modelLoader, "models/chair.glb")?.let { instance ->
+                    ModelNode(modelInstance = instance, scaleToUnits = 0.5f)
+                }
             }
         }
     }
-}
-```
+    ```
+
+=== "iOS (SwiftUI)"
+
+    ```swift
+    ARSceneView(
+        planeDetection: .horizontal,
+        onTapOnPlane: { position, arView in
+            let model = try? await ModelNode.load("chair.usdz")
+            model?.scaleToUnits(0.5)
+            let anchor = AnchorNode.world(position: position)
+            anchor.add(model!.entity)
+            arView.scene.addAnchor(anchor.entity)
+        }
+    )
+    .ignoresSafeArea()
+    ```
 
 ---
 
@@ -194,6 +212,26 @@ ARScene(
 
     [:octicons-arrow-right-24: Start the codelab](codelabs/codelab-ar-compose.md)
 
+-   **3D with SwiftUI**
+
+    ---
+
+    Build a 3D model viewer on iOS/macOS using SceneViewSwift, RealityKit, and orbit camera.
+
+    ~15 minutes
+
+    [:octicons-arrow-right-24: Start the codelab](codelabs/codelab-3d-swiftui.md)
+
+-   **AR with SwiftUI**
+
+    ---
+
+    Detect planes with ARKit and tap to place 3D objects in the real world on iOS.
+
+    ~15 minutes
+
+    [:octicons-arrow-right-24: Start the codelab](codelabs/codelab-ar-swiftui.md)
+
 </div>
 
 ---
@@ -210,6 +248,8 @@ ARScene(
 ![Autopilot Demo](screenshots/autopilot-demo.png)
 
 </div>
+
+[:octicons-arrow-right-24: All Android samples](samples.md) | [:octicons-arrow-right-24: Apple samples](samples-ios.md)
 
 ---
 

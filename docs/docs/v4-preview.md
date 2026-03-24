@@ -10,9 +10,9 @@ title: v4 Preview — Multi-Platform
 <img src="assets/images/v4-architecture.svg" alt="SceneView 4.0 multi-platform architecture" style="width: 100%; max-width: 800px; border-radius: 24px;">
 </div>
 
-!!! info "v3.2.0 is production-ready today"
+!!! info "v3.3.0 is production-ready today"
     You don't need to wait for 4.0. Everything below adds capabilities on top — it doesn't
-    replace anything. [Get started now](index.md#get-started).
+    replace anything. [Get started now](index.md#install).
 
 ---
 

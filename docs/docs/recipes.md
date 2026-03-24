@@ -1,7 +1,7 @@
 # Recipes / Cookbook
 
 Copy-paste patterns for the most common SceneView tasks.
-Every snippet targets **SceneView 3.2.0** and uses Jetpack Compose.
+Every snippet targets **SceneView 3.3.0** and uses Jetpack Compose.
 
 ---
 
