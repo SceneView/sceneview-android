@@ -8,12 +8,12 @@
 
 export const PLATFORM_ROADMAP = `# SceneView Multi-Platform Roadmap
 
-## Current Status (v3.2.2)
+## Current Status (v3.3.0)
 
 | Platform | Status | Artifact |
 |----------|--------|----------|
-| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.2.2\` |
-| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.2.2\` |
+| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.3.0\` |
+| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.3.0\` |
 | **iOS** | Planned | — |
 | **Kotlin Multiplatform** | Planned | — |
 | **Web (Compose HTML)** | Exploratory | — |
@@ -265,7 +265,7 @@ export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.2.2")
+    implementation("io.github.sceneview:arsceneview:3.3.0")
     // arsceneview includes sceneview transitively — no need to add both
 }
 \`\`\`

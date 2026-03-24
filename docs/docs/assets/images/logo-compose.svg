@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 40" fill="none">
+  <rect x="4" y="10" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+  <path d="M10 20h8M14 16v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <text x="30" y="27" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="600" fill="currentColor">Compose</text>
+</svg>
