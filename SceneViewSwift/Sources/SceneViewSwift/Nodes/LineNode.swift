@@ -87,4 +87,4 @@ public struct LineNode: Sendable {
     }
 }
 
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(macOS) || os(visionOS)

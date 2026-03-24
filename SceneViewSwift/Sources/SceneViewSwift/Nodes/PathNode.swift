@@ -163,4 +163,4 @@ public struct PathNode: Sendable {
         return self
     }
 }
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(macOS) || os(visionOS)
