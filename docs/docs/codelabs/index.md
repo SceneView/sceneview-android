@@ -26,6 +26,26 @@ Step-by-step guides for building 3D and AR apps with SceneView and Jetpack Compo
 
     [:octicons-arrow-right-24: Start](codelab-ar-compose.md)
 
+-   :material-apple: **3D with SwiftUI**
+
+    ---
+
+    Build a 3D model viewer on iOS/macOS using SceneViewSwift, RealityKit, and orbit camera.
+
+    **~15 minutes · Beginner**
+
+    [:octicons-arrow-right-24: Start](codelab-3d-swiftui.md)
+
+-   :material-cube-scan: **AR with SwiftUI**
+
+    ---
+
+    Detect planes with ARKit and tap to place 3D objects in the real world on iOS.
+
+    **~15 minutes · Beginner**
+
+    [:octicons-arrow-right-24: Start](codelab-ar-swiftui.md)
+
 </div>
 
 ## Advanced guides
