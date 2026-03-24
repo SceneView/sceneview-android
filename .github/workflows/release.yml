@@ -50,16 +50,22 @@ jobs:
       - name: Generate Dokka docs
         run: ./gradlew dokkaHtmlMultiModule
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload Dokka artifact
+        uses: actions/upload-artifact@v4
         with:
-          personal_token: ${{ secrets.PERSONAL_TOKEN }}
-          external_repository: SceneView/sceneview.github.io
-          publish_branch: main
-          publish_dir: ./build/dokka/htmlMultiModule
-          destination_dir: api/sceneview
-          full_commit_message: "API docs ${{ github.ref_name }}"
-          enable_jekyll: false
+          name: dokka-api-docs
+          path: ./build/dokka/htmlMultiModule
+          retention-days: 1
+
+  # ── 2b. Rebuild docs site with Dokka API docs included ───────────────────
+  rebuild-docs-with-api:
+    name: Rebuild docs site
+    needs: publish-api-docs
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
 
   # ── 3. Publish MCP to npm ──────────────────────────────────────────────────
   publish-mcp:
