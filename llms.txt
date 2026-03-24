@@ -1528,6 +1528,237 @@ public struct SceneEnvironment: Sendable {
 }
 ```
 
+### iOS: CameraNode (programmatic camera)
+
+Define camera viewpoints programmatically with perspective projection and look-at targeting.
+
+```swift
+import SceneViewSwift
+
+let camera = CameraNode()
+    .position(.init(x: 0, y: 1.5, z: 3))
+    .lookAt(.zero)
+    .clipPlanes(near: 0.1, far: 500)
+
+// Access the 4x4 transform matrix
+let viewMatrix = camera.transform
+```
+
+**Signature:**
+```swift
+public struct CameraNode: Sendable {
+    public let entity: Entity
+    public var position: SIMD3<Float>
+    public var rotation: simd_quatf
+    public var transform: simd_float4x4
+    public var nearClip: Float
+    public var farClip: Float
+
+    public init()
+    public init(_ entity: Entity)
+    public func position(_ position: SIMD3<Float>) -> CameraNode
+    public func lookAt(_ target: SIMD3<Float>, up: SIMD3<Float>) -> CameraNode
+    public func rotation(_ rotation: simd_quatf) -> CameraNode
+    public func clipPlanes(near: Float, far: Float) -> CameraNode
+}
+```
+
+### iOS: ImageNode (image on 3D plane)
+
+Display images as textured planes — load from bundle or URL, with lit or unlit rendering.
+
+```swift
+import SceneViewSwift
+
+@State private var poster: ImageNode?
+
+SceneView { content in
+    if let poster {
+        content.addChild(poster.entity)
+    }
+}
+.task {
+    poster = try? await ImageNode.load("textures/poster.png")
+        .position(.init(x: 0, y: 1, z: -2))
+        .size(width: 1.0, height: 0.75)
+}
+
+// Solid color plane
+let colorPlane = ImageNode.color(.blue, width: 2.0, height: 1.0)
+```
+
+**Signature:**
+```swift
+public struct ImageNode: Sendable {
+    public let entity: ModelEntity
+    public var position: SIMD3<Float>
+    public var rotation: simd_quatf
+    public var scale: SIMD3<Float>
+
+    public static func load(_ name: String, width: Float, height: Float?, isLit: Bool) async throws -> ImageNode
+    public static func load(contentsOf url: URL, width: Float, height: Float?, isLit: Bool) async throws -> ImageNode
+    public static func color(_ color: SimpleMaterial.Color, width: Float, height: Float) -> ImageNode
+
+    public func position(_ position: SIMD3<Float>) -> ImageNode
+    public func rotation(_ rotation: simd_quatf) -> ImageNode
+    public func scale(_ uniform: Float) -> ImageNode
+    public func size(width: Float, height: Float) -> ImageNode
+    public func withGroundingShadow() -> ImageNode
+}
+```
+
+### iOS: VideoNode (video playback in 3D)
+
+Play video on a 3D surface using AVFoundation and RealityKit's VideoPlayerComponent.
+
+```swift
+import SceneViewSwift
+
+@State private var video: VideoNode?
+
+SceneView { content in
+    if let video {
+        content.addChild(video.entity)
+    }
+}
+.onAppear {
+    video = VideoNode.load("intro.mp4")
+        .position(.init(x: 0, y: 1.5, z: -3))
+        .size(width: 1.6, height: 0.9)
+    video?.play()
+}
+
+// Playback controls
+video?.pause()
+video?.stop()
+video?.seek(to: 30.0)
+video?.volume(0.5)
+video?.muted(true)
+```
+
+**Signature:**
+```swift
+public struct VideoNode: Sendable {
+    public let entity: Entity
+    public let player: AVPlayer
+    public var isPlaying: Bool
+
+    public static func load(_ name: String, width: Float, height: Float, loop: Bool) -> VideoNode
+    public static func load(contentsOf url: URL, width: Float, height: Float, loop: Bool) -> VideoNode
+    public static func create(player: AVPlayer, width: Float, height: Float, loop: Bool) -> VideoNode
+
+    public func play()
+    public func pause()
+    public func stop()
+    public func seek(to seconds: Double)
+    public func volume(_ volume: Float)
+    public func muted(_ muted: Bool)
+
+    public func position(_ position: SIMD3<Float>) -> VideoNode
+    public func rotation(_ rotation: simd_quatf) -> VideoNode
+    public func scale(_ uniform: Float) -> VideoNode
+    public func size(width: Float, height: Float) -> VideoNode
+}
+```
+
+### iOS: PhysicsNode (rigid-body simulation)
+
+Add physics simulation — gravity, collisions, forces — to any entity using RealityKit's physics engine.
+
+```swift
+import SceneViewSwift
+
+SceneView { content in
+    // Falling cube
+    let cube = GeometryNode.cube(size: 0.2, color: .red)
+    PhysicsNode.dynamic(cube.entity, mass: 1.0)
+    cube.entity.position = .init(x: 0, y: 3, z: -2)
+    content.addChild(cube.entity)
+
+    // Static floor
+    let floor = GeometryNode.plane(width: 10, depth: 10, color: .gray)
+    PhysicsNode.static(floor.entity)
+    content.addChild(floor.entity)
+
+    // Apply impulse
+    PhysicsNode.applyImpulse(to: cube.entity, impulse: .init(x: 0, y: 10, z: 0))
+}
+```
+
+**Signature:**
+```swift
+public struct PhysicsNode: Sendable {
+    public let entity: Entity
+    public let mode: Mode
+
+    public enum Mode { case dynamic, `static`, kinematic }
+
+    public static func `dynamic`(_ entity: Entity, mass: Float, restitution: Float, friction: Float) -> PhysicsNode
+    public static func `static`(_ entity: Entity, restitution: Float, friction: Float) -> PhysicsNode
+    public static func kinematic(_ entity: Entity, restitution: Float, friction: Float) -> PhysicsNode
+
+    public static func applyImpulse(to entity: Entity, impulse: SIMD3<Float>)
+    public static func setVelocity(_ entity: Entity, velocity: SIMD3<Float>)
+    public static func setAngularVelocity(_ entity: Entity, angularVelocity: SIMD3<Float>)
+}
+```
+
+### iOS: AugmentedImageNode (image detection in AR)
+
+Detect real-world images and overlay 3D content. Uses ARKit image tracking.
+
+```swift
+import SceneViewSwift
+
+// Create reference image database
+let images = AugmentedImageNode.createImageDatabase([
+    AugmentedImageNode.ReferenceImage(
+        name: "poster",
+        image: UIImage(named: "poster_ref")!,
+        physicalWidth: 0.3
+    )
+])
+
+// Or from asset catalog
+let catalogImages = AugmentedImageNode.referenceImages(inGroupNamed: "AR Resources")
+
+// Use in ARSceneView
+ARSceneView(
+    planeDetection: .horizontal,
+    imageTrackingDatabase: images,
+    onImageDetected: { imageName, anchor, arView in
+        let cube = GeometryNode.cube(size: 0.1, color: .green)
+        anchor.add(cube.entity)
+        arView.scene.addAnchor(anchor.entity)
+    }
+)
+```
+
+### iOS: Enhanced PBR Materials (texture maps)
+
+GeometryMaterial now supports texture maps for realistic PBR rendering.
+
+```swift
+import SceneViewSwift
+
+// Load textures
+let albedo = try await GeometryMaterial.loadTexture("brick_diffuse.png")
+let normal = try await GeometryMaterial.loadTexture("brick_normal.png")
+
+// PBR with textures
+let texturedMaterial = GeometryMaterial.textured(
+    baseColor: albedo,
+    normal: normal,
+    metallic: 0.0,
+    roughness: 0.8
+)
+
+let wall = GeometryNode.cube(size: 2.0, material: texturedMaterial)
+
+// Unlit with texture
+let unlitTextured = GeometryMaterial.unlitTextured(texture: albedo)
+```
+
 ### iOS: Complete AR Tap-to-Place Example
 
 ```swift
@@ -1577,12 +1808,18 @@ struct ARTapToPlace: View {
 | Cone | N/A | `GeometryNode.cone(height:radius:color:)` |
 | Plane | `PlaneNode(size)` | `GeometryNode.plane(width:depth:color:)` |
 | PBR material | `materialLoader.createMaterial()` | `.pbr(color:metallic:roughness:)` |
+| PBR textures | `materialLoader.createMaterial()` | `.textured(baseColor:normal:metallic:roughness:)` |
 | Text | `TextNode(text = "...")` | `TextNode(text:fontSize:color:depth:)` |
 | Billboard | `BillboardNode { }` | `BillboardNode(child:)` / `.text("...")` |
 | Line | `LineNode(from, to)` | `LineNode(from:to:thickness:color:)` |
 | Light | `LightNode(apply = { })` | `LightNode.directional(color:intensity:castsShadow:)` |
+| Camera node | `CameraNode(camera)` | `CameraNode().position(...).lookAt(...)` |
+| Image plane | `ImageNode(bitmap)` | `ImageNode.load("img.png")` |
+| Video | `VideoNode(player)` | `VideoNode.load("video.mp4")` |
+| Physics | `PhysicsNode(body)` | `PhysicsNode.dynamic(entity, mass:)` |
 | Anchor (world) | `AnchorNode(anchor) { }` | `AnchorNode.world(position:)` |
 | Anchor (plane) | `AnchorNode(anchor) { }` | `AnchorNode.plane(alignment:)` |
+| Image detection | `AugmentedImageNode { }` | `ARSceneView(imageTrackingDatabase:onImageDetected:)` |
 | Tap on entity | `onTap = { node -> }` | `.onEntityTapped { entity in }` |
 | Renderer | Google Filament | Apple RealityKit |
 | AR framework | Google ARCore | Apple ARKit (iOS only) |
