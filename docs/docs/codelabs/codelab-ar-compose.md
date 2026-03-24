@@ -1,4 +1,4 @@
-# CodeLab: AR with Jetpack Compose — SceneView 3.0
+# CodeLab: AR with Jetpack Compose — SceneView
 
 <img src="../assets/images/showcase-ar-placement.svg" alt="What you'll build: AR model placement" width="200" style="border-radius: 28px; float: right; margin-left: 1rem; margin-bottom: 1rem;">
 
@@ -53,7 +53,7 @@ if (cameraPermissionState.status.isGranted) {
 
 ## Step 2 — The key idea
 
-AR state in SceneView 3.0 is just Compose state.
+AR state in SceneView is just Compose state.
 
 You don't manage the AR session lifecycle. You don't add/remove nodes imperatively. You update a `mutableStateOf<Anchor?>` and let Compose react.
 
@@ -315,4 +315,4 @@ fun ARViewerScreen() {
 - **Cloud anchors** → `CloudAnchorNode` — share AR experiences between devices
 - **Face effects** → `AugmentedFaceNode` with front camera
 - **Hit result cursor** → `HitResultNode(xPx, yPx)` — a placement reticle that follows the center of the screen
-- **Explore samples** → [ar-model-viewer](/samples/ar-model-viewer), [ar-augmented-image](/samples/ar-augmented-image), [ar-cloud-anchor](/samples/ar-cloud-anchor)
+- **Explore samples** → See the [samples page](../samples.md) for AR model viewer, augmented image, cloud anchor, and more

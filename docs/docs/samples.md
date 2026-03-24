@@ -191,3 +191,9 @@ AR samples require:
 
 !!! tip
     For best AR tracking, use a well-lit environment with textured surfaces (wood tables, carpet — not glass or plain white surfaces).
+
+---
+
+## Apple platforms
+
+Looking for iOS, macOS, or visionOS samples? See the [Apple samples page](samples-ios.md).

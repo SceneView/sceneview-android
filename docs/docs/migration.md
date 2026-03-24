@@ -244,7 +244,7 @@ the imports continue to work. No action required.
 
 ## New node types (non-breaking)
 
-v3.3.0 adds 8 new node composables in `SceneScope`. No migration required — these are additive.
+v3.2.0 adds 8 new node composables in `SceneScope`. No migration required — these are additive.
 
 | Node | Purpose |
 |---|---|
