@@ -7,6 +7,18 @@ import io.github.sceneview.geometries.Cube
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 
+/**
+ * A node that renders a procedural box (cube) geometry.
+ *
+ * The box is axis-aligned and centred at [center] with the given [size] (width x height x depth).
+ * Vertices include normals and UV coordinates suitable for textured materials.
+ *
+ * Use the composable `SceneScope.CubeNode(...)` for declarative usage inside a `Scene { }` block,
+ * or instantiate this class directly for imperative code.
+ *
+ * @see io.github.sceneview.geometries.Cube
+ * @see GeometryNode
+ */
 open class CubeNode private constructor(
     engine: Engine,
     override val geometry: Cube,
