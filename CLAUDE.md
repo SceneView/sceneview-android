@@ -69,6 +69,8 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 | `SceneViewSwift/` | Apple 3D+AR library — `SceneView`, `ARSceneView` (RealityKit renderer, iOS/macOS/visionOS) |
 | `samples/common/` | Shared helpers across sample apps |
 | `mcp/` | `@sceneview/mcp` — MCP server for AI assistant integration |
+| `flutter/` | Flutter plugin scaffold — PlatformView bridge to SceneView (Android + iOS) |
+| `react-native/` | React Native module scaffold — Fabric/Turbo bridge to SceneView |
 
 ## Session continuity
 
@@ -109,14 +111,31 @@ need to be merged to main first.
   - iOS ARKit guides, best practices, troubleshooting
   - dist rebuilt
 
+  Phase 5 — Full project stabilization (COMPLETE):
+  - Android sceneview: KDoc audit, all 21 composables documented
+  - Android arsceneview: KDoc for 13 files, **critical bug fix** in Frame.hitTest (direction was using origin)
+  - KMP sceneview-core: **4 critical math bugs fixed** (Ray-box intersection, SAT overlap, box-box axes, Delaunator bounds)
+  - Sample apps: merge conflict resolved, Material 2→3 migration, hardcoded deps removed, exposed password removed
+  - Website: SEO meta tags, structured data, cross-linking, SwiftUI tab on homepage, 4 iOS FAQ
+  - Marketing: all 20 files updated for cross-platform messaging
+  - MCP: iOS samples verified, validator corrected, 368 tests pass
+  - Swift audit: endif guards fixed, duplicate extension extracted, Sendable correctness, missing rotation/discardableResult
+  - Test suite: 1081 lines of tests added across 15 files, imports fixed
+  - Repo cleanup: .gitignore enriched, SceneViewSwift README updated
+
+  Phase 6 — Cross-framework scaffolds (COMPLETE):
+  - Flutter plugin scaffold: `flutter/sceneview_flutter/` — Dart API, Android ComposeView bridge, iOS SceneViewSwift bridge
+  - React Native module scaffold: `react-native/react-native-sceneview/` — TypeScript, Android ViewManager, iOS RCTViewManager
+
 - **What's next (for future sessions)**:
-  - Merge branch to main (push to claude/* branch, create PR, merge via GitHub UI)
-  - Run full stabilization audit (compilation, tests, docs links)
-  - Consider v3.4.0-alpha release for SceneViewSwift improvements
-  - Phase 2 of roadmap: KMP core XCFramework consumption
-  - Phase 3: Cross-framework bridges (Flutter, React Native)
-  - Phase 4: visionOS spatial features
+  - **MERGE BRANCH TO MAIN**: push to claude/* branch, create PR via GitHub UI, merge
+  - Sync llms.txt across docs/docs/llms.txt and mcp/llms.txt
+  - Consider v3.4.0-alpha release tag
+  - Complete Flutter/React Native bridges (currently scaffolds with TODOs)
+  - KMP core XCFramework: build and integrate into SceneViewSwift
+  - visionOS spatial features (immersive spaces, hand tracking)
   - GitHub Pages deployment for updated docs site
+  - Play Store deployment (needs keystore + service account secrets)
 
 - **Known constraints**:
   - Cannot push directly to `main` (proxy restriction, only claude/* branches)
