@@ -17,18 +17,9 @@ on:
     types: [published]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
-  build:
-    name: Build docs
+  deploy:
+    name: Build and deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -74,11 +65,6 @@ jobs:
             cp docs/docs/.well-known/security.txt site/.well-known/security.txt
           fi
 
-          # CNAME for custom domain (if configured)
-          if [ -f "docs/docs/CNAME" ]; then
-            cp docs/docs/CNAME site/CNAME
-          fi
-
           # Ensure GitHub Pages doesn't process with Jekyll
           touch site/.nojekyll
 
@@ -90,19 +76,13 @@ jobs:
             exit 1
           fi
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-  deploy:
-    name: Deploy to Pages
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.PERSONAL_TOKEN }}
+          external_repository: SceneView/sceneview.github.io
+          publish_branch: main
+          publish_dir: ./site
+          destination_dir: .
+          full_commit_message: 'Deploy docs site — ${{ github.sha }}'
+          enable_jekyll: false
