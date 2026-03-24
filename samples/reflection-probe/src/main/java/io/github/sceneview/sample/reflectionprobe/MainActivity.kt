@@ -16,15 +16,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.FilterChip
-import androidx.compose.material.Icon
-import androidx.compose.material.Slider
-import androidx.compose.material.SliderDefaults
-import androidx.compose.material.Switch
-import androidx.compose.material.SwitchDefaults
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -204,10 +202,7 @@ class MainActivity : ComponentActivity() {
                             )
                             Switch(
                                 checked = probeEnabled,
-                                onCheckedChange = { probeEnabled = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color(0xFF4CAF50)
-                                )
+                                onCheckedChange = { probeEnabled = it }
                             )
                         }
 
@@ -222,11 +217,7 @@ class MainActivity : ComponentActivity() {
                                 Slider(
                                     value = roughness,
                                     onValueChange = { roughness = it },
-                                    valueRange = 0f..1f,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = Color.White,
-                                        activeTrackColor = Color.White
-                                    )
+                                    valueRange = 0f..1f
                                 )
                             }
                         }
@@ -249,12 +240,11 @@ class MainActivity : ComponentActivity() {
                             FilterChip(
                                 selected = selectedMaterial == type,
                                 onClick = { selectedMaterial = type },
+                                label = { Text(type, color = Color.White) },
                                 leadingIcon = if (selectedMaterial == type) {
                                     { Icon(Icons.Default.Check, null, tint = Color.White) }
                                 } else null
-                            ) {
-                                Text(type, color = Color.White)
-                            }
+                            )
                         }
                     }
                 }
