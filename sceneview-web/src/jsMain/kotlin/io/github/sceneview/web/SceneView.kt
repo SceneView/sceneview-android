@@ -127,6 +127,25 @@ class SceneView private constructor(
         }
     }
 
+    /** Resize the viewport to match the canvas dimensions. Call on window resize. */
+    fun resize(width: Int = canvas.clientWidth, height: Int = canvas.clientHeight) {
+        if (width <= 0 || height <= 0) return
+        canvas.width = width
+        canvas.height = height
+        val viewport = js("[]")
+        viewport.push(0, 0, width, height)
+        view.setViewport(viewport)
+        camera.setProjectionFov(
+            fovInDegrees = 45.0,
+            aspect = width.toDouble() / height.toDouble(),
+            near = 0.1,
+            far = 1000.0
+        )
+    }
+
+    /** Enable automatic viewport resizing when the canvas CSS size changes. */
+    var autoResize = true
+
     /** Start the render loop. */
     fun startRendering() {
         if (isRunning) return
@@ -223,6 +242,15 @@ class SceneView private constructor(
 
     private fun renderLoop(timestamp: Double) {
         if (!isRunning) return
+
+        // Auto-resize viewport if canvas CSS size changed
+        if (autoResize) {
+            val w = canvas.clientWidth
+            val h = canvas.clientHeight
+            if (w != canvas.width || h != canvas.height) {
+                resize(w, h)
+            }
+        }
 
         // Update orbit camera
         cameraController?.update()
