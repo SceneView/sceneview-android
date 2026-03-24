@@ -104,7 +104,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           tag: {
             type: "string",
             description:
-              "Optional tag to filter by (e.g. \"ar\", \"3d\", \"anchor\", \"face-tracking\", \"geometry\", \"animation\"). Omit to list all samples.",
+              "Optional tag to filter by (e.g. \"ar\", \"3d\", \"ios\", \"swift\", \"anchor\", \"geometry\", \"animation\", \"video\", \"lighting\"). Omit to list all samples.",
           },
         },
         required: [],
@@ -129,13 +129,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "validate_code",
       description:
-        "Checks a Kotlin SceneView snippet for common mistakes: threading violations, wrong destroy order, missing null-checks on rememberModelInstance, LightNode trailing-lambda bug, deprecated 2.x APIs, and more. Always call this before presenting generated SceneView code to the user.",
+        "Checks a Kotlin or Swift SceneView snippet for common mistakes. For Kotlin: threading violations, wrong destroy order, missing null-checks, LightNode trailing-lambda bug, deprecated 2.x APIs. For Swift: missing @MainActor, async/await patterns, missing imports, RealityKit mistakes. Language is auto-detected. Always call this before presenting generated SceneView code to the user.",
       inputSchema: {
         type: "object",
         properties: {
           code: {
             type: "string",
-            description: "The Kotlin source code to validate (composable function, class, or file).",
+            description: "The Kotlin or Swift source code to validate (composable function, SwiftUI view, class, or file). Language is auto-detected.",
           },
         },
         required: ["code"],
@@ -214,6 +214,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: [],
       },
     },
+    {
+      name: "get_ios_setup",
+      description:
+        "Returns the complete iOS setup guide for SceneViewSwift — SPM dependency, Package.swift example, minimum platform versions, Info.plist entries for AR (camera permission), and basic SwiftUI integration code. Use this when a user wants to set up SceneView for iOS, macOS, or visionOS.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: ["3d", "ar"],
+            description: '"3d" for 3D-only scenes. "ar" for augmented reality (requires iOS, not macOS/visionOS via this path).',
+          },
+        },
+        required: ["type"],
+      },
+    },
   ],
 }));
 
@@ -236,6 +252,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           isError: true,
         };
       }
+      const isIos = sample.language === "swift";
+      const depBlock = isIos
+        ? [
+            `**SPM dependency:**`,
+            `\`\`\`swift`,
+            `.package(url: "${sample.spmDependency ?? sample.dependency}", from: "3.3.0")`,
+            `\`\`\``,
+          ]
+        : [
+            `**Gradle dependency:**`,
+            `\`\`\`kotlin`,
+            `implementation("${sample.dependency}")`,
+            `\`\`\``,
+          ];
+      const codeLang = isIos ? "swift" : "kotlin";
+      const codeLabel = isIos ? "**Swift (SwiftUI):**" : "**Kotlin (Jetpack Compose):**";
+
       return {
         content: [
           {
@@ -245,13 +278,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               ``,
               `**Tags:** ${sample.tags.join(", ")}`,
               ``,
-              `**Gradle dependency:**`,
-              `\`\`\`kotlin`,
-              `implementation("${sample.dependency}")`,
-              `\`\`\``,
+              ...depBlock,
               ``,
-              `**Kotlin (Jetpack Compose):**`,
-              `\`\`\`kotlin`,
+              codeLabel,
+              `\`\`\`${codeLang}`,
               sample.code,
               `\`\`\``,
               ``,
@@ -275,7 +305,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: "text",
-              text: `No samples found with tag "${filterTag}". Available tags: 3d, ar, model, geometry, animation, camera, environment, anchor, plane-detection, image-tracking, cloud-anchor, point-cloud, placement, gestures, physics, sky, fog, lines, text, reflection, post-processing`,
+              text: `No samples found with tag "${filterTag}". Available tags: 3d, ar, model, geometry, animation, camera, environment, anchor, plane-detection, image-tracking, cloud-anchor, point-cloud, placement, gestures, physics, sky, fog, lines, text, reflection, post-processing, ios, swift, video, lighting`,
             },
           ],
         };
@@ -287,8 +317,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       const rows = entries
         .map(
-          (s) =>
-            `### \`${s.id}\`\n**${s.title}**\n${s.description}\n*Tags:* ${s.tags.join(", ")}\n*Dependency:* \`${s.dependency}\`\n\nCall \`get_sample("${s.id}")\` for the full code.`
+          (s) => {
+            const depLabel = s.language === "swift" ? "*SPM:*" : "*Dependency:*";
+            return `### \`${s.id}\`\n**${s.title}**${s.language === "swift" ? " (Swift/iOS)" : ""}\n${s.description}\n*Tags:* ${s.tags.join(", ")}\n${depLabel} \`${s.dependency}\`\n\nCall \`get_sample("${s.id}")\` for the full code.`;
+          }
         )
         .join("\n\n---\n\n");
 
@@ -435,6 +467,191 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // ── get_troubleshooting ──────────────────────────────────────────────────
     case "get_troubleshooting": {
       return { content: [{ type: "text", text: TROUBLESHOOTING_GUIDE }] };
+    }
+
+    // ── get_ios_setup ─────────────────────────────────────────────────────────
+    case "get_ios_setup": {
+      const iosType = request.params.arguments?.type as "3d" | "ar";
+      if (iosType === "3d") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                `## SceneViewSwift — iOS/macOS/visionOS 3D Setup`,
+                ``,
+                `### 1. Add SPM Dependency`,
+                ``,
+                `In Xcode: **File → Add Package Dependencies** → paste:`,
+                `\`\`\``,
+                `https://github.com/SceneView/sceneview`,
+                `\`\`\``,
+                `Set version rule to **"from: 3.3.0"**.`,
+                ``,
+                `Or in Package.swift:`,
+                `\`\`\`swift`,
+                `// swift-tools-version: 5.10`,
+                `import PackageDescription`,
+                ``,
+                `let package = Package(`,
+                `    name: "MyApp",`,
+                `    platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],`,
+                `    dependencies: [`,
+                `        .package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")`,
+                `    ],`,
+                `    targets: [`,
+                `        .executableTarget(`,
+                `            name: "MyApp",`,
+                `            dependencies: [`,
+                `                .product(name: "SceneViewSwift", package: "sceneview")`,
+                `            ]`,
+                `        )`,
+                `    ]`,
+                `)`,
+                `\`\`\``,
+                ``,
+                `### 2. Minimum Platform Versions`,
+                ``,
+                `| Platform | Minimum Version |`,
+                `|----------|-----------------|`,
+                `| iOS      | 17.0            |`,
+                `| macOS    | 14.0            |`,
+                `| visionOS | 1.0             |`,
+                ``,
+                `### 3. Basic SwiftUI Integration`,
+                ``,
+                `\`\`\`swift`,
+                `import SwiftUI`,
+                `import SceneViewSwift`,
+                `import RealityKit`,
+                ``,
+                `struct ContentView: View {`,
+                `    @State private var model: ModelNode?`,
+                ``,
+                `    var body: some View {`,
+                `        SceneView { root in`,
+                `            if let model {`,
+                `                root.addChild(model.entity)`,
+                `            }`,
+                `        }`,
+                `        .cameraControls(.orbit)`,
+                `        .task {`,
+                `            model = try? await ModelNode.load("models/car.usdz")`,
+                `            model?.scaleToUnits(1.0)`,
+                `        }`,
+                `    }`,
+                `}`,
+                `\`\`\``,
+                ``,
+                `### 4. Model Formats`,
+                ``,
+                `| Format | Support |`,
+                `|--------|---------|`,
+                `| USDZ   | Native — recommended for iOS |`,
+                `| .reality | Native — RealityKit format |`,
+                `| glTF/GLB | Planned via GLTFKit2 |`,
+                ``,
+                `No manifest or permission changes needed for 3D-only scenes.`,
+              ].join("\n"),
+            },
+          ],
+        };
+      }
+      if (iosType === "ar") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                `## SceneViewSwift — iOS AR Setup`,
+                ``,
+                `### 1. Add SPM Dependency`,
+                ``,
+                `\`\`\`swift`,
+                `.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")`,
+                `\`\`\``,
+                ``,
+                `### 2. Minimum Platform`,
+                ``,
+                `AR requires **iOS 17.0+** (ARKit + RealityKit). macOS and visionOS use different AR APIs.`,
+                ``,
+                `### 3. Info.plist — Camera Permission`,
+                ``,
+                `Add to your Info.plist (required for AR camera access):`,
+                `\`\`\`xml`,
+                `<key>NSCameraUsageDescription</key>`,
+                `<string>This app uses the camera for augmented reality.</string>`,
+                `\`\`\``,
+                ``,
+                `### 4. Basic AR Integration`,
+                ``,
+                `\`\`\`swift`,
+                `import SwiftUI`,
+                `import SceneViewSwift`,
+                `import RealityKit`,
+                ``,
+                `struct ARContentView: View {`,
+                `    @State private var model: ModelNode?`,
+                ``,
+                `    var body: some View {`,
+                `        ARSceneView(`,
+                `            planeDetection: .horizontal,`,
+                `            showCoachingOverlay: true,`,
+                `            onTapOnPlane: { position, arView in`,
+                `                guard let model else { return }`,
+                `                let anchor = AnchorNode.world(position: position)`,
+                `                let clone = model.entity.clone(recursive: true)`,
+                `                clone.scale = .init(repeating: 0.3)`,
+                `                anchor.add(clone)`,
+                `                arView.scene.addAnchor(anchor.entity)`,
+                `            }`,
+                `        )`,
+                `        .edgesIgnoringSafeArea(.all)`,
+                `        .task {`,
+                `            model = try? await ModelNode.load("models/robot.usdz")`,
+                `        }`,
+                `    }`,
+                `}`,
+                `\`\`\``,
+                ``,
+                `### 5. AR Configuration Options`,
+                ``,
+                `| Parameter | Options | Default |`,
+                `|-----------|---------|---------|`,
+                `| \`planeDetection\` | \`.none\`, \`.horizontal\`, \`.vertical\`, \`.both\` | \`.horizontal\` |`,
+                `| \`showPlaneOverlay\` | \`true\` / \`false\` | \`true\` |`,
+                `| \`showCoachingOverlay\` | \`true\` / \`false\` | \`true\` |`,
+                `| \`imageTrackingDatabase\` | \`Set<ARReferenceImage>\` | \`nil\` |`,
+                ``,
+                `### 6. Image Tracking`,
+                ``,
+                `\`\`\`swift`,
+                `let images = AugmentedImageNode.createImageDatabase([`,
+                `    AugmentedImageNode.ReferenceImage(`,
+                `        name: "poster",`,
+                `        image: UIImage(named: "poster_ref")!,`,
+                `        physicalWidth: 0.3  // meters`,
+                `    )`,
+                `])`,
+                ``,
+                `ARSceneView(`,
+                `    imageTrackingDatabase: images,`,
+                `    onImageDetected: { name, anchor, arView in`,
+                `        let cube = GeometryNode.cube(size: 0.1, color: .blue)`,
+                `        anchor.add(cube.entity)`,
+                `        arView.scene.addAnchor(anchor.entity)`,
+                `    }`,
+                `)`,
+                `\`\`\``,
+              ].join("\n"),
+            },
+          ],
+        };
+      }
+      return {
+        content: [{ type: "text", text: `Unknown type "${iosType}". Use "3d" or "ar".` }],
+        isError: true,
+      };
     }
 
     default:

@@ -30,6 +30,12 @@ public struct GeometryNode: Sendable {
         nonmutating set { entity.position = newValue }
     }
 
+    /// Orientation as a quaternion.
+    public var rotation: simd_quatf {
+        get { entity.orientation }
+        nonmutating set { entity.orientation = newValue }
+    }
+
     /// Scale factor.
     public var scale: SIMD3<Float> {
         get { entity.scale }
@@ -187,6 +193,20 @@ public struct GeometryNode: Sendable {
     @discardableResult
     public func scale(_ uniform: Float) -> GeometryNode {
         entity.scale = .init(repeating: uniform)
+        return self
+    }
+
+    /// Returns self rotated by the given quaternion.
+    @discardableResult
+    public func rotation(_ rotation: simd_quatf) -> GeometryNode {
+        entity.orientation = rotation
+        return self
+    }
+
+    /// Returns self rotated by angle around axis.
+    @discardableResult
+    public func rotation(angle: Float, axis: SIMD3<Float>) -> GeometryNode {
+        entity.orientation = simd_quatf(angle: angle, axis: axis)
         return self
     }
 

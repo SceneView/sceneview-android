@@ -1,6 +1,6 @@
 # Module arsceneview
 
-AR scene rendering for Jetpack Compose, powered by ARCore and Google Filament.
+AR scene rendering for Jetpack Compose, powered by ARCore 1.53.0 and Google Filament.
 
 ## Quick start
 
@@ -30,7 +30,7 @@ fun ARScreen() {
             }
         },
     ) {
-        anchor?.let { AnchorNode(engine = engine, anchor = it) {
+        anchor?.let { AnchorNode(anchor = it) {
             instance?.let { ModelNode(modelInstance = it, scaleToUnits = 0.5f) }
         }}
     }
@@ -43,15 +43,15 @@ fun ARScreen() {
 
 | Composable | Description |
 |---|---|
-| `ARScene { }` | Root AR scene. Manages an ARCore Session. Accepts an `ARSceneScope` content block. |
+| `ARScene { }` | Root AR scene. Manages an ARCore Session, camera stream, light estimation, and plane rendering. Accepts an `ARSceneScope` content block. |
 
 ### AR remember helpers
 
 | Function | Returns | Description |
 |---|---|---|
 | `rememberARCameraNode(engine)` | `ARCameraNode` | Camera driven by ARCore pose each frame. |
-| `rememberARCameraStream(engine)` | `ARCameraStream` | OpenGL external texture for camera background + depth occlusion. |
-| `rememberAREnvironment(engine)` | `HDREnvironment` | No skybox, neutral IBL; updated by LightEstimator from the camera feed. |
+| `rememberARCameraStream(materialLoader)` | `ARCameraStream` | OpenGL external texture for camera background + depth occlusion. |
+| `rememberAREnvironment(engine)` | `Environment` | No skybox, neutral IBL; updated by LightEstimator from the camera feed. |
 
 All `rememberXxx` helpers from the base `sceneview` module are also available.
 
@@ -61,12 +61,41 @@ All `rememberXxx` helpers from the base `sceneview` module are also available.
 |---|---|
 | `AnchorNode` | Tracks a world-space `Anchor`. Children follow the anchor pose. |
 | `PoseNode` | Tracks a raw ARCore `Pose` without an anchor. |
-| `HitResultNode` | Creates and tracks an anchor from a `HitResult`. |
-| `AugmentedImageNode` | Renders content anchored to a detected `AugmentedImage`. |
-| `AugmentedFaceNode` | Renders content anchored to a detected `AugmentedFace`. |
-| `CloudAnchorNode` | Creates or resolves a Cloud Anchor; exposes resolution state. |
+| `HitResultNode` | Performs per-frame hit tests and follows the result pose. Two overloads: coordinate-based and custom lambda. |
+| `AugmentedImageNode` | Renders content anchored to a detected `AugmentedImage`. Optionally scales to physical image size. |
+| `AugmentedFaceNode` | Renders a 3D mesh aligned to a detected `AugmentedFace` (front camera). |
+| `CloudAnchorNode` | Hosts or resolves a Cloud Anchor for persistent cross-device AR. |
 | `TrackableNode` | Generic node for any `Trackable` (plane, point, etc.). |
-| `StreetscapeGeometryNode` | Renders Geospatial API building/terrain geometry. |
+| `StreetscapeGeometryNode` | Renders Geospatial API building/terrain geometry meshes. |
+
+### Geospatial anchor nodes (imperative — use via companion `resolve()`)
+
+| Node | Description |
+|---|---|
+| `TerrainAnchorNode` | Anchor at lat/lon with altitude relative to terrain. |
+| `RooftopAnchorNode` | Anchor at lat/lon with altitude relative to building rooftop. |
+
+### AR subsystems
+
+| Component | Description |
+|---|---|
+| `ARCameraStream` | Renders the device camera feed as the scene background. Supports depth occlusion. |
+| `LightEstimator` | Per-frame real-world lighting estimation (ambient intensity or environmental HDR). |
+| `PlaneRenderer` | Visualizes detected ARCore planes with configurable material and shadow receiving. |
+
+## Features
+
+- **Plane detection**: Horizontal, vertical, or both. Visual overlay with configurable material.
+- **Hit testing**: Coordinate-based, ray-based, and motion-event hit tests with type filtering.
+- **Anchors**: World-space anchors that persist across frames with automatic pose updates.
+- **Cloud Anchors**: Host and resolve anchors via the Google Cloud ARCore API for cross-device AR.
+- **Augmented Images**: Detect and track real-world images from an `AugmentedImageDatabase`.
+- **Augmented Faces**: Front-camera face mesh tracking with region poses (nose, forehead).
+- **Geospatial API**: Terrain anchors, rooftop anchors, streetscape geometry, Earth anchor helpers.
+- **Light estimation**: Ambient intensity mode and Environmental HDR (spherical harmonics, cubemap reflections, directional light).
+- **Depth occlusion**: Automatic depth-based occlusion of virtual objects behind real-world surfaces.
+- **Camera permission**: Automatic camera permission request and ARCore install/update flow.
+- **Lifecycle-aware**: Session pause/resume tied to the Compose lifecycle.
 
 ## Session configuration examples
 
@@ -93,13 +122,51 @@ ARScene(
 )
 ```
 
-### Geospatial / Street View
+### Augmented image detection
+
+```kotlin
+ARScene(
+    sessionConfiguration = { session, config ->
+        config.addAugmentedImage(session, "poster", posterBitmap, widthInMeters = 0.3f)
+    },
+    onSessionUpdated = { _, frame ->
+        frame.getUpdatedAugmentedImages().forEach { image ->
+            if (image.isTracking) detectedImages += image
+        }
+    },
+) {
+    detectedImages.forEach { image ->
+        AugmentedImageNode(augmentedImage = image) {
+            ModelNode(modelInstance = rememberModelInstance(modelLoader, "overlay.glb"))
+        }
+    }
+}
+```
+
+### Cloud Anchors
+
+```kotlin
+ARScene(
+    sessionConfiguration = { _, config ->
+        config.cloudAnchorMode = Config.CloudAnchorMode.ENABLED
+    },
+) {
+    anchor?.let { a ->
+        CloudAnchorNode(anchor = a, onHosted = { id, state ->
+            if (!state.isError) shareCloudAnchorId(id!!)
+        })
+    }
+}
+```
+
+### Geospatial / Streetscape
 
 ```kotlin
 ARScene(
     sessionConfiguration = { session, config ->
         if (session.isGeospatialModeSupported(Config.GeospatialMode.ENABLED)) {
             config.geospatialMode = Config.GeospatialMode.ENABLED
+            config.streetscapeGeometryMode = Config.StreetscapeGeometryMode.ENABLED
         }
     },
 )
@@ -109,8 +176,9 @@ ARScene(
 
 | Package | Contents |
 |---|---|
-| `io.github.sceneview.ar` | `ARScene`, `ARSceneView`, `ARSceneScope`, `ARCore` |
-| `io.github.sceneview.ar.node` | `AnchorNode`, `PoseNode`, `HitResultNode`, `TrackableNode`, augmented nodes |
-| `io.github.sceneview.ar.arcore` | `ArSession`, `ArFrame`, session lifecycle helpers |
-| `io.github.sceneview.ar.camera` | `ARCameraNode`, `ARCameraStream` |
+| `io.github.sceneview.ar` | `ARScene`, `ARSceneScope`, `ARCore`, `ARFactories`, `PlaneVisualizer` |
+| `io.github.sceneview.ar.node` | `AnchorNode`, `PoseNode`, `HitResultNode`, `TrackableNode`, `CloudAnchorNode`, `TerrainAnchorNode`, `RooftopAnchorNode`, `AugmentedImageNode`, `AugmentedFaceNode`, `StreetscapeGeometryNode`, `ARCameraNode` |
+| `io.github.sceneview.ar.arcore` | `ARSession`, Frame/Pose/Camera/HitResult/Trackable extensions, session configuration helpers |
+| `io.github.sceneview.ar.camera` | `ARCameraStream` — camera feed rendering and depth occlusion |
+| `io.github.sceneview.ar.scene` | `PlaneRenderer`, `Anchor` extensions |
 | `io.github.sceneview.ar.light` | `LightEstimator` — real-world lighting from camera feed |

@@ -13,6 +13,25 @@ import com.google.ar.core.exceptions.ResourceExhaustedException
 import dev.romainguy.kotlin.math.Quaternion
 import io.github.sceneview.ar.arcore.configure
 
+/**
+ * An [AnchorNode] positioned at a specified latitude/longitude with altitude relative to the
+ * terrain (or floor) at that location, using the ARCore Geospatial API.
+ *
+ * An altitude of 0 places the anchor directly on the terrain; positive values place it above,
+ * against the direction of gravity.
+ *
+ * Requires [Config.GeospatialMode.ENABLED] and a working internet connection. The anchor is
+ * created asynchronously via [resolve] (companion function).
+ *
+ * @param engine                 The Filament [Engine].
+ * @param anchor                 The resolved [Anchor] from the Geospatial API.
+ * @param latitude               WGS84 latitude of the anchor.
+ * @param longitude              WGS84 longitude of the anchor.
+ * @param altitudeAboveTerrain   Altitude in meters above the terrain (or floor).
+ * @param eusQuaternion          East-up-south rotation quaternion.
+ * @param onTrackingStateChanged Callback invoked when tracking state changes.
+ * @param onUpdated              Callback invoked each frame while the anchor is updated.
+ */
 open class TerrainAnchorNode private constructor(
     engine: Engine,
     anchor: Anchor,

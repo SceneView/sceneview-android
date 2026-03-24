@@ -5,6 +5,9 @@ import com.google.ar.core.Pose
 import com.google.ar.core.Trackable
 import com.google.ar.core.TrackingState
 
+/**
+ * Whether this [Trackable] is currently in [TrackingState.TRACKING].
+ */
 val Trackable.isTracking get() = trackingState == TrackingState.TRACKING
 
 /**

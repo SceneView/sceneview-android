@@ -34,3 +34,12 @@ sceneview-core/build/
 
 # Swift build artifacts
 SceneViewSwift/.build/
+SceneViewSwift/.swiftpm/
+
+# Android build artifacts
+*.apk
+*.aab
+
+# Environment files
+.env
+.env.local

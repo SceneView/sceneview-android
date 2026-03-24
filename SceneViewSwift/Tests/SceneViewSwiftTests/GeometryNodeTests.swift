@@ -123,5 +123,88 @@ final class GeometryNodeTests: XCTestCase {
         XCTAssertEqual(node.position.x, 1.0, accuracy: 0.001)
         XCTAssertEqual(node.scale.x, 0.5, accuracy: 0.001)
     }
+
+    // MARK: - Corner radius
+
+    func testCubeWithCornerRadius() {
+        let cube = GeometryNode.cube(size: 1.0, cornerRadius: 0.1)
+        XCTAssertNotNil(cube.entity)
+        XCTAssertNotNil(cube.entity.model)
+    }
+
+    func testCubeWithPBRMaterialAndCornerRadius() {
+        let cube = GeometryNode.cube(
+            size: 1.0,
+            material: .pbr(color: .blue, metallic: 0.5, roughness: 0.5),
+            cornerRadius: 0.2
+        )
+        XCTAssertNotNil(cube.entity)
+        XCTAssertNotNil(cube.entity.model)
+    }
+
+    func testCubeWithZeroCornerRadius() {
+        let cube = GeometryNode.cube(size: 1.0, cornerRadius: 0.0)
+        XCTAssertNotNil(cube.entity.model)
+    }
+
+    // MARK: - Collision shapes
+
+    func testCubeHasCollisionComponent() {
+        let cube = GeometryNode.cube(size: 1.0)
+        XCTAssertNotNil(cube.entity.components[CollisionComponent.self])
+    }
+
+    func testSphereHasCollisionComponent() {
+        let sphere = GeometryNode.sphere(radius: 0.5)
+        XCTAssertNotNil(sphere.entity.components[CollisionComponent.self])
+    }
+
+    func testCylinderHasCollisionComponent() {
+        let cyl = GeometryNode.cylinder()
+        XCTAssertNotNil(cyl.entity.components[CollisionComponent.self])
+    }
+
+    func testPlaneHasCollisionComponent() {
+        let plane = GeometryNode.plane()
+        XCTAssertNotNil(plane.entity.components[CollisionComponent.self])
+    }
+
+    func testConeHasCollisionComponent() {
+        let cone = GeometryNode.cone()
+        XCTAssertNotNil(cone.entity.components[CollisionComponent.self])
+    }
+
+    // MARK: - Grounding shadow
+
+    func testWithGroundingShadowDoesNotCrash() {
+        let cube = GeometryNode.cube(size: 0.5, color: .red)
+            .withGroundingShadow()
+        XCTAssertNotNil(cube.entity)
+    }
+
+    func testWithGroundingShadowChaining() {
+        let node = GeometryNode.sphere(radius: 0.3)
+            .position(.init(x: 0, y: 1, z: 0))
+            .scale(2.0)
+            .withGroundingShadow()
+        XCTAssertEqual(node.position.y, 1.0, accuracy: 0.001)
+        XCTAssertEqual(node.scale.x, 2.0, accuracy: 0.001)
+    }
+
+    // MARK: - Material count
+
+    func testAllFactoryMethodsProduceSingleMaterial() {
+        let cube = GeometryNode.cube()
+        let sphere = GeometryNode.sphere()
+        let cyl = GeometryNode.cylinder()
+        let plane = GeometryNode.plane()
+        let cone = GeometryNode.cone()
+
+        XCTAssertEqual(cube.entity.model?.materials.count, 1)
+        XCTAssertEqual(sphere.entity.model?.materials.count, 1)
+        XCTAssertEqual(cyl.entity.model?.materials.count, 1)
+        XCTAssertEqual(plane.entity.model?.materials.count, 1)
+        XCTAssertEqual(cone.entity.model?.materials.count, 1)
+    }
 }
 #endif

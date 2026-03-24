@@ -63,16 +63,10 @@ android {
 dependencies {
     implementation project(":samples:common")
 
-    // Compose
-    implementation "androidx.compose.ui:ui:1.10.5"
-    implementation "androidx.compose.foundation:foundation:1.10.5"
-    implementation 'androidx.activity:activity-compose:1.10.1'
+    // Compose (extras beyond what :samples:common provides)
+    implementation libs.androidx.compose.material.icons.extended
+    // Material 3 Expressive APIs require a newer alpha than the version catalog's stable release
     implementation 'androidx.compose.material3:material3:1.5.0-alpha15'
-    implementation 'androidx.compose.material:material-icons-extended:1.7.8'
-    implementation 'androidx.compose.animation:animation:1.10.5'
-    implementation "androidx.compose.ui:ui-tooling-preview:1.10.5"
-    implementation "androidx.navigation:navigation-compose:2.8.9"
-    debugImplementation "androidx.compose.ui:ui-tooling:1.10.5"
 
     // SceneView (3D only — no AR features in this app)
     implementation project(":sceneview")

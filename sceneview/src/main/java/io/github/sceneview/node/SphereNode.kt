@@ -6,6 +6,18 @@ import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Sphere
 import io.github.sceneview.math.Position
 
+/**
+ * A node that renders a procedural sphere geometry.
+ *
+ * The sphere is centred at [center] with the given [radius] and tessellated with [stacks] horizontal
+ * and [slices] vertical subdivisions. Vertices include normals and UV coordinates.
+ *
+ * Use the composable `SceneScope.SphereNode(...)` for declarative usage inside a `Scene { }` block,
+ * or instantiate this class directly for imperative code.
+ *
+ * @see io.github.sceneview.geometries.Sphere
+ * @see GeometryNode
+ */
 open class SphereNode private constructor(
     engine: Engine,
     override val geometry: Sphere,

@@ -1,0 +1,62 @@
+{
+  "name": "react-native-sceneview",
+  "version": "0.1.0",
+  "description": "React Native bindings for SceneView — 3D and AR scenes powered by Filament (Android) and RealityKit (iOS)",
+  "main": "lib/commonjs/index",
+  "module": "lib/module/index",
+  "types": "lib/typescript/index.d.ts",
+  "react-native": "src/index",
+  "source": "src/index",
+  "files": [
+    "src",
+    "lib",
+    "android",
+    "ios",
+    "react-native-sceneview.podspec",
+    "!**/__tests__"
+  ],
+  "scripts": {
+    "typescript": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "build": "bob build",
+    "prepare": "bob build"
+  },
+  "keywords": [
+    "react-native",
+    "3d",
+    "ar",
+    "sceneview",
+    "filament",
+    "realitykit",
+    "arcore",
+    "arkit"
+  ],
+  "repository": "https://github.com/sceneview/sceneview-android",
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.72.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-native": "^0.72.0",
+    "react": "^18.2.0",
+    "react-native": "^0.73.0",
+    "react-native-builder-bob": "^0.23.0",
+    "typescript": "^5.3.0"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      "commonjs",
+      "module",
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  }
+}
