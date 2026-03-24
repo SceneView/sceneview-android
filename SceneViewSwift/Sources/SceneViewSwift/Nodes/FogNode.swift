@@ -283,12 +283,4 @@ public struct FogNode: Sendable {
     }
 }
 
-// MARK: - Float clamping helper
-
-private extension Float {
-    func clamped(to range: ClosedRange<Float>) -> Float {
-        return min(max(self, range.lowerBound), range.upperBound)
-    }
-}
-
 #endif // os(iOS) || os(macOS) || os(visionOS)

@@ -326,12 +326,4 @@ public struct DynamicSkyNode: Sendable {
     }
 }
 
-// MARK: - Float clamping helper
-
-private extension Float {
-    func clamped(to range: ClosedRange<Float>) -> Float {
-        return Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
-    }
-}
-
 #endif // os(iOS) || os(macOS) || os(visionOS)
