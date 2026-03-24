@@ -40,6 +40,16 @@ SceneViewSwift/.swiftpm/
 *.apk
 *.aab
 
+# MkDocs build output
+docs/.cache/
+docs/site/
+site/
+
+# Xcode
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
 # Environment files
 .env
 .env.local

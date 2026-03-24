@@ -76,14 +76,13 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-**NOTE FOR OTHER SESSIONS:** Always check `git log --oneline -20` on the current branch
-to see recent work before starting. The branch `claude/resume-sceneview-ios-PjPVi` may
-need to be merged to main first.
+**NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
+Never say "everything is good" without verifying published packages.
 
 ### Current state (last updated: 2026-03-24)
 
-- **Active branch**: `claude/resume-sceneview-ios-PjPVi` (needs merge to main after stabilization)
-- **Latest release**: v3.3.0
+- **Active branch**: `main` (clean — all PRs merged)
+- **Latest release**: v3.3.0 (published: Maven Central ⏳ propagating, npm ✅, SPM ✅, GitHub Release ✅)
 - **What was done this session (2026-03-24)**:
 
   Phase 1 — SceneViewSwift stabilization (COMPLETE):

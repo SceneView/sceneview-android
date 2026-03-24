@@ -1,95 +1,97 @@
 # SceneView Roadmap
 
-## v3.3.0 — Unified version, cross-platform, website (current)
-
-### SDK — Android
-- **PhysicsNode**, **RaycastNode**, **DynamicSkyNode**, **ReflectionProbeNode**, **FogNode** — shipped
-- **BillboardNode**, **TextNode**, **LineNode / PathNode** — shipped
-- Gesture improvements — scale clamp, rotation axis lock, velocity flick
-- `onCollision` callback in `SceneScope`
-
-### SDK — Apple (SceneViewSwift)
-- **SceneView** (3D) + **ARSceneView** (AR) in SwiftUI — alpha
-- iOS 17+ / macOS 14+ / visionOS 1+ via RealityKit
-- Node types: ModelNode, AnchorNode, GeometryNode, LightNode, CameraNode, ImageNode, VideoNode, PhysicsNode, AugmentedImageNode
-- **New nodes**: DynamicSkyNode, FogNode, ReflectionProbeNode — done
-- **Enhanced nodes**: ModelNode (named animations, materials, collision), LightNode (shadows, attenuation), CameraNode (FOV, DOF, exposure) — done
-- **Full test suite**: 15+ node types with edge cases and platform tests (65+ tests) — done
-- Swift Package Manager distribution (`from: "3.3.0"`)
-
-### Ecosystem
-- **Unified versioning** — all modules (sceneview, arsceneview, sceneview-core, MCP, SceneViewSwift) at 3.3.0
-- **Website** (`docs/`) — MkDocs Material, platform logo ticker, codelabs, cheatsheet
-- **MCP server** (`mcp/`) — 10 tools + 2 resources, published on npm; iOS support added (8 Swift samples, `get_ios_setup` tool, Swift code validation) — done
-- **Docs**: iOS quickstart, cheatsheet, 2 SwiftUI codelabs added — done
-- `llms.txt` covers full API (26+ node types, all platforms) — updated
+> **Vision**: Become the #1 open-source 3D & AR SDK for mobile developers.
+> **Strategy**: Ship fast, ship often. Every feature = a patch release. Majors for breaking changes only.
 
 ---
 
-## v3.4.0 — SceneViewSwift stabilization
+## Versioning strategy
 
-### SDK — Apple
-- ~~Complete API parity for core node types with Android~~ — largely done (15 node types, 3 new + 3 enhanced)
-- macOS target tested and stable
-- ~~Unit test coverage for all node types~~ — done (65+ tests covering 15+ node types)
-- KDoc/DocC documentation
-
-### SDK — Android
-- `ViewNode` depth-ordering fix for edge cases with transparent Compose layers
-- ARCore `EnvironmentalHDR` upgrade — real camera feed for AR environment estimation
-
-### Ecosystem
-- ~~Codelab: iOS 3D scene with SwiftUI~~ — done (2 SwiftUI codelabs added)
-- ~~`llms.txt` updated with SceneViewSwift API details~~ — done
+- **Patch (3.3.x)**: Every feature, fix, or improvement ships immediately as a patch
+- **Minor (3.x.0)**: Accumulated features grouped for marketing / communication
+- **Major (x.0.0)**: Breaking API changes only (Filament upgrade, API redesign)
+- **Rule**: Never accumulate unreleased work. Tag → Publish → Communicate.
 
 ---
 
-## v3.5.0 — KMP core consumption
+## v3.3.0 — Current release (published)
 
-### SDK
-- Build XCFramework from `sceneview-core` (math, collision, geometry, animations)
-- Integrate XCFramework into SceneViewSwift for shared algorithms
+### What shipped
+- **Android SDK**: 21+ composable node types, Filament 1.70.0, ARCore 1.53.0
+- **SceneViewSwift (Apple)**: 17 node types, iOS 17+ / macOS 14+ / visionOS 1+, RealityKit + ARKit
+- **sceneview-core (KMP)**: Shared math, collision, geometry, animation, physics
+- **MCP server**: 10 tools, iOS + Android samples, Swift validation, published on npm
+- **Website**: MkDocs Material, codelabs (Android + iOS), cheatsheets, quickstarts
+- **CI/CD**: Automated release pipeline (Maven Central + npm + GitHub Release + Dokka)
+- **Cross-framework scaffolds**: Flutter plugin + React Native module (scaffolds)
+
+### Published artifacts
+| Artifact | Registry | Version |
+|---|---|---|
+| `io.github.sceneview:sceneview` | Maven Central | 3.3.0 |
+| `io.github.sceneview:arsceneview` | Maven Central | 3.3.0 |
+| `io.github.sceneview:sceneview-core` | Maven Central | 3.3.0 |
+| `sceneview-mcp` | npm | 3.3.0 |
+| `SceneViewSwift` | SPM (GitHub tag) | v3.3.0 |
+
+---
+
+## Next patches (3.3.x) — Ship as ready
+
+Each item below ships as its own patch release the moment it's done.
+
+### High priority
+- [ ] **Enable GitHub Pages** — repo Settings → Pages → Source: "GitHub Actions"
+- [ ] **Post-processing sample PR** — Bloom, DoF, SSAO, Fog (already built)
+- [ ] **ar-model-viewer UX** — better pinch scale + two-finger rotate, plane mesh vis
+- [ ] **model-viewer animations** — play/pause/scrub controls, morph targets demo
+- [ ] Gesture improvements — scale clamp, rotation axis lock, velocity flick
+- [ ] `onCollision` callback in `SceneScope`
+
+### Medium priority
+- [ ] `ViewNode` depth-ordering fix (transparent Compose layers)
+- [ ] ARCore `EnvironmentalHDR` upgrade
+- [ ] macOS target tested and stable for SceneViewSwift
+- [ ] DocC documentation for SceneViewSwift
+
+### Low priority
+- [ ] KDoc/DocC auto-generation at release time
+- [ ] GitHub Discussions enabled + triage labels
+
+---
+
+## v3.4.0 — KMP core consumption
+
+- Build XCFramework from `sceneview-core`
+- Integrate into SceneViewSwift for shared algorithms
 - Shared physics simulation across Android and Apple
-
-### Ecosystem
-- Codelab: Dynamic Environments
-- Codelab: Spatial UI
+- New codelabs: Dynamic Environments, Spatial UI
 
 ---
 
-## v4.0.0 — Multi-scene, XR, cross-framework bridges
+## v4.0.0 — Multi-scene, XR, cross-framework
 
-### SDK — Android
-- Multiple independent `Scene {}` composables sharing one `Engine`
-- **`PortalNode`** — render a secondary scene inside a 3D frame (AR portals)
-- Filament 2.x migration (when stable)
-- **`SceneView-XR`** module — Android XR / spatial computing support
+### Android
+- Multiple independent `Scene {}` sharing one `Engine`
+- **PortalNode** — render-to-texture portal between scenes
+- Filament 2.x migration
+- **SceneView-XR** — Android XR / spatial computing
 
-### SDK — Apple
-- visionOS spatial computing — immersive spaces, hand tracking, spatial anchors
+### Apple
+- visionOS spatial computing — immersive spaces, hand tracking
 
-### Cross-framework bridges
-- Flutter plugin — `PlatformView` wrapping SceneViewSwift
-- React Native module — Turbo Module / Fabric component
-- KMP Compose — `UIKitView` wrapping SceneViewSwift
-
-### Ecosystem
-- `llms.txt` auto-generated from KDoc at release time
-- GitHub Discussions enabled + triage labels for community
+### Cross-framework
+- Flutter plugin (PlatformView → SceneViewSwift)
+- React Native module (Turbo Module / Fabric)
+- KMP Compose (UIKitView → SceneViewSwift)
 
 ---
 
-## Backlog
+## Process rules
 
-| Priority | Task | Status |
-|----------|------|--------|
-| 1 | **Material 3 Expressive design** — demo app with `MaterialExpressiveTheme`, spring animations, dynamic color, expressive components | In progress |
-| 2 | **Play Store deployment** — GitHub secrets for keystore + service account | Pending |
-
----
-
-## Ongoing
-
-- Keep `llms.txt` and MCP server in sync with every public API change
-- Keep all module versions synchronized
-- Website maintenance and content updates
+1. **Every PR runs `/sync-check`** before merge
+2. **Every feature = immediate patch release** (tag + publish)
+3. **Never say "done" without checking published packages** (Maven Central, npm, SPM)
+4. **CLAUDE.md updated at end of every session**
+5. **llms.txt and MCP updated with every public API change**
+6. **Docs site updated with every user-facing change**
