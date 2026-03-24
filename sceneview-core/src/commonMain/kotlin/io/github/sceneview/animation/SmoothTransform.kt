@@ -89,7 +89,7 @@ fun updateSmoothTransform(
  * @param speed Optional new speed (keeps current speed if null).
  * @return Updated state with the new target.
  */
-fun setSmoothtarget(
+fun setSmoothTarget(
     state: SmoothTransformState,
     target: Transform,
     speed: Float? = null

@@ -143,10 +143,6 @@ public struct PathNode: Sendable {
             container.addChild(xLine.entity)
         }
 
-        // Return a PathNode with the container entity
-        var node = PathNode(points: [], closed: false)
-        // Replace the empty entity with our populated container
-        // (this is a workaround since we can't mutate self.entity)
         return PathNode(entity: container, points: [])
     }
 

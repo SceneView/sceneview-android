@@ -7,11 +7,11 @@ import io.github.sceneview.rendering.Vertex
 /**
  * Generates a quad (two-triangle plane) as a list of vertices and triangle indices.
  *
- * The plane lies in the XZ plane by default, facing up along Y.
+ * The plane lies in the XY plane (z = 0) by default.
  *
- * @param size Width (X) and depth (Z) of the plane.
+ * @param size Width (X) and height (Y) of the plane.
  * @param center Offset applied to every vertex position.
- * @param normal Surface normal for all four vertices.
+ * @param normal Surface normal for all four vertices. Default is +Y.
  */
 fun generatePlane(
     size: Float2 = Float2(1f),

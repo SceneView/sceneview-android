@@ -279,10 +279,22 @@ open class ModelNode(
         animator.getAnimationIndex(animationName)?.let { setAnimationSpeed(it, speed) }
     }
 
+    /**
+     * Stops the animation at [animationIndex], removing it from the set of playing animations.
+     *
+     * @param animationIndex Zero-based index for the animation to stop.
+     */
     fun stopAnimation(animationIndex: Int) {
         playingAnimations.remove(animationIndex)
     }
 
+    /**
+     * Stops the named animation, removing it from the set of playing animations.
+     *
+     * @param animationName The glTF animation name to stop.
+     * @see stopAnimation
+     * @see Animator.getAnimationName
+     */
     fun stopAnimation(animationName: String) {
         animator.getAnimationIndex(animationName)?.let { stopAnimation(it) }
     }
@@ -442,14 +454,18 @@ open class ModelNode(
     }
 }
 
+/** Returns the first child node whose [ModelNode.ChildNode.name] matches [name]. */
 inline operator fun <reified T : ModelNode.ChildNode> List<T>.get(name: String): T =
     first { it.name == name }
 
+/** Returns the first child node whose [ModelNode.ChildNode.name] matches [name], or `null`. */
 inline fun <reified T : ModelNode.ChildNode> List<T>.getOrNull(name: String): T? =
     firstOrNull { it.name == name }
 
+/** Returns the first [MaterialInstance] whose [MaterialInstance.getName] matches [name]. */
 inline operator fun <reified T : MaterialInstance> List<T>.get(name: String): T =
     first { it.name == name }
 
+/** Returns the first [MaterialInstance] whose name matches [name], or `null`. */
 inline fun <reified T : MaterialInstance> List<T>.getOrNull(name: String): T? =
     firstOrNull { it.name == name }

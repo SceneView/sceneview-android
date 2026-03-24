@@ -18,6 +18,19 @@ import io.github.sceneview.texture.ImageTexture
 import io.github.sceneview.texture.TextureSampler2D
 import io.github.sceneview.texture.setBitmap
 
+/**
+ * A node that renders a [Bitmap] image on a flat textured plane in 3D space.
+ *
+ * The plane is auto-sized from the image's aspect ratio (longest edge normalised to 1.0 world
+ * unit) unless an explicit [size] is given. Assigning a new [bitmap] re-uploads the texture to the
+ * GPU and optionally re-sizes the geometry.
+ *
+ * Multiple constructors are provided for loading from a [Bitmap], an asset file path, or a
+ * drawable resource ID.
+ *
+ * @see PlaneNode
+ * @see io.github.sceneview.texture.ImageTexture
+ */
 open class ImageNode private constructor(
     val materialLoader: MaterialLoader,
     bitmap: Bitmap,

@@ -1,3 +1,8 @@
+---
+title: Migration Guide — SceneView 2.x to 3.x
+description: "Step-by-step migration guide from SceneView 2.x (View-based) to 3.x (Compose-native). Covers every breaking change with before/after code examples."
+---
+
 # Migration Guide
 
 SceneView 3.0 is a ground-up rewrite around Jetpack Compose. The core concepts are the same
@@ -8,7 +13,7 @@ walks through every breaking change with before/after examples.
 
 ## 1. Dependency version
 
-```gradle
+```kotlin
 // Before
 implementation("io.github.sceneview:sceneview:2.3.0")
 implementation("io.github.sceneview:arsceneview:2.3.0")
@@ -244,7 +249,7 @@ the imports continue to work. No action required.
 
 ## New node types (non-breaking)
 
-v3.3.0 adds 8 new node composables in `SceneScope`. No migration required — these are additive.
+v3.2.0 adds 8 new node composables in `SceneScope`. No migration required — these are additive.
 
 | Node | Purpose |
 |---|---|
@@ -262,7 +267,7 @@ v3.3.0 adds 8 new node composables in `SceneScope`. No migration required — th
 Sample apps now use the Gradle version catalog (`libs.*`) instead of hardcoded versions.
 If you copied a sample `build.gradle` as a starting point, update your dependencies:
 
-```gradle
+```kotlin
 // Before (hardcoded)
 implementation "androidx.compose.ui:ui:1.10.5"
 implementation "androidx.compose.material3:material3:1.3.2"

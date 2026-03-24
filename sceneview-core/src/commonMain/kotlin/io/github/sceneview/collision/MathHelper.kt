@@ -4,10 +4,17 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-/** Static functions for common math operations. */
+/**
+ * Static functions for common math operations used by the collision system.
+ *
+ * Provides float comparison with tolerance, clamping, and linear interpolation.
+ */
 object MathHelper {
 
+    /** Machine epsilon for single-precision IEEE 754 floats. */
     internal const val FLT_EPSILON = 1.19209290E-07f
+
+    /** Absolute tolerance for near-zero comparisons. */
     internal const val MAX_DELTA = 1.0E-10f
 
     /**

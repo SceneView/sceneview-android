@@ -1,6 +1,11 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// A wrapper around RealityKit's `ModelEntity` for loading and displaying 3D models.
 ///
@@ -19,9 +24,13 @@ import Foundation
 ///     model = try? await ModelNode.load("models/car.usdz")
 /// }
 /// ```
-public struct ModelNode: Sendable {
+public struct ModelNode: @unchecked Sendable {
     /// The underlying RealityKit entity.
     public let entity: ModelEntity
+
+    /// Stored tap handler invoked by the scene's gesture recognizer.
+    /// - Note: Managed externally — the scene checks `tapHandler` after a hit test.
+    public var tapHandler: (() -> Void)?
 
     /// World-space position.
     public var position: SIMD3<Float> {
@@ -44,6 +53,7 @@ public struct ModelNode: Sendable {
     /// Wraps an existing `ModelEntity`.
     public init(_ entity: ModelEntity) {
         self.entity = entity
+        self.tapHandler = nil
     }
 
     /// Loads a 3D model from a bundle resource path.
@@ -204,6 +214,47 @@ public struct ModelNode: Sendable {
         }
     }
 
+    /// Names of all available animations on this model.
+    ///
+    /// Names are extracted from the animation resource definitions.
+    /// Useful for discovering which animations a model provides before
+    /// calling `playAnimation(named:)`.
+    public var animationNames: [String] {
+        entity.availableAnimations.map { $0.name ?? "" }
+    }
+
+    /// Plays a specific animation by name.
+    ///
+    /// If no animation matches the given name, this method does nothing.
+    ///
+    /// - Parameters:
+    ///   - name: The animation name (as authored in the 3D file).
+    ///   - loop: Whether the animation should repeat. Default `true`.
+    ///   - speed: Playback speed multiplier. Default 1.0.
+    ///   - transitionDuration: Blend time when transitioning from another animation.
+    public func playAnimation(
+        named name: String,
+        loop: Bool = true,
+        speed: Float = 1.0,
+        transitionDuration: TimeInterval = 0.2
+    ) {
+        guard var animation = entity.availableAnimations.first(where: {
+            $0.name == name
+        }) else { return }
+        animation.speed = speed
+        if loop {
+            entity.playAnimation(
+                animation.repeat(),
+                transitionDuration: transitionDuration
+            )
+        } else {
+            entity.playAnimation(
+                animation,
+                transitionDuration: transitionDuration
+            )
+        }
+    }
+
     /// Stops all animations on the model.
     public func stopAllAnimations() {
         entity.stopAllAnimations()
@@ -222,9 +273,116 @@ public struct ModelNode: Sendable {
         entity.generateCollisionShapes(recursive: true)
     }
 
+    /// The axis-aligned bounding box of the collision shape, relative to the entity.
+    ///
+    /// Returns `nil` if no collision shapes have been generated.
+    public var collisionBounds: BoundingBox? {
+        guard entity.collision != nil else { return nil }
+        return entity.visualBounds(relativeTo: nil)
+    }
+
+    /// Registers a tap handler for this model.
+    ///
+    /// The scene's gesture recognizer should check `tapHandler` after a hit test.
+    ///
+    /// - Parameter handler: Closure invoked when the model is tapped.
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public mutating func onTap(_ handler: @escaping () -> Void) -> ModelNode {
+        tapHandler = handler
+        return self
+    }
+
+    // MARK: - Material properties
+
+    /// Sets the base color of all materials on this model.
+    ///
+    /// - Parameter color: The new base color.
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public func setColor(_ color: SimpleMaterial.Color) -> ModelNode {
+        guard var model = entity.model else { return self }
+        model.materials = model.materials.map { material in
+            if var pbr = material as? PhysicallyBasedMaterial {
+                #if canImport(UIKit)
+                pbr.baseColor = .init(tint: color)
+                #else
+                pbr.baseColor = .init(tint: color)
+                #endif
+                return pbr
+            } else if var simple = material as? SimpleMaterial {
+                simple.color = .init(tint: color)
+                return simple
+            }
+            return material
+        }
+        entity.model = model
+        return self
+    }
+
+    /// Sets the metallic factor on all PBR materials.
+    ///
+    /// - Parameter value: Metallic factor (0 = dielectric, 1 = fully metallic).
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public func setMetallic(_ value: Float) -> ModelNode {
+        guard var model = entity.model else { return self }
+        model.materials = model.materials.map { material in
+            if var pbr = material as? PhysicallyBasedMaterial {
+                pbr.metallic = .init(floatLiteral: value)
+                return pbr
+            }
+            return material
+        }
+        entity.model = model
+        return self
+    }
+
+    /// Sets the roughness factor on all PBR materials.
+    ///
+    /// - Parameter value: Roughness factor (0 = smooth/mirror, 1 = fully rough).
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public func setRoughness(_ value: Float) -> ModelNode {
+        guard var model = entity.model else { return self }
+        model.materials = model.materials.map { material in
+            if var pbr = material as? PhysicallyBasedMaterial {
+                pbr.roughness = .init(floatLiteral: value)
+                return pbr
+            }
+            return material
+        }
+        entity.model = model
+        return self
+    }
+
+    /// Sets the opacity of all materials on this model.
+    ///
+    /// - Parameter value: Opacity factor (0 = fully transparent, 1 = fully opaque).
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public func opacity(_ value: Float) -> ModelNode {
+        guard var model = entity.model else { return self }
+        model.materials = model.materials.map { material in
+            if var pbr = material as? PhysicallyBasedMaterial {
+                pbr.blending = .transparent(opacity: .init(floatLiteral: value))
+                return pbr
+            } else if var simple = material as? SimpleMaterial {
+                simple.color = .init(
+                    tint: simple.color.tint.withAlphaComponent(CGFloat(value))
+                )
+                return simple
+            }
+            return material
+        }
+        entity.model = model
+        return self
+    }
+
     // MARK: - Shadow
 
     /// Adds a grounding shadow beneath the model.
+    @discardableResult
     public func withGroundingShadow() -> ModelNode {
         #if os(iOS) || os(visionOS)
         entity.components.set(GroundingShadowComponent(castsShadow: true))

@@ -49,13 +49,15 @@ fun ProductViewer(productGlb: String) {
     val modelLoader = rememberModelLoader(engine)
     val model = rememberModelInstance(modelLoader, productGlb)
 
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
     Scene(
         modifier = Modifier.fillMaxWidth().height(400.dp),
         engine = engine,
         modelLoader = modelLoader,
         cameraManipulator = rememberCameraManipulator(),
-        environment = rememberEnvironment(rememberEnvironmentLoader(engine)) {
-            createHDREnvironment("environments/studio.hdr")
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/studio.hdr")
                 ?: createEnvironment(environmentLoader)
         }
     ) {
