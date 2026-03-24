@@ -87,14 +87,14 @@ class SmoothTransformTest {
     @Test
     fun setTargetUpdatesTarget() {
         val state = SmoothTransformState(current = origin)
-        val updated = setSmoothtarget(state, target)
+        val updated = setSmoothTarget(state, target)
         assertEquals(target, updated.target)
     }
 
     @Test
     fun setTargetWithSpeedUpdatesSpeed() {
         val state = SmoothTransformState(current = origin, speed = 5f)
-        val updated = setSmoothtarget(state, target, speed = 20f)
+        val updated = setSmoothTarget(state, target, speed = 20f)
         assertEquals(20f, updated.speed)
         assertEquals(target, updated.target)
     }
