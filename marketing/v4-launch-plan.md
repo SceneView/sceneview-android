@@ -128,7 +128,7 @@ Source → github.com/SceneView/sceneview
    - Multi-scene: 3D in LazyColumn (code example + diagram)
    - PortalNode: scenes inside scenes (code example + use cases)
    - SceneView-XR: same API in spatial computing (code example)
-3. Migration from 3.2.0 (what changes, what stays the same)
+3. Migration from 3.3.0 (what changes, what stays the same)
 4. Benchmarks: multi-scene performance, shared Engine efficiency
 5. What's next: ParticleNode, AnimationController, KMP iOS
 6. Getting started

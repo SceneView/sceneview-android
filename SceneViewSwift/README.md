@@ -1,8 +1,9 @@
 # SceneViewSwift
 
-3D and AR scenes in SwiftUI, powered by RealityKit. The iOS companion to [SceneView for Android](https://github.com/SceneView/sceneview).
+3D and AR scenes in SwiftUI, powered by RealityKit. The Apple companion to [SceneView for Android](https://github.com/SceneView/sceneview).
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![visionOS 1+](https://img.shields.io/badge/visionOS-1%2B-blue)
 
 ## Installation
@@ -20,7 +21,7 @@ Or add it to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/SceneView/sceneview-swift", from: "1.0.0")
+    .package(url: "https://github.com/SceneView/sceneview-swift", from: "3.3.0")
 ]
 ```
 
@@ -136,6 +137,12 @@ let title = TextNode(text: "SceneView", fontSize: 0.08, depth: 0.02)
 | `LineNode` | Line segments and axis gizmos |
 | `LightNode` | Directional, point, and spot lights |
 | `AnchorNode` | AR world/plane anchor |
+| `CameraNode` | Programmatic camera control with orbit, fly-through, and custom modes |
+| `ImageNode` | Display images on 3D planes with automatic aspect ratio |
+| `VideoNode` | Play video content on 3D surfaces with playback controls |
+| `PhysicsNode` | Apply physics simulation (dynamic, static, kinematic) to entities |
+| `PathNode` | Closed and open 3D paths with customizable geometry (circle, grid helpers) |
+| `AugmentedImageNode` | Detect real-world images and place 3D content (iOS only) |
 
 ### Configuration
 

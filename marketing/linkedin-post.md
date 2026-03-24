@@ -35,8 +35,8 @@ What's new in 3.0:
 Built on Google Filament for rendering and ARCore for augmented reality.
 Open source · MIT licensed.
 
-implementation("io.github.sceneview:sceneview:3.2.0")
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 
 It's not a wrapper. It's not a bridge. It's just Compose.
 

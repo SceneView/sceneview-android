@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.3.0 — Unified versioning, cross-platform, website
+
+### Version unification
+- **All modules aligned to 3.3.0** — sceneview, arsceneview, sceneview-core, MCP server, SceneViewSwift, docs, and all references across the repo are now at a single unified version
+
+### SceneViewSwift (Apple)
+- **iOS 17+ / macOS 14+ / visionOS 1+** via RealityKit — alpha
+- Node types: ModelNode, AnchorNode, GeometryNode, LightNode, CameraNode, ImageNode, VideoNode, PhysicsNode, AugmentedImageNode
+- PBR material system with textures
+- Swift Package Manager distribution
+
+### Website
+- Platform logo ticker on homepage — infinite-scroll marquee showing all supported platforms and technologies (Android, iOS, macOS, visionOS, Compose, SwiftUI, Filament, RealityKit, ARCore, ARKit, Kotlin, Swift)
+- CSS-only animation with fade edges, hover-to-pause, dark mode support
+
+### Documentation
+- Updated ROADMAP.md to reflect current state (SceneViewSwift exists, phased plan revised)
+- Updated PLATFORM_STRATEGY.md — native renderer per platform architecture (Filament + RealityKit)
+- All codelabs, cheatsheet, migration guide updated to 3.3.0
+
+---
+
 ## 3.1.2 — Sample polish, CI fixes, maintenance tooling
 
 ### Fixes

@@ -39,7 +39,7 @@ Nodes are composables. State drives the scene. Lifecycle is automatic.
 
 Add the dependency and start composing:
 
-    implementation("io.github.sceneview:sceneview:3.2.0")
+    implementation("io.github.sceneview:sceneview:3.3.0")
 
 - [Documentation](https://sceneview.github.io)
 - [Samples](https://github.com/SceneView/sceneview/tree/main/samples)
@@ -55,7 +55,7 @@ Create a 1280x640 image for the GitHub social preview (Settings > Social preview
 **Layout:**
 - Left half: SceneView logo + "3D & AR for Compose" tagline
 - Right half: a screenshot of the model-viewer sample (helmet with HDR reflections)
-- Bottom strip: `sceneview:3.2.0` · `26+ nodes` · `Filament` · `ARCore` · `Apache 2.0`
+- Bottom strip: `sceneview:3.3.0` · `26+ nodes` · `Filament` · `ARCore` · `Apache 2.0`
 - Background: dark gradient (#1a1a2e to #16213e)
 - Text: white, clean sans-serif
 

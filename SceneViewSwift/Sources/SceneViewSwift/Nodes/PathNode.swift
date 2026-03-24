@@ -1,4 +1,4 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 
 /// A node that renders a polyline path through multiple 3D points.
@@ -163,4 +163,4 @@ public struct PathNode: Sendable {
         return self
     }
 }
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(macOS) || os(visionOS)

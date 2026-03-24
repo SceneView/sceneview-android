@@ -211,10 +211,10 @@ the 3D visualization reacts instantly. No manual scene graph manipulation.
 
 ```gradle
 // 3D only
-implementation("io.github.sceneview:sceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
 
 // 3D + AR
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
 **Step 2:** Drop a scene into any composable
@@ -248,7 +248,7 @@ No XML. No fragments. No lifecycle callbacks. No OpenGL boilerplate. Just Compos
 ## Links
 
 - **GitHub**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
-- **Maven Central**: `io.github.sceneview:sceneview:3.2.0`
+- **Maven Central**: `io.github.sceneview:sceneview:3.3.0`
 - **API docs**: [sceneview.github.io](https://sceneview.github.io/api/sceneview/sceneview/)
 - **Discord**: [discord.gg/UbNDDBTNqb](https://discord.gg/UbNDDBTNqb)
 - **MCP server**: `npx sceneview-mcp` for AI-assisted development

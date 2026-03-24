@@ -12,7 +12,7 @@ export async function fetchKnownIssues() {
         const response = await fetch("https://api.github.com/repos/SceneView/sceneview/issues?state=open&per_page=30", {
             headers: {
                 Accept: "application/vnd.github+json",
-                "User-Agent": "sceneview-mcp/3.2.2",
+                "User-Agent": "sceneview-mcp/3.3.0",
                 "X-GitHub-Api-Version": "2022-11-28",
             },
         });

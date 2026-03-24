@@ -1,56 +1,76 @@
 # SceneView Roadmap
 
-## 3.2.0 — Physics & Interactions
+## v3.3.0 — Unified version, cross-platform, website (current)
 
-### SDK
-- **`PhysicsNode`** — rigid body / collision via Bullet or JBullet wrapper
-- **`RaycastNode`** — tap/drag hit-testing against scene geometry (not just AR planes)
-- **Gesture improvements** — scale clamp, rotation axis lock, velocity flick on release
+### SDK — Android
+- **PhysicsNode**, **RaycastNode**, **DynamicSkyNode**, **ReflectionProbeNode**, **FogNode** — shipped
+- **BillboardNode**, **TextNode**, **LineNode / PathNode** — shipped
+- Gesture improvements — scale clamp, rotation axis lock, velocity flick
 - `onCollision` callback in `SceneScope`
 
+### SDK — Apple (SceneViewSwift)
+- **SceneView** (3D) + **ARSceneView** (AR) in SwiftUI — alpha
+- iOS 17+ / macOS 14+ / visionOS 1+ via RealityKit
+- Node types: ModelNode, AnchorNode, GeometryNode, LightNode, CameraNode, ImageNode, VideoNode, PhysicsNode, AugmentedImageNode
+- Swift Package Manager distribution (`from: "3.3.0"`)
+
 ### Ecosystem
-- MCP tool: `get_node_reference` — look up any node type's full API from an AI assistant
-- Codelab: Physics & Interactions
+- **Unified versioning** — all modules (sceneview, arsceneview, sceneview-core, MCP, SceneViewSwift) at 3.3.0
+- **Website** (`docs/`) — MkDocs Material, platform logo ticker, codelabs, cheatsheet
+- **MCP server** (`mcp/`) — 10 tools + 2 resources, published on npm
+- `llms.txt` covers full API (26+ node types, all platforms)
 
 ---
 
-## 3.3.0 — Environment & Lighting
+## v3.4.0 — SceneViewSwift stabilization
+
+### SDK — Apple
+- Complete API parity for core node types with Android
+- macOS target tested and stable
+- Unit test coverage for all node types
+- KDoc/DocC documentation
+
+### SDK — Android
+- `ViewNode` depth-ordering fix for edge cases with transparent Compose layers
+- ARCore `EnvironmentalHDR` upgrade — real camera feed for AR environment estimation
+
+### Ecosystem
+- Codelab: iOS 3D scene with SwiftUI
+- `llms.txt` updated with SceneViewSwift API details
+
+---
+
+## v3.5.0 — KMP core consumption
 
 ### SDK
-- **`DynamicSkyNode`** — time-of-day sun position driven by Compose state
-- **`ReflectionProbeNode`** — local cubemap reflections per region
-- **`FogNode`** — distance/height fog as composable state
-- ARCore `EnvironmentalHDR` upgrade — capture real camera feed for AR environment estimation
+- Build XCFramework from `sceneview-core` (math, collision, geometry, animations)
+- Integrate XCFramework into SceneViewSwift for shared algorithms
+- Shared physics simulation across Android and Apple
 
 ### Ecosystem
 - Codelab: Dynamic Environments
-
----
-
-## 3.4.0 — Spatial UI
-
-### SDK
-- **`BillboardNode`** — node always faces camera (labels, tooltips, UI callouts)
-- **`TextNode`** — 3D text geometry
-- **`LineNode` / `PathNode`** — 3D polylines (measurements, AR guides, drawing)
-- `ViewNode` depth-ordering fix for edge cases with transparent Compose layers
-
-### Ecosystem
 - Codelab: Spatial UI
 
 ---
 
-## 4.0.0 — Multi-scene & Platform Expansion
+## v4.0.0 — Multi-scene, XR, cross-framework bridges
 
-### SDK
-- Multiple independent `Scene {}` composables on the same screen sharing one `Engine`
+### SDK — Android
+- Multiple independent `Scene {}` composables sharing one `Engine`
 - **`PortalNode`** — render a secondary scene inside a 3D frame (AR portals)
 - Filament 2.x migration (when stable)
 - **`SceneView-XR`** module — Android XR / spatial computing support
 
+### SDK — Apple
+- visionOS spatial computing — immersive spaces, hand tracking, spatial anchors
+
+### Cross-framework bridges
+- Flutter plugin — `PlatformView` wrapping SceneViewSwift
+- React Native module — Turbo Module / Fabric component
+- KMP Compose — `UIKitView` wrapping SceneViewSwift
+
 ### Ecosystem
 - `llms.txt` auto-generated from KDoc at release time
-- Kotlin Multiplatform proof of concept (iOS via Filament Metal backend)
 - GitHub Discussions enabled + triage labels for community
 
 ---
@@ -59,11 +79,13 @@
 
 | Priority | Task | Status |
 |----------|------|--------|
-| 1 | **Material 3 Expressive design** — Clean, professional UI using `MaterialExpressiveTheme`, `MotionScheme.expressive()`, fully rounded shapes, spring animations, dynamic color, and expressive components (FloatingToolbar, LoadingIndicator, ButtonGroup) across the entire demo app | In progress |
+| 1 | **Material 3 Expressive design** — demo app with `MaterialExpressiveTheme`, spring animations, dynamic color, expressive components | In progress |
+| 2 | **Play Store deployment** — GitHub secrets for keystore + service account | Pending |
 
 ---
 
 ## Ongoing
 
 - Keep `llms.txt` and MCP server in sync with every public API change
-- Enable GitHub Discussions for community Q&A
+- Keep all module versions synchronized
+- Website maintenance and content updates

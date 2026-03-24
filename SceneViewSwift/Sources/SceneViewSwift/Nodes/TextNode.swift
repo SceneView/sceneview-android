@@ -1,4 +1,4 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
 
@@ -144,4 +144,4 @@ public struct TextNode: Sendable {
     }
 }
 
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(macOS) || os(visionOS)

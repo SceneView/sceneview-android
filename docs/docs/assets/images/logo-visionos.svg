@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 40" fill="none">
+  <path d="M4 20c0 0 6-10 16-10s16 10 16 10-6 10-16 10S4 20 4 20z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+  <circle cx="20" cy="20" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+  <circle cx="20" cy="20" r="2" fill="currentColor"/>
+  <text x="40" y="27" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="600" fill="currentColor">visionOS</text>
+</svg>
