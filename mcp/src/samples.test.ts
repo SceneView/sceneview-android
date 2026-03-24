@@ -1,23 +1,42 @@
 import { describe, it, expect } from "vitest";
 import { SAMPLES, SAMPLE_IDS, getSample } from "./samples.js";
 
+const ANDROID_IDS = SAMPLE_IDS.filter((id) => !SAMPLES[id].language || SAMPLES[id].language === "kotlin");
+const IOS_IDS = SAMPLE_IDS.filter((id) => SAMPLES[id].language === "swift");
+
 describe("SAMPLE_IDS", () => {
-  it("contains all 14 real sample directories", () => {
-    expect(SAMPLE_IDS).toContain("model-viewer");
-    expect(SAMPLE_IDS).toContain("ar-model-viewer");
-    expect(SAMPLE_IDS).toContain("ar-augmented-image");
-    expect(SAMPLE_IDS).toContain("ar-cloud-anchor");
-    expect(SAMPLE_IDS).toContain("ar-point-cloud");
-    expect(SAMPLE_IDS).toContain("gltf-camera");
-    expect(SAMPLE_IDS).toContain("camera-manipulator");
-    expect(SAMPLE_IDS).toContain("autopilot-demo");
-    expect(SAMPLE_IDS).toContain("physics-demo");
-    expect(SAMPLE_IDS).toContain("dynamic-sky");
-    expect(SAMPLE_IDS).toContain("line-path");
-    expect(SAMPLE_IDS).toContain("text-labels");
-    expect(SAMPLE_IDS).toContain("reflection-probe");
-    expect(SAMPLE_IDS).toContain("post-processing");
-    expect(SAMPLE_IDS).toHaveLength(14);
+  it("contains all 14 Android sample directories", () => {
+    expect(ANDROID_IDS).toContain("model-viewer");
+    expect(ANDROID_IDS).toContain("ar-model-viewer");
+    expect(ANDROID_IDS).toContain("ar-augmented-image");
+    expect(ANDROID_IDS).toContain("ar-cloud-anchor");
+    expect(ANDROID_IDS).toContain("ar-point-cloud");
+    expect(ANDROID_IDS).toContain("gltf-camera");
+    expect(ANDROID_IDS).toContain("camera-manipulator");
+    expect(ANDROID_IDS).toContain("autopilot-demo");
+    expect(ANDROID_IDS).toContain("physics-demo");
+    expect(ANDROID_IDS).toContain("dynamic-sky");
+    expect(ANDROID_IDS).toContain("line-path");
+    expect(ANDROID_IDS).toContain("text-labels");
+    expect(ANDROID_IDS).toContain("reflection-probe");
+    expect(ANDROID_IDS).toContain("post-processing");
+    expect(ANDROID_IDS).toHaveLength(14);
+  });
+
+  it("contains all 8 iOS samples", () => {
+    expect(IOS_IDS).toContain("ios-model-viewer");
+    expect(IOS_IDS).toContain("ios-ar-model-viewer");
+    expect(IOS_IDS).toContain("ios-ar-augmented-image");
+    expect(IOS_IDS).toContain("ios-geometry-shapes");
+    expect(IOS_IDS).toContain("ios-lighting");
+    expect(IOS_IDS).toContain("ios-physics");
+    expect(IOS_IDS).toContain("ios-text-labels");
+    expect(IOS_IDS).toContain("ios-video-player");
+    expect(IOS_IDS).toHaveLength(8);
+  });
+
+  it("has 22 total samples (14 Android + 8 iOS)", () => {
+    expect(SAMPLE_IDS).toHaveLength(22);
   });
 
   it("SAMPLE_IDS matches keys of SAMPLES", () => {
@@ -25,8 +44,8 @@ describe("SAMPLE_IDS", () => {
   });
 });
 
-describe("every sample", () => {
-  for (const id of SAMPLE_IDS) {
+describe("every Android sample", () => {
+  for (const id of ANDROID_IDS) {
     const sample = SAMPLES[id];
 
     it(`${id}: has all required fields`, () => {
@@ -53,49 +72,95 @@ describe("every sample", () => {
   }
 });
 
-describe("AR samples", () => {
-  const arIds = SAMPLE_IDS.filter((id) => SAMPLES[id].tags.includes("ar"));
+describe("every iOS sample", () => {
+  for (const id of IOS_IDS) {
+    const sample = SAMPLES[id];
 
-  it("all AR samples use arsceneview dependency", () => {
-    for (const id of arIds) {
+    it(`${id}: has all required fields`, () => {
+      expect(sample.id).toBe(id);
+      expect(sample.title).toBeTruthy();
+      expect(sample.description).toBeTruthy();
+      expect(sample.tags.length).toBeGreaterThan(0);
+      expect(sample.tags).toContain("ios");
+      expect(sample.tags).toContain("swift");
+      expect(sample.prompt).toBeTruthy();
+      expect(sample.code).toBeTruthy();
+    });
+
+    it(`${id}: language is swift`, () => {
+      expect(sample.language).toBe("swift");
+    });
+
+    it(`${id}: code contains Swift markers`, () => {
+      expect(sample.code).toContain("import SwiftUI");
+      expect(sample.code).toContain("import SceneViewSwift");
+    });
+
+    it(`${id}: has SPM dependency URL`, () => {
+      expect(sample.spmDependency).toBe("https://github.com/SceneView/sceneview");
+    });
+  }
+});
+
+describe("AR samples", () => {
+  const androidArIds = ANDROID_IDS.filter((id) => SAMPLES[id].tags.includes("ar"));
+  const iosArIds = IOS_IDS.filter((id) => SAMPLES[id].tags.includes("ar"));
+
+  it("all Android AR samples use arsceneview dependency", () => {
+    for (const id of androidArIds) {
       expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.3.0");
     }
   });
 
-  it("all AR samples contain ARScene in code", () => {
-    for (const id of arIds) {
+  it("all Android AR samples contain ARScene in code", () => {
+    for (const id of androidArIds) {
       expect(SAMPLES[id].code).toContain("ARScene");
     }
   });
 
-  it("all AR samples have the 'ar' tag", () => {
-    for (const id of arIds) {
-      expect(SAMPLES[id].tags).toContain("ar");
+  it("all iOS AR samples contain ARSceneView in code", () => {
+    for (const id of iosArIds) {
+      expect(SAMPLES[id].code).toContain("ARSceneView");
     }
   });
 
-  it("has 4 AR samples matching real sample directories", () => {
-    expect(arIds).toHaveLength(4);
+  it("has 4 Android AR samples", () => {
+    expect(androidArIds).toHaveLength(4);
+  });
+
+  it("has 2 iOS AR samples", () => {
+    expect(iosArIds).toHaveLength(2);
   });
 });
 
 describe("3D samples", () => {
-  const d3Ids = SAMPLE_IDS.filter((id) => SAMPLES[id].tags.includes("3d"));
+  const android3dIds = ANDROID_IDS.filter((id) => SAMPLES[id].tags.includes("3d"));
+  const ios3dIds = IOS_IDS.filter((id) => SAMPLES[id].tags.includes("3d"));
 
-  it("all 3D samples use sceneview dependency", () => {
-    for (const id of d3Ids) {
+  it("all Android 3D samples use sceneview dependency", () => {
+    for (const id of android3dIds) {
       expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.3.0");
     }
   });
 
-  it("all 3D samples contain Scene in code", () => {
-    for (const id of d3Ids) {
+  it("all Android 3D samples contain Scene in code", () => {
+    for (const id of android3dIds) {
       expect(SAMPLES[id].code).toContain("Scene(");
     }
   });
 
-  it("has 10 pure-3D samples", () => {
-    expect(d3Ids).toHaveLength(10);
+  it("all iOS 3D samples contain SceneView in code", () => {
+    for (const id of ios3dIds) {
+      expect(SAMPLES[id].code).toContain("SceneView");
+    }
+  });
+
+  it("has 10 Android pure-3D samples", () => {
+    expect(android3dIds).toHaveLength(10);
+  });
+
+  it("has 6 iOS 3D samples", () => {
+    expect(ios3dIds).toHaveLength(6);
   });
 });
 
@@ -105,6 +170,13 @@ describe("getSample", () => {
     expect(s).toBeDefined();
     expect(s!.id).toBe("model-viewer");
     expect(s!.title).toBe("3D Model Viewer");
+  });
+
+  it("returns an iOS sample by ID", () => {
+    const s = getSample("ios-model-viewer");
+    expect(s).toBeDefined();
+    expect(s!.id).toBe("ios-model-viewer");
+    expect(s!.language).toBe("swift");
   });
 
   it("returns undefined for an unknown ID", () => {
@@ -124,26 +196,25 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'ar' returns only AR samples", () => {
     const results = filterByTag("ar");
-    expect(results.length).toBeGreaterThan(0);
+    expect(results.length).toBe(6); // 4 Android + 2 iOS
     results.forEach((s) => expect(s.tags).toContain("ar"));
   });
 
   it("tag '3d' returns only 3D samples", () => {
     const results = filterByTag("3d");
-    expect(results.length).toBeGreaterThan(0);
+    expect(results.length).toBe(16); // 10 Android + 6 iOS
     results.forEach((s) => expect(s.tags).toContain("3d"));
   });
 
-  it("tag 'physics' returns only the physics-demo sample", () => {
+  it("tag 'physics' returns physics samples", () => {
     const results = filterByTag("physics");
-    expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("physics-demo");
+    expect(results).toHaveLength(2); // Android + iOS
+    expect(results.map((s) => s.id).sort()).toEqual(["ios-physics", "physics-demo"]);
   });
 
-  it("tag 'image-tracking' returns only augmented image sample", () => {
+  it("tag 'image-tracking' returns augmented image samples", () => {
     const results = filterByTag("image-tracking");
-    expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("ar-augmented-image");
+    expect(results).toHaveLength(2); // Android + iOS
   });
 
   it("tag 'reflection' returns only reflection-probe sample", () => {
@@ -156,6 +227,30 @@ describe("tag filtering (simulating list_samples tool)", () => {
     const results = filterByTag("anchor");
     expect(results.length).toBeGreaterThan(0);
     results.forEach((s) => expect(s.tags).toContain("anchor"));
+  });
+
+  it("tag 'ios' returns only iOS samples", () => {
+    const results = filterByTag("ios");
+    expect(results).toHaveLength(8);
+    results.forEach((s) => expect(s.language).toBe("swift"));
+  });
+
+  it("tag 'swift' returns only Swift samples", () => {
+    const results = filterByTag("swift");
+    expect(results).toHaveLength(8);
+    results.forEach((s) => expect(s.language).toBe("swift"));
+  });
+
+  it("tag 'video' returns video samples", () => {
+    const results = filterByTag("video");
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe("ios-video-player");
+  });
+
+  it("tag 'lighting' returns lighting samples", () => {
+    const results = filterByTag("lighting");
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe("ios-lighting");
   });
 
   it("unknown tag returns empty array", () => {
