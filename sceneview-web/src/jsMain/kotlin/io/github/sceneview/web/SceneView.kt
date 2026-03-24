@@ -44,6 +44,27 @@ class SceneView private constructor(
     private val models = mutableListOf<FilamentAsset>()
     private var assetLoader: AssetLoader? = null
 
+    /** Orbit camera controller — initialized when cameraControls is enabled. */
+    var cameraController: OrbitCameraController? = null
+        private set
+
+    /** Enable orbit camera controls (mouse drag to orbit, scroll to zoom, touch support). */
+    fun enableCameraControls(
+        distance: Double = 5.0,
+        targetX: Double = 0.0,
+        targetY: Double = 0.0,
+        targetZ: Double = 0.0,
+        autoRotate: Boolean = false
+    ): OrbitCameraController {
+        val controller = OrbitCameraController(canvas, camera).apply {
+            this.distance = distance
+            target(targetX, targetY, targetZ)
+            this.autoRotate = autoRotate
+        }
+        cameraController = controller
+        return controller
+    }
+
     companion object {
         /**
          * Initialize Filament WASM and create a SceneView instance.
@@ -203,6 +224,9 @@ class SceneView private constructor(
     private fun renderLoop(timestamp: Double) {
         if (!isRunning) return
 
+        // Update orbit camera
+        cameraController?.update()
+
         // Update animations
         models.forEach { asset ->
             asset.animator?.let { animator ->
@@ -232,6 +256,8 @@ class SceneViewBuilder(private val sceneView: SceneView) {
     private val modelConfigs = mutableListOf<ModelConfig>()
     private var iblUrl: String? = null
     private var skyboxUrl: String? = null
+    private var cameraControlsEnabled = true
+    private var autoRotateEnabled = false
 
     /** Configure the camera. */
     fun camera(block: CameraConfig.() -> Unit) {
@@ -254,12 +280,32 @@ class SceneViewBuilder(private val sceneView: SceneView) {
         this.skyboxUrl = skyboxUrl
     }
 
+    /** Enable orbit camera controls (drag to orbit, scroll to zoom, touch). Enabled by default. */
+    fun cameraControls(enabled: Boolean = true) {
+        cameraControlsEnabled = enabled
+    }
+
+    /** Enable auto-rotation of the camera around the target. */
+    fun autoRotate(enabled: Boolean = true) {
+        autoRotateEnabled = enabled
+    }
+
     internal fun apply() {
         cameraConfig?.applyTo(sceneView.camera)
         lightConfig?.let { sceneView.addLight(it) }
         iblUrl?.let { sceneView.loadEnvironment(it, skyboxUrl) }
         modelConfigs.forEach { config ->
             sceneView.loadModel(config.url, config.onLoaded)
+        }
+        if (cameraControlsEnabled) {
+            val cam = cameraConfig
+            sceneView.enableCameraControls(
+                distance = cam?.eyeZ ?: 5.0,
+                targetX = cam?.targetX ?: 0.0,
+                targetY = cam?.targetY ?: 0.0,
+                targetZ = cam?.targetZ ?: 0.0,
+                autoRotate = autoRotateEnabled
+            )
         }
     }
 }
