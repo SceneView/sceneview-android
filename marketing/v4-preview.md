@@ -12,12 +12,37 @@
 | **3.0** | Compose rewrite | Nodes become composables — "3D is just Compose UI" |
 | **3.1** | Stability + DX | `rememberModelInstance`, camera manipulator, gesture polish |
 | **3.2** | Physics & Spatial UI | `PhysicsNode`, `DynamicSkyNode`, `FogNode`, `LineNode`, `TextNode`, `ReflectionProbeNode`, post-processing |
-| **4.0** | Multi-scene, portals, XR | The release that makes SceneView a platform |
+| **3.3.0** | **Cross-platform** | iOS/macOS/visionOS via SceneViewSwift (16 node types), MCP server, AI-first SDK |
+| **4.0** | Multi-scene, portals, XR | The release that makes SceneView a cross-platform standard |
 
 Each release has expanded what's possible without changing the core principle:
-**nodes are composables, state drives the scene, lifecycle is automatic.**
+**nodes are declarative UI, state drives the scene, lifecycle is automatic.**
 
-v4.0 continues that trajectory — but the scope jumps significantly.
+v3.3.0 proved the cross-platform architecture works — native renderers (Filament + RealityKit), shared logic (KMP), consistent developer experience. v4.0 builds on that foundation.
+
+---
+
+## What v3.3.0 already delivers (the cross-platform foundation)
+
+### Android (Stable)
+- 26+ composable node types
+- Google Filament 1.70 — PBR, HDR, 60fps
+- Full ARCore integration
+- Post-processing: bloom, DOF, SSAO, fog
+- MCP server for AI-assisted development
+
+### iOS / macOS / visionOS (Alpha)
+- **16 node types** built on RealityKit: ModelNode, GeometryNode, LightNode, CameraNode, MeshNode, DynamicSkyNode, FogNode, ReflectionProbeNode, PhysicsNode, LineNode, PathNode, TextNode, BillboardNode, ImageNode, VideoNode, AugmentedImageNode
+- SwiftUI-native API matching Android patterns
+- ARKit integration via ARSceneView
+- Swift Package Manager installation (`from: "3.3.0"`)
+- iOS 17+ / macOS 14+ / visionOS 1+
+
+### Shared (KMP Core)
+- Math, collision, geometry, animation algorithms
+- Physics simulation
+- Scene graph logic
+- commonMain → Android + XCFramework (Apple)
 
 ---
 
@@ -25,14 +50,13 @@ v4.0 continues that trajectory — but the scope jumps significantly.
 
 ### Multiple `Scene {}` composables on one screen
 
-Today, you get one `Scene` per screen. In 4.0, multiple independent scenes share a single
-Filament `Engine`, each with its own camera, environment, and node tree.
+Today, you get one `Scene` per screen. In 4.0, multiple independent scenes share resources, each with its own camera, environment, and node tree.
 
+**Android:**
 ```kotlin
 @Composable
 fun DashboardScreen() {
     Column {
-        // Product hero — rotating model with HDR environment
         Scene(
             modifier = Modifier.fillMaxWidth().height(300.dp),
             engine = engine,
@@ -41,52 +65,57 @@ fun DashboardScreen() {
             ModelNode(modelInstance = product, scaleToUnits = 1.0f)
         }
 
-        // Inline data globe — different camera, different lighting
         Scene(
             modifier = Modifier.size(200.dp),
-            engine = engine,  // same engine, shared GPU resources
+            engine = engine,
             environment = darkEnvironment
         ) {
             SphereNode(radius = 0.5f, materialInstance = globeMaterial)
-            dataPoints.forEach { point ->
-                CubeNode(
-                    position = point.position,
-                    size = Size(0.02f),
-                    materialInstance = point.material
-                )
-            }
         }
 
-        // Rest of the dashboard — standard Compose
-        LazyColumn { /* cards, charts, text */ }
+        LazyColumn { /* regular content */ }
     }
 }
 ```
 
-**Why it matters:** Dashboards, e-commerce feeds, social timelines — anywhere you want
-multiple 3D elements on the same screen without a single `Scene` owning the full viewport.
-Each scene is just another composable in your layout. Mix freely with `LazyColumn`, `Pager`,
-`BottomSheet` — whatever your app needs.
+**iOS:**
+```swift
+struct DashboardView: View {
+    var body: some View {
+        VStack {
+            SceneView {
+                ModelNode(named: "product.usdz")
+            }
+            .frame(height: 300)
+
+            SceneView {
+                GeometryNode(.sphere(radius: 0.5))
+            }
+            .frame(width: 200, height: 200)
+
+            List { /* regular content */ }
+        }
+    }
+}
+```
+
+**Why it matters:** Dashboards, e-commerce feeds, social timelines — anywhere you want multiple 3D elements without a single Scene owning the full viewport. Works on both platforms.
 
 ---
 
 ### `PortalNode` — a scene inside a scene
 
-Render a secondary scene inside a 3D frame. Think of it as a window into another world,
-placed inside your current scene.
+Render a secondary scene inside a 3D frame. Think of it as a window into another world.
 
 ```kotlin
 Scene(modifier = Modifier.fillMaxSize()) {
-    // The real world (or your main 3D scene)
     ModelNode(modelInstance = room, scaleToUnits = 2.0f)
 
-    // A portal on the wall — look through it into a different scene
     PortalNode(
         position = Position(0f, 1.5f, -2f),
         size = Size(1.2f, 1.8f),
-        scene = portalScene  // independent scene with its own environment
+        scene = portalScene
     ) {
-        // Inside the portal: different lighting, different world
         ModelNode(modelInstance = fantasyLandscape, scaleToUnits = 5.0f)
         DynamicSkyNode(sunPosition = Position(0.2f, 0.8f, 0.3f))
         FogNode(density = 0.05f, color = Color(0.6f, 0.7f, 1.0f))
@@ -94,150 +123,85 @@ Scene(modifier = Modifier.fillMaxSize()) {
 }
 ```
 
-**Use cases:**
-- AR portals — look through a "window" in your room into a virtual space
-- Product showcases — each product in its own lighting environment
-- Games — level transitions, dimensional rifts
-- Real estate — stand in one room, see another through the portal
+**Use cases:** AR portals, product showcases with custom lighting, game level transitions, real estate walkthroughs.
 
 ---
 
-### SceneView-XR — Android XR & spatial computing
+### Spatial computing: Android XR + visionOS
 
-A new module for Android XR (spatial computing headsets and passthrough AR).
-Same composable API, now in spatial environments.
-
+**Android XR:**
 ```kotlin
 // New module
 implementation("io.github.sceneview:sceneview-xr:4.0.0")
-```
 
-```kotlin
-// Same familiar pattern — now in spatial computing
 XRScene(modifier = Modifier.fillMaxSize()) {
-    // Content placed in the user's physical space
     ModelNode(
         modelInstance = furniture,
         scaleToUnits = 1.0f,
-        position = Position(0f, 0f, -2f)  // 2 meters in front
+        position = Position(0f, 0f, -2f)
     )
-
-    // Spatial UI — Compose panels floating in space
     ViewNode(position = Position(0.5f, 1.5f, -1.5f)) {
-        Card {
-            Text("Tap to customize")
-            ColorPicker(onColorSelected = { color -> /* update material */ })
-        }
+        Card { Text("Tap to customize") }
     }
 }
 ```
 
-**Why it matters:** Android XR is Google's push into spatial computing. SceneView-XR means
-your existing 3D/AR skills and code patterns transfer directly. No new paradigm to learn.
-The same `ModelNode`, `LightNode`, `ViewNode` composables — just placed in spatial space.
+**visionOS:** SceneViewSwift already targets visionOS. v4.0 adds immersive space support and spatial anchor integration.
+
+**Why it matters:** Your 3D skills transfer to headsets on both ecosystems. Same `ModelNode`, `LightNode`, `ViewNode` — just placed in spatial space.
+
+---
+
+### Deeper iOS parity
+
+v4.0 closes more gaps between Android and iOS:
+- More node types on iOS (approaching Android's 26+)
+- Cross-framework bridges: Flutter plugin, React Native module wrapping SceneViewSwift
+- Tighter KMP core integration — more shared algorithms
 
 ---
 
 ### Filament 2.x migration
 
-When Filament 2.x stabilizes, SceneView 4.0 will adopt it for:
-- Improved rendering performance
-- Better material system
-- New shader capabilities
-- Reduced memory footprint
-
-This is transparent to SceneView users — the composable API stays the same.
-
----
-
-### Kotlin Multiplatform — already shipping
-
-SceneView already supports iOS via the SceneViewSwift package (SwiftUI + RealityKit + ARKit),
-with a shared Kotlin Multiplatform core (sceneview-core) providing cross-platform math, collision,
-animation, and geometry. v4.0 deepens this integration with more shared logic and tighter
-platform parity.
-
----
-
-## What v3.x already delivers (and v4.0 builds on)
-
-For developers evaluating SceneView today, here's the current feature set you get
-immediately with v3.3.0:
-
-### Rendering
-- Physically-based rendering via Filament 1.70
-- HDR environment lighting (`.hdr`, `.ktx`)
-- Dynamic shadows, ambient occlusion
-- Post-processing: bloom, depth-of-field, SSAO, fog
-- 60fps on mid-range devices
-
-### 3D nodes (all composable)
-- `ModelNode` — glTF/GLB with animations, gestures
-- `CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode` — geometry primitives
-- `LightNode` — sun, point, spot, directional
-- `DynamicSkyNode` — time-of-day sun positioning
-- `FogNode` — atmospheric fog
-- `ReflectionProbeNode` — local cubemap reflections
-- `ImageNode`, `VideoNode` (with chromakey)
-- `ViewNode` — any Composable rendered in 3D space
-- `TextNode`, `BillboardNode` — camera-facing text and labels
-- `LineNode`, `PathNode` — 3D polylines and paths
-- `PhysicsNode` — rigid body simulation
-- `CameraNode`, `MeshNode`, `Node` (grouping)
-
-### AR (ARScene composable)
-- Plane detection with persistent mesh rendering
-- Image detection and tracking
-- Face mesh tracking and augmentation
-- Cloud anchors (cross-device)
-- Environmental HDR lighting
-- Streetscape geometry (city-scale 3D)
-- Geospatial API support
-
-### Developer experience
-- `remember*` for all resources — automatic lifecycle
-- Thread-safe model loading
-- Orbit/pan/zoom camera in one line
-- Multi-touch gestures built into nodes
-- MCP server for AI-assisted development
-- 15 working sample apps
+When Filament 2.x stabilizes, SceneView 4.0 will adopt it for improved rendering, better materials, and reduced memory. Transparent to users — the composable API stays the same.
 
 ---
 
 ## The v4.0 vision
 
-SceneView started as "make 3D easy on mobile." v3.0 proved that 3D could work like Compose.
-v3.2 added physics, atmosphere, and spatial UI.
+SceneView started as "make 3D easy on Android." v3.0 proved that 3D could work like Compose. v3.2 added physics, atmosphere, and spatial UI. v3.3.0 went cross-platform.
 
-v4.0 is about removing the last limitations:
+v4.0 removes the last limitations:
 
 | Limitation today | v4.0 solution |
 |---|---|
-| One Scene per screen | Multiple independent Scenes |
+| One Scene per screen | Multiple independent Scenes (both platforms) |
 | Flat scene graph | `PortalNode` — scenes within scenes |
-| Separate iOS package | Deeper KMP integration |
-| Phone/tablet only | `SceneView-XR` for spatial computing |
-| Filament 1.x | Filament 2.x (when stable) |
+| Phone/tablet only | Android XR + visionOS spatial computing |
+| iOS at 16 nodes | Approaching Android parity |
+| Separate framework ecosystems | Flutter/React Native bridges via SceneViewSwift |
 
-The goal: **SceneView becomes the standard way to do 3D on Android and iOS** — from a product
-thumbnail to a spatial computing experience, all with native platform APIs.
+The goal: **SceneView becomes the standard way to do 3D on mobile and spatial platforms** — from a product thumbnail to a headset experience, all with native APIs.
 
 ---
 
 ## Timeline
 
-v4.0 is on the [roadmap](https://github.com/SceneView/sceneview/blob/main/ROADMAP.md)
-as the next major release following the 3.x feature series. Follow the repo for updates.
+v4.0 is on the [roadmap](https://github.com/SceneView/sceneview/blob/main/ROADMAP.md) as the next major release. Follow the repo for updates.
 
-**You don't need to wait for 4.0.** Everything in v3.3.0 is production-ready today.
-v4.0 adds capabilities on top — it doesn't replace anything.
+**You don't need to wait for 4.0.** Everything in v3.3.0 is production-ready on Android and usable (alpha) on iOS today. v4.0 adds capabilities on top — it doesn't replace anything.
 
+**Android:**
 ```gradle
-// Start building today
 implementation("io.github.sceneview:sceneview:3.3.0")
 implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
+**iOS / macOS / visionOS:**
+```swift
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+```
+
 ---
 
-*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — the #1 3D & AR SDK for Android and iOS*
+*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — the #1 cross-platform 3D & AR SDK*

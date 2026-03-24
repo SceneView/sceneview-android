@@ -1,12 +1,12 @@
 # PhysicsNode — Real-Time 3D Physics in 10 Lines of Compose
 
-*Tags: Android, JetpackCompose, Physics, Kotlin, 3D*
+*Tags: Android, iOS, JetpackCompose, SwiftUI, Physics, Kotlin, Swift, 3D*
 
 ---
 
-Here's a challenge: add real-time gravity, bouncing balls, and floor collision to a 3D Android scene — no third-party physics engine, no C++ code, no XML.
+Here's a challenge: add real-time gravity, bouncing balls, and floor collision to a 3D scene — no third-party physics engine, no C++ code, no XML.
 
-With SceneView 3.2, it's 10 lines of Compose.
+With SceneView 3.3.0, it's 10 lines of Compose on Android — and just as simple on iOS with SwiftUI and RealityKit.
 
 ## The result
 
@@ -25,7 +25,7 @@ By the end of this article, you'll have a scene where:
 implementation("io.github.sceneview:sceneview:3.3.0")
 ```
 
-No extra physics libraries. No JNI dependencies. Physics is implemented in pure Kotlin — Euler integration, ~160 lines of code, zero overhead when a body is asleep.
+No extra physics libraries. No JNI dependencies. On Android, physics is implemented in pure Kotlin — Euler integration, ~160 lines of code, zero overhead when a body is asleep. On iOS, `PhysicsNode` leverages RealityKit's built-in physics engine for native Metal-accelerated simulation.
 
 ## The complete scene
 
@@ -154,6 +154,32 @@ modelInstance?.let { instance ->
 
 `PhysicsNode` works on any `Node` subclass — spheres, cubes, GLB models, even `TextNode`s.
 
+## iOS: PhysicsNode with RealityKit
+
+On iOS, `PhysicsNode` wraps RealityKit's native physics engine. The API follows the same pattern:
+
+```swift
+import SceneViewSwift
+
+struct PhysicsDemoView: View {
+    var body: some View {
+        SceneView {
+            // Floor
+            GeometryNode(.box(width: 6, height: 0.1, depth: 6))
+                .position(y: -0.05)
+
+            // Bouncing ball with physics
+            PhysicsNode(mass: 1.0, restitution: 0.65) {
+                GeometryNode(.sphere(radius: 0.15))
+                    .position(y: 2.5)
+            }
+        }
+    }
+}
+```
+
+RealityKit handles the physics simulation natively on Metal — collision detection, gravity, and bounce are all GPU-accelerated. Same concept as Android, native performance on Apple hardware.
+
 ### Elevated floor
 
 The `floorY` parameter places the collision plane anywhere in world space:
@@ -178,4 +204,4 @@ git clone https://github.com/SceneView/sceneview
 
 *Next: [TextNode & BillboardNode — Adding Labels to Your AR Scene →](#)*
 
-*SceneView is open-source (MIT License). Star the repo if this was useful: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)*
+*SceneView is open-source (Apache 2.0). Now cross-platform: Android + iOS + macOS + visionOS. Star the repo if this was useful: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)*
