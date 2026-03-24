@@ -570,7 +570,16 @@ const SWIFT_RULES: Rule[] = [
   },
 ];
 
-function detectLanguage(code: string): "kotlin" | "swift" {
+function detectLanguage(code: string): "kotlin" | "swift" | "kotlin-js" {
+  // Heuristic: detect web/Kotlin-JS code
+  if (
+    code.includes("io.github.sceneview.web") ||
+    code.includes("kotlinx.browser") ||
+    code.includes("HTMLCanvasElement") ||
+    code.includes("SceneView.create(")
+  ) {
+    return "kotlin-js";
+  }
   // Heuristic: if the code has Swift markers, validate as Swift
   if (
     code.includes("import SwiftUI") ||
@@ -585,11 +594,85 @@ function detectLanguage(code: string): "kotlin" | "swift" {
   return "kotlin";
 }
 
+// ─── Web (Kotlin/JS) validation rules ────────────────────────────────────────
+
+const WEB_RULES: Rule[] = [
+  {
+    id: "web/missing-canvas-null-check",
+    severity: "warning",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      if (code.includes("getElementById") && !code.includes("as?") && !code.includes("?: ") && !code.includes("== null")) {
+        findLines(lines, /getElementById/).forEach((line) =>
+          issues.push({
+            severity: "warning",
+            rule: "web/missing-canvas-null-check",
+            message: "Canvas element lookup should include a null check. Use `as? HTMLCanvasElement` with a null guard.",
+            line,
+          })
+        );
+      }
+      return issues;
+    },
+  },
+  {
+    id: "web/missing-canvas-resize",
+    severity: "info",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      if (code.includes("SceneView.create(") && !code.includes("clientWidth") && !code.includes("resize")) {
+        issues.push({
+          severity: "info",
+          rule: "web/missing-canvas-resize",
+          message: "Canvas should be sized before creating SceneView. Set `canvas.width = canvas.clientWidth` and `canvas.height = canvas.clientHeight` before `SceneView.create()`. Or enable `autoResize` (on by default).",
+        });
+      }
+      return issues;
+    },
+  },
+  {
+    id: "web/ar-not-supported",
+    severity: "error",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      if (code.includes("ARScene") || code.includes("ARSceneView")) {
+        findLines(lines, /ARScene|ARSceneView/).forEach((line) =>
+          issues.push({
+            severity: "error",
+            rule: "web/ar-not-supported",
+            message: "AR is not supported on the web platform. SceneView Web only supports 3D scenes (no camera/sensor access in browsers). Use `SceneView.create()` for 3D-only web rendering.",
+            line,
+          })
+        );
+      }
+      return issues;
+    },
+  },
+  {
+    id: "web/missing-start-rendering",
+    severity: "warning",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      if (code.includes("SceneView.create(") && !code.includes("startRendering")) {
+        issues.push({
+          severity: "warning",
+          rule: "web/missing-start-rendering",
+          message: "Don't forget to call `sceneView.startRendering()` in the `onReady` callback to start the render loop.",
+        });
+      }
+      return issues;
+    },
+  },
+];
+
 export function validateCode(code: string): ValidationIssue[] {
   const lines = code.split("\n");
   const lang = detectLanguage(code);
   if (lang === "swift") {
     return SWIFT_RULES.flatMap((rule) => rule.check(code, lines));
+  }
+  if (lang === "kotlin-js") {
+    return WEB_RULES.flatMap((rule) => rule.check(code, lines));
   }
   return RULES.flatMap((rule) => rule.check(code, lines));
 }

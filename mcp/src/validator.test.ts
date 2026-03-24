@@ -383,3 +383,88 @@ describe("formatValidationReport", () => {
     expect(report).toMatch(/line \d+/);
   });
 });
+
+// ─── Web (Kotlin/JS) validation rules ──────────────────────────────────────
+
+describe("web/ar-not-supported", () => {
+  const RULE = "web/ar-not-supported";
+
+  it("fires when ARScene used in web code", () => {
+    const code = `
+import io.github.sceneview.web.SceneView
+import kotlinx.browser.document
+ARScene(modifier = Modifier.fillMaxSize())
+`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does not fire for 3D-only web code", () => {
+    const code = `
+import io.github.sceneview.web.SceneView
+import kotlinx.browser.document
+SceneView.create(canvas = canvas, configure = {})
+`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+describe("web/missing-start-rendering", () => {
+  const RULE = "web/missing-start-rendering";
+
+  it("fires when SceneView.create used without startRendering", () => {
+    const code = `
+import io.github.sceneview.web.SceneView
+SceneView.create(canvas = canvas, configure = {}, onReady = { })
+`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does not fire when startRendering is called", () => {
+    const code = `
+import io.github.sceneview.web.SceneView
+SceneView.create(canvas = canvas, configure = {}, onReady = { it.startRendering() })
+`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+describe("web/missing-canvas-resize", () => {
+  const RULE = "web/missing-canvas-resize";
+
+  it("fires when canvas not sized before SceneView.create", () => {
+    const code = `
+import io.github.sceneview.web.SceneView
+val canvas = document.getElementById("c") as HTMLCanvasElement
+SceneView.create(canvas = canvas, configure = {}, onReady = { it.startRendering() })
+`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does not fire when clientWidth is used", () => {
+    const code = `
+import io.github.sceneview.web.SceneView
+val canvas = document.getElementById("c") as HTMLCanvasElement
+canvas.width = canvas.clientWidth
+SceneView.create(canvas = canvas, configure = {}, onReady = { it.startRendering() })
+`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+describe("web language detection", () => {
+  it("detects kotlin-js from sceneview.web import", () => {
+    const code = `import io.github.sceneview.web.SceneView`;
+    // Should not trigger Android-only rules
+    expect(hasRule(code, "threading/filament-off-main-thread")).toBe(false);
+  });
+
+  it("detects kotlin-js from kotlinx.browser import", () => {
+    const code = `
+import kotlinx.browser.document
+val canvas = document.getElementById("c") as HTMLCanvasElement
+SceneView.create(canvas = canvas, configure = {}, onReady = { it.startRendering() })
+`;
+    // Should trigger web rules, not Android rules
+    expect(hasRule(code, "web/missing-canvas-resize")).toBe(true);
+  });
+});

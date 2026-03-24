@@ -53,3 +53,10 @@ DerivedData/
 # Environment files
 .env
 .env.local
+website/build/
+website/node_modules/
+website/.gradle/
+
+# Module build artifacts
+sceneview-web/build/
+sceneview-desktop/build/

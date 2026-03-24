@@ -58,19 +58,23 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 | `samples/line-path` | 3D polylines, Lissajous curves, amplitude/frequency |
 | `samples/text-labels` | 3D text, planet labels, tap interaction |
 | `samples/sceneview-demo` | Play Store demo app, 4-tab Material 3 Expressive |
+| `samples/tv-model-viewer` | Android TV 3D viewer, D-pad controls |
+| `samples/web-model-viewer` | Web 3D viewer using Filament.js (WASM) |
+| `samples/ios-demo` | iOS App Store demo app, 3-tab SwiftUI |
 
 ## Module structure
 
 | Module | Purpose |
 |---|---|
-| `sceneview-core/` | KMP module — portable collision, math, geometry, animation, physics (commonMain/androidMain/iosMain) |
+| `sceneview-core/` | KMP module — portable collision, math, geometry, animation, physics (commonMain/androidMain/iosMain/jsMain) |
 | `sceneview/` | Android 3D library — `Scene`, `SceneScope`, all node types (Filament renderer) |
 | `arsceneview/` | Android AR layer — `ARScene`, `ARSceneScope`, ARCore integration |
+| `sceneview-web/` | Web 3D library — Kotlin/JS + Filament.js (same engine as Android, WebGL2/WASM) |
 | `SceneViewSwift/` | Apple 3D+AR library — `SceneView`, `ARSceneView` (RealityKit renderer, iOS/macOS/visionOS) |
 | `samples/common/` | Shared helpers across sample apps |
 | `mcp/` | `@sceneview/mcp` — MCP server for AI assistant integration |
-| `flutter/` | Flutter plugin scaffold — PlatformView bridge to SceneView (Android + iOS) |
-| `react-native/` | React Native module scaffold — Fabric/Turbo bridge to SceneView |
+| `flutter/` | Flutter plugin — PlatformView bridge to SceneView (Android + iOS), with native rendering |
+| `react-native/` | React Native module — Fabric/Turbo bridge to SceneView (Android + iOS), with native rendering |
 
 ## Session continuity
 
@@ -81,9 +85,23 @@ Never say "everything is good" without verifying published packages.
 
 ### Current state (last updated: 2026-03-24)
 
-- **Active branch**: `main` (clean — all PRs merged)
-- **Latest release**: v3.3.0 (published: Maven Central ⏳ propagating, npm ✅, SPM ✅, GitHub Release ✅)
-- **What was done this session (2026-03-24)**:
+- **Active branch**: `feat/multi-platform-expansion` (branched from main)
+- **Latest release**: v3.3.0 (published: Maven Central ✅, npm ✅, SPM ✅, GitHub Release ✅)
+- **What was done this session (2026-03-24 evening)**:
+
+  Multi-platform expansion session:
+  - **sceneview-web** module: Kotlin/JS + Filament.js (WASM) — same engine as Android, for browser
+    - External bindings for filament-js npm package (Engine, Scene, View, Camera, Renderer, AssetLoader)
+    - SceneView DSL builder (camera, light, model, environment)
+    - sceneview-core JS target added (math, collision, geometry shared with web)
+  - **Android TV sample**: `samples/tv-model-viewer` — D-pad controls, model cycling, auto-rotation
+  - **iOS demo app**: `samples/ios-demo` — SwiftUI 3-tab app (3D, AR, Samples) for App Store
+  - **App Store workflow**: `.github/workflows/app-store.yml` — TestFlight CI/CD with certificate management
+  - **Release workflow updated**: sceneview-web npm publish added to release.yml
+  - **Flutter bridge completed**: Android (ComposeView + Scene composable), iOS (UIHostingController + SceneViewSwift)
+  - **React Native bridge completed**: Android (ComposeView + Scene), iOS (UIHostingController + SceneViewSwift)
+
+- **What was done previously (2026-03-24)**:
 
   Phase 1 — SceneViewSwift stabilization (COMPLETE):
   - New nodes: DynamicSkyNode, FogNode, ReflectionProbeNode, MeshNode
@@ -127,24 +145,37 @@ Never say "everything is good" without verifying published packages.
   - React Native module scaffold: `react-native/react-native-sceneview/` — TypeScript, Android ViewManager, iOS RCTViewManager
 
 - **What's next (for future sessions)**:
-  - **PRIORITY 1 — CREATE PR & MERGE TO MAIN**:
-    1. Run `gh pr create --base main --head claude/resume-sceneview-ios-PjPVi` with a summary of all 6 phases (28 commits)
-    2. If `gh` auth fails, print the URL for manual creation: `https://github.com/SceneView/sceneview/compare/main...claude/resume-sceneview-ios-PjPVi`
-    3. PR title: `feat: iOS SceneViewSwift stabilization, tests, docs, MCP, cross-framework scaffolds`
-    4. PR body should list all 6 phases with key highlights (see "What was done" above)
-    5. Once PR is created, merge it (squash or merge commit, maintainer's choice)
-  - Sync llms.txt across docs/docs/llms.txt and mcp/llms.txt
+  - **PRIORITY 1 — CREATE PR & MERGE `feat/multi-platform-expansion`**:
+    1. Run `gh pr create --base main --head feat/multi-platform-expansion`
+    2. PR title: `feat: multi-platform expansion — web (Filament.js), Android TV, iOS demo, Flutter/RN bridges`
+    3. Merge after review
+  - **PRIORITY 2 — Kobweb website** (branch: `feat/multi-platform-expansion`, sources in `website/`):
+    - **Architecture**: Kobweb (Compose HTML / Kotlin/JS) + model-viewer web component for live 3D
+    - **Now that sceneview-web exists**: use sceneview-web (Filament.js native) instead of model-viewer for the 3D demos — same engine as Android
+    - **Sources on disk** (13 Kotlin files):
+      - `website/src/jsMain/kotlin/.../pages/`: Index, Quickstart, Samples, Playground, Changelog
+      - `website/src/jsMain/kotlin/.../components/`: NavBar, Footer, Layout, CodeBlock, FeatureCard, PlatformTabs, Seo, ModelViewer
+      - `website/src/jsMain/kotlin/.../Theme.kt` + `AppEntry.kt`
+    - **Design**: Material Design 3 Expressive (28px radius, spring easing, tonal surfaces, Inter font)
+    - **SEO/LLM**: llms.txt, llms-full.txt, sitemap.xml, robots.txt, structured-data.json, per-page meta/OG/Twitter
+    - **Build config**: `website/build.gradle.kts`, `website/settings.gradle.kts`, `website/gradle/libs.versions.toml` (Kotlin 2.0.20, Kobweb 0.19.2)
+    - **Model**: DamagedHelmet.glb (Khronos CC0) in `website/src/jsMain/resources/public/models/`
+    - **Status**: scaffold built, M3 styled, model-viewer integrated, build passes (`kobwebExport`), needs assembly + deploy
+    - **Process commands**: `/sync-check` (pre-PR verification), `/release` (guided release workflow) — already on main
+  - Sync llms.txt across docs/docs/llms.txt and mcp/llms.txt (add web API)
   - Consider v3.4.0-alpha release tag
-  - Complete Flutter/React Native bridges (currently scaffolds with TODOs)
   - KMP core XCFramework: build and integrate into SceneViewSwift
   - visionOS spatial features (immersive spaces, hand tracking)
-  - **GitHub Pages migration** (after merging PR):
-    1. Check `SceneView/sceneview.github.io` for any content to preserve (CNAME, Dokka `/api/`, etc.)
-    2. If a `CNAME` file exists, copy it to `docs/docs/CNAME` in this repo
-    3. Repo Settings → Pages → Source → "GitHub Actions"
-    4. Trigger `workflow_dispatch` on `docs.yml` to verify the site builds correctly
-    5. Only after the native deployment works → archive `SceneView/sceneview.github.io`
-  - Play Store deployment (needs keystore + service account secrets)
+  - Compose Desktop module (Filament JNI on Windows/Linux/macOS)
+  - **GitHub Pages migration**:
+    1. Repo Settings → Pages → Source → "GitHub Actions"
+    2. Trigger `workflow_dispatch` on `docs.yml`
+  - **Store deployments** (need secrets):
+    - Play Store: `UPLOAD_KEYSTORE_BASE64`, `PLAY_STORE_SERVICE_ACCOUNT_JSON`
+    - App Store: `IOS_BUILD_CERTIFICATE_BASE64`, `APP_STORE_CONNECT_API_KEY`
+  - Publish sceneview-web to npm: `@sceneview/sceneview-web`
+  - Publish Flutter plugin to pub.dev
+  - Publish React Native module to npm
 
 - **Known constraints**:
   - Cannot push directly to `main` (proxy restriction, only claude/* branches)
@@ -177,6 +208,52 @@ After completing significant work, update the "Current state" block above with:
 2. A brief summary of what changed
 3. Any new decisions or design choices made
 4. Update the date
+
+---
+
+## Long-running session rules
+
+Based on [Anthropic harness design for long-running apps](https://www.anthropic.com/engineering/harness-design-long-running-apps).
+
+### Context management
+- **Read `.claude/handoff.md` at session start** — structured handoff artifact
+- **Update `.claude/handoff.md` at session end** — what was done, decisions, next steps
+- **Context resets > compaction** — when context gets long, start a fresh session with handoff
+- **Don't prematurely wrap up** — if approaching context limits, hand off cleanly instead
+
+### Separate generator from evaluator
+- **Never self-evaluate** — run `/evaluate` or `/review` as a separate step
+- Evaluators should be skeptical; generators should be creative
+- If any evaluation criterion scores 1-2/5, it's BLOCKING — fix before pushing
+
+### Sprint contracts
+- Before starting a feature chunk, define **what "done" looks like**
+- Use the sprint contract template in `.claude/handoff.md`
+- Prevents scope creep and ensures alignment
+
+### Decomposition
+- **One feature at a time** — break complex work into discrete chunks
+- Each chunk should compile, test, and be commitable independently
+- Don't attempt end-to-end execution of large features in one go
+
+### Criteria-driven quality
+- Use measurable criteria (compile? tests pass? review checklist?)
+- Weight criteria: Safety (3x) > Correctness (3x) > API consistency (2x) > Completeness (2x) > Minimality (1x)
+- Explicit > vague — "tests pass" beats "looks good"
+
+### Complexity hygiene
+- Every harness component encodes an assumption about model limitations
+- Regularly stress-test: does this hook/check still add value?
+- Remove scaffolding that newer model capabilities make unnecessary
+
+### Available evaluator commands
+| Command | Role |
+|---|---|
+| `/review` | Code review checklist (threading, Compose API, style) |
+| `/evaluate` | Independent quality assessment (5 criteria, weighted scores) |
+| `/test` | Test coverage audit |
+| `/sync-check` | Repo synchronization verification |
+| `/contribute` | Full contribution workflow |
 
 ---
 
@@ -217,9 +294,14 @@ Rationale:
 | Platform | Renderer | Framework | Status |
 |---|---|---|---|
 | Android | Filament | Jetpack Compose | Stable (v3.3.0) |
+| Android TV | Filament | Compose TV | Alpha (sample app) |
 | iOS | RealityKit | SwiftUI | Alpha (v3.3.0) |
 | macOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
 | visionOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
+| Web | Filament.js (WASM) | Kotlin/JS | Alpha (sceneview-web module) |
+| Flutter | Filament / RealityKit | PlatformView | Alpha (bridge implemented) |
+| React Native | Filament / RealityKit | Fabric | Alpha (bridge implemented) |
+| Desktop | Filament (JNI) | Compose Desktop | Planned |
 
 ### KMP core role
 

@@ -12,6 +12,20 @@ kotlin {
     iosSimulatorArm64()
     iosX64()
 
+    // Web target (JS/Browser, consumed by the sceneview-web module)
+    js(IR) {
+        browser()
+        binaries.library()
+    }
+
+    // WASM target planned — blocked by kotlin-math not supporting wasmJs yet.
+    // When kotlin-math adds wasmJs support, uncomment:
+    // @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    // wasmJs {
+    //     browser()
+    //     binaries.library()
+    // }
+
     applyDefaultHierarchyTemplate()
 
     sourceSets {

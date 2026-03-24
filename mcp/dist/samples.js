@@ -886,6 +886,90 @@ struct VideoPlayerScreen: View {
     }
 }`,
     },
+    // ── Web Samples (Kotlin/JS + Filament.js) ──────────────────────────────
+    "web-model-viewer": {
+        id: "web-model-viewer",
+        title: "Web 3D Model Viewer",
+        description: "Browser-based 3D model viewer using Filament.js (WebGL2/WASM) — same engine as SceneView Android",
+        tags: ["3d", "model", "web", "filament-js"],
+        dependency: "@sceneview/sceneview-web",
+        language: "kotlin-js",
+        prompt: "Create a browser-based 3D model viewer using SceneView Web (Kotlin/JS + Filament.js). Load a GLB model with camera and lighting.",
+        code: `import io.github.sceneview.web.SceneView
+import kotlinx.browser.document
+import kotlinx.browser.window
+import org.w3c.dom.HTMLCanvasElement
+
+fun main() {
+    val canvas = document.getElementById("scene-canvas") as HTMLCanvasElement
+    canvas.width = canvas.clientWidth
+    canvas.height = canvas.clientHeight
+
+    SceneView.create(
+        canvas = canvas,
+        configure = {
+            camera {
+                eye(0.0, 1.5, 5.0)
+                target(0.0, 0.0, 0.0)
+                fov(45.0)
+            }
+            light {
+                directional()
+                intensity(100_000.0)
+                direction(0.0f, -1.0f, -0.5f)
+            }
+            model("models/DamagedHelmet.glb")
+        },
+        onReady = { sceneView ->
+            sceneView.startRendering()
+
+            window.addEventListener("resize", {
+                canvas.width = canvas.clientWidth
+                canvas.height = canvas.clientHeight
+            })
+        }
+    )
+}`,
+    },
+    "web-environment": {
+        id: "web-environment",
+        title: "Web Environment Lighting",
+        description: "Browser 3D scene with IBL environment lighting and skybox from KTX files",
+        tags: ["3d", "environment", "web", "filament-js", "lighting"],
+        dependency: "@sceneview/sceneview-web",
+        language: "kotlin-js",
+        prompt: "Create a browser 3D viewer with HDR environment lighting (IBL + skybox) using SceneView Web and Filament.js.",
+        code: `import io.github.sceneview.web.SceneView
+import kotlinx.browser.document
+import org.w3c.dom.HTMLCanvasElement
+
+fun main() {
+    val canvas = document.getElementById("scene-canvas") as HTMLCanvasElement
+    canvas.width = canvas.clientWidth
+    canvas.height = canvas.clientHeight
+
+    SceneView.create(
+        canvas = canvas,
+        configure = {
+            camera {
+                eye(0.0, 1.0, 4.0)
+                target(0.0, 0.0, 0.0)
+                fov(50.0)
+                exposure(16.0, 1.0 / 125.0, 100.0)
+            }
+            // Environment from KTX IBL + skybox files
+            environment(
+                iblUrl = "environments/pillars_2k_ibl.ktx",
+                skyboxUrl = "environments/pillars_2k_skybox.ktx"
+            )
+            model("models/DamagedHelmet.glb")
+        },
+        onReady = { sceneView ->
+            sceneView.startRendering()
+        }
+    )
+}`,
+    },
 };
 export const SAMPLE_IDS = Object.keys(SAMPLES);
 export function getSample(id) {

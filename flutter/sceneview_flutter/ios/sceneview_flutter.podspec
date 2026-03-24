@@ -14,6 +14,7 @@ Pod::Spec.new do |s|
   s.platform         = :ios, '17.0'
   s.swift_version    = '5.9'
 
-  # TODO: Add SceneViewSwift SPM dependency
-  # s.dependency 'SceneViewSwift', '~> 3.3.0'
+  # SceneViewSwift is consumed via SPM — the host app must add it to their Xcode project.
+  # CocoaPods doesn't natively support SPM dependencies, so we declare it as a framework.
+  s.frameworks = 'RealityKit', 'ARKit'
 end
