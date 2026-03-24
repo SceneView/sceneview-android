@@ -1,6 +1,14 @@
+---
+title: API Cheatsheet — SceneView Android
+description: "Complete API reference for SceneView's 26+ node types, composables, resource loading, camera controls, gestures, and AR features on Android."
+---
+
 # API Cheatsheet
 
 A quick reference for SceneView's most-used APIs. Print it, pin it, keep it next to your keyboard.
+
+!!! tip "Building for Apple platforms?"
+    See the [Apple API Cheatsheet](cheatsheet-ios.md) for SwiftUI + RealityKit equivalents.
 
 ---
 

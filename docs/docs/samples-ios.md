@@ -1,8 +1,16 @@
+---
+title: Samples — SceneView for iOS, macOS, visionOS
+description: "SwiftUI + RealityKit sample code for SceneViewSwift: model viewer, geometry shapes, dynamic sky, physics, text, fog, reflections, and AR tap-to-place."
+---
+
 # Samples — Apple Platforms
+
+!!! tip "Looking for Android samples?"
+    See [Samples](samples.md) for 15 working Jetpack Compose sample apps with source code.
 
 These samples demonstrate SceneViewSwift capabilities using **SwiftUI + RealityKit** on iOS, macOS, and visionOS. Each example is a self-contained SwiftUI view you can drop into an Xcode project after adding the SceneViewSwift package.
 
-```
+```swift
 .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
 ```
 

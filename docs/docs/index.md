@@ -1,3 +1,8 @@
+---
+title: SceneView — 3D & AR SDK for Android, iOS, macOS, visionOS
+description: "The #1 open-source 3D & AR SDK. Jetpack Compose on Android, SwiftUI on iOS. Drop-in Scene{} and ARScene{} composables for model viewing, AR placement, physics, and immersive experiences."
+---
+
 <div class="sv-hero" markdown>
 
 # SceneView
