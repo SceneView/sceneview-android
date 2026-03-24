@@ -235,6 +235,77 @@ final class ModelNodeTests: XCTestCase {
         XCTAssertTrue(result.entity === node.entity)
     }
 
+    // MARK: - Animation edge cases
+
+    func testPlayAllAnimationsWithZeroAnimations() {
+        let node = ModelNode(ModelEntity())
+        // Should be a no-op when there are no animations
+        node.playAllAnimations()
+        XCTAssertEqual(node.animationCount, 0)
+    }
+
+    func testStopAllAnimationsWhenNotAnimating() {
+        let node = ModelNode(ModelEntity())
+        // Should not crash when stopping with no active animations
+        node.stopAllAnimations()
+        XCTAssertEqual(node.animationCount, 0)
+    }
+
+    func testPauseAllAnimationsWhenNotAnimating() {
+        let node = ModelNode(ModelEntity())
+        // Should not crash when pausing with no active animations
+        node.pauseAllAnimations()
+        XCTAssertEqual(node.animationCount, 0)
+    }
+
+    // MARK: - scaleToUnits edge cases
+
+    func testScaleToUnitsWithZeroValue() {
+        let mesh = MeshResource.generateBox(size: 2.0)
+        let material = SimpleMaterial(color: .white, isMetallic: false)
+        let entity = ModelEntity(mesh: mesh, materials: [material])
+        let node = ModelNode(entity)
+
+        // Scale to zero units — should compute scaleFactor = 0
+        node.scaleToUnits(0.0)
+        XCTAssertEqual(node.entity.scale.x, 0.0, accuracy: 0.001)
+        XCTAssertEqual(node.entity.scale.y, 0.0, accuracy: 0.001)
+        XCTAssertEqual(node.entity.scale.z, 0.0, accuracy: 0.001)
+    }
+
+    func testScaleToUnitsWithNegativeValue() {
+        let mesh = MeshResource.generateBox(size: 2.0)
+        let material = SimpleMaterial(color: .white, isMetallic: false)
+        let entity = ModelEntity(mesh: mesh, materials: [material])
+        let node = ModelNode(entity)
+
+        // Negative units — should produce negative scale (mirror)
+        node.scaleToUnits(-1.0)
+        XCTAssertEqual(node.entity.scale.x, -0.5, accuracy: 0.05)
+    }
+
+    func testScaleToUnitsOnEmptyEntity() {
+        let node = ModelNode(ModelEntity())
+        // Entity with no mesh has zero extents — should be a no-op (guard maxExtent > 0)
+        node.scaleToUnits(1.0)
+        // Scale should remain at default (1, 1, 1)
+        XCTAssertEqual(node.entity.scale.x, 1.0, accuracy: 0.001)
+        XCTAssertEqual(node.entity.scale.y, 1.0, accuracy: 0.001)
+        XCTAssertEqual(node.entity.scale.z, 1.0, accuracy: 0.001)
+    }
+
+    // MARK: - Loading invalid model path
+
+    func testLoadInvalidModelPathThrows() async {
+        do {
+            _ = try await ModelNode.load("nonexistent_model_xyz.usdz")
+            XCTFail("Should have thrown an error for invalid model path")
+        } catch {
+            // Expected: loading a nonexistent model should throw
+            XCTAssertNotNil(error)
+        }
+    }
+
     // MARK: - Chaining
 
     func testChainingTransforms() {
