@@ -2,18 +2,50 @@
 
 # SceneView
 
-<p class="sv-tagline">3D and AR as Compose UI. Build immersive experiences with the same tools you already know.</p>
+<p class="sv-tagline">3D and AR as declarative UI — Android, iOS, macOS, and visionOS. Build immersive experiences with the tools you already know.</p>
 
 <div class="sv-stats" markdown>
 <span class="sv-stat">Jetpack Compose</span>
-<span class="sv-stat">Google Filament</span>
-<span class="sv-stat">ARCore</span>
+<span class="sv-stat">SwiftUI</span>
+<span class="sv-stat">Filament</span>
+<span class="sv-stat">RealityKit</span>
+<span class="sv-stat">ARCore / ARKit</span>
 <span class="sv-stat">Kotlin Multiplatform</span>
 </div>
 
 [Get started](codelabs/codelab-3d-compose.md){ .md-button .md-button--primary }
 [View on GitHub](https://github.com/SceneView/sceneview){ .md-button }
 
+</div>
+
+<div class="sv-logo-ticker" aria-label="Supported platforms and technologies">
+<div class="sv-logo-ticker__track">
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-android.svg" alt="Android" loading="lazy"><span>Android</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-ios.svg" alt="iOS" loading="lazy"><span>iOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-macos.svg" alt="macOS" loading="lazy"><span>macOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-visionos.svg" alt="visionOS" loading="lazy"><span>visionOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-compose.svg" alt="Jetpack Compose" loading="lazy"><span>Compose</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swiftui.svg" alt="SwiftUI" loading="lazy"><span>SwiftUI</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-filament.svg" alt="Filament" loading="lazy"><span>Filament</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-realitykit.svg" alt="RealityKit" loading="lazy"><span>RealityKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arcore.svg" alt="ARCore" loading="lazy"><span>ARCore</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arkit.svg" alt="ARKit" loading="lazy"><span>ARKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-kotlin.svg" alt="Kotlin" loading="lazy"><span>Kotlin</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swift.svg" alt="Swift" loading="lazy"><span>Swift</span></div>
+<!-- Duplicate set for seamless loop -->
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-android.svg" alt="Android" loading="lazy"><span>Android</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-ios.svg" alt="iOS" loading="lazy"><span>iOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-macos.svg" alt="macOS" loading="lazy"><span>macOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-visionos.svg" alt="visionOS" loading="lazy"><span>visionOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-compose.svg" alt="Jetpack Compose" loading="lazy"><span>Compose</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swiftui.svg" alt="SwiftUI" loading="lazy"><span>SwiftUI</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-filament.svg" alt="Filament" loading="lazy"><span>Filament</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-realitykit.svg" alt="RealityKit" loading="lazy"><span>RealityKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arcore.svg" alt="ARCore" loading="lazy"><span>ARCore</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arkit.svg" alt="ARKit" loading="lazy"><span>ARKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-kotlin.svg" alt="Kotlin" loading="lazy"><span>Kotlin</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swift.svg" alt="Swift" loading="lazy"><span>Swift</span></div>
+</div>
 </div>
 
 ## Write 3D the same way you write UI
@@ -88,20 +120,29 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
 
 ## Install
 
-=== "3D only"
+=== "Android — 3D only"
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:sceneview:3.2.0")
+        implementation("io.github.sceneview:sceneview:3.3.0")
     }
     ```
 
-=== "3D + AR"
+=== "Android — 3D + AR"
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:arsceneview:3.2.0")
+        implementation("io.github.sceneview:arsceneview:3.3.0")
     }
+    ```
+
+=== "iOS / macOS / visionOS"
+
+    ```swift
+    // Package.swift
+    dependencies: [
+        .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
+    ]
     ```
 
 ---
@@ -186,9 +227,11 @@ Pass Compose state into node parameters. The scene updates on the next frame. To
 
 The Filament engine, model loaders, environment, camera — all are `remember`-ed values with automatic cleanup. Create them, use them, forget about them.
 
-### Kotlin Multiplatform ready
+### Multi-platform, native renderers
 
-The core math, geometry, animation, and collision modules are fully cross-platform in `sceneview-core`. Shared logic for Android and iOS — renderer-independent.
+Android uses Filament. Apple platforms (iOS, macOS, visionOS) use RealityKit. Shared
+logic (math, collision, geometry, animations) lives in `sceneview-core` via Kotlin Multiplatform.
+Each platform gets native performance and native tooling — no compromises.
 
 ---
 

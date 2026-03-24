@@ -1,4 +1,4 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 
 /// A node that renders a line segment between two 3D points.
@@ -87,4 +87,4 @@ public struct LineNode: Sendable {
     }
 }
 
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(macOS) || os(visionOS)
