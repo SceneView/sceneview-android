@@ -124,11 +124,35 @@
 - **"AI built this"** : how Claude Code contributed to the SDK (meta story)
 - **Architecture diagram** : the native-renderer-per-platform strategy explained
 
-### Timing
-- Don't announce until the website is live and the demo apps are on the stores
-- Best days for LinkedIn: Tuesday-Thursday morning
-- Best for HN: weekday mornings US time
-- Coordinate all channels for max impact (same week)
+### Timing & Release Sync
+
+**Rule: NEVER communicate while something is broken.**
+
+Pre-launch checklist (ALL must be green before posting anywhere):
+- [ ] Website live and loading correctly (test from incognito)
+- [ ] Play Store demo installable (not "pending review")
+- [ ] App Store demo downloadable (not "waiting for review")
+- [ ] npm packages published and installable (`npm install` works)
+- [ ] Maven Central artifacts resolved (not "propagating")
+- [ ] GitHub repo README is up to date
+- [ ] llms.txt is current
+- [ ] No open P0/P1 issues on GitHub
+- [ ] Demo models load correctly on all platforms
+
+**Private/public sync protocol:**
+- Thomas's private profile activity (LinkedIn drafts, blog posts) must sync
+  with the public SceneView release state
+- Before any public post: verify sceneview.github.io is stable (not mid-deploy)
+- Coordinate between sessions: one session should NOT push breaking changes
+  while another session prepares a release or marketing communication
+- Use `.claude/handoff.md` to flag: "RELEASE FREEZE — do not push to main"
+- After communication goes live: monitor GitHub stars, issues, Discord for 48h
+
+**Schedule:**
+- Best days for LinkedIn: Tuesday-Thursday morning (EU timezone)
+- Best for HN: weekday mornings US Pacific time
+- Coordinate all channels same week for max impact
+- Leave 24h between website deploy and first public post (catch any issues)
 
 ### Logo Next Steps
 - Current: blue wordmark "SceneView" in Inter 700
