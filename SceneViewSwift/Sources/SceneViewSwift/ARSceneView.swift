@@ -30,6 +30,8 @@ public struct ARSceneView: UIViewRepresentable {
     private var showCoachingOverlay: Bool
     private var onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)?
     private var onSessionStarted: ((ARView) -> Void)?
+    private var imageTrackingDatabase: Set<ARReferenceImage>?
+    private var onImageDetected: ((String, AnchorNode, ARView) -> Void)?
 
     /// Plane detection modes matching Android's ARCore config.
     public enum PlaneDetectionMode: Sendable {
@@ -48,24 +50,33 @@ public struct ARSceneView: UIViewRepresentable {
         }
     }
 
-    /// Creates an AR scene with plane detection and tap-to-place.
+    /// Creates an AR scene with plane detection, image tracking, and tap-to-place.
     ///
     /// - Parameters:
     ///   - planeDetection: Which plane orientations to detect. Default horizontal.
     ///   - showPlaneOverlay: Whether to visualize detected planes. Default true.
     ///   - showCoachingOverlay: Whether to show coaching when tracking limited. Default true.
+    ///   - imageTrackingDatabase: Set of reference images to detect. Use
+    ///     `AugmentedImageNode.createImageDatabase()` or
+    ///     `AugmentedImageNode.referenceImages(inGroupNamed:)` to create.
     ///   - onTapOnPlane: Called with (worldPosition, arView) when user taps on a plane.
-    ///     Use the arView to add anchors: `arView.scene.addAnchor(anchor.entity)`.
+    ///   - onImageDetected: Called with (imageName, anchorNode, arView) when a reference
+    ///     image is detected. Add content to the anchor and call
+    ///     `arView.scene.addAnchor(anchor.entity)`.
     public init(
         planeDetection: PlaneDetectionMode = .horizontal,
         showPlaneOverlay: Bool = true,
         showCoachingOverlay: Bool = true,
-        onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)? = nil
+        imageTrackingDatabase: Set<ARReferenceImage>? = nil,
+        onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)? = nil,
+        onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil
     ) {
         self.planeDetection = planeDetection
         self.showPlaneOverlay = showPlaneOverlay
         self.showCoachingOverlay = showCoachingOverlay
+        self.imageTrackingDatabase = imageTrackingDatabase
         self.onTapOnPlane = onTapOnPlane
+        self.onImageDetected = onImageDetected
     }
 
     /// Called once when the AR session starts. Use to add initial content.
@@ -87,6 +98,12 @@ public struct ARSceneView: UIViewRepresentable {
         let config = ARWorldTrackingConfiguration()
         config.planeDetection = planeDetection.arPlaneDetection
         config.environmentTexturing = .automatic
+
+        // Image tracking
+        if let images = imageTrackingDatabase, !images.isEmpty {
+            config.detectionImages = images
+            config.maximumNumberOfTrackedImages = images.count
+        }
 
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
             config.sceneReconstruction = .mesh
@@ -128,10 +145,15 @@ public struct ARSceneView: UIViewRepresentable {
 
     public func updateUIView(_ arView: ARView, context: Context) {
         context.coordinator.onTapOnPlane = onTapOnPlane
+        context.coordinator.onImageDetected = onImageDetected
     }
 
     public func makeCoordinator() -> Coordinator {
-        Coordinator(onTapOnPlane: onTapOnPlane, planeDetection: planeDetection)
+        Coordinator(
+            onTapOnPlane: onTapOnPlane,
+            planeDetection: planeDetection,
+            onImageDetected: onImageDetected
+        )
     }
 
     private var coachingGoal: ARCoachingOverlayView.Goal {
@@ -146,15 +168,19 @@ public struct ARSceneView: UIViewRepresentable {
 
     public class Coordinator: NSObject, ARSessionDelegate {
         var onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)?
+        var onImageDetected: ((String, AnchorNode, ARView) -> Void)?
         var planeDetection: PlaneDetectionMode
         weak var arView: ARView?
+        private var detectedImageNames: Set<String> = []
 
         init(
             onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)?,
-            planeDetection: PlaneDetectionMode
+            planeDetection: PlaneDetectionMode,
+            onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil
         ) {
             self.onTapOnPlane = onTapOnPlane
             self.planeDetection = planeDetection
+            self.onImageDetected = onImageDetected
         }
 
         @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
@@ -176,6 +202,21 @@ public struct ARSceneView: UIViewRepresentable {
 
         // MARK: - ARSessionDelegate
 
+        public func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
+            guard let arView = arView, let onImageDetected = onImageDetected else { return }
+
+            for anchor in anchors {
+                guard let imageAnchor = anchor as? ARImageAnchor,
+                      let imageName = imageAnchor.referenceImage.name,
+                      !detectedImageNames.contains(imageName) else { continue }
+
+                detectedImageNames.insert(imageName)
+                let anchorEntity = AnchorEntity(anchor: imageAnchor)
+                let anchorNode = AnchorNode(entity: anchorEntity)
+                onImageDetected(imageName, anchorNode, arView)
+            }
+        }
+
         public func session(
             _ session: ARSession,
             didFailWithError error: Error
@@ -189,10 +230,12 @@ public struct ARSceneView: UIViewRepresentable {
 
         public func sessionInterruptionEnded(_ session: ARSession) {
             print("[SceneViewSwift] AR session interruption ended — resuming")
-            // Re-run session with the original plane detection config
+            // Re-run session with the original config
             let config = ARWorldTrackingConfiguration()
             config.planeDetection = planeDetection.arPlaneDetection
             config.environmentTexturing = .automatic
+            // Reset detected images so they can be re-detected after interruption
+            detectedImageNames.removeAll()
             session.run(config)
         }
     }
