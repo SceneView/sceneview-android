@@ -1,8 +1,10 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
 #if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
 #endif
 
 /// A wrapper for adding lights to a RealityKit scene.
@@ -147,8 +149,24 @@ public struct LightNode: Sendable {
                 )
             }
         }
+        #elseif canImport(AppKit)
+        var platformColor: NSColor {
+            switch self {
+            case .white:
+                return .white
+            case .warm:
+                return NSColor(red: 1.0, green: 0.87, blue: 0.68, alpha: 1.0)
+            case .cool:
+                return NSColor(red: 0.79, green: 0.88, blue: 1.0, alpha: 1.0)
+            case .custom(let r, let g, let b):
+                return NSColor(
+                    red: CGFloat(r), green: CGFloat(g),
+                    blue: CGFloat(b), alpha: 1.0
+                )
+            }
+        }
         #endif
     }
 }
 
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(macOS) || os(visionOS)
