@@ -11,6 +11,25 @@
 - PBR material system with textures
 - Swift Package Manager distribution
 
+### SceneViewSwift — new nodes and enhancements
+- **DynamicSkyNode** — procedural time-of-day sky with sun position, atmospheric scattering
+- **FogNode** — volumetric fog with density, color, and distance falloff
+- **ReflectionProbeNode** — local cubemap reflections for realistic environment lighting
+- **ModelNode enhancements** — named animation playback, runtime material swapping, collision shapes
+- **LightNode enhancements** — shadow configuration, attenuation radius and falloff
+- **CameraNode enhancements** — field of view, depth of field, exposure control
+
+### MCP server — iOS support
+- **8 Swift sample snippets** for iOS code generation
+- **`get_ios_setup`** tool for Swift/iOS project bootstrapping
+- **Swift code validation** in `validate_code` tool
+- iOS-specific guides and documentation
+
+### Tests
+- **65+ new tests** covering edge cases and platform-specific behavior
+- Test coverage for all 15+ SceneViewSwift node types
+- Platform tests for iOS-specific RealityKit integration
+
 ### Website
 - Platform logo ticker on homepage — infinite-scroll marquee showing all supported platforms and technologies (Android, iOS, macOS, visionOS, Compose, SwiftUI, Filament, RealityKit, ARCore, ARKit, Kotlin, Swift)
 - CSS-only animation with fade edges, hover-to-pause, dark mode support
@@ -19,6 +38,9 @@
 - Updated ROADMAP.md to reflect current state (SceneViewSwift exists, phased plan revised)
 - Updated PLATFORM_STRATEGY.md — native renderer per platform architecture (Filament + RealityKit)
 - All codelabs, cheatsheet, migration guide updated to 3.3.0
+- **iOS quickstart guide** — step-by-step setup for SceneViewSwift
+- **iOS cheatsheet** — quick reference for SwiftUI 3D/AR patterns
+- **2 SwiftUI codelabs** — hands-on tutorials for iOS 3D scenes and AR
 
 ---
 
