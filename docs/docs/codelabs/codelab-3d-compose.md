@@ -1,4 +1,4 @@
-# CodeLab: Your first 3D scene with SceneView 3.0
+# CodeLab: Your first 3D scene with SceneView
 
 <img src="../assets/images/showcase-model-viewer.svg" alt="What you'll build: a 3D model viewer" width="200" style="border-radius: 28px; float: right; margin-left: 1rem; margin-bottom: 1rem;">
 
@@ -29,7 +29,7 @@ This is the `model-viewer` sample from the SceneView repository, built from scra
 
 In your module's `build.gradle`:
 
-```gradle
+```kotlin
 dependencies {
     implementation("io.github.sceneview:sceneview:3.3.0")
 }
@@ -315,5 +315,6 @@ That's ~35 lines. A production-quality 3D model viewer with orbit camera, HDR li
 - **Add AR** → See the [AR CodeLab](codelab-ar-compose.md) — same pattern, `ARScene` instead of `Scene`
 - **Add geometry** → Try `CubeNode`, `SphereNode`, `CylinderNode` in the scene block
 - **Embed in a screen** → Replace any `Image()` in your app with this `Box` wrapping a `Scene`
-- **Explore samples** → The [model-viewer](/samples/model-viewer), [gltf-camera](/samples/gltf-camera), and [camera-manipulator](/samples/camera-manipulator) samples show more patterns
+- **Explore samples** → The [samples page](../samples.md) covers model viewer, glTF camera, camera manipulator, and more
 - **Read the API docs** → [sceneview.github.io/api/sceneview/sceneview](https://sceneview.github.io/api/sceneview/sceneview/)
+- **Building for iOS?** → See the [3D with SwiftUI codelab](codelab-3d-swiftui.md) for the equivalent experience using RealityKit

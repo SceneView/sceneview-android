@@ -468,6 +468,424 @@ fun PostProcessingScreen() {
     // See samples/post-processing for full interactive controls
 }`,
     },
+    // ─── iOS Samples ────────────────────────────────────────────────────────────
+    "ios-model-viewer": {
+        id: "ios-model-viewer",
+        title: "iOS 3D Model Viewer",
+        description: "SwiftUI 3D scene with a USDZ model, IBL environment, orbit camera, and animation playback.",
+        tags: ["3d", "model", "environment", "camera", "animation", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create a SwiftUI screen that loads a USDZ model and displays it with IBL lighting, orbit camera, and animation playback. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct ModelViewerScreen: View {
+    @State private var model: ModelNode?
+
+    var body: some View {
+        SceneView { root in
+            if let model {
+                root.addChild(model.entity)
+            }
+        }
+        .environment(.studio)
+        .cameraControls(.orbit)
+        .onEntityTapped { entity in
+            print("Tapped: \\(entity)")
+        }
+        .task {
+            do {
+                model = try await ModelNode.load("models/car.usdz")
+                model?.scaleToUnits(1.0)
+                model?.playAllAnimations()
+            } catch {
+                print("Failed to load model: \\(error)")
+            }
+        }
+    }
+}`,
+    },
+    "ios-ar-model-viewer": {
+        id: "ios-ar-model-viewer",
+        title: "iOS AR Tap-to-Place Model Viewer",
+        description: "AR scene with plane detection. Tap a surface to place a 3D model using ARKit + RealityKit.",
+        tags: ["ar", "model", "anchor", "plane-detection", "placement", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create an iOS AR screen that detects surfaces and lets the user tap to place a USDZ model. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct ARModelViewerScreen: View {
+    @State private var model: ModelNode?
+
+    var body: some View {
+        ARSceneView(
+            planeDetection: .horizontal,
+            showCoachingOverlay: true,
+            onTapOnPlane: { position, arView in
+                guard let model else { return }
+                let anchor = AnchorNode.world(position: position)
+                let clone = model.entity.clone(recursive: true)
+                clone.scale = .init(repeating: 0.3)
+                anchor.add(clone)
+                arView.scene.addAnchor(anchor.entity)
+            }
+        )
+        .edgesIgnoringSafeArea(.all)
+        .task {
+            do {
+                model = try await ModelNode.load("models/robot.usdz")
+            } catch {
+                print("Failed to load model: \\(error)")
+            }
+        }
+    }
+}`,
+    },
+    "ios-ar-augmented-image": {
+        id: "ios-ar-augmented-image",
+        title: "iOS AR Augmented Image",
+        description: "Detects reference images in the camera feed and overlays 3D content above them using ARKit.",
+        tags: ["ar", "model", "image-tracking", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create an iOS AR screen that detects a printed reference image and places a 3D model above it. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+import ARKit
+
+struct AugmentedImageScreen: View {
+    var body: some View {
+        ARSceneView(
+            planeDetection: .horizontal,
+            imageTrackingDatabase: AugmentedImageNode.createImageDatabase([
+                AugmentedImageNode.ReferenceImage(
+                    name: "poster",
+                    image: UIImage(named: "poster_reference")!,
+                    physicalWidth: 0.3  // 30 cm
+                )
+            ]),
+            onImageDetected: { imageName, anchor, arView in
+                // Place a spinning cube above the detected image
+                let cube = GeometryNode.cube(size: 0.08, color: .systemBlue)
+                    .position(.init(x: 0, y: 0.06, z: 0))
+                anchor.add(cube.entity)
+                arView.scene.addAnchor(anchor.entity)
+                print("Detected image: \\(imageName)")
+            }
+        )
+        .edgesIgnoringSafeArea(.all)
+    }
+}`,
+    },
+    "ios-geometry-shapes": {
+        id: "ios-geometry-shapes",
+        title: "iOS Procedural Geometry",
+        description: "Procedural geometry shapes — cube, sphere, cylinder, cone, and plane — with PBR materials.",
+        tags: ["3d", "geometry", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create a SwiftUI scene showing procedural geometry shapes (cube, sphere, cylinder, cone, plane) with different materials. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct GeometryShapesScreen: View {
+    var body: some View {
+        SceneView { root in
+            // Red cube
+            let cube = GeometryNode.cube(size: 0.3, color: .red, cornerRadius: 0.02)
+                .position(.init(x: -0.8, y: 0, z: 0))
+            root.addChild(cube.entity)
+
+            // Metallic sphere
+            let sphere = GeometryNode.sphere(
+                radius: 0.2,
+                material: .pbr(color: .gray, metallic: 1.0, roughness: 0.2)
+            )
+            .position(.init(x: -0.3, y: 0, z: 0))
+            root.addChild(sphere.entity)
+
+            // Green cylinder
+            let cylinder = GeometryNode.cylinder(
+                radius: 0.15, height: 0.4, color: .green
+            )
+            .position(.init(x: 0.2, y: 0, z: 0))
+            root.addChild(cylinder.entity)
+
+            // Blue cone
+            let cone = GeometryNode.cone(
+                height: 0.4, radius: 0.2, color: .systemBlue
+            )
+            .position(.init(x: 0.7, y: 0, z: 0))
+            root.addChild(cone.entity)
+
+            // Floor plane
+            let floor = GeometryNode.plane(
+                width: 3.0, depth: 3.0, color: .darkGray
+            )
+            .position(.init(x: 0, y: -0.25, z: 0))
+            root.addChild(floor.entity)
+        }
+        .cameraControls(.orbit)
+    }
+}`,
+    },
+    "ios-lighting": {
+        id: "ios-lighting",
+        title: "iOS Lighting",
+        description: "Directional, point, and spot lights with configurable intensity, color, and shadows.",
+        tags: ["3d", "lighting", "environment", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create a SwiftUI 3D scene with directional, point, and spot lights illuminating geometry. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct LightingScreen: View {
+    var body: some View {
+        SceneView { root in
+            // Ground plane
+            let floor = GeometryNode.plane(
+                width: 4.0, depth: 4.0, color: .lightGray
+            )
+            root.addChild(floor.entity)
+
+            // Metallic sphere to show reflections
+            let sphere = GeometryNode.sphere(
+                radius: 0.3,
+                material: .pbr(color: .white, metallic: 0.8, roughness: 0.3)
+            )
+            .position(.init(x: 0, y: 0.3, z: 0))
+            root.addChild(sphere.entity)
+
+            // Directional light (sun) with shadows
+            let sun = LightNode.directional(
+                color: .warm,
+                intensity: 1500,
+                castsShadow: true
+            )
+            sun.entity.look(at: .zero, from: [3, 5, 3], relativeTo: nil)
+            root.addChild(sun.entity)
+
+            // Point light (red)
+            let pointLight = LightNode.point(
+                color: .custom(r: 1.0, g: 0.2, b: 0.2),
+                intensity: 5000,
+                attenuationRadius: 5.0
+            )
+            .position(.init(x: -1.0, y: 1.0, z: 0.5))
+            root.addChild(pointLight.entity)
+
+            // Spot light (blue)
+            let spotLight = LightNode.spot(
+                color: .custom(r: 0.2, g: 0.4, b: 1.0),
+                intensity: 8000,
+                innerAngle: .pi / 8,
+                outerAngle: .pi / 4,
+                attenuationRadius: 8.0
+            )
+            .position(.init(x: 1.0, y: 2.0, z: 0.5))
+            spotLight.entity.look(at: .zero, from: spotLight.entity.position, relativeTo: nil)
+            root.addChild(spotLight.entity)
+        }
+        .cameraControls(.orbit)
+    }
+}`,
+    },
+    "ios-physics": {
+        id: "ios-physics",
+        title: "iOS Physics Demo",
+        description: "Interactive physics simulation with bouncing spheres, gravity, and configurable restitution.",
+        tags: ["3d", "physics", "geometry", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create a SwiftUI 3D scene where tapping spawns coloured spheres that fall under gravity and bounce off a floor. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct PhysicsDemoScreen: View {
+    @State private var sphereColors: [SimpleMaterial.Color] = [
+        .red, .blue, .green, .orange, .purple, .yellow
+    ]
+    @State private var spawnCount = 0
+
+    var body: some View {
+        SceneView { root in
+            // Static floor
+            let floor = GeometryNode.plane(
+                width: 4.0, depth: 4.0, color: .darkGray
+            )
+            PhysicsNode.static(floor.entity, restitution: 0.8)
+            root.addChild(floor.entity)
+
+            // Spawn initial spheres at different heights
+            for i in 0..<6 {
+                let color = sphereColors[i % sphereColors.count]
+                let sphere = GeometryNode.sphere(radius: 0.15, color: color)
+                    .position(.init(
+                        x: Float(i % 3) * 0.5 - 0.5,
+                        y: Float(i / 3) * 1.0 + 1.5,
+                        z: 0
+                    ))
+                    .withGroundingShadow()
+                PhysicsNode.dynamic(
+                    sphere.entity,
+                    mass: 1.0,
+                    restitution: 0.7,
+                    friction: 0.3
+                )
+                root.addChild(sphere.entity)
+            }
+
+            // Walls to keep spheres in bounds
+            let wallLeft = GeometryNode.cube(size: 0.05, color: .clear)
+                .position(.init(x: -2, y: 1, z: 0))
+            wallLeft.entity.scale = .init(x: 0.05, y: 4, z: 4)
+            PhysicsNode.static(wallLeft.entity)
+            root.addChild(wallLeft.entity)
+
+            let wallRight = GeometryNode.cube(size: 0.05, color: .clear)
+                .position(.init(x: 2, y: 1, z: 0))
+            wallRight.entity.scale = .init(x: 0.05, y: 4, z: 4)
+            PhysicsNode.static(wallRight.entity)
+            root.addChild(wallRight.entity)
+        }
+        .cameraControls(.orbit)
+    }
+}`,
+    },
+    "ios-text-labels": {
+        id: "ios-text-labels",
+        title: "iOS 3D Text Labels",
+        description: "Camera-facing 3D text labels using TextNode and BillboardNode for always-facing-camera behavior.",
+        tags: ["3d", "text", "geometry", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create a SwiftUI 3D scene with floating text labels that always face the camera, showing planet names. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct TextLabelsScreen: View {
+    let planets: [(name: String, color: SimpleMaterial.Color, position: SIMD3<Float>)] = [
+        ("Earth", .systemBlue, .init(x: -1.0, y: 0, z: 0)),
+        ("Mars", .systemRed, .init(x: 0, y: 0, z: 0)),
+        ("Venus", .systemOrange, .init(x: 1.0, y: 0, z: 0)),
+    ]
+
+    var body: some View {
+        SceneView { root in
+            for planet in planets {
+                // Planet sphere
+                let sphere = GeometryNode.sphere(
+                    radius: 0.2, color: planet.color
+                )
+                .position(planet.position)
+                root.addChild(sphere.entity)
+
+                // Billboard text label above the planet
+                let label = BillboardNode.text(
+                    planet.name,
+                    fontSize: 0.04,
+                    color: .white
+                )
+                .position(.init(
+                    x: planet.position.x,
+                    y: planet.position.y + 0.35,
+                    z: planet.position.z
+                ))
+                root.addChild(label.entity)
+            }
+        }
+        .cameraControls(.orbit)
+    }
+}`,
+    },
+    "ios-video-player": {
+        id: "ios-video-player",
+        title: "iOS Video on 3D Surface",
+        description: "Video playback on a 3D plane using VideoNode with play/pause controls.",
+        tags: ["3d", "video", "ios", "swift"],
+        dependency: "https://github.com/SceneView/sceneview — from: \"3.3.0\"",
+        spmDependency: "https://github.com/SceneView/sceneview",
+        prompt: "Create a SwiftUI 3D scene with a video playing on a floating 3D plane. Include play/pause controls. Use SceneViewSwift.",
+        language: "swift",
+        code: `import SwiftUI
+import SceneViewSwift
+import RealityKit
+
+struct VideoPlayerScreen: View {
+    @State private var videoNode: VideoNode?
+    @State private var isPlaying = false
+
+    var body: some View {
+        ZStack {
+            SceneView { root in
+                if let videoNode {
+                    root.addChild(videoNode.entity)
+                }
+            }
+            .cameraControls(.orbit)
+            .onAppear {
+                videoNode = VideoNode.load(
+                    "videos/intro.mp4",
+                    width: 1.6,
+                    height: 0.9,
+                    loop: true
+                )
+                .position(.init(x: 0, y: 0.5, z: -2))
+            }
+
+            // Play/Pause overlay
+            VStack {
+                Spacer()
+                HStack(spacing: 30) {
+                    Button(action: {
+                        videoNode?.play()
+                        isPlaying = true
+                    }) {
+                        Image(systemName: "play.fill")
+                            .font(.title)
+                    }
+                    Button(action: {
+                        videoNode?.pause()
+                        isPlaying = false
+                    }) {
+                        Image(systemName: "pause.fill")
+                            .font(.title)
+                    }
+                    Button(action: {
+                        videoNode?.stop()
+                        isPlaying = false
+                    }) {
+                        Image(systemName: "stop.fill")
+                            .font(.title)
+                    }
+                }
+                .padding()
+                .background(.ultraThinMaterial)
+                .cornerRadius(16)
+                .padding(.bottom, 40)
+            }
+        }
+    }
+}`,
+    },
 };
 export const SAMPLE_IDS = Object.keys(SAMPLES);
 export function getSample(id) {

@@ -453,10 +453,14 @@ ARScene(
 ## Apple platforms (iOS, macOS, visionOS)
 
 SceneView is available for all Apple platforms via the **SceneViewSwift** package — a native
-Swift Package built on SwiftUI and RealityKit. Same concepts as Android (declarative scene
-building, model loading, gesture controls) using native Apple frameworks.
+Swift Package built on SwiftUI and RealityKit with **17 node types**. Same concepts as Android
+(declarative scene building, model loading, gesture controls) using native Apple frameworks.
 
 **Supported:** iOS 17+ · macOS 14+ · visionOS 1+
+
+**Node types:** ModelNode · GeometryNode (cube, sphere, cylinder, cone, plane) · MeshNode ·
+LightNode · CameraNode · TextNode · BillboardNode · ImageNode · VideoNode · LineNode · PathNode ·
+PhysicsNode · DynamicSkyNode · FogNode · ReflectionProbeNode · AugmentedImageNode · AnchorNode
 
 ```swift
 // Package.swift
@@ -490,6 +494,7 @@ ARSceneView(
 ```
 
 See the [`SceneViewSwift/`](SceneViewSwift/) directory for the full library, demo app, and documentation.
+For a step-by-step guide, see the [iOS Quickstart](https://sceneview.github.io/quickstart-ios/).
 
 ### Cross-framework iOS support
 
@@ -528,16 +533,22 @@ and more.
 | AR scene | `ARScene { }` | `ARSceneView(...)` (iOS only) |
 | Model loading | glTF/GLB | USDZ |
 | Procedural geometry | CubeNode, SphereNode, CylinderNode, PlaneNode | GeometryNode (cube, sphere, cylinder, cone, plane) |
+| Custom mesh | MeshNode | MeshNode |
 | Text | TextNode | TextNode |
 | Billboards | BillboardNode | BillboardNode |
-| Lines | LineNode | LineNode |
-| Lighting | LightNode | LightNode |
+| Lines / paths | LineNode | LineNode, PathNode |
+| Images | ImageNode | ImageNode |
+| Video | -- | VideoNode |
+| Lighting | LightNode | LightNode (directional, point, spot) |
+| Camera | CameraNode | CameraNode |
 | Orbit camera | rememberCameraManipulator() | .cameraControls(.orbit) |
 | Environment/HDR | rememberEnvironment() | .environment(.studio) |
 | Gesture editing | isEditable = true | Drag/pinch/tap built-in |
-| Physics | PhysicsNode | -- |
-| Dynamic sky | DynamicSkyNode | -- |
-| Augmented images | AugmentedImageNode | -- |
+| Physics | PhysicsNode | PhysicsNode |
+| Dynamic sky | DynamicSkyNode | DynamicSkyNode |
+| Fog | -- | FogNode |
+| Reflections | -- | ReflectionProbeNode |
+| Augmented images | AugmentedImageNode | AugmentedImageNode |
 | Face tracking | AugmentedFaceNode | -- |
 | Cloud anchors | CloudAnchorNode | -- |
 | Renderer | Google Filament | Apple RealityKit |
@@ -552,6 +563,8 @@ and more.
 ### Documentation
 - [3D API Reference](https://sceneview.github.io/api/sceneview/sceneview/)
 - [AR API Reference](https://sceneview.github.io/api/sceneview/arsceneview/)
+- [iOS Quickstart](https://sceneview.github.io/quickstart-ios/)
+- [iOS Cheatsheet](https://sceneview.github.io/cheatsheet-ios/)
 - [Migration Guide — v2.x → v3.0](MIGRATION.md)
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)

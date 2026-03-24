@@ -38,6 +38,7 @@
   "files": [
     "dist/index.js",
     "dist/issues.js",
+    "dist/guides.js",
     "dist/migration.js",
     "dist/node-reference.js",
     "dist/samples.js",

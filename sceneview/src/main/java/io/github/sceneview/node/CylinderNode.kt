@@ -6,6 +6,18 @@ import com.google.android.filament.RenderableManager
 import io.github.sceneview.geometries.Cylinder
 import io.github.sceneview.math.Position
 
+/**
+ * A node that renders a procedural cylinder geometry.
+ *
+ * The cylinder is centred at [center] with the given [radius], [height], and [sideCount]
+ * subdivisions. Vertices include normals and UV coordinates.
+ *
+ * Use the composable `SceneScope.CylinderNode(...)` for declarative usage inside a `Scene { }` block,
+ * or instantiate this class directly for imperative code.
+ *
+ * @see io.github.sceneview.geometries.Cylinder
+ * @see GeometryNode
+ */
 open class CylinderNode private constructor(
     engine: Engine,
     override val geometry: Cylinder,

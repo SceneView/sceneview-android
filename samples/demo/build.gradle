@@ -19,16 +19,26 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(System.getenv("KEYSTORE_PATH") ?: "/tmp/upload.keystore")
-            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "AZmHjopUyiYf4vmPwaOvM"
-            keyAlias System.getenv("KEY_ALIAS") ?: "sceneview-demo"
-            keyPassword System.getenv("KEY_PASSWORD") ?: "AZmHjopUyiYf4vmPwaOvM"
+            def keystoreFile = System.getenv("KEYSTORE_PATH")
+            def keystorePass = System.getenv("KEYSTORE_PASSWORD")
+            def ksAlias = System.getenv("KEY_ALIAS")
+            def keyPass = System.getenv("KEY_PASSWORD")
+
+            if (keystoreFile != null) {
+                storeFile file(keystoreFile)
+                storePassword keystorePass
+                keyAlias ksAlias
+                keyPassword keyPass
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            def keystoreFile = System.getenv("KEYSTORE_PATH")
+            if (keystoreFile != null) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
         }
     }
