@@ -2219,9 +2219,29 @@ fun main() {
 | `loadEnvironment(iblUrl, skyboxUrl?)` | Load IBL + skybox KTX files |
 | `destroy()` | Clean up all Filament resources |
 
+### Web AR (WebXR)
+
+SceneView Web supports augmented reality via the **WebXR Device API** on supported browsers:
+
+```kotlin
+ARSceneView.checkSupport { supported ->
+    if (supported) {
+        ARSceneView.create(canvas) { arView ->
+            arView.onHitTest = { pose ->
+                // Place model at hit position
+            }
+            arView.start()
+        }
+    }
+}
+```
+
+**Supported browsers:** Chrome Android 79+, Safari iOS 18+, Quest Browser, Edge
+**Features:** Hit-test (tap-to-place), light estimation, DOM overlay
+
 ### Web constraints
-- No AR (requires native sensors — camera, compass, accelerometer)
-- WebGL2 required (~95% of browsers)
+- AR requires WebXR-capable browser (not all browsers — check with `ARSceneView.checkSupport`)
+- WebGL2 required for 3D (~95% of browsers)
 - glTF 2.0 / GLB format only (same as Android)
 - Cross-origin asset loading requires CORS headers
 
