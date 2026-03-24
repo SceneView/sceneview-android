@@ -563,6 +563,8 @@ and more.
 ### Documentation
 - [3D API Reference](https://sceneview.github.io/api/sceneview/sceneview/)
 - [AR API Reference](https://sceneview.github.io/api/sceneview/arsceneview/)
+- [iOS Quickstart](https://sceneview.github.io/quickstart-ios/)
+- [iOS Cheatsheet](https://sceneview.github.io/cheatsheet-ios/)
 - [Migration Guide — v2.x → v3.0](MIGRATION.md)
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)
