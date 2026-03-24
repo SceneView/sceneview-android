@@ -35,8 +35,8 @@ describe("SAMPLE_IDS", () => {
     expect(IOS_IDS).toHaveLength(8);
   });
 
-  it("has 22 total samples (14 Android + 8 iOS)", () => {
-    expect(SAMPLE_IDS).toHaveLength(22);
+  it("has 24 total samples (14 Android + 8 iOS + 2 Web)", () => {
+    expect(SAMPLE_IDS).toHaveLength(24);
   });
 
   it("SAMPLE_IDS matches keys of SAMPLES", () => {
@@ -202,7 +202,7 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag '3d' returns only 3D samples", () => {
     const results = filterByTag("3d");
-    expect(results.length).toBe(16); // 10 Android + 6 iOS
+    expect(results.length).toBe(18); // 10 Android + 6 iOS + 2 Web
     results.forEach((s) => expect(s.tags).toContain("3d"));
   });
 
@@ -249,8 +249,9 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'lighting' returns lighting samples", () => {
     const results = filterByTag("lighting");
-    expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("ios-lighting");
+    expect(results).toHaveLength(2);
+    expect(results.map((s) => s.id)).toContain("ios-lighting");
+    expect(results.map((s) => s.id)).toContain("web-environment");
   });
 
   it("unknown tag returns empty array", () => {

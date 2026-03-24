@@ -103,12 +103,64 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # ── 4. Create GitHub Release with auto-generated notes ────────────────────
+  # ── 4. Publish sceneview-web to npm ────────────────────────────────────────
+  publish-web:
+    name: Publish sceneview-web to npm
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - run: chmod +x ./gradlew
+
+      - name: Build sceneview-web JS library
+        run: ./gradlew :sceneview-web:jsBrowserProductionLibraryDistribution
+
+      - name: Prepare npm package
+        working-directory: sceneview-web/build/dist/js/productionLibrary
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          cat > package.json << EOF
+          {
+            "name": "@sceneview/sceneview-web",
+            "version": "$VERSION",
+            "description": "SceneView for Web — 3D rendering with Filament.js (WebGL2/WASM)",
+            "main": "sceneview-web.js",
+            "types": "sceneview-web.d.ts",
+            "keywords": ["3d", "webgl", "filament", "sceneview", "gltf", "wasm"],
+            "homepage": "https://github.com/SceneView/sceneview",
+            "repository": {
+              "type": "git",
+              "url": "https://github.com/SceneView/sceneview.git",
+              "directory": "sceneview-web"
+            },
+            "license": "Apache-2.0"
+          }
+          EOF
+
+      - name: Publish
+        working-directory: sceneview-web/build/dist/js/productionLibrary
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ── 5. Create GitHub Release with auto-generated notes ────────────────────
   create-release:
     name: Create GitHub Release
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    needs: [publish-library]
+    needs: [publish-library, publish-mcp, publish-web]
     permissions:
       contents: write
     steps:

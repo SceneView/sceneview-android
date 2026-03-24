@@ -3,7 +3,12 @@ package io.github.sceneview.flutter
 import android.app.Activity
 import android.content.Context
 import android.view.View
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -13,6 +18,14 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
+import io.github.sceneview.Scene
+import io.github.sceneview.math.Position
+import io.github.sceneview.rememberCameraNode
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberEnvironment
+import io.github.sceneview.rememberEnvironmentLoader
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
 
 /**
  * Flutter plugin entry point for SceneView on Android.
@@ -38,7 +51,6 @@ class SceneViewPlugin : FlutterPlugin, ActivityAware {
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {}
 
-    // ActivityAware
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
     }
@@ -48,6 +60,17 @@ class SceneViewPlugin : FlutterPlugin, ActivityAware {
     }
     override fun onDetachedFromActivity() { activity = null }
 }
+
+// ---------------------------------------------------------------------------
+// Model descriptor passed from Dart via method channel
+// ---------------------------------------------------------------------------
+
+private data class FlutterModelNode(
+    val path: String,
+    val position: Position = Position(0f, 0f, 0f),
+    val scale: Float = 1.0f,
+    val autoAnimate: Boolean = true
+)
 
 // ---------------------------------------------------------------------------
 // 3D SceneView
@@ -74,14 +97,45 @@ class SceneViewPlatformView(
         "io.github.sceneview.flutter/scene_$viewId"
     )
 
-    // TODO: Replace with actual ComposeView hosting io.github.sceneview.Scene { }
-    // For now, create a placeholder ComposeView to validate the wiring.
+    // Reactive state for Compose — updated via method channel
+    private val modelNodes = mutableStateListOf<FlutterModelNode>()
+    private var environmentPath by mutableStateOf<String?>(null)
+
     private val composeView = ComposeView(context).apply {
-        // setContent {
-        //     io.github.sceneview.Scene {
-        //         // Nodes added via method channel calls
-        //     }
-        // }
+        setContent {
+            val engine = rememberEngine()
+            val modelLoader = rememberModelLoader(engine)
+            val environmentLoader = rememberEnvironmentLoader(engine)
+
+            val cameraNode = rememberCameraNode(engine) {
+                position = Position(y = 0f, z = 3.0f)
+            }
+
+            val environment = environmentPath?.let { path ->
+                rememberEnvironment(environmentLoader) {
+                    environmentLoader.createHDREnvironment(path)
+                }
+            }
+
+            Scene(
+                modifier = Modifier.fillMaxSize(),
+                engine = engine,
+                modelLoader = modelLoader,
+                cameraNode = cameraNode,
+                environment = environment,
+            ) {
+                modelNodes.forEach { model ->
+                    val instance = rememberModelInstance(modelLoader, model.path)
+                    instance?.let {
+                        ModelNode(
+                            modelInstance = it,
+                            scaleToUnits = model.scale,
+                            autoAnimate = model.autoAnimate,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     init {
@@ -97,26 +151,28 @@ class SceneViewPlatformView(
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "loadModel" -> {
-                val modelPath = call.argument<String>("modelPath")
-                // TODO: Use modelLoader.loadModelInstanceAsync(modelPath) on main thread
-                result.success(null)
-            }
-            "addGeometry" -> {
-                val type = call.argument<String>("type")
-                // TODO: Add geometry node to scene
-                result.success(null)
-            }
-            "addLight" -> {
-                // TODO: Add light node to scene
+                val modelPath = call.argument<String>("modelPath") ?: run {
+                    result.error("INVALID_ARG", "modelPath is required", null)
+                    return
+                }
+                val scale = call.argument<Double>("scale")?.toFloat() ?: 1.0f
+                val x = call.argument<Double>("x")?.toFloat() ?: 0f
+                val y = call.argument<Double>("y")?.toFloat() ?: 0f
+                val z = call.argument<Double>("z")?.toFloat() ?: 0f
+
+                modelNodes.add(FlutterModelNode(
+                    path = modelPath,
+                    position = Position(x, y, z),
+                    scale = scale,
+                ))
                 result.success(null)
             }
             "clearScene" -> {
-                // TODO: Remove all child nodes
+                modelNodes.clear()
                 result.success(null)
             }
             "setEnvironment" -> {
-                val hdrPath = call.argument<String>("hdrPath")
-                // TODO: Load HDR environment
+                environmentPath = call.argument<String>("hdrPath")
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -149,13 +205,35 @@ class ARSceneViewPlatformView(
         "io.github.sceneview.flutter/scene_$viewId"
     )
 
-    // TODO: Replace with actual ComposeView hosting io.github.sceneview.ar.ARScene { }
+    private val modelNodes = mutableStateListOf<FlutterModelNode>()
+
     private val composeView = ComposeView(context).apply {
-        // setContent {
-        //     io.github.sceneview.ar.ARScene {
-        //         // AR nodes
-        //     }
-        // }
+        setContent {
+            val engine = rememberEngine()
+            val modelLoader = rememberModelLoader(engine)
+
+            // AR Scene — models are placed in the scene directly.
+            // TODO: Implement tap-to-place with ARCore hit test to create
+            // real AnchorNodes at detected plane positions.
+            io.github.sceneview.ar.ARScene(
+                modifier = Modifier.fillMaxSize(),
+                engine = engine,
+                modelLoader = modelLoader,
+                planeRenderer = true,
+                onSessionUpdated = { _, _ -> },
+            ) {
+                modelNodes.forEach { model ->
+                    val instance = rememberModelInstance(modelLoader, model.path)
+                    instance?.let {
+                        ModelNode(
+                            modelInstance = it,
+                            scaleToUnits = model.scale,
+                            autoAnimate = model.autoAnimate,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     init {
@@ -171,10 +249,16 @@ class ARSceneViewPlatformView(
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "loadModel" -> {
-                // TODO: Load model and attach to AR anchor on tap
+                val modelPath = call.argument<String>("modelPath") ?: run {
+                    result.error("INVALID_ARG", "modelPath is required", null)
+                    return
+                }
+                val scale = call.argument<Double>("scale")?.toFloat() ?: 1.0f
+                modelNodes.add(FlutterModelNode(path = modelPath, scale = scale))
                 result.success(null)
             }
             "clearScene" -> {
+                modelNodes.clear()
                 result.success(null)
             }
             else -> result.notImplemented()

@@ -1,7 +1,7 @@
 import Flutter
 import UIKit
-// TODO: Uncomment when SceneViewSwift is added as a dependency
-// import SceneViewSwift
+import SwiftUI
+import SceneViewSwift
 
 /// Flutter plugin entry point for SceneView on iOS.
 ///
@@ -50,13 +50,25 @@ class SceneViewFactory: NSObject, FlutterPlatformViewFactory {
     }
 }
 
+/// Observable model holding scene state, updated via method channel.
+@MainActor
+class SceneState: ObservableObject {
+    @Published var modelPaths: [String] = []
+    @Published var environmentPath: String?
+}
+
 class SceneViewPlatformView: NSObject, FlutterPlatformView {
-    private let containerView: UIView
+    private let hostingController: UIHostingController<SceneViewSwiftUIWrapper>
     private let channel: FlutterMethodChannel
+    private let sceneState = SceneState()
 
     init(frame: CGRect, viewId: Int64, args: [String: Any], messenger: FlutterBinaryMessenger) {
-        self.containerView = UIView(frame: frame)
-        self.containerView.backgroundColor = .black
+        self.hostingController = UIHostingController(
+            rootView: SceneViewSwiftUIWrapper(state: sceneState)
+        )
+        self.hostingController.view.frame = frame
+        self.hostingController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
         self.channel = FlutterMethodChannel(
             name: "io.github.sceneview.flutter/scene_\(viewId)",
             binaryMessenger: messenger
@@ -64,15 +76,10 @@ class SceneViewPlatformView: NSObject, FlutterPlatformView {
         super.init()
 
         channel.setMethodCallHandler(handleMethodCall)
-
-        // TODO: Create SceneViewSwift.SceneView and add as subview
-        // let sceneView = SceneViewSwift.SceneView(frame: frame)
-        // containerView.addSubview(sceneView)
-        // sceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
 
     func view() -> UIView {
-        return containerView
+        return hostingController.view
     }
 
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -83,27 +90,39 @@ class SceneViewPlatformView: NSObject, FlutterPlatformView {
                 result(FlutterError(code: "INVALID_ARGS", message: "modelPath required", details: nil))
                 return
             }
-            // TODO: Load glTF/USDZ model via SceneViewSwift
-            result(nil)
-
-        case "addGeometry":
-            // TODO: Add geometry node
-            result(nil)
-
-        case "addLight":
-            // TODO: Add light node
+            Task { @MainActor in
+                sceneState.modelPaths.append(modelPath)
+            }
             result(nil)
 
         case "clearScene":
-            // TODO: Remove all child nodes
+            Task { @MainActor in
+                sceneState.modelPaths.removeAll()
+            }
             result(nil)
 
         case "setEnvironment":
-            // TODO: Set IBL environment
+            let hdrPath = (call.arguments as? [String: Any])?["hdrPath"] as? String
+            Task { @MainActor in
+                sceneState.environmentPath = hdrPath
+            }
             result(nil)
 
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+}
+
+/// SwiftUI wrapper for SceneViewSwift.SceneView, driven by observable state.
+struct SceneViewSwiftUIWrapper: View {
+    @ObservedObject var state: SceneState
+
+    var body: some View {
+        SceneView {
+            ForEach(state.modelPaths, id: \.self) { path in
+                ModelNode(path)
+            }
         }
     }
 }
@@ -137,12 +156,17 @@ class ARSceneViewFactory: NSObject, FlutterPlatformViewFactory {
 }
 
 class ARSceneViewPlatformView: NSObject, FlutterPlatformView {
-    private let containerView: UIView
+    private let hostingController: UIHostingController<ARSceneViewSwiftUIWrapper>
     private let channel: FlutterMethodChannel
+    private let sceneState = SceneState()
 
     init(frame: CGRect, viewId: Int64, args: [String: Any], messenger: FlutterBinaryMessenger) {
-        self.containerView = UIView(frame: frame)
-        self.containerView.backgroundColor = .black
+        self.hostingController = UIHostingController(
+            rootView: ARSceneViewSwiftUIWrapper(state: sceneState)
+        )
+        self.hostingController.view.frame = frame
+        self.hostingController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
         self.channel = FlutterMethodChannel(
             name: "io.github.sceneview.flutter/scene_\(viewId)",
             binaryMessenger: messenger
@@ -150,28 +174,47 @@ class ARSceneViewPlatformView: NSObject, FlutterPlatformView {
         super.init()
 
         channel.setMethodCallHandler(handleMethodCall)
-
-        // TODO: Create SceneViewSwift.ARSceneView and add as subview
-        // let arSceneView = SceneViewSwift.ARSceneView(frame: frame)
-        // containerView.addSubview(arSceneView)
-        // arSceneView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
 
     func view() -> UIView {
-        return containerView
+        return hostingController.view
     }
 
     private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "loadModel":
-            // TODO: Load model and place on detected plane
+            guard let args = call.arguments as? [String: Any],
+                  let modelPath = args["modelPath"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS", message: "modelPath required", details: nil))
+                return
+            }
+            Task { @MainActor in
+                sceneState.modelPaths.append(modelPath)
+            }
             result(nil)
 
         case "clearScene":
+            Task { @MainActor in
+                sceneState.modelPaths.removeAll()
+            }
             result(nil)
 
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+}
+
+/// SwiftUI wrapper for SceneViewSwift.ARSceneView, driven by observable state.
+struct ARSceneViewSwiftUIWrapper: View {
+    @ObservedObject var state: SceneState
+
+    var body: some View {
+        ARSceneView { anchor in
+            ForEach(state.modelPaths, id: \.self) { path in
+                ModelNode(path)
+                    .scale(0.3)
+            }
         }
     }
 }

@@ -51,6 +51,10 @@ nav:
   - Get Started:
     - Quickstart: quickstart.md
     - Quickstart (Apple): quickstart-ios.md
+    - Quickstart (Web): quickstart-web.md
+    - Quickstart (TV): quickstart-tv.md
+    - Quickstart (Flutter): quickstart-flutter.md
+    - Quickstart (React Native): quickstart-react-native.md
     - API Cheatsheet: cheatsheet.md
     - API Cheatsheet (Apple): cheatsheet-ios.md
     - Recipes: recipes.md
