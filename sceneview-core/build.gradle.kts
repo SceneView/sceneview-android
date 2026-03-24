@@ -18,6 +18,14 @@ kotlin {
         binaries.library()
     }
 
+    // WASM target planned — blocked by kotlin-math not supporting wasmJs yet.
+    // When kotlin-math adds wasmJs support, uncomment:
+    // @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    // wasmJs {
+    //     browser()
+    //     binaries.library()
+    // }
+
     applyDefaultHierarchyTemplate()
 
     sourceSets {
