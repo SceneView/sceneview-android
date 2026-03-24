@@ -131,6 +131,67 @@ public struct CameraNode: Sendable {
         self.farClip = far
         return self
     }
+
+    // MARK: - Field of view
+
+    /// Sets the vertical field of view in degrees.
+    ///
+    /// - Parameter degrees: Vertical FOV in degrees. Typical values are 30-90.
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public func fieldOfView(_ degrees: Float) -> CameraNode {
+        #if !os(macOS)
+        var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
+        camera.fieldOfViewInDegrees = degrees
+        entity.components.set(camera)
+        #endif
+        return self
+    }
+
+    // MARK: - Depth of field
+
+    /// Configures depth-of-field blur.
+    ///
+    /// When applied, objects outside the focus distance will appear blurred based on aperture size.
+    /// Requires iOS 18+ / visionOS 2+; no-op on earlier versions.
+    ///
+    /// - Parameters:
+    ///   - focusDistance: Distance in meters to the in-focus plane.
+    ///   - aperture: Aperture diameter in f-stops. Lower values produce more blur.
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public func depthOfField(focusDistance: Float, aperture: Float) -> CameraNode {
+        #if !os(macOS)
+        if #available(iOS 18.0, visionOS 2.0, *) {
+            var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
+            camera.focus = .init(focusDistance: focusDistance, aperture: aperture)
+            entity.components.set(camera)
+        }
+        #endif
+        return self
+    }
+
+    // MARK: - Exposure
+
+    /// Sets the exposure compensation value.
+    ///
+    /// Positive values brighten the image, negative values darken it. One stop equals a
+    /// doubling/halving of brightness.
+    /// Requires iOS 18+ / visionOS 2+; no-op on earlier versions.
+    ///
+    /// - Parameter value: Exposure compensation in EV (exposure value) stops.
+    /// - Returns: Self for chaining.
+    @discardableResult
+    public func exposure(_ value: Float) -> CameraNode {
+        #if !os(macOS)
+        if #available(iOS 18.0, visionOS 2.0, *) {
+            var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
+            camera.exposure = .init(compensation: value)
+            entity.components.set(camera)
+        }
+        #endif
+        return self
+    }
 }
 
 #endif // os(iOS) || os(macOS) || os(visionOS)

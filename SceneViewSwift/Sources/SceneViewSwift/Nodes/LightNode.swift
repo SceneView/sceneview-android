@@ -126,6 +126,81 @@ public struct LightNode: Sendable {
         return self
     }
 
+    // MARK: - Shadow configuration
+
+    /// Enables or disables shadow casting for this light.
+    ///
+    /// For directional lights, adds/removes a `DirectionalLightComponent.Shadow`.
+    /// Point and spot lights do not support shadows in RealityKit.
+    @discardableResult
+    public func castsShadow(_ enabled: Bool) -> LightNode {
+        if let directional = entity as? DirectionalLight {
+            if enabled {
+                if directional.shadow == nil {
+                    directional.shadow = DirectionalLightComponent.Shadow(
+                        maximumDistance: 8,
+                        depthBias: 5.0
+                    )
+                }
+            } else {
+                directional.shadow = nil
+            }
+        }
+        return self
+    }
+
+    /// Sets the shadow color for directional lights.
+    ///
+    /// - Parameter color: The shadow tint color.
+    @discardableResult
+    public func shadowColor(_ color: LightNode.Color) -> LightNode {
+        if let directional = entity as? DirectionalLight {
+            if directional.shadow == nil {
+                directional.shadow = DirectionalLightComponent.Shadow(
+                    maximumDistance: 8,
+                    depthBias: 5.0
+                )
+            }
+            directional.shadow?.color = color.platformColor
+        }
+        return self
+    }
+
+    /// Sets the maximum shadow rendering distance for directional lights.
+    ///
+    /// - Parameter distance: Maximum distance in meters at which shadows are rendered.
+    @discardableResult
+    public func shadowMaximumDistance(_ distance: Float) -> LightNode {
+        if let directional = entity as? DirectionalLight {
+            if directional.shadow == nil {
+                directional.shadow = DirectionalLightComponent.Shadow(
+                    maximumDistance: distance,
+                    depthBias: 5.0
+                )
+            } else {
+                directional.shadow?.maximumDistance = distance
+            }
+        }
+        return self
+    }
+
+    // MARK: - Attenuation
+
+    /// Sets the attenuation radius for point or spot lights.
+    ///
+    /// Controls how far the light's influence reaches. Has no effect on directional lights.
+    ///
+    /// - Parameter radius: Maximum influence distance in meters.
+    @discardableResult
+    public func attenuationRadius(_ radius: Float) -> LightNode {
+        if let point = entity as? PointLight {
+            point.light.attenuationRadius = radius
+        } else if let spot = entity as? SpotLight {
+            spot.light.attenuationRadius = radius
+        }
+        return self
+    }
+
     /// Simple color representation for lights.
     public enum Color: Sendable {
         case white

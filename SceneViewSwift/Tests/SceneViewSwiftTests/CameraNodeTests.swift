@@ -65,5 +65,58 @@ final class CameraNodeTests: XCTestCase {
         let camera = CameraNode(entity)
         XCTAssertEqual(camera.position.x, 5.0, accuracy: 0.001)
     }
+
+    // MARK: - Field of view
+
+    #if !os(macOS)
+    func testFieldOfView() {
+        let camera = CameraNode()
+            .fieldOfView(60.0)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertNotNil(component)
+        XCTAssertEqual(component?.fieldOfViewInDegrees, 60.0, accuracy: 0.001)
+    }
+    #endif
+
+    // MARK: - Depth of field
+
+    #if !os(macOS)
+    func testDepthOfField() {
+        let camera = CameraNode()
+            .depthOfField(focusDistance: 2.0, aperture: 1.4)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertNotNil(component)
+    }
+    #endif
+
+    // MARK: - Exposure
+
+    #if !os(macOS)
+    func testExposure() {
+        let camera = CameraNode()
+            .exposure(2.0)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertNotNil(component)
+    }
+    #endif
+
+    // MARK: - Chaining
+
+    #if !os(macOS)
+    func testFullChaining() {
+        let camera = CameraNode()
+            .position(.init(x: 0, y: 1.5, z: 3))
+            .lookAt(.zero)
+            .fieldOfView(75.0)
+            .clipPlanes(near: 0.1, far: 500)
+            .exposure(1.5)
+        XCTAssertEqual(camera.position.y, 1.5, accuracy: 0.001)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertNotNil(component)
+        XCTAssertEqual(component?.fieldOfViewInDegrees, 75.0, accuracy: 0.001)
+        XCTAssertEqual(component?.near, 0.1, accuracy: 0.001)
+        XCTAssertEqual(component?.far, 500.0, accuracy: 0.001)
+    }
+    #endif
 }
 #endif
