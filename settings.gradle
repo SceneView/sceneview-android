@@ -25,6 +25,7 @@ include ":sceneview-core"
 include ":sceneview"
 include ":arsceneview"
 include ":sceneview-web"
+include ":sceneview-desktop"
 
 // Samples
 include ":samples:common"
