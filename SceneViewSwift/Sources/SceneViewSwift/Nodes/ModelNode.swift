@@ -226,7 +226,9 @@ public struct ModelNode: Sendable {
 
     /// Adds a grounding shadow beneath the model.
     public func withGroundingShadow() -> ModelNode {
+        #if os(iOS) || os(visionOS)
         entity.components.set(GroundingShadowComponent(castsShadow: true))
+        #endif
         return self
     }
 }

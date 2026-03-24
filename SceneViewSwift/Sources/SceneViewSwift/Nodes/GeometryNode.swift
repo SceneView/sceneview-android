@@ -193,7 +193,9 @@ public struct GeometryNode: Sendable {
     /// Returns self with a grounding shadow.
     @discardableResult
     public func withGroundingShadow() -> GeometryNode {
+        #if os(iOS) || os(visionOS)
         entity.components.set(GroundingShadowComponent(castsShadow: true))
+        #endif
         return self
     }
 }
