@@ -12,6 +12,25 @@ import com.google.ar.core.exceptions.NotTrackingException
 import com.google.ar.core.exceptions.ResourceExhaustedException
 import dev.romainguy.kotlin.math.Quaternion
 
+/**
+ * An [AnchorNode] positioned at a specified latitude/longitude with altitude relative to the
+ * building rooftop at that location, using the ARCore Geospatial API.
+ *
+ * If no building exists at the given location, the altitude is relative to the terrain instead.
+ * An altitude of 0 places the anchor directly on the rooftop; positive values place it above.
+ *
+ * Requires [Config.GeospatialMode.ENABLED] and a working internet connection. The anchor is
+ * created asynchronously via [resolve] (companion function).
+ *
+ * @param engine                 The Filament [Engine].
+ * @param anchor                 The resolved [Anchor] from the Geospatial API.
+ * @param latitude               WGS84 latitude of the anchor.
+ * @param longitude              WGS84 longitude of the anchor.
+ * @param altitudeAboveRooftop   Altitude in meters above the rooftop (or terrain).
+ * @param eusQuaternion          East-up-south rotation quaternion.
+ * @param onTrackingStateChanged Callback invoked when tracking state changes.
+ * @param onUpdated              Callback invoked each frame while the anchor is updated.
+ */
 open class RooftopAnchorNode private constructor(
     engine: Engine,
     anchor: Anchor,
