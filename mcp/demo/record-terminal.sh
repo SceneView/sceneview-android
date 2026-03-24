@@ -52,7 +52,7 @@ echo ""
 type_text "npx sceneview-mcp --version"
 echo ""
 sleep 0.5
-echo "sceneview-mcp 3.0.0"
+echo "sceneview-mcp 3.3.0"
 sleep 0.3
 echo -e "\e[2mSceneView MCP server ready — exposes sceneview://api + 2 tools\e[0m"
 sleep 1.5
