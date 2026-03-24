@@ -81,6 +81,7 @@ nav:
     - API (3D — sceneview): https://sceneview.github.io/api/sceneview/sceneview/
     - API (AR — arsceneview): https://sceneview.github.io/api/sceneview/arsceneview/
   - Samples: samples.md
+  - Samples (Apple): samples-ios.md
   - Contribute: contributing.md
   - Changelog: changelog.md
   - Migration: migration.md
