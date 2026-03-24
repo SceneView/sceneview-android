@@ -283,3 +283,9 @@ model?.stopAllAnimations()
 | `rememberCameraManipulator()` | `.cameraControls(.orbit)` view modifier |
 | `AnchorNode(anchor)` | `AnchorNode.world(position:)` |
 | `PhysicsNode(node, mass)` | `PhysicsNode.dynamic(entity, mass:)` |
+
+---
+
+## Android
+
+Building for Android with Jetpack Compose? See the [Android API Cheatsheet](cheatsheet.md).

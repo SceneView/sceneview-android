@@ -3,7 +3,7 @@
 These samples demonstrate SceneViewSwift capabilities using **SwiftUI + RealityKit** on iOS, macOS, and visionOS. Each example is a self-contained SwiftUI view you can drop into an Xcode project after adding the SceneViewSwift package.
 
 ```
-.package(url: "https://github.com/SceneView/sceneview.git", from: "3.3.0")
+.package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
 ```
 
 ---
@@ -431,3 +431,9 @@ AR samples require:
 
 !!! tip
     For best AR tracking, use a well-lit environment with textured surfaces. Plain white surfaces and glass are difficult for ARKit to detect.
+
+---
+
+## Android samples
+
+Looking for Android (Jetpack Compose) samples? See the [Android samples page](samples.md).
