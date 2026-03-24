@@ -1,4 +1,12 @@
+---
+title: Apple Quickstart — SceneView for iOS, macOS, visionOS
+description: "Set up SceneViewSwift in your Xcode project in 10 minutes. Build a 3D model viewer with orbit camera and environment lighting using SwiftUI and RealityKit."
+---
+
 # Quickstart — Apple Platforms
+
+!!! tip "Looking for Android?"
+    See the [Android Quickstart](quickstart.md) for Jetpack Compose setup.
 
 **Time:** ~10 minutes |
 **Goal:** Go from an empty Xcode project to a 3D model you can orbit with touch gestures — on iOS, macOS, or visionOS.

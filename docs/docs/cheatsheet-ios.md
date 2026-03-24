@@ -1,6 +1,14 @@
+---
+title: API Cheatsheet — SceneView for iOS, macOS, visionOS
+description: "Complete API reference for SceneViewSwift node types, views, materials, physics, and AR features on Apple platforms."
+---
+
 # API Cheatsheet — Apple Platforms
 
 A quick reference for SceneViewSwift's most-used APIs. Print it, pin it, keep it next to your keyboard.
+
+!!! tip "Building for Android?"
+    See the [Android API Cheatsheet](cheatsheet.md) for Jetpack Compose equivalents.
 
 ---
 

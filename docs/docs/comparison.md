@@ -1,3 +1,8 @@
+---
+title: SceneView vs. Unity, Sceneform, Raw ARCore
+description: "Side-by-side comparison of SceneView with Unity, Google Sceneform, Raw ARCore SDK, and Rajawali. Lines of code, APK size, and feature parity."
+---
+
 # SceneView vs. the alternatives
 
 An honest comparison for developers evaluating 3D and AR options.
