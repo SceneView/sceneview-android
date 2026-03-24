@@ -15,11 +15,22 @@ on:
       - 'arsceneview/Module.md'
   release:
     types: [published]
+  workflow_call:
   workflow_dispatch:
 
+# Allow only one concurrent deployment, skip in-progress runs
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  deploy:
-    name: Build and deploy
+  build:
+    name: Build site
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +63,6 @@ jobs:
 
       - name: Copy extra site files
         run: |
-          # Copy extra files if they exist
           for f in robots.txt manifest.json structured-data.json llms.txt llms-full.txt; do
             [ -f "docs/docs/$f" ] && cp "docs/docs/$f" "site/$f" || true
           done
@@ -63,7 +73,6 @@ jobs:
             cp docs/docs/.well-known/security.txt site/.well-known/security.txt
           fi
 
-          # Ensure GitHub Pages doesn't process with Jekyll
           touch site/.nojekyll
 
           # Verify the build produced content
@@ -74,13 +83,30 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      # If Dokka API docs were uploaded by the release workflow, include them
+      - name: Download Dokka API docs (if available)
+        uses: actions/download-artifact@v4
         with:
-          personal_token: ${{ secrets.PERSONAL_TOKEN }}
-          external_repository: SceneView/sceneview.github.io
-          publish_branch: main
-          publish_dir: ./site
-          destination_dir: .
-          full_commit_message: 'Deploy docs site — ${{ github.sha }}'
-          enable_jekyll: false
+          name: dokka-api-docs
+          path: site/api/sceneview
+        continue-on-error: true
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
