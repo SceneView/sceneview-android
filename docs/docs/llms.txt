@@ -1231,10 +1231,11 @@ public struct ARSceneView: UIViewRepresentable {
         planeDetection: PlaneDetectionMode = .horizontal,  // .none | .horizontal | .vertical | .both
         showPlaneOverlay: Bool = true,
         showCoachingOverlay: Bool = true,
-        onTapOnPlane: ((SIMD3<Float>) -> Void)? = nil
+        imageTrackingDatabase: Set<ARReferenceImage>? = nil,
+        onTapOnPlane: ((SIMD3<Float>, ARView) -> Void)? = nil,
+        onImageDetected: ((String, AnchorNode, ARView) -> Void)? = nil
     )
-    public func content(_ builder: @escaping (ARView) -> Void) -> ARSceneView
-    public func onSessionUpdated(_ handler: @escaping (ARSession) -> Void) -> ARSceneView
+    public func onSessionStarted(_ handler: @escaping (ARView) -> Void) -> ARSceneView
 }
 ```
 
@@ -1278,8 +1279,9 @@ struct ModelViewer: View {
 
 **Signature:**
 ```swift
-public struct ModelNode: Sendable {
+public struct ModelNode: @unchecked Sendable {
     public let entity: ModelEntity
+    public var tapHandler: (() -> Void)?
     public var position: SIMD3<Float>
     public var rotation: simd_quatf
     public var scale: SIMD3<Float>
@@ -1298,12 +1300,26 @@ public struct ModelNode: Sendable {
 
     // Animation
     public var animationCount: Int
+    public var isAnimating: Bool
+    public var animationNames: [String]           // names of all available animations
     public func playAllAnimations(loop: Bool = true, speed: Float = 1.0)
     public func playAnimation(at index: Int, loop: Bool = true, speed: Float = 1.0, transitionDuration: TimeInterval = 0.2)
+    public func playAnimation(named name: String, loop: Bool = true, speed: Float = 1.0, transitionDuration: TimeInterval = 0.2)
     public func stopAllAnimations()
     public func pauseAllAnimations()
 
+    // Collision
     public func enableCollision()
+    public var collisionBounds: BoundingBox?      // nil if no collision shapes generated
+    public mutating func onTap(_ handler: @escaping () -> Void) -> ModelNode
+
+    // Material properties (fluent, @discardableResult)
+    public func setColor(_ color: SimpleMaterial.Color) -> ModelNode       // base color of all materials
+    public func setMetallic(_ value: Float) -> ModelNode                   // 0 = dielectric, 1 = metal
+    public func setRoughness(_ value: Float) -> ModelNode                  // 0 = mirror, 1 = rough
+    public func opacity(_ value: Float) -> ModelNode                       // 0 = transparent, 1 = opaque
+
+    // Shadow
     public func withGroundingShadow() -> ModelNode
 }
 ```
@@ -1350,7 +1366,13 @@ public struct GeometryNode: Sendable {
 public enum GeometryMaterial: Sendable {
     case simple(color: SimpleMaterial.Color)
     case pbr(color: SimpleMaterial.Color, metallic: Float = 0.0, roughness: Float = 0.5)
+    case textured(baseColor: TextureResource, normal: TextureResource? = nil, metallic: Float = 0.0, roughness: Float = 0.5, tint: SimpleMaterial.Color = .white)
     case unlit(color: SimpleMaterial.Color)
+    case unlitTextured(texture: TextureResource, tint: SimpleMaterial.Color = .white)
+
+    // Texture loading helpers
+    public static func loadTexture(_ name: String) async throws -> TextureResource
+    public static func loadTexture(contentsOf url: URL) async throws -> TextureResource
 }
 ```
 
@@ -1378,12 +1400,22 @@ public struct LightNode: Sendable {
     public var position: SIMD3<Float>
     public var rotation: simd_quatf
 
+    // Factory methods
     public static func directional(color: LightNode.Color = .white, intensity: Float = 1000, castsShadow: Bool = true) -> LightNode
     public static func point(color: LightNode.Color = .white, intensity: Float = 1000, attenuationRadius: Float = 10.0) -> LightNode
     public static func spot(color: LightNode.Color = .white, intensity: Float = 1000, innerAngle: Float = .pi/6, outerAngle: Float = .pi/4, attenuationRadius: Float = 10.0) -> LightNode
 
+    // Transform (fluent, @discardableResult)
     public func position(_ position: SIMD3<Float>) -> LightNode
     public func lookAt(_ target: SIMD3<Float>) -> LightNode
+
+    // Shadow configuration (directional lights only)
+    public func castsShadow(_ enabled: Bool) -> LightNode
+    public func shadowColor(_ color: LightNode.Color) -> LightNode
+    public func shadowMaximumDistance(_ distance: Float) -> LightNode
+
+    // Attenuation (point and spot lights only)
+    public func attenuationRadius(_ radius: Float) -> LightNode
 
     public enum Color: Sendable { case white, warm, cool, custom(r: Float, g: Float, b: Float) }
 }
@@ -1528,9 +1560,10 @@ public struct SceneEnvironment: Sendable {
 }
 ```
 
-### iOS: CameraNode (programmatic camera)
+### iOS: CameraNode (programmatic camera with FOV, DOF, exposure)
 
-Define camera viewpoints programmatically with perspective projection and look-at targeting.
+Define camera viewpoints programmatically with perspective projection, field of view,
+depth of field, exposure compensation, and look-at targeting.
 
 ```swift
 import SceneViewSwift
@@ -1539,6 +1572,9 @@ let camera = CameraNode()
     .position(.init(x: 0, y: 1.5, z: 3))
     .lookAt(.zero)
     .clipPlanes(near: 0.1, far: 500)
+    .fieldOfView(60)                              // vertical FOV in degrees
+    .depthOfField(focusDistance: 2.0, aperture: 2.8) // blur objects outside focus
+    .exposure(1.5)                                // +1.5 EV brighter
 
 // Access the 4x4 transform matrix
 let viewMatrix = camera.transform
@@ -1556,10 +1592,17 @@ public struct CameraNode: Sendable {
 
     public init()
     public init(_ entity: Entity)
+
+    // Transform (fluent, @discardableResult)
     public func position(_ position: SIMD3<Float>) -> CameraNode
-    public func lookAt(_ target: SIMD3<Float>, up: SIMD3<Float>) -> CameraNode
+    public func lookAt(_ target: SIMD3<Float>, up: SIMD3<Float> = SIMD3<Float>(0, 1, 0)) -> CameraNode
     public func rotation(_ rotation: simd_quatf) -> CameraNode
     public func clipPlanes(near: Float, far: Float) -> CameraNode
+
+    // Projection & effects
+    public func fieldOfView(_ degrees: Float) -> CameraNode                     // vertical FOV, typical 30-90
+    public func depthOfField(focusDistance: Float, aperture: Float) -> CameraNode // iOS 18+ / visionOS 2+
+    public func exposure(_ value: Float) -> CameraNode                          // EV compensation, iOS 18+ / visionOS 2+
 }
 ```
 
@@ -1703,6 +1746,270 @@ public struct PhysicsNode: Sendable {
 }
 ```
 
+### iOS: PathNode (polyline through multiple points)
+
+Connects a series of 3D points with line segments. Includes circle and grid factories.
+
+```swift
+SceneView { root in
+    // Triangle path
+    let path = PathNode(
+        points: [
+            .init(x: -0.5, y: 0, z: 0),
+            .init(x: 0.5, y: 0, z: 0),
+            .init(x: 0, y: 0.5, z: 0)
+        ],
+        closed: true,
+        color: .systemYellow
+    )
+    root.addChild(path.entity)
+
+    // Circle on XZ plane
+    let circle = PathNode.circle(radius: 1.0, segments: 32, color: .cyan)
+    root.addChild(circle.entity)
+
+    // Ground grid
+    let grid = PathNode.grid(size: 4.0, divisions: 20, color: .gray)
+    root.addChild(grid.entity)
+}
+```
+
+**Signature:**
+```swift
+public struct PathNode: Sendable {
+    public let entity: Entity
+    public let points: [SIMD3<Float>]
+
+    public init(points: [SIMD3<Float>], closed: Bool = false, thickness: Float = 0.005, color: SimpleMaterial.Color = .white)
+
+    // Factory methods
+    public static func circle(center: SIMD3<Float> = .zero, radius: Float = 0.5, segments: Int = 32, thickness: Float = 0.005, color: SimpleMaterial.Color = .white) -> PathNode
+    public static func grid(size: Float = 2.0, divisions: Int = 10, thickness: Float = 0.003, color: SimpleMaterial.Color = .gray) -> PathNode
+
+    public func position(_ position: SIMD3<Float>) -> PathNode
+}
+```
+
+### iOS: DynamicSkyNode (time-of-day sun simulation)
+
+Directional light driven by time-of-day — sun rises at 06:00, peaks at noon, sets at 18:00.
+Color shifts from warm orange-red at horizon to near-white at midday. Includes presets for
+sunrise, noon, sunset, and night.
+
+```swift
+@State private var hour: Float = 12
+
+SceneView { content in
+    // Noon sun
+    let sky = DynamicSkyNode.noon()
+    content.add(sky.entity)
+
+    // Or custom time
+    let custom = DynamicSkyNode(timeOfDay: hour, turbidity: 3, sunIntensity: 1200)
+    content.add(custom.entity)
+}
+
+// Animate time-of-day with a slider
+Slider(value: $hour, in: 0...24)
+```
+
+**Signature:**
+```swift
+public struct DynamicSkyNode: Sendable {
+    public let entity: Entity
+    public private(set) var timeOfDay: Float      // 0-24, 0=midnight, 12=noon
+    public private(set) var sunIntensity: Float    // max lux at solar noon
+    public private(set) var turbidity: Float       // atmospheric haze [1, 10]
+
+    // Initializer
+    public init(timeOfDay: Float = 12, turbidity: Float = 2, sunIntensity: Float = 1000, castsShadow: Bool = true)
+
+    // Presets
+    public static func sunrise(turbidity: Float = 2, sunIntensity: Float = 1000, castsShadow: Bool = true) -> DynamicSkyNode
+    public static func noon(turbidity: Float = 2, sunIntensity: Float = 1000, castsShadow: Bool = true) -> DynamicSkyNode
+    public static func sunset(turbidity: Float = 2, sunIntensity: Float = 1000, castsShadow: Bool = true) -> DynamicSkyNode
+    public static func night(turbidity: Float = 2, sunIntensity: Float = 1000, castsShadow: Bool = true) -> DynamicSkyNode
+
+    // Builder methods (fluent, @discardableResult)
+    public func time(_ timeOfDay: Float) -> DynamicSkyNode
+    public func intensity(_ sunIntensity: Float) -> DynamicSkyNode
+    public func position(_ position: SIMD3<Float>) -> DynamicSkyNode
+
+    // Computed properties
+    public var sunDirection: SIMD3<Float>          // unit vector toward sun
+    public var sunColor: SIMD3<Float>              // RGB in [0, 1]
+    public var effectiveIntensity: Float           // scaled by elevation
+    public var isDaytime: Bool                     // true between 06:00 and 18:00
+}
+```
+
+### iOS: FogNode (atmospheric fog effect)
+
+Atmospheric fog simulated with a translucent sphere around the camera. Supports linear,
+exponential, and height-based fog modes.
+
+```swift
+SceneView { content in
+    // Linear fog: ramps from transparent at 1m to full at 20m
+    let fog = FogNode.linear(start: 1.0, end: 20.0)
+        .color(.cool)
+    content.add(fog.entity)
+
+    // Exponential fog
+    let thickFog = FogNode.exponential(density: 0.15)
+        .color(.custom(r: 0.8, g: 0.85, b: 0.9))
+    content.add(thickFog.entity)
+
+    // Height-based fog (denser below 1m)
+    let groundFog = FogNode.heightBased(density: 0.1, height: 1.0)
+    content.add(groundFog.entity)
+}
+```
+
+**Signature:**
+```swift
+public struct FogNode: Sendable {
+    public let entity: ModelEntity
+    public var density: Float                      // [0.0, 1.0]
+    public var startDistance: Float                 // near distance (meters)
+    public var endDistance: Float                   // far distance (meters)
+    public var heightFalloff: Float                // world-space height (meters)
+    public var position: SIMD3<Float>
+
+    // Factory methods
+    public static func linear(start: Float = 1.0, end: Float = 20.0, color: FogNode.Color = .white) -> FogNode
+    public static func exponential(density: Float = 0.05, color: FogNode.Color = .white) -> FogNode
+    public static func heightBased(density: Float = 0.05, height: Float = 1.0, color: FogNode.Color = .white) -> FogNode
+
+    // Builder methods (fluent, @discardableResult)
+    public func color(_ color: FogNode.Color) -> FogNode
+    public func density(_ density: Float) -> FogNode
+    public func startDistance(_ distance: Float) -> FogNode
+    public func endDistance(_ distance: Float) -> FogNode
+    public func position(_ position: SIMD3<Float>) -> FogNode
+
+    public enum Color: Sendable { case white, cool, warm, custom(r: Float, g: Float, b: Float) }
+}
+```
+
+### iOS: ReflectionProbeNode (local environment reflections)
+
+Defines a volume (box or sphere) within which objects receive reflections from a local
+environment texture instead of the scene's global IBL. Use multiple probes for different zones.
+
+```swift
+SceneView { content in
+    // Box-shaped probe for a room
+    let roomProbe = ReflectionProbeNode.box(size: [4, 3, 4])
+        .position(.init(x: 0, y: 1.5, z: 0))
+        .intensity(1.0)
+    content.add(roomProbe.entity)
+
+    // Spherical probe for a local highlight
+    let sphereProbe = ReflectionProbeNode.sphere(radius: 2.0)
+        .position(.init(x: 3, y: 1, z: 0))
+    content.add(sphereProbe.entity)
+
+    // Load and assign a custom environment texture
+    let env = try await ReflectionProbeNode.loadEnvironment("office_env")
+    let customProbe = ReflectionProbeNode.box(size: [4, 3, 4])
+        .environmentTexture(env)
+    content.add(customProbe.entity)
+}
+```
+
+**Signature:**
+```swift
+public struct ReflectionProbeNode: Sendable {
+    public let entity: Entity
+    public let shape: Shape
+    public var position: SIMD3<Float>
+    public var scale: SIMD3<Float>
+    public var volumeSize: SIMD3<Float>            // computed from shape
+
+    public enum Shape: Sendable {
+        case box(size: SIMD3<Float>)
+        case sphere(radius: Float)
+    }
+
+    // Factory methods
+    public static func box(size: SIMD3<Float> = .init(repeating: 1.0), intensity: Float = 1.0) -> ReflectionProbeNode
+    public static func sphere(radius: Float = 1.0, intensity: Float = 1.0) -> ReflectionProbeNode
+
+    // Builder methods (fluent, @discardableResult)
+    public func position(_ position: SIMD3<Float>) -> ReflectionProbeNode
+    public func intensity(_ value: Float) -> ReflectionProbeNode
+    public func environmentTexture(_ resource: EnvironmentResource) -> ReflectionProbeNode
+
+    // Hit testing
+    public func contains(_ point: SIMD3<Float>) -> Bool
+
+    // Environment loading helpers
+    public static func loadEnvironment(_ name: String) async throws -> EnvironmentResource
+    public static func loadEnvironment(contentsOf url: URL) async throws -> EnvironmentResource
+}
+```
+
+### iOS: MeshNode (custom geometry from raw vertex data)
+
+Create geometry from raw vertex positions, normals, UVs, and triangle indices for advanced use cases.
+
+```swift
+// Triangle from raw vertices
+let triangle = try MeshNode.fromVertices(
+    positions: [
+        SIMD3<Float>(0, 0.5, 0),
+        SIMD3<Float>(-0.5, -0.5, 0),
+        SIMD3<Float>(0.5, -0.5, 0)
+    ],
+    normals: [
+        SIMD3<Float>(0, 0, 1),
+        SIMD3<Float>(0, 0, 1),
+        SIMD3<Float>(0, 0, 1)
+    ],
+    indices: [0, 1, 2],
+    material: .simple(color: .red)
+)
+content.addChild(triangle.entity)
+
+// From a MeshDescriptor for maximum flexibility
+let mesh = try MeshNode.fromDescriptor(myDescriptor, material: .pbr(color: .gray, metallic: 1.0, roughness: 0.2))
+```
+
+**Signature:**
+```swift
+public struct MeshNode: Sendable {
+    public let entity: ModelEntity
+    public var position: SIMD3<Float>
+    public var scale: SIMD3<Float>
+    public var rotation: simd_quatf
+
+    public init(_ entity: ModelEntity)
+
+    // Factory methods
+    public static func fromVertices(
+        positions: [SIMD3<Float>],
+        normals: [SIMD3<Float>]? = nil,
+        uvs: [SIMD2<Float>]? = nil,
+        indices: [UInt32],
+        material: GeometryMaterial = .simple(color: .white)
+    ) throws -> MeshNode
+
+    public static func fromDescriptor(
+        _ descriptor: MeshDescriptor,
+        material: GeometryMaterial = .simple(color: .white)
+    ) throws -> MeshNode
+
+    // Transform (fluent, @discardableResult)
+    public func position(_ position: SIMD3<Float>) -> MeshNode
+    public func scale(_ uniform: Float) -> MeshNode
+    public func scale(_ scale: SIMD3<Float>) -> MeshNode
+    public func rotation(_ rotation: simd_quatf) -> MeshNode
+    public func rotation(angle: Float, axis: SIMD3<Float>) -> MeshNode
+    public func withGroundingShadow() -> MeshNode
+}
+```
+
 ### iOS: AugmentedImageNode (image detection in AR)
 
 Detect real-world images and overlay 3D content. Uses ARKit image tracking.
@@ -1820,7 +2127,18 @@ struct ARTapToPlace: View {
 | Anchor (world) | `AnchorNode(anchor) { }` | `AnchorNode.world(position:)` |
 | Anchor (plane) | `AnchorNode(anchor) { }` | `AnchorNode.plane(alignment:)` |
 | Image detection | `AugmentedImageNode { }` | `ARSceneView(imageTrackingDatabase:onImageDetected:)` |
-| Tap on entity | `onTap = { node -> }` | `.onEntityTapped { entity in }` |
+| Path (polyline) | `PathNode(points)` | `PathNode(points:closed:thickness:color:)` |
+| Grid | N/A | `PathNode.grid(size:divisions:)` |
+| Dynamic sky | `DynamicSkyNode(hour)` | `DynamicSkyNode(timeOfDay:turbidity:sunIntensity:)` |
+| Fog | `FogNode(mode)` | `FogNode.linear(start:end:)` / `.exponential(density:)` |
+| Reflection probe | `ReflectionProbeNode(...)` | `ReflectionProbeNode.box(size:)` / `.sphere(radius:)` |
+| Custom mesh | `MeshNode(vertexBuffer, indexBuffer)` | `MeshNode.fromVertices(positions:normals:indices:)` |
+| Camera FOV | `cameraNode.setProjection(fov)` | `.fieldOfView(degrees)` |
+| Depth of field | `depthOfFieldOptions` | `.depthOfField(focusDistance:aperture:)` |
+| Exposure | `setExposure(...)` | `.exposure(value)` |
+| Named animation | `animationName = "Walk"` | `.playAnimation(named: "Walk")` |
+| Material color | `materialLoader.createColorInstance()` | `.setColor(.red)` / `.setMetallic(1.0)` / `.setRoughness(0.3)` |
+| Tap on entity | `onTap = { node -> }` | `.onEntityTapped { entity in }` / `model.onTap { }` |
 | Renderer | Google Filament | Apple RealityKit |
 | AR framework | Google ARCore | Apple ARKit (iOS only) |
 | Model format | glTF/GLB | USDZ / Reality |
@@ -1836,3 +2154,89 @@ Pure Kotlin logic shared between Android and Apple platforms:
 - **Animation**: Easing, lerp/slerp, spring, smooth transform interpolation
 - **Physics**: Euler integration, floor bounce, restitution, sleep detection
 - **Triangulation**: Earcut (polygon), Delaunator (Delaunay)
+
+---
+
+## Web Platform (Alpha)
+
+SceneView for Web uses **Filament.js** — the same Filament rendering engine as Android, compiled to WebAssembly for browsers (WebGL2).
+
+### npm package
+```
+npm install @sceneview/sceneview-web
+```
+
+### Kotlin/JS API
+```kotlin
+import io.github.sceneview.web.SceneView
+import kotlinx.browser.document
+import org.w3c.dom.HTMLCanvasElement
+
+fun main() {
+    val canvas = document.getElementById("scene-canvas") as HTMLCanvasElement
+
+    SceneView.create(
+        canvas = canvas,
+        configure = {
+            camera {
+                eye(0.0, 1.5, 5.0)
+                target(0.0, 0.0, 0.0)
+                fov(45.0)
+            }
+            model("models/DamagedHelmet.glb")
+            environment("environments/sky_ibl.ktx", "environments/sky_skybox.ktx")
+        },
+        onReady = { sceneView ->
+            sceneView.startRendering()
+        }
+    )
+}
+```
+
+### HTML
+```html
+<canvas id="scene-canvas"></canvas>
+<script src="sceneview-web.js"></script>
+```
+
+### SceneView Web API
+
+| Class | Purpose |
+|---|---|
+| `SceneView` | Main entry — `create(canvas, configure, onReady)` |
+| `SceneViewBuilder` | DSL: `camera {}`, `light {}`, `model()`, `environment()` |
+| `CameraConfig` | `eye()`, `target()`, `up()`, `fov()`, `near()`, `far()`, `exposure()` |
+| `LightConfig` | `directional()`, `point()`, `spot()`, `intensity()`, `color()`, `direction()` |
+| `ModelConfig` | `url`, `scale()`, `autoAnimate()`, `onLoaded {}` |
+
+### SceneView instance methods
+
+| Method | Description |
+|---|---|
+| `startRendering()` | Begin render loop (requestAnimationFrame) |
+| `stopRendering()` | Stop render loop |
+| `loadModel(url, onLoaded?)` | Load glTF/GLB from URL |
+| `loadEnvironment(iblUrl, skyboxUrl?)` | Load IBL + skybox KTX files |
+| `destroy()` | Clean up all Filament resources |
+
+### Web constraints
+- No AR (requires native sensors — camera, compass, accelerometer)
+- WebGL2 required (~95% of browsers)
+- glTF 2.0 / GLB format only (same as Android)
+- Cross-origin asset loading requires CORS headers
+
+---
+
+## Platform Coverage Summary
+
+| Platform | Renderer | Framework | Module | Status |
+|---|---|---|---|---|
+| Android | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable |
+| Android TV | Filament | Compose TV | `samples/tv-model-viewer` | Alpha |
+| iOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
+| macOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
+| visionOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
+| Web | Filament.js | Kotlin/JS | `sceneview-web` | Alpha |
+| Flutter | Filament/RealityKit | PlatformView | `flutter/sceneview_flutter` | Alpha |
+| React Native | Filament/RealityKit | Fabric | `react-native/react-native-sceneview` | Alpha |
+| Desktop | Filament (planned) | Compose Desktop | `sceneview-desktop` | Scaffold |
