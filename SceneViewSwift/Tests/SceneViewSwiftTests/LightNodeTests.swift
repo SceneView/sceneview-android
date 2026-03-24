@@ -169,5 +169,72 @@ final class LightNodeTests: XCTestCase {
         XCTAssertNotNil(directional.shadow)
         XCTAssertEqual(directional.shadow?.maximumDistance, 12.0, accuracy: 0.001)
     }
+
+    // MARK: - Shadow on non-directional lights
+
+    func testCastsShadowOnPointLightNoOp() {
+        let light = LightNode.point()
+            .castsShadow(true)
+        // Point lights don't support shadows in RealityKit, should not crash
+        XCTAssertNotNil(light.entity)
+    }
+
+    func testCastsShadowOnSpotLightNoOp() {
+        let light = LightNode.spot()
+            .castsShadow(false)
+        XCTAssertNotNil(light.entity)
+    }
+
+    func testShadowColorOnPointLightNoOp() {
+        let light = LightNode.point()
+            .shadowColor(.cool)
+        XCTAssertNotNil(light.entity)
+    }
+
+    func testShadowMaximumDistanceOnPointLightNoOp() {
+        let light = LightNode.point()
+            .shadowMaximumDistance(10.0)
+        XCTAssertNotNil(light.entity)
+    }
+
+    // MARK: - Intensity values
+
+    func testDirectionalLightWithCustomIntensity() {
+        let light = LightNode.directional(intensity: 5000)
+        let dl = light.entity as! DirectionalLight
+        XCTAssertEqual(dl.light.intensity, 5000, accuracy: 0.001)
+    }
+
+    func testPointLightCustomAttenuationRadius() {
+        let light = LightNode.point(attenuationRadius: 15.0)
+        let pl = light.entity as! PointLight
+        XCTAssertEqual(pl.light.attenuationRadius, 15.0, accuracy: 0.001)
+    }
+
+    func testSpotLightAngles() {
+        let inner: Float = .pi / 8
+        let outer: Float = .pi / 3
+        let light = LightNode.spot(
+            innerAngle: inner,
+            outerAngle: outer
+        )
+        XCTAssertNotNil(light.entity)
+        XCTAssertTrue(light.entity is SpotLight)
+    }
+
+    // MARK: - Directional light default shadow
+
+    func testDirectionalLightDefaultCastsShadow() {
+        let light = LightNode.directional()
+        let dl = light.entity as! DirectionalLight
+        // Default castsShadow is true
+        XCTAssertNotNil(dl.shadow)
+    }
+
+    func testDirectionalLightNoShadow() {
+        let light = LightNode.directional(castsShadow: false)
+        let dl = light.entity as! DirectionalLight
+        XCTAssertNil(dl.shadow)
+    }
 }
 #endif

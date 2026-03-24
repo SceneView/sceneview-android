@@ -68,5 +68,87 @@ final class PhysicsNodeTests: XCTestCase {
             XCTAssertEqual(motion.angularVelocity.y, 1.0, accuracy: 0.001)
         }
     }
+
+    // MARK: - Apply impulse
+
+    func testApplyImpulseOnDynamicBody() {
+        let cube = GeometryNode.cube(size: 0.5, color: .red)
+        _ = PhysicsNode.dynamic(cube.entity)
+        // Should not crash
+        PhysicsNode.applyImpulse(to: cube.entity, impulse: .init(x: 0, y: 10, z: 0))
+        XCTAssertNotNil(cube.entity.components[PhysicsBodyComponent.self])
+    }
+
+    func testApplyImpulseOnNonModelEntityNoOp() {
+        let entity = Entity()
+        // Non-ModelEntity should be a no-op (guard clause)
+        PhysicsNode.applyImpulse(to: entity, impulse: .init(x: 0, y: 10, z: 0))
+        XCTAssertNotNil(entity)
+    }
+
+    // MARK: - Velocity on entity without motion component
+
+    func testSetVelocityOnEntityWithoutMotionComponentNoOp() {
+        let entity = Entity()
+        // No motion component: should be a no-op
+        PhysicsNode.setVelocity(entity, velocity: .init(x: 1, y: 0, z: 0))
+        XCTAssertNil(entity.components[PhysicsMotionComponent.self])
+    }
+
+    func testSetAngularVelocityOnEntityWithoutMotionComponentNoOp() {
+        let entity = Entity()
+        PhysicsNode.setAngularVelocity(entity, angularVelocity: .init(x: 0, y: 1, z: 0))
+        XCTAssertNil(entity.components[PhysicsMotionComponent.self])
+    }
+
+    // MARK: - Mode enum
+
+    func testModeEnumValues() {
+        let modes: [PhysicsNode.Mode] = [.dynamic, .static, .kinematic]
+        XCTAssertEqual(modes.count, 3)
+    }
+
+    // MARK: - Physics entity reference
+
+    func testDynamicReturnsCorrectEntity() {
+        let cube = GeometryNode.cube(size: 0.5)
+        let physics = PhysicsNode.dynamic(cube.entity)
+        XCTAssertTrue(physics.entity === cube.entity)
+    }
+
+    func testStaticReturnsCorrectEntity() {
+        let plane = GeometryNode.plane()
+        let physics = PhysicsNode.static(plane.entity)
+        XCTAssertTrue(physics.entity === plane.entity)
+    }
+
+    func testKinematicReturnsCorrectEntity() {
+        let sphere = GeometryNode.sphere()
+        let physics = PhysicsNode.kinematic(sphere.entity)
+        XCTAssertTrue(physics.entity === sphere.entity)
+    }
+
+    // MARK: - Zero mass dynamic
+
+    func testDynamicWithZeroMass() {
+        let cube = GeometryNode.cube(size: 0.5)
+        let physics = PhysicsNode.dynamic(cube.entity, mass: 0.0)
+        XCTAssertEqual(physics.mode, .dynamic)
+        XCTAssertNotNil(cube.entity.components[PhysicsBodyComponent.self])
+    }
+
+    // MARK: - Edge case restitution/friction
+
+    func testDynamicWithZeroRestitutionAndFriction() {
+        let cube = GeometryNode.cube(size: 0.5)
+        let physics = PhysicsNode.dynamic(cube.entity, restitution: 0.0, friction: 0.0)
+        XCTAssertEqual(physics.mode, .dynamic)
+    }
+
+    func testDynamicWithMaxRestitution() {
+        let cube = GeometryNode.cube(size: 0.5)
+        let physics = PhysicsNode.dynamic(cube.entity, restitution: 1.0, friction: 1.0)
+        XCTAssertEqual(physics.mode, .dynamic)
+    }
 }
 #endif

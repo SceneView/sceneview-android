@@ -77,5 +77,34 @@ final class BillboardNodeTests: XCTestCase {
         XCTAssertEqual(billboard.entity.position.y, 2.0, accuracy: 0.001)
         XCTAssertEqual(billboard.entity.scale.x, 0.5, accuracy: 0.001)
     }
+
+    // MARK: - Scale property
+
+    func testScalePropertyDoesNotAffectChild() {
+        let child = ModelEntity()
+        let billboard = BillboardNode(child: child)
+            .scale(3.0)
+        // Scale should apply to the container, not the child
+        XCTAssertEqual(billboard.entity.scale.x, 3.0, accuracy: 0.001)
+        XCTAssertEqual(child.scale.x, 1.0, accuracy: 0.001)
+    }
+
+    // MARK: - Empty text factory
+
+    func testTextFactoryWithEmptyString() {
+        let billboard = BillboardNode.text("")
+        XCTAssertNotNil(billboard.entity)
+        XCTAssertTrue(billboard.entity.children.count > 0)
+    }
+
+    // MARK: - Billboard with geometry child
+
+    func testBillboardWithGeometryChild() {
+        let cube = GeometryNode.cube(size: 0.3, color: .red)
+        let billboard = BillboardNode(child: cube.entity)
+        XCTAssertNotNil(billboard.entity)
+        XCTAssertEqual(billboard.entity.children.count, 1)
+        XCTAssertNotNil(billboard.entity.components[BillboardComponent.self])
+    }
 }
 #endif

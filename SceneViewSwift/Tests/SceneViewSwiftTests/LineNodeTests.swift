@@ -101,5 +101,67 @@ final class LineNodeTests: XCTestCase {
         let line = LineNode(from: .zero, to: .zero)
         XCTAssertNotNil(line.entity)
     }
+
+    // MARK: - Default thickness
+
+    func testDefaultThickness() {
+        let line = LineNode(from: .zero, to: .init(x: 1, y: 0, z: 0))
+        // Default thickness is 0.005 — entity should have a model
+        XCTAssertNotNil(line.entity.model)
+    }
+
+    // MARK: - Very small thickness
+
+    func testVerySmallThickness() {
+        let line = LineNode(
+            from: .zero,
+            to: .init(x: 1, y: 0, z: 0),
+            thickness: 0.0001
+        )
+        XCTAssertNotNil(line.entity.model)
+    }
+
+    // MARK: - Zero thickness
+
+    func testZeroThickness() {
+        let line = LineNode(
+            from: .zero,
+            to: .init(x: 1, y: 0, z: 0),
+            thickness: 0.0
+        )
+        XCTAssertNotNil(line.entity)
+    }
+
+    // MARK: - Negative direction
+
+    func testNegativeDirectionLine() {
+        let line = LineNode(
+            from: .init(x: 1, y: 1, z: 1),
+            to: .init(x: -1, y: -1, z: -1)
+        )
+        XCTAssertNotNil(line.entity)
+        // Midpoint should be (0, 0, 0)
+        XCTAssertEqual(line.entity.position.x, 0.0, accuracy: 0.01)
+        XCTAssertEqual(line.entity.position.y, 0.0, accuracy: 0.01)
+        XCTAssertEqual(line.entity.position.z, 0.0, accuracy: 0.01)
+    }
+
+    // MARK: - Axis gizmo custom parameters
+
+    func testAxisGizmoWithCustomLength() {
+        let gizmo = LineNode.axisGizmo(length: 2.0)
+        XCTAssertEqual(gizmo.count, 3)
+        // X-axis: midpoint at (1, 0, 0)
+        XCTAssertEqual(gizmo[0].entity.position.x, 1.0, accuracy: 0.01)
+    }
+
+    func testAxisGizmoWithCustomThickness() {
+        let gizmo = LineNode.axisGizmo(thickness: 0.02)
+        XCTAssertEqual(gizmo.count, 3)
+        // Should not crash
+        for line in gizmo {
+            XCTAssertNotNil(line.entity.model)
+        }
+    }
 }
 #endif
