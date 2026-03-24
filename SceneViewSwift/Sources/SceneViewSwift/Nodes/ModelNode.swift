@@ -1,4 +1,4 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
 
@@ -226,9 +226,11 @@ public struct ModelNode: Sendable {
 
     /// Adds a grounding shadow beneath the model.
     public func withGroundingShadow() -> ModelNode {
+        #if os(iOS) || os(visionOS)
         entity.components.set(GroundingShadowComponent(castsShadow: true))
+        #endif
         return self
     }
 }
 
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(macOS) || os(visionOS)

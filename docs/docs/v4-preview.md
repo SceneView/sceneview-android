@@ -50,13 +50,17 @@ With Android XR launching, SceneView v4 will add:
 
 ### New Platforms
 
-| Platform | Composable | Renderer |
-|---|---|---|
-| Android | `Scene { }` | Filament (OpenGL ES / Vulkan) |
-| Android XR | `XRScene { }` | Filament (Vulkan) |
-| iOS | `SceneView { }` (SwiftUI) | Filament (Metal) |
-| Desktop | `Scene { }` (Compose Desktop) | Filament (OpenGL / Vulkan) |
-| Web | `Scene { }` (Compose HTML) | Filament (WebGPU) |
+!!! note "iOS, macOS, visionOS already available"
+    SceneViewSwift v3.3.0 (alpha) ships today with RealityKit rendering.
+    v4.0 focuses on Android XR, cross-framework bridges, and deeper KMP integration.
+
+| Platform | Composable | Renderer | Status |
+|---|---|---|---|
+| Android | `Scene { }` | Filament (OpenGL ES / Vulkan) | Stable (v3.3.0) |
+| iOS / macOS / visionOS | `SceneView { }` (SwiftUI) | RealityKit (Metal) | Alpha (v3.3.0) |
+| Android XR | `XRScene { }` | Filament (Vulkan) | v4.0 |
+| Desktop | `Scene { }` (Compose Desktop) | Filament (OpenGL / Vulkan) | Planned |
+| Web | `Scene { }` (Compose HTML) | Filament (WebGPU) | Research |
 
 ---
 
@@ -155,7 +159,7 @@ Your existing 3D/AR code patterns transfer directly to spatial computing.
 
 ## Kotlin Multiplatform
 
-Share scene definitions between Android and iOS from a single Kotlin codebase. iOS rendering via Filament's Metal backend.
+Share scene logic between Android and Apple platforms from a single Kotlin codebase. Each platform uses its native renderer — Filament on Android, RealityKit on Apple. KMP shares math, collision, geometry, and animation algorithms.
 
 ```kotlin
 // commonMain — shared across platforms
