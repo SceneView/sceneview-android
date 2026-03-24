@@ -51,6 +51,7 @@ jobs:
             :samples:line-path:assembleDebug \
             :samples:text-labels:assembleDebug \
             :samples:reflection-probe:assembleDebug \
+            :samples:tv-model-viewer:assembleDebug \
             --stacktrace 2>&1 | tee samples-build.log || (grep -E "error:|FAILURE|e:" samples-build.log > samples-error.log && exit 1)
 
       - name: Upload sample build log on failure
@@ -78,6 +79,71 @@ jobs:
             sceneview/build/reports/lint-results-debug.html
             arsceneview/build/reports/lint-results-debug.html
           if-no-files-found: ignore
+
+  # ── Web & Desktop modules (Kotlin/JS + Compose Desktop) ──────────────────
+  web-desktop:
+    name: Build web & desktop modules
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: chmod +x ./gradlew
+
+      - name: Build sceneview-core JS target
+        run: ./gradlew :sceneview-core:jsMainClasses --stacktrace
+
+      - name: Build sceneview-web
+        run: ./gradlew :sceneview-web:jsMainClasses --stacktrace
+
+      - name: Run JS tests
+        run: ./gradlew :sceneview-core:jsTest :sceneview-web:jsTest --stacktrace
+
+      - name: Build web sample
+        run: ./gradlew :samples:web-model-viewer:compileKotlinJs --stacktrace
+
+      - name: Build TV sample
+        run: ./gradlew :samples:tv-model-viewer:compileDebugKotlin --stacktrace
+
+      - name: Build desktop module
+        run: ./gradlew :sceneview-desktop:compileKotlinDesktop --stacktrace
+
+  # ── Kobweb website ──────────────────────────────────────────────────────
+  website:
+    name: Build Kobweb website
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Build website
+        working-directory: website
+        run: |
+          chmod +x ./gradlew
+          ./gradlew kobwebExport --stacktrace
+
+      - name: Upload website artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kobweb-website
+          path: website/.kobweb/site/
+          if-no-files-found: warn
 
   # AR emulator tests are inherently flaky due to virtualscene rendering
   # limitations in headless CI. This job is informational — failures here
