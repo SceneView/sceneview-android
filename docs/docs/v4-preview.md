@@ -1,5 +1,6 @@
 ---
-title: v4 Preview — Multi-Platform
+title: v4 Preview — Multi-Platform SceneView
+description: "What's coming in SceneView 4.0: Kotlin Multiplatform core, Android XR, multiple scenes per screen, PortalNode, ParticleNode, and cross-platform rendering."
 ---
 
 # SceneView v4 Preview — Multi-Platform

@@ -1,3 +1,8 @@
+---
+title: FAQ — SceneView 3D & AR SDK
+description: "Frequently asked questions about SceneView: setup, model formats, AR, performance, iOS support, and troubleshooting for Android and Apple platforms."
+---
+
 # FAQ
 
 ## General
@@ -138,6 +143,26 @@ Approximately **5 MB** (native Filament libraries + Kotlin code). ARSceneView ad
 ### Can I share the Engine across screens?
 
 Yes — create the engine at a higher scope (e.g., ViewModel or CompositionLocal) and pass it to each `Scene`. This avoids creating multiple Filament engines.
+
+---
+
+## Apple Platforms (iOS / macOS / visionOS)
+
+### Does SceneView support iOS?
+
+Yes. SceneViewSwift (v3.3.0 alpha) provides a native SwiftUI library powered by RealityKit and ARKit. It supports iOS 17+, macOS 14+, and visionOS 1+. Install via Swift Package Manager. See the [Apple Quickstart](quickstart-ios.md).
+
+### What model formats work on iOS?
+
+RealityKit natively supports **USDZ** and **Reality** files. If you have a `.glb` file, convert it using Apple's [Reality Converter](https://developer.apple.com/augmented-reality/tools/) or the `usdzconvert` command-line tool.
+
+### Can I use SceneViewSwift from Flutter or React Native?
+
+Yes. `SceneView` and `ARSceneView` are standard SwiftUI views backed by `UIView`. Flutter can wrap them via `PlatformView`, React Native via a Fabric component, and KMP Compose via `UIKitView`. See the [Architecture page](architecture.md) for details.
+
+### Is AR available on macOS and visionOS?
+
+`ARSceneView` (AR with camera feed) is iOS-only because it uses `ARView` from ARKit. `SceneView` (3D without camera AR) works on all three Apple platforms. On visionOS, RealityKit provides its own spatial computing APIs.
 
 ---
 

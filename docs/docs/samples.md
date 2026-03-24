@@ -1,4 +1,12 @@
+---
+title: Samples — SceneView Android
+description: "15 working sample apps demonstrating SceneView 3D and AR features: model viewer, AR placement, physics, dynamic sky, reflection probes, and more."
+---
+
 # Samples
+
+!!! tip "Looking for Apple samples?"
+    See [Samples — Apple Platforms](samples-ios.md) for SwiftUI + RealityKit examples on iOS, macOS, and visionOS.
 
 15 working sample apps ship with the repository. Clone and run them to see SceneView in action.
 

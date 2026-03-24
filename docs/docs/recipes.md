@@ -1,3 +1,8 @@
+---
+title: Recipes — SceneView Cookbook
+description: "Copy-paste code patterns for SceneView: model loading, animations, camera control, gestures, lighting, AR placement, physics, and Compose UI integration."
+---
+
 # Recipes / Cookbook
 
 Copy-paste patterns for the most common SceneView tasks.
