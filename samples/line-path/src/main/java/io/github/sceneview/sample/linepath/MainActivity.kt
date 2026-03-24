@@ -21,10 +21,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.FilterChip
-import androidx.compose.material.Slider
-import androidx.compose.material.SliderDefaults
-import androidx.compose.material.Text
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -221,7 +221,7 @@ fun LinePath3DScene() {
                 value = amplitude,
                 onValueChange = { amplitude = it },
                 valueRange = 0.1f..1.0f,
-                colors = SliderDefaults.colors(thumbColor = Color.Cyan, activeTrackColor = Color.Cyan)
+                colors = SliderDefaults.colors(thumbColor = Color.Cyan)
             )
 
             Text(
@@ -234,7 +234,7 @@ fun LinePath3DScene() {
                 onValueChange = { frequency = it },
                 valueRange = 1f..5f,
                 steps = 3,
-                colors = SliderDefaults.colors(thumbColor = Color.Cyan, activeTrackColor = Color.Cyan)
+                colors = SliderDefaults.colors(thumbColor = Color.Cyan)
             )
         }
     }
@@ -253,10 +253,9 @@ fun LinePath3DScene() {
             patterns.forEach { pattern ->
                 FilterChip(
                     selected = selectedPattern == pattern,
-                    onClick = { selectedPattern = pattern }
-                ) {
-                    Text(pattern, color = Color.White, fontSize = 12.sp)
-                }
+                    onClick = { selectedPattern = pattern },
+                    label = { Text(pattern, color = Color.White, fontSize = 12.sp) }
+                )
             }
         }
     }
