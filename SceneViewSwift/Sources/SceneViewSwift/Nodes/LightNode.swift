@@ -115,12 +115,14 @@ public struct LightNode: Sendable {
     }
 
     /// Returns a copy positioned at the given coordinates.
+    @discardableResult
     public func position(_ position: SIMD3<Float>) -> LightNode {
         entity.position = position
         return self
     }
 
     /// Points the light toward a target position.
+    @discardableResult
     public func lookAt(_ target: SIMD3<Float>) -> LightNode {
         entity.look(at: target, from: entity.position, relativeTo: nil)
         return self
