@@ -112,12 +112,11 @@ fun NavBar() {
                     classes("nav-icon-btn")
                 }) { FaGithub(size = IconSize.LG) }
 
-                // Mobile hamburger
+                // Mobile hamburger — visibility controlled by CSS media query
                 Span(attrs = {
                     style {
                         cursor("pointer")
                         padding(10.px)
-                        display(DisplayStyle.None)
                         color(Color(colorMode.text()))
                         property("border-radius", Shape.FULL)
                     }
@@ -157,6 +156,7 @@ fun NavBar() {
         @media (prefers-color-scheme: dark) {
             .nav-icon-btn:hover { background-color: rgba(255,255,255,0.08); }
         }
+        .nav-hamburger { display: none; }
         @media (max-width: 768px) {
             .nav-links { display: none !important; }
             .nav-hamburger { display: block !important; }

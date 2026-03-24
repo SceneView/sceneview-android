@@ -84,7 +84,7 @@ fun Footer() {
                     margin(0.px)
                     property("font-family", Fonts.SYSTEM)
                 }
-            }) { Text("Copyright 2024 SceneView contributors. Apache License 2.0.") }
+            }) { Text("Copyright 2024-2026 SceneView contributors. Apache License 2.0.") }
         }
     }
 }
