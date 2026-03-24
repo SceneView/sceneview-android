@@ -137,6 +137,12 @@ let title = TextNode(text: "SceneView", fontSize: 0.08, depth: 0.02)
 | `LineNode` | Line segments and axis gizmos |
 | `LightNode` | Directional, point, and spot lights |
 | `AnchorNode` | AR world/plane anchor |
+| `CameraNode` | Programmatic camera control with orbit, fly-through, and custom modes |
+| `ImageNode` | Display images on 3D planes with automatic aspect ratio |
+| `VideoNode` | Play video content on 3D surfaces with playback controls |
+| `PhysicsNode` | Apply physics simulation (dynamic, static, kinematic) to entities |
+| `PathNode` | Closed and open 3D paths with customizable geometry (circle, grid helpers) |
+| `AugmentedImageNode` | Detect real-world images and place 3D content (iOS only) |
 
 ### Configuration
 
