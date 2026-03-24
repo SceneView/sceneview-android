@@ -18,6 +18,36 @@
 
 </div>
 
+<div class="sv-logo-ticker" aria-label="Supported platforms and technologies">
+<div class="sv-logo-ticker__track">
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-android.svg" alt="Android" loading="lazy"><span>Android</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-ios.svg" alt="iOS" loading="lazy"><span>iOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-macos.svg" alt="macOS" loading="lazy"><span>macOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-visionos.svg" alt="visionOS" loading="lazy"><span>visionOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-compose.svg" alt="Jetpack Compose" loading="lazy"><span>Compose</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swiftui.svg" alt="SwiftUI" loading="lazy"><span>SwiftUI</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-filament.svg" alt="Filament" loading="lazy"><span>Filament</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-realitykit.svg" alt="RealityKit" loading="lazy"><span>RealityKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arcore.svg" alt="ARCore" loading="lazy"><span>ARCore</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arkit.svg" alt="ARKit" loading="lazy"><span>ARKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-kotlin.svg" alt="Kotlin" loading="lazy"><span>Kotlin</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swift.svg" alt="Swift" loading="lazy"><span>Swift</span></div>
+<!-- Duplicate set for seamless loop -->
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-android.svg" alt="Android" loading="lazy"><span>Android</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-ios.svg" alt="iOS" loading="lazy"><span>iOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-macos.svg" alt="macOS" loading="lazy"><span>macOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-visionos.svg" alt="visionOS" loading="lazy"><span>visionOS</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-compose.svg" alt="Jetpack Compose" loading="lazy"><span>Compose</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swiftui.svg" alt="SwiftUI" loading="lazy"><span>SwiftUI</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-filament.svg" alt="Filament" loading="lazy"><span>Filament</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-realitykit.svg" alt="RealityKit" loading="lazy"><span>RealityKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arcore.svg" alt="ARCore" loading="lazy"><span>ARCore</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-arkit.svg" alt="ARKit" loading="lazy"><span>ARKit</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-kotlin.svg" alt="Kotlin" loading="lazy"><span>Kotlin</span></div>
+<div class="sv-logo-ticker__item"><img src="assets/images/logo-swift.svg" alt="Swift" loading="lazy"><span>Swift</span></div>
+</div>
+</div>
+
 ## Write 3D the same way you write UI
 
 Nodes are composables. Lifecycle is automatic. State drives everything.
@@ -94,7 +124,7 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:sceneview:3.2.0")
+        implementation("io.github.sceneview:sceneview:3.3.0")
     }
     ```
 
@@ -102,7 +132,7 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:arsceneview:3.2.0")
+        implementation("io.github.sceneview:arsceneview:3.3.0")
     }
     ```
 
@@ -111,7 +141,7 @@ Detect real-world images and overlay 3D content. Track multiple images simultane
     ```swift
     // Package.swift
     dependencies: [
-        .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "0.1.0")
+        .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
     ]
     ```
 

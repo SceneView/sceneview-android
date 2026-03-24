@@ -33,7 +33,7 @@ When connected to an AI assistant (Claude, Cursor, Windsurf, etc.), this MCP ser
 
 | Resource | Description |
 |----------|-------------|
-| `sceneview://api` | Complete SceneView 3.2.0 API reference (llms.txt) |
+| `sceneview://api` | Complete SceneView 3.3.0 API reference (llms.txt) |
 | `sceneview://known-issues` | Live open issues from GitHub (cached 10 min) |
 
 ---
@@ -193,7 +193,7 @@ The assistant will call `get_migration_guide` and return every breaking change w
 - Forget null-checks on `rememberModelInstance`
 
 **With** this MCP server, AI assistants:
-- Always use the latest SceneView 3.2.0 API
+- Always use the latest SceneView 3.3.0 API
 - Generate correct Compose-native 3D/AR code
 - Know about all 22+ node types and their exact parameters
 - Validate code against 15+ rules before presenting it
