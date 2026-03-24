@@ -19,7 +19,7 @@ Content for positioning SceneView as the #1 3D & AR SDK for Android and iOS.
 | [x-thread.md](x-thread.md) | 12-tweet thread template | Twitter/X, Bluesky, Mastodon |
 | [linkedin-post.md](linkedin-post.md) | 3 caption variants + hashtags | LinkedIn |
 | [linkedin-video-storyboard.md](linkedin-video-storyboard.md) | 60s video — shot-by-shot production guide | LinkedIn (film → upload) |
-| [devto-article.md](devto-article.md) | Updated article for 3.2.0 with all new features | Dev.to, Hashnode |
+| [devto-article.md](devto-article.md) | Updated article for 3.3.0 with all new features | Dev.to, Hashnode |
 | [medium-article.md](medium-article.md) | Original 3.0 launch article | Medium |
 | [youtube-script.md](youtube-script.md) | 10-min video script + code + b-roll notes | YouTube |
 

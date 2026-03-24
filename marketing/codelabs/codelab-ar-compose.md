@@ -12,7 +12,7 @@
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.2.0")
+    implementation("io.github.sceneview:arsceneview:3.3.0")
 }
 ```
 

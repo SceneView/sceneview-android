@@ -22,7 +22,7 @@ By the end of this article, you'll have a scene where:
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:sceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
 ```
 
 No extra physics libraries. No JNI dependencies. Physics is implemented in pure Kotlin — Euler integration, ~160 lines of code, zero overhead when a body is asleep.

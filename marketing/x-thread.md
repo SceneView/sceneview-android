@@ -151,8 +151,8 @@ One SDK, two platforms, native on both.
 **12/12 — Get started**
 
 ```
-implementation("io.github.sceneview:sceneview:3.2.0")
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
 15 sample apps. Full API docs. MCP server for AI-assisted development.

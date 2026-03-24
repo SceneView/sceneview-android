@@ -1,17 +1,17 @@
-# SceneView 3.2.0 Release Notes
+# SceneView 3.3.0 Release Notes
 
 **Copy-paste template for GitHub Release.**
 
 ---
 
 ## Title
-SceneView 3.2.0 — Physics, Atmosphere, Drawing, and Text
+SceneView 3.3.0 — Physics, Atmosphere, Drawing, and Text
 
 ## Body
 
 ### Highlights
 
-SceneView 3.2.0 adds **8 new composable node types** and **6 new sample apps**, making it the biggest feature release since the Compose rewrite.
+SceneView 3.3.0 adds **8 new composable node types** and **6 new sample apps**, making it the biggest feature release since the Compose rewrite.
 
 ### New node types
 
@@ -45,10 +45,10 @@ SceneView 3.2.0 adds **8 new composable node types** and **6 new sample apps**, 
 
 ```kotlin
 // 3D only
-implementation("io.github.sceneview:sceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
 
 // 3D + AR
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
 ### Example: Dynamic sky with fog
