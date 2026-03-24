@@ -2,8 +2,19 @@
 
 An honest comparison for developers evaluating 3D and AR options.
 
-<div style="text-align: center; margin: 1.5rem 0;">
-<img src="assets/images/comparison-chart.svg" alt="Lines of code comparison: SceneView vs alternatives" style="width: 100%; max-width: 800px; border-radius: 24px;">
+<div class="sv-comparison-table" markdown>
+
+| | **SceneView** | Sceneform | Raw ARCore | Unity |
+|---|---|---|---|---|
+| **Lines to show a 3D model** | ~15 | ~80 | ~200+ | ~50 + engine |
+| **Platforms** | Android · iOS · Desktop · Web · XR | Android only | Android only | All |
+| **Status** | ✅ Active v3.2 | ❌ Archived | ✅ Active | ✅ Active |
+| **Compose / SwiftUI native** | ✅ | ❌ | ❌ | ❌ |
+| **Zero XML / boilerplate** | ✅ | ❌ | ❌ | ❌ |
+| **APK size impact** | ~5 MB | ~20 MB | ~5 MB | +50 MB |
+| **AI-ready (MCP + llms.txt)** | ✅ | ❌ | ❌ | ❌ |
+| **License** | Apache 2.0 | Apache 2.0 | Apache 2.0 | Proprietary |
+
 </div>
 
 ---

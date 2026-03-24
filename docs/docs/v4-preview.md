@@ -6,13 +6,10 @@ title: v4 Preview — Multi-Platform
 
 > **Status**: Design phase. The v4 milestone is about expanding SceneView beyond Android while maintaining the Compose-first philosophy.
 
-<div style="text-align: center; margin: 1.5rem 0;">
-<img src="assets/images/v4-architecture.svg" alt="SceneView 4.0 multi-platform architecture" style="width: 100%; max-width: 800px; border-radius: 24px;">
-</div>
 
 !!! info "v3.2.0 is production-ready today"
     You don't need to wait for 4.0. Everything below adds capabilities on top — it doesn't
-    replace anything. [Get started now](index.md#get-started).
+    replace anything. [Get started now](index.md).
 
 ---
 
@@ -253,7 +250,7 @@ Scene(modifier = Modifier.fillMaxSize()) {
 ## How to Get Involved
 
 - **Join the discussion**: [Discord #v4-planning](https://discord.gg/UbNDDBTNqb)
-- **Contribute**: Check [CONTRIBUTING.md](../contributing/) for guidelines
+- **Contribute**: Check [CONTRIBUTING.md](contributing.md) for guidelines
 - **Sponsor**: Help fund multi-platform development on [Open Collective](https://opencollective.com/sceneview)
 
 [:octicons-arrow-right-24: Full roadmap on GitHub](https://github.com/SceneView/sceneview-android/blob/main/ROADMAP.md)

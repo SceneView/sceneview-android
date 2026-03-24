@@ -315,4 +315,4 @@ fun ARViewerScreen() {
 - **Cloud anchors** → `CloudAnchorNode` — share AR experiences between devices
 - **Face effects** → `AugmentedFaceNode` with front camera
 - **Hit result cursor** → `HitResultNode(xPx, yPx)` — a placement reticle that follows the center of the screen
-- **Explore samples** → [ar-model-viewer](/samples/ar-model-viewer), [ar-augmented-image](/samples/ar-augmented-image), [ar-cloud-anchor](/samples/ar-cloud-anchor)
+- **Explore samples** → [ar-model-viewer](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-model-viewer), [ar-augmented-image](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-augmented-image), [ar-cloud-anchor](https://github.com/SceneView/sceneview-android/tree/main/samples/ar-cloud-anchor)

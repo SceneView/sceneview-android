@@ -1,59 +1,59 @@
 # Why SceneView
 
-SceneView is the only actively maintained, Compose-native 3D and AR library for Kotlin.
-It delivers Filament's physically-based rendering and ARCore's full AR capabilities through
-a declarative API that developers already understand — and v4.0 extends that to XR headsets
-and iOS via Kotlin Multiplatform.
+SceneView is the only actively maintained, cross-platform 3D & AR SDK for native apps.
+It brings production-quality rendering to Android, iOS, Desktop, Web and XR —
+through a declarative API that works the same way on every platform,
+and integrates natively with AI tools like Claude, Cursor and Copilot.
 
 <div class="showcase-gallery">
 
 <div class="showcase-item">
-<img src="assets/images/showcase-model-viewer.svg" alt="3D Model Viewer" class="showcase-item__img">
+<img src="../assets/images/showcase-model-viewer.svg" alt="3D Model Viewer" class="showcase-item__img">
 <div class="showcase-item__label">Model Viewer</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-ar-placement.svg" alt="AR Placement" class="showcase-item__img">
+<img src="../assets/images/showcase-ar-placement.svg" alt="AR Placement" class="showcase-item__img">
 <div class="showcase-item__label">AR Placement</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-physics.svg" alt="Physics Demo" class="showcase-item__img">
+<img src="../assets/images/showcase-physics.svg" alt="Physics Demo" class="showcase-item__img">
 <div class="showcase-item__label">Physics</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-dynamic-sky.svg" alt="Dynamic Sky" class="showcase-item__img">
+<img src="../assets/images/showcase-dynamic-sky.svg" alt="Dynamic Sky" class="showcase-item__img">
 <div class="showcase-item__label">Dynamic Sky</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-post-processing.svg" alt="Post-Processing" class="showcase-item__img">
+<img src="../assets/images/showcase-post-processing.svg" alt="Post-Processing" class="showcase-item__img">
 <div class="showcase-item__label">Post-Processing</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-camera.svg" alt="Camera Controls" class="showcase-item__img">
+<img src="../assets/images/showcase-camera.svg" alt="Camera Controls" class="showcase-item__img">
 <div class="showcase-item__label">Camera</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-autopilot.svg" alt="Autopilot HUD" class="showcase-item__img">
+<img src="../assets/images/showcase-autopilot.svg" alt="Autopilot HUD" class="showcase-item__img">
 <div class="showcase-item__label">Autopilot HUD</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-line-paths.svg" alt="Line Paths" class="showcase-item__img">
+<img src="../assets/images/showcase-line-paths.svg" alt="Line Paths" class="showcase-item__img">
 <div class="showcase-item__label">Line Paths</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-text-labels.svg" alt="Text Labels" class="showcase-item__img">
+<img src="../assets/images/showcase-text-labels.svg" alt="Text Labels" class="showcase-item__img">
 <div class="showcase-item__label">Text Labels</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/showcase-reflection.svg" alt="Reflection Probes" class="showcase-item__img">
+<img src="../assets/images/showcase-reflection.svg" alt="Reflection Probes" class="showcase-item__img">
 <div class="showcase-item__label">Reflections</div>
 </div>
 
@@ -189,32 +189,32 @@ ARScene(
 <div class="showcase-gallery">
 
 <div class="showcase-item">
-<img src="assets/images/industry-ecommerce.svg" alt="E-commerce 3D product viewer and AR try-on" class="showcase-item__img" style="border-radius: 24px;">
+<img src="../assets/images/industry-ecommerce.svg" alt="E-commerce 3D product viewer and AR try-on" class="showcase-item__img" style="border-radius: 24px;">
 <div class="showcase-item__label">E-commerce</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/industry-automotive.svg" alt="Automotive HUD and Android Auto" class="showcase-item__img" style="border-radius: 24px;">
+<img src="../assets/images/industry-automotive.svg" alt="Automotive HUD and Android Auto" class="showcase-item__img" style="border-radius: 24px;">
 <div class="showcase-item__label">Automotive</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/industry-medical.svg" alt="Medical anatomy and molecular viewer" class="showcase-item__img" style="border-radius: 24px;">
+<img src="../assets/images/industry-medical.svg" alt="Medical anatomy and molecular viewer" class="showcase-item__img" style="border-radius: 24px;">
 <div class="showcase-item__label">Healthcare</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/industry-realestate.svg" alt="Real estate AR staging and floor plans" class="showcase-item__img" style="border-radius: 24px;">
+<img src="../assets/images/industry-realestate.svg" alt="Real estate AR staging and floor plans" class="showcase-item__img" style="border-radius: 24px;">
 <div class="showcase-item__label">Real Estate</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/industry-gaming.svg" alt="3D gaming and level editor" class="showcase-item__img" style="border-radius: 24px;">
+<img src="../assets/images/industry-gaming.svg" alt="3D gaming and level editor" class="showcase-item__img" style="border-radius: 24px;">
 <div class="showcase-item__label">Gaming</div>
 </div>
 
 <div class="showcase-item">
-<img src="assets/images/industry-education.svg" alt="Interactive globe and solar system" class="showcase-item__img" style="border-radius: 24px;">
+<img src="../assets/images/industry-education.svg" alt="Interactive globe and solar system" class="showcase-item__img" style="border-radius: 24px;">
 <div class="showcase-item__label">Education</div>
 </div>
 

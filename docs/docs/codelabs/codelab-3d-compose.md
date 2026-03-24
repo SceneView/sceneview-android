@@ -315,5 +315,5 @@ That's ~35 lines. A production-quality 3D model viewer with orbit camera, HDR li
 - **Add AR** → See the [AR CodeLab](codelab-ar-compose.md) — same pattern, `ARScene` instead of `Scene`
 - **Add geometry** → Try `CubeNode`, `SphereNode`, `CylinderNode` in the scene block
 - **Embed in a screen** → Replace any `Image()` in your app with this `Box` wrapping a `Scene`
-- **Explore samples** → The [model-viewer](/samples/model-viewer), [gltf-camera](/samples/gltf-camera), and [camera-manipulator](/samples/camera-manipulator) samples show more patterns
+- **Explore samples** → The [model-viewer](https://github.com/SceneView/sceneview-android/tree/main/samples/model-viewer), [gltf-camera](https://github.com/SceneView/sceneview-android/tree/main/samples/gltf-camera), and [camera-manipulator](https://github.com/SceneView/sceneview-android/tree/main/samples/camera-manipulator) samples show more patterns
 - **Read the API docs** → [sceneview.github.io/api/sceneview/sceneview](https://sceneview.github.io/api/sceneview/sceneview/)

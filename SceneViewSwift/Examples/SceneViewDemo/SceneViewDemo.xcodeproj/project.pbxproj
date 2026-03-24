@@ -14,7 +14,18 @@
 		A10005 /* ARDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20005; };
 		A10006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20006; };
 		A10007 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20007; };
+		B10001 /* SceneViewDemoUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20001; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B00001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A60001;
+			remoteInfo = SceneViewDemo;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A20001 /* SceneViewDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneViewDemoApp.swift; sourceTree = "<group>"; };
@@ -26,10 +37,19 @@
 		A20007 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		A30001 /* SceneViewDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SceneViewDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30002 /* SceneViewSwift */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = SceneViewSwift; path = ../../; sourceTree = "<group>"; };
+		B20001 /* SceneViewDemoUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneViewDemoUITests.swift; sourceTree = "<group>"; };
+		B30001 /* SceneViewDemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SceneViewDemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A40001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B40001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -43,6 +63,7 @@
 			isa = PBXGroup;
 			children = (
 				A50003 /* SceneViewDemo */,
+				B50001 /* SceneViewDemoUITests */,
 				A50004 /* Packages */,
 				A50002 /* Products */,
 			);
@@ -52,6 +73,7 @@
 			isa = PBXGroup;
 			children = (
 				A30001 /* SceneViewDemo.app */,
+				B30001 /* SceneViewDemoUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -86,6 +108,14 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		B50001 /* SceneViewDemoUITests */ = {
+			isa = PBXGroup;
+			children = (
+				B20001 /* SceneViewDemoUITests.swift */,
+			);
+			path = SceneViewDemoUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -109,6 +139,23 @@
 			productReference = A30001;
 			productType = "com.apple.product-type.application";
 		};
+		B60001 /* SceneViewDemoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B80001;
+			buildPhases = (
+				B70001 /* Sources */,
+				B40001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B00002 /* PBXTargetDependency */,
+			);
+			name = SceneViewDemoUITests;
+			productName = SceneViewDemoUITests;
+			productReference = B30001;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -121,6 +168,10 @@
 				TargetAttributes = {
 					A60001 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					B60001 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = A60001;
 					};
 				};
 			};
@@ -138,6 +189,7 @@
 			projectRoot = "";
 			targets = (
 				A60001 /* SceneViewDemo */,
+				B60001 /* SceneViewDemoUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -167,7 +219,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B70001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10001 /* SceneViewDemoUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B00002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A60001 /* SceneViewDemo */;
+			targetProxy = B00001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A80002 /* Debug */ = {
@@ -281,6 +349,46 @@
 			};
 			name = Release;
 		};
+		B80002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = DA855LVD7A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.sceneview.demo.ios.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SceneViewDemo;
+			};
+			name = Debug;
+		};
+		B80004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = DA855LVD7A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.sceneview.demo.ios.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SceneViewDemo;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -298,6 +406,15 @@
 			buildConfigurations = (
 				A80005 /* Debug */,
 				A80006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B80001 /* Build configuration list for UITest target */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B80002 /* Debug */,
+				B80004 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

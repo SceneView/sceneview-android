@@ -12,7 +12,6 @@ package io.github.sceneview.rendering
  *
  * @param path Relative path to the asset (e.g., "models/helmet.glb", "environments/studio.hdr").
  */
-@JvmInline
 value class AssetPath(val path: String) {
 
     /** The file extension without the dot (e.g., "glb", "hdr"). */

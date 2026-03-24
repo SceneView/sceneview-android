@@ -1,5 +1,5 @@
-site_name: SceneView — 3D & AR SDK
-site_description: "The #1 open-source 3D & AR SDK for Android and iOS. Compose-native scenes powered by Google Filament and ARCore on Android, SwiftUI + RealityKit on iOS. Drop-in Scene{} and ARScene{} composables for model viewing, AR placement, physics, and immersive experiences."
+site_name: SceneView — 3D, AR & XR SDK
+site_description: "Open-source 3D, AR & XR SDK for Android, iOS, Desktop, Web and spatial computing. Build immersive experiences with any AI — powered by Google Filament, ARCore, RealityKit and Kotlin Multiplatform."
 site_url: https://sceneview.github.io/
 repo_url: https://github.com/SceneView/sceneview
 repo_name: SceneView/sceneview
@@ -22,7 +22,7 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   font:
-    text: Google Sans
+    text: Inter
     code: JetBrains Mono
   icon:
     logo: material/cube-outline
@@ -83,7 +83,7 @@ nav:
 
 plugins:
   - search
-  - social
+  # - social  # requires cairosvg — install with: pip install cairosvg pillow
 
 markdown_extensions:
   - admonition
@@ -123,18 +123,12 @@ extra:
     - icon: fontawesome/brands/npm
       link: https://www.npmjs.com/package/@sceneview/mcp
       name: SceneView MCP on npm
-  analytics:
-    provider: google
-    property: G-XXXXXXXXXX
+  # analytics:
+  #   provider: google
+  #   property: G-XXXXXXXXXX   # replace with real tracking ID before enabling
   generator: false
   version:
     provider: mike
 
 extra_css:
   - stylesheets/extra.css
-  - stylesheets/m3-expressive.css
-  - stylesheets/m3-enhancements.css
-  - stylesheets/m3-flagship.css
-
-extra_javascript:
-  - assets/javascripts/m3-interactions.js
