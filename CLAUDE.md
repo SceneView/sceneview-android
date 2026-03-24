@@ -74,23 +74,64 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
+**NOTE FOR OTHER SESSIONS:** Always check `git log --oneline -20` on the current branch
+to see recent work before starting. The branch `claude/resume-sceneview-ios-PjPVi` may
+need to be merged to main first.
+
 ### Current state (last updated: 2026-03-24)
 
-- **Active branch**: `claude/resume-sceneview-ios-PjPVi`
-- **Latest release**: v3.3.0 (unified version — Android + iOS + MCP)
-- **Session work**: SceneViewSwift iOS stabilization — added 3 new nodes (DynamicSkyNode,
-  FogNode, ReflectionProbeNode), enhanced 3 existing nodes (ModelNode, LightNode,
-  CameraNode), added 65+ tests, MCP iOS support (8 Swift samples, `get_ios_setup` tool,
-  Swift validation), iOS docs (quickstart, cheatsheet, 2 SwiftUI codelabs), updated llms.txt
-- **SceneViewSwift** (`SceneViewSwift/`): now 15 node types — Apple library — Swift Package,
-  iOS 17+ / macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift
-  native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
+- **Active branch**: `claude/resume-sceneview-ios-PjPVi` (needs merge to main after stabilization)
+- **Latest release**: v3.3.0
+- **What was done this session (2026-03-24)**:
+
+  Phase 1 — SceneViewSwift stabilization (COMPLETE):
+  - New nodes: DynamicSkyNode, FogNode, ReflectionProbeNode, MeshNode
+  - Enhanced: ModelNode (named animations, materials, collision), LightNode (shadows, attenuation), CameraNode (FOV, DOF, exposure)
+  - 16 node types total in SceneViewSwift
+
+  Phase 2 — Tests (COMPLETE):
+  - 65+ new edge case, error condition, and platform tests
+  - EdgeCaseTests.swift, PlatformTests.swift
+  - All node types have dedicated test files
+
+  Phase 3 — Docs (COMPLETE):
+  - iOS Quickstart (quickstart-ios.md)
+  - iOS API Cheatsheet (cheatsheet-ios.md)
+  - 2 SwiftUI codelabs (3D + AR)
+  - iOS Samples page (samples-ios.md)
+  - mkdocs.yml updated with all new pages
+  - llms.txt updated with complete iOS API reference
+
+  Phase 4 — MCP (COMPLETE):
+  - 8 iOS Swift samples in samples.ts
+  - get_ios_setup tool in index.ts
+  - Swift code validation in validator.ts
+  - iOS ARKit guides, best practices, troubleshooting
+  - dist rebuilt
+
+- **What's next (for future sessions)**:
+  - Merge branch to main (push to claude/* branch, create PR, merge via GitHub UI)
+  - Run full stabilization audit (compilation, tests, docs links)
+  - Consider v3.4.0-alpha release for SceneViewSwift improvements
+  - Phase 2 of roadmap: KMP core XCFramework consumption
+  - Phase 3: Cross-framework bridges (Flutter, React Native)
+  - Phase 4: visionOS spatial features
+  - GitHub Pages deployment for updated docs site
+
+- **Known constraints**:
+  - Cannot push directly to `main` (proxy restriction, only claude/* branches)
+  - No GitHub API token available — PRs must be created manually on GitHub
+  - Container is ephemeral — tokens/env don't persist between sessions
+
 - **Project philosophy**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
 - **Cross-platform strategy**: native renderer per platform — Filament (Android),
   RealityKit (Apple: iOS, macOS, visionOS). KMP shares logic, not rendering.
 - **KMP core** (`sceneview-core/`): collision, math, triangulation, animation, geometry,
   physics shared across Android and Apple via Kotlin Multiplatform
+- **SceneViewSwift** (`SceneViewSwift/`): now 16 node types — Apple library — Swift Package,
+  iOS 17+ / macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift
+  native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
 - **Demo app** (`samples/sceneview-demo/`): Play Store ready, 4-tab architecture (Explore,
   Showcase, Gallery, QA), Material 3 Expressive
 - **MCP server** (`mcp/`): published npm package for AI assistant integration; now with
