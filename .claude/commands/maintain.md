@@ -71,21 +71,32 @@ When creating or improving a sample:
 - Use high-quality HDR environments (prefer Poly Haven CC0 HDRIs, converted to .ktx via cmgen).
 - Build and screenshot the result on the emulator. Attach the screenshot to the commit or PR description.
 
-## 6. MCP & llms.txt sync
+## 6. Cross-repo sync check
+
+Run `/sync-check` to verify:
+- All module versions are aligned
+- MCP dist/ is fresh
+- llms.txt matches actual Swift and Kotlin APIs
+- CLAUDE.md session continuity is current
+- No build artifacts tracked in git
+
+Fix any issues found before proceeding.
+
+## 7. MCP & llms.txt sync
 
 - Check if any public API changed since last release: `git diff v3.2.0..HEAD -- sceneview/src/ arsceneview/src/ | grep "^+.*fun \|^+.*@Composable"`
 - If new public APIs exist, update `llms.txt` and the relevant MCP tool descriptions.
 - Run MCP tests: `cd mcp && npm test`
 - If tests fail, fix them.
 
-## 7. Release decision
+## 8. Release decision
 
 Evaluate whether a new release is warranted:
 - Count meaningful commits since last tag: `git log v3.2.0..HEAD --oneline | grep -v "chore\|docs\|ci\|style" | wc -l`
 - If ≥ 5 meaningful commits, or a critical bug was fixed: propose a release (bump version, update CHANGELOG, tag).
 - If releasing: capture emulator screenshots of all samples and attach them to the GitHub Release page.
 
-## 8. End-of-run summary
+## 9. End-of-run summary
 
 Open or update a GitHub issue titled **"Maintenance log — YYYY-MM-DD"** with:
 - ✅ / ❌ status for each section above

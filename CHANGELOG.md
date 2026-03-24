@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.2.2 — Sync, CI fixes, project hygiene
+
+### Fixes
+- Aligned version numbers across all modules (sceneview, arsceneview, sceneview-core, MCP)
+- Fixed `.gitignore` — removed ~120 tracked Swift build artifacts, added SwiftPM/Xcode/MkDocs patterns
+- Fixed docs CI deployment path and migrated to native GitHub Pages
+- Fixed iOS demo: Swift 6 + Xcode 26 compatibility, Team ID configuration
+- Fixed MCP server repository URLs (sceneview-android → sceneview)
+
+### New
+- iOS UI tests for SceneViewDemo (tab navigation, chip filters, crash resilience)
+- `/sync-check` Claude Code command — verifies version alignment, doc freshness, build artifacts
+- `/release` Claude Code command — guided release workflow with checklist
+- iOS PathNode documented in llms.txt
+
+### Improved
+- Unified cross-platform branding to 3.2.2
+- Rebuilt MCP dist/ from source (was stale at 3.1.1)
+- Cleaned up stale git stashes and branches
+- Updated CLAUDE.md session continuity
+
 ## 3.2.0 — Cross-platform, iOS support, KMP core
 
 ### New: SceneViewSwift (iOS)

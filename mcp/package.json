@@ -1,6 +1,6 @@
 {
   "name": "sceneview-mcp",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "description": "MCP server for SceneView — 3D and AR SDK for Android (Jetpack Compose) and iOS (SwiftUI). Give Claude the full SceneView SDK so it writes correct, compilable code.",
   "keywords": [
     "mcp",
@@ -19,12 +19,12 @@
   "author": "SceneView (https://github.com/SceneView)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SceneView/sceneview-android.git",
+    "url": "https://github.com/SceneView/sceneview.git",
     "directory": "mcp"
   },
-  "homepage": "https://github.com/SceneView/sceneview-android/tree/main/mcp#readme",
+  "homepage": "https://github.com/SceneView/sceneview/tree/main/mcp#readme",
   "bugs": {
-    "url": "https://github.com/SceneView/sceneview-android/issues"
+    "url": "https://github.com/SceneView/sceneview/issues"
   },
   "type": "module",
   "bin": {

@@ -66,9 +66,9 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-23, Phase 10 — iOS Native)
+### Current state (last updated: 2026-03-24, Phase 11 — Sync & Process)
 
-- **Active branch**: `claude/identify-project-focus-FU1rl`
+- **Active branch**: `fix/cross-platform-coherence`
 - **Project philosophy established**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
 - **KMP migration (Phase 9 complete)**:
@@ -146,6 +146,15 @@ Every Claude Code session MUST read this section first to stay in sync.
   - Build: `swift build` passes clean on macOS CLT
   - **Needs Xcode 16+** for full iOS simulator build and App Store upload
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
+- **Phase 11 — Sync & Process** (2026-03-24):
+  - All versions aligned to 3.2.2 (gradle.properties × 4, mcp/package.json, llms.txt, docs, README)
+  - `.gitignore` fixed — removed ~120 tracked Swift build artifacts, added SwiftPM/Xcode/MkDocs/Claude patterns
+  - MCP server rebuilt from source, repository URLs fixed (sceneview-android → sceneview)
+  - PathNode added to iOS section of llms.txt
+  - CHANGELOG.md updated with 3.2.2 entry
+  - Stale stashes cleaned (3 dropped, 1 kept for TextNode 3.4.0)
+  - New Claude Code commands: `/sync-check` (pre-PR verification), `/release` (guided release workflow)
+  - Process: run `/sync-check` before every PR to prevent version drift
 
 ### Design direction
 

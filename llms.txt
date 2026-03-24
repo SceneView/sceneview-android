@@ -2,9 +2,9 @@
 
 SceneView is a Compose-first 3D and AR SDK for Android (Jetpack Compose + Filament + ARCore) with a native iOS edition (SwiftUI + RealityKit + ARKit). It provides declarative composables for rendering interactive 3D scenes, loading glTF/GLB models, and building AR experiences.
 
-**Android — Maven artifacts (version 3.2.0):**
-- 3D only: `io.github.sceneview:sceneview:3.2.0`
-- AR + 3D: `io.github.sceneview:arsceneview:3.2.0`
+**Android — Maven artifacts (version 3.2.2):**
+- 3D only: `io.github.sceneview:sceneview:3.2.2`
+- AR + 3D: `io.github.sceneview:arsceneview:3.2.2`
 
 **iOS — Swift Package (SceneViewSwift):**
 - `https://github.com/SceneView/sceneview-swift`
@@ -18,8 +18,8 @@ SceneView is a Compose-first 3D and AR SDK for Android (Jetpack Compose + Filame
 ### build.gradle (app module)
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.2.0")   // 3D only
-    implementation("io.github.sceneview:arsceneview:3.2.0") // AR (includes sceneview)
+    implementation("io.github.sceneview:sceneview:3.2.2")   // 3D only
+    implementation("io.github.sceneview:arsceneview:3.2.2") // AR (includes sceneview)
 }
 ```
 
@@ -1463,6 +1463,40 @@ public struct LineNode: Sendable {
     public let entity: ModelEntity
     public init(from: SIMD3<Float>, to: SIMD3<Float>, thickness: Float = 0.005, color: SimpleMaterial.Color = .white)
     public static func axisGizmo(at origin: SIMD3<Float> = .zero, length: Float = 0.5, thickness: Float = 0.005) -> [LineNode]
+}
+```
+
+### iOS: PathNode (polyline, circle, grid)
+
+Connects a series of 3D points with line segments. Includes circle and grid factory methods.
+
+```swift
+SceneView { root in
+    // Triangle path
+    let triangle = PathNode(
+        points: [.init(x: -0.5, y: 0, z: 0), .init(x: 0.5, y: 0, z: 0), .init(x: 0, y: 0.5, z: 0)],
+        closed: true,
+        color: .systemYellow
+    )
+    root.addChild(triangle.entity)
+
+    // Circle
+    root.addChild(PathNode.circle(radius: 0.3, color: .cyan).entity)
+
+    // Ground grid
+    root.addChild(PathNode.grid(size: 2.0, divisions: 10, color: .gray).entity)
+}
+```
+
+**Signature:**
+```swift
+public struct PathNode: Sendable {
+    public let entity: Entity
+    public let points: [SIMD3<Float>]
+    public init(points: [SIMD3<Float>], closed: Bool = false, thickness: Float = 0.005, color: SimpleMaterial.Color = .white)
+    public static func circle(center: SIMD3<Float> = .zero, radius: Float = 0.5, segments: Int = 32, thickness: Float = 0.005, color: SimpleMaterial.Color = .white) -> PathNode
+    public static func grid(size: Float = 2.0, divisions: Int = 10, thickness: Float = 0.003, color: SimpleMaterial.Color = .gray) -> PathNode
+    @discardableResult public func position(_ position: SIMD3<Float>) -> PathNode
 }
 ```
 

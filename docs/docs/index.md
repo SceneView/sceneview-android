@@ -1,6 +1,6 @@
 <div class="sv-hero" markdown>
 
-<p class="sv-new-badge">v3.2.0 — Now on every platform</p>
+<p class="sv-new-badge">v3.2.2 — Now on every platform</p>
 
 # SceneView
 
@@ -86,7 +86,7 @@
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:sceneview:3.2.0")
+        implementation("io.github.sceneview:sceneview:3.2.2")
     }
     ```
 
@@ -94,7 +94,7 @@
 
     ```kotlin
     dependencies {
-        implementation("io.github.sceneview:arsceneview:3.2.0")
+        implementation("io.github.sceneview:arsceneview:3.2.2")
     }
     ```
 
@@ -102,7 +102,7 @@
 
     ```swift
     // Swift Package Manager — add to Package.swift:
-    .package(url: "https://github.com/SceneView/sceneview-swift", from: "3.2.0")
+    .package(url: "https://github.com/SceneView/sceneview-swift", from: "3.2.2")
     ```
 
 === "KMP *(soon)*"
