@@ -15,6 +15,13 @@ import kotlin.math.sqrt
  */
 object Earcut {
 
+    /**
+     * Bundled input for triangulation: vertex coordinates, hole start-indices, and vertex dimension.
+     *
+     * @param vertices Flat array of vertex coordinates (e.g. [x0,y0,x1,y1,...] for 2D).
+     * @param holeIndices Vertex indices where each hole ring starts.
+     * @param dimensions Number of coordinates per vertex (2 for 2D, 3 for 3D).
+     */
     class Input(val vertices: DoubleArray, val holeIndices: IntArray, val dimensions: Int)
 
     class VertexIndex(var i: Int, var x: Double, var y: Double) {
@@ -31,6 +38,10 @@ object Earcut {
 
     val xComparator = Comparator { a: VertexIndex, b: VertexIndex -> compareValues(a.x, b.x) }
 
+    /**
+     * Projects 3D polygon vertices onto the XY plane by computing the polygon's
+     * normal and applying a rotation transform. Required before triangulating 3D polygons.
+     */
     fun toXY(data: DoubleArray): DoubleArray {
         val normal = normal(data)
         val anyToXYTransform = AnyToXYTransform(normal[0], normal[1], normal[2])
@@ -737,10 +748,18 @@ object Earcut {
         return sum
     }
 
+    /**
+     * Computes the deviation between polygon area and triangulated area.
+     * Returns 0 for a perfect triangulation; useful for validating results.
+     */
     fun deviation(input: Input, triangles: List<Int>): Double {
         return deviation(input.vertices, input.holeIndices, input.dimensions, triangles)
     }
 
+    /**
+     * Computes the deviation between polygon area and triangulated area.
+     * Returns 0 for a perfect triangulation; useful for validating results.
+     */
     fun deviation(
         data: DoubleArray, holeIndices: IntArray?, dim: Int, triangles: List<Int>
     ): Double {
@@ -772,6 +791,12 @@ object Earcut {
         }
     }
 
+    /**
+     * Flattens a nested polygon array (outer ring + holes) into an [Input].
+     *
+     * @param data Array of rings, each ring is an array of coordinate arrays.
+     *             `data[0]` is the outer ring; `data[1..]` are holes.
+     */
     fun flatten(data: Array<Array<DoubleArray>>): Input {
         val dim: Int = data[0][0].size
         val rVertices = mutableListOf<Double>()

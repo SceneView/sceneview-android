@@ -72,7 +72,7 @@ class Box : CollisionShape {
         val max = getExtents()
         val min = max.negated()
 
-        var tMin = Float.MIN_VALUE
+        var tMin = -Float.MAX_VALUE
         var tMax = Float.MAX_VALUE
 
         val delta = Vector3.subtract(center, rayOrigin)
