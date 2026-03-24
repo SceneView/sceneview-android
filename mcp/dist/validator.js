@@ -398,7 +398,7 @@ const SWIFT_RULES = [
         check(code, lines) {
             const issues = [];
             // Check if SceneViewSwift types are used but not imported
-            const svTypes = ["SceneView", "ARSceneView", "ModelNode", "GeometryNode", "LightNode", "TextNode", "VideoNode", "PhysicsNode", "BillboardNode", "AnchorNode", "AugmentedImageNode"];
+            const svTypes = ["SceneView", "ARSceneView", "ModelNode", "GeometryNode", "LightNode", "TextNode", "VideoNode", "PhysicsNode", "BillboardNode", "AnchorNode", "AugmentedImageNode", "ImageNode", "CameraNode", "PathNode", "LineNode", "MeshNode", "FogNode", "DynamicSkyNode", "ReflectionProbeNode"];
             const usesSceneView = svTypes.some((t) => code.includes(t));
             if (usesSceneView && !code.includes("import SceneViewSwift")) {
                 issues.push({
