@@ -139,7 +139,12 @@ need to be merged to main first.
   - Complete Flutter/React Native bridges (currently scaffolds with TODOs)
   - KMP core XCFramework: build and integrate into SceneViewSwift
   - visionOS spatial features (immersive spaces, hand tracking)
-  - GitHub Pages setup: go to repo Settings → Pages → Source → "GitHub Actions" (one-time)
+  - **GitHub Pages migration** (after merging PR):
+    1. Check `SceneView/sceneview.github.io` for any content to preserve (CNAME, Dokka `/api/`, etc.)
+    2. If a `CNAME` file exists, copy it to `docs/docs/CNAME` in this repo
+    3. Repo Settings → Pages → Source → "GitHub Actions"
+    4. Trigger `workflow_dispatch` on `docs.yml` to verify the site builds correctly
+    5. Only after the native deployment works → archive `SceneView/sceneview.github.io`
   - Play Store deployment (needs keystore + service account secrets)
 
 - **Known constraints**:
