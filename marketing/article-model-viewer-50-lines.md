@@ -22,7 +22,7 @@ By the end of this article, you'll have a viewer that:
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:sceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
 ```
 
 Put your models in `src/main/assets/models/` and an HDR file in `src/main/assets/environments/`.

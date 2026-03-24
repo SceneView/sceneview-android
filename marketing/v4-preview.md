@@ -162,7 +162,7 @@ platform parity.
 ## What v3.x already delivers (and v4.0 builds on)
 
 For developers evaluating SceneView today, here's the current feature set you get
-immediately with v3.2.0:
+immediately with v3.3.0:
 
 ### Rendering
 - Physically-based rendering via Filament 1.70
@@ -229,13 +229,13 @@ thumbnail to a spatial computing experience, all with native platform APIs.
 v4.0 is on the [roadmap](https://github.com/SceneView/sceneview/blob/main/ROADMAP.md)
 as the next major release following the 3.x feature series. Follow the repo for updates.
 
-**You don't need to wait for 4.0.** Everything in v3.2.0 is production-ready today.
+**You don't need to wait for 4.0.** Everything in v3.3.0 is production-ready today.
 v4.0 adds capabilities on top — it doesn't replace anything.
 
 ```gradle
 // Start building today
-implementation("io.github.sceneview:sceneview:3.2.0")
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
 ---

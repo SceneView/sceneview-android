@@ -120,7 +120,7 @@ See [MIGRATION.md](MIGRATION.md) for a step-by-step upgrade guide from 2.x.
 
 ```gradle
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.2.0")
+    implementation("io.github.sceneview:sceneview:3.3.0")
 }
 ```
 
@@ -294,7 +294,7 @@ Scene(surfaceType = SurfaceType.TextureSurface, isOpaque = false)
 ```gradle
 dependencies {
     // Includes sceneview — no need to add both
-    implementation("io.github.sceneview:arsceneview:3.2.0")
+    implementation("io.github.sceneview:arsceneview:3.3.0")
 }
 ```
 
@@ -460,7 +460,7 @@ building, model loading, gesture controls) using native Apple frameworks.
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "0.1.0")
+    .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
 ]
 ```
 

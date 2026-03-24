@@ -210,10 +210,10 @@ Add the dependency:
 
 ```gradle
 // 3D only
-implementation("io.github.sceneview:sceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
 
 // 3D + AR
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
 The minimal 3D scene:

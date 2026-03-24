@@ -9,8 +9,8 @@ SceneView aims to be the **universal 3D/AR SDK** — the go-to library for every
 ### Tier 1: Production Ready
 | Platform | Status | Artifact | Min Version |
 |---|---|---|---|
-| Android (Compose) | ✅ Stable | `io.github.sceneview:sceneview:3.2.0` | API 24 (Android 7.0) |
-| Android AR (ARCore) | ✅ Stable | `io.github.sceneview:arsceneview:3.2.0` | API 24 |
+| Android (Compose) | ✅ Stable | `io.github.sceneview:sceneview:3.3.0` | API 24 (Android 7.0) |
+| Android AR (ARCore) | ✅ Stable | `io.github.sceneview:arsceneview:3.3.0` | API 24 |
 
 ### Tier 2: In Development
 | Platform | Status | Target | Renderer |

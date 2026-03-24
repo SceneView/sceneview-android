@@ -23,7 +23,7 @@ By the end of this article you'll have:
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:sceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
 ```
 
 ### Camera-facing labels in 12 lines
@@ -115,7 +115,7 @@ AR adds a dimension: labels must track **real-world positions** via ARCore ancho
 
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
 ### Waypoint labels on tap

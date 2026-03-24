@@ -25,8 +25,8 @@ composable signatures, node types, resource loading, threading rules, and common
 
 ## When writing any SceneView code
 
-- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.2.0`)
-- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.2.0`)
+- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.3.0`)
+- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.3.0`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case
@@ -67,10 +67,10 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 Every Claude Code session MUST read this section first to stay in sync.
 
-### Current state (last updated: 2026-03-23)
+### Current state (last updated: 2026-03-24)
 
 - **Active branch**: `main`
-- **Latest release**: v3.2.0 (Maven Central)
+- **Latest release**: v3.3.0 (unified version — Android + iOS + MCP)
 - **Project philosophy**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
 - **Cross-platform strategy**: native renderer per platform — Filament (Android),
@@ -132,10 +132,10 @@ Rationale:
 
 | Platform | Renderer | Framework | Status |
 |---|---|---|---|
-| Android | Filament | Jetpack Compose | Stable (v3.2.0) |
-| iOS | RealityKit | SwiftUI | In development |
-| macOS | RealityKit | SwiftUI | Planned (add `.macOS(.v14)` to Package.swift) |
-| visionOS | RealityKit | SwiftUI | In development (already in Package.swift) |
+| Android | Filament | Jetpack Compose | Stable (v3.3.0) |
+| iOS | RealityKit | SwiftUI | Alpha (v3.3.0) |
+| macOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
+| visionOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
 
 ### KMP core role
 
