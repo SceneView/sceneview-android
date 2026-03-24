@@ -20,20 +20,35 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 
 /**
+ * Per-instance scene state stored as a tag on the FrameLayout container.
+ * Each `<RNSceneView>` gets its own independent state.
+ */
+class SceneViewState {
+    val modelPaths = mutableStateListOf<ModelNodeData>()
+    val environmentPath = mutableStateOf<String?>(null)
+    val orbitEnabled = mutableStateOf(true)
+}
+
+/**
  * ViewManager that bridges React Native's `<RNSceneView>` to the Jetpack Compose
  * `Scene { }` composable from `io.github.sceneview`.
+ *
+ * State is stored per-instance via [FrameLayout.getTag] to support multiple
+ * `<RNSceneView>` components on the same screen.
  */
 class SceneViewManager : SimpleViewManager<FrameLayout>() {
 
     override fun getName(): String = "RNSceneView"
 
-    // Reactive state shared between React props and Compose
-    private val modelPaths = mutableStateListOf<ModelNodeData>()
-    private val environmentPath = mutableStateOf<String?>(null)
-    private val orbitEnabled = mutableStateOf(true)
+    private fun getState(view: FrameLayout): SceneViewState {
+        return view.tag as? SceneViewState ?: SceneViewState().also { view.tag = it }
+    }
 
     override fun createViewInstance(reactContext: ThemedReactContext): FrameLayout {
         val container = FrameLayout(reactContext)
+        val state = SceneViewState()
+        container.tag = state
+
         val composeView = ComposeView(reactContext).apply {
             setContent {
                 val engine = rememberEngine()
@@ -44,7 +59,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                     position = Position(y = 0f, z = 3.0f)
                 }
 
-                val environment = environmentPath.value?.let { path ->
+                val environment = state.environmentPath.value?.let { path ->
                     rememberEnvironment(environmentLoader) {
                         environmentLoader.createHDREnvironment(path)
                     }
@@ -57,7 +72,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                     cameraNode = cameraNode,
                     environment = environment,
                 ) {
-                    modelPaths.forEach { model ->
+                    state.modelPaths.forEach { model ->
                         val instance = rememberModelInstance(modelLoader, model.src)
                         instance?.let {
                             ModelNode(
@@ -76,20 +91,22 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
 
     @ReactProp(name = "environment")
     fun setEnvironment(view: FrameLayout, environment: String?) {
-        environmentPath.value = environment
+        getState(view).environmentPath.value = environment
     }
 
     @ReactProp(name = "modelNodes")
     fun setModelNodes(view: FrameLayout, nodes: ReadableArray?) {
-        modelPaths.clear()
+        val state = getState(view)
+        state.modelPaths.clear()
         nodes?.let { array ->
             for (i in 0 until array.size()) {
                 val map = array.getMap(i) ?: continue
-                modelPaths.add(
+                val src = map.getString("src") ?: continue
+                state.modelPaths.add(
                     ModelNodeData(
-                        src = map.getString("src") ?: continue,
-                        scale = map.getDouble("scale").toFloat(),
-                        animate = map.getBoolean("animation")
+                        src = src,
+                        scale = if (map.hasKey("scale")) map.getDouble("scale").toFloat() else 1.0f,
+                        animate = if (map.hasKey("animation")) map.getBoolean("animation") else true
                     )
                 )
             }
@@ -98,7 +115,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
 
     @ReactProp(name = "cameraOrbit", defaultBoolean = true)
     fun setCameraOrbit(view: FrameLayout, enabled: Boolean) {
-        orbitEnabled.value = enabled
+        getState(view).orbitEnabled.value = enabled
     }
 }
 

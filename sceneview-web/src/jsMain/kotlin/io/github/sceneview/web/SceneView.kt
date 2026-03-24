@@ -3,6 +3,7 @@ package io.github.sceneview.web
 import io.github.sceneview.web.bindings.*
 import io.github.sceneview.web.nodes.CameraConfig
 import io.github.sceneview.web.nodes.LightConfig
+import io.github.sceneview.web.nodes.LightType
 import io.github.sceneview.web.nodes.ModelConfig
 import kotlinx.browser.window
 import org.w3c.dom.HTMLCanvasElement
@@ -157,6 +158,38 @@ class SceneView private constructor(
         }
     }
 
+    /**
+     * Add a light to the scene.
+     *
+     * Uses Filament's LightManager to create a light entity and configure it.
+     */
+    fun addLight(config: LightConfig) {
+        val entity = EntityManager.get().create()
+        val lm = engine.lightManager
+
+        // Filament light type mapping — use js() to access the LightManager.Type enum
+        val lightType = when (config.type) {
+            LightType.DIRECTIONAL -> 0 // LightManager.Type.DIRECTIONAL
+            LightType.POINT -> 1       // LightManager.Type.POINT
+            LightType.SPOT -> 3        // LightManager.Type.SPOT
+        }
+
+        // Build light via the LightManager — using dynamic JS interop
+        // since Filament.js uses a builder pattern not directly expressible in Kotlin externals
+        js("Filament.LightManager.Builder(lightType).intensity(config.intensity).build(engine, entity)")
+
+        val instance = lm.getInstance(entity)
+        lm.setColor(instance, config.colorR, config.colorG, config.colorB)
+
+        if (config.type == LightType.DIRECTIONAL) {
+            lm.setDirection(instance, config.directionX, config.directionY, config.directionZ)
+        } else {
+            lm.setPosition(instance, config.positionX, config.positionY, config.positionZ)
+        }
+
+        scene.addEntity(entity)
+    }
+
     /** Clean up all resources. */
     fun destroy() {
         stopRendering()
@@ -171,7 +204,6 @@ class SceneView private constructor(
         if (!isRunning) return
 
         // Update animations
-        val deltaSeconds = 1.0 / 60.0 // Approximate, could track actual delta
         models.forEach { asset ->
             asset.animator?.let { animator ->
                 if (animator.getAnimationCount() > 0) {
@@ -224,7 +256,7 @@ class SceneViewBuilder(private val sceneView: SceneView) {
 
     internal fun apply() {
         cameraConfig?.applyTo(sceneView.camera)
-        // Light and model configs are applied through the engine
+        lightConfig?.let { sceneView.addLight(it) }
         iblUrl?.let { sceneView.loadEnvironment(it, skyboxUrl) }
         modelConfigs.forEach { config ->
             sceneView.loadModel(config.url, config.onLoaded)

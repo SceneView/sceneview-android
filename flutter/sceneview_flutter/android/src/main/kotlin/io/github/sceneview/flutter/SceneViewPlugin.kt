@@ -20,8 +20,6 @@ import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
-import io.github.sceneview.math.Rotation
-import io.github.sceneview.math.Scale
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
@@ -214,30 +212,24 @@ class ARSceneViewPlatformView(
             val engine = rememberEngine()
             val modelLoader = rememberModelLoader(engine)
 
+            // AR Scene — models are placed in the scene directly.
+            // TODO: Implement tap-to-place with ARCore hit test to create
+            // real AnchorNodes at detected plane positions.
             io.github.sceneview.ar.ARScene(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
                 planeRenderer = true,
-                onSessionUpdated = { session, frame -> },
-                onGestureListener = io.github.sceneview.rememberOnGestureListener(
-                    onSingleTapConfirmed = { motionEvent, node ->
-                        // Tap-to-place: load first pending model at hit position
-                    }
-                )
+                onSessionUpdated = { _, _ -> },
             ) {
                 modelNodes.forEach { model ->
                     val instance = rememberModelInstance(modelLoader, model.path)
                     instance?.let {
-                        io.github.sceneview.ar.node.AnchorNode(
-                            engine = engine,
-                        ) {
-                            ModelNode(
-                                modelInstance = it,
-                                scaleToUnits = model.scale,
-                                autoAnimate = model.autoAnimate,
-                            )
-                        }
+                        ModelNode(
+                            modelInstance = it,
+                            scaleToUnits = model.scale,
+                            autoAnimate = model.autoAnimate,
+                        )
                     }
                 }
             }
