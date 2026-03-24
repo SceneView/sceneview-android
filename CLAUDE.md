@@ -211,6 +211,52 @@ After completing significant work, update the "Current state" block above with:
 
 ---
 
+## Long-running session rules
+
+Based on [Anthropic harness design for long-running apps](https://www.anthropic.com/engineering/harness-design-long-running-apps).
+
+### Context management
+- **Read `.claude/handoff.md` at session start** — structured handoff artifact
+- **Update `.claude/handoff.md` at session end** — what was done, decisions, next steps
+- **Context resets > compaction** — when context gets long, start a fresh session with handoff
+- **Don't prematurely wrap up** — if approaching context limits, hand off cleanly instead
+
+### Separate generator from evaluator
+- **Never self-evaluate** — run `/evaluate` or `/review` as a separate step
+- Evaluators should be skeptical; generators should be creative
+- If any evaluation criterion scores 1-2/5, it's BLOCKING — fix before pushing
+
+### Sprint contracts
+- Before starting a feature chunk, define **what "done" looks like**
+- Use the sprint contract template in `.claude/handoff.md`
+- Prevents scope creep and ensures alignment
+
+### Decomposition
+- **One feature at a time** — break complex work into discrete chunks
+- Each chunk should compile, test, and be commitable independently
+- Don't attempt end-to-end execution of large features in one go
+
+### Criteria-driven quality
+- Use measurable criteria (compile? tests pass? review checklist?)
+- Weight criteria: Safety (3x) > Correctness (3x) > API consistency (2x) > Completeness (2x) > Minimality (1x)
+- Explicit > vague — "tests pass" beats "looks good"
+
+### Complexity hygiene
+- Every harness component encodes an assumption about model limitations
+- Regularly stress-test: does this hook/check still add value?
+- Remove scaffolding that newer model capabilities make unnecessary
+
+### Available evaluator commands
+| Command | Role |
+|---|---|
+| `/review` | Code review checklist (threading, Compose API, style) |
+| `/evaluate` | Independent quality assessment (5 criteria, weighted scores) |
+| `/test` | Test coverage audit |
+| `/sync-check` | Repo synchronization verification |
+| `/contribute` | Full contribution workflow |
+
+---
+
 ## Cross-platform strategy
 
 ### Architecture: native renderer per platform

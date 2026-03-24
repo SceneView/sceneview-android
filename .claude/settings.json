@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$TOOL_INPUT\" in *'git push'*|*'gh pr'*|*'npm publish'*) echo '[Checkpoint] About to push/publish. Run /review first if not done this session.' ;; esac"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "callback"
+          }
+        ]
+      }
+    ]
+  }
+}
