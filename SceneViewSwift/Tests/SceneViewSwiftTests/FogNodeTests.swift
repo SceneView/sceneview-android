@@ -194,5 +194,71 @@ final class FogNodeTests: XCTestCase {
         XCTAssertNotNil(fog.entity)
         XCTAssertEqual(fog.density, 1.0, accuracy: 0.001)
     }
+
+    // MARK: - Density mutable property
+
+    func testDensityMutablePropertyClamps() {
+        var fog = FogNode.exponential(density: 0.5)
+        fog.density = 1.5
+        XCTAssertEqual(fog.density, 1.0, accuracy: 0.001)
+
+        fog.density = -0.5
+        XCTAssertEqual(fog.density, 0.0, accuracy: 0.001)
+    }
+
+    func testDensityMutablePropertyWithinRange() {
+        var fog = FogNode.exponential(density: 0.5)
+        fog.density = 0.7
+        XCTAssertEqual(fog.density, 0.7, accuracy: 0.001)
+    }
+
+    // MARK: - Start/end distance mutable properties
+
+    func testStartDistanceMutableProperty() {
+        var fog = FogNode.linear()
+        fog.startDistance = 10.0
+        XCTAssertEqual(fog.startDistance, 10.0, accuracy: 0.001)
+    }
+
+    func testStartDistanceMutablePropertyClampsNegative() {
+        var fog = FogNode.linear()
+        fog.startDistance = -5.0
+        XCTAssertEqual(fog.startDistance, 0.0, accuracy: 0.001)
+    }
+
+    func testEndDistanceMutableProperty() {
+        var fog = FogNode.linear()
+        fog.endDistance = 100.0
+        XCTAssertEqual(fog.endDistance, 100.0, accuracy: 0.001)
+    }
+
+    func testEndDistanceMutablePropertyClampsNegative() {
+        var fog = FogNode.linear()
+        fog.endDistance = -10.0
+        XCTAssertEqual(fog.endDistance, 0.0, accuracy: 0.001)
+    }
+
+    // MARK: - Equal start and end distance
+
+    func testEqualStartAndEndDistance() {
+        let fog = FogNode.linear(start: 5.0, end: 5.0)
+        XCTAssertEqual(fog.startDistance, 5.0, accuracy: 0.001)
+        XCTAssertEqual(fog.endDistance, 5.0, accuracy: 0.001)
+        XCTAssertNotNil(fog.entity)
+    }
+
+    // MARK: - Height falloff mutable property
+
+    func testHeightFalloffNegativeValue() {
+        var fog = FogNode.heightBased()
+        fog.heightFalloff = -5.0
+        XCTAssertEqual(fog.heightFalloff, -5.0, accuracy: 0.001)
+    }
+
+    func testHeightFalloffZero() {
+        var fog = FogNode.heightBased()
+        fog.heightFalloff = 0.0
+        XCTAssertEqual(fog.heightFalloff, 0.0, accuracy: 0.001)
+    }
 }
 #endif

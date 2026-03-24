@@ -290,5 +290,87 @@ final class DynamicSkyNodeTests: XCTestCase {
         let sky = DynamicSkyNode.night()
         XCTAssertEqual(sky.effectiveIntensity, 0, accuracy: 0.001)
     }
+
+    // MARK: - Time builder wrapping
+
+    func testTimeBuilderWrapsAt24() {
+        let sky = DynamicSkyNode.noon().time(25)
+        XCTAssertEqual(sky.timeOfDay, 1, accuracy: 0.001)
+    }
+
+    func testTimeBuilderWrapsNegative() {
+        let sky = DynamicSkyNode.noon().time(-1)
+        // truncatingRemainder: -1.truncatingRemainder(dividingBy: 24) = -1
+        XCTAssertEqual(sky.timeOfDay, -1, accuracy: 0.001)
+    }
+
+    func testTimeBuilderAt24() {
+        let sky = DynamicSkyNode.noon().time(24)
+        XCTAssertEqual(sky.timeOfDay, 0, accuracy: 0.001)
+    }
+
+    func testTimeBuilderAtZero() {
+        let sky = DynamicSkyNode.noon().time(0)
+        XCTAssertEqual(sky.timeOfDay, 0, accuracy: 0.001)
+    }
+
+    // MARK: - Intensity builder edge cases
+
+    func testIntensityBuilderWithZero() {
+        let sky = DynamicSkyNode.noon().intensity(0)
+        XCTAssertEqual(sky.sunIntensity, 0, accuracy: 0.001)
+        XCTAssertEqual(sky.effectiveIntensity, 0, accuracy: 0.001)
+    }
+
+    func testIntensityBuilderWithNegative() {
+        let sky = DynamicSkyNode.noon().intensity(-500)
+        XCTAssertEqual(sky.sunIntensity, -500, accuracy: 0.001)
+    }
+
+    func testIntensityBuilderWithVeryHigh() {
+        let sky = DynamicSkyNode.noon().intensity(100_000)
+        XCTAssertEqual(sky.sunIntensity, 100_000, accuracy: 0.001)
+    }
+
+    // MARK: - isDaytime at boundaries
+
+    func testIsDaytimeAtExactly6() {
+        let sky = DynamicSkyNode(timeOfDay: 6)
+        XCTAssertTrue(sky.isDaytime)
+    }
+
+    func testIsDaytimeAtExactly18() {
+        let sky = DynamicSkyNode(timeOfDay: 18)
+        XCTAssertTrue(sky.isDaytime)
+    }
+
+    func testIsNotDaytimeAt5Point99() {
+        let sky = DynamicSkyNode(timeOfDay: 5.99)
+        XCTAssertFalse(sky.isDaytime)
+    }
+
+    func testIsNotDaytimeAt18Point01() {
+        let sky = DynamicSkyNode(timeOfDay: 18.01)
+        XCTAssertFalse(sky.isDaytime)
+    }
+
+    // MARK: - Sun state at edge times
+
+    func testSunStateAtExactly12() {
+        let state = DynamicSkyNode.computeSunState(
+            timeOfDay: 12, turbidity: 2, sunIntensity: 500
+        )
+        XCTAssertEqual(state.intensity, 500, accuracy: 1)
+        XCTAssertEqual(state.elevation, 1.0, accuracy: 0.01)
+    }
+
+    func testSunStateAtMidnightElevation() {
+        // At midnight (0h), hourAngle = ((0-6)/12) * pi = -pi/2
+        // elevation = sin(-pi/2) = -1
+        let state = DynamicSkyNode.computeSunState(
+            timeOfDay: 0, turbidity: 2, sunIntensity: 1000
+        )
+        XCTAssertEqual(state.elevation, -1.0, accuracy: 0.01)
+    }
 }
 #endif

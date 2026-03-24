@@ -207,5 +207,75 @@ final class MeshNodeTests: XCTestCase {
 
         XCTAssertEqual(node.rotation.angle, quat.angle, accuracy: 0.001)
     }
+
+    // MARK: - Init with ModelEntity
+
+    func testInitWithModelEntity() {
+        let mesh = MeshResource.generateBox(size: 1.0)
+        let material = SimpleMaterial(color: .white, isMetallic: false)
+        let entity = ModelEntity(mesh: mesh, materials: [material])
+        let node = MeshNode(entity)
+        XCTAssertNotNil(node.entity)
+        XCTAssertNotNil(node.entity.model)
+    }
+
+    // MARK: - Grounding shadow
+
+    func testWithGroundingShadowDoesNotCrash() throws {
+        let node = try MeshNode.fromVertices(
+            positions: Self.trianglePositions,
+            indices: Self.triangleIndices
+        )
+        .withGroundingShadow()
+        XCTAssertNotNil(node.entity)
+    }
+
+    // MARK: - Collision shapes
+
+    func testFromVerticesHasCollisionComponent() throws {
+        let node = try MeshNode.fromVertices(
+            positions: Self.trianglePositions,
+            indices: Self.triangleIndices
+        )
+        XCTAssertNotNil(node.entity.components[CollisionComponent.self])
+    }
+
+    func testFromDescriptorHasCollisionComponent() throws {
+        var descriptor = MeshDescriptor(name: "Test")
+        descriptor.positions = MeshBuffers.Positions(Self.trianglePositions)
+        descriptor.primitives = .triangles(Self.triangleIndices)
+
+        let node = try MeshNode.fromDescriptor(descriptor)
+        XCTAssertNotNil(node.entity.components[CollisionComponent.self])
+    }
+
+    // MARK: - Quad (two triangles)
+
+    func testQuadMesh() throws {
+        let positions: [SIMD3<Float>] = [
+            SIMD3<Float>(-0.5, -0.5, 0),
+            SIMD3<Float>( 0.5, -0.5, 0),
+            SIMD3<Float>( 0.5,  0.5, 0),
+            SIMD3<Float>(-0.5,  0.5, 0)
+        ]
+        let indices: [UInt32] = [0, 1, 2, 0, 2, 3]
+        let node = try MeshNode.fromVertices(
+            positions: positions,
+            indices: indices,
+            material: .simple(color: .green)
+        )
+        XCTAssertNotNil(node.entity.model)
+    }
+
+    // MARK: - Empty vertex data
+
+    func testEmptyPositionsThrows() {
+        XCTAssertThrowsError(
+            try MeshNode.fromVertices(
+                positions: [],
+                indices: []
+            )
+        )
+    }
 }
 #endif
