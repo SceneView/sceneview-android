@@ -21,7 +21,10 @@ private val samples = listOf(
     SampleEntry("Cross-Platform Model Viewer", "Side-by-side recipe showing identical 3D model viewers in Kotlin and Swift.", "samples/recipes/model-viewer", "Android + iOS", listOf("3D", "Cross-Platform")),
     SampleEntry("Cross-Platform AR", "Recipe for tap-to-place AR on both Android (ARCore) and iOS (ARKit).", "samples/recipes/ar-tap-to-place", "Android + iOS", listOf("AR", "Cross-Platform")),
     SampleEntry("Procedural Geometry", "Create cubes, spheres, cylinders, and custom shapes from code on both platforms.", "samples/recipes/procedural-geometry", "Android + iOS", listOf("3D", "Procedural", "Cross-Platform")),
-    SampleEntry("Text Labels", "Render 3D text labels and billboards in your scene.", "samples/recipes/text-labels", "Android + iOS", listOf("3D", "Text", "Cross-Platform"))
+    SampleEntry("Text Labels", "Render 3D text labels and billboards in your scene.", "samples/recipes/text-labels", "Android + iOS", listOf("3D", "Text", "Cross-Platform")),
+    SampleEntry("Web Model Viewer", "Browser-based 3D viewer using Filament.js (WASM) — same engine as Android.", "samples/web-model-viewer", "Web", listOf("3D", "Web", "Filament.js")),
+    SampleEntry("Android TV Viewer", "3D model viewer for Android TV with D-pad controls (rotate, zoom, cycle).", "samples/tv-model-viewer", "Android TV", listOf("3D", "TV", "D-pad")),
+    SampleEntry("iOS Demo App", "SwiftUI App Store demo with 3D viewer, AR viewer, and samples browser.", "samples/ios-demo", "iOS", listOf("3D", "AR", "SwiftUI")),
 )
 
 @Page

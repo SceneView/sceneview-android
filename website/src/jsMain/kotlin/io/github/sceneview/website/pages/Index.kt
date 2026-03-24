@@ -202,7 +202,7 @@ private fun HeroSection() {
                         property("font-family", Fonts.SYSTEM)
                         property("opacity", "0.7")
                     }
-                }) { Text("Drag to orbit  ·  Scroll to zoom  ·  Powered by model-viewer") }
+                }) { Text("Drag to orbit  ·  Scroll to zoom  ·  Powered by Filament") }
             }
         }
     }
