@@ -1,5 +1,6 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import XCTest
+import RealityKit
 @testable import SceneViewSwift
 
 final class CameraNodeTests: XCTestCase {
@@ -116,6 +117,95 @@ final class CameraNodeTests: XCTestCase {
         XCTAssertEqual(component?.fieldOfViewInDegrees, 75.0, accuracy: 0.001)
         XCTAssertEqual(component?.near, 0.1, accuracy: 0.001)
         XCTAssertEqual(component?.far, 500.0, accuracy: 0.001)
+    }
+    #endif
+
+    // MARK: - Property get/set
+
+    func testPositionPropertyGetSet() {
+        var camera = CameraNode()
+        camera.position = SIMD3<Float>(10, 20, 30)
+        XCTAssertEqual(camera.position.x, 10.0, accuracy: 0.001)
+        XCTAssertEqual(camera.position.y, 20.0, accuracy: 0.001)
+        XCTAssertEqual(camera.position.z, 30.0, accuracy: 0.001)
+    }
+
+    func testRotationPropertyGetSet() {
+        var camera = CameraNode()
+        let quat = simd_quatf(angle: .pi / 6, axis: SIMD3<Float>(1, 0, 0))
+        camera.rotation = quat
+        XCTAssertEqual(camera.rotation.angle, quat.angle, accuracy: 0.001)
+    }
+
+    // MARK: - Default clipping planes
+
+    #if !os(macOS)
+    func testDefaultNearClip() {
+        let camera = CameraNode()
+        XCTAssertEqual(camera.nearClip, 0.01, accuracy: 0.001)
+    }
+
+    func testDefaultFarClip() {
+        let camera = CameraNode()
+        XCTAssertEqual(camera.farClip, 1000.0, accuracy: 0.001)
+    }
+
+    func testNearClipSetGet() {
+        let camera = CameraNode()
+        camera.nearClip = 0.5
+        XCTAssertEqual(camera.nearClip, 0.5, accuracy: 0.001)
+    }
+
+    func testFarClipSetGet() {
+        let camera = CameraNode()
+        camera.farClip = 200.0
+        XCTAssertEqual(camera.farClip, 200.0, accuracy: 0.001)
+    }
+    #endif
+
+    // MARK: - FOV edge cases
+
+    #if !os(macOS)
+    func testFieldOfViewZeroDegrees() {
+        let camera = CameraNode().fieldOfView(0.0)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertNotNil(component)
+    }
+
+    func testFieldOfViewWideAngle() {
+        let camera = CameraNode().fieldOfView(120.0)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertNotNil(component)
+        XCTAssertEqual(component?.fieldOfViewInDegrees, 120.0, accuracy: 0.001)
+    }
+
+    func testFieldOfViewNarrow() {
+        let camera = CameraNode().fieldOfView(10.0)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertEqual(component?.fieldOfViewInDegrees, 10.0, accuracy: 0.001)
+    }
+    #endif
+
+    // MARK: - Look at with custom up
+
+    func testLookAtWithCustomUp() {
+        let camera = CameraNode()
+            .position(.init(x: 0, y: 0, z: 5))
+            .lookAt(.zero, up: SIMD3<Float>(0, 1, 0))
+        XCTAssertNotNil(camera.entity)
+        XCTAssertGreaterThan(abs(camera.rotation.angle), 0.001)
+    }
+
+    // MARK: - Depth of field chaining
+
+    #if !os(macOS)
+    func testDepthOfFieldChaining() {
+        let camera = CameraNode()
+            .depthOfField(focusDistance: 5.0, aperture: 2.8)
+            .fieldOfView(60.0)
+        let component = camera.entity.components[PerspectiveCameraComponent.self]
+        XCTAssertNotNil(component)
+        XCTAssertEqual(component?.fieldOfViewInDegrees, 60.0, accuracy: 0.001)
     }
     #endif
 }

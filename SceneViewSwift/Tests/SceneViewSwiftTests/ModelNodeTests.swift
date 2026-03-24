@@ -342,5 +342,93 @@ final class ModelNodeTests: XCTestCase {
         XCTAssertEqual(node.position.y, 1.0, accuracy: 0.001)
         XCTAssertEqual(node.scale.x, 0.5, accuracy: 0.001)
     }
+
+    // MARK: - Grounding shadow
+
+    func testWithGroundingShadowDoesNotCrash() {
+        let node = ModelNode(ModelEntity())
+            .withGroundingShadow()
+        XCTAssertNotNil(node.entity)
+    }
+
+    func testWithGroundingShadowChaining() {
+        let mesh = MeshResource.generateBox(size: 1.0)
+        let material = SimpleMaterial(color: .white, isMetallic: false)
+        let entity = ModelEntity(mesh: mesh, materials: [material])
+        let node = ModelNode(entity)
+            .position(.init(x: 0, y: 0, z: -2))
+            .withGroundingShadow()
+        XCTAssertEqual(node.position.z, -2.0, accuracy: 0.001)
+    }
+
+    // MARK: - isAnimating
+
+    func testIsAnimatingPropertyOnEmptyEntity() {
+        let node = ModelNode(ModelEntity())
+        // With no animations, isAnimating relies on availableAnimations being empty
+        // which means the current implementation checks !entity.availableAnimations.isEmpty
+        XCTAssertEqual(node.animationCount, 0)
+    }
+
+    // MARK: - Animation with custom speed
+
+    func testPlayAllAnimationsWithCustomSpeed() {
+        let node = ModelNode(ModelEntity())
+        // Should not crash when there are no animations
+        node.playAllAnimations(loop: false, speed: 2.0)
+        XCTAssertEqual(node.animationCount, 0)
+    }
+
+    func testPlayAnimationNamedWithCustomTransition() {
+        let node = ModelNode(ModelEntity())
+        // Should be a no-op, not crash
+        node.playAnimation(named: "idle", loop: false, speed: 0.5, transitionDuration: 0.5)
+        XCTAssertEqual(node.animationCount, 0)
+    }
+
+    // MARK: - Material chaining with PBR
+
+    func testSetMetallicOnEntityWithPBRMaterial() {
+        let mesh = MeshResource.generateBox(size: 1.0)
+        var pbrMat = PhysicallyBasedMaterial()
+        pbrMat.baseColor = .init(tint: .white)
+        let entity = ModelEntity(mesh: mesh, materials: [pbrMat])
+        let node = ModelNode(entity)
+            .setMetallic(0.8)
+        XCTAssertNotNil(node.entity.model)
+    }
+
+    func testSetRoughnessOnEntityWithPBRMaterial() {
+        let mesh = MeshResource.generateBox(size: 1.0)
+        var pbrMat = PhysicallyBasedMaterial()
+        pbrMat.baseColor = .init(tint: .white)
+        let entity = ModelEntity(mesh: mesh, materials: [pbrMat])
+        let node = ModelNode(entity)
+            .setRoughness(0.2)
+        XCTAssertNotNil(node.entity.model)
+    }
+
+    func testOpacityOnPBRMaterial() {
+        let mesh = MeshResource.generateBox(size: 1.0)
+        var pbrMat = PhysicallyBasedMaterial()
+        pbrMat.baseColor = .init(tint: .white)
+        let entity = ModelEntity(mesh: mesh, materials: [pbrMat])
+        let node = ModelNode(entity)
+            .opacity(0.3)
+        XCTAssertNotNil(node.entity.model)
+    }
+
+    // MARK: - scaleToUnits with non-cube geometry
+
+    func testScaleToUnitsWithRectangularBox() {
+        // Box 4 wide, 2 tall, 1 deep => max extent = 4
+        let mesh = MeshResource.generateBox(width: 4.0, height: 2.0, depth: 1.0)
+        let material = SimpleMaterial(color: .white, isMetallic: false)
+        let entity = ModelEntity(mesh: mesh, materials: [material])
+        let node = ModelNode(entity)
+            .scaleToUnits(2.0)
+        // scaleFactor = 2.0 / 4.0 = 0.5
+        XCTAssertEqual(node.entity.scale.x, 0.5, accuracy: 0.05)
+    }
 }
 #endif

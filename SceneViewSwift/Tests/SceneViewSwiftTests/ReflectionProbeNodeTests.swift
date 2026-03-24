@@ -189,5 +189,116 @@ final class ReflectionProbeNodeTests: XCTestCase {
         XCTAssertEqual(probe.entity.position.y, 1.5, accuracy: 0.001)
         XCTAssertTrue(probe.entity.name.contains("1.2"))
     }
+
+    // MARK: - Zero and negative sizes
+
+    func testBoxWithZeroSize() {
+        let probe = ReflectionProbeNode.box(size: .zero)
+        XCTAssertNotNil(probe.entity)
+        if case .box(let size) = probe.shape {
+            XCTAssertEqual(size, .zero)
+        } else {
+            XCTFail("Expected box shape")
+        }
+    }
+
+    func testSphereWithZeroRadius() {
+        let probe = ReflectionProbeNode.sphere(radius: 0.0)
+        XCTAssertNotNil(probe.entity)
+        if case .sphere(let radius) = probe.shape {
+            XCTAssertEqual(radius, 0.0, accuracy: 0.001)
+        } else {
+            XCTFail("Expected sphere shape")
+        }
+    }
+
+    func testBoxWithNegativeSize() {
+        let probe = ReflectionProbeNode.box(size: .init(repeating: -1.0))
+        XCTAssertNotNil(probe.entity)
+    }
+
+    func testSphereWithNegativeRadius() {
+        let probe = ReflectionProbeNode.sphere(radius: -1.0)
+        XCTAssertNotNil(probe.entity)
+    }
+
+    // MARK: - Contains with zero-size probe
+
+    func testZeroSizeBoxContainsOrigin() {
+        let probe = ReflectionProbeNode.box(size: .zero)
+        // Only the exact origin should be "inside" (half = 0, abs(0) <= 0)
+        XCTAssertTrue(probe.contains(.zero))
+    }
+
+    func testZeroSizeBoxDoesNotContainOffset() {
+        let probe = ReflectionProbeNode.box(size: .zero)
+        XCTAssertFalse(probe.contains(.init(x: 0.001, y: 0, z: 0)))
+    }
+
+    func testZeroRadiusSphereContainsOrigin() {
+        let probe = ReflectionProbeNode.sphere(radius: 0.0)
+        // simd_length(.zero) = 0 <= 0
+        XCTAssertTrue(probe.contains(.zero))
+    }
+
+    func testZeroRadiusSphereDoesNotContainOffset() {
+        let probe = ReflectionProbeNode.sphere(radius: 0.0)
+        XCTAssertFalse(probe.contains(.init(x: 0.001, y: 0, z: 0)))
+    }
+
+    // MARK: - Intensity edge cases
+
+    func testIntensityZero() {
+        let probe = ReflectionProbeNode.box(intensity: 0.0)
+        XCTAssertTrue(probe.entity.name.contains("0.0"))
+    }
+
+    func testIntensityNegative() {
+        let probe = ReflectionProbeNode.sphere(intensity: -1.0)
+        XCTAssertNotNil(probe.entity)
+    }
+
+    func testIntensityVeryHigh() {
+        let probe = ReflectionProbeNode.box(intensity: 100.0)
+        XCTAssertTrue(probe.entity.name.contains("100.0"))
+    }
+
+    // MARK: - Volume size edge cases
+
+    func testVolumeSizeForZeroBox() {
+        let probe = ReflectionProbeNode.box(size: .zero)
+        XCTAssertEqual(probe.volumeSize, .zero)
+    }
+
+    func testVolumeSizeForZeroSphere() {
+        let probe = ReflectionProbeNode.sphere(radius: 0.0)
+        XCTAssertEqual(probe.volumeSize, .zero)
+    }
+
+    // MARK: - Contains with diagonal points
+
+    func testBoxContainsDiagonalPointInside() {
+        let probe = ReflectionProbeNode.box(size: [2, 2, 2])
+        // Point at (0.9, 0.9, 0.9) is inside
+        XCTAssertTrue(probe.contains(.init(x: 0.9, y: 0.9, z: 0.9)))
+    }
+
+    func testBoxDoesNotContainDiagonalPointOutside() {
+        let probe = ReflectionProbeNode.box(size: [2, 2, 2])
+        // Point at (1.1, 0, 0) is outside
+        XCTAssertFalse(probe.contains(.init(x: 1.1, y: 0, z: 0)))
+    }
+
+    func testSphereContainsDiagonalPointInside() {
+        let probe = ReflectionProbeNode.sphere(radius: 2.0)
+        // Point at (1, 1, 1): distance = sqrt(3) ~= 1.73, < 2.0
+        XCTAssertTrue(probe.contains(.init(x: 1, y: 1, z: 1)))
+    }
+
+    func testSphereDoesNotContainDiagonalPointOutside() {
+        let probe = ReflectionProbeNode.sphere(radius: 1.0)
+        // Point at (1, 1, 1): distance = sqrt(3) ~= 1.73, > 1.0
+        XCTAssertFalse(probe.contains(.init(x: 1, y: 1, z: 1)))
+    }
 }
 #endif
