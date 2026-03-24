@@ -406,9 +406,192 @@ const RULES: Rule[] = [
   },
 ];
 
-export function validateCode(kotlinCode: string): ValidationIssue[] {
-  const lines = kotlinCode.split("\n");
-  return RULES.flatMap((rule) => rule.check(kotlinCode, lines));
+// ─── Swift Validation Rules ──────────────────────────────────────────────────
+
+const SWIFT_RULES: Rule[] = [
+  // ─── Missing @MainActor for async model loading ────────────────────────────
+  {
+    id: "swift/missing-main-actor",
+    severity: "warning",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      // If there's an async function that loads models but no @MainActor annotation
+      if (/func\s+\w+.*async/.test(code) && /ModelNode\.load\(/.test(code)) {
+        if (!code.includes("@MainActor")) {
+          findLines(lines, /func\s+\w+.*async/).forEach((line) =>
+            issues.push({
+              severity: "warning",
+              rule: "swift/missing-main-actor",
+              message:
+                "Async function that loads RealityKit models should be annotated with `@MainActor` or called from a `@MainActor` context. RealityKit entity operations are main-thread-bound. Using `.task { }` in SwiftUI is already `@MainActor`-isolated, but standalone functions should be annotated.",
+              line,
+            })
+          );
+        }
+      }
+      return issues;
+    },
+  },
+
+  // ─── Missing async/await for ModelNode.load ────────────────────────────────
+  {
+    id: "swift/model-load-not-async",
+    severity: "error",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      // ModelNode.load is async throws — must use try await
+      if (/ModelNode\.load\(/.test(code)) {
+        findLines(lines, /ModelNode\.load\(/).forEach((line) => {
+          const lineContent = lines[line - 1];
+          if (lineContent && !lineContent.includes("await") && !lineContent.includes("try")) {
+            issues.push({
+              severity: "error",
+              rule: "swift/model-load-not-async",
+              message:
+                "`ModelNode.load()` is `async throws` — you must call it with `try await ModelNode.load(\"model.usdz\")` inside a `.task { }` block or async function.",
+              line,
+            });
+          }
+        });
+      }
+      return issues;
+    },
+  },
+
+  // ─── Missing import statements ─────────────────────────────────────────────
+  {
+    id: "swift/missing-imports",
+    severity: "warning",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      // Check if SceneViewSwift types are used but not imported
+      const svTypes = ["SceneView", "ARSceneView", "ModelNode", "GeometryNode", "LightNode", "TextNode", "VideoNode", "PhysicsNode", "BillboardNode", "AnchorNode", "AugmentedImageNode"];
+      const usesSceneView = svTypes.some((t) => code.includes(t));
+      if (usesSceneView && !code.includes("import SceneViewSwift")) {
+        issues.push({
+          severity: "warning",
+          rule: "swift/missing-imports",
+          message:
+            "SceneViewSwift types used but `import SceneViewSwift` not found. Add `import SceneViewSwift` at the top of the file.",
+          line: 1,
+        });
+      }
+      // Check for RealityKit types without import
+      const rkTypes = ["Entity", "ModelEntity", "AnchorEntity", "RealityView", "MeshResource", "SimpleMaterial"];
+      const usesRK = rkTypes.some((t) => new RegExp(`\\b${t}\\b`).test(code));
+      if (usesRK && !code.includes("import RealityKit")) {
+        issues.push({
+          severity: "warning",
+          rule: "swift/missing-imports",
+          message:
+            "RealityKit types used but `import RealityKit` not found. Add `import RealityKit` at the top of the file.",
+          line: 1,
+        });
+      }
+      return issues;
+    },
+  },
+
+  // ─── Common RealityKit mistakes: using addChild on non-Entity ──────────────
+  {
+    id: "swift/add-child-wrong-type",
+    severity: "error",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      // Common mistake: passing ModelNode instead of ModelNode.entity
+      const patterns: [RegExp, string][] = [
+        [/addChild\(\s*model\s*\)/, "model"],
+        [/addChild\(\s*cube\s*\)/, "cube"],
+        [/addChild\(\s*sphere\s*\)/, "sphere"],
+        [/addChild\(\s*light\s*\)/, "light"],
+        [/addChild\(\s*text\s*\)/, "text"],
+      ];
+      for (const [pat, name] of patterns) {
+        // Only flag if the variable is likely a SceneViewSwift node wrapper, not a raw Entity
+        if (pat.test(code) && new RegExp(`(ModelNode|GeometryNode|LightNode|TextNode|VideoNode|BillboardNode).*\\b${name}\\b`).test(code)) {
+          findLines(lines, pat).forEach((line) =>
+            issues.push({
+              severity: "error",
+              rule: "swift/add-child-wrong-type",
+              message:
+                `\`addChild(${name})\` — SceneViewSwift node wrappers are not \`Entity\` subclasses. Use \`addChild(${name}.entity)\` to add the underlying RealityKit entity.`,
+              line,
+            })
+          );
+        }
+      }
+      return issues;
+    },
+  },
+
+  // ─── ARSceneView used on macOS or visionOS ─────────────────────────────────
+  {
+    id: "swift/ar-platform-check",
+    severity: "info",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      if (code.includes("ARSceneView")) {
+        if (code.includes("macOS") || code.includes("visionOS")) {
+          findLines(lines, /ARSceneView/).forEach((line) =>
+            issues.push({
+              severity: "info",
+              rule: "swift/ar-platform-check",
+              message:
+                "`ARSceneView` uses `ARView` which is only available on iOS. For macOS use `SceneView` (3D only). For visionOS, use RealityKit's `RealityView` with `ARKitSession` directly.",
+              line,
+            })
+          );
+        }
+      }
+      return issues;
+    },
+  },
+
+  // ─── Missing error handling on model load ──────────────────────────────────
+  {
+    id: "swift/unhandled-model-load-error",
+    severity: "warning",
+    check(code, lines) {
+      const issues: ValidationIssue[] = [];
+      // Using try? silently swallows errors — warning but not error
+      if (/try\?\s+await\s+ModelNode\.load/.test(code)) {
+        findLines(lines, /try\?\s+await\s+ModelNode\.load/).forEach((line) =>
+          issues.push({
+            severity: "warning",
+            rule: "swift/unhandled-model-load-error",
+            message:
+              "`try?` on `ModelNode.load()` silently swallows load failures. Consider using `do { try await ... } catch { print(error) }` to at least log failures, or show a loading indicator.",
+            line,
+          })
+        );
+      }
+      return issues;
+    },
+  },
+];
+
+function detectLanguage(code: string): "kotlin" | "swift" {
+  // Heuristic: if the code has Swift markers, validate as Swift
+  if (
+    code.includes("import SwiftUI") ||
+    code.includes("import RealityKit") ||
+    code.includes("import SceneViewSwift") ||
+    code.includes("struct ") && code.includes(": View") ||
+    code.includes("@State private var") ||
+    /SceneView\s*\{.*\bin\b/.test(code)
+  ) {
+    return "swift";
+  }
+  return "kotlin";
+}
+
+export function validateCode(code: string): ValidationIssue[] {
+  const lines = code.split("\n");
+  const lang = detectLanguage(code);
+  if (lang === "swift") {
+    return SWIFT_RULES.flatMap((rule) => rule.check(code, lines));
+  }
+  return RULES.flatMap((rule) => rule.check(code, lines));
 }
 
 export function formatValidationReport(issues: ValidationIssue[]): string {
