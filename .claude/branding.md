@@ -95,6 +95,47 @@
 | Web | Blue (same as Android) |
 | Cross-Platform | Green (same as iOS) |
 
+## Marketing Plan
+
+### Launch Communication
+
+**Milestone triggers** — communicate when:
+1. **PR #709 merged** → "SceneView now runs on 9 platforms" (LinkedIn post)
+2. **Website live on GitHub Pages** → share the URL, demo the hero 3D viewer
+3. **Play Store demo published** → "Try SceneView on Android" with QR code
+4. **App Store demo published** → "Try SceneView on iOS" — cross-platform story
+5. **npm `@sceneview/sceneview-web` published** → "3D in the browser with Filament.js"
+6. **v3.4.0 release** → full announcement with all platforms
+
+### Channels
+| Channel | Audience | Format |
+|---|---|---|
+| **LinkedIn** (Thomas Gorisse) | Developers, CTOs, recruiters | Long post + screenshot/video |
+| **Twitter/X** | Android/iOS dev community | Short thread + GIF |
+| **Reddit** (r/androiddev, r/iOSProgramming, r/webdev) | Platform-specific devs | Show & tell post |
+| **Hacker News** | Technical audience | "Show HN: SceneView — 3D as Compose UI, now on 9 platforms" |
+| **Dev.to / Medium** | Tutorial seekers | "Build a 3D viewer in 10 lines of Compose" article |
+| **Discord** (SceneView server) | Existing community | Changelog + migration guide |
+| **Product Hunt** | Early adopters, startups | Launch with demo video |
+
+### Content Ideas
+- **Before/after** : 100 lines of OpenGL boilerplate → 10 lines of SceneView Compose
+- **Cross-platform demo video** : same 3D scene on Android, iOS, Web, TV, Desktop
+- **"AI built this"** : how Claude Code contributed to the SDK (meta story)
+- **Architecture diagram** : the native-renderer-per-platform strategy explained
+
+### Timing
+- Don't announce until the website is live and the demo apps are on the stores
+- Best days for LinkedIn: Tuesday-Thursday morning
+- Best for HN: weekday mornings US time
+- Coordinate all channels for max impact (same week)
+
+### Logo Next Steps
+- Current: blue wordmark "SceneView" in Inter 700
+- Needed: icon/symbol to pair with the wordmark
+- Direction: 3D cube, scene graph node, or abstract geometric shape
+- Keep the blue palette (#1a73e8 / #8ab4f8)
+
 ## Source File
 
 All tokens are defined in:
