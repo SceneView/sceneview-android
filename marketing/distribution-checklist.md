@@ -9,7 +9,7 @@ publication to maximise algorithmic reach.
 ## Pre-publication (do once per article)
 
 - [ ] Final proofread — spell check, all code snippets compile and match current library version
-- [ ] All Gradle dependencies use the latest released version (`3.2.0` as of this writing)
+- [ ] All Gradle dependencies use the latest released version (`3.3.0` as of this writing)
 - [ ] At least one code snippet is copy-paste runnable (not pseudocode)
 - [ ] Hero image created (1200 × 630 px, text overlay with article title)
 - [ ] Canonical URL decided (Medium is primary; dev.to cross-post points canonical → Medium URL)

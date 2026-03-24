@@ -125,12 +125,12 @@ ModelNode(
 For 3D-only (no AR):
 ```kotlin
 // build.gradle.kts
-implementation("io.github.sceneview:sceneview:3.2.0")
+implementation("io.github.sceneview:sceneview:3.3.0")
 ```
 
 For AR:
 ```kotlin
-implementation("io.github.sceneview:arsceneview:3.2.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
 ### 2. Add camera permission (AR only)

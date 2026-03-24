@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 40" fill="none">
+  <circle cx="14" cy="20" r="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
+  <path d="M14 10v20M4 20h20M7 13l14 14M7 27l14-14" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+  <text x="30" y="27" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="600" fill="currentColor">Filament</text>
+</svg>
