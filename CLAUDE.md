@@ -149,7 +149,19 @@ Never say "everything is good" without verifying published packages.
     1. Run `gh pr create --base main --head feat/multi-platform-expansion`
     2. PR title: `feat: multi-platform expansion — web (Filament.js), Android TV, iOS demo, Flutter/RN bridges`
     3. Merge after review
-  - **PRIORITY 2 — Kobweb website**: separate session on `feat/kobweb-website`
+  - **PRIORITY 2 — Kobweb website** (branch: `feat/multi-platform-expansion`, sources in `website/`):
+    - **Architecture**: Kobweb (Compose HTML / Kotlin/JS) + model-viewer web component for live 3D
+    - **Now that sceneview-web exists**: use sceneview-web (Filament.js native) instead of model-viewer for the 3D demos — same engine as Android
+    - **Sources on disk** (13 Kotlin files):
+      - `website/src/jsMain/kotlin/.../pages/`: Index, Quickstart, Samples, Playground, Changelog
+      - `website/src/jsMain/kotlin/.../components/`: NavBar, Footer, Layout, CodeBlock, FeatureCard, PlatformTabs, Seo, ModelViewer
+      - `website/src/jsMain/kotlin/.../Theme.kt` + `AppEntry.kt`
+    - **Design**: Material Design 3 Expressive (28px radius, spring easing, tonal surfaces, Inter font)
+    - **SEO/LLM**: llms.txt, llms-full.txt, sitemap.xml, robots.txt, structured-data.json, per-page meta/OG/Twitter
+    - **Build config**: `website/build.gradle.kts`, `website/settings.gradle.kts`, `website/gradle/libs.versions.toml` (Kotlin 2.0.20, Kobweb 0.19.2)
+    - **Model**: DamagedHelmet.glb (Khronos CC0) in `website/src/jsMain/resources/public/models/`
+    - **Status**: scaffold built, M3 styled, model-viewer integrated, build passes (`kobwebExport`), needs assembly + deploy
+    - **Process commands**: `/sync-check` (pre-PR verification), `/release` (guided release workflow) — already on main
   - Sync llms.txt across docs/docs/llms.txt and mcp/llms.txt (add web API)
   - Consider v3.4.0-alpha release tag
   - KMP core XCFramework: build and integrate into SceneViewSwift
