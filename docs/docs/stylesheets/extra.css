@@ -95,6 +95,112 @@
   margin-bottom: 1rem;
 }
 
+/* ─── Logo Ticker (infinite scroll marquee) ─── */
+
+.sv-logo-ticker {
+  overflow: hidden;
+  position: relative;
+  padding: 2rem 0;
+  margin: 0 -1rem 2rem;
+}
+
+/* Fade edges */
+.sv-logo-ticker::before,
+.sv-logo-ticker::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.sv-logo-ticker::before {
+  left: 0;
+  background: linear-gradient(to right, var(--md-default-bg-color), transparent);
+}
+
+.sv-logo-ticker::after {
+  right: 0;
+  background: linear-gradient(to left, var(--md-default-bg-color), transparent);
+}
+
+.sv-logo-ticker__track {
+  display: flex;
+  gap: 3rem;
+  width: max-content;
+  animation: sv-ticker-scroll 40s linear infinite;
+}
+
+.sv-logo-ticker:hover .sv-logo-ticker__track {
+  animation-play-state: paused;
+}
+
+.sv-logo-ticker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.sv-logo-ticker__item:hover {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.sv-logo-ticker__item img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: grayscale(100%);
+  transition: filter 0.3s ease;
+}
+
+.sv-logo-ticker__item:hover img {
+  filter: grayscale(0%);
+}
+
+[data-md-color-scheme="slate"] .sv-logo-ticker__item img {
+  filter: grayscale(100%) invert(1) brightness(2);
+}
+
+[data-md-color-scheme="slate"] .sv-logo-ticker__item:hover img {
+  filter: invert(1) brightness(2);
+}
+
+.sv-logo-ticker__item span {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sv-on-surface-variant);
+  white-space: nowrap;
+}
+
+@keyframes sv-ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .sv-logo-ticker__track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+  }
+  .sv-logo-ticker__item {
+    opacity: 0.7;
+  }
+}
+
 /* ─── Buttons ─── */
 
 .md-typeset .md-button {

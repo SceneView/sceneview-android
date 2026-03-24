@@ -1,4 +1,4 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 
 /// A node that always faces the camera (billboard behavior).
