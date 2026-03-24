@@ -1,0 +1,13 @@
+site:
+  title: "SceneView"
+
+server:
+  files:
+    dev:
+      contentRoot: "build/processedResources/js/main/public"
+      script: "build/kotlin-webpack/js/developmentExecutable/sceneview-website.js"
+      api: "build/libs/sceneview-website.jar"
+    prod:
+      script: "build/kotlin-webpack/js/productionExecutable/sceneview-website.js"
+      siteRoot: ".kobweb/site"
+  port: 8080
