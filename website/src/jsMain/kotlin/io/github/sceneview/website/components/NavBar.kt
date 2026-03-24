@@ -148,24 +148,7 @@ fun NavBar() {
         }
     }
 
-    Style {
-        """
-        .nav-icon-btn:hover {
-            background-color: rgba(0,0,0,0.06);
-        }
-        @media (prefers-color-scheme: dark) {
-            .nav-icon-btn:hover { background-color: rgba(255,255,255,0.08); }
-        }
-        .nav-hamburger { display: none; }
-        @media (max-width: 768px) {
-            .nav-links { display: none !important; }
-            .nav-hamburger { display: block !important; }
-        }
-        @media (min-width: 769px) {
-            .nav-mobile-menu { display: none !important; }
-        }
-        """.trimIndent()
-    }
+    // Responsive CSS is in AppEntry global Style block
 }
 
 @Composable
