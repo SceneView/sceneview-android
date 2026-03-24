@@ -1,0 +1,28 @@
+{
+  "name": "@sceneview/sceneview-web",
+  "version": "3.3.0",
+  "description": "SceneView for Web — 3D rendering with Filament.js (WebGL2/WASM). Same engine as SceneView Android.",
+  "main": "build/dist/js/productionLibrary/sceneview-web.js",
+  "types": "build/dist/js/productionLibrary/sceneview-web.d.ts",
+  "keywords": [
+    "3d",
+    "webgl",
+    "filament",
+    "sceneview",
+    "gltf",
+    "wasm",
+    "pbr",
+    "rendering",
+    "kotlin"
+  ],
+  "homepage": "https://github.com/SceneView/sceneview",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SceneView/sceneview.git",
+    "directory": "sceneview-web"
+  },
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "filament": ">=1.52.0"
+  }
+}

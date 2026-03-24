@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace "io.github.sceneview.sample.tv"
+
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "io.github.sceneview.sample.tv"
+        minSdk 28
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose true
+    }
+    androidResources {
+        noCompress 'filamat', 'ktx'
+    }
+}
+
+dependencies {
+    implementation project(":samples:common")
+
+    // SceneView
+    implementation project(":sceneview")
+
+    // TV Compose (Leanback)
+    implementation "androidx.tv:tv-foundation:1.0.0-alpha11"
+    implementation "androidx.tv:tv-material:1.0.0"
+}

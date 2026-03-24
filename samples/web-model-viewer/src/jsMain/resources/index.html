@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SceneView Web — Model Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
+        #scene-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .overlay {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        .overlay a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            pointer-events: auto;
+        }
+        .overlay a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <canvas id="scene-canvas"></canvas>
+    <div class="overlay">
+        Powered by <a href="https://github.com/SceneView/sceneview" target="_blank">SceneView</a>
+        + Filament.js
+    </div>
+    <script src="web-model-viewer.js"></script>
+</body>
+</html>

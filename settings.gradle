@@ -13,7 +13,8 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    // PREFER_PROJECT allows Kotlin/JS plugin to add Node.js and Yarn repositories
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         mavenLocal()
         mavenCentral()
@@ -24,6 +25,8 @@ rootProject.name = "SceneView"
 include ":sceneview-core"
 include ":sceneview"
 include ":arsceneview"
+include ":sceneview-web"
+include ":sceneview-desktop"
 
 // Samples
 include ":samples:common"
@@ -42,3 +45,5 @@ include ":samples:line-path"
 include ":samples:text-labels"
 include ":samples:reflection-probe"
 include ":samples:sceneview-demo"
+include ":samples:tv-model-viewer"
+include ":samples:web-model-viewer"

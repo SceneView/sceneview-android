@@ -513,10 +513,27 @@ Each platform uses its **native rendering engine**. Shared logic (math, collisio
 animations) lives in `sceneview-core` via Kotlin Multiplatform.
 
 ```
-sceneview-core (KMP) — shared algorithms
-├── sceneview (Android) — Filament renderer
-└── SceneViewSwift (Apple) — RealityKit renderer
+sceneview-core (KMP) — shared algorithms (math, collision, geometry, physics)
+├── sceneview (Android)     — Filament renderer, Jetpack Compose
+├── arsceneview (Android)   — ARCore integration
+├── SceneViewSwift (Apple)  — RealityKit renderer, SwiftUI
+├── sceneview-web (Web)     — Filament.js (WASM), Kotlin/JS
+└── sceneview-desktop (JVM) — Filament JNI, Compose Desktop (scaffold)
 ```
+
+### All supported platforms
+
+| Platform | Renderer | Framework | Status |
+|---|---|---|---|
+| **Android** | Filament | Jetpack Compose | Stable (v3.3.0) |
+| **Android TV** | Filament | Compose TV | Alpha |
+| **iOS** | RealityKit | SwiftUI | Alpha (v3.3.0) |
+| **macOS** | RealityKit | SwiftUI | Alpha (v3.3.0) |
+| **visionOS** | RealityKit | SwiftUI | Alpha (v3.3.0) |
+| **Web** | Filament.js (WASM) | Kotlin/JS | Alpha |
+| **Flutter** | Filament / RealityKit | PlatformView | Alpha |
+| **React Native** | Filament / RealityKit | Fabric | Alpha |
+| **Desktop** | Filament JNI | Compose Desktop | Scaffold |
 
 ### Kotlin Multiplatform (`sceneview-core`)
 
