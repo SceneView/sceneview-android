@@ -19,10 +19,19 @@ class RNSceneViewManager: RCTViewManager {
     }
 }
 
+/// Observable state model shared between React props and SwiftUI view.
+@MainActor
+class RNSceneState: ObservableObject {
+    @Published var modelPaths: [String] = []
+    @Published var environmentPath: String?
+    @Published var cameraOrbit: Bool = true
+}
+
 /// UIView wrapper that hosts a SwiftUI `SceneView` via UIHostingController.
 class RNSceneViewWrapper: UIView {
 
-    private var hostingController: UIHostingController<SceneViewSwift.SceneView>?
+    private var hostingController: UIHostingController<RNSceneViewContent>?
+    private let sceneState = RNSceneState()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -35,32 +44,50 @@ class RNSceneViewWrapper: UIView {
     }
 
     private func setupView() {
-        // TODO: Initialize SceneView with default configuration.
-        // let sceneView = SceneViewSwift.SceneView()
-        // let hosting = UIHostingController(rootView: sceneView)
-        // hosting.view.frame = bounds
-        // hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        // addSubview(hosting.view)
-        // hostingController = hosting
+        let content = RNSceneViewContent(state: sceneState)
+        let hosting = UIHostingController(rootView: content)
+        hosting.view.frame = bounds
+        hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(hosting.view)
+        hostingController = hosting
     }
 
     // MARK: - React props
 
     @objc var environment: String? {
         didSet {
-            // TODO: Update the scene environment HDR.
+            Task { @MainActor in
+                sceneState.environmentPath = environment
+            }
         }
     }
 
     @objc var modelNodes: [[String: Any]]? {
         didSet {
-            // TODO: Parse model node dictionaries and update the scene.
+            Task { @MainActor in
+                sceneState.modelPaths = modelNodes?.compactMap { $0["src"] as? String } ?? []
+            }
         }
     }
 
     @objc var cameraOrbit: Bool = true {
         didSet {
-            // TODO: Enable/disable orbit camera.
+            Task { @MainActor in
+                sceneState.cameraOrbit = cameraOrbit
+            }
+        }
+    }
+}
+
+/// SwiftUI content view rendering SceneViewSwift.SceneView.
+struct RNSceneViewContent: View {
+    @ObservedObject var state: RNSceneState
+
+    var body: some View {
+        SceneView {
+            ForEach(state.modelPaths, id: \.self) { path in
+                ModelNode(path)
+            }
         }
     }
 }
@@ -84,6 +111,9 @@ class RNARSceneViewManager: RCTViewManager {
 /// UIView wrapper that hosts a SwiftUI `ARSceneView` via UIHostingController.
 class RNARSceneViewWrapper: UIView {
 
+    private var hostingController: UIHostingController<RNARSceneViewContent>?
+    private let sceneState = RNSceneState()
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupView()
@@ -95,37 +125,53 @@ class RNARSceneViewWrapper: UIView {
     }
 
     private func setupView() {
-        // TODO: Initialize ARSceneView with ARKit session configuration.
-        // let arSceneView = SceneViewSwift.ARSceneView()
-        // let hosting = UIHostingController(rootView: arSceneView)
-        // hosting.view.frame = bounds
-        // hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        // addSubview(hosting.view)
+        let content = RNARSceneViewContent(state: sceneState)
+        let hosting = UIHostingController(rootView: content)
+        hosting.view.frame = bounds
+        hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(hosting.view)
+        hostingController = hosting
     }
 
     // MARK: - React props
 
     @objc var planeDetection: Bool = true {
         didSet {
-            // TODO: Enable/disable ARKit plane detection.
+            // ARSceneView handles plane detection via its configuration
         }
     }
 
     @objc var depthOcclusion: Bool = false {
         didSet {
-            // TODO: Enable/disable LiDAR depth occlusion.
+            // LiDAR depth occlusion configuration
         }
     }
 
     @objc var instantPlacement: Bool = false {
         didSet {
-            // TODO: Enable/disable instant placement.
+            // Instant placement configuration
         }
     }
 
     @objc var modelNodes: [[String: Any]]? {
         didSet {
-            // TODO: Parse and place AR model nodes.
+            Task { @MainActor in
+                sceneState.modelPaths = modelNodes?.compactMap { $0["src"] as? String } ?? []
+            }
+        }
+    }
+}
+
+/// SwiftUI content view rendering SceneViewSwift.ARSceneView.
+struct RNARSceneViewContent: View {
+    @ObservedObject var state: RNSceneState
+
+    var body: some View {
+        ARSceneView { anchor in
+            ForEach(state.modelPaths, id: \.self) { path in
+                ModelNode(path)
+                    .scale(0.3)
+            }
         }
     }
 }

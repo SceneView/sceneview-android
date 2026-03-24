@@ -59,7 +59,7 @@ dependencies {
     implementation 'androidx.compose.ui:ui-tooling:1.6.0'
     implementation 'androidx.activity:activity-compose:1.8.2'
 
-    // TODO: Add SceneView dependency once published or use project reference
-    // implementation 'io.github.sceneview:sceneview:3.3.0'
-    // implementation 'io.github.sceneview:arsceneview:3.3.0'
+    // SceneView — 3D and AR rendering
+    implementation 'io.github.sceneview:sceneview:3.3.0'
+    implementation 'io.github.sceneview:arsceneview:3.3.0'
 }
