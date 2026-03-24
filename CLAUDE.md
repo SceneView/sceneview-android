@@ -139,7 +139,7 @@ need to be merged to main first.
   - Complete Flutter/React Native bridges (currently scaffolds with TODOs)
   - KMP core XCFramework: build and integrate into SceneViewSwift
   - visionOS spatial features (immersive spaces, hand tracking)
-  - GitHub Pages deployment for updated docs site
+  - GitHub Pages setup: go to repo Settings → Pages → Source → "GitHub Actions" (one-time)
   - Play Store deployment (needs keystore + service account secrets)
 
 - **Known constraints**:
@@ -160,8 +160,11 @@ need to be merged to main first.
   Showcase, Gallery, QA), Material 3 Expressive
 - **MCP server** (`mcp/`): published npm package for AI assistant integration; now with
   iOS support (8 Swift samples, `get_ios_setup` tool, Swift code validation)
-- **Website**: `docs/` (MkDocs) + `sceneview.github.io`
+- **Website**: `docs/` (MkDocs), deployed via native GitHub Pages from this repo
+  (no longer uses separate `sceneview.github.io` repo — that repo can be archived)
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
+- **GitHub Pages setup required**: In repo Settings → Pages → Source, select "GitHub Actions"
+  (no `PERSONAL_TOKEN` secret needed anymore)
 
 ### How to update this section
 
