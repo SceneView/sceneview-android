@@ -205,33 +205,105 @@ public struct GeometryNode: Sendable {
 /// Material configuration for geometry nodes.
 ///
 /// Mirrors SceneView Android's MaterialInstance configuration.
+/// Supports simple colors, PBR with texture maps, and unlit materials.
+///
+/// ```swift
+/// // Simple color
+/// let red = GeometryMaterial.simple(color: .red)
+///
+/// // PBR with color
+/// let metal = GeometryMaterial.pbr(color: .gray, metallic: 1.0, roughness: 0.2)
+///
+/// // PBR with textures (load textures first)
+/// let textured = GeometryMaterial.textured(
+///     baseColor: albedoTexture,
+///     normal: normalTexture,
+///     metallic: 1.0,
+///     roughness: 0.3
+/// )
+/// ```
 public enum GeometryMaterial: Sendable {
     /// Simple non-metallic material.
     case simple(color: SimpleMaterial.Color)
 
-    /// Physically-based rendering material.
+    /// Physically-based rendering material with color tint.
     case pbr(
         color: SimpleMaterial.Color,
         metallic: Float = 0.0,
         roughness: Float = 0.5
     )
 
+    /// PBR material with texture maps.
+    ///
+    /// - Parameters:
+    ///   - baseColor: Albedo/diffuse texture.
+    ///   - normal: Normal map texture (optional).
+    ///   - metallic: Metallic value (0 = dielectric, 1 = metal).
+    ///   - roughness: Roughness value (0 = smooth/mirror, 1 = rough/diffuse).
+    ///   - tint: Color tint applied on top of the base texture.
+    case textured(
+        baseColor: TextureResource,
+        normal: TextureResource? = nil,
+        metallic: Float = 0.0,
+        roughness: Float = 0.5,
+        tint: SimpleMaterial.Color = .white
+    )
+
     /// Unlit material (no lighting response).
     case unlit(color: SimpleMaterial.Color)
+
+    /// Unlit material with a texture (no lighting response).
+    case unlitTextured(texture: TextureResource, tint: SimpleMaterial.Color = .white)
 
     var rkMaterial: any RealityKit.Material {
         switch self {
         case .simple(let color):
             return SimpleMaterial(color: color, isMetallic: false)
+
         case .pbr(let color, let metallic, let roughness):
             var mat = SimpleMaterial()
             mat.color = .init(tint: color)
             mat.metallic = .init(floatLiteral: metallic)
             mat.roughness = .init(floatLiteral: roughness)
             return mat
+
+        case .textured(let baseColor, let normal, let metallic, let roughness, let tint):
+            var mat = SimpleMaterial()
+            mat.color = .init(tint: tint, texture: .init(baseColor))
+            mat.metallic = .init(floatLiteral: metallic)
+            mat.roughness = .init(floatLiteral: roughness)
+            if let normal = normal {
+                mat.normal = .init(texture: .init(normal))
+            }
+            return mat
+
         case .unlit(let color):
             return UnlitMaterial(color: color)
+
+        case .unlitTextured(let texture, let tint):
+            var mat = UnlitMaterial()
+            mat.color = .init(tint: tint, texture: .init(texture))
+            return mat
         }
+    }
+}
+
+// MARK: - Texture loading helpers
+
+extension GeometryMaterial {
+    /// Loads a texture from a bundle resource name.
+    ///
+    /// ```swift
+    /// let texture = try await GeometryMaterial.loadTexture("textures/brick_diffuse.png")
+    /// let material = GeometryMaterial.textured(baseColor: texture, roughness: 0.8)
+    /// ```
+    public static func loadTexture(_ name: String) async throws -> TextureResource {
+        try await TextureResource(named: name)
+    }
+
+    /// Loads a texture from a URL.
+    public static func loadTexture(contentsOf url: URL) async throws -> TextureResource {
+        try await TextureResource(contentsOf: url)
     }
 }
 
