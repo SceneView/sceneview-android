@@ -1,314 +1,107 @@
-/* SceneView — Modern, rounded, Google-inspired design */
+/* SceneView — Clean, minimal developer docs styling */
+/* Only adds what MkDocs Material doesn't provide out of the box */
 
 :root {
-  /* Clean, professional palette — not the "deep purple" Material default */
-  --md-primary-fg-color: #1a73e8;          /* Google Blue */
+  --md-primary-fg-color: #1a73e8;
   --md-primary-fg-color--light: #4285f4;
   --md-primary-fg-color--dark: #1557b0;
   --md-accent-fg-color: #1a73e8;
-
-  /* Surface colors */
-  --sv-surface: #ffffff;
-  --sv-surface-variant: #f8f9fa;
-  --sv-surface-container: #f1f3f4;
-  --sv-on-surface: #202124;
-  --sv-on-surface-variant: #5f6368;
-  --sv-outline: #dadce0;
-
-  /* Radius */
-  --sv-radius-sm: 12px;
-  --sv-radius-md: 16px;
-  --sv-radius-lg: 24px;
-  --sv-radius-xl: 28px;
-
-  /* Shadows */
-  --sv-shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-  --sv-shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --sv-shadow-lg: 0 8px 24px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
-}
-
-/* Dark mode overrides */
-[data-md-color-scheme="slate"] {
-  --sv-surface: #1e1e1e;
-  --sv-surface-variant: #2d2d2d;
-  --sv-surface-container: #252525;
-  --sv-on-surface: #e8eaed;
-  --sv-on-surface-variant: #9aa0a6;
-  --sv-outline: #3c4043;
-  --sv-shadow-sm: 0 1px 3px rgba(0,0,0,0.25);
-  --sv-shadow-md: 0 4px 12px rgba(0,0,0,0.30);
-  --sv-shadow-lg: 0 8px 24px rgba(0,0,0,0.35);
-}
-
-/* ─── Typography ─── */
-
-.md-typeset h1 {
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--sv-on-surface);
-}
-
-.md-typeset h2 {
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--sv-on-surface);
 }
 
 /* ─── Hero Section ─── */
 
 .sv-hero {
   text-align: center;
-  padding: 3rem 1rem 2rem;
-  margin: -1rem -1rem 2rem;
-  background: linear-gradient(135deg, #e8f0fe 0%, #f3e8fd 100%);
-  border-radius: 0 0 var(--sv-radius-xl) var(--sv-radius-xl);
-}
-
-[data-md-color-scheme="slate"] .sv-hero {
-  background: linear-gradient(135deg, #1a2744 0%, #2a1b3d 100%);
+  padding: 4rem 1.5rem 3rem;
+  margin: -0.5rem 0 2rem;
 }
 
 .sv-hero h1 {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
   letter-spacing: -0.03em;
+  margin-bottom: 0.75rem;
 }
 
 .sv-hero .sv-tagline {
-  font-size: 1.25rem;
-  color: var(--sv-on-surface-variant);
+  font-size: 1.2rem;
+  color: var(--md-default-fg-color--light);
+  margin: 0 auto 1rem;
+  max-width: 640px;
+  line-height: 1.6;
+}
+
+.sv-hero .sv-platforms {
+  font-size: 0.95rem;
+  color: var(--md-default-fg-color--lighter);
   margin-bottom: 1.5rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.sv-hero .sv-badge {
-  display: inline-block;
-  background: var(--md-primary-fg-color);
-  color: white;
-  padding: 0.35rem 1rem;
-  border-radius: 100px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  margin-bottom: 1rem;
-}
-
-/* ─── Logo Ticker (infinite scroll marquee) ─── */
-
-.sv-logo-ticker {
-  overflow: hidden;
-  position: relative;
-  padding: 2rem 0;
-  margin: 0 -1rem 2rem;
-}
-
-/* Fade edges */
-.sv-logo-ticker::before,
-.sv-logo-ticker::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 80px;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.sv-logo-ticker::before {
-  left: 0;
-  background: linear-gradient(to right, var(--md-default-bg-color), transparent);
-}
-
-.sv-logo-ticker::after {
-  right: 0;
-  background: linear-gradient(to left, var(--md-default-bg-color), transparent);
-}
-
-.sv-logo-ticker__track {
-  display: flex;
-  gap: 3rem;
-  width: max-content;
-  animation: sv-ticker-scroll 40s linear infinite;
-}
-
-.sv-logo-ticker:hover .sv-logo-ticker__track {
-  animation-play-state: paused;
-}
-
-.sv-logo-ticker__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-  opacity: 0.55;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.sv-logo-ticker__item:hover {
-  opacity: 1;
-  transform: scale(1.08);
-}
-
-.sv-logo-ticker__item img {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  filter: grayscale(100%);
-  transition: filter 0.3s ease;
-}
-
-.sv-logo-ticker__item:hover img {
-  filter: grayscale(0%);
-}
-
-[data-md-color-scheme="slate"] .sv-logo-ticker__item img {
-  filter: grayscale(100%) invert(1) brightness(2);
-}
-
-[data-md-color-scheme="slate"] .sv-logo-ticker__item:hover img {
-  filter: invert(1) brightness(2);
-}
-
-.sv-logo-ticker__item span {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--sv-on-surface-variant);
-  white-space: nowrap;
-}
-
-@keyframes sv-ticker-scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .sv-logo-ticker__track {
-    animation: none;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 2rem;
-  }
-  .sv-logo-ticker__item {
-    opacity: 0.7;
-  }
-}
-
-/* ─── Buttons ─── */
-
-.md-typeset .md-button {
-  border-radius: 100px;
-  padding: 0.65rem 1.5rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  transition: all 0.2s ease;
-}
-
-.md-typeset .md-button:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--sv-shadow-md);
-}
-
-.md-typeset .md-button--primary {
-  background: var(--md-primary-fg-color);
-  border-color: var(--md-primary-fg-color);
+  letter-spacing: 0.02em;
 }
 
 /* ─── Feature Cards ─── */
 
 .sv-features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
   margin: 2rem 0;
 }
 
 .sv-feature-card {
-  background: var(--sv-surface);
-  border: 1px solid var(--sv-outline);
-  border-radius: var(--sv-radius-lg);
-  overflow: hidden;
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: box-shadow 0.2s ease;
 }
 
 .sv-feature-card:hover {
-  box-shadow: var(--sv-shadow-lg);
-  transform: translateY(-2px);
-}
-
-.sv-feature-card img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  border-bottom: 1px solid var(--sv-outline);
-}
-
-.sv-feature-card .sv-card-body {
-  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .sv-feature-card h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.1rem;
-  font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
 .sv-feature-card p {
   margin: 0;
-  color: var(--sv-on-surface-variant);
+  color: var(--md-default-fg-color--light);
   font-size: 0.9rem;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-/* ─── Code Block Styling ─── */
-
-.md-typeset pre {
-  border-radius: var(--sv-radius-md);
-  border: 1px solid var(--sv-outline);
+.sv-feature-card .sv-card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  display: block;
 }
 
-.highlight code {
-  font-size: 0.85rem;
+/* ─── Section heading helper ─── */
+
+.sv-section-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
 }
 
-/* ─── Card Grid (MkDocs Material built-in) ─── */
-
-.grid.cards > ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-  list-style: none;
-  padding: 0;
+.sv-section-header p {
+  color: var(--md-default-fg-color--light);
+  max-width: 600px;
+  margin: 0.5rem auto 0;
 }
 
-.grid.cards > ul > li {
-  border: 1px solid var(--sv-outline);
-  border-radius: var(--sv-radius-lg);
-  padding: 1.5rem;
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
-  background: var(--sv-surface);
-}
+/* ─── Community links row ─── */
 
-.grid.cards > ul > li:hover {
-  box-shadow: var(--sv-shadow-md);
-  transform: translateY(-1px);
-}
-
-/* Remove colored emoji/icon styling from cards */
-.grid.cards > ul > li .twemoji,
-.grid.cards > ul > li .emojione,
-.grid.cards > ul > li svg {
-  filter: none;
+.sv-community {
+  text-align: center;
+  padding: 2rem 0;
 }
 
 /* ─── Codelab Step Numbers ─── */
+
+.md-content[data-md-component="content"] .codelab-steps {
+  counter-reset: step;
+}
 
 .md-content[data-md-component="content"] .codelab-steps h2 {
   counter-increment: step;
@@ -332,145 +125,13 @@
   flex-shrink: 0;
 }
 
-.md-content[data-md-component="content"] .codelab-steps {
-  counter-reset: step;
-}
+/* ─── Responsive hero ─── */
 
-/* ─── Screenshot Gallery ─── */
-
-.sv-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
-  margin: 2rem 0;
-}
-
-.sv-gallery img {
-  width: 100%;
-  border-radius: var(--sv-radius-md);
-  border: 1px solid var(--sv-outline);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.sv-gallery img:hover {
-  transform: scale(1.02);
-  box-shadow: var(--sv-shadow-md);
-}
-
-/* ─── Stat Chips / Badges ─── */
-
-.sv-stats {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin: 1rem 0;
-}
-
-.sv-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: var(--sv-surface-container);
-  border: 1px solid var(--sv-outline);
-  border-radius: 100px;
-  padding: 0.4rem 1rem;
-  font-size: 0.85rem;
-  color: var(--sv-on-surface-variant);
-  font-weight: 500;
-}
-
-/* ─── Section Dividers ─── */
-
-.md-typeset hr {
-  border: none;
-  border-top: 1px solid var(--sv-outline);
-  margin: 2.5rem 0;
-}
-
-/* ─── Hero Image Centering ─── */
-
-.md-content img[width] {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-/* ─── Pill nav tabs ─── */
-
-.md-tabs {
-  border-bottom: 1px solid var(--sv-outline);
-}
-
-/* ─── Admonitions with rounded corners ─── */
-
-.md-typeset .admonition,
-.md-typeset details {
-  border-radius: var(--sv-radius-md);
-  border: 1px solid var(--sv-outline);
-  box-shadow: none;
-}
-
-/* ─── Install Tabs ─── */
-
-.md-typeset .tabbed-set {
-  border-radius: var(--sv-radius-md);
-  overflow: hidden;
-}
-
-.md-typeset .tabbed-labels > label {
-  border-radius: var(--sv-radius-sm) var(--sv-radius-sm) 0 0;
-}
-
-/* ─── Footer cleanup ─── */
-
-.md-footer {
-  border-top: 1px solid var(--sv-outline);
-}
-
-/* ─── Showcase Gallery (horizontal scroll) ─── */
-
-.showcase-gallery {
-  display: flex;
-  overflow-x: auto;
-  gap: 1.25rem;
-  padding: 1rem 0 1.5rem;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-}
-
-.showcase-gallery::-webkit-scrollbar {
-  height: 6px;
-}
-
-.showcase-gallery::-webkit-scrollbar-thumb {
-  background: var(--sv-outline);
-  border-radius: 3px;
-}
-
-.showcase-item {
-  flex: 0 0 220px;
-  text-align: center;
-  scroll-snap-align: start;
-}
-
-.showcase-item__img {
-  width: 100%;
-  height: 360px;
-  object-fit: cover;
-  border-radius: var(--sv-radius-lg);
-  border: 1px solid var(--sv-outline);
-  background: var(--sv-surface-variant);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.showcase-item:hover .showcase-item__img {
-  transform: translateY(-4px);
-  box-shadow: var(--sv-shadow-lg);
-}
-
-.showcase-item__label {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--sv-on-surface-variant);
+@media (max-width: 600px) {
+  .sv-hero h1 {
+    font-size: 2rem;
+  }
+  .sv-hero .sv-tagline {
+    font-size: 1rem;
+  }
 }
