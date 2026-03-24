@@ -1,4 +1,4 @@
-# Twitter/X Thread — SceneView: #1 3D & AR SDK
+# Twitter/X Thread — SceneView 3.3.0: Cross-Platform 3D & AR
 
 *Copy-paste each numbered block as a separate tweet. Thread format.*
 
@@ -6,170 +6,215 @@
 
 ## Thread
 
-**1/12 — Hook**
+**1/14 — Hook**
 
-3D on Android used to require 500+ lines of boilerplate, lifecycle management, and OpenGL knowledge.
+3D on mobile used to require 500+ lines of boilerplate, lifecycle management, and platform-specific knowledge.
 
-SceneView reduced it to this:
+SceneView 3.3.0 reduced it to this — on BOTH platforms:
 
+Android:
 ```
 Scene {
     ModelNode(modelInstance = helmet, scaleToUnits = 1.0f)
 }
 ```
 
-A thread on why it's the #1 3D & AR library for Android and iOS:
+iOS:
+```
+SceneView {
+    ModelNode(named: "helmet.usdz")
+}
+```
+
+A thread on why it's the #1 3D & AR SDK for Android and iOS:
 
 ---
 
-**2/12 — The core idea**
+**2/14 — The core idea**
 
-The insight: 3D nodes should work like Compose UI.
+The insight: 3D nodes should work like your UI framework.
 
+Android (Compose):
 - `ModelNode` = like `Image()` but 3D
-- `LightNode` = lighting as a composable
 - `if/else` = controls what's in the scene
 - `State<T>` = drives animations
 
-No new paradigm. Just Compose — with depth.
+iOS (SwiftUI):
+- `ModelNode` = like `Image()` but 3D
+- `if/else` = controls what's in the scene
+- `@State` = drives animations
+
+No new paradigm. Just your UI framework — with depth.
 
 ---
 
-**3/12 — Before vs. After**
+**3/14 — Now cross-platform**
 
-Before (Sceneform / raw ARCore):
-- XML layout + Fragment
-- `ModelRenderable.builder().build().thenAccept { ... }`
-- `onResume`, `onPause`, `onDestroy`
-- Manual `setParent()`, manual `destroy()`
+SceneView 3.3.0 ships on:
+- Android: Jetpack Compose + Filament + ARCore
+- iOS: SwiftUI + RealityKit + ARKit
+- macOS: SwiftUI + RealityKit
+- visionOS: SwiftUI + RealityKit
 
-After (SceneView):
-- One `Scene { }` composable
-- `rememberModelInstance()` → null while loading, auto-recompose when ready
-- Lifecycle = automatic
+Same concepts. Native renderers. Native performance.
+
+One SDK, four platforms.
 
 ---
 
-**4/12 — 26+ node types**
+**4/14 — 16 iOS node types**
+
+All new in v3.3.0:
+
+ModelNode, GeometryNode, LightNode, CameraNode, MeshNode, DynamicSkyNode, FogNode, ReflectionProbeNode, PhysicsNode, LineNode, PathNode, TextNode, BillboardNode, ImageNode, VideoNode, AugmentedImageNode
+
+Every major category covered: models, geometry, lighting, atmosphere, physics, text, drawing, media, AR.
+
+---
+
+**5/14 — The architecture**
+
+KMP shares LOGIC (math, collision, geometry, animation).
+Each platform uses its NATIVE RENDERER.
+
+Android → Filament (OpenGL ES / Vulkan)
+Apple → RealityKit (Metal)
+
+No cross-compiled renderers. No WASM bridges. Native performance, native debugging, native tooling.
+
+---
+
+**6/14 — Android: 26+ node types**
 
 All composable:
 
-Models: `ModelNode`
-Geometry: `CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode`
-Lighting: `LightNode`, `DynamicSkyNode`
-Atmosphere: `FogNode`, `ReflectionProbeNode`
-Media: `ImageNode`, `VideoNode`, `ViewNode`
-Text: `TextNode`, `BillboardNode`
-Drawing: `LineNode`, `PathNode`
-Physics: `PhysicsNode`
-AR: `AnchorNode`, `AugmentedImageNode`, `AugmentedFaceNode`, `CloudAnchorNode`
+Models: ModelNode
+Geometry: CubeNode, SphereNode, CylinderNode, PlaneNode
+Lighting: LightNode, DynamicSkyNode
+Atmosphere: FogNode, ReflectionProbeNode
+Media: ImageNode, VideoNode, ViewNode
+Text: TextNode, BillboardNode
+Drawing: LineNode, PathNode
+Physics: PhysicsNode
+AR: AnchorNode, AugmentedImageNode, AugmentedFaceNode, CloudAnchorNode
 
 ---
 
-**5/12 — The rendering engine**
+**7/14 — The rendering engines**
 
-Built on Google Filament — the same PBR engine Google uses in Search and Play Store.
+Android: Google Filament — the same PBR engine Google uses in Search and Play Store.
+iOS: RealityKit — Apple's native 3D engine, the only path to visionOS.
 
-- Physically-based rendering
-- HDR environment lighting
-- Dynamic shadows
-- Post-processing: bloom, DOF, SSAO
-- 60fps on mid-range phones
+Both: physically-based rendering, HDR lighting, dynamic shadows, 60fps on mid-range devices.
 
-Not a toy renderer. Production quality.
+Production quality on both platforms.
 
 ---
 
-**6/12 — AR in the same pattern**
+**8/14 — AR on both platforms**
 
+Android:
 ```
 ARScene(planeRenderer = true) {
-    anchor?.let { a ->
-        AnchorNode(anchor = a) {
-            ModelNode(modelInstance = sofa)
-        }
+    AnchorNode(anchor = a) {
+        ModelNode(modelInstance = sofa)
     }
 }
 ```
 
-Plane detection, image tracking, face mesh, cloud anchors, geospatial API — all as composables inside `ARScene { }`.
+iOS:
+```
+ARSceneView { anchor in
+    ModelNode(named: "sofa.usdz")
+}
+```
+
+Same concept: declare AR content, the framework handles tracking.
 
 ---
 
-**7/12 — The killer feature nobody talks about**
+**9/14 — Physics on both platforms**
 
-`ViewNode` — render ANY Compose UI inside 3D space.
+Android: pure Kotlin Euler integration
+iOS: RealityKit's native Metal-accelerated physics
 
-A `Card` with price and "Buy Now" button floating next to an AR-placed product. A tooltip hovering over a 3D model. A real `TextField` in a 3D scene.
-
-No other Android 3D library does this.
-
----
-
-**8/12 — Physics**
-
-`PhysicsNode` — rigid body simulation in a composable.
-
-Gravity, collision, tap-to-throw. Combined with `DynamicSkyNode` for time-of-day lighting and `FogNode` for atmosphere.
-
-Interactive 3D worlds in Compose. Not a game engine — but enough for most apps.
+Same API pattern:
+- PhysicsNode wraps any node
+- Gravity, collision, bounce
+- Works with any geometry or model
 
 ---
 
-**9/12 — vs. the alternatives**
+**10/14 — The killer feature: ViewNode (Android)**
 
-| | SceneView | Sceneform | Unity | Raw ARCore |
+Render ANY Compose UI inside 3D space.
+
+A Card with price and "Buy Now" button floating next to an AR-placed product. A tooltip hovering over a 3D model.
+
+No other mobile 3D library does this.
+
+---
+
+**11/14 — vs. the alternatives**
+
+| | SceneView | Unity | RealityKit | Raw ARCore |
 |---|---|---|---|---|
-| Compose | Native | No | No | No |
-| APK size | ~5 MB | ~3 MB | 40-80 MB | ~1 MB |
-| Setup | 1 line | Archived | Separate build | 500+ lines |
-| Status | Active | Dead | Active | No UI layer |
+| Cross-platform | Android+Apple | All | Apple only | Android only |
+| Declarative | Compose+SwiftUI | No | SwiftUI | No |
+| Size | ~5 MB | 40-80 MB | N/A | ~1 MB |
+| Open source | Apache 2.0 | No | No | No |
 
 ---
 
-**10/12 — The use case that matters most**
+**12/14 — AI-first SDK**
+
+SceneView ships with:
+- llms.txt — machine-readable API reference
+- MCP server — real-time API for AI assistants
+- Both include Android AND iOS docs
+
+Ask Claude "build me a 3D viewer" — it generates correct code for either platform.
+
+---
+
+**13/14 — The use case that matters most**
 
 Most apps won't be "3D apps."
 
-But replacing `Image()` with `Scene {}` on a product page? That's 10 extra lines for a noticeably better experience.
+But replacing Image() with Scene {} on a product page? That's 10 extra lines for a noticeably better experience.
 
-3D as a finishing touch — not a feature. That's the real opportunity.
-
----
-
-**11/12 — Now cross-platform**
-
-SceneView now supports:
-- Android: Jetpack Compose + Filament + ARCore
-- iOS: SwiftUI + RealityKit + ARKit
-- Shared core: Kotlin Multiplatform (math, collision, animation, geometry)
-
-One SDK, two platforms, native on both.
+Works the same on Android and iOS now. One skill, both platforms.
 
 ---
 
-**12/12 — Get started**
+**14/14 — Get started**
 
+Android:
 ```
 implementation("io.github.sceneview:sceneview:3.3.0")
-implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
-15 sample apps. Full API docs. MCP server for AI-assisted development.
+iOS:
+```
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+```
+
+15 Android samples. iOS examples. Full docs. MCP server.
 
 Open source. Apache 2.0.
 
 github.com/SceneView/sceneview
 
-#AndroidDev #JetpackCompose #3D #AR #Kotlin #SceneView
+#AndroidDev #iOSDev #JetpackCompose #SwiftUI #3D #AR #Kotlin #Swift #SceneView #CrossPlatform
 
 ---
 
 ## Posting tips
 
-- **Best time:** Tuesday–Thursday, 9–11 AM EST (US dev audience) or 3–5 PM CET (EU)
-- **Thread format:** Post tweet 1, then reply chain for 2–12
-- **Engagement:** Quote-tweet #1 with the code screenshot from tweet 6 or 7 for visual appeal
+- **Best time:** Tuesday-Thursday, 9-11 AM EST (US dev audience) or 3-5 PM CET (EU)
+- **Thread format:** Post tweet 1, then reply chain for 2-14
+- **Engagement:** Quote-tweet #1 with the code screenshot from tweet 3 (cross-platform comparison) for visual appeal
 - **Pin:** Pin tweet 1 to your profile for the week
-- **Cross-post:** Copy to Bluesky and Mastodon (Android dev community is active there)
+- **Cross-post:** Copy to Bluesky and Mastodon (Android AND iOS dev communities are active there)
 - **Follow-up:** Reply to your own thread 24h later with a link to the Medium article
+- **iOS angle:** Share tweets 3-4 in iOS developer communities separately

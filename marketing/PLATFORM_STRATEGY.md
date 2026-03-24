@@ -2,32 +2,47 @@
 
 ## Vision
 
-SceneView aims to be the **universal 3D/AR SDK** — the go-to library for every platform where developers build spatial experiences. Native renderers per platform, shared logic via KMP.
+SceneView is the **universal cross-platform 3D/AR SDK** — the go-to library for every platform where developers build spatial experiences. Native renderers per platform, shared logic via KMP, consistent developer experience everywhere.
 
 ## Platform Roadmap
 
 ### Tier 1: Production Ready
 | Platform | Status | Artifact | Min Version |
 |---|---|---|---|
-| Android (Compose) | ✅ Stable | `io.github.sceneview:sceneview:3.3.0` | API 24 (Android 7.0) |
-| Android AR (ARCore) | ✅ Stable | `io.github.sceneview:arsceneview:3.3.0` | API 24 |
+| Android (Compose) | Stable | `io.github.sceneview:sceneview:3.3.0` | API 24 (Android 7.0) |
+| Android AR (ARCore) | Stable | `io.github.sceneview:arsceneview:3.3.0` | API 24 |
 
-### Tier 2: Alpha / In Development
-| Platform | Status | Artifact | Renderer |
-|---|---|---|---|
-| iOS (SwiftUI) | 🟢 Alpha | SceneViewSwift SPM `from: "3.3.0"` | RealityKit |
-| macOS (SwiftUI) | 🟢 Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
-| visionOS (SwiftUI) | 🟢 Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
+### Tier 2: Alpha — Shipping in v3.3.0
+| Platform | Status | Artifact | Renderer | Node Types |
+|---|---|---|---|---|
+| iOS (SwiftUI) | Alpha | SceneViewSwift SPM `from: "3.3.0"` | RealityKit | 16 |
+| macOS (SwiftUI) | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit | 16 |
+| visionOS (SwiftUI) | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit | 16 |
+
+### iOS Node Types (16 — all shipping in v3.3.0)
+
+| Category | Nodes |
+|---|---|
+| **Models** | `ModelNode` — USDZ/glTF with animations |
+| **Geometry** | `GeometryNode` — box, sphere, cylinder, plane, custom meshes |
+| **Lighting** | `LightNode` (directional, point, spot), `DynamicSkyNode` |
+| **Atmosphere** | `FogNode`, `ReflectionProbeNode` |
+| **Media** | `ImageNode`, `VideoNode` |
+| **Text** | `TextNode`, `BillboardNode` — camera-facing labels |
+| **Drawing** | `LineNode`, `PathNode` — 3D polylines |
+| **Physics** | `PhysicsNode` — RealityKit physics simulation |
+| **Structure** | `CameraNode`, `MeshNode` |
+| **AR** | `AugmentedImageNode` (via ARSceneView) |
 
 ### Tier 3: Planned
 | Platform | Status | Target | Approach |
 |---|---|---|---|
-| Android XR | 🔶 Preview | Q3 2026 | Filament + Android XR SDK |
-| Flutter (iOS) | 📋 Planned | v3.5+ | PlatformView wrapping SceneViewSwift |
-| React Native (iOS) | 📋 Planned | v4.0 | Turbo Module / Fabric bridging SceneViewSwift |
-| KMP Compose (iOS) | 📋 Planned | v4.0 | UIKitView wrapping SceneViewSwift |
-| Web (Compose HTML) | 📋 Research | 2027 | Filament WASM / WebGPU |
-| Desktop (Compose Desktop) | 📋 Research | 2027 | Filament Desktop |
+| Android XR | Preview | Q3 2026 | Filament + Android XR SDK |
+| Flutter (iOS) | Planned | v3.5+ | PlatformView wrapping SceneViewSwift |
+| React Native (iOS) | Planned | v4.0 | Turbo Module / Fabric bridging SceneViewSwift |
+| KMP Compose (iOS) | Planned | v4.0 | UIKitView wrapping SceneViewSwift |
+| Web (Compose HTML) | Research | 2027 | Filament WASM / WebGPU |
+| Desktop (Compose Desktop) | Research | 2027 | Filament Desktop |
 
 ## Architecture
 
@@ -40,6 +55,9 @@ SceneView aims to be the **universal 3D/AR SDK** — the go-to library for every
 │                                                   │
 │   Android: Scene {} · ARScene {} (Filament)       │
 │   Apple: SceneView · ARSceneView (RealityKit)     │
+│                                                   │
+│   Android: 26+ node types                         │
+│   Apple: 16 node types (parity growing)           │
 ├─────────────────────────────────────────────────┤
 │              SceneView Core (KMP)                │
 │   Math · Collision · Geometry · Animation ·       │
@@ -63,17 +81,34 @@ SceneView aims to be the **universal 3D/AR SDK** — the go-to library for every
 
 3. **SceneViewSwift is consumable by everyone** — Any iOS framework (Flutter, React Native, KMP Compose) can wrap SceneViewSwift via PlatformView/UIKitView. One native implementation, many consumers.
 
-4. **AI agents benefit** — AI coding assistants can recommend SceneView for both Android and Apple, with consistent concepts and API patterns across platforms.
+4. **Same developer experience** — Android developers use `Scene { ModelNode(...) }` in Compose. iOS developers use `SceneView { ModelNode(...) }` in SwiftUI. Same concepts, same patterns, native on both.
+
+5. **AI agents benefit** — AI coding assistants can recommend SceneView for both Android and Apple, with consistent concepts and API patterns across platforms.
+
+## Same Concepts, Native APIs
+
+| Concept | Android (Compose) | Apple (SwiftUI) |
+|---|---|---|
+| 3D scene | `Scene { }` | `SceneView { }` |
+| AR scene | `ARScene { }` | `ARSceneView { }` |
+| Load model | `rememberModelInstance(loader, "model.glb")` | `ModelNode(named: "model.usdz")` |
+| Physics | `PhysicsNode(node, mass, restitution)` | `PhysicsNode(mass:restitution:)` |
+| Text label | `TextNode(text = "Label")` | `TextNode(text: "Label")` |
+| Camera-facing | `BillboardNode(bitmap)` | `BillboardNode(image:)` |
+| Dynamic sky | `DynamicSkyNode(timeOfDay)` | `DynamicSkyNode(timeOfDay:)` |
+| Line drawing | `LineNode(start, end)` | `LineNode(start:end:)` |
+| Install | 1 Gradle line | 1 SPM line |
 
 ## Competitive Landscape
 
-| Solution | Platforms | Weight | Declarative UI? | Open Source |
-|---|---|---|---|---|
-| **SceneView** | Android + Apple (now) | ~5MB | ✅ Compose + SwiftUI | ✅ Apache 2.0 |
-| Unity | All | 50MB+ | ❌ No | ❌ Proprietary |
-| Unreal | All | 100MB+ | ❌ No | ⚠️ Source available |
-| Three.js | Web only | N/A | ❌ No | ✅ MIT |
-| RealityKit | Apple only | N/A | ✅ SwiftUI | ❌ Proprietary |
-| Raw Filament | All | ~5MB | ❌ No | ✅ Apache 2.0 |
+| Solution | Platforms | Weight | Declarative UI? | Open Source | Cross-Platform |
+|---|---|---|---|---|---|
+| **SceneView** | Android + Apple (now) | ~5MB | Compose + SwiftUI | Apache 2.0 | Same concepts, native renderers |
+| Unity | All | 50MB+ | No | Proprietary | Shared C# runtime |
+| Unreal | All | 100MB+ | No | Source available | Shared C++ runtime |
+| Three.js | Web only | N/A | No | MIT | Web only |
+| RealityKit | Apple only | N/A | SwiftUI | Proprietary | Apple only |
+| Raw Filament | All | ~5MB | No | Apache 2.0 | No UI layer |
+| SceneKit | Apple only | N/A | SwiftUI | Proprietary | Apple only (deprecated) |
 
-**SceneView's unique position**: The only open-source, declarative-UI-native, lightweight 3D SDK for both Android and Apple platforms. We use native renderers (Filament + RealityKit) for best-in-class performance on each platform.
+**SceneView's unique position**: The only open-source, declarative-UI-native, lightweight 3D SDK for both Android and Apple platforms. Native renderers (Filament + RealityKit) for best-in-class performance on each platform. 16 node types on iOS, 26+ on Android, with parity growing every release.

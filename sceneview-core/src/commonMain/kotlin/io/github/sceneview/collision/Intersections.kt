@@ -41,9 +41,9 @@ internal object Intersections {
         testAxes.add(extractZAxisFromRotationMatrix(box2Rotation))
 
         for (i in 0..2) {
-            testAxes.add(Vector3.cross(testAxes[i], testAxes[0]))
-            testAxes.add(Vector3.cross(testAxes[i], testAxes[1]))
-            testAxes.add(Vector3.cross(testAxes[i], testAxes[2]))
+            testAxes.add(Vector3.cross(testAxes[i], testAxes[3]))
+            testAxes.add(Vector3.cross(testAxes[i], testAxes[4]))
+            testAxes.add(Vector3.cross(testAxes[i], testAxes[5]))
         }
 
         for (i in 0 until testAxes.size) {
@@ -125,7 +125,7 @@ internal object Intersections {
         vertices1: List<Vector3>, vertices2: List<Vector3>, axis: Vector3
     ): Boolean {
         var min1 = Float.MAX_VALUE
-        var max1 = Float.MIN_VALUE
+        var max1 = -Float.MAX_VALUE
         for (i in vertices1.indices) {
             val projection = Vector3.dot(axis, vertices1[i])
             min1 = min(projection, min1)
@@ -133,7 +133,7 @@ internal object Intersections {
         }
 
         var min2 = Float.MAX_VALUE
-        var max2 = Float.MIN_VALUE
+        var max2 = -Float.MAX_VALUE
         for (i in vertices2.indices) {
             val projection = Vector3.dot(axis, vertices2[i])
             min2 = min(projection, min2)

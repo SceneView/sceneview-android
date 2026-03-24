@@ -69,29 +69,107 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 | `SceneViewSwift/` | Apple 3D+AR library — `SceneView`, `ARSceneView` (RealityKit renderer, iOS/macOS/visionOS) |
 | `samples/common/` | Shared helpers across sample apps |
 | `mcp/` | `@sceneview/mcp` — MCP server for AI assistant integration |
+| `flutter/` | Flutter plugin scaffold — PlatformView bridge to SceneView (Android + iOS) |
+| `react-native/` | React Native module scaffold — Fabric/Turbo bridge to SceneView |
 
 ## Session continuity
 
 Every Claude Code session MUST read this section first to stay in sync.
 
+**NOTE FOR OTHER SESSIONS:** Always check `git log --oneline -20` on the current branch
+to see recent work before starting. The branch `claude/resume-sceneview-ios-PjPVi` may
+need to be merged to main first.
+
 ### Current state (last updated: 2026-03-24)
 
-- **Active branch**: `main`
-- **Latest release**: v3.3.0 (unified version — Android + iOS + MCP)
+- **Active branch**: `claude/resume-sceneview-ios-PjPVi` (needs merge to main after stabilization)
+- **Latest release**: v3.3.0
+- **What was done this session (2026-03-24)**:
+
+  Phase 1 — SceneViewSwift stabilization (COMPLETE):
+  - New nodes: DynamicSkyNode, FogNode, ReflectionProbeNode, MeshNode
+  - Enhanced: ModelNode (named animations, materials, collision), LightNode (shadows, attenuation), CameraNode (FOV, DOF, exposure)
+  - 16 node types total in SceneViewSwift
+
+  Phase 2 — Tests (COMPLETE):
+  - 65+ new edge case, error condition, and platform tests
+  - EdgeCaseTests.swift, PlatformTests.swift
+  - All node types have dedicated test files
+
+  Phase 3 — Docs (COMPLETE):
+  - iOS Quickstart (quickstart-ios.md)
+  - iOS API Cheatsheet (cheatsheet-ios.md)
+  - 2 SwiftUI codelabs (3D + AR)
+  - iOS Samples page (samples-ios.md)
+  - mkdocs.yml updated with all new pages
+  - llms.txt updated with complete iOS API reference
+
+  Phase 4 — MCP (COMPLETE):
+  - 8 iOS Swift samples in samples.ts
+  - get_ios_setup tool in index.ts
+  - Swift code validation in validator.ts
+  - iOS ARKit guides, best practices, troubleshooting
+  - dist rebuilt
+
+  Phase 5 — Full project stabilization (COMPLETE):
+  - Android sceneview: KDoc audit, all 21 composables documented
+  - Android arsceneview: KDoc for 13 files, **critical bug fix** in Frame.hitTest (direction was using origin)
+  - KMP sceneview-core: **4 critical math bugs fixed** (Ray-box intersection, SAT overlap, box-box axes, Delaunator bounds)
+  - Sample apps: merge conflict resolved, Material 2→3 migration, hardcoded deps removed, exposed password removed
+  - Website: SEO meta tags, structured data, cross-linking, SwiftUI tab on homepage, 4 iOS FAQ
+  - Marketing: all 20 files updated for cross-platform messaging
+  - MCP: iOS samples verified, validator corrected, 368 tests pass
+  - Swift audit: endif guards fixed, duplicate extension extracted, Sendable correctness, missing rotation/discardableResult
+  - Test suite: 1081 lines of tests added across 15 files, imports fixed
+  - Repo cleanup: .gitignore enriched, SceneViewSwift README updated
+
+  Phase 6 — Cross-framework scaffolds (COMPLETE):
+  - Flutter plugin scaffold: `flutter/sceneview_flutter/` — Dart API, Android ComposeView bridge, iOS SceneViewSwift bridge
+  - React Native module scaffold: `react-native/react-native-sceneview/` — TypeScript, Android ViewManager, iOS RCTViewManager
+
+- **What's next (for future sessions)**:
+  - **PRIORITY 1 — CREATE PR & MERGE TO MAIN**:
+    1. Run `gh pr create --base main --head claude/resume-sceneview-ios-PjPVi` with a summary of all 6 phases (28 commits)
+    2. If `gh` auth fails, print the URL for manual creation: `https://github.com/SceneView/sceneview/compare/main...claude/resume-sceneview-ios-PjPVi`
+    3. PR title: `feat: iOS SceneViewSwift stabilization, tests, docs, MCP, cross-framework scaffolds`
+    4. PR body should list all 6 phases with key highlights (see "What was done" above)
+    5. Once PR is created, merge it (squash or merge commit, maintainer's choice)
+  - Sync llms.txt across docs/docs/llms.txt and mcp/llms.txt
+  - Consider v3.4.0-alpha release tag
+  - Complete Flutter/React Native bridges (currently scaffolds with TODOs)
+  - KMP core XCFramework: build and integrate into SceneViewSwift
+  - visionOS spatial features (immersive spaces, hand tracking)
+  - **GitHub Pages migration** (after merging PR):
+    1. Check `SceneView/sceneview.github.io` for any content to preserve (CNAME, Dokka `/api/`, etc.)
+    2. If a `CNAME` file exists, copy it to `docs/docs/CNAME` in this repo
+    3. Repo Settings → Pages → Source → "GitHub Actions"
+    4. Trigger `workflow_dispatch` on `docs.yml` to verify the site builds correctly
+    5. Only after the native deployment works → archive `SceneView/sceneview.github.io`
+  - Play Store deployment (needs keystore + service account secrets)
+
+- **Known constraints**:
+  - Cannot push directly to `main` (proxy restriction, only claude/* branches)
+  - No GitHub API token available — PRs must be created manually on GitHub, or use `gh auth login` first
+  - Container is ephemeral — tokens/env don't persist between sessions
+
 - **Project philosophy**: SceneView is an AI-first SDK — everything optimized
   so AI assistants can generate correct 3D/AR Compose code on the first try
 - **Cross-platform strategy**: native renderer per platform — Filament (Android),
   RealityKit (Apple: iOS, macOS, visionOS). KMP shares logic, not rendering.
 - **KMP core** (`sceneview-core/`): collision, math, triangulation, animation, geometry,
   physics shared across Android and Apple via Kotlin Multiplatform
-- **SceneViewSwift** (`SceneViewSwift/`): Apple library — Swift Package, iOS 17+ /
-  macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift native,
-  Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
+- **SceneViewSwift** (`SceneViewSwift/`): now 16 node types — Apple library — Swift Package,
+  iOS 17+ / macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift
+  native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
 - **Demo app** (`samples/sceneview-demo/`): Play Store ready, 4-tab architecture (Explore,
   Showcase, Gallery, QA), Material 3 Expressive
-- **MCP server** (`mcp/`): published npm package for AI assistant integration
-- **Website**: `docs/` (MkDocs) + `sceneview.github.io`
+- **MCP server** (`mcp/`): published npm package for AI assistant integration; now with
+  iOS support (8 Swift samples, `get_ios_setup` tool, Swift code validation)
+- **Website**: `docs/` (MkDocs), deployed via native GitHub Pages from this repo
+  (no longer uses separate `sceneview.github.io` repo — that repo can be archived)
 - **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
+- **GitHub Pages setup required**: In repo Settings → Pages → Source, select "GitHub Actions"
+  (no `PERSONAL_TOKEN` secret needed anymore)
 
 ### How to update this section
 

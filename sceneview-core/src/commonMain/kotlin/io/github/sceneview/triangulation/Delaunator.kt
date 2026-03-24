@@ -7,6 +7,9 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 private val kEpsilon = 2.0.pow(-52.0)
+
+// Note: this shared mutable array makes Delaunator NOT thread-safe.
+// Do not construct multiple Delaunator instances concurrently.
 private val kEdgeStack = Array(512) { 0 }
 
 /**
@@ -71,8 +74,8 @@ class Delaunator<out T : Delaunator.IPoint>(val points: List<T>) {
 
         var minX = Double.POSITIVE_INFINITY
         var minY = Double.POSITIVE_INFINITY
-        var maxX = Double.POSITIVE_INFINITY
-        var maxY = Double.POSITIVE_INFINITY
+        var maxX = Double.NEGATIVE_INFINITY
+        var maxY = Double.NEGATIVE_INFINITY
 
         for (i in 0 until n) {
             val x = coordinates[2 * i]
@@ -619,6 +622,7 @@ class Delaunator<out T : Delaunator.IPoint>(val points: List<T>) {
         }
     }
 
+    /** A 2D point with mutable x/y coordinates. */
     interface IPoint {
         var x: Double
         var y: Double

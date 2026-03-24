@@ -268,13 +268,65 @@ You built a tap-to-place AR app in ~50 lines of Compose. Here's what you used:
 | `rememberModelInstance` | Async model loading with automatic cleanup |
 | `isEditable = true` | Pinch-scale + two-finger-rotate gestures |
 
-## Next steps
+---
 
-- **[3D Model Viewer codelab →](#)** — Orbit camera, HDR environment, model switching
-- **[Cloud Anchors →](#)** — Share AR scenes between devices
-- **[TextNode →](#)** — Add 3D labels to your scene
-- **[GitHub samples →](https://github.com/SceneView/sceneview/tree/main/samples)** — 14 complete sample apps
+## Bonus: iOS version (SwiftUI)
+
+The same AR tap-to-place experience on iOS uses SceneViewSwift with ARKit:
+
+### Setup
+
+```swift
+// Package.swift or Xcode: File > Add Package Dependencies
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+```
+
+In your `Info.plist`, add camera usage description:
+```xml
+<key>NSCameraUsageDescription</key>
+<string>This app uses the camera for augmented reality.</string>
+```
+
+### The AR screen (SwiftUI)
+
+```swift
+import SwiftUI
+import SceneViewSwift
+
+struct ARPlacementView: View {
+    var body: some View {
+        ARSceneView { anchor in
+            ModelNode(named: "object.usdz")
+                .scale(0.5)
+        }
+    }
+}
+```
+
+That's the entire iOS AR placement screen. ARKit handles plane detection and anchor tracking. RealityKit handles rendering. SceneViewSwift wraps it in a SwiftUI view.
+
+### Side-by-side comparison
+
+| | Android | iOS |
+|---|---|---|
+| **Framework** | Jetpack Compose | SwiftUI |
+| **AR backend** | ARCore | ARKit |
+| **Renderer** | Filament | RealityKit |
+| **Model format** | .glb / .gltf | .usdz |
+| **Lines of code** | ~50 | ~10 |
+| **Install** | 1 Gradle line | 1 SPM line |
+
+The iOS version is more concise because RealityKit handles more internally. The concepts are the same: declare what you want in the AR scene, the framework manages tracking and rendering.
 
 ---
 
-*Built with [SceneView](https://github.com/SceneView/sceneview) — Apache License 2.0*
+## Next steps
+
+- **[3D Model Viewer codelab →](#)** — Orbit camera, HDR environment, model switching
+- **[Cloud Anchors →](#)** — Share AR scenes between devices (Android)
+- **[TextNode →](#)** — Add 3D labels to your scene (both platforms)
+- **[GitHub samples →](https://github.com/SceneView/sceneview/tree/main/samples)** — 15 complete sample apps
+
+---
+
+*Built with [SceneView](https://github.com/SceneView/sceneview) — Apache 2.0 — cross-platform 3D & AR for Android + iOS + macOS + visionOS*

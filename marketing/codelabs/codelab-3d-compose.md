@@ -308,9 +308,38 @@ That's ~35 lines. A production-quality 3D model viewer with orbit camera, HDR li
 
 ---
 
-## Step 12 — What's next?
+## Step 12 — iOS equivalent (SwiftUI)
+
+The same 3D model viewer on iOS uses SceneViewSwift:
+
+```swift
+// Package.swift
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+```
+
+```swift
+import SwiftUI
+import SceneViewSwift
+
+struct ModelViewerView: View {
+    var body: some View {
+        SceneView {
+            ModelNode(named: "damaged_helmet.usdz")
+                .scaleToUnits(1.0)
+            LightNode(.directional, intensity: 100_000)
+        }
+    }
+}
+```
+
+Same result, same concepts — SwiftUI + RealityKit instead of Compose + Filament.
+
+---
+
+## Step 13 — What's next?
 
 - **Add AR** → See the [AR CodeLab](codelab-ar-compose.md) — same pattern, `ARScene` instead of `Scene`
+- **Try iOS** → Install SceneViewSwift via SPM and build the same viewer in SwiftUI
 - **Add geometry** → Try `CubeNode`, `SphereNode`, `CylinderNode` in the scene block
 - **Embed in a screen** → Replace any `Image()` in your app with this `Box` wrapping a `Scene`
 - **Explore samples** → The [model-viewer](/samples/model-viewer), [gltf-camera](/samples/gltf-camera), and [camera-manipulator](/samples/camera-manipulator) samples show more patterns

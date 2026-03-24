@@ -27,7 +27,8 @@
       "https://discord.gg/UbNDDBTNqb",
       "https://opencollective.com/sceneview",
       "https://central.sonatype.com/artifact/io.github.sceneview/sceneview",
-      "https://www.npmjs.com/package/sceneview-mcp"
+      "https://github.com/SceneView/SceneViewSwift",
+      "https://www.npmjs.com/package/@sceneview/mcp"
     ],
     "contactPoint": [
       {
@@ -46,13 +47,21 @@
       "3D Rendering",
       "Augmented Reality",
       "Android Development",
+      "iOS Development",
+      "macOS Development",
+      "visionOS Development",
       "Jetpack Compose",
+      "SwiftUI",
       "Google Filament",
+      "RealityKit",
       "ARCore",
+      "ARKit",
+      "Kotlin Multiplatform",
       "glTF",
+      "USDZ",
       "PBR Rendering"
     ],
-    "slogan": "The #1 3D & AR SDK for Android and iOS"
+    "slogan": "The #1 3D & AR SDK for Android, iOS, macOS, and visionOS"
   },
   {
     "@context": "https://schema.org",
@@ -98,7 +107,7 @@
     },
     "featureList": [
       "Compose-native Scene{} and ARScene{} composables",
-      "22+ built-in node types (ModelNode, CubeNode, SphereNode, etc.)",
+      "26+ built-in node types (ModelNode, CubeNode, SphereNode, etc.)",
       "glTF/GLB 3D model loading with animations",
       "ARCore integration (plane detection, image tracking, face mesh, cloud anchors)",
       "Physics simulation (rigid body, gravity, collisions)",

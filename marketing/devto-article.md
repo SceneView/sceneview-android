@@ -1,67 +1,85 @@
 ---
-title: "3D is just Compose UI — what SceneView 3.2 makes possible on Android"
+title: "SceneView 3.3.0 — Cross-platform 3D & AR for Compose and SwiftUI"
 published: true
-description: "26 composable node types, physics, dynamic sky, fog, reflections — and it still feels like writing a Column."
-tags: android, kotlin, jetpackcompose, augmentedreality
+description: "26+ Android node types, 16 iOS node types, physics, dynamic sky, fog, reflections — native on both platforms, declarative on both."
+tags: android, ios, kotlin, swift
 canonical_url: https://sceneview.github.io/showcase/
 cover_image: # Add a 1000x420 image of a SceneView render here
 ---
 
 You already know how to build a Compose screen. A `Column` with some children. A `Box` with overlapping layers. You've done it a hundred times.
 
-What if a 3D scene worked exactly the same way?
+What if a 3D scene worked exactly the same way — on both Android and iOS?
 
 ```kotlin
-// A Compose UI screen
-Column {
-    Text("Title")
-    Image(painter = painterResource(R.drawable.cover), contentDescription = null)
-}
-
-// A 3D scene with SceneView
+// Android — Jetpack Compose
 Scene(modifier = Modifier.fillMaxSize()) {
     ModelNode(modelInstance = helmet, scaleToUnits = 1.0f, autoAnimate = true)
     LightNode(type = LightManager.Type.SUN, apply = { intensity(100_000.0f) })
 }
 ```
 
-Same pattern. Same Kotlin. Same mental model — now with depth.
+```swift
+// iOS — SwiftUI
+SceneView {
+    ModelNode(named: "helmet.usdz")
+        .scaleToUnits(1.0)
+    LightNode(.directional, intensity: 100_000)
+}
+```
+
+Same pattern. Same mental model. Native on both platforms — now with depth.
 
 ---
 
-## What changed since 3.0
+## What's new in 3.3.0: Cross-platform
 
-SceneView 3.0 introduced the core idea: **nodes are composables**. Since then, the library has grown to 26+ node types. Here's what 3.2 added:
+SceneView 3.3.0 is the **first cross-platform release**. The library now supports:
+
+| Platform | UI Framework | Renderer | Status |
+|---|---|---|---|
+| Android | Jetpack Compose | Google Filament | Stable |
+| iOS | SwiftUI | RealityKit | Alpha |
+| macOS | SwiftUI | RealityKit | Alpha |
+| visionOS | SwiftUI | RealityKit | Alpha |
+
+**Key architecture decision:** KMP shares logic (math, collision, geometry, animations), not rendering. Each platform uses its native renderer for best performance and tooling.
+
+### 16 iOS node types
+
+SceneViewSwift ships with 16 node types built on RealityKit:
+
+`ModelNode`, `GeometryNode`, `LightNode`, `CameraNode`, `MeshNode`, `DynamicSkyNode`, `FogNode`, `ReflectionProbeNode`, `PhysicsNode`, `LineNode`, `PathNode`, `TextNode`, `BillboardNode`, `ImageNode`, `VideoNode`, `AugmentedImageNode`
 
 ### Physics
 
-`PhysicsNode` brings rigid body simulation. Gravity, collision detection, tap-to-throw.
+`PhysicsNode` brings rigid body simulation on both platforms. Gravity, collision detection, tap-to-throw.
 
+**Android:**
 ```kotlin
 Scene {
     PhysicsNode(
-        shape = SphereShape(radius = 0.1f),
+        node = ball,
         mass = 1.0f,
-        restitution = 0.8f
-    ) {
-        SphereNode(radius = 0.1f, materialInstance = ballMaterial)
+        restitution = 0.8f,
+        floorY = 0f
+    )
+}
+```
+
+**iOS (RealityKit physics):**
+```swift
+SceneView {
+    PhysicsNode(mass: 1.0, restitution: 0.8) {
+        GeometryNode(.sphere(radius: 0.15))
+            .position(y: 2.5)
     }
 }
 ```
 
 ### Dynamic sky
 
-`DynamicSkyNode` drives sun position from a single `timeOfDay: Float` value. Sunrise, noon, golden hour, sunset — all reactive to Compose state.
-
-```kotlin
-var timeOfDay by remember { mutableStateOf(0.5f) }
-
-Scene {
-    DynamicSkyNode(timeOfDay = timeOfDay, turbidity = 4.0f)
-}
-
-Slider(value = timeOfDay, onValueChange = { timeOfDay = it })
-```
+`DynamicSkyNode` drives sun position from a single `timeOfDay` value on both platforms.
 
 ### Fog, reflections, lines, text
 
@@ -70,7 +88,9 @@ Slider(value = timeOfDay, onValueChange = { timeOfDay = it })
 - `LineNode` / `PathNode` — 3D polylines (measurements, drawing, animated paths)
 - `TextNode` / `BillboardNode` — camera-facing text labels in 3D space
 
-### Post-processing
+All available on both Android and iOS.
+
+### Post-processing (Android)
 
 Bloom, depth-of-field, SSAO, fog — all toggleable from Compose state.
 
@@ -82,11 +102,8 @@ Most 3D demos show a rotating helmet on a black background. Cool — but who nee
 
 The real opportunity: **subtle 3D**. Replace a flat `Image()` on your product page with a `Scene {}`:
 
+**Android:**
 ```kotlin
-// Before
-Image(painter = painterResource(R.drawable.shoe), contentDescription = "Shoe")
-
-// After — interactive 3D in 10 extra lines
 val model = rememberModelInstance(modelLoader, "models/shoe.glb")
 Scene(
     modifier = Modifier.fillMaxWidth().height(300.dp),
@@ -96,13 +113,22 @@ Scene(
 }
 ```
 
-The customer orbits the product with one finger. No separate "3D viewer" screen. No Unity integration project. Just a composable.
+**iOS:**
+```swift
+SceneView {
+    ModelNode(named: "shoe.usdz")
+        .scaleToUnits(1.0)
+}
+.frame(height: 300)
+```
+
+The customer orbits the product with one finger. No separate "3D viewer" screen. No Unity integration project. Just a composable or a SwiftUI view.
 
 ---
 
 ## AR works the same way
 
-`ARScene` is `Scene` with ARCore wired in:
+**Android:** `ARScene` is `Scene` with ARCore wired in:
 
 ```kotlin
 ARScene(
@@ -121,11 +147,20 @@ ARScene(
 }
 ```
 
-Plane detection, image tracking, face mesh, cloud anchors, geospatial API — all as composables.
+**iOS:** `ARSceneView` is `SceneView` with ARKit wired in:
+
+```swift
+ARSceneView { anchor in
+    ModelNode(named: "sofa.usdz")
+        .scale(0.5)
+}
+```
+
+Plane detection, image tracking, and more — as composables on Android, as SwiftUI views on iOS.
 
 ---
 
-## ViewNode — the feature nobody else has
+## ViewNode — the feature nobody else has (Android)
 
 Render **any Composable** directly inside 3D space:
 
@@ -135,7 +170,7 @@ AnchorNode(anchor = sofaAnchor) {
     ViewNode {
         Card {
             Text("Sofa Pro", style = MaterialTheme.typography.titleMedium)
-            Text("€ 599", style = MaterialTheme.typography.headlineMedium)
+            Text("$599", style = MaterialTheme.typography.headlineMedium)
             Button(onClick = {}) { Text("Buy in AR") }
         }
     }
@@ -146,48 +181,17 @@ A real Compose `Card` with buttons, text fields, images — floating in 3D space
 
 ---
 
-## The complete setup
-
-```kotlin
-@Composable
-fun ModelViewerScreen() {
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine)
-    val model = rememberModelInstance(modelLoader, "models/helmet.glb")
-    val environment = rememberEnvironment(rememberEnvironmentLoader(engine)) {
-        createHDREnvironment("environments/sky_2k.hdr")
-            ?: createEnvironment(environmentLoader)
-    }
-
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        modelLoader = modelLoader,
-        environment = environment,
-        cameraManipulator = rememberCameraManipulator(),
-        mainLightNode = rememberMainLightNode(engine) { intensity = 100_000.0f }
-    ) {
-        model?.let {
-            ModelNode(modelInstance = it, scaleToUnits = 1.0f, autoAnimate = true)
-        }
-    }
-}
-// All resources destroyed automatically when composable leaves the tree
-```
-
-No XML. No fragments. No lifecycle callbacks. No OpenGL boilerplate.
-
----
-
 ## vs. the alternatives
 
-| | SceneView | Sceneform | Unity | Raw ARCore |
-|---|---|---|---|---|
-| **Compose** | Native | No | No | No |
-| **Setup** | 1 Gradle line | Archived | Separate pipeline | 500+ lines |
-| **APK size** | ~5 MB | ~3 MB | 40–350 MB | ~1 MB |
-| **Physics** | Built-in | No | Built-in | No |
-| **Status** | Active | Dead (2021) | Active | No UI layer |
+| | SceneView | Sceneform | Unity | Raw ARCore | RealityKit |
+|---|---|---|---|---|---|
+| **Declarative UI** | Compose + SwiftUI | No | No | No | SwiftUI only |
+| **Cross-platform** | Android + Apple | Android only | All | Android only | Apple only |
+| **Setup** | 1 line | Archived | Separate pipeline | 500+ lines | N/A |
+| **APK/IPA size** | ~5 MB | ~3 MB | 40–350 MB | ~1 MB | N/A |
+| **Physics** | Built-in | No | Built-in | No | Built-in |
+| **Open source** | Apache 2.0 | Apache 2.0 | Proprietary | Proprietary | Proprietary |
+| **Status** | Active | Dead (2021) | Active | No UI layer | Active |
 
 ---
 
@@ -196,12 +200,14 @@ No XML. No fragments. No lifecycle callbacks. No OpenGL boilerplate.
 - Multiple `Scene {}` composables on one screen
 - `PortalNode` — scene inside a scene (AR portals)
 - `SceneView-XR` — Android XR spatial computing
-- Kotlin Multiplatform proof of concept (iOS)
+- Deeper KMP integration — more shared logic across platforms
+- Flutter and React Native bridges via SceneViewSwift
 
 ---
 
 ## Get started
 
+**Android:**
 ```gradle
 // 3D only
 implementation("io.github.sceneview:sceneview:3.3.0")
@@ -210,7 +216,12 @@ implementation("io.github.sceneview:sceneview:3.3.0")
 implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
-15 sample apps. Full API docs. MCP server for AI-assisted development.
+**iOS / macOS / visionOS:**
+```swift
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+```
+
+15 Android sample apps. iOS examples. Full API docs. MCP server for AI-assisted development.
 
 - **GitHub**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
 - **Docs**: [sceneview.github.io](https://sceneview.github.io)
@@ -218,4 +229,4 @@ implementation("io.github.sceneview:arsceneview:3.3.0")
 
 ---
 
-*SceneView is open source (Apache 2.0). Built on Google Filament 1.70 and ARCore 1.53.*
+*SceneView is open source (Apache 2.0). Built on Google Filament and ARCore (Android) + RealityKit and ARKit (Apple).*

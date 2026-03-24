@@ -111,5 +111,83 @@ final class PathNodeTests: XCTestCase {
 
         XCTAssertEqual(path.entity.position.y, 1.0, accuracy: 0.001)
     }
+
+    // MARK: - Custom thickness and color
+
+    func testPathWithCustomThickness() {
+        let path = PathNode(
+            points: [.zero, .init(x: 1, y: 0, z: 0)],
+            thickness: 0.02,
+            color: .red
+        )
+        XCTAssertNotNil(path.entity)
+        XCTAssertEqual(path.entity.children.count, 1)
+    }
+
+    func testCircleWithCustomThicknessAndColor() {
+        let circle = PathNode.circle(
+            radius: 1.0,
+            segments: 8,
+            thickness: 0.01,
+            color: .blue
+        )
+        XCTAssertNotNil(circle.entity)
+        // 8 segments + 1 closing = 9 children
+        XCTAssertEqual(circle.entity.children.count, 9)
+    }
+
+    func testGridWithCustomThicknessAndColor() {
+        let grid = PathNode.grid(
+            size: 1.0,
+            divisions: 2,
+            thickness: 0.01,
+            color: .green
+        )
+        XCTAssertNotNil(grid.entity)
+        // 2 divisions => 3 lines per axis => 6 total
+        XCTAssertEqual(grid.entity.children.count, 6)
+    }
+
+    // MARK: - Circle edge cases
+
+    func testCircleWithOneSegment() {
+        let circle = PathNode.circle(segments: 1)
+        XCTAssertEqual(circle.points.count, 1)
+    }
+
+    func testCircleWithZeroRadius() {
+        let circle = PathNode.circle(radius: 0.0, segments: 4)
+        // All points should be at center
+        for point in circle.points {
+            XCTAssertEqual(point.x, 0.0, accuracy: 0.001)
+            XCTAssertEqual(point.z, 0.0, accuracy: 0.001)
+        }
+    }
+
+    // MARK: - Grid edge cases
+
+    func testGridWithOneDivision() {
+        let grid = PathNode.grid(size: 1.0, divisions: 1)
+        // 1 division => 2 lines per axis => 4 total
+        XCTAssertEqual(grid.entity.children.count, 4)
+    }
+
+    func testGridWithZeroDivisions() {
+        let grid = PathNode.grid(size: 1.0, divisions: 0)
+        // 0 divisions => 1 line per axis => 2 total
+        XCTAssertEqual(grid.entity.children.count, 2)
+    }
+
+    // MARK: - Large point counts
+
+    func testPathWithManyPoints() {
+        var points: [SIMD3<Float>] = []
+        for i in 0..<100 {
+            points.append(SIMD3<Float>(Float(i) * 0.1, 0, 0))
+        }
+        let path = PathNode(points: points)
+        XCTAssertEqual(path.entity.children.count, 99)
+        XCTAssertEqual(path.points.count, 100)
+    }
 }
 #endif

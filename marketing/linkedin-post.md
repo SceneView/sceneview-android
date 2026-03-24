@@ -1,45 +1,45 @@
-# LinkedIn Post — SceneView 3.0 Video Announcement
+# LinkedIn Post — SceneView 3.3.0 Cross-Platform Announcement
 
-Copy-paste the text below. Attach the video (sceneview-3.0-video.webm converted to MP4).
+Copy-paste the text below. Attach the video (sceneview-3.3.0-video.webm converted to MP4).
 
 ---
 
-Introducing SceneView 3.0 — 3D & AR as Jetpack Compose composables.
+SceneView 3.3.0 is here — and it's now cross-platform.
 
-After years of development, I'm thrilled to announce SceneView 3.0: a ground-up rewrite built entirely around Jetpack Compose.
+3D & AR as Jetpack Compose composables on Android. 3D & AR as SwiftUI views on iOS, macOS, and visionOS.
 
-What if adding a 3D model viewer to your Android app was as simple as writing a composable?
+Same concepts. Native on both platforms.
 
-Scene(
-    modifier = Modifier.fillMaxSize(),
-    cameraManipulator = rememberCameraManipulator()
-) {
-    ModelNode(
-        rememberModelInstance(modelLoader, "model.glb"),
-        scaleToUnits = 1.0f,
-        autoAnimate = true
-    )
+Android (Compose):
+Scene(modifier = Modifier.fillMaxSize()) {
+    ModelNode(rememberModelInstance(modelLoader, "model.glb"), scaleToUnits = 1.0f)
 }
 
-That's it. Full 3D viewer with orbit camera. No boilerplate.
+iOS (SwiftUI):
+SceneView {
+    ModelNode(named: "model.usdz")
+        .scaleToUnits(1.0)
+}
 
-What's new in 3.0:
+What's new in 3.3.0:
 
-→ Scene { } for 3D, ARScene { } for AR
-→ Nodes are composables — declare them, don't manage them
-→ State drives the scene — recomposition handles updates
-→ Lifecycle is automatic — no manual cleanup
-→ ViewNode: embed Compose UI directly in 3D/AR space
-→ MCP server for AI-assisted development
+-> Cross-platform: Android + iOS + macOS + visionOS
+-> 26+ node types on Android (Filament), 16 on iOS (RealityKit)
+-> PhysicsNode, DynamicSkyNode, FogNode, TextNode — on both platforms
+-> Same developer experience: nodes are declarative UI
+-> AI-first SDK with MCP server for both platforms
+-> Kotlin Multiplatform core shares math, collision, geometry, animation
 
-Built on Google Filament for rendering and ARCore for augmented reality.
-Open source · MIT licensed.
+The architecture: KMP shares logic, not rendering. Each platform uses its native renderer — Filament on Android, RealityKit on Apple. Best performance, native tooling, native debugging.
 
-implementation("io.github.sceneview:sceneview:3.3.0")
-implementation("io.github.sceneview:arsceneview:3.3.0")
+This is the only open-source, declarative-UI-native 3D/AR SDK for both Android and Apple platforms.
 
-It's not a wrapper. It's not a bridge. It's just Compose.
+Android: implementation("io.github.sceneview:sceneview:3.3.0")
+iOS: .package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
 
-→ github.com/SceneView
+Open source. Apache 2.0.
 
-#Android #JetpackCompose #3D #AR #AugmentedReality #OpenSource #AndroidDev #Kotlin #SceneView #Filament #ARCore
+-> github.com/SceneView/sceneview
+-> sceneview.github.io
+
+#Android #iOS #JetpackCompose #SwiftUI #3D #AR #AugmentedReality #OpenSource #AndroidDev #iOSDev #Kotlin #Swift #SceneView #Filament #RealityKit #ARCore #ARKit #CrossPlatform #visionOS

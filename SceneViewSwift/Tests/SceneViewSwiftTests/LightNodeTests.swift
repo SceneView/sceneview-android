@@ -93,5 +93,148 @@ final class LightNodeTests: XCTestCase {
 
         XCTAssertEqual(light.rotation.angle, Float.pi / 4, accuracy: 0.01)
     }
+
+    // MARK: - Shadow configuration
+
+    func testCastsShadowEnables() {
+        let light = LightNode.directional(castsShadow: false)
+            .castsShadow(true)
+        let directional = light.entity as! DirectionalLight
+        XCTAssertNotNil(directional.shadow)
+    }
+
+    func testCastsShadowDisables() {
+        let light = LightNode.directional(castsShadow: true)
+            .castsShadow(false)
+        let directional = light.entity as! DirectionalLight
+        XCTAssertNil(directional.shadow)
+    }
+
+    func testShadowColorSetsColor() {
+        let light = LightNode.directional()
+            .shadowColor(.warm)
+        let directional = light.entity as! DirectionalLight
+        XCTAssertNotNil(directional.shadow)
+    }
+
+    func testShadowMaximumDistance() {
+        let light = LightNode.directional()
+            .shadowMaximumDistance(20.0)
+        let directional = light.entity as! DirectionalLight
+        XCTAssertNotNil(directional.shadow)
+        XCTAssertEqual(directional.shadow?.maximumDistance, 20.0, accuracy: 0.001)
+    }
+
+    func testShadowMaximumDistanceUpdatesExisting() {
+        let light = LightNode.directional(castsShadow: true)
+            .shadowMaximumDistance(15.0)
+        let directional = light.entity as! DirectionalLight
+        XCTAssertEqual(directional.shadow?.maximumDistance, 15.0, accuracy: 0.001)
+    }
+
+    // MARK: - Attenuation
+
+    func testAttenuationRadiusOnPointLight() {
+        let light = LightNode.point(attenuationRadius: 5.0)
+            .attenuationRadius(20.0)
+        let point = light.entity as! PointLight
+        XCTAssertEqual(point.light.attenuationRadius, 20.0, accuracy: 0.001)
+    }
+
+    func testAttenuationRadiusOnSpotLight() {
+        let light = LightNode.spot(attenuationRadius: 5.0)
+            .attenuationRadius(25.0)
+        let spot = light.entity as! SpotLight
+        XCTAssertEqual(spot.light.attenuationRadius, 25.0, accuracy: 0.001)
+    }
+
+    func testAttenuationRadiusIgnoredOnDirectional() {
+        // Should not crash or have any effect on directional lights
+        let light = LightNode.directional()
+            .attenuationRadius(10.0)
+        XCTAssertNotNil(light.entity)
+    }
+
+    // MARK: - Chaining
+
+    func testShadowMethodsChain() {
+        let light = LightNode.directional()
+            .position(.init(x: 0, y: 5, z: 0))
+            .castsShadow(true)
+            .shadowMaximumDistance(12.0)
+            .shadowColor(.cool)
+            .lookAt(.zero)
+        XCTAssertNotNil(light.entity)
+        let directional = light.entity as! DirectionalLight
+        XCTAssertNotNil(directional.shadow)
+        XCTAssertEqual(directional.shadow?.maximumDistance, 12.0, accuracy: 0.001)
+    }
+
+    // MARK: - Shadow on non-directional lights
+
+    func testCastsShadowOnPointLightNoOp() {
+        let light = LightNode.point()
+            .castsShadow(true)
+        // Point lights don't support shadows in RealityKit, should not crash
+        XCTAssertNotNil(light.entity)
+    }
+
+    func testCastsShadowOnSpotLightNoOp() {
+        let light = LightNode.spot()
+            .castsShadow(false)
+        XCTAssertNotNil(light.entity)
+    }
+
+    func testShadowColorOnPointLightNoOp() {
+        let light = LightNode.point()
+            .shadowColor(.cool)
+        XCTAssertNotNil(light.entity)
+    }
+
+    func testShadowMaximumDistanceOnPointLightNoOp() {
+        let light = LightNode.point()
+            .shadowMaximumDistance(10.0)
+        XCTAssertNotNil(light.entity)
+    }
+
+    // MARK: - Intensity values
+
+    func testDirectionalLightWithCustomIntensity() {
+        let light = LightNode.directional(intensity: 5000)
+        let dl = light.entity as! DirectionalLight
+        XCTAssertEqual(dl.light.intensity, 5000, accuracy: 0.001)
+    }
+
+    func testPointLightCustomAttenuationRadius() {
+        let light = LightNode.point(attenuationRadius: 15.0)
+        let pl = light.entity as! PointLight
+        XCTAssertEqual(pl.light.attenuationRadius, 15.0, accuracy: 0.001)
+    }
+
+    func testSpotLightAngles() {
+        let inner: Float = .pi / 8
+        let outer: Float = .pi / 3
+        let light = LightNode.spot(
+            innerAngle: inner,
+            outerAngle: outer
+        )
+        XCTAssertNotNil(light.entity)
+        XCTAssertTrue(light.entity is SpotLight)
+    }
+
+    // MARK: - Directional light default shadow
+
+    func testDirectionalLightDefaultCastsShadow() {
+        let light = LightNode.directional()
+        let dl = light.entity as! DirectionalLight
+        // Default castsShadow is true
+        XCTAssertNotNil(dl.shadow)
+    }
+
+    func testDirectionalLightNoShadow() {
+        let light = LightNode.directional(castsShadow: false)
+        let dl = light.entity as! DirectionalLight
+        XCTAssertNil(dl.shadow)
+    }
 }
 #endif

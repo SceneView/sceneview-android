@@ -5,15 +5,72 @@
 ---
 
 ## Title
-SceneView 3.3.0 — Physics, Atmosphere, Drawing, and Text
+SceneView 3.3.0 — Cross-Platform: Android + iOS + macOS + visionOS
 
 ## Body
 
 ### Highlights
 
-SceneView 3.3.0 adds **8 new composable node types** and **6 new sample apps**, making it the biggest feature release since the Compose rewrite.
+SceneView 3.3.0 is the **first cross-platform release** — shipping 16 node types on iOS/macOS/visionOS via SwiftUI + RealityKit, alongside 8 new Android node types and 6 new sample apps. This is the biggest feature release since the Compose rewrite.
 
-### New node types
+### Cross-platform: SceneViewSwift (NEW)
+
+SceneView now supports **iOS, macOS, and visionOS** via the SceneViewSwift package — a native Swift library built on RealityKit and ARKit.
+
+**16 iOS node types shipping in v3.3.0:**
+
+| Node | What it does |
+|---|---|
+| `ModelNode` | USDZ/glTF models with animations |
+| `GeometryNode` | Box, sphere, cylinder, plane, custom meshes |
+| `LightNode` | Directional, point, and spot lights |
+| `CameraNode` | Camera configuration and control |
+| `MeshNode` | Custom mesh rendering |
+| `DynamicSkyNode` | Time-of-day sun with sky model |
+| `FogNode` | Atmospheric fog |
+| `ReflectionProbeNode` | Local IBL override for reflective surfaces |
+| `PhysicsNode` | RealityKit physics simulation — gravity, collision, bounce |
+| `LineNode` | Single 3D line segment |
+| `PathNode` | 3D polyline through a list of points |
+| `TextNode` | Camera-facing text label |
+| `BillboardNode` | Camera-facing image quad |
+| `ImageNode` | 2D image on a 3D surface |
+| `VideoNode` | Video playback on a 3D surface |
+| `AugmentedImageNode` | Real-world image detection and overlay (AR) |
+
+**Installation (Swift Package Manager):**
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+]
+```
+
+**iOS 3D scene (SwiftUI):**
+
+```swift
+import SceneViewSwift
+
+struct ContentView: View {
+    var body: some View {
+        SceneView {
+            ModelNode(named: "robot.usdz")
+            LightNode(.directional)
+        }
+    }
+}
+```
+
+**iOS AR scene (SwiftUI):**
+
+```swift
+ARSceneView { anchor in
+    ModelNode(named: "chair.usdz")
+        .scale(0.5)
+}
+```
+
+### New Android node types
 
 | Node | What it does |
 |---|---|
@@ -35,14 +92,20 @@ SceneView 3.3.0 adds **8 new composable node types** and **6 new sample apps**, 
 - **line-path** — 3D lines, spirals, axis gizmos, animated sine wave
 - **text-labels** — camera-facing text labels on 3D spheres
 
+### MCP server
+
+The `@sceneview/mcp` npm package now includes iOS documentation, enabling AI assistants to generate correct SwiftUI + RealityKit code alongside Android Compose code. Install with `npx @anthropic-ai/create-mcp`.
+
 ### Documentation
 
 - **Full docs site launched** at [sceneview.github.io](https://sceneview.github.io/)
-- 20 pages including quickstart, recipes cookbook, FAQ, architecture guide, performance guide, and more
-- `llms.txt` updated with all new APIs
+- iOS quickstart and samples documentation added
+- 20+ pages including quickstart, recipes cookbook, FAQ, architecture guide, and more
+- `llms.txt` updated with all new APIs (Android and iOS)
 
 ### Getting started
 
+**Android:**
 ```kotlin
 // 3D only
 implementation("io.github.sceneview:sceneview:3.3.0")
@@ -51,7 +114,13 @@ implementation("io.github.sceneview:sceneview:3.3.0")
 implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
-### Example: Dynamic sky with fog
+**iOS / macOS / visionOS:**
+```swift
+// Package.swift
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+```
+
+### Example: Dynamic sky with fog (Android)
 
 ```kotlin
 Scene(modifier = Modifier.fillMaxSize()) {
@@ -63,7 +132,17 @@ Scene(modifier = Modifier.fillMaxSize()) {
 }
 ```
 
-### Example: Physics
+### Example: 3D model viewer (iOS)
+
+```swift
+SceneView {
+    ModelNode(named: "helmet.usdz")
+    LightNode(.directional)
+    DynamicSkyNode(timeOfDay: 14)
+}
+```
+
+### Example: Physics (Android)
 
 ```kotlin
 Scene(modifier = Modifier.fillMaxSize()) {

@@ -6,23 +6,24 @@
 
 ## The landscape
 
-If you want 3D or AR in an Android app today, here are your options:
+If you want 3D or AR in a mobile app today, here are your options:
 
-| Library | Approach | Status |
-|---|---|---|
-| **SceneView** | Jetpack Compose composables, Filament rendering, ARCore | Active, v3.3.0 |
-| **Google Sceneform** | View-based, custom renderer, ARCore | Abandoned (archived 2021) |
-| **Raw ARCore SDK** | Low-level session/frame API, bring your own renderer | Active but no UI layer |
-| **Unity** | Full game engine embedded via `UnityPlayerActivity` | Active, heavy |
-| **Rajawali** | OpenGL ES wrapper, imperative scene graph | Maintenance mode |
-| **three.js (WebView)** | JavaScript 3D in a WebView | Active, but web-only perf |
-| **Babylon Native** | C++ cross-platform runtime | Early stage on Android |
+| Library | Platforms | Approach | Status |
+|---|---|---|---|
+| **SceneView** | Android + iOS + macOS + visionOS | Compose + SwiftUI, native renderers | Active, v3.3.0 |
+| **Google Sceneform** | Android only | View-based, custom renderer, ARCore | Abandoned (archived 2021) |
+| **Raw ARCore SDK** | Android only | Low-level session/frame API, bring your own renderer | Active but no UI layer |
+| **RealityKit** | Apple only | SwiftUI, Metal renderer, ARKit | Active, Apple-only |
+| **Unity** | All | Full game engine embedded via activity/view controller | Active, heavy |
+| **Rajawali** | Android only | OpenGL ES wrapper, imperative scene graph | Maintenance mode |
+| **three.js (WebView)** | Web (via WebView) | JavaScript 3D in a WebView | Active, but web-only perf |
+| **Babylon Native** | Cross-platform | C++ cross-platform runtime | Early stage |
 
 ---
 
 ## Side-by-side: adding a 3D model viewer
 
-### SceneView (Compose)
+### SceneView — Android (Compose)
 
 ```kotlin
 // build.gradle
@@ -54,40 +55,77 @@ fun ModelViewer() {
 
 ---
 
+### SceneView — iOS (SwiftUI)
+
+```swift
+// Package.swift
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+
+// One SwiftUI view, that's it
+import SceneViewSwift
+
+struct ModelViewer: View {
+    var body: some View {
+        SceneView {
+            ModelNode(named: "helmet.usdz")
+                .scaleToUnits(1.0)
+            LightNode(.directional)
+        }
+    }
+}
+```
+
+**Lines of code:** ~10
+**Files touched:** 1 (your SwiftUI view)
+**Storyboards/XIBs:** 0
+**Lifecycle callbacks:** 0
+**Manual cleanup:** 0
+
+---
+
+### RealityKit (Apple only, no cross-platform)
+
+```swift
+// Requires iOS-specific code, no Android equivalent
+import RealityKit
+
+struct RealityViewer: View {
+    var body: some View {
+        RealityView { content in
+            if let model = try? await ModelEntity.load(named: "helmet.usdz") {
+                content.add(model)
+            }
+        }
+    }
+}
+```
+
+**Lines of code:** ~10
+**Platform:** Apple only — no Android support
+**Cross-platform story:** None
+
+---
+
 ### Google Sceneform (legacy, archived)
 
 ```kotlin
 // build.gradle — must use a community fork, original is archived
 implementation("com.gorisse.thomas.sceneform:sceneform:1.21.0")
 
-// XML layout
-// <fragment android:name="com.google.ar.sceneform.ux.ArFragment" ... />
-
 // Activity code (~80 lines)
 class ModelViewerActivity : AppCompatActivity() {
     private lateinit var arFragment: ArFragment
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_model_viewer)
         arFragment = supportFragmentManager.findFragmentById(R.id.arFragment) as ArFragment
-
         arFragment.setOnTapArPlaneListener { hitResult, plane, motionEvent ->
-            val anchor = hitResult.createAnchor()
             ModelRenderable.builder()
                 .setSource(this, Uri.parse("helmet.sfb"))
                 .build()
-                .thenAccept { renderable ->
-                    val anchorNode = AnchorNode(anchor)
-                    anchorNode.setParent(arFragment.arSceneView.scene)
-                    val modelNode = TransformableNode(arFragment.transformationSystem)
-                    modelNode.renderable = renderable
-                    modelNode.setParent(anchorNode)
-                    modelNode.select()
-                }
+                .thenAccept { renderable -> /* ... */ }
         }
     }
-
     override fun onResume() { super.onResume(); /* check AR availability */ }
     override fun onPause() { super.onPause(); /* release resources */ }
     override fun onDestroy() { super.onDestroy(); /* cleanup */ }
@@ -96,8 +134,8 @@ class ModelViewerActivity : AppCompatActivity() {
 
 **Lines of code:** ~80+
 **Files touched:** 3+ (Activity, XML layout, manifest)
-**Manual lifecycle:** Yes — `onResume`, `onPause`, `onDestroy`
-**Status:** Archived. No updates since 2021. `.sfb` format deprecated.
+**Manual lifecycle:** Yes
+**Status:** Archived. No updates since 2021. Android only.
 
 ---
 
@@ -106,14 +144,11 @@ class ModelViewerActivity : AppCompatActivity() {
 ```kotlin
 // You get a Session, Frame, and Camera. That's it.
 // You must bring your own renderer (OpenGL ES, Vulkan, or Filament directly).
-// You must manage the GL surface, shader compilation, mesh uploading,
-// lighting, shadow maps, and frame timing yourself.
 // Typical setup: 500–1000 lines before rendering a single triangle.
 ```
 
-**Lines of code:** 500–1000+ for basic rendering
-**Skill required:** OpenGL/Vulkan expertise
-**When it makes sense:** You're building a custom rendering engine
+**Lines of code:** 500-1000+ for basic rendering
+**Platform:** Android only
 
 ---
 
@@ -122,43 +157,40 @@ class ModelViewerActivity : AppCompatActivity() {
 ```kotlin
 // build.gradle — Unity export as Android library
 implementation(project(":unityLibrary"))
-
-// Activity
-class UnityViewerActivity : UnityPlayerActivity() {
-    // All rendering logic lives in C# inside Unity
-    // Communication via UnitySendMessage / JNI bridge
-}
 ```
 
-**APK size increase:** 40–80 MB (Unity runtime)
-**Build time increase:** Significant (Unity build pipeline)
-**Compose integration:** None — Unity owns the entire Activity
+**APK size increase:** 40-80 MB (Unity runtime)
+**Compose/SwiftUI integration:** None — Unity owns the entire Activity/ViewController
 **When it makes sense:** Full 3D game with existing Unity assets
 
 ---
 
 ## Feature comparison
 
-| Feature | SceneView | Sceneform | Raw ARCore | Unity |
-|---|---|---|---|---|
-| **Jetpack Compose** | Native | No | No | No |
-| **Declarative nodes** | Yes | No (imperative) | No API | No (C# scripts) |
-| **Auto lifecycle** | Yes | Manual | Manual | Unity-managed |
-| **PBR rendering** | Filament | Custom (limited) | DIY | Unity renderer |
-| **glTF/GLB models** | Yes | .sfb (deprecated) | DIY | Yes |
-| **Physics** | Built-in | No | No | Built-in |
-| **Post-processing** | Bloom, DOF, SSAO, fog | No | DIY | Yes |
-| **Dynamic sky** | Yes | No | No | Yes (HDRP) |
-| **AR plane detection** | Yes | Yes | Yes | Yes (AR Foundation) |
-| **AR image tracking** | Yes | Yes | Yes | Yes |
-| **AR face tracking** | Yes | Yes | Yes | Yes |
-| **Cloud anchors** | Yes | Yes | Yes | Yes |
-| **Geospatial API** | Yes | No | Yes | Yes |
-| **ViewNode (Compose in 3D)** | Yes | No | No | No |
-| **AI tooling (MCP)** | Yes | No | No | No |
-| **APK size impact** | ~5 MB | ~3 MB | ~1 MB | 40–80 MB |
-| **Active maintenance** | Yes (2024–) | Abandoned | Google-maintained | Yes |
-| **License** | Apache 2.0 | Apache 2.0 | Proprietary | Commercial |
+| Feature | SceneView | Sceneform | Raw ARCore | RealityKit | Unity |
+|---|---|---|---|---|---|
+| **Cross-platform** | Android + Apple | Android only | Android only | Apple only | All |
+| **Jetpack Compose** | Native | No | No | No | No |
+| **SwiftUI** | Native | No | No | Native | No |
+| **Declarative nodes** | Yes | No (imperative) | No API | Yes | No (C# scripts) |
+| **Auto lifecycle** | Yes | Manual | Manual | Yes | Unity-managed |
+| **PBR rendering** | Filament / RealityKit | Custom (limited) | DIY | RealityKit | Unity renderer |
+| **glTF/GLB models** | Yes | .sfb (deprecated) | DIY | Via conversion | Yes |
+| **USDZ models** | Yes (iOS) | No | No | Yes | Yes |
+| **Physics** | Built-in (both) | No | No | Built-in | Built-in |
+| **Post-processing** | Bloom, DOF, SSAO, fog | No | DIY | Limited | Yes |
+| **Dynamic sky** | Yes (both) | No | No | No | Yes (HDRP) |
+| **AR plane detection** | Yes (both) | Yes | Yes | Yes | Yes |
+| **AR image tracking** | Yes (both) | Yes | Yes | Yes | Yes |
+| **AR face tracking** | Yes (Android) | Yes | Yes | Yes | Yes |
+| **Cloud anchors** | Yes (Android) | Yes | Yes | No | Yes |
+| **Geospatial API** | Yes (Android) | No | Yes | No | Yes |
+| **ViewNode (UI in 3D)** | Yes (Android) | No | No | No | No |
+| **AI tooling (MCP)** | Yes (both) | No | No | No | No |
+| **visionOS** | Yes (Alpha) | No | No | Yes | Yes |
+| **APK/IPA size impact** | ~5 MB | ~3 MB | ~1 MB | N/A | 40-80 MB |
+| **Active maintenance** | Yes (2024-) | Abandoned | Google-maintained | Apple-maintained | Yes |
+| **License** | Apache 2.0 | Apache 2.0 | Proprietary | Proprietary | Commercial |
 
 ---
 
@@ -166,46 +198,33 @@ class UnityViewerActivity : UnityPlayerActivity() {
 
 ### "We already use Unity for 3D"
 
-Unity is the right choice if you're building a 3D-first game. But if you're adding 3D to an
-existing Compose app — a product viewer, an AR feature, a data visualization — Unity's 60–350 MB
-runtime overhead, separate C# build pipeline, and inability to integrate with Compose make it
-overkill. (Developers have reported 350 MB minimum APK size for a basic Unity AR app on Android.)
+Unity is the right choice if you're building a 3D-first game. But if you're adding 3D to an existing Compose or SwiftUI app — a product viewer, an AR feature, a data visualization — Unity's 60-350 MB runtime overhead, separate build pipeline, and inability to integrate with native UI make it overkill.
 
-SceneView adds ~5 MB and works inside your existing Compose screens.
+SceneView adds ~5 MB and works inside your existing screens on both platforms.
 
-### "Can't we just use ARCore directly?"
+### "Can't we just use ARCore/ARKit directly?"
 
-ARCore gives you tracking data (planes, anchors, poses) but no rendering. You'd need to build
-your own renderer on top of OpenGL ES or Vulkan. That's months of work for a team with graphics
-expertise. SceneView gives you ARCore's full feature set with Filament's rendering, wrapped in
-Compose composables.
+ARCore gives you tracking data but no rendering. ARKit is better (RealityKit provides rendering), but it's Apple-only. SceneView gives you full rendering + AR on both platforms with a consistent developer experience.
+
+### "RealityKit already does this on iOS"
+
+RealityKit is excellent — and SceneView uses it on Apple platforms. But RealityKit is Apple-only. If you need the same 3D/AR features on Android, you'd need a completely different SDK. SceneView provides the same concepts and patterns across both platforms.
 
 ### "Sceneform worked fine for us"
 
-Google archived Sceneform in 2021. The `.sfb` model format is deprecated. No Compose support.
-No new ARCore features (geospatial, streetscape, depth). The community fork ("Sceneform
-Maintained") has unresolved compatibility issues including 16 KB page size compliance required
-by Android 15 (API 35). SceneView was created as Sceneform's successor — the migration path
-is straightforward and documented in
-[MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGRATION.md).
+Google archived Sceneform in 2021. No Compose support. No new ARCore features. No iOS support. SceneView was created as its successor with a clear migration path documented in [MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGRATION.md).
 
-### "What about iOS?"
+### "What about visionOS?"
 
-SceneView now supports iOS with SwiftUI, RealityKit, and ARKit (SceneViewSwift package).
-A shared Kotlin Multiplatform core (sceneview-core) provides cross-platform math, collision,
-animation, and geometry. Each platform uses its native rendering engine and UI framework.
+SceneView supports visionOS via SceneViewSwift (Alpha). Since it uses RealityKit on Apple platforms, the path to spatial computing features (immersive spaces, hand tracking) is natural.
 
 ### "Is it production-ready?"
 
-SceneView is used in production apps on Google Play. It's built on Filament (Google's
-production rendering engine) and ARCore (Google's production AR platform). The API surface
-is stable and versioned. Breaking changes follow semantic versioning with migration guides.
+Android: stable, used in production apps on Google Play. iOS: alpha, with 16 node types shipping and tests passing. Built on production rendering engines (Filament, RealityKit).
 
 ---
 
 ## Migration from Sceneform
-
-If you have an existing Sceneform app, the migration is documented step by step:
 
 | Sceneform concept | SceneView equivalent |
 |---|---|
@@ -226,14 +245,15 @@ Full guide: [MIGRATION.md](https://github.com/SceneView/sceneview/blob/main/MIGR
 | If you need... | Use |
 |---|---|
 | 3D in a Compose app | **SceneView** |
-| AR features in a Compose app | **SceneView** |
+| 3D in a SwiftUI app | **SceneView** (or RealityKit directly) |
+| 3D on both Android and iOS | **SceneView** (the only declarative cross-platform option) |
+| AR features on both platforms | **SceneView** |
 | A full 3D game | Unity |
-| A custom rendering engine | Raw ARCore + OpenGL/Vulkan |
+| A custom rendering engine | Raw ARCore/ARKit + OpenGL/Vulkan/Metal |
 | Nothing — it's a 2D app | Nothing (but SceneView makes "subtle 3D" trivial) |
 
-For the vast majority of Android and iOS apps that want to add 3D or AR, SceneView is the answer.
-It's the only library that treats 3D as a first-class citizen in both Jetpack Compose and SwiftUI.
+For the vast majority of mobile apps that want to add 3D or AR, SceneView is the answer. It's the only library that treats 3D as a first-class citizen in both Jetpack Compose and SwiftUI.
 
 ---
 
-*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — built on Filament & ARCore*
+*[github.com/SceneView/sceneview](https://github.com/SceneView/sceneview) — Apache 2.0 — cross-platform 3D & AR for Android + iOS + macOS + visionOS*

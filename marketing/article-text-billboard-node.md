@@ -1,12 +1,12 @@
 # TextNode & BillboardNode — Adding Labels to Your AR Scene
 
-*Tags: Android, AR, JetpackCompose, Kotlin, 3D*
+*Tags: Android, iOS, AR, JetpackCompose, SwiftUI, Kotlin, Swift, 3D*
 
 ---
 
 One of the most requested features in any 3D or AR app: **labels**. Floating text above a model, a waypoint marker that always faces the user, an info panel anchored to the real world.
 
-In SceneView 3.2, adding a camera-facing text label is one composable call. No bitmaps, no Canvas, no material creation — all handled internally.
+In SceneView 3.3.0, adding a camera-facing text label is one composable call on both Android and iOS. No bitmaps, no Canvas, no material creation — all handled internally.
 
 ## What we're building
 
@@ -249,12 +249,54 @@ TextNode(
 )
 ```
 
+## iOS: TextNode & BillboardNode with SwiftUI
+
+SceneView 3.3.0 ships `TextNode` and `BillboardNode` on iOS too. Built on RealityKit's mesh generation:
+
+```swift
+import SceneViewSwift
+
+struct LabelledSceneView: View {
+    var body: some View {
+        SceneView {
+            ModelNode(named: "toy_car.usdz")
+                .scaleToUnits(1.0)
+
+            // Camera-facing text label
+            TextNode(text: "Toy Car", position: [0, 0.7, 0])
+                .fontSize(52)
+                .textColor(.white)
+                .backgroundColor(.black.opacity(0.8))
+
+            LightNode(.directional)
+        }
+    }
+}
+```
+
+For AR labels on iOS:
+
+```swift
+ARSceneView { anchor in
+    ModelNode(named: "chair.usdz")
+        .scale(0.5)
+
+    TextNode(text: "Chair", position: [0, 0.3, 0])
+        .fontSize(48)
+        .textColor(.white)
+        .backgroundColor(.blue.opacity(0.85))
+}
+```
+
+Same concept as Android — camera-facing text labels attached to any node or AR anchor. The API is native to each platform while the developer experience stays consistent.
+
 ## Full samples
 
 Both demos are in the SceneView repository:
 
-- `samples/text-labels/` — Labelled 3D spheres, tap to cycle label text
-- `samples/ar-model-viewer/` — AR tap-to-place with gesture docs
+- `samples/text-labels/` — Labelled 3D spheres, tap to cycle label text (Android)
+- `samples/ar-model-viewer/` — AR tap-to-place with gesture docs (Android)
+- iOS examples in `SceneViewSwift/` package
 
 ```
 git clone https://github.com/SceneView/sceneview
@@ -263,4 +305,4 @@ git clone https://github.com/SceneView/sceneview
 
 ---
 
-*SceneView is open-source (MIT License). [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)*
+*SceneView is open-source (Apache 2.0). Now cross-platform: Android + iOS + macOS + visionOS. [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)*

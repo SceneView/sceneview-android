@@ -50,7 +50,9 @@ nav:
   - Try the Demo: try.md
   - Get Started:
     - Quickstart: quickstart.md
+    - Quickstart (Apple): quickstart-ios.md
     - API Cheatsheet: cheatsheet.md
+    - API Cheatsheet (Apple): cheatsheet-ios.md
     - Recipes: recipes.md
     - FAQ: faq.md
     - Troubleshooting: troubleshooting.md
@@ -69,6 +71,8 @@ nav:
     - codelabs/index.md
     - 3D with Compose: codelabs/codelab-3d-compose.md
     - AR with Compose: codelabs/codelab-ar-compose.md
+    - 3D with SwiftUI: codelabs/codelab-3d-swiftui.md
+    - AR with SwiftUI: codelabs/codelab-ar-swiftui.md
     - Dynamic Sky: codelabs/guide-dynamic-sky.md
     - Lines & Text: codelabs/guide-lines-text.md
     - Physics: codelabs/guide-physics.md
@@ -77,6 +81,7 @@ nav:
     - API (3D — sceneview): https://sceneview.github.io/api/sceneview/sceneview/
     - API (AR — arsceneview): https://sceneview.github.io/api/sceneview/arsceneview/
   - Samples: samples.md
+  - Samples (Apple): samples-ios.md
   - Contribute: contributing.md
   - Changelog: changelog.md
   - Migration: migration.md
@@ -129,6 +134,9 @@ extra:
   generator: false
   version:
     provider: mike
+
+extra_javascript:
+  - assets/javascripts/structured-data-loader.js
 
 extra_css:
   - stylesheets/extra.css

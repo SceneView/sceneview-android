@@ -307,10 +307,38 @@ fun ARViewerScreen() {
 
 ---
 
-## Step 10 — What's next?
+## Step 10 — iOS equivalent (SwiftUI)
 
-- **Image tracking** → `AugmentedImageNode` — overlay content on printed images or magazine covers
-- **Cloud anchors** → `CloudAnchorNode` — share AR experiences between devices
-- **Face effects** → `AugmentedFaceNode` with front camera
-- **Hit result cursor** → `HitResultNode(xPx, yPx)` — a placement reticle that follows the center of the screen
+The same AR experience on iOS uses SceneViewSwift with ARKit:
+
+```swift
+// Package.swift
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+```
+
+```swift
+import SwiftUI
+import SceneViewSwift
+
+struct ARViewerView: View {
+    var body: some View {
+        ARSceneView { anchor in
+            ModelNode(named: "damaged_helmet.usdz")
+                .scale(0.3)
+        }
+    }
+}
+```
+
+ARKit handles plane detection and anchor tracking. RealityKit handles rendering. Same concepts as the Android version — declare AR content, the framework manages the session.
+
+---
+
+## Step 11 — What's next?
+
+- **Try iOS** → Build the same AR viewer in SwiftUI with SceneViewSwift
+- **Image tracking** → `AugmentedImageNode` — overlay content on printed images (both platforms)
+- **Cloud anchors** → `CloudAnchorNode` — share AR experiences between devices (Android)
+- **Face effects** → `AugmentedFaceNode` with front camera (Android)
+- **Hit result cursor** → `HitResultNode(xPx, yPx)` — a placement reticle (Android)
 - **Explore samples** → [ar-model-viewer](/samples/ar-model-viewer), [ar-augmented-image](/samples/ar-augmented-image), [ar-cloud-anchor](/samples/ar-cloud-anchor)

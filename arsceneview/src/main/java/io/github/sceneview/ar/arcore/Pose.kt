@@ -13,29 +13,36 @@ import io.github.sceneview.math.Transform
 import io.github.sceneview.math.toPosition
 import io.github.sceneview.math.toTransform
 
+/** The translation component of this [Pose] as a SceneView [Position]. */
 val Pose.position: Position
     get() = Position(x = tx(), y = ty(), z = tz())
 
+/** The rotation component of this [Pose] as a [Quaternion]. */
 val Pose.quaternion: Quaternion
     get() = Quaternion(x = qx(), y = qy(), z = qz(), w = qw())
 
+/** Converts this [Pose] to a 4x4 [Transform] matrix. */
 val Pose.transform: Transform
     get() = FloatArray(16).apply { toMatrix(this, 0) }.toTransform()
 //    get() = translation(position) * rotation(quaternion)
 
+/** The rotation component of this [Pose] as Euler angles (pitch, yaw, roll) in degrees. */
 val Pose.rotation: Rotation
     get() = quaternion.toEulerAngles()
 
+/** The local X axis direction of this [Pose]. */
 val Pose.xDirection: Direction
     get() = xAxis!!.let { (x, y, z) ->
         Direction(x, y, z)
     }
 
+/** The local Y axis direction (up) of this [Pose]. */
 val Pose.yDirection: Direction
     get() = yAxis!!.let { (x, y, z) ->
         Direction(x, y, z)
     }
 
+/** The local Z axis direction (forward) of this [Pose]. */
 val Pose.zDirection: Direction
     get() = zAxis!!.let { (x, y, z) ->
         Direction(x, y, z)
@@ -76,6 +83,7 @@ fun Pose.distanceToPlane(cameraPose: Pose): Float {
 //            (cameraPosition.z - this.tz()) * normal[2]
 }
 
+/** Converts this [GeospatialPose] to a 4x4 [Transform] matrix using lat/lon/alt as position. */
 val GeospatialPose.transform: Transform
     get() = translation(
         Position(

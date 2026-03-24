@@ -1,4 +1,4 @@
-# SceneView — The #1 3D & AR Library for Android and iOS
+# SceneView — The #1 Cross-Platform 3D & AR SDK
 
 *Why thousands of developers chose SceneView — and why you should too.*
 
@@ -6,10 +6,9 @@
 
 ## The pitch in 10 seconds
 
-SceneView makes 3D and AR work **exactly like Jetpack Compose UI**. Nodes are composables.
-State drives the scene. Lifecycle is automatic. No boilerplate, no manual cleanup, no learning
-a separate rendering paradigm.
+SceneView makes 3D and AR work **exactly like your UI framework**. Jetpack Compose on Android. SwiftUI on iOS, macOS, and visionOS. Nodes are declarative UI. State drives the scene. Lifecycle is automatic. No boilerplate, no manual cleanup, no learning a separate rendering paradigm.
 
+**Android:**
 ```kotlin
 Scene(modifier = Modifier.fillMaxSize()) {
     ModelNode(modelInstance = helmet, scaleToUnits = 1.0f, autoAnimate = true)
@@ -17,51 +16,78 @@ Scene(modifier = Modifier.fillMaxSize()) {
 }
 ```
 
-That's a production-quality 3D viewer. Five lines. Same Kotlin you write every day.
+**iOS:**
+```swift
+SceneView {
+    ModelNode(named: "helmet.usdz")
+        .scaleToUnits(1.0)
+    LightNode(.directional, intensity: 100_000)
+}
+```
+
+Production-quality 3D viewers. Five lines on each platform. Same patterns you write every day.
 
 ---
 
 ## What you get
 
-### 26+ node types — all composable
+### 26+ Android node types, 16 iOS node types — all declarative
 
-| Category | Nodes |
-|---|---|
-| **Models** | `ModelNode` — glTF/GLB with animations, gestures, scaling |
-| **Geometry** | `CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode` — no asset files needed |
-| **Lighting** | `LightNode` (sun, point, spot, directional), `DynamicSkyNode`, `ReflectionProbeNode` |
-| **Atmosphere** | `FogNode` — distance/height fog driven by Compose state |
-| **Media** | `ImageNode`, `VideoNode` (with chromakey), `ViewNode` (any Composable in 3D) |
-| **Text** | `TextNode`, `BillboardNode` — camera-facing labels and UI callouts |
-| **Drawing** | `LineNode`, `PathNode` — 3D polylines, measurements, animated paths |
-| **Physics** | `PhysicsNode` — rigid body simulation, collision, gravity |
-| **AR** | `AnchorNode`, `HitResultNode`, `AugmentedImageNode`, `AugmentedFaceNode`, `CloudAnchorNode`, `StreetscapeGeometryNode` |
-| **Structure** | `Node` (grouping/pivots), `CameraNode`, `MeshNode` |
+| Category | Android Nodes | iOS Nodes |
+|---|---|---|
+| **Models** | `ModelNode` — glTF/GLB with animations, gestures, scaling | `ModelNode` — USDZ/glTF with animations |
+| **Geometry** | `CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode` | `GeometryNode` — box, sphere, cylinder, plane, custom |
+| **Lighting** | `LightNode` (sun, point, spot, directional), `DynamicSkyNode`, `ReflectionProbeNode` | `LightNode`, `DynamicSkyNode`, `ReflectionProbeNode` |
+| **Atmosphere** | `FogNode` — distance/height fog driven by state | `FogNode` |
+| **Media** | `ImageNode`, `VideoNode` (with chromakey), `ViewNode` (any Composable in 3D) | `ImageNode`, `VideoNode` |
+| **Text** | `TextNode`, `BillboardNode` — camera-facing labels and UI callouts | `TextNode`, `BillboardNode` |
+| **Drawing** | `LineNode`, `PathNode` — 3D polylines, measurements, animated paths | `LineNode`, `PathNode` |
+| **Physics** | `PhysicsNode` — rigid body simulation, collision, gravity | `PhysicsNode` — RealityKit physics |
+| **AR** | `AnchorNode`, `HitResultNode`, `AugmentedImageNode`, `AugmentedFaceNode`, `CloudAnchorNode`, `StreetscapeGeometryNode` | `AugmentedImageNode` (via ARSceneView) |
+| **Structure** | `Node` (grouping/pivots), `CameraNode`, `MeshNode` | `CameraNode`, `MeshNode` |
 
-Every one of these is a `@Composable` function. They enter the scene on composition,
-update when state changes, and destroy themselves when they leave. Zero imperative code.
-
----
-
-### Production rendering — Google Filament
-
-SceneView is built on [Filament](https://github.com/google/filament), the same physically-based
-rendering engine used inside Google's own apps (Google Search 3D viewer, Google Play Store).
-
-- Physically-based rendering (PBR) with metallic/roughness workflow
-- HDR environment lighting (IBL) from `.hdr` and `.ktx` files
-- Dynamic shadows, reflections, ambient occlusion
-- Post-processing: bloom, depth-of-field, SSAO, fog
-- 60fps on mid-range devices — Filament is optimized for mobile
-
-You get AAA-quality rendering without touching OpenGL, Vulkan, or shader code.
+Every one of these is a declarative UI element. They enter the scene on composition, update when state changes, and destroy themselves when they leave. Zero imperative code.
 
 ---
 
-### Full ARCore integration
+### Cross-platform architecture
 
-`ARScene` wraps `Scene` with ARCore wired in. Same composable pattern, now in the real world:
+```
+┌─────────────────────────────────────────────────┐
+│                 Application Layer                │
+│     Compose UI / SwiftUI / Flutter / React Native│
+├─────────────────────────────────────────────────┤
+│               SceneView Platform SDKs            │
+│                                                   │
+│   Android: Scene {} · ARScene {} (Filament)       │
+│   Apple: SceneView · ARSceneView (RealityKit)     │
+├─────────────────────────────────────────────────┤
+│               SceneView Core (KMP)               │
+│   Math · Collision · Geometry · Animation ·       │
+│   Physics · Scene Graph                           │
+├────────────────────┬────────────────────────────┤
+│  Google Filament   │       RealityKit            │
+│    (Android)       │ (iOS/macOS/visionOS)        │
+└────────────────────┴────────────────────────────┘
+```
 
+**Key decision:** KMP shares logic, not rendering. Native renderers on each platform for best performance.
+
+---
+
+### Production rendering
+
+**Android — Google Filament:**
+The same physically-based rendering engine used inside Google's own apps. PBR, HDR lighting, dynamic shadows, post-processing. 60fps on mid-range devices.
+
+**iOS — RealityKit:**
+Apple's native 3D engine. Metal-accelerated PBR, environment-based lighting, shadows. The only path to visionOS spatial computing.
+
+---
+
+### Full AR integration
+
+**Android — ARCore:**
 ```kotlin
 ARScene(
     planeRenderer = true,
@@ -79,65 +105,43 @@ ARScene(
 }
 ```
 
-**AR features included:**
-- Plane detection (horizontal + vertical) with persistent mesh rendering
-- Image detection and tracking (`AugmentedImageNode`)
-- Face mesh tracking and augmentation (`AugmentedFaceNode`)
-- Cloud anchors for cross-device persistence (`CloudAnchorNode`)
-- Environmental HDR — real-world light estimation
-- Streetscape geometry — city-scale 3D building meshes
-- Geospatial API support — place content at lat/long coordinates
+**iOS — ARKit:**
+```swift
+ARSceneView { anchor in
+    ModelNode(named: "sofa.usdz")
+        .scale(0.5)
+}
+```
+
+**Android AR features:** Plane detection, image tracking, face mesh, cloud anchors, environmental HDR, streetscape geometry, geospatial API.
+
+**iOS AR features:** Plane detection, image tracking, world tracking, face tracking (with ARKit).
 
 ---
 
 ## What makes SceneView different
 
-### 1. It's Compose — not a wrapper around something else
+### 1. It's your UI framework — not a wrapper
 
-60% of the top 1,000 Play Store apps use Jetpack Compose. It's the standard. Other 3D libraries
-give you a `SurfaceView` to embed in your layout and an imperative API to manage the scene graph.
-SceneView's scene graph **is** the Compose tree. The Compose runtime owns it.
+60% of top Play Store apps use Jetpack Compose. SwiftUI is the standard on Apple platforms. SceneView's scene graph IS the UI tree. The runtime owns it.
 
-This means:
-- `if/else` controls whether nodes exist
-- `State<T>` drives animations, positions, visibility
-- `LaunchedEffect` and `DisposableEffect` work inside scenes
-- Nesting nodes is the same as nesting `Column { Row { Text() } }`
+### 2. Cross-platform with native renderers
 
-### 2. Zero boilerplate lifecycle
+The only open-source 3D SDK that's declarative-UI-native on BOTH Android and Apple. Not a lowest-common-denominator wrapper — native performance on each platform.
 
-```kotlin
-// This is ALL the setup you need
-val engine = rememberEngine()
-val modelLoader = rememberModelLoader(engine)
-val environment = rememberEnvironment(rememberEnvironmentLoader(engine)) {
-    createHDREnvironment("environments/sky_2k.hdr")
-        ?: createEnvironment(environmentLoader)
-}
-```
+### 3. Zero boilerplate lifecycle
 
-Every resource is `remember`-ed. Created once, cleaned up when the composable leaves.
-No `onPause`/`onResume` dance. No `destroy()` calls. No leaked Filament objects.
+**Android:** `remember*` helpers manage everything. No `destroy()` calls.
+**iOS:** SwiftUI and ARC manage everything. No manual cleanup.
 
-### 3. Thread safety by default
+### 4. Thread safety by default
 
-Filament requires all JNI calls on the main thread. `rememberModelInstance` handles the
-IO-to-main-thread transition automatically. You never think about it.
-
-### 4. Gesture handling built in
-
-`ModelNode` supports pinch-to-scale, drag-to-rotate, and two-finger-rotate out of the box.
-`CameraManipulator` gives you orbit/pan/zoom with one line:
-
-```kotlin
-Scene(cameraManipulator = rememberCameraManipulator()) { ... }
-```
+**Android:** Filament requires all JNI calls on the main thread. `rememberModelInstance` handles it.
+**iOS:** RealityKit handles threading internally.
 
 ### 5. AI-assisted development
 
-SceneView ships with an MCP server (`@sceneview/mcp`) and a machine-readable `llms.txt` API
-reference. Claude, Cursor, and other AI tools always have the current API — no hallucinated
-methods, no outdated patterns.
+SceneView ships with an MCP server and `llms.txt` covering both platforms. AI tools generate correct code for Android and iOS.
 
 ---
 
@@ -145,70 +149,40 @@ methods, no outdated patterns.
 
 ### E-commerce: product viewer in 10 lines
 
-Replace a static `Image()` with a `Scene {}` on your product detail page. The customer orbits
-the product with one finger. No separate "3D viewer" screen. No SDK integration project.
-
-```kotlin
-// Before: static image
-Image(painter = painterResource(R.drawable.shoe), contentDescription = "Shoe")
-
-// After: interactive 3D viewer
-Scene(
-    modifier = Modifier.fillMaxWidth().height(300.dp),
-    cameraManipulator = rememberCameraManipulator()
-) {
-    rememberModelInstance(modelLoader, "models/shoe.glb")?.let {
-        ModelNode(modelInstance = it, scaleToUnits = 1.0f)
-    }
-}
-```
+Replace a static image with an interactive 3D viewer on either platform. The customer orbits the product with one finger.
 
 ### Furniture & interior design: AR placement
 
-Let customers see how a sofa looks in their living room. Tap to place, pinch to resize,
-rotate with two fingers. Compose UI floats alongside in 3D space via `ViewNode`.
+Let customers see furniture in their living room. Tap to place, pinch to resize. Works on Android (ARCore) and iOS (ARKit).
 
 ### Education & training
 
-Interactive 3D anatomy models, molecular structures, mechanical assemblies — all controlled
-by standard Compose sliders, buttons, and state. Students manipulate, not just watch.
+Interactive 3D models controlled by standard UI components. Works the same on student tablets (Android) and iPads (iOS).
 
 ### Gaming & entertainment
 
-`PhysicsNode` provides rigid body simulation. Tap-to-throw, collision detection, gravity.
-Combined with `DynamicSkyNode` for time-of-day lighting and `FogNode` for atmosphere.
-
-### Data visualization
-
-3D bar charts, globes, network graphs. The data is Compose `State` — update the state and
-the 3D visualization reacts instantly. No manual scene graph manipulation.
-
-### Social & communication
-
-`AugmentedFaceNode` for face filters and effects. Apply materials to the face mesh, attach
-3D objects to landmarks. Front-camera AR, no separate SDK.
+`PhysicsNode` provides rigid body simulation on both platforms. Tap-to-throw, collision, gravity.
 
 ---
 
 ## The numbers
 
-| Metric | Value |
-|---|---|
-| **Node types** | 26+ composable nodes |
-| **Rendering** | Google Filament 1.70 — physically-based, 60fps mobile |
-| **AR backend** | ARCore 1.53 — latest features |
-| **Min SDK** | 24 (Android 7.0) |
-| **Setup** | 1 Gradle line, 0 XML |
-| **Model viewer** | ~5 lines of Kotlin |
-| **AR placement** | ~15 lines of Kotlin |
-| **License** | Apache 2.0 — use it anywhere |
+| Metric | Android | iOS |
+|---|---|---|
+| **Node types** | 26+ composable | 16 SwiftUI |
+| **Rendering** | Filament 1.70 — PBR, 60fps | RealityKit — Metal, 60fps |
+| **AR backend** | ARCore 1.53 | ARKit |
+| **Min version** | API 24 (Android 7.0) | iOS 17+ |
+| **Setup** | 1 Gradle line | 1 SPM line |
+| **Model viewer** | ~5 lines Kotlin | ~4 lines Swift |
+| **AR placement** | ~15 lines Kotlin | ~5 lines Swift |
+| **License** | Apache 2.0 | Apache 2.0 |
 
 ---
 
 ## Get started in 60 seconds
 
-**Step 1:** Add the dependency
-
+**Android:**
 ```gradle
 // 3D only
 implementation("io.github.sceneview:sceneview:3.3.0")
@@ -217,31 +191,15 @@ implementation("io.github.sceneview:sceneview:3.3.0")
 implementation("io.github.sceneview:arsceneview:3.3.0")
 ```
 
-**Step 2:** Drop a scene into any composable
-
-```kotlin
-@Composable
-fun ProductViewer() {
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine)
-    val model = rememberModelInstance(modelLoader, "models/product.glb")
-
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        modelLoader = modelLoader,
-        cameraManipulator = rememberCameraManipulator()
-    ) {
-        model?.let {
-            ModelNode(modelInstance = it, scaleToUnits = 1.0f, autoAnimate = true)
-        }
-    }
-}
+**iOS / macOS / visionOS:**
+```swift
+// Package.swift or Xcode: File > Add Package Dependencies
+.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
 ```
 
-**Step 3:** Ship it.
+**Step 2:** Drop a scene into any screen — Compose or SwiftUI.
 
-No XML. No fragments. No lifecycle callbacks. No OpenGL boilerplate. Just Compose.
+**Step 3:** Ship it.
 
 ---
 
@@ -249,11 +207,12 @@ No XML. No fragments. No lifecycle callbacks. No OpenGL boilerplate. Just Compos
 
 - **GitHub**: [github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
 - **Maven Central**: `io.github.sceneview:sceneview:3.3.0`
-- **API docs**: [sceneview.github.io](https://sceneview.github.io/api/sceneview/sceneview/)
+- **Swift Package Manager**: `from: "3.3.0"`
+- **Docs**: [sceneview.github.io](https://sceneview.github.io/)
 - **Discord**: [discord.gg/UbNDDBTNqb](https://discord.gg/UbNDDBTNqb)
-- **MCP server**: `npx sceneview-mcp` for AI-assisted development
-- **Samples**: 15 working sample apps in the repository
+- **MCP server**: `npx @sceneview/mcp` for AI-assisted development
+- **Samples**: 15 Android apps + iOS examples in the repository
 
 ---
 
-*SceneView is open source. Built on Google Filament and ARCore. Used in production by apps on Google Play.*
+*SceneView is open source (Apache 2.0). Built on Google Filament + ARCore (Android) and RealityKit + ARKit (Apple). Used in production by apps on Google Play and the App Store.*

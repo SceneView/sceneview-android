@@ -1,3 +1,8 @@
+---
+title: Android Quickstart — SceneView 3D & AR SDK
+description: "Set up SceneView in your Android project in 10 minutes. Add a 3D model viewer with orbit camera, HDR lighting, and gesture controls using Jetpack Compose."
+---
+
 # Quickstart
 
 **Time:** ~10 minutes |
@@ -132,4 +137,4 @@ That is a production-quality, physically-based 3D viewer in under 30 lines of co
 - **Try AR** — Follow the [AR Compose codelab](codelabs/codelab-ar-compose.md) to place models in the real world using `ARScene`.
 - **Explore the samples** — The [samples page](samples.md) covers model animation, camera manipulation, cloud anchors, and more.
 - **Browse the API** — See the full [API reference](https://sceneview.github.io/api/) for every composable, node type, and loader.
-- **Building for Apple platforms?** — SceneView is available for iOS, macOS, and visionOS via SwiftUI and RealityKit. See the [`SceneViewSwift`](https://github.com/SceneView/SceneViewSwift) package.
+- **Building for Apple platforms?** — See the [Apple Quickstart](quickstart-ios.md) for iOS, macOS, and visionOS setup with SwiftUI and RealityKit.

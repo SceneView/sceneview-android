@@ -35,7 +35,18 @@ const val kCameraTextureParameter = "cameraTexture"
 const val kDepthTextureParameter = "depthTexture"
 
 /**
- * Displays the Camera stream using Filament.
+ * Renders the live AR camera feed as the scene background using Filament.
+ *
+ * The camera stream owns OpenGL external textures that receive frames from ARCore, and a
+ * full-screen Filament renderable that draws the active texture behind all scene content.
+ * It also supports **depth occlusion** — when enabled, virtual objects are correctly hidden
+ * behind real-world surfaces using the ARCore depth image.
+ *
+ * Typically created via [rememberARCameraStream] and passed to `ARScene(cameraStream = ...)`.
+ *
+ * @param materialLoader             [MaterialLoader] for creating the camera background materials.
+ * @param standardMaterialFile       Asset path for the flat (non-depth) camera material.
+ * @param depthOcclusionMaterialFile Asset path for the depth-aware occlusion material.
  */
 open class ARCameraStream(
     private val materialLoader: MaterialLoader,

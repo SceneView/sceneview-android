@@ -25,21 +25,35 @@ import io.github.sceneview.collision.Vector3
 import kotlin.math.abs
 import kotlin.math.max
 
+/** 2D position (x, y). */
 typealias Position2 = Float2
+/** 3D position (x, y, z) in world or local space. */
 typealias Position = Float3
+/** Euler angle rotation in degrees (pitch, yaw, roll). */
 typealias Rotation = Float3
+/** Non-uniform scale (x, y, z). */
 typealias Scale = Float3
+/** Unit direction vector (x, y, z). */
 typealias Direction = Float3
+/** 3D size / extents (width, height, depth). */
 typealias Size = Float3
+/** 4x4 transformation matrix (position + rotation + scale). */
 typealias Transform = Mat4
+/** RGBA color (r, g, b, a) with values typically in [0..1]. */
 typealias Color = Float4
 
+/**
+ * Construct a [Transform] matrix from position, quaternion rotation, and scale.
+ */
 fun Transform(
     position: Position = Position(),
     quaternion: Quaternion = Quaternion(),
     scale: Scale = Scale(1.0f)
 ) = translation(position) * rotation(quaternion) * scale(scale)
 
+/**
+ * Construct a [Transform] matrix from position, Euler angle rotation (degrees), and scale.
+ */
 fun Transform(
     position: Position = Position(),
     rotation: Rotation,
@@ -83,9 +97,11 @@ fun Mat3.toColumnsFloatArray() = floatArrayOf(
 fun Mat4.toColumnsDoubleArray(): DoubleArray =
     toColumnsFloatArray().map { it.toDouble() }.toDoubleArray()
 
+/** Extracts the rotation component of this transform as a [Quaternion]. */
 val Mat4.quaternion: Quaternion
     get() = rotation(this).toQuaternion()
 
+/** Transforms a 3D point by this matrix (applies translation, rotation, and scale). */
 operator fun Mat4.times(v: Float3) = (this * Float4(v, 1f)).xyz
 
 fun Mat4.toMatrix() = Matrix(toColumnsFloatArray())
@@ -108,6 +124,13 @@ fun DoubleArray.toTransform() = this.map { it.toFloat() }.toFloatArray().toTrans
 
 fun lerp(start: Float3, end: Float3, deltaSeconds: Float) = mix(start, end, deltaSeconds)
 
+/**
+ * Computes a quaternion that orients a surface given its [normal] direction.
+ *
+ * Derives a right-handed tangent/bitangent/normal frame and returns the
+ * corresponding rotation quaternion. Used for orienting planar geometry
+ * (planes, decals) to face a given direction.
+ */
 fun normalToTangent(normal: Float3): Quaternion {
     var tangent: Float3
     val bitangent: Float3
@@ -157,10 +180,16 @@ fun slerp(
  */
 fun FloatArray.toLinearSpace() = map { pow(it, 2.2f) }.toFloatArray()
 
+/**
+ * Creates a view matrix looking from [eye] toward [target] with Y-up.
+ */
 fun lookAt(eye: Position, target: Position): Mat4 {
     return lookAt(eye, target - eye, Direction(y = 1.0f))
 }
 
+/**
+ * Returns a quaternion that orients an object at [eye] to look along [direction] with Y-up.
+ */
 fun lookTowards(eye: Position, direction: Direction) =
     lookTowards(eye, direction, Direction(y = 1.0f)).toQuaternion()
 

@@ -143,7 +143,7 @@ import io.github.sceneview.utils.intervalSeconds
  */
 fun Frame.hitTest(ray: Ray): List<HitResult> {
     val origin = ray.origin.toFloatArray()
-    val direction = ray.origin.toFloatArray()
+    val direction = ray.direction.toFloatArray()
     return hitTest(origin, origin.size, direction, direction.size)
 }
 //
@@ -194,13 +194,13 @@ fun Frame.hitTest(ray: Ray): List<HitResult> {
 //}.getOrNull()
 
 /**
- * Retrieve all the frame tracked Planes.
+ * Returns the collection of updated trackables of the same type as [trackable] for this frame.
  */
 inline fun <reified T : Trackable> Frame.hasUpdatedTrackable(trackable: T) =
     getUpdatedTrackables(T::class.java)
 
 /**
- * Retrieve all the frame tracked Planes.
+ * Returns all updated [Trackable]s of any type for this frame.
  */
 fun Frame.getUpdatedTrackables() = getUpdatedTrackables(Trackable::class.java)
 
@@ -233,6 +233,14 @@ fun Frame.getUpdatedAugmentedFaces() = getUpdatedTrackables(AugmentedFace::class
  */
 fun Frame.getUpdatedStreetscapeGeometries() = getUpdatedTrackables(StreetscapeGeometry::class.java)
 
+/**
+ * Returns the time interval in seconds between this frame and [other].
+ * If [other] is `null`, returns the interval from timestamp 0.
+ */
 fun Frame.intervalSeconds(other: Frame?): Double = timestamp.intervalSeconds(other?.timestamp)
 
+/**
+ * Returns the estimated frames per second between this frame and [other].
+ * If [other] is `null`, returns the FPS from timestamp 0.
+ */
 fun Frame.fps(other: Frame?): Double = timestamp.fps(other?.timestamp)
