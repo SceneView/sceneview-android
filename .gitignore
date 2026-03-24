@@ -53,3 +53,6 @@ DerivedData/
 # Environment files
 .env
 .env.local
+website/build/
+website/node_modules/
+website/.gradle/

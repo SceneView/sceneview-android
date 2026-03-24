@@ -24,6 +24,7 @@ rootProject.name = "SceneView"
 include ":sceneview-core"
 include ":sceneview"
 include ":arsceneview"
+include ":sceneview-web"
 
 // Samples
 include ":samples:common"
@@ -42,3 +43,5 @@ include ":samples:line-path"
 include ":samples:text-labels"
 include ":samples:reflection-probe"
 include ":samples:sceneview-demo"
+include ":samples:tv-model-viewer"
+include ":samples:web-model-viewer"

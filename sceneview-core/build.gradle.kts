@@ -12,6 +12,12 @@ kotlin {
     iosSimulatorArm64()
     iosX64()
 
+    // Web target (JS/Browser, consumed by the sceneview-web module)
+    js(IR) {
+        browser()
+        binaries.library()
+    }
+
     applyDefaultHierarchyTemplate()
 
     sourceSets {

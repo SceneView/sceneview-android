@@ -1,39 +1,73 @@
 package io.github.sceneview.reactnative
 
-import android.view.Choreographer
 import android.widget.FrameLayout
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
+import io.github.sceneview.Scene
+import io.github.sceneview.math.Position
+import io.github.sceneview.rememberCameraNode
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberEnvironment
+import io.github.sceneview.rememberEnvironmentLoader
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
 
 /**
  * ViewManager that bridges React Native's `<RNSceneView>` to the Jetpack Compose
  * `Scene { }` composable from `io.github.sceneview`.
- *
- * This is a scaffold — the full implementation will:
- * 1. Inflate a ComposeView
- * 2. Set its content to `Scene { ... }` with model/geometry/light nodes
- * 3. Map React props to composable parameters
  */
 class SceneViewManager : SimpleViewManager<FrameLayout>() {
 
     override fun getName(): String = "RNSceneView"
 
+    // Reactive state shared between React props and Compose
+    private val modelPaths = mutableStateListOf<ModelNodeData>()
+    private val environmentPath = mutableStateOf<String?>(null)
+    private val orbitEnabled = mutableStateOf(true)
+
     override fun createViewInstance(reactContext: ThemedReactContext): FrameLayout {
         val container = FrameLayout(reactContext)
         val composeView = ComposeView(reactContext).apply {
             setContent {
-                // TODO: Render Scene { } with nodes from props.
-                // io.github.sceneview.Scene(
-                //     modifier = Modifier.fillMaxSize(),
-                //     engine = rememberEngine(),
-                //     modelLoader = rememberModelLoader(engine),
-                // ) {
-                //     // ModelNode, GeometryNode, LightNode …
-                // }
+                val engine = rememberEngine()
+                val modelLoader = rememberModelLoader(engine)
+                val environmentLoader = rememberEnvironmentLoader(engine)
+
+                val cameraNode = rememberCameraNode(engine) {
+                    position = Position(y = 0f, z = 3.0f)
+                }
+
+                val environment = environmentPath.value?.let { path ->
+                    rememberEnvironment(environmentLoader) {
+                        environmentLoader.createHDREnvironment(path)
+                    }
+                }
+
+                Scene(
+                    modifier = Modifier.fillMaxSize(),
+                    engine = engine,
+                    modelLoader = modelLoader,
+                    cameraNode = cameraNode,
+                    environment = environment,
+                ) {
+                    modelPaths.forEach { model ->
+                        val instance = rememberModelInstance(modelLoader, model.src)
+                        instance?.let {
+                            ModelNode(
+                                modelInstance = it,
+                                scaleToUnits = model.scale,
+                                autoAnimate = model.animate,
+                            )
+                        }
+                    }
+                }
             }
         }
         container.addView(composeView)
@@ -42,26 +76,34 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
 
     @ReactProp(name = "environment")
     fun setEnvironment(view: FrameLayout, environment: String?) {
-        // TODO: Pass environment HDR path to the Scene composable.
+        environmentPath.value = environment
     }
 
     @ReactProp(name = "modelNodes")
     fun setModelNodes(view: FrameLayout, nodes: ReadableArray?) {
-        // TODO: Parse JSON array → list of ModelNode data, trigger recomposition.
-    }
-
-    @ReactProp(name = "geometryNodes")
-    fun setGeometryNodes(view: FrameLayout, nodes: ReadableArray?) {
-        // TODO: Parse JSON array → list of GeometryNode data, trigger recomposition.
-    }
-
-    @ReactProp(name = "lightNodes")
-    fun setLightNodes(view: FrameLayout, nodes: ReadableArray?) {
-        // TODO: Parse JSON array → list of LightNode data, trigger recomposition.
+        modelPaths.clear()
+        nodes?.let { array ->
+            for (i in 0 until array.size()) {
+                val map = array.getMap(i) ?: continue
+                modelPaths.add(
+                    ModelNodeData(
+                        src = map.getString("src") ?: continue,
+                        scale = map.getDouble("scale").toFloat(),
+                        animate = map.getBoolean("animation")
+                    )
+                )
+            }
+        }
     }
 
     @ReactProp(name = "cameraOrbit", defaultBoolean = true)
     fun setCameraOrbit(view: FrameLayout, enabled: Boolean) {
-        // TODO: Enable/disable orbit camera manipulator.
+        orbitEnabled.value = enabled
     }
 }
+
+data class ModelNodeData(
+    val src: String,
+    val scale: Float = 1.0f,
+    val animate: Boolean = true
+)
