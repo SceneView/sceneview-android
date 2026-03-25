@@ -83,14 +83,22 @@
       <div class="hero__model">
         <model-viewer
           src="models/DamagedHelmet.glb"
-          alt="3D model preview"
+          alt="3D damaged helmet rendered by SceneView"
           auto-rotate
+          auto-rotate-delay="0"
+          rotation-per-second="30deg"
           camera-controls
-          shadow-intensity="1"
-          shadow-softness="1"
-          exposure="1"
+          touch-action="pan-y"
+          interaction-prompt="none"
+          shadow-intensity="1.2"
+          shadow-softness="0.8"
+          exposure="1.1"
           environment-image="neutral"
-          style="width:100%;height:100%"
+          camera-orbit="45deg 70deg 2.5m"
+          min-camera-orbit="auto auto auto"
+          max-camera-orbit="auto auto auto"
+          loading="eager"
+          style="width:100%;height:100%;--poster-color:transparent"
         ></model-viewer>
       </div>
     </div>
