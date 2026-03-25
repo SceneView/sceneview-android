@@ -28,22 +28,8 @@ include ":arsceneview"
 include ":sceneview-web"
 include ":sceneview-desktop"
 
-// Samples
+// Samples — one unified showcase per platform
 include ":samples:common"
-include ":samples:ar-augmented-image"
-include ":samples:ar-cloud-anchor"
-include ":samples:ar-model-viewer"
-include ":samples:ar-point-cloud"
-include ":samples:gltf-camera"
-include ":samples:model-viewer"
-include ":samples:camera-manipulator"
-include ":samples:autopilot-demo"
-include ":samples:post-processing"
-include ":samples:physics-demo"
-include ":samples:dynamic-sky"
-include ":samples:line-path"
-include ":samples:text-labels"
-include ":samples:reflection-probe"
-include ":samples:sceneview-demo"
-include ":samples:tv-model-viewer"
-include ":samples:web-model-viewer"
+include ":samples:sceneview-demo"       // Android showcase (Play Store)
+include ":samples:tv-model-viewer"      // Android TV
+include ":samples:web-model-viewer"     // Web (Filament.js + WebXR)

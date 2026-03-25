@@ -41,26 +41,16 @@ For imperative code, use `modelLoader.loadModelInstanceAsync`.
 
 ## Samples
 
-| Directory | Demonstrates |
-|---|---|
-| `samples/model-viewer` | 3D model, HDR environment, orbit camera |
-| `samples/ar-model-viewer` | Tap-to-place, plane detection, pinch/rotate |
-| `samples/gltf-camera` | Cameras imported from a glTF file |
-| `samples/camera-manipulator` | Orbit / pan / zoom camera |
-| `samples/ar-augmented-image` | Real-world image detection + overlay |
-| `samples/ar-cloud-anchor` | Persistent cross-device anchors |
-| `samples/ar-point-cloud` | ARCore feature point visualisation |
-| `samples/autopilot-demo` | Autonomous AR demo |
-| `samples/dynamic-sky` | Time-of-day sun position, DynamicSkyNode |
-| `samples/reflection-probe` | Local cubemap reflections, material picker |
-| `samples/physics-demo` | Rigid body physics, colored balls, bounciness |
-| `samples/post-processing` | Bloom, SSAO, FXAA, tone mapping, vignette |
-| `samples/line-path` | 3D polylines, Lissajous curves, amplitude/frequency |
-| `samples/text-labels` | 3D text, planet labels, tap interaction |
-| `samples/sceneview-demo` | Play Store demo app, 4-tab Material 3 Expressive |
-| `samples/tv-model-viewer` | Android TV 3D viewer, D-pad controls |
-| `samples/web-model-viewer` | Web 3D viewer using Filament.js (WASM) |
-| `samples/ios-demo` | iOS App Store demo app, 3-tab SwiftUI |
+One unified showcase app per platform — all features integrated into tabs.
+
+| Directory | Platform | Demonstrates |
+|---|---|---|
+| `samples/sceneview-demo` | Android | Play Store app — 4-tab Material 3 (3D, AR, Samples, About), 14 demos |
+| `samples/tv-model-viewer` | Android TV | D-pad controls, model cycling, auto-rotation |
+| `samples/web-model-viewer` | Web | Browser 3D viewer, Filament.js (WASM), WebXR AR/VR |
+| `samples/ios-demo` | iOS | App Store app — 3-tab SwiftUI (3D, AR, Samples) |
+| `samples/common` | Shared | Helpers and utilities for all Android samples |
+| `samples/recipes` | Docs | Markdown code recipes (model-viewer, AR, physics, geometry, text) |
 
 ## Module structure
 

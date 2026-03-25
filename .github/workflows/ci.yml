@@ -37,20 +37,7 @@ jobs:
       - name: Build samples
         run: |
           ./gradlew \
-            :samples:model-viewer:assembleDebug \
-            :samples:ar-model-viewer:assembleDebug \
-            :samples:ar-augmented-image:assembleDebug \
-            :samples:ar-cloud-anchor:assembleDebug \
-            :samples:ar-point-cloud:assembleDebug \
-            :samples:gltf-camera:assembleDebug \
-            :samples:camera-manipulator:assembleDebug \
-            :samples:autopilot-demo:assembleDebug \
-            :samples:physics-demo:assembleDebug \
-            :samples:post-processing:assembleDebug \
-            :samples:dynamic-sky:assembleDebug \
-            :samples:line-path:assembleDebug \
-            :samples:text-labels:assembleDebug \
-            :samples:reflection-probe:assembleDebug \
+            :samples:sceneview-demo:assembleDebug \
             :samples:tv-model-viewer:assembleDebug \
             --stacktrace 2>&1 | tee samples-build.log || (grep -E "error:|FAILURE|e:" samples-build.log > samples-error.log && exit 1)
 
