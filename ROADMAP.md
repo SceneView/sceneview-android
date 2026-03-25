@@ -23,6 +23,10 @@
 
 ## Next: v3.5.0
 
+### API simplification
+- [ ] Merge sceneview + arsceneview into single dependency (one `implementation` line)
+- [ ] Unify naming: `SceneView {}` on all platforms (currently `Scene {}` on Android)
+
 ### Platform maturity
 - [ ] Filament JNI for Desktop (hardware 3D, replace software renderer)
 - [ ] Android XR module (Jetpack XR SceneCore)
