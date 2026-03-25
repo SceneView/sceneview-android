@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView Web — Filament.js 3D Viewer</title>
+<meta name="description" content="SceneView Web: lightweight Filament.js 3D viewer. Load glTF/GLB models with one line of JavaScript.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1117; font-family: 'Inter', system-ui, sans-serif; color: #fff; }
+  canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  .overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #0d1117; z-index: 100; transition: opacity 0.5s;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .loader { text-align: center; }
+  .loader-spinner {
+    width: 40px; height: 40px; border: 3px solid rgba(26,115,232,0.2);
+    border-top-color: #1a73e8; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text { font-size: 14px; color: rgba(255,255,255,0.6); }
+
+  .controls {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .model-btn {
+    padding: 8px 16px; border-radius: 8px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.7); font-size: 13px; font-family: inherit;
+    cursor: pointer; transition: all 0.15s; text-align: left;
+  }
+  .model-btn:hover { background: rgba(26,115,232,0.2); border-color: #1a73e8; color: #fff; }
+  .model-btn.active { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+
+  .badge {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    padding: 6px 16px; border-radius: 20px;
+    background: rgba(26,115,232,0.15); border: 1px solid rgba(26,115,232,0.3);
+    color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500;
+    backdrop-filter: blur(8px); pointer-events: none; z-index: 10;
+  }
+  .badge a { color: #4a9af5; text-decoration: none; pointer-events: auto; }
+
+  .info {
+    position: fixed; bottom: 16px; right: 16px; z-index: 10;
+    color: rgba(255,255,255,0.4); font-size: 11px; text-align: right;
+    pointer-events: none;
+  }
+
+  .code-badge {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    padding: 8px 12px; border-radius: 8px;
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px;
+    color: rgba(255,255,255,0.5); max-width: 320px;
+    backdrop-filter: blur(8px);
+  }
+  .code-badge code { color: #7dd3fc; }
+  .code-badge .comment { color: #6b7280; }
+</style>
+</head>
+<body>
+
+<canvas id="viewer"></canvas>
+
+<div class="overlay" id="loading">
+  <div class="loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text" id="loading-text">Initializing Filament.js...</div>
+  </div>
+</div>
+
+<div class="controls" id="controls" style="display:none;">
+  <button class="model-btn active" data-url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">Damaged Helmet</button>
+  <button class="model-btn" data-url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/glTF-Binary/Avocado.glb">Avocado</button>
+  <button class="model-btn" data-url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Lantern/glTF-Binary/Lantern.glb">Lantern</button>
+</div>
+
+<div class="code-badge">
+  <span class="comment">// One-liner to create a 3D viewer</span><br>
+  <code>sceneview.modelViewer("viewer", "model.glb");</code>
+</div>
+
+<div class="badge">Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> + Filament.js</div>
+<div class="info">Drag to orbit | Scroll to zoom | Right-click to pan</div>
+
+<!--
+  SceneView Web library (Kotlin/JS compiled + Filament.js WASM)
+  Build with: ./gradlew :sceneview-web:copyToWebsite
+  The output JS file bundles Kotlin runtime + Filament.js bindings + SceneView API
+-->
+<script src="js/sceneview-web.js"></script>
+<script>
+// SceneView Web Demo
+// API: sceneview.createViewer(canvasId) -> Promise<SceneViewer>
+//      sceneview.modelViewer(canvasId, url) -> Promise<SceneViewer>
+//      SceneViewer: loadModel(url), setAutoRotate(bool), setCameraOrbit(t,p,d), dispose()
+
+var FIRST_MODEL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb";
+var viewer = null;
+
+// Check if the library loaded
+if (typeof sceneview === "undefined") {
+  document.getElementById("loading-text").textContent =
+    "Library not built yet. Run: ./gradlew :sceneview-web:copyToWebsite";
+} else {
+  document.getElementById("loading-text").textContent = "Loading Filament WASM...";
+
+  // Create viewer and load model
+  sceneview.createViewer("viewer").then(function(sv) {
+    viewer = sv;
+    sv.setAutoRotate(true);
+    document.getElementById("loading-text").textContent = "Loading model...";
+    return sv.loadModel(FIRST_MODEL);
+  }).then(function() {
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("controls").style.display = "flex";
+    console.log("SceneView Web v" + sceneview.version + " ready");
+  }).catch(function(err) {
+    console.error("SceneView init failed:", err);
+    document.getElementById("loading-text").textContent = "Error: " + (err.message || err);
+  });
+
+  // Model switching
+  document.querySelectorAll(".model-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      if (!viewer) return;
+      document.querySelectorAll(".model-btn").forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      viewer.loadModel(btn.dataset.url);
+    });
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+package io.github.sceneview.web
+
+import kotlin.js.Promise
+
+/**
+ * SceneViewer — the JavaScript-facing 3D viewer class.
+ *
+ * Instances are created via `sceneview.createViewer()` or `sceneview.modelViewer()`.
+ * All methods use `@JsName` to ensure stable, unmangled names in compiled JS.
+ *
+ * ```js
+ * sceneview.createViewer("canvas").then(function(sv) {
+ *   sv.loadModel("model.glb");
+ *   sv.setAutoRotate(true);
+ * });
+ * ```
+ */
+@JsExport
+@JsName("SceneViewer")
+class SceneViewJS {
+    private var _sceneView: SceneView? = null
+    private var disposed = false
+
+    internal fun attach(sv: SceneView) {
+        _sceneView = sv
+    }
+
+    /**
+     * Load a glTF/GLB model from a URL.
+     * Returns a Promise that resolves with the URL when loaded.
+     */
+    @JsName("loadModel")
+    fun loadModel(url: String): Promise<String> {
+        val sv = _sceneView ?: return Promise.reject(Throwable("SceneViewer not initialized"))
+        return Promise { resolve, reject ->
+            try {
+                sv.loadModel(url) {
+                    resolve(url)
+                }
+            } catch (e: Throwable) {
+                reject(e)
+            }
+        }
+    }
+
+    /**
+     * Load environment lighting from a KTX IBL file URL.
+     */
+    @JsName("setEnvironment")
+    fun setEnvironment(iblUrl: String) {
+        _sceneView?.loadEnvironment(iblUrl, null)
+    }
+
+    /**
+     * Load environment lighting with skybox.
+     */
+    @JsName("setEnvironmentWithSkybox")
+    fun setEnvironmentWithSkybox(iblUrl: String, skyboxUrl: String) {
+        _sceneView?.loadEnvironment(iblUrl, skyboxUrl)
+    }
+
+    /**
+     * Set the camera orbit position in spherical coordinates.
+     * @param theta Horizontal angle in radians
+     * @param phi Vertical angle in radians
+     * @param distance Distance from target
+     */
+    @JsName("setCameraOrbit")
+    fun setCameraOrbit(theta: Double, phi: Double, distance: Double) {
+        _sceneView?.cameraController?.let {
+            it.theta = theta
+            it.phi = phi
+            it.distance = distance
+        }
+    }
+
+    /**
+     * Set the camera orbit target (look-at point).
+     */
+    @JsName("setCameraTarget")
+    fun setCameraTarget(x: Double, y: Double, z: Double) {
+        _sceneView?.cameraController?.target(x, y, z)
+    }
+
+    /**
+     * Enable or disable auto-rotation.
+     */
+    @JsName("setAutoRotate")
+    fun setAutoRotate(enabled: Boolean) {
+        _sceneView?.cameraController?.autoRotate = enabled
+    }
+
+    /**
+     * Set auto-rotation speed in radians per frame.
+     */
+    @JsName("setAutoRotateSpeed")
+    fun setAutoRotateSpeed(speed: Double) {
+        _sceneView?.cameraController?.autoRotateSpeed = speed
+    }
+
+    /**
+     * Set minimum and maximum zoom distances.
+     */
+    @JsName("setZoomLimits")
+    fun setZoomLimits(min: Double, max: Double) {
+        _sceneView?.cameraController?.let {
+            it.minDistance = min
+            it.maxDistance = max
+        }
+    }
+
+    /**
+     * Start the render loop. Called automatically by createViewer().
+     */
+    @JsName("startRendering")
+    fun startRendering() {
+        _sceneView?.startRendering()
+    }
+
+    /**
+     * Stop the render loop.
+     */
+    @JsName("stopRendering")
+    fun stopRendering() {
+        _sceneView?.stopRendering()
+    }
+
+    /**
+     * Resize the viewport. Normally handled automatically.
+     */
+    @JsName("resize")
+    fun resize(width: Int, height: Int) {
+        _sceneView?.resize(width, height)
+    }
+
+    /**
+     * Clean up all GPU resources. Call when removing the viewer.
+     */
+    @JsName("dispose")
+    fun dispose() {
+        if (!disposed) {
+            disposed = true
+            _sceneView?.destroy()
+            _sceneView = null
+        }
+    }
+}
+
+/**
+ * Library version.
+ */
+const val SCENEVIEW_VERSION = "3.4.4"
