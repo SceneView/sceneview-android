@@ -26,6 +26,7 @@
   <!-- model-viewer -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -49,8 +50,9 @@
       <div class="nav__links" id="navLinks">
         <a href="https://sceneview.github.io/docs" class="nav__link">Docs</a>
         <a href="#samples" class="nav__link">Samples</a>
-        <a href="https://github.com/SceneView/sceneview" class="nav__link">GitHub</a>
+        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
         <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
+        <a href="https://github.com/sponsors/ThomasGorisse" class="nav__link">Sponsor</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -69,10 +71,10 @@
       <div class="hero__content">
         <h1 class="hero__title">SceneView</h1>
         <p class="hero__subtitle">3D & AR for every platform</p>
-        <p class="hero__platforms">Android &middot; iOS &middot; Web &middot; Desktop &middot; TV &middot; Flutter &middot; React Native</p>
+        <p class="hero__platforms">Android &middot; iOS &middot; macOS &middot; visionOS &middot; Web &middot; Desktop &middot; TV &middot; Flutter &middot; React Native</p>
         <div class="hero__actions">
           <a href="https://sceneview.github.io/docs/quickstart" class="btn btn--primary">Get Started</a>
-          <a href="https://github.com/SceneView/sceneview" class="btn btn--outline">
+          <a href="https://github.com/sceneview/sceneview" class="btn btn--outline">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
             View on GitHub
           </a>
@@ -222,7 +224,7 @@
             <pre class="code-block"><code><span class="cm">// Swift Package Manager</span>
 <span class="cm">// Add in Xcode: File &rarr; Add Package Dependencies</span>
 
-<span class="str">"https://github.com/SceneView/sceneview-swift"</span>
+<span class="str">"https://github.com/sceneview/sceneview-swift"</span>
 <span class="cm">// Version: 3.3.0</span>
 
 <span class="kw">import</span> SceneViewSwift</code></pre>
@@ -264,37 +266,37 @@
       <p class="section__subtitle">Explore working demos across every supported platform.</p>
 
       <div class="samples__grid">
-        <a href="https://github.com/SceneView/sceneview/tree/main/samples/android-demo" class="sample-card">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo" class="sample-card">
           <div class="sample-card__badge">Android</div>
           <h3 class="sample-card__title">Model Viewer</h3>
           <p class="sample-card__text">3D model, HDR environment, orbit camera</p>
         </a>
-        <a href="https://github.com/SceneView/sceneview/tree/main/samples/android-demo" class="sample-card">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo" class="sample-card">
           <div class="sample-card__badge sample-card__badge--ar">AR</div>
           <h3 class="sample-card__title">AR Model Viewer</h3>
           <p class="sample-card__text">Tap-to-place, plane detection, pinch/rotate</p>
         </a>
-        <a href="https://github.com/SceneView/sceneview/tree/main/samples/android-demo" class="sample-card">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo" class="sample-card">
           <div class="sample-card__badge sample-card__badge--demo">Demo</div>
           <h3 class="sample-card__title">SceneView Demo</h3>
           <p class="sample-card__text">Play Store demo, 4-tab Material 3 Expressive</p>
         </a>
-        <a href="https://github.com/SceneView/sceneview/tree/main/samples/ios-demo" class="sample-card">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/ios-demo" class="sample-card">
           <div class="sample-card__badge sample-card__badge--ios">iOS</div>
           <h3 class="sample-card__title">iOS Demo</h3>
           <p class="sample-card__text">SwiftUI 3-tab app for App Store</p>
         </a>
-        <a href="https://github.com/SceneView/sceneview/tree/main/samples/android-tv-demo" class="sample-card">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-tv-demo" class="sample-card">
           <div class="sample-card__badge sample-card__badge--tv">TV</div>
           <h3 class="sample-card__title">TV Model Viewer</h3>
           <p class="sample-card__text">Android TV, D-pad controls, auto-rotation</p>
         </a>
-        <a href="https://github.com/SceneView/sceneview/tree/main/samples/physics-demo" class="sample-card">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/physics-demo" class="sample-card">
           <div class="sample-card__badge">Android</div>
           <h3 class="sample-card__title">Physics Demo</h3>
           <p class="sample-card__text">Rigid body physics, colored balls, bounciness</p>
         </a>
-        <a href="https://github.com/SceneView/sceneview/tree/main/samples/web-model-viewer" class="sample-card">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/web-model-viewer" class="sample-card">
           <div class="sample-card__badge sample-card__badge--web">Web</div>
           <h3 class="sample-card__title">Web Model Viewer</h3>
           <p class="sample-card__text">Browser-based 3D with Filament.js (WASM)</p>
@@ -344,7 +346,7 @@
           <h3>Discord</h3>
           <p>Chat with developers, ask questions, share your creations</p>
         </a>
-        <a href="https://github.com/SceneView/sceneview" class="community-card community-card--github">
+        <a href="https://github.com/sceneview/sceneview" class="community-card community-card--github">
           <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
           <h3>GitHub</h3>
           <p>Star the repo, report issues, submit pull requests</p>
@@ -366,9 +368,9 @@
           <span>SceneView</span>
         </div>
         <div class="footer__links">
-          <a href="https://github.com/SceneView/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
-          <a href="https://github.com/sponsors/SceneView">GitHub Sponsors</a>
-          <a href="https://github.com/SceneView/sceneview">Source Code</a>
+          <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
+          <a href="https://github.com/sponsors/ThomasGorisse">Sponsor</a>
+          <a href="https://github.com/sceneview/sceneview">Source Code</a>
         </div>
       </div>
     </div>
