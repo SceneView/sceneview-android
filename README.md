@@ -50,6 +50,22 @@ overrides. No manual cleanup. The Compose runtime handles all of it.
 
 ---
 
+## Platforms
+
+| Platform | Renderer | Framework | Sample |
+|---|---|---|---|
+| **Android** | Filament | Jetpack Compose | `samples/android-demo` |
+| **Android TV** | Filament | Compose TV | `samples/android-tv-demo` |
+| **iOS** | RealityKit | SwiftUI | `samples/ios-demo` |
+| **macOS** | RealityKit | SwiftUI | via SceneViewSwift |
+| **visionOS** | RealityKit | SwiftUI | via SceneViewSwift |
+| **Web** | Filament.js (WASM) | Kotlin/JS + WebXR | `samples/web-demo` |
+| **Desktop** | Software / Filament JNI | Compose Desktop | `samples/desktop-demo` |
+| **Flutter** | Filament / RealityKit | PlatformView | `samples/flutter-demo` |
+| **React Native** | Filament / RealityKit | Fabric | `samples/react-native-demo` |
+
+---
+
 ## AR in 15 lines
 
 ```kotlin
