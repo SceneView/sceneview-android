@@ -5,88 +5,95 @@
 ## Last Session Summary
 
 **Date:** 2026-03-25 (night session, autonomous)
-**Branch:** `main` (direct pushes, no PR needed)
+**Branch:** `main` (direct pushes)
+**Commits:** ~15 commits pushed this session
 
-### What Was Done This Session
+### What Was Done
 
-**CI Fix:**
-- material-icons-extended pinned to 1.7.8 (1.10.5 doesn't exist on Google Maven)
-- material-icons-core also pinned to 1.7.8
-- New `composeMaterialIcons` version in libs.versions.toml
+**Samples reorganization (big cleanup):**
+- Deleted 15 obsolete samples (all merged into android-demo)
+- Renamed all samples to `{platform}-demo` convention
+- Moved desktop-demo into samples/
+- Copied flutter-demo and react-native-demo into samples/
+- Final structure: 7 platform demos + common + recipes
 
-**sceneview-core WASM target:**
-- `wasmJs()` target enabled (was commented out, now works with Kotlin 2.3.20 + kotlin-math 1.6.0)
-- `console.warn` via `@JsFun` (proper browser console)
-- `performance.now()` via `@JsFun` (no external dependency)
-- 14 tests (geometry + platform)
+**New features:**
+- sceneview-core WASM target (`wasmJs()`, 14 tests)
+- WebXR AR/VR in sceneview-web (6 declaration files, Filament integration)
+- Desktop software 3D renderer (Compose Canvas, wireframe shapes)
+- Android demo app Material 3 (4 tabs, 14 demos, blue branding)
 
-**WebXR support (sceneview-web):**
-- 6 external declaration files: XRSystem, XRSession, XRFrame, XRReferenceSpace, XRHitTestSource, XRInputSource
-- WebXRSession — Filament.js integration (pose tracking, hit testing, input)
-- ARSceneView + VRSceneView classes
-- "Enter AR" / "Enter VR" buttons in web sample
-- 10 test classes
+**CI fixes:**
+- material-icons-extended pinned to 1.7.8 (1.10.5 doesn't exist)
+- material-icons-core pinned to 1.7.8
+- Missing icons dependency in gltf-camera and reflection-probe (before deletion)
+- CI workflows updated for new sample names
+- APK builds passing green ✅
 
-**Compose Desktop upgrade:**
-- Software 3D renderer with Compose Canvas
-- Rotating cube with filled faces, wireframe octahedron, diamond
-- Perspective projection, grid floor, axis gizmo
-- Material 3 dark theme with SceneView branding
-- 3-tab UI: 3D Viewer, Wireframe, About (7 platforms listed)
+**Website:**
+- sceneview.github.io deployed (Kobweb, GitHub Actions workflow mode)
 
-**Website deployed:**
-- sceneview.github.io switched to GitHub Actions workflow deploy
-- New Kobweb site live
+**Docs:**
+- README: 9-platform table added
+- llms.txt: synced across root, docs/, mcp/
+- CLAUDE.md: updated with night session, Android XR roadmap
 
-**SceneView Pro structure:**
-- Revenue model: 3 passive layers (Sponsors, MCP Pro API, Marketplace)
-- Auto-entrepreneur → SASU migration plan
-- Marketing plan with brand identity (blue theme)
-- Communication sync protocol (never post when site is broken)
+**Business:**
+- SceneView Pro structure (3 passive revenue layers)
+- Branding guide with store asset checklist
+- Email to employer for AE authorization sent
 
-**Legal:**
-- Employment contract reviewed (Article 12 exclusivity clause)
-- Email sent to employer requesting written authorization for open-source + AE activity
+### Current Sample Structure
 
-### Android Demo App (in progress)
-- Agent creating unified Material 3 showcase with 4 tabs (3D, AR, Samples, About)
-- Blue theme matching website branding
-- Committing soon
+```
+samples/
+├── android-demo/         ← Android (Play Store) — 4 tabs, 14 demos
+├── android-tv-demo/      ← Android TV — D-pad, auto-rotation
+├── web-demo/             ← Web — Filament.js, WebXR AR/VR
+├── ios-demo/             ← iOS (App Store) — SwiftUI 3 tabs
+├── desktop-demo/         ← Desktop — software 3D, Compose Desktop
+├── flutter-demo/         ← Flutter — PlatformView bridge
+├── react-native-demo/    ← React Native — Fabric bridge
+├── common/               ← Shared Android helpers
+└── recipes/              ← Code recipes (markdown)
+```
 
 ### Known Issues
 
-- CI build status: pending verification after material-icons fix
-- Filament JNI desktop: release assets are `.a` static libs, no JARs — need to build from source
-- Other session running on website Kobweb (different branch)
+- Dependabot: 6 vulnerabilities (1 high, 3 moderate, 2 low) — check
+- git gc warning: too many unreachable loose objects (`git prune` needed)
+- Flutter/RN demos are copies — originals still in flutter/ and react-native/
+- Desktop: software renderer only, Filament JNI needs building from source
 
 ### Decisions Made
 
-- **material-icons:** separate version pin (1.7.8) since Google deprecated the artifact
-- **WASM:** unblocked — kotlin-math 1.6.0 supports wasmJs
-- **Desktop renderer:** software renderer first (Compose Canvas), Filament JNI as upgrade path
-- **Revenue model:** Freemium + credits (autonomous, minimal management)
-- **Brand colors:** Blue gradient from website = future logo direction
-- **Permissions:** bypassPermissions mode for autonomous night work
+- **Sample naming:** `{platform}-demo` everywhere
+- **All samples in samples/:** even non-Gradle ones (Flutter, RN, iOS)
+- **Android XR:** added to roadmap, uses Jetpack XR SceneCore
+- **Wear OS / Android Auto:** excluded (no 3D rendering support)
+- **Brand colors:** Blue gradient — #1565C0 (dark), #2196F3 (primary), #64B5F6 (light)
+- **Revenue model:** Freemium + credits, 3 passive layers, auto-entrepreneur → SASU
 
 ### What's Next (Priority Order)
 
-1. **Verify CI passes green** — after material-icons fix
-2. **Android demo app finish** — agent completing, needs push
-3. **Unified samples** — same feature set across all platforms, same look & feel
-4. **Filament JNI from source** — build native libs for desktop hardware rendering
-5. **GitHub Sponsors** — already configured in FUNDING.yml
-6. **MCP registry submission** — server.json created, submit to Anthropic
-7. **Store deployments** — Play Store + App Store (need secrets)
-8. **LinkedIn announcement** — ONLY when site + demos stable
-9. **visionOS spatial features** — immersive spaces, hand tracking
-10. **Claude playground on website** — describe in French, get 3D code
+1. **Check employer response** — Hélène's authorization email
+2. **Fix Dependabot vulnerabilities** — 6 security issues
+3. **Run git prune** — clean up loose objects
+4. **Verify all CI green** — latest commits building correctly
+5. **Store assets** — create feature graphics, screenshots for Play/App Store
+6. **Filament JNI from source** — real 3D on Desktop
+7. **Android XR module** — Jetpack XR SceneCore integration
+8. **GitHub Sponsors tiers** — set up sponsor badges
+9. **MCP registry submission** — submit to Anthropic
+10. **LinkedIn announcement** — ONLY when everything is stable
 
 ### Design Rules (Carry Forward)
 
-- **Site is the mirror:** every new sample/platform/language pushes = update site
-- **Unified samples:** one showcase app per platform, same features, same theme
+- **Site is the mirror:** every new sample/platform = update site
+- **Unified samples:** `{platform}-demo`, same features, same theme
 - **AI-first:** every API change → "can an AI generate correct code for this?"
-- **Blue brand:** keep the gradient from the website header
+- **Blue brand:** isometric cube logo, blue gradient
+- **Autonomy first:** revenue model must be self-service, zero management
 
 ## Agent Roles
 
