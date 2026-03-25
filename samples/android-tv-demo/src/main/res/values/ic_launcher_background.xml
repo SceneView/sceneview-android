@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SceneView adaptive icon background — dark navy -->
+    <color name="ic_launcher_background">#0D2137</color>
+</resources>
