@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SceneView + Claude — AI-Powered 3D Development</title>
+  <meta name="description" content="Open Claude with SceneView context — build 3D & AR apps with AI assistance.">
+  <meta http-equiv="refresh" content="2;url=https://claude.ai/new?q=I%20want%20to%20build%20a%203D%20app%20with%20SceneView.%20Help%20me%20get%20started%20with%20Jetpack%20Compose.">
+  <meta property="og:title" content="SceneView + Claude">
+  <meta property="og:description" content="Build 3D & AR apps with AI assistance — open Claude with SceneView context.">
+  <meta property="og:url" content="https://sceneview.github.io/go/claude">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0D2137; color: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    body::before { content: ''; position: fixed; top: -40%; left: 50%; transform: translateX(-50%); width: 800px; height: 800px; background: radial-gradient(circle, rgba(26,115,232,0.15) 0%, transparent 70%); pointer-events: none; }
+    .page { position: relative; z-index: 1; text-align: center; padding: 2rem; max-width: 520px; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(135deg, #d4a574, #c9956b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .desc { color: #7b8fa6; margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.6; }
+    .cta { display: inline-flex; align-items: center; gap: 10px; padding: 16px 36px; border-radius: 16px; font-size: 1rem; font-weight: 700; text-decoration: none; color: #fff; background: linear-gradient(135deg, #c9956b, #a67c52); box-shadow: 0 4px 20px rgba(201,149,107,0.35); transition: transform 0.2s, box-shadow 0.2s; }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(201,149,107,0.45); }
+    .tip { margin-top: 1.5rem; padding: 14px 20px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); text-align: left; font-size: 0.82rem; color: #7b8fa6; line-height: 1.6; }
+    .tip strong { color: #8ab4f8; font-weight: 600; }
+    .note { color: #4ade80; font-size: 0.8rem; margin-top: 1rem; }
+    .fallback { margin-top: 2rem; color: #4a5e73; font-size: 0.8rem; }
+    .fallback a { color: #5e7a94; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="icon">&#9889;</div>
+    <h1>SceneView + Claude</h1>
+    <p class="desc">Open Claude with SceneView context to build 3D & AR apps with AI assistance</p>
+    <a class="cta" href="https://claude.ai/new?q=I%20want%20to%20build%20a%203D%20app%20with%20SceneView.%20Help%20me%20get%20started%20with%20Jetpack%20Compose.">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Open Claude
+    </a>
+    <div class="tip">
+      <strong>Pro tip:</strong> For best results, install the SceneView MCP server so Claude has full API access:<br>
+      <code style="color:#a6e3a1; font-family:monospace;">npx @anthropic/sceneview-mcp</code>
+    </div>
+    <p class="note">Redirecting to Claude...</p>
+    <p class="fallback">Not working? <a href="https://claude.ai">Open Claude manually</a> or go <a href="/go/">back</a></p>
+  </div>
+  <script>
+    setTimeout(function() {
+      window.location.href = 'https://claude.ai/new?q=I%20want%20to%20build%20a%203D%20app%20with%20SceneView.%20Help%20me%20get%20started%20with%20Jetpack%20Compose.';
+    }, 2000);
+  </script>
+</body>
+</html>
