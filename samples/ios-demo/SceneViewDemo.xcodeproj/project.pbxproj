@@ -103,7 +103,7 @@
 			);
 			mainGroup = A40000010000000000000001;
 			packageReferences = (
-				A80000010000000000000002 /* XCRemoteSwiftPackageReference "SceneViewSwift" */,
+				A80000010000000000000002 /* XCLocalSwiftPackageReference "SceneViewSwift" */,
 			);
 			productRefGroup = A40000010000000000000003 /* Products */;
 			projectDirPath = "";
@@ -322,21 +322,16 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		A80000010000000000000002 /* XCRemoteSwiftPackageReference "SceneViewSwift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/SceneView/SceneViewSwift.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.3.0;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		A80000010000000000000002 /* XCLocalSwiftPackageReference "SceneViewSwift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../SceneViewSwift;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		A80000010000000000000001 /* SceneViewSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A80000010000000000000002 /* XCRemoteSwiftPackageReference "SceneViewSwift" */;
 			productName = SceneViewSwift;
 		};
 /* End XCSwiftPackageProductDependency section */

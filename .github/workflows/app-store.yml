@@ -48,7 +48,7 @@ jobs:
           cp $PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles
 
       - name: Resolve Swift Package dependencies
-        run: xcodebuild -resolvePackageDependencies -scheme SceneViewDemo -project SceneViewDemo.xcodeproj
+        run: xcodebuild -resolvePackageDependencies -scheme SceneViewDemo -project SceneViewDemo.xcodeproj -clonedSourcePackagesDirPath SourcePackages
 
       - name: Build archive
         run: |

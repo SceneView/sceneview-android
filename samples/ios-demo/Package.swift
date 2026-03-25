@@ -5,13 +5,13 @@ let package = Package(
     name: "SceneViewDemo",
     platforms: [.iOS(.v17)],
     dependencies: [
-        .package(url: "https://github.com/SceneView/sceneview.git", from: "3.3.0")
+        .package(name: "SceneViewSwift", path: "../../SceneViewSwift")
     ],
     targets: [
         .executableTarget(
             name: "SceneViewDemo",
             dependencies: [
-                .product(name: "SceneViewSwift", package: "sceneview")
+                .product(name: "SceneViewSwift", package: "SceneViewSwift")
             ],
             path: "SceneViewDemo"
         )
