@@ -15,10 +15,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -40,11 +39,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import io.github.sceneview.demo.effects.EffectsScreen
+import io.github.sceneview.demo.about.AboutScreen
+import io.github.sceneview.demo.ar.ARScreen
 import io.github.sceneview.demo.explore.ExploreScreen
-import io.github.sceneview.demo.gallery.GalleryScreen
-import io.github.sceneview.demo.showcase.ShowcaseScreen
-import io.github.sceneview.demo.qa.QAScreen
+import io.github.sceneview.demo.samples.SamplesScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 import io.github.sceneview.demo.update.InAppUpdateManager
 import io.github.sceneview.demo.update.UpdateBanner
@@ -73,17 +71,16 @@ class MainActivity : ComponentActivity() {
 }
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    data object Explore : Screen("explore", "Explore", Icons.Default.Explore)
-    data object Showcase : Screen("showcase", "Showcase", Icons.Default.ViewInAr)
-    data object Gallery : Screen("gallery", "Gallery", Icons.Default.PhotoLibrary)
-    data object Effects : Screen("effects", "Effects", Icons.Default.AutoAwesome)
-    data object QA : Screen("qa", "QA Tests", Icons.Default.BugReport)
+    data object ThreeD : Screen("3d", "3D", Icons.Default.ViewInAr)
+    data object AR : Screen("ar", "AR", Icons.Default.CameraAlt)
+    data object Samples : Screen("samples", "Samples", Icons.Default.GridView)
+    data object About : Screen("about", "About", Icons.Default.Info)
 }
 
 @Composable
 fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Explore, Screen.Showcase, Screen.Gallery, Screen.Effects, Screen.QA)
+    val screens = listOf(Screen.ThreeD, Screen.AR, Screen.Samples, Screen.About)
 
     // Auto-check for updates on launch
     LaunchedEffect(Unit) {
@@ -142,27 +139,24 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
 
             NavHost(
                 navController = navController,
-                startDestination = Screen.Explore.route,
+                startDestination = Screen.ThreeD.route,
                 modifier = Modifier.weight(1f),
                 enterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
                 exitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) },
                 popEnterTransition = { fadeIn() + scaleIn(initialScale = 0.96f) },
                 popExitTransition = { fadeOut() + scaleOut(targetScale = 0.96f) }
             ) {
-                composable(Screen.Explore.route) {
+                composable(Screen.ThreeD.route) {
                     ExploreScreen()
                 }
-                composable(Screen.Showcase.route) {
-                    ShowcaseScreen(updateManager = updateManager)
+                composable(Screen.AR.route) {
+                    ARScreen()
                 }
-                composable(Screen.Gallery.route) {
-                    GalleryScreen()
+                composable(Screen.Samples.route) {
+                    SamplesScreen()
                 }
-                composable(Screen.Effects.route) {
-                    EffectsScreen()
-                }
-                composable(Screen.QA.route) {
-                    QAScreen()
+                composable(Screen.About.route) {
+                    AboutScreen()
                 }
             }
         }
