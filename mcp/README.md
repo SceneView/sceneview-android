@@ -3,8 +3,10 @@
 [![npm version](https://img.shields.io/npm/v/sceneview-mcp?color=6c35aa)](https://www.npmjs.com/package/sceneview-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/sceneview-mcp?color=blue)](https://www.npmjs.com/package/sceneview-mcp)
 [![MCP](https://img.shields.io/badge/MCP-v1.12-blue)](https://modelcontextprotocol.io/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 [![Node](https://img.shields.io/badge/Node-%3E%3D18-brightgreen)](https://nodejs.org/)
+
+> **Disclaimer:** This tool generates code suggestions for the SceneView SDK. Generated code is provided "as is" without warranty. Always review generated code before use in production. This is not a substitute for professional software engineering review. See [TERMS.md](./TERMS.md) and [PRIVACY.md](./PRIVACY.md).
 
 The official [Model Context Protocol](https://modelcontextprotocol.io/) server for **SceneView** — giving AI assistants deep knowledge of the SceneView 3D/AR SDK so they generate correct, compilable Kotlin code.
 
@@ -265,6 +267,12 @@ Published to npm on each SceneView release:
 npm publish --access public
 ```
 
+## Legal
+
+- [LICENSE](./LICENSE) — MIT License
+- [TERMS.md](./TERMS.md) — Terms of Service
+- [PRIVACY.md](./PRIVACY.md) — Privacy Policy (no data collected)
+
 ## License
 
-Apache 2.0 — same as SceneView.
+MIT — see [LICENSE](./LICENSE).
