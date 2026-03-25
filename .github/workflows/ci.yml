@@ -151,13 +151,10 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Build AR samples
+      - name: Build Android demo (includes AR)
         run: |
           ./gradlew \
-            :samples:ar-model-viewer:assembleDebug \
-            :samples:ar-augmented-image:assembleDebug \
-            :samples:ar-cloud-anchor:assembleDebug \
-            :samples:ar-point-cloud:assembleDebug \
+            :samples:android-demo:assembleDebug \
             --stacktrace
 
       - name: Download ARCore emulator APK
