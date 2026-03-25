@@ -321,6 +321,7 @@ button {
   width: 100%;
   aspect-ratio: 1;
   max-width: 500px;
+  min-height: 400px;
   justify-self: center;
   border-radius: var(--radius-lg);
   overflow: hidden;
