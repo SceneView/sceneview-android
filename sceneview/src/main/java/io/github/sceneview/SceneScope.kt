@@ -9,6 +9,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.google.android.filament.Box
 import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.LightManager
@@ -890,6 +891,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         primitiveType: RenderableManager.PrimitiveType,
         vertexBuffer: VertexBuffer,
         indexBuffer: IndexBuffer,
+        boundingBox: Box? = null,
         materialInstance: MaterialInstance? = null,
         apply: MeshNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
@@ -900,6 +902,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 primitiveType = primitiveType,
                 vertexBuffer = vertexBuffer,
                 indexBuffer = indexBuffer,
+                boundingBox = boundingBox,
                 materialInstance = materialInstance
             ).apply(apply)
         }
