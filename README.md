@@ -55,8 +55,8 @@ No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 **Android** (3D + AR):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.4.0")     // 3D
-    implementation("io.github.sceneview:arsceneview:3.4.0")   // AR (includes 3D)
+    implementation("io.github.sceneview:sceneview:3.3.0")     // 3D
+    implementation("io.github.sceneview:arsceneview:3.3.0")   // AR (includes 3D)
 }
 ```
 
@@ -68,7 +68,7 @@ https://github.com/SceneView/SceneViewSwift.git  (from: 3.3.0)
 **Web** (Kotlin/JS + Filament.js):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview-web:3.4.0")
+    implementation("io.github.sceneview:sceneview-web:3.3.0")
 }
 ```
 

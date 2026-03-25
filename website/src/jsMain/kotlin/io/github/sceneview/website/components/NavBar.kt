@@ -98,7 +98,7 @@ fun NavBar() {
                 }
 
                 // GitHub — M3 icon button
-                A(href = "https://github.com/sceneview/sceneview-android", attrs = {
+                A(href = "https://github.com/sceneview/sceneview", attrs = {
                     attr("target", "_blank")
                     attr("rel", "noopener noreferrer")
                     style {

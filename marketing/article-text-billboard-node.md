@@ -295,7 +295,7 @@ Same concept as Android — camera-facing text labels attached to any node or AR
 Both demos are in the SceneView repository:
 
 - `samples/text-labels/` — Labelled 3D spheres, tap to cycle label text (Android)
-- `samples/ar-model-viewer/` — AR tap-to-place with gesture docs (Android)
+- `samples/android-demo/` — AR tap-to-place with gesture docs (Android)
 - iOS examples in `SceneViewSwift/` package
 
 ```

@@ -342,5 +342,5 @@ Same result, same concepts — SwiftUI + RealityKit instead of Compose + Filamen
 - **Try iOS** → Install SceneViewSwift via SPM and build the same viewer in SwiftUI
 - **Add geometry** → Try `CubeNode`, `SphereNode`, `CylinderNode` in the scene block
 - **Embed in a screen** → Replace any `Image()` in your app with this `Box` wrapping a `Scene`
-- **Explore samples** → The [model-viewer](/samples/model-viewer), [gltf-camera](/samples/gltf-camera), and [camera-manipulator](/samples/camera-manipulator) samples show more patterns
+- **Explore samples** → The [model-viewer](/samples/android-demo), [gltf-camera](/samples/gltf-camera), and [camera-manipulator](/samples/camera-manipulator) samples show more patterns
 - **Read the API docs** → [sceneview.github.io/api/sceneview/sceneview](https://sceneview.github.io/api/sceneview/sceneview/)

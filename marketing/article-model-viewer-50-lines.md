@@ -242,7 +242,7 @@ Scene(
 
 ## Full source
 
-The complete model viewer sample (with model picker chips, environment switcher, and animation controls) is in the [SceneView repository](https://github.com/SceneView/sceneview/tree/main/samples/model-viewer).
+The complete model viewer sample (with model picker chips, environment switcher, and animation controls) is in the [SceneView repository](https://github.com/SceneView/sceneview/tree/main/samples/android-demo).
 
 ---
 

@@ -136,4 +136,4 @@ cd sceneview
 ./gradlew :samples:sceneview-demo:lint
 ```
 
-The APK lands in `samples/sceneview-demo/build/outputs/apk/debug/`.
+The APK lands in `samples/android-demo/build/outputs/apk/debug/`.

@@ -341,4 +341,4 @@ ARKit handles plane detection and anchor tracking. RealityKit handles rendering.
 - **Cloud anchors** → `CloudAnchorNode` — share AR experiences between devices (Android)
 - **Face effects** → `AugmentedFaceNode` with front camera (Android)
 - **Hit result cursor** → `HitResultNode(xPx, yPx)` — a placement reticle (Android)
-- **Explore samples** → [ar-model-viewer](/samples/ar-model-viewer), [ar-augmented-image](/samples/ar-augmented-image), [ar-cloud-anchor](/samples/ar-cloud-anchor)
+- **Explore samples** → [ar-model-viewer](/samples/android-demo), [ar-augmented-image](/samples/ar-augmented-image), [ar-cloud-anchor](/samples/ar-cloud-anchor)
