@@ -28,26 +28,26 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Build SceneView Demo APK
-        run: ./gradlew :samples:sceneview-demo:assembleDebug --console=plain
+        run: ./gradlew :samples:android-demo:assembleDebug --console=plain
 
       - name: Collect demo APK
         run: |
           mkdir -p dist
-          apk=$(find samples/sceneview-demo/build/outputs/apk/debug -name "*.apk" | head -1)
-          cp "$apk" dist/sceneview-demo.apk
+          apk=$(find samples/android-demo/build/outputs/apk/debug -name "*.apk" | head -1)
+          cp "$apk" dist/android-demo.apk
 
       - name: Upload demo APK
         uses: actions/upload-artifact@v4
         with:
-          name: sceneview-demo-apk
-          path: dist/sceneview-demo.apk
+          name: android-demo-apk
+          path: dist/android-demo.apk
           retention-days: 90
 
       - name: Attach demo APK to GitHub Release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/sceneview-demo.apk
+          files: dist/android-demo.apk
 
   build-samples:
     name: Build all sample APKs
@@ -70,14 +70,14 @@ jobs:
       - name: Build all sample APKs
         run: |
           ./gradlew \
-            :samples:sceneview-demo:assembleDebug \
-            :samples:tv-model-viewer:assembleDebug \
+            :samples:android-demo:assembleDebug \
+            :samples:android-tv-demo:assembleDebug \
             --stacktrace
 
       - name: Collect APKs
         run: |
           mkdir -p dist
-          for sample in sceneview-demo tv-model-viewer; do
+          for sample in android-demo android-tv-demo; do
             apk=$(find "samples/$sample/build/outputs/apk/debug" -name "*.apk" | head -1)
             if [ -n "$apk" ]; then
               cp "$apk" "dist/sceneview-${sample}.apk"
