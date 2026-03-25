@@ -203,6 +203,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
                 properties: {},
             },
         },
+        {
+            name: "render_3d_preview",
+            description: "Generates an interactive 3D preview link for a glTF/GLB model. Returns a URL to sceneview.github.io/preview that renders the model in the browser with orbit controls, AR support, and sharing. Use this when you want to show a 3D model to the user — paste the link in your response and they can click to see it live. Also works with any publicly accessible .glb URL.",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    modelUrl: {
+                        type: "string",
+                        description: "Public URL to a .glb or .gltf model file. Must be HTTPS and CORS-enabled.",
+                    },
+                    autoRotate: {
+                        type: "boolean",
+                        description: "Auto-rotate the model (default: true)",
+                    },
+                    ar: {
+                        type: "boolean",
+                        description: "Enable AR mode on supported devices (default: true)",
+                    },
+                },
+                required: ["modelUrl"],
+            },
+        },
     ],
 }));
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -691,6 +713,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         ].join("\n"),
                     },
                 ],
+            };
+        }
+        // ── render_3d_preview ──────────────────────────────────────────────────
+        case "render_3d_preview": {
+            const modelUrl = request.params.arguments?.modelUrl;
+            const autoRotate = request.params.arguments?.autoRotate ?? true;
+            const ar = request.params.arguments?.ar ?? true;
+            if (!modelUrl) {
+                return {
+                    content: [{ type: "text", text: "Error: modelUrl is required. Provide a public HTTPS URL to a .glb or .gltf file." }],
+                    isError: true,
+                };
+            }
+            const params = new URLSearchParams();
+            params.set("model", modelUrl);
+            if (!autoRotate)
+                params.set("rotate", "false");
+            if (!ar)
+                params.set("ar", "false");
+            const previewUrl = `https://sceneview.github.io/preview?${params.toString()}`;
+            return {
+                content: [{
+                        type: "text",
+                        text: `## 3D Preview
+
+**[Click to view the 3D model interactively →](${previewUrl})**
+
+The link opens an interactive 3D viewer where you can:
+- 🖱️ Drag to orbit, scroll to zoom
+- 📱 "View in AR" on mobile devices (ARCore/ARKit)
+- 🔗 Share the link with anyone
+
+**Preview URL:** ${previewUrl}
+
+**Model:** ${modelUrl}
+
+---
+*Powered by SceneView — 3D & AR for every platform*`,
+                    }],
             };
         }
         default:
