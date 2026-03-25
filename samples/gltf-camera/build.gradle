@@ -44,4 +44,7 @@ dependencies {
 
     // SceneView
     implementation project(":sceneview")
+
+    // Material Icons (used for camera switch button)
+    implementation libs.androidx.compose.material.icons
 }
