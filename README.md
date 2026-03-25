@@ -2,16 +2,17 @@
 
 ![SceneView Logo](https://github.com/SceneView/sceneview/assets/6597529/ad382001-a771-4484-9746-3ad200d00f05)
 
-> ## 3D is just Compose UI.
+> ## 3D & AR for every platform, powered by AI.
 
-SceneView brings 3D and AR into Jetpack Compose (Android) and SwiftUI (iOS, macOS, visionOS).
+SceneView brings 3D and AR to **Android**, **iOS**, **Web**, **Desktop**, **TV**, **Flutter**, and **React Native**.
 Write a `Scene { }` the same way you write a `Column { }`. Nodes are composables.
 Lifecycle is automatic. State drives everything.
 
-[![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Sceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
-[![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=ARSceneview&color=6c35aa)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![Filament](https://img.shields.io/badge/Filament-v1.70.0-yellow)](https://github.com/google/filament)
-[![ARCore](https://img.shields.io/badge/ARCore-v1.53.0-c961cb)](https://github.com/google-ar/arcore-android-sdk)
+[![Sceneview](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Android&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
+[![ARSceneview](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=AR&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
+[![npm](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&color=1a73e8)](https://www.npmjs.com/package/sceneview-mcp)
+[![Filament](https://img.shields.io/badge/Filament-v1.70.1-64b5f6)](https://github.com/google/filament)
+[![ARCore](https://img.shields.io/badge/ARCore-v1.53.0-64b5f6)](https://github.com/google-ar/arcore-android-sdk)
 
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
 [![Open Collective](https://opencollective.com/sceneview/tiers/badge.svg?label=Donators%20)](https://opencollective.com/sceneview)
