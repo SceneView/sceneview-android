@@ -85,8 +85,35 @@ fun QuickstartPage() {
                 Step("2", "Create a SceneView", colorMode) {
                     CodeBlock("import SwiftUI\nimport SceneViewSwift\n\nstruct ModelViewer: View {\n    var body: some View {\n        SceneView(environment: .studio) {\n            ModelNode(named: \"car.usdz\")\n                .scaleToUnits(1.0)\n                .position(x: 0, y: 0, z: -1)\n        }\n    }\n}", "Swift")
                 }
-                Step("3", "Add AR support (optional)", colorMode) {
-                    CodeBlock("import SceneViewSwift\n\nstruct ARViewer: View {\n    var body: some View {\n        ARSceneView(planeDetection: .horizontal) { position, arView in\n            ModelNode(named: \"robot.usdz\")\n                .scaleToUnits(0.5)\n                .position(position)\n        }\n    }\n}", "Swift")
+            }
+
+            Div(attrs = { style { height(48.px) } }) {}
+
+            DocSection("Web — Kotlin/JS + Filament.js", colorMode) {
+                Step("1", "Add the dependency", colorMode) {
+                    CodeBlock("// build.gradle.kts (Kotlin/JS)\ndependencies {\n    implementation(\"io.github.sceneview:sceneview-web:3.4.0\")\n}", "Gradle")
+                }
+                Step("2", "Create a scene in Kotlin/JS", colorMode) {
+                    CodeBlock("import io.github.sceneview.web.*\n\nfun main() {\n    SceneView(\"canvas\") {\n        camera {\n            position(0.0, 1.5, 5.0)\n            lookAt(0.0, 0.0, 0.0)\n        }\n        light {\n            type(LightType.SUN)\n            intensity(100_000.0)\n        }\n        model(\"models/helmet.glb\")\n    }\n}", "Kotlin")
+                }
+            }
+
+            Div(attrs = { style { height(48.px) } }) {}
+
+            DocSection("Flutter", colorMode) {
+                Step("1", "Add the dependency", colorMode) {
+                    CodeBlock("# pubspec.yaml\ndependencies:\n  sceneview_flutter: ^3.4.0", "YAML")
+                }
+                Step("2", "Use the widget", colorMode) {
+                    CodeBlock("import 'package:sceneview_flutter/sceneview_flutter.dart';\n\nclass MyApp extends StatelessWidget {\n  @override\n  Widget build(BuildContext context) {\n    return SceneView(\n      model: 'assets/models/helmet.glb',\n      environment: 'assets/envs/studio.hdr',\n    );\n  }\n}", "Dart")
+                }
+            }
+
+            Div(attrs = { style { height(48.px) } }) {}
+
+            DocSection("Desktop — Compose Desktop", colorMode) {
+                Step("1", "Run the demo", colorMode) {
+                    CodeBlock("# Clone the repo and run\ngit clone https://github.com/SceneView/sceneview.git\ncd sceneview\n./gradlew :samples:desktop-demo:run", "Terminal")
                 }
             }
         }
