@@ -17,6 +17,7 @@ import { MIGRATION_GUIDE } from "./migration.js";
 import { fetchKnownIssues } from "./issues.js";
 import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
 import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
+import { buildPreviewUrl, validatePreviewInput, formatPreviewResponse } from "./preview.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -242,24 +243,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "render_3d_preview",
       description:
-        "Generates an interactive 3D preview link for a glTF/GLB model. Returns a URL to sceneview.github.io/preview that renders the model in the browser with orbit controls, AR support, and sharing. Use this when you want to show a 3D model to the user — paste the link in your response and they can click to see it live. Also works with any publicly accessible .glb URL.",
+        "Generates an interactive 3D preview link. Accepts a model URL, a SceneView code snippet, or both. Returns a URL to sceneview.github.io/preview that renders the model in the browser with orbit controls, AR support, and sharing. For model URLs: embeds a model-viewer link directly. For code snippets: shows the 3D preview with the code in a companion panel. Use this when you want to show a 3D model to the user — paste the link in your response and they can click to see it live.",
       inputSchema: {
         type: "object",
         properties: {
           modelUrl: {
             type: "string",
-            description: "Public URL to a .glb or .gltf model file. Must be HTTPS and CORS-enabled.",
+            description: "Public URL to a .glb or .gltf model file. Must be HTTPS and CORS-enabled. If omitted, a default model is used.",
+          },
+          codeSnippet: {
+            type: "string",
+            description: "SceneView code snippet (Kotlin or Swift) to display alongside the 3D preview in a companion panel. Useful when showing generated code together with a live preview.",
           },
           autoRotate: {
             type: "boolean",
-            description: "Auto-rotate the model (default: true)",
+            description: "Auto-rotate the model (default: true).",
           },
           ar: {
             type: "boolean",
-            description: "Enable AR mode on supported devices (default: true)",
+            description: "Enable AR mode on supported devices (default: true).",
+          },
+          title: {
+            type: "string",
+            description: "Custom title shown above the preview.",
           },
         },
-        required: ["modelUrl"],
+        required: [],
       },
     },
   ],
@@ -780,44 +789,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── render_3d_preview ──────────────────────────────────────────────────
     case "render_3d_preview": {
-      const modelUrl = request.params.arguments?.modelUrl as string;
-      const autoRotate = (request.params.arguments?.autoRotate as boolean) ?? true;
-      const ar = (request.params.arguments?.ar as boolean) ?? true;
+      const modelUrl = request.params.arguments?.modelUrl as string | undefined;
+      const codeSnippet = request.params.arguments?.codeSnippet as string | undefined;
+      const autoRotate = request.params.arguments?.autoRotate as boolean | undefined;
+      const ar = request.params.arguments?.ar as boolean | undefined;
+      const title = request.params.arguments?.title as string | undefined;
 
-      if (!modelUrl) {
+      const validationError = validatePreviewInput(modelUrl, codeSnippet);
+      if (validationError) {
         return {
-          content: [{ type: "text", text: "Error: modelUrl is required. Provide a public HTTPS URL to a .glb or .gltf file." }],
+          content: [{ type: "text", text: `Error: ${validationError}` }],
           isError: true,
         };
       }
 
-      const params = new URLSearchParams();
-      params.set("model", modelUrl);
-      if (!autoRotate) params.set("rotate", "false");
-      if (!ar) params.set("ar", "false");
+      const result = buildPreviewUrl({ modelUrl, codeSnippet, autoRotate, ar, title });
+      const text = formatPreviewResponse(result);
 
-      const previewUrl = `https://sceneview.github.io/preview?${params.toString()}`;
-
-      return {
-        content: [{
-          type: "text",
-          text: `## 3D Preview
-
-**[Click to view the 3D model interactively →](${previewUrl})**
-
-The link opens an interactive 3D viewer where you can:
-- 🖱️ Drag to orbit, scroll to zoom
-- 📱 "View in AR" on mobile devices (ARCore/ARKit)
-- 🔗 Share the link with anyone
-
-**Preview URL:** ${previewUrl}
-
-**Model:** ${modelUrl}
-
----
-*Powered by SceneView — 3D & AR for every platform*`,
-        }],
-      };
+      return { content: [{ type: "text", text }] };
     }
 
     default:
