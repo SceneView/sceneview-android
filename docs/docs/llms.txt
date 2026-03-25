@@ -2249,14 +2249,14 @@ ARSceneView.checkSupport { supported ->
 
 ## Platform Coverage Summary
 
-| Platform | Renderer | Framework | Module | Status |
+| Platform | Renderer | Framework | Sample | Status |
 |---|---|---|---|---|
-| Android | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable |
-| Android TV | Filament | Compose TV | `samples/tv-model-viewer` | Alpha |
-| iOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
-| macOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
-| visionOS | RealityKit | SwiftUI | `SceneViewSwift` | Alpha |
-| Web | Filament.js | Kotlin/JS | `sceneview-web` | Alpha |
-| Flutter | Filament/RealityKit | PlatformView | `flutter/sceneview_flutter` | Alpha |
-| React Native | Filament/RealityKit | Fabric | `react-native/react-native-sceneview` | Alpha |
-| Desktop | Filament (planned) | Compose Desktop | `sceneview-desktop` | Scaffold |
+| Android | Filament | Jetpack Compose | `samples/android-demo` | Stable |
+| Android TV | Filament | Compose TV | `samples/android-tv-demo` | Alpha |
+| iOS | RealityKit | SwiftUI | `samples/ios-demo` | Alpha |
+| macOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
+| visionOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
+| Web | Filament.js + WebXR | Kotlin/JS | `samples/web-demo` | Alpha |
+| Desktop | Software renderer | Compose Desktop | `samples/desktop-demo` | Alpha |
+| Flutter | Filament/RealityKit | PlatformView | `samples/flutter-demo` | Alpha |
+| React Native | Filament/RealityKit | Fabric | `samples/react-native-demo` | Alpha |
