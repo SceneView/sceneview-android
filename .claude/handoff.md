@@ -4,80 +4,89 @@
 
 ## Last Session Summary
 
-**Date:** 2026-03-24 / 2026-03-25 (evening + night session)
-**Branch:** `feat/multi-platform-expansion`
-**PR:** https://github.com/SceneView/sceneview/pull/709 (ready for review, ~38 commits)
+**Date:** 2026-03-25 (night session, autonomous)
+**Branch:** `main` (direct pushes, no PR needed)
 
-### What Was Done
+### What Was Done This Session
 
-**Modules created:**
-- `sceneview-web` — Kotlin/JS + Filament.js WASM (bindings, DSL, orbit camera, auto-resize, animation, WebXR AR, tests)
-- `sceneview-desktop` — Compose Desktop + LWJGL scaffold (Filament JNI architecture documented)
+**CI Fix:**
+- material-icons-extended pinned to 1.7.8 (1.10.5 doesn't exist on Google Maven)
+- material-icons-core also pinned to 1.7.8
+- New `composeMaterialIcons` version in libs.versions.toml
 
-**Samples:**
-- `tv-model-viewer` — Android TV, D-pad controls
-- `web-model-viewer` — Browser 3D viewer
-- `ios-demo` — SwiftUI 3-tab App Store app
+**sceneview-core WASM target:**
+- `wasmJs()` target enabled (was commented out, now works with Kotlin 2.3.20 + kotlin-math 1.6.0)
+- `console.warn` via `@JsFun` (proper browser console)
+- `performance.now()` via `@JsFun` (no external dependency)
+- 14 tests (geometry + platform)
 
-**Bridges completed:**
-- Flutter Android (ComposeView + Scene) + iOS (UIHostingController + SceneViewSwift)
-- React Native Android (ViewManager + Scene) + iOS (RCTViewManager + SceneViewSwift)
-- Review fixes: RN per-instance state, Flutter AR node, web light implementation
+**WebXR support (sceneview-web):**
+- 6 external declaration files: XRSystem, XRSession, XRFrame, XRReferenceSpace, XRHitTestSource, XRInputSource
+- WebXRSession — Filament.js integration (pose tracking, hit testing, input)
+- ARSceneView + VRSceneView classes
+- "Enter AR" / "Enter VR" buttons in web sample
+- 10 test classes
 
-**Website Kobweb:**
-- 5 pages (Index, Quickstart, Samples, Playground, Changelog)
-- M3 Expressive theme, responsive mobile (hamburger menu fixed)
-- DamagedHelmet.glb model, model-viewer web component
-- Copyright updated, styles.css + CSS injection for static export
-- Build: `kobwebExport` + `injectResponsiveCss` — BUILD SUCCESSFUL
+**Compose Desktop upgrade:**
+- Software 3D renderer with Compose Canvas
+- Rotating cube with filled faces, wireframe octahedron, diamond
+- Perspective projection, grid floor, axis gizmo
+- Material 3 dark theme with SceneView branding
+- 3-tab UI: 3D Viewer, Wireframe, About (7 platforms listed)
 
-**CI/CD:**
-- `docs.yml` — Kobweb (root) + MkDocs (/docs/) combined deploy
-- `app-store.yml` — TestFlight pipeline
-- `ci.yml` — web-desktop + website jobs added
-- `release.yml` — npm sceneview-web publish added
+**Website deployed:**
+- sceneview.github.io switched to GitHub Actions workflow deploy
+- New Kobweb site live
 
-**MCP:**
-- 2 web samples, `get_web_setup` tool, web validator (4 rules, 384 tests)
-- dist rebuilt
+**SceneView Pro structure:**
+- Revenue model: 3 passive layers (Sponsors, MCP Pro API, Marketplace)
+- Auto-entrepreneur → SASU migration plan
+- Marketing plan with brand identity (blue theme)
+- Communication sync protocol (never post when site is broken)
 
-**Docs:**
-- 4 quickstart guides (web, TV, Flutter, React Native)
-- llms.txt with WebXR AR documentation, synced to docs/ and mcp/
-- README with 9-platform table
+**Legal:**
+- Employment contract reviewed (Article 12 exclusivity clause)
+- Email sent to employer requesting written authorization for open-source + AE activity
 
-**Infrastructure:**
-- Harness design patterns (handoff.md, /evaluate, settings.json hooks)
-- Branding reference (.claude/branding.md) — colors, typography, shapes
-- Marketing plan — 6 triggers, 7 channels, release sync protocol
-- WASM target prepared (actuals written, blocked by kotlin-math)
+### Android Demo App (in progress)
+- Agent creating unified Material 3 showcase with 4 tabs (3D, AR, Samples, About)
+- Blue theme matching website branding
+- Committing soon
 
 ### Known Issues
 
-- `material-icons-extended:1.10.5` not on Maven Central (pre-existing)
-- Website mobile navbar: CSS injection needed for Kobweb static export
-- Filament JNI desktop: requires building from source (no Maven artifact)
-- kotlin-math: no wasmJs target yet
+- CI build status: pending verification after material-icons fix
+- Filament JNI desktop: release assets are `.a` static libs, no JARs — need to build from source
+- Other session running on website Kobweb (different branch)
 
 ### Decisions Made
 
-- **Web renderer:** Filament.js (same engine as Android)
-- **WebXR:** production-ready, integrated with Filament.js
-- **Desktop:** Filament JNI via SwingPanel (same Java API as Android)
-- **WASM:** prepared but blocked by kotlin-math dependency
-- **settings.gradle:** PREFER_PROJECT for Kotlin/JS repos
-- **Android Auto/CarPlay:** excluded (no custom views)
-- **Branding:** blue #1a73e8 / #8ab4f8, Inter font, M3 Expressive shapes
+- **material-icons:** separate version pin (1.7.8) since Google deprecated the artifact
+- **WASM:** unblocked — kotlin-math 1.6.0 supports wasmJs
+- **Desktop renderer:** software renderer first (Compose Canvas), Filament JNI as upgrade path
+- **Revenue model:** Freemium + credits (autonomous, minimal management)
+- **Brand colors:** Blue gradient from website = future logo direction
+- **Permissions:** bypassPermissions mode for autonomous night work
 
 ### What's Next (Priority Order)
 
-1. **Merge PR #709** — review and merge into main
-2. **Deploy website** — trigger docs.yml workflow_dispatch after merge
-3. **Deploy stores** — Play Store (demo-v1.0.0 tag) + App Store (ios-demo-v1.0.0)
-4. **Build Filament from source** — get filament-java.jar for desktop
-5. **Publish npm** — `@sceneview/sceneview-web` + sceneview-web dist
-6. **Marketing communication** — after all green on pre-launch checklist
-7. **visionOS spatial features** — immersive spaces, hand tracking
+1. **Verify CI passes green** — after material-icons fix
+2. **Android demo app finish** — agent completing, needs push
+3. **Unified samples** — same feature set across all platforms, same look & feel
+4. **Filament JNI from source** — build native libs for desktop hardware rendering
+5. **GitHub Sponsors** — already configured in FUNDING.yml
+6. **MCP registry submission** — server.json created, submit to Anthropic
+7. **Store deployments** — Play Store + App Store (need secrets)
+8. **LinkedIn announcement** — ONLY when site + demos stable
+9. **visionOS spatial features** — immersive spaces, hand tracking
+10. **Claude playground on website** — describe in French, get 3D code
+
+### Design Rules (Carry Forward)
+
+- **Site is the mirror:** every new sample/platform/language pushes = update site
+- **Unified samples:** one showcase app per platform, same features, same theme
+- **AI-first:** every API change → "can an AI generate correct code for this?"
+- **Blue brand:** keep the gradient from the website header
 
 ## Agent Roles
 
