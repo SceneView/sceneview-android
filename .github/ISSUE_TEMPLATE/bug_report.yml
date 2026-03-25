@@ -7,6 +7,55 @@ body:
       value: |
         Before filing: check the [migration guide](../MIGRATION.md) if you upgraded from v2.
 
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform are you using?
+      options:
+        - Android
+        - iOS
+        - macOS
+        - visionOS
+        - Web
+        - Desktop
+        - Android TV
+        - Flutter
+        - React Native
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - sceneview (3D only)
+        - arsceneview (AR)
+        - SceneViewSwift (Apple)
+        - sceneview-web (Web)
+        - sceneview-core (KMP)
+        - MCP server
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: SceneView version
+      placeholder: "3.3.0"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device / OS
+      placeholder: "Pixel 8 Pro — Android 14 / iPhone 15 Pro — iOS 17.4"
+    validations:
+      required: true
+
   - type: textarea
     id: description
     attributes:
@@ -25,28 +74,9 @@ body:
   - type: textarea
     id: reproduction
     attributes:
-      label: Minimal reproduction
-      description: Paste the smallest Kotlin snippet that reproduces the bug.
+      label: Steps to reproduce
+      description: Paste the smallest code snippet that reproduces the bug, or step-by-step instructions.
       render: kotlin
-    validations:
-      required: true
-
-  - type: input
-    id: version
-    attributes:
-      label: SceneView version
-      placeholder: "3.0.0"
-    validations:
-      required: true
-
-  - type: dropdown
-    id: module
-    attributes:
-      label: Module
-      options:
-        - sceneview (3D only)
-        - arsceneview (AR)
-        - Both
     validations:
       required: true
 
@@ -57,7 +87,7 @@ body:
       render: text
 
   - type: textarea
-    id: device
+    id: screenshots
     attributes:
-      label: Device / OS
-      placeholder: "Pixel 8 Pro — Android 14"
+      label: Screenshots / screen recordings
+      description: Drag and drop images or videos here if applicable.

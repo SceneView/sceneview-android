@@ -1,11 +1,17 @@
-## What
+## Summary
 <!-- Short description of the change -->
 
-## Why
-<!-- The problem this fixes or the feature this adds -->
+## Type
+<!-- Check one -->
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactor / cleanup
+- [ ] Documentation
+- [ ] Build / CI
+- [ ] Other
 
-## How
-<!-- Approach taken. Any non-obvious design decisions -->
+## Testing done
+<!-- How was this tested? Device/emulator, test cases, manual verification -->
 
 ## Checklist
 

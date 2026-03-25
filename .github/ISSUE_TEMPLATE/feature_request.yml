@@ -2,11 +2,31 @@ name: Feature request
 description: Suggest a new feature or API improvement
 labels: [enhancement]
 body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform is this for?
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - macOS
+        - visionOS
+        - Web
+        - Desktop
+        - Android TV
+        - Flutter
+        - React Native
+        - All platforms
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
-      label: What problem does this solve?
-      description: Describe the use case or limitation you're hitting.
+      label: Description
+      description: What problem does this solve? Describe the use case or limitation you're hitting.
     validations:
       required: true
 
@@ -14,8 +34,13 @@ body:
     id: proposal
     attributes:
       label: Proposed API / behaviour
-      description: Show what the Kotlin code would look like with your proposed change.
-      render: kotlin
+      description: Show what the code would look like with your proposed change.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches have you considered? Why are they insufficient?
 
   - type: dropdown
     id: module
@@ -24,8 +49,11 @@ body:
       options:
         - sceneview (3D only)
         - arsceneview (AR)
-        - Both
-        - Other (MCP, samples, docs)
+        - SceneViewSwift (Apple)
+        - sceneview-web (Web)
+        - sceneview-core (KMP)
+        - MCP server
+        - Other (samples, docs)
     validations:
       required: true
 
