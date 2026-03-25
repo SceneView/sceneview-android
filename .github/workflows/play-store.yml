@@ -39,7 +39,7 @@ jobs:
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 -d > samples/sceneview-demo/release.keystore
+        run: echo "$KEYSTORE_BASE64" | base64 -d > samples/android-demo/release.keystore
 
       - name: Build release AAB
         env:
@@ -47,20 +47,20 @@ jobs:
           SCENEVIEW_DEMO_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
           SCENEVIEW_DEMO_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           SCENEVIEW_DEMO_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
-        run: ./gradlew :samples:sceneview-demo:bundleRelease
+        run: ./gradlew :samples:android-demo:bundleRelease
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: sceneview-demo-release
-          path: samples/sceneview-demo/build/outputs/bundle/release/*.aab
+          path: samples/android-demo/build/outputs/bundle/release/*.aab
 
       - name: Publish to Play Store
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: io.github.sceneview.demo
-          releaseFiles: samples/sceneview-demo/build/outputs/bundle/release/*.aab
+          releaseFiles: samples/android-demo/build/outputs/bundle/release/*.aab
           track: ${{ github.event.inputs.track || 'internal' }}
           status: completed
-          whatsNewDirectory: samples/sceneview-demo/play/release-notes
+          whatsNewDirectory: samples/android-demo/play/release-notes
