@@ -144,7 +144,8 @@ object Elevation {
 }
 
 @InitSilk
-fun initTheme(@Suppress("UNUSED_PARAMETER") ctx: InitSilkContext) {
-    // Theme colors are applied via CSS property() calls in components.
-    // Silk palette customization left as default for compatibility.
+fun initTheme(ctx: InitSilkContext) {
+    // Light mode by default — more accessible for new visitors
+    // Dark mode available via toggle in the navbar
+    ctx.config.initialColorMode = ColorMode.LIGHT
 }
