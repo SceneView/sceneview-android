@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.ar.core.Anchor
+import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import com.google.ar.core.Plane
@@ -93,6 +94,20 @@ private val arModels = listOf(
 
 @Composable
 fun ARScreen() {
+    val context = LocalContext.current
+    val arAvailability = remember {
+        try {
+            ArCoreApk.getInstance().checkAvailability(context)
+        } catch (e: Exception) {
+            ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE
+        }
+    }
+
+    if (!arAvailability.isSupported) {
+        ARNotAvailableScreen()
+        return
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         val engine = rememberEngine()
         val modelLoader = rememberModelLoader(engine)
@@ -349,5 +364,48 @@ private fun ScanningReticle(modifier: Modifier = Modifier) {
         bracket(cx + half, cy + half, cx + half, cy + half - cornerLen)
 
         drawCircle(color = Color.White.copy(alpha = 0.9f), radius = 3.dp.toPx())
+    }
+}
+
+@Composable
+private fun ARNotAvailableScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.size(80.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+            Text(
+                text = "AR Not Available",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "This device does not support ARCore.\nAR features require a compatible Android device with Google Play Services for AR installed.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
     }
 }
