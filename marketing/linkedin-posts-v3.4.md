@@ -1,70 +1,73 @@
 # LinkedIn Posts — SceneView v3.4 Launch
 
-## Post 1 : Annonce technique (cible : developpeurs)
+> **DO NOT POST** without Thomas's explicit approval.
+> Review each post, adjust tone/details, then Thomas publishes manually.
 
-9 plateformes. 1 SDK. La 3D et la AR partout.
+## Post 1: Technical announcement (target: developers)
 
-SceneView v3.4 est la, et c'est la mise a jour la plus ambitieuse depuis la creation du projet.
+9 platforms. 1 SDK. 3D and AR everywhere.
 
-Ce qui change :
+SceneView v3.4 is here — the most ambitious update since the project was created.
+
+What's new:
 - Android, iOS, macOS, visionOS, Web, Desktop, Android TV, Flutter, React Native
-- Un moteur natif par plateforme : Filament (Android/Web), RealityKit (Apple)
-- WebXR pour la AR et VR directement dans le navigateur
-- Kotlin Multiplatform pour la logique partagee (collision, physique, geometrie)
-- Un serveur MCP sur le registre officiel Anthropic pour generer du code 3D avec Claude
+- Native renderer per platform: Filament (Android/Web), RealityKit (Apple)
+- WebXR for AR and VR directly in the browser
+- Kotlin Multiplatform for shared logic (collision, physics, geometry)
+- An MCP server on the official Anthropic registry to generate 3D code with Claude
 
-Le tout en Jetpack Compose declaratif cote Android, SwiftUI cote Apple, et Kotlin/JS + Filament WASM cote Web.
+All declarative: Jetpack Compose on Android, SwiftUI on Apple, Kotlin/JS + Filament WASM on Web.
 
-Open source. Gratuit. Pret a l'emploi.
+Open source. Free. Ready to use.
 
-Repo : https://github.com/sceneview/sceneview-android
-MCP : https://github.com/anthropics/mcp-registry
+Repo: https://github.com/sceneview/sceneview
+Website: https://sceneview.github.io
 
 #SceneView #3D #AR #Android #iOS #visionOS #WebXR #KotlinMultiplatform #JetpackCompose #SwiftUI #Flutter #ReactNative #OpenSource #SDK
 
 ---
 
-## Post 2 : Angle IA (cible : tech leaders, passionnes d'IA)
+## Post 2: AI angle (target: tech leaders, AI enthusiasts)
 
-"Construis-moi une app AR." — et Claude le fait. En une seule reponse.
+"Build me an AR app." — and Claude does it. In a single response.
 
-SceneView est le premier SDK 3D/AR concu pour l'IA. Notre serveur MCP est sur le registre officiel Anthropic, ce qui veut dire que Claude peut generer du code 3D fonctionnel sans documentation supplementaire.
+SceneView is the first 3D/AR SDK designed for AI. Our MCP server is on the official Anthropic registry, which means Claude can generate working 3D code without any extra documentation.
 
-Le concept : un SDK "AI-first". Chaque API, chaque signature, chaque doc est optimisee pour qu'un LLM produise du code correct du premier coup.
+The concept: an "AI-first" SDK. Every API, every signature, every doc is optimized so an LLM produces correct code on the first try.
 
-En pratique :
-- Un developpeur demande a Claude "affiche un modele 3D en AR"
-- Claude interroge le serveur MCP SceneView
-- Il genere du Jetpack Compose ou du SwiftUI fonctionnel, pret a compiler
+In practice:
+- A developer asks Claude "display a 3D model in AR"
+- Claude queries the SceneView MCP server
+- It generates working Jetpack Compose or SwiftUI code, ready to compile
 
-9 plateformes supportees. Android, iOS, Web, Desktop, TV, visionOS, Flutter, React Native.
+9 platforms supported. Android, iOS, Web, Desktop, TV, visionOS, Flutter, React Native.
 
-L'IA ne remplace pas les developpeurs. Elle leur donne des super-pouvoirs. Et SceneView est l'outil qui rend ca possible pour la 3D.
+AI doesn't replace developers. It gives them superpowers. And SceneView is the tool that makes this possible for 3D.
 
-Testez : https://github.com/sceneview/sceneview-android
+Try it: https://github.com/sceneview/sceneview
 
 #AI #Claude #MCP #Anthropic #3D #AR #AugmentedReality #AIFirst #DeveloperTools #OpenSource #Innovation
 
 ---
 
-## Post 3 : Histoire personnelle (cible : audience tech generale, sponsors potentiels)
+## Post 3: Personal story (target: general tech audience, potential sponsors)
 
-Il y a 5 ans, j'ai commence a coder un petit projet open source pour simplifier la 3D sur Android.
+5 years ago, I started coding a small open-source project to simplify 3D on Android.
 
-Aujourd'hui, SceneView tourne sur 9 plateformes, est utilise par des milliers de developpeurs, et dispose d'un serveur IA sur le registre officiel d'Anthropic.
+Today, SceneView runs on 9 platforms, is used by thousands of developers, and has an AI server on Anthropic's official registry.
 
-Ce projet, je l'ai construit soir apres soir, week-end apres week-end. Pas de startup, pas de financement. Juste la conviction que la 3D et la realite augmentee devraient etre accessibles a tous les developpeurs, pas seulement aux studios AAA.
+I built this project evening after evening, weekend after weekend. No startup, no funding. Just the belief that 3D and augmented reality should be accessible to every developer, not just AAA studios.
 
-Le chemin :
-- 2021 : premiere version Android avec Filament + ARCore
-- 2024 : Jetpack Compose, API declarative
-- 2025 : iOS (RealityKit), macOS, visionOS via SwiftUI
-- 2026 : Web (WebXR), Desktop, Flutter, React Native, integration IA avec Claude
+The journey:
+- 2021: First Android version with Filament + ARCore
+- 2024: Jetpack Compose, declarative API
+- 2025: iOS (RealityKit), macOS, visionOS via SwiftUI
+- 2026: Web (WebXR), Desktop, Flutter, React Native, AI integration with Claude
 
-Chaque ligne de code est open source. Chaque contribution compte.
+Every line of code is open source. Every contribution matters.
 
-Si vous croyez que l'open source merite d'etre soutenu, un star sur GitHub ou un mot d'encouragement fait toute la difference.
+If you believe open source deserves support, a star on GitHub or a word of encouragement makes all the difference.
 
-https://github.com/sceneview/sceneview-android
+https://github.com/sceneview/sceneview
 
 #OpenSource #Android #iOS #3D #AR #SideProject #PassionProject #DeveloperLife #Motivation #IndieDev #SceneView
