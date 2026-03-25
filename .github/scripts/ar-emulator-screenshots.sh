@@ -33,7 +33,7 @@ fi
 adb install -r "$DEMO_APK"
 
 # Grant camera permission
-adb shell pm grant io.github.sceneview.sample.android android.permission.CAMERA || true
+adb shell pm grant io.github.sceneview.demo android.permission.CAMERA || true
 
 # ---------------------------------------------------------------------------
 # Sensor motion injection
@@ -54,7 +54,7 @@ inject_motion() {
 # Launch demo app and capture AR tab
 # ---------------------------------------------------------------------------
 echo "=== ANDROID DEMO — AR TAB ==="
-adb shell am start -S --activity-clear-task -n "io.github.sceneview.sample.android/.MainActivity"
+adb shell am start -S --activity-clear-task -n "io.github.sceneview.demo/.MainActivity"
 sleep 10
 inject_motion
 sleep 20
