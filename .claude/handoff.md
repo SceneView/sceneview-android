@@ -4,7 +4,7 @@
 
 ## Last Session Summary
 
-**Date:** 2026-03-25 (marathon — 24h session)
+**Date:** 2026-03-25 (marathon session continued)
 **Branch:** `main`
 **Releases:** v3.4.0 + v3.4.1
 **Total commits:** 50+
@@ -13,30 +13,40 @@
 
 **Releases & Publishing:**
 - v3.4.0 + v3.4.1 on GitHub
-- sceneview-mcp@3.4.3 on npm (with render_3d_preview tool)
-- MCP on official registry (io.github.ThomasGorisse/sceneview)
+- MCP published on official registry: `io.github.sceneview/mcp` v3.4.6
+- sceneview-mcp on npm (with render_3d_preview tool)
+
+**GitHub Org:**
+- Renamed SceneView -> sceneview (lowercase)
 
 **Website (static HTML, replaces Kobweb):**
 - sceneview.github.io — dark theme, model-viewer 3D, M3 Expressive
-- /go — universal smart link (platform detection → store redirect)
-- /preview — interactive 3D preview (model URL → AR + share)
+- /go — universal smart link (platform detection -> store redirect)
+- /preview — interactive 3D preview (model URL -> AR + share)
 - /preview/embed — embeddable iframe viewer
 
 **Infrastructure:**
-- 21 GitHub Secrets (Android + iOS + Maven + npm)
+- 21 GitHub Secrets configured (Android + iOS + Maven + npm + GPG)
 - Apple Developer: cert + provisioning + API key (team 5G3DZ3TH45)
-- GitHub Sponsors: active, Stripe configured
-- W-8BEN tax form submitted (France, 0%)
-- Polar.sh added to FUNDING.yml
+- Google Play: W-8BEN tax form completed (France, 0% withholding)
+- GitHub Sponsors: active, Stripe verified
+- Polar.sh: SceneView org created + MCP Pro product ($9.99/mo, test mode)
 
 **Code:**
 - WebXR AR/VR (sceneview-web)
 - Desktop software 3D renderer
 - Android demo Material 3 (4 tabs, 14 demos)
-- Samples: 15→7, {platform}-demo naming
-- README: 622→200 lines
+- WASM target prep in sceneview-core
+- Samples renamed to {platform}-demo convention (7 platforms)
+- 15 audit issues fixed (stale files, versions, references)
+- README: 622 -> 200 lines
 - CHANGELOG, ROADMAP rewritten
 - GitHub description + 20 topics
+
+**Branding:**
+- SVG logos, adaptive icons, favicon
+- Store checklist prepared
+- LinkedIn posts drafted (3 options in English — DO NOT POST yet)
 
 **Strategy:**
 - pro/STRATEGY.md — full plan (deeplinks, monetization, plugins, 3D AI)
@@ -48,21 +58,24 @@
 - **NEVER enter sensitive financial data**
 
 ### Pending (Thomas)
-- [ ] Supprimer 3 apps Play Store (AR Wall Paint, AR for TikTok, Info Trafic Nantes)
-- [ ] Créer Polar.sh (sign in with GitHub)
-- [ ] Checker réponse Hélène
-- [ ] Play Store retry (~26 mars, key reset done)
+- [ ] Polar.sh Go Live (switch from test mode to production)
+- [ ] Play Store deploy retry (~27 March, key reset done)
+- [ ] App Store first build via Xcode
+- [ ] LinkedIn post (when site + stores verified)
+- [ ] GitHub Sponsors tier update (see branding/SPONSOR_TIERS.md)
 
 ### What's Next
-1. Play Store deploy (key reset should be done)
-2. App Store Xcode project for ios-demo
-3. LinkedIn post (when site + stores verified)
-4. Filament JNI Desktop (build from source)
-5. Android XR module
-6. MCP Pro with Polar.sh subscriptions
-7. AI 3D app prototype
-8. Merge sceneview+arsceneview (v3.5.0)
-9. Unify naming: SceneView {} everywhere
+1. **Polar.sh Go Live** — switch from test mode to production
+2. **Play Store deploy** — key reset should be done ~27 March
+3. **App Store first build** — Xcode project for ios-demo
+4. **LinkedIn post** — when stable (3 drafts ready, DO NOT POST)
+5. **GitHub Sponsors tier update** — see branding/SPONSOR_TIERS.md
+6. **MCP Pro implementation** — Cloudflare Workers + Stripe via Polar.sh
+7. Filament JNI Desktop (build from source)
+8. Android XR module
+9. AI 3D app prototype
+10. Merge sceneview+arsceneview (v3.5.0)
+11. Unify naming: SceneView {} everywhere
 
 ## Agent Roles
 | Command | Role |
