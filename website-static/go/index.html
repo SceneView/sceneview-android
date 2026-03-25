@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get SceneView</title>
+  <meta name="description" content="Download SceneView for your platform — Android, iOS, Web, Desktop.">
+
+  <!-- Smart App Banners -->
+  <meta name="apple-itunes-app" content="app-id=TODO">
+  <meta name="google-play-app" content="app-id=io.github.sceneview.demo">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #111827;
+      color: #f9fafb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 500px;
+    }
+    .logo { font-size: 2rem; font-weight: 700; color: #8ab4f8; margin-bottom: 0.5rem; }
+    .subtitle { color: #9ca3af; margin-bottom: 2rem; }
+    .detecting { color: #6b7280; font-size: 0.875rem; margin-bottom: 1.5rem; }
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      margin: 0.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,115,232,0.3); }
+    .btn-primary { background: #1a73e8; color: white; }
+    .btn-secondary { background: #1f2937; color: #8ab4f8; border: 1px solid #374151; }
+    .platforms { margin-top: 2rem; }
+    .platforms a {
+      display: block;
+      padding: 12px 20px;
+      margin: 8px 0;
+      border-radius: 12px;
+      background: #1f2937;
+      color: #d1d5db;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .platforms a:hover { background: #374151; }
+    .platforms a .label { font-weight: 500; }
+    .platforms a .desc { font-size: 0.8rem; color: #6b7280; }
+    .redirect-msg { color: #4ade80; font-size: 0.875rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">SceneView</div>
+    <div class="subtitle">3D & AR for every platform</div>
+    <p class="detecting" id="detecting">Detecting your platform...</p>
+
+    <div id="primary-action"></div>
+
+    <div class="platforms" id="all-platforms" style="display:none">
+      <a href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">
+        <span class="label">Android</span>
+        <span class="desc">Google Play Store</span>
+      </a>
+      <a href="https://sceneview.github.io">
+        <span class="label">iOS</span>
+        <span class="desc">Coming soon to App Store</span>
+      </a>
+      <a href="https://sceneview.github.io">
+        <span class="label">Web</span>
+        <span class="desc">Try in browser</span>
+      </a>
+      <a href="https://github.com/SceneView/sceneview">
+        <span class="label">Developer?</span>
+        <span class="desc">View on GitHub — docs, samples, MCP</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const ua = navigator.userAgent.toLowerCase();
+    const isAndroid = /android/.test(ua);
+    const isIOS = /iphone|ipad|ipod/.test(ua);
+    const isMac = /macintosh/.test(ua);
+
+    const detecting = document.getElementById('detecting');
+    const primary = document.getElementById('primary-action');
+    const all = document.getElementById('all-platforms');
+
+    if (isAndroid) {
+      detecting.textContent = 'Android detected';
+      primary.innerHTML = '<a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">Download on Play Store</a>';
+      // Auto-redirect after 2 seconds
+      setTimeout(() => {
+        document.querySelector('.redirect-msg')?.remove();
+        window.location.href = 'https://play.google.com/store/apps/details?id=io.github.sceneview.demo';
+      }, 2000);
+      primary.innerHTML += '<p class="redirect-msg">Redirecting to Play Store...</p>';
+    } else if (isIOS) {
+      detecting.textContent = 'iOS detected';
+      primary.innerHTML = '<a class="btn btn-primary" href="https://sceneview.github.io">Coming soon to App Store</a>';
+    } else {
+      detecting.textContent = 'Choose your platform';
+      all.style.display = 'block';
+    }
+
+    // Show all platforms link
+    if (isAndroid || isIOS) {
+      setTimeout(() => {
+        all.style.display = 'block';
+        detecting.textContent += ' — or choose another platform:';
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
