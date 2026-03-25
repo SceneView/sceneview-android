@@ -36,6 +36,15 @@ tasks.register("injectResponsiveCss") {
     }
 }
 
+// Force patched versions of transitive npm dependencies (Dependabot security alerts)
+plugins.withType<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin> {
+    the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().apply {
+        resolution("serialize-javascript", ">=7.0.3")
+        resolution("webpack", ">=5.104.1")
+        resolution("webpack-dev-server", ">=5.2.1")
+    }
+}
+
 kotlin {
     configAsKobwebApplication("sceneview-website")
 
