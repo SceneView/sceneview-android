@@ -45,7 +45,11 @@ jobs:
           security list-keychain -d user -s $KEYCHAIN_PATH
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+          # Extract the UUID from the provisioning profile and install with that name
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i $PROFILE_PATH))
+          cp $PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
+          echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> $GITHUB_ENV
 
       - name: Resolve Swift Package dependencies
         run: xcodebuild -resolvePackageDependencies -scheme SceneViewDemo -project SceneViewDemo.xcodeproj -clonedSourcePackagesDirPath SourcePackages
@@ -58,12 +62,15 @@ jobs:
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/SceneViewDemo.xcarchive \
             -destination 'generic/platform=iOS' \
+            -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=5G3DZ3TH45
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            DEVELOPMENT_TEAM=5G3DZ3TH45 \
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_UUID"
 
       - name: Export IPA
         run: |
-          cat > $RUNNER_TEMP/ExportOptions.plist << 'PLIST'
+          cat > $RUNNER_TEMP/ExportOptions.plist << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -72,6 +79,15 @@ jobs:
             <string>app-store-connect</string>
             <key>destination</key>
             <string>upload</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>5G3DZ3TH45</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>io.github.sceneview.demo.ios</key>
+              <string>$PROVISIONING_PROFILE_UUID</string>
+            </dict>
           </dict>
           </plist>
           PLIST
