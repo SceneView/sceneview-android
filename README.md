@@ -5,10 +5,13 @@
 Build 3D and AR experiences with the UI frameworks you already know.
 Same concepts, same simplicity — Android, iOS, Web, Desktop, TV, Flutter, React Native.
 
-[![Android](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Android&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Android&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![AR](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=AR&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![MCP](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&color=1a73e8)](https://www.npmjs.com/package/sceneview-mcp)
-[![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
+[![npm](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&color=1a73e8)](https://www.npmjs.com/package/sceneview-mcp)
+[![CI](https://img.shields.io/github/actions/workflow/status/SceneView/sceneview/ci.yml?branch=main&label=CI)](https://github.com/SceneView/sceneview/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/SceneView/sceneview?color=blue)](https://github.com/SceneView/sceneview/blob/main/LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/SceneView/sceneview?style=flat&color=yellow)](https://github.com/SceneView/sceneview/stargazers)
+[![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff)](https://discord.gg/UbNDDBTNqb)
 [![Sponsors](https://img.shields.io/github/sponsors/ThomasGorisse?label=Sponsors&color=ea4aaa)](https://github.com/sponsors/ThomasGorisse)
 
 ---
