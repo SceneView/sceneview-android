@@ -4,60 +4,70 @@
 
 ## Last Session Summary
 
-**Date:** 2026-03-25 (marathon session — night + day)
+**Date:** 2026-03-25 (marathon — 24h session)
 **Branch:** `main`
-**Total commits:** ~40+ this session
+**Releases:** v3.4.0 + v3.4.1
+**Total commits:** 50+
 
-### Major Achievements
+### Everything delivered
 
-1. **v3.4.0 released** — GitHub Release, 23 commits from v3.3.0
-2. **MCP on official registry** — `io.github.ThomasGorisse/sceneview` live
-3. **Website rebuilt** — Kobweb → static HTML/CSS (zero build, model-viewer 3D)
-4. **21 GitHub Secrets** — Android + iOS + Maven + npm all configured
-5. **Apple Developer** — cert, provisioning profile, API key created
-6. **README rewritten** — 622→200 lines, multi-platform, clean
-7. **Samples reorganized** — 15→7 demos, `{platform}-demo` naming
-8. **GitHub repo polished** — description, topics, cleanup
+**Releases & Publishing:**
+- v3.4.0 + v3.4.1 on GitHub
+- sceneview-mcp@3.4.3 on npm (with render_3d_preview tool)
+- MCP on official registry (io.github.ThomasGorisse/sceneview)
 
-### Website
-- **Tech:** Static HTML/CSS/JS + model-viewer web component
-- **Location:** `website-static/` (deployed to `sceneview.github.io`)
-- **Deploy:** Push to `SceneView/sceneview.github.io` repo directly
-- **Old Kobweb:** Still in `website/` — can be removed in future session
+**Website (static HTML, replaces Kobweb):**
+- sceneview.github.io — dark theme, model-viewer 3D, M3 Expressive
+- /go — universal smart link (platform detection → store redirect)
+- /preview — interactive 3D preview (model URL → AR + share)
+- /preview/embed — embeddable iframe viewer
 
-### Stores
-- **Play Store:** Blocked by upload key reset (48-72h from Mar 23)
-- **App Store:** All secrets ready, workflow needs Xcode project (ios-demo uses Package.swift, not .xcodeproj)
-- **W-8BEN tax form:** Submitted (0% withholding, France treaty)
+**Infrastructure:**
+- 21 GitHub Secrets (Android + iOS + Maven + npm)
+- Apple Developer: cert + provisioning + API key (team 5G3DZ3TH45)
+- GitHub Sponsors: active, Stripe configured
+- W-8BEN tax form submitted (France, 0%)
+- Polar.sh added to FUNDING.yml
+
+**Code:**
+- WebXR AR/VR (sceneview-web)
+- Desktop software 3D renderer
+- Android demo Material 3 (4 tabs, 14 demos)
+- Samples: 15→7, {platform}-demo naming
+- README: 622→200 lines
+- CHANGELOG, ROADMAP rewritten
+- GitHub description + 20 topics
+
+**Strategy:**
+- pro/STRATEGY.md — full plan (deeplinks, monetization, plugins, 3D AI)
+- pro/LINKEDIN_DRAFT.md — 3 post options ready
+- Revenue: Open Collective ($2.6k balance) + GitHub Sponsors + Polar.sh (future)
 
 ### CRITICAL RULES
-- **NEVER touch Octopus Community** — Thomas's employer (CDI)
+- **NEVER touch Octopus Community** — employer (CDI)
 - **NEVER enter sensitive financial data**
-- Use profile-private for pro/personal separation
+
+### Pending (Thomas)
+- [ ] Supprimer 3 apps Play Store (AR Wall Paint, AR for TikTok, Info Trafic Nantes)
+- [ ] Créer Polar.sh (sign in with GitHub)
+- [ ] Checker réponse Hélène
+- [ ] Play Store retry (~26 mars, key reset done)
 
 ### What's Next
-1. **Play Store** — retry deploy (key reset should be done by Mar 26)
-2. **App Store** — create Xcode project for ios-demo OR restructure workflow
-3. **npm @sceneview org** — Thomas needs to create at npmjs.com
-4. **GitHub Sponsors** — Thomas needs to activate
-5. **Model-viewer fix** — verify 3D helmet renders in real browser
-6. **Remove old Kobweb** — clean up `website/` directory
-7. **Merge sceneview+arsceneview** — v3.5.0 breaking change
-8. **Unify naming** — `SceneView {}` everywhere
-9. **Filament JNI Desktop** — hardware 3D rendering
-10. **Android XR** — Jetpack XR SceneCore module
-
-### Design Rules
-- **Site = mirror:** new feature → update site
-- **`{platform}-demo`:** consistent naming
-- **AI-first:** can AI generate correct code?
-- **Blue brand:** #1565C0, #2196F3, #64B5F6
-- **Fast releasing:** ship → tag → publish → communicate
+1. Play Store deploy (key reset should be done)
+2. App Store Xcode project for ios-demo
+3. LinkedIn post (when site + stores verified)
+4. Filament JNI Desktop (build from source)
+5. Android XR module
+6. MCP Pro with Polar.sh subscriptions
+7. AI 3D app prototype
+8. Merge sceneview+arsceneview (v3.5.0)
+9. Unify naming: SceneView {} everywhere
 
 ## Agent Roles
 | Command | Role |
 |---|---|
-| `/review` | Code review checklist |
+| `/review` | Code review |
 | `/evaluate` | Quality scoring |
-| `/sync-check` | Repo sync verification |
+| `/sync-check` | Repo sync |
 | `/release` | Release workflow |
