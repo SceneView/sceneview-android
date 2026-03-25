@@ -1,5 +1,19 @@
 {
   "permissions": {
     "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // \"\"' | grep -qE 'gh secret set|gh secret delete' && { echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"REMINDER: A GitHub secret was just added/modified/deleted. Update branding/SECRETS.md to keep the inventory in sync. Run: gh secret list --repo SceneView/sceneview to get the current list.\"}}'; } || true",
+            "statusMessage": "Checking secrets sync..."
+          }
+        ]
+      }
+    ]
   }
 }
