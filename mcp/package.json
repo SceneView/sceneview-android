@@ -43,6 +43,7 @@
     "dist/migration.js",
     "dist/node-reference.js",
     "dist/samples.js",
+    "dist/preview.js",
     "dist/validator.js",
     "llms.txt"
   ],
