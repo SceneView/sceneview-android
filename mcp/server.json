@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.ThomasGorisse/sceneview",
+  "name": "io.github.sceneview/mcp",
   "description": "3D & AR SDK for Android, iOS, Web — API docs, samples, validation, and code generation.",
   "repository": {
     "url": "https://github.com/SceneView/sceneview",
