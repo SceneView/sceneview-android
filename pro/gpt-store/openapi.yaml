@@ -1,0 +1,208 @@
+openapi: 3.1.0
+info:
+  title: SceneView Assistant API
+  description: >
+    API for the SceneView GPT — generates 3D/AR code, validates SceneView snippets,
+    and provides sample templates for Android (Jetpack Compose) and iOS (SwiftUI).
+  version: 3.3.0
+  contact:
+    name: SceneView
+    url: https://github.com/SceneView/sceneview
+
+servers:
+  - url: https://api.sceneview.dev/v1
+    description: Production server
+
+paths:
+  /generate:
+    post:
+      operationId: generateCode
+      summary: Generate SceneView code from a natural language prompt
+      description: >
+        Takes a natural language description of a 3D or AR feature and returns
+        compilable code (Kotlin for Android, Swift for iOS). The generated code
+        follows SceneView best practices, handles null safety, respects threading
+        rules, and includes all necessary imports.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prompt
+              properties:
+                prompt:
+                  type: string
+                  description: Natural language description of the desired 3D/AR feature.
+                  example: "A 3D scene with a rotating car model, directional lighting, and orbit camera controls"
+                platform:
+                  type: string
+                  enum: [android, ios, web]
+                  default: android
+                  description: Target platform. Android generates Kotlin/Compose, iOS generates Swift/SwiftUI, web generates Kotlin/JS.
+                type:
+                  type: string
+                  enum: ["3d", ar]
+                  default: "3d"
+                  description: Whether to generate a 3D-only scene or an AR scene.
+      responses:
+        "200":
+          description: Generated code with metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The generated source code (Kotlin, Swift, or Kotlin/JS).
+                  language:
+                    type: string
+                    enum: [kotlin, swift, javascript]
+                    description: Programming language of the generated code.
+                  dependencies:
+                    type: array
+                    items:
+                      type: string
+                    description: Required dependencies (Gradle coordinates, SPM URLs, or npm packages).
+                  manifest:
+                    type: string
+                    description: Required manifest changes (AndroidManifest.xml entries, Info.plist keys), if any.
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                    description: Any warnings or notes about the generated code.
+
+  /validate:
+    post:
+      operationId: validateCode
+      summary: Validate a SceneView code snippet for common mistakes
+      description: >
+        Checks Kotlin or Swift SceneView code for common issues: threading
+        violations, wrong destroy order, missing null-checks on model instances,
+        LightNode trailing-lambda bug, deprecated 2.x APIs, missing imports,
+        and platform-specific mistakes. Language is auto-detected.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+              properties:
+                code:
+                  type: string
+                  description: The Kotlin or Swift source code to validate.
+      responses:
+        "200":
+          description: Validation report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    description: True if no issues were found.
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        severity:
+                          type: string
+                          enum: [error, warning, info]
+                          description: Issue severity level.
+                        rule:
+                          type: string
+                          description: Rule identifier (e.g., "threading-violation", "lightnode-trailing-lambda").
+                        message:
+                          type: string
+                          description: Human-readable explanation of the issue.
+                        line:
+                          type: integer
+                          description: Approximate line number where the issue was detected.
+                        fix:
+                          type: string
+                          description: Suggested fix for the issue.
+                  summary:
+                    type: string
+                    description: One-line summary of the validation result.
+
+  /samples:
+    get:
+      operationId: listSamples
+      summary: List available SceneView code samples
+      description: >
+        Returns a list of all available SceneView code samples with their IDs,
+        titles, descriptions, tags, and dependencies. Use the tag parameter to
+        filter by category. Call with a specific sample ID to get the full code.
+      parameters:
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["3d", ar, model, geometry, animation, camera, environment, anchor, ios, swift, video, lighting, physics]
+          description: Filter samples by tag.
+        - name: id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: If provided, returns the full code for this specific sample instead of the list.
+      responses:
+        "200":
+          description: Sample list or single sample with full code
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    description: List of samples (when no id is provided)
+                    properties:
+                      samples:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: Unique sample identifier.
+                            title:
+                              type: string
+                              description: Human-readable title.
+                            description:
+                              type: string
+                              description: What the sample demonstrates.
+                            tags:
+                              type: array
+                              items:
+                                type: string
+                              description: Categorization tags.
+                            platform:
+                              type: string
+                              enum: [android, ios, web]
+                              description: Target platform.
+                      count:
+                        type: integer
+                        description: Total number of matching samples.
+                  - type: object
+                    description: Single sample with full code (when id is provided)
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                      code:
+                        type: string
+                        description: The complete, compilable source code.
+                      language:
+                        type: string
+                        enum: [kotlin, swift]
+                      dependency:
+                        type: string
+                        description: Required dependency for this sample.
