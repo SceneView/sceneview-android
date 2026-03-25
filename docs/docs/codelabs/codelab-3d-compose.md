@@ -17,7 +17,7 @@ By the end of this codelab, you will have a fully working 3D scene that:
 - Scales the model on double-tap
 - Overlays standard Compose UI on top of the 3D viewport
 
-This is the `model-viewer` sample from the SceneView repository, built from scratch step by step.
+This is based on the 3D tab in the `android-demo` sample from the SceneView repository, built from scratch step by step.
 
 **No 3D experience required.** If you know Compose, you already know most of this.
 
