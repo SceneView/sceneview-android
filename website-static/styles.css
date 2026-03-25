@@ -318,6 +318,7 @@ button {
 }
 
 .hero__model {
+  position: relative;
   width: 100%;
   aspect-ratio: 1;
   max-width: 500px;
@@ -325,8 +326,18 @@ button {
   justify-self: center;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: var(--color-surface-dim);
+  background: radial-gradient(ellipse at 50% 40%,
+    rgba(26, 115, 232, 0.1) 0%,
+    rgba(108, 92, 231, 0.06) 40%,
+    var(--color-surface-dim) 80%);
   box-shadow: var(--shadow-lg);
+}
+
+[data-theme="dark"] .hero__model {
+  background: radial-gradient(ellipse at 50% 40%,
+    rgba(138, 180, 248, 0.1) 0%,
+    rgba(187, 134, 252, 0.06) 40%,
+    var(--color-surface-dim) 80%);
 }
 
 /* ===== BUTTONS ===== */
@@ -793,6 +804,8 @@ button {
 
   .hero__model {
     max-width: 360px;
+    min-height: 300px;
+    aspect-ratio: 1;
   }
 
   .ai-section__inner {
@@ -841,6 +854,11 @@ button {
 
   .section {
     padding: var(--space-3xl) 0;
+  }
+
+  .hero__model {
+    max-width: 300px;
+    min-height: 260px;
   }
 }
 
