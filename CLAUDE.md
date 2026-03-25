@@ -144,6 +144,17 @@ Never say "everything is good" without verifying published packages.
   - Flutter plugin scaffold: `flutter/sceneview_flutter/` — Dart API, Android ComposeView bridge, iOS SceneViewSwift bridge
   - React Native module scaffold: `react-native/react-native-sceneview/` — TypeScript, Android ViewManager, iOS RCTViewManager
 
+- **What was done (2026-03-25 night, autonomous session)**:
+  - WASM target enabled in sceneview-core (wasmJs(), 14 tests)
+  - WebXR AR/VR in sceneview-web (6 declaration files, Filament integration, tests)
+  - CI fix: material-icons pinned to 1.7.8 (1.10.5 doesn't exist)
+  - Desktop software 3D renderer (Compose Canvas, wireframe cube/octahedron/diamond)
+  - Android demo app Material 3 (4 tabs, 14 samples, blue branding)
+  - Website Kobweb deployed to GitHub Pages (live)
+  - SceneView Pro revenue structure (3 passive layers)
+  - Platform roadmap: Android XR added, Wear OS / Android Auto excluded
+  - Permissions fixed for autonomous night work
+
 - **What's next (for future sessions)**:
   - **PRIORITY 1 — CREATE PR & MERGE `feat/multi-platform-expansion`**:
     1. Run `gh pr create --base main --head feat/multi-platform-expansion`
@@ -295,13 +306,14 @@ Rationale:
 |---|---|---|---|
 | Android | Filament | Jetpack Compose | Stable (v3.3.0) |
 | Android TV | Filament | Compose TV | Alpha (sample app) |
+| Android XR | Jetpack XR SceneCore | Compose XR | Planned |
 | iOS | RealityKit | SwiftUI | Alpha (v3.3.0) |
 | macOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
 | visionOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
-| Web | Filament.js (WASM) | Kotlin/JS | Alpha (sceneview-web module) |
+| Web | Filament.js (WASM) | Kotlin/JS | Alpha (sceneview-web + WebXR) |
+| Desktop | Software / Filament JNI | Compose Desktop | Alpha (software renderer) |
 | Flutter | Filament / RealityKit | PlatformView | Alpha (bridge implemented) |
 | React Native | Filament / RealityKit | Fabric | Alpha (bridge implemented) |
-| Desktop | Filament (JNI) | Compose Desktop | Planned |
 
 ### KMP core role
 
