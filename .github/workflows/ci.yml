@@ -37,8 +37,8 @@ jobs:
       - name: Build samples
         run: |
           ./gradlew \
-            :samples:sceneview-demo:assembleDebug \
-            :samples:tv-model-viewer:assembleDebug \
+            :samples:android-demo:assembleDebug \
+            :samples:android-tv-demo:assembleDebug \
             --stacktrace 2>&1 | tee samples-build.log || (grep -E "error:|FAILURE|e:" samples-build.log > samples-error.log && exit 1)
 
       - name: Upload sample build log on failure
@@ -97,10 +97,10 @@ jobs:
         run: ./gradlew :sceneview-core:jsTest :sceneview-web:jsTest --stacktrace
 
       - name: Build web sample
-        run: ./gradlew :samples:web-model-viewer:compileKotlinJs --stacktrace
+        run: ./gradlew :samples:web-demo:compileKotlinJs --stacktrace
 
       - name: Build TV sample
-        run: ./gradlew :samples:tv-model-viewer:compileDebugKotlin --stacktrace
+        run: ./gradlew :samples:android-tv-demo:compileDebugKotlin --stacktrace
 
       - name: Build desktop module
         run: ./gradlew :sceneview-desktop:compileKotlinDesktop --stacktrace
