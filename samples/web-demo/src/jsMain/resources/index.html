@@ -3,81 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SceneView Web — Model Viewer</title>
+    <title>SceneView Web Demo — 3D Model Viewer</title>
+    <meta name="description" content="SceneView Web Demo: 3D model viewer powered by Filament.js (WASM) with WebXR AR/VR support.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
-        #scene-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+        :root {
+            --sv-blue: #1a73e8;
+            --sv-blue-light: #4a9af5;
+            --sv-dark: #0D2137;
+            --sv-dark-surface: #142d47;
+            --sv-dark-overlay: rgba(13, 33, 55, 0.85);
+            --sv-text: #e8edf2;
+            --sv-text-muted: rgba(232, 237, 242, 0.6);
+            --sv-radius: 12px;
+            --sv-radius-lg: 16px;
+            --sv-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        .overlay {
-            position: fixed;
-            bottom: 16px;
-            left: 16px;
-            color: rgba(255, 255, 255, 0.7);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 14px;
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            background: var(--sv-dark);
+            font-family: var(--sv-font);
+            color: var(--sv-text);
+        }
+
+        /* Canvas */
+        #scene-canvas {
+            width: 100%; height: 100%; display: block;
+            position: absolute; top: 0; left: 0; z-index: 0;
+        }
+
+        /* Top bar */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px;
+            background: linear-gradient(180deg, var(--sv-dark-overlay) 0%, transparent 100%);
             pointer-events: none;
         }
-        .overlay a {
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-            pointer-events: auto;
-        }
-        .overlay a:hover { text-decoration: underline; }
+        .top-bar > * { pointer-events: auto; }
 
-        /* XR buttons */
-        #xr-buttons {
-            position: fixed;
-            bottom: 16px;
-            right: 16px;
-            display: flex;
-            gap: 8px;
-            z-index: 10;
+        .logo {
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none; color: var(--sv-text);
         }
-        .xr-button {
-            display: none; /* Hidden until support is detected */
-            padding: 12px 24px;
-            border: none;
-            border-radius: 28px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            letter-spacing: 0.02em;
+        .logo-icon {
+            width: 32px; height: 32px;
+            background: var(--sv-blue);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 16px; color: white;
         }
-        .xr-button:hover {
+        .logo-text {
+            font-weight: 700; font-size: 18px; letter-spacing: -0.02em;
+        }
+        .logo-badge {
+            font-size: 11px; font-weight: 500; color: var(--sv-blue-light);
+            background: rgba(26, 115, 232, 0.15);
+            padding: 2px 8px; border-radius: 6px;
+            margin-left: 4px;
+        }
+
+        .top-actions {
+            display: flex; gap: 8px; align-items: center;
+        }
+        .icon-btn {
+            width: 36px; height: 36px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            color: var(--sv-text);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s, border-color 0.15s;
+            font-size: 16px;
+        }
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        /* Model selector panel */
+        .model-selector {
+            position: fixed; left: 20px; top: 50%; transform: translateY(-50%);
+            z-index: 15; display: flex; flex-direction: column; gap: 6px;
+        }
+        .model-chip {
+            padding: 8px 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: var(--sv-dark-overlay);
+            color: var(--sv-text-muted);
+            font-size: 13px; font-weight: 500; font-family: var(--sv-font);
+            cursor: pointer; white-space: nowrap;
+            transition: all 0.2s;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        .model-chip:hover {
+            background: rgba(26, 115, 232, 0.2);
+            border-color: var(--sv-blue);
+            color: var(--sv-text);
+        }
+        .model-chip.active {
+            background: var(--sv-blue);
+            border-color: var(--sv-blue);
+            color: white;
+        }
+
+        /* Controls overlay (bottom-left) */
+        .controls-info {
+            position: fixed; bottom: 20px; left: 20px; z-index: 15;
+            display: flex; flex-direction: column; gap: 4px;
+            font-size: 12px; color: var(--sv-text-muted);
+            pointer-events: none;
+        }
+        .controls-info .row {
+            display: flex; align-items: center; gap: 6px;
+        }
+        .controls-info kbd {
+            display: inline-block;
+            padding: 1px 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            font-family: var(--sv-font); font-size: 11px;
+            background: rgba(255,255,255,0.06);
+            color: var(--sv-text-muted);
+        }
+
+        /* Bottom bar */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 15;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px;
+            background: linear-gradient(0deg, var(--sv-dark-overlay) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        .bottom-bar > * { pointer-events: auto; }
+
+        .powered-by {
+            font-size: 12px; color: var(--sv-text-muted);
+        }
+        .powered-by a {
+            color: var(--sv-blue-light);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .powered-by a:hover { text-decoration: underline; }
+
+        /* XR buttons (bottom-right) */
+        .xr-buttons {
+            display: flex; gap: 8px;
+        }
+        .xr-btn {
+            display: none; /* shown when supported */
+            padding: 10px 20px;
+            border: none; border-radius: 28px;
+            font-family: var(--sv-font);
+            font-size: 13px; font-weight: 600;
+            cursor: pointer; letter-spacing: 0.01em;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .xr-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
         }
-        .xr-button:active {
-            transform: translateY(0);
-        }
+        .xr-btn:active { transform: translateY(0); }
         #enter-ar {
             background: linear-gradient(135deg, #6c5ce7, #a29bfe);
             color: white;
         }
         #enter-vr {
             background: linear-gradient(135deg, #00b894, #55efc4);
-            color: #1a1a2e;
+            color: var(--sv-dark);
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: var(--sv-dark);
+            transition: opacity 0.5s ease;
+        }
+        .loading-overlay.hidden {
+            opacity: 0; pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(26, 115, 232, 0.2);
+            border-top-color: var(--sv-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text {
+            margin-top: 16px;
+            font-size: 14px; font-weight: 500;
+            color: var(--sv-text-muted);
+        }
+        .loading-model-name {
+            margin-top: 6px;
+            font-size: 12px;
+            color: rgba(232, 237, 242, 0.35);
+        }
+        .loading-bar-track {
+            width: 200px; height: 3px;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .loading-bar-fill {
+            width: 0%; height: 100%;
+            background: var(--sv-blue);
+            border-radius: 2px;
+            animation: loading-progress 2s ease-in-out infinite;
+        }
+        @keyframes loading-progress {
+            0% { width: 0%; transform: translateX(0); }
+            50% { width: 60%; }
+            100% { width: 100%; transform: translateX(0); }
+        }
+
+        /* Inline loading chip (when switching models) */
+        .loading-chip {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 50;
+            display: none;
+            padding: 10px 20px;
+            background: var(--sv-dark-overlay);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 28px;
+            font-size: 13px; font-weight: 500;
+            color: var(--sv-text-muted);
+            gap: 10px; align-items: center;
+        }
+        .loading-chip.visible { display: flex; }
+        .loading-chip .mini-spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(26, 115, 232, 0.2);
+            border-top-color: var(--sv-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Auto-rotate toggle */
+        .auto-rotate-btn {
+            padding: 8px 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            color: var(--sv-text-muted);
+            font-size: 12px; font-weight: 500; font-family: var(--sv-font);
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        .auto-rotate-btn:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .auto-rotate-btn.active {
+            background: rgba(26, 115, 232, 0.2);
+            border-color: var(--sv-blue);
+            color: var(--sv-blue-light);
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 640px) {
+            .model-selector {
+                position: fixed; left: 0; right: 0; top: auto; bottom: 64px;
+                transform: none;
+                flex-direction: row; overflow-x: auto;
+                padding: 0 12px; gap: 6px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .model-selector::-webkit-scrollbar { display: none; }
+            .model-chip { flex-shrink: 0; font-size: 12px; padding: 6px 12px; }
+
+            .controls-info { display: none; }
+
+            .top-bar { padding: 10px 14px; }
+            .logo-text { font-size: 16px; }
+            .logo-badge { font-size: 10px; }
+            .bottom-bar { padding: 10px 14px; }
+
+            .xr-btn { padding: 8px 16px; font-size: 12px; }
         }
     </style>
 </head>
 <body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Initializing Filament engine...</div>
+        <div id="loading-model-name" class="loading-model-name"></div>
+        <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
+    </div>
+
+    <!-- Inline loading chip for model switching -->
+    <div id="loading-chip" class="loading-chip">
+        <div class="mini-spinner"></div>
+        <span id="loading-chip-text">Loading model...</span>
+    </div>
+
+    <!-- Canvas -->
     <canvas id="scene-canvas"></canvas>
 
-    <div id="xr-buttons">
-        <button id="enter-ar" class="xr-button">Enter AR</button>
-        <button id="enter-vr" class="xr-button">Enter VR</button>
+    <!-- Top bar -->
+    <header class="top-bar">
+        <a href="https://sceneview.github.io" target="_blank" class="logo" title="SceneView — 3D and AR for Compose and SwiftUI">
+            <div class="logo-icon">S</div>
+            <span class="logo-text">SceneView</span>
+            <span class="logo-badge">Web</span>
+        </a>
+        <div class="top-actions">
+            <button id="auto-rotate-toggle" class="auto-rotate-btn active" title="Toggle auto-rotation">Auto-rotate</button>
+            <a href="https://github.com/SceneView/sceneview" target="_blank" class="icon-btn" title="View on GitHub">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            </a>
+        </div>
+    </header>
+
+    <!-- Model selector (left side on desktop, bottom horizontal on mobile) -->
+    <nav id="model-selector" class="model-selector"></nav>
+
+    <!-- Camera controls info -->
+    <div class="controls-info">
+        <div class="row"><kbd>Drag</kbd> Orbit</div>
+        <div class="row"><kbd>Scroll</kbd> Zoom</div>
+        <div class="row"><kbd>Right-drag</kbd> Pan</div>
     </div>
 
-    <div class="overlay">
-        Powered by <a href="https://github.com/SceneView/sceneview" target="_blank">SceneView</a>
-        + Filament.js + WebXR
-    </div>
+    <!-- Bottom bar -->
+    <footer class="bottom-bar">
+        <div class="powered-by">
+            Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> + <a href="https://github.com/google/filament" target="_blank">Filament.js</a> + WebXR
+        </div>
+        <div class="xr-buttons">
+            <button id="enter-ar" class="xr-btn">Enter AR</button>
+            <button id="enter-vr" class="xr-btn">Enter VR</button>
+        </div>
+    </footer>
+
     <script src="web-model-viewer.js"></script>
 </body>
 </html>
