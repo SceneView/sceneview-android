@@ -76,68 +76,29 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-24)
+### Current state (last updated: 2026-03-25)
 
-- **Active branch**: `feat/multi-platform-expansion` (branched from main)
-- **Latest release**: v3.3.0 (published: Maven Central ✅, npm ✅, SPM ✅, GitHub Release ✅)
-- **What was done this session (2026-03-24 evening)**:
+- **Active branch**: `main`
+- **Latest release**: v3.4.1 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
+- **MCP server**: `io.github.sceneview/mcp` v3.4.6 (npm + registry)
+- **GitHub org**: renamed `SceneView` → `sceneview` (lowercase)
+- **Website**: sceneview.github.io (static HTML, deployed)
 
-  Multi-platform expansion session:
-  - **sceneview-web** module: Kotlin/JS + Filament.js (WASM) — same engine as Android, for browser
-    - External bindings for filament-js npm package (Engine, Scene, View, Camera, Renderer, AssetLoader)
-    - SceneView DSL builder (camera, light, model, environment)
-    - sceneview-core JS target added (math, collision, geometry shared with web)
-  - **Android TV sample**: `samples/android-tv-demo` — D-pad controls, model cycling, auto-rotation
-  - **iOS demo app**: `samples/ios-demo` — SwiftUI 3-tab app (3D, AR, Samples) for App Store
-  - **App Store workflow**: `.github/workflows/app-store.yml` — TestFlight CI/CD with certificate management
-  - **Release workflow updated**: sceneview-web npm publish added to release.yml
-  - **Flutter bridge completed**: Android (ComposeView + Scene composable), iOS (UIHostingController + SceneViewSwift)
-  - **React Native bridge completed**: Android (ComposeView + Scene), iOS (UIHostingController + SceneViewSwift)
+- **What was done this session (2026-03-25)**:
 
-- **What was done previously (2026-03-24)**:
+  Audit, branding, and community session:
+  - **All 15 audit issues fixed** across the codebase
+  - **6 Dependabot vulnerabilities resolved**
+  - **Branding**: SVG logos, adaptive icons, favicon, social preview template
+  - **Community**: SPONSORS.md, CONTRIBUTING.md created
+  - **LinkedIn**: 3 posts in English drafted (NOT posted — needs Thomas approval)
+  - **Accounts**:
+    - GitHub Sponsors: active
+    - Polar.sh: created (test mode)
+    - Apple Developer: configured
+    - Google Play: W-8BEN completed
 
-  Phase 1 — SceneViewSwift stabilization (COMPLETE):
-  - New nodes: DynamicSkyNode, FogNode, ReflectionProbeNode, MeshNode
-  - Enhanced: ModelNode (named animations, materials, collision), LightNode (shadows, attenuation), CameraNode (FOV, DOF, exposure)
-  - 16 node types total in SceneViewSwift
-
-  Phase 2 — Tests (COMPLETE):
-  - 65+ new edge case, error condition, and platform tests
-  - EdgeCaseTests.swift, PlatformTests.swift
-  - All node types have dedicated test files
-
-  Phase 3 — Docs (COMPLETE):
-  - iOS Quickstart (quickstart-ios.md)
-  - iOS API Cheatsheet (cheatsheet-ios.md)
-  - 2 SwiftUI codelabs (3D + AR)
-  - iOS Samples page (samples-ios.md)
-  - mkdocs.yml updated with all new pages
-  - llms.txt updated with complete iOS API reference
-
-  Phase 4 — MCP (COMPLETE):
-  - 8 iOS Swift samples in samples.ts
-  - get_ios_setup tool in index.ts
-  - Swift code validation in validator.ts
-  - iOS ARKit guides, best practices, troubleshooting
-  - dist rebuilt
-
-  Phase 5 — Full project stabilization (COMPLETE):
-  - Android sceneview: KDoc audit, all 21 composables documented
-  - Android arsceneview: KDoc for 13 files, **critical bug fix** in Frame.hitTest (direction was using origin)
-  - KMP sceneview-core: **4 critical math bugs fixed** (Ray-box intersection, SAT overlap, box-box axes, Delaunator bounds)
-  - Sample apps: merge conflict resolved, Material 2→3 migration, hardcoded deps removed, exposed password removed
-  - Website: SEO meta tags, structured data, cross-linking, SwiftUI tab on homepage, 4 iOS FAQ
-  - Marketing: all 20 files updated for cross-platform messaging
-  - MCP: iOS samples verified, validator corrected, 368 tests pass
-  - Swift audit: endif guards fixed, duplicate extension extracted, Sendable correctness, missing rotation/discardableResult
-  - Test suite: 1081 lines of tests added across 15 files, imports fixed
-  - Repo cleanup: .gitignore enriched, SceneViewSwift README updated
-
-  Phase 6 — Cross-framework scaffolds (COMPLETE):
-  - Flutter plugin scaffold: `flutter/sceneview_flutter/` — Dart API, Android ComposeView bridge, iOS SceneViewSwift bridge
-  - React Native module scaffold: `react-native/react-native-sceneview/` — TypeScript, Android ViewManager, iOS RCTViewManager
-
-- **What was done (2026-03-25 night, autonomous session)**:
+- **What was done previously (2026-03-25 night, autonomous session)**:
   - WASM target enabled in sceneview-core (wasmJs(), 14 tests)
   - WebXR AR/VR in sceneview-web (6 declaration files, Filament integration, tests)
   - CI fix: material-icons pinned to 1.7.8 (1.10.5 doesn't exist)
@@ -146,37 +107,29 @@ Never say "everything is good" without verifying published packages.
   - Website Kobweb deployed to GitHub Pages (live)
   - SceneView Pro revenue structure (3 passive layers)
   - Platform roadmap: Android XR added, Wear OS / Android Auto excluded
-  - Permissions fixed for autonomous night work
+
+- **What was done previously (2026-03-24)**:
+
+  Multi-platform expansion (merged to main):
+  - sceneview-web module (Kotlin/JS + Filament.js WASM)
+  - Android TV sample (`samples/android-tv-demo`)
+  - iOS demo app (`samples/ios-demo`)
+  - Flutter bridge (`flutter/`), React Native bridge (`react-native/`)
+  - SceneViewSwift: 16 node types, full test suite, docs, MCP iOS support
+  - KMP sceneview-core: 4 critical math bugs fixed
+  - Android: KDoc audit, Frame.hitTest bug fix, Material 3 migration
 
 - **What's next (for future sessions)**:
-  - **PRIORITY 1 — CREATE PR & MERGE `feat/multi-platform-expansion`**:
-    1. Run `gh pr create --base main --head feat/multi-platform-expansion`
-    2. PR title: `feat: multi-platform expansion — web (Filament.js), Android TV, iOS demo, Flutter/RN bridges`
-    3. Merge after review
-  - **PRIORITY 2 — Kobweb website** (branch: `feat/multi-platform-expansion`, sources in `website/`):
-    - **Architecture**: Kobweb (Compose HTML / Kotlin/JS) + model-viewer web component for live 3D
-    - **Now that sceneview-web exists**: use sceneview-web (Filament.js native) instead of model-viewer for the 3D demos — same engine as Android
-    - **Sources on disk** (13 Kotlin files):
-      - `website/src/jsMain/kotlin/.../pages/`: Index, Quickstart, Samples, Playground, Changelog
-      - `website/src/jsMain/kotlin/.../components/`: NavBar, Footer, Layout, CodeBlock, FeatureCard, PlatformTabs, Seo, ModelViewer
-      - `website/src/jsMain/kotlin/.../Theme.kt` + `AppEntry.kt`
-    - **Design**: Material Design 3 Expressive (28px radius, spring easing, tonal surfaces, Inter font)
-    - **SEO/LLM**: llms.txt, llms-full.txt, sitemap.xml, robots.txt, structured-data.json, per-page meta/OG/Twitter
-    - **Build config**: `website/build.gradle.kts`, `website/settings.gradle.kts`, `website/gradle/libs.versions.toml` (Kotlin 2.0.20, Kobweb 0.19.2)
-    - **Model**: DamagedHelmet.glb (Khronos CC0) in `website/src/jsMain/resources/public/models/`
-    - **Status**: scaffold built, M3 styled, model-viewer integrated, build passes (`kobwebExport`), needs assembly + deploy
-    - **Process commands**: `/sync-check` (pre-PR verification), `/release` (guided release workflow) — already on main
-  - Sync llms.txt across docs/docs/llms.txt and mcp/llms.txt (add web API)
-  - Consider v3.4.0-alpha release tag
+  - **PRIORITY 1 — Polar.sh Go Live**: switch from test mode to production
+  - **PRIORITY 2 — Play Store deploy**: upload key reset expected ~27 March, then deploy `samples/android-demo`
+  - **PRIORITY 3 — App Store first build**: submit `samples/ios-demo` to TestFlight
+  - **PRIORITY 4 — GitHub Sponsors tier update**: configure tiers and benefits
+  - **PRIORITY 5 — LinkedIn post**: publish when stable (needs Thomas approval, 3 drafts ready)
+  - **PRIORITY 6 — MCP Pro implementation**: premium features for SceneView Pro subscribers
+  - **PRIORITY 7 — v3.4.0 Maven Central publish**: `gradle.properties` still says 3.3.0, needs version bump + Sonatype publish
   - KMP core XCFramework: build and integrate into SceneViewSwift
   - visionOS spatial features (immersive spaces, hand tracking)
   - Compose Desktop module (Filament JNI on Windows/Linux/macOS)
-  - **GitHub Pages migration**:
-    1. Repo Settings → Pages → Source → "GitHub Actions"
-    2. Trigger `workflow_dispatch` on `docs.yml`
-  - **Store deployments** (need secrets):
-    - Play Store: `UPLOAD_KEYSTORE_BASE64`, `PLAY_STORE_SERVICE_ACCOUNT_JSON`
-    - App Store: `IOS_BUILD_CERTIFICATE_BASE64`, `APP_STORE_CONNECT_API_KEY`
   - Publish sceneview-web to npm: `@sceneview/sceneview-web`
   - Publish Flutter plugin to pub.dev
   - Publish React Native module to npm
@@ -197,13 +150,10 @@ Never say "everything is good" without verifying published packages.
   native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
 - **Demo app** (`samples/android-demo/`): Play Store ready, 4-tab architecture (Explore,
   Showcase, Gallery, QA), Material 3 Expressive
-- **MCP server** (`mcp/`): published npm package for AI assistant integration; now with
-  iOS support (8 Swift samples, `get_ios_setup` tool, Swift code validation)
-- **Website**: `docs/` (MkDocs), deployed via native GitHub Pages from this repo
-  (no longer uses separate `sceneview.github.io` repo — that repo can be archived)
-- **Pending**: GitHub secrets for Play Store deployment (keystore + service account)
-- **GitHub Pages setup required**: In repo Settings → Pages → Source, select "GitHub Actions"
-  (no `PERSONAL_TOKEN` secret needed anymore)
+- **MCP server** (`mcp/`): `io.github.sceneview/mcp` v3.4.6 on npm + registry; iOS support
+  (8 Swift samples, `get_ios_setup` tool, Swift code validation)
+- **Website**: sceneview.github.io (static HTML, deployed)
+- **Pending**: Play Store key reset (~27 March), App Store first TestFlight build
 
 ### How to update this section
 
