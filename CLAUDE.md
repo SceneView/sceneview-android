@@ -79,24 +79,26 @@ Never say "everything is good" without verifying published packages.
 ### Current state (last updated: 2026-03-25)
 
 - **Active branch**: `main`
-- **Latest release**: v3.4.1 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
-- **MCP server**: `io.github.sceneview/mcp` v3.4.6 (npm + registry)
+- **Latest release**: v3.4.3 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
+- **MCP server**: `io.github.sceneview/mcp` v3.4.7 (npm + registry)
 - **GitHub org**: renamed `SceneView` → `sceneview` (lowercase)
-- **Website**: sceneview.github.io (static HTML, deployed)
+- **Website**: sceneview.github.io (static HTML + playground + embed widget, deployed)
 
-- **What was done this session (2026-03-25)**:
+- **What was done (2026-03-25 marathon — 90+ commits)**:
 
-  Audit, branding, and community session:
-  - **All 15 audit issues fixed** across the codebase
-  - **6 Dependabot vulnerabilities resolved**
-  - **Branding**: SVG logos, adaptive icons, favicon, social preview template
-  - **Community**: SPONSORS.md, CONTRIBUTING.md created
-  - **LinkedIn**: 3 posts in English drafted (NOT posted — needs Thomas approval)
-  - **Accounts**:
-    - GitHub Sponsors: active
-    - Polar.sh: created (test mode)
-    - Apple Developer: configured
-    - Google Play: W-8BEN completed
+  Massive marathon session covering releases, infrastructure, bugs, branding, docs, and monetization:
+  - **Releases**: v3.4.0, v3.4.1, v3.4.2, v3.4.3 on GitHub; MCP v3.4.7 on npm + official registry
+  - **Bug fixes**: AR crash #713 (materials for Filament 1.70.0), MeshNode boundingBox #711
+  - **15 audit issues fixed**, 6 Dependabot vulns resolved, 28 stale refs cleaned
+  - **Website**: static HTML (replaced Kobweb), playground page, 3D embed widget, smart links (/go/)
+  - **iOS**: Xcode project, signing config, App Store workflow (macos-14 runner) — needs real Apple cert
+  - **Branding**: SVG logos, adaptive icons, favicon, social preview
+  - **Docs**: platforms page, Android XR, visionOS, community, issue templates, SPONSORS.md, CONTRIBUTING.md
+  - **Pro/Revenue**: strategy doc, MCP Pro API scaffold, GPT Store prep
+  - **Revenue active**: GitHub Sponsors (Stripe verified), Polar.sh (test mode), W-8BEN filed
+  - **DevOps**: Discord webhook, render_3d_preview MCP tool
+  - **GitHub org renamed** to lowercase `sceneview`
+  - **LinkedIn**: 3 posts drafted (DO NOT POST without Thomas approval)
 
 - **What was done previously (2026-03-25 night, autonomous session)**:
   - WASM target enabled in sceneview-core (wasmJs(), 14 tests)
@@ -119,17 +121,23 @@ Never say "everything is good" without verifying published packages.
   - KMP sceneview-core: 4 critical math bugs fixed
   - Android: KDoc audit, Frame.hitTest bug fix, Material 3 migration
 
+- **Pending for Thomas (manual actions)**:
+  - Login to Apple Developer to create real iOS distribution certificate
+  - Publish LinkedIn post (3 drafts ready, DO NOT POST without approval)
+  - Polar.sh Go Live (switch from test mode to production)
+  - Delete old Play Store apps (AR Wall Paint, AR for TikTok, Info Trafic Nantes)
+  - Re-enable Mac sleep (Battery settings)
+
 - **What's next (for future sessions)**:
-  - **PRIORITY 1 — Polar.sh Go Live**: switch from test mode to production
-  - **PRIORITY 2 — Play Store deploy**: upload key reset expected ~27 March, then deploy `samples/android-demo`
-  - **PRIORITY 3 — App Store first build**: submit `samples/ios-demo` to TestFlight
-  - **PRIORITY 4 — GitHub Sponsors tier update**: configure tiers and benefits
-  - **PRIORITY 5 — LinkedIn post**: publish when stable (needs Thomas approval, 3 drafts ready)
-  - **PRIORITY 6 — MCP Pro implementation**: premium features for SceneView Pro subscribers
-  - **PRIORITY 7 — v3.4.0 Maven Central publish**: `gradle.properties` still says 3.3.0, needs version bump + Sonatype publish
+  - **PRIORITY 1 — Maven Central v3.4.0 publish**: gradle.properties still says 3.3.0, needs version bump + Sonatype publish
+  - **PRIORITY 2 — App Store first TestFlight build**: needs real Apple cert (Thomas action first)
+  - **PRIORITY 3 — Play Store deploy**: key reset should be done by ~27 March
+  - **PRIORITY 4 — GitHub Sponsors tier update**: configure tiers ($5/$15/$50/$200) and benefits
+  - **PRIORITY 5 — MCP Pro backend**: connect Stripe + Redis via Cloudflare Workers
+  - **PRIORITY 6 — LinkedIn post**: publish when approved (3 drafts ready)
+  - Filament JNI Desktop (18-29 day effort, high complexity)
   - KMP core XCFramework: build and integrate into SceneViewSwift
   - visionOS spatial features (immersive spaces, hand tracking)
-  - Compose Desktop module (Filament JNI on Windows/Linux/macOS)
   - Publish sceneview-web to npm: `@sceneview/sceneview-web`
   - Publish Flutter plugin to pub.dev
   - Publish React Native module to npm
@@ -150,10 +158,10 @@ Never say "everything is good" without verifying published packages.
   native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
 - **Demo app** (`samples/android-demo/`): Play Store ready, 4-tab architecture (Explore,
   Showcase, Gallery, QA), Material 3 Expressive
-- **MCP server** (`mcp/`): `io.github.sceneview/mcp` v3.4.6 on npm + registry; iOS support
-  (8 Swift samples, `get_ios_setup` tool, Swift code validation)
-- **Website**: sceneview.github.io (static HTML, deployed)
-- **Pending**: Play Store key reset (~27 March), App Store first TestFlight build
+- **MCP server** (`mcp/`): `io.github.sceneview/mcp` v3.4.7 on npm + registry; iOS support
+  (8 Swift samples, `get_ios_setup` tool, Swift code validation), `render_3d_preview` tool
+- **Website**: sceneview.github.io (static HTML + playground + embed widget, deployed)
+- **Pending**: Maven Central v3.4.0 publish, App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
 
 ### How to update this section
 
