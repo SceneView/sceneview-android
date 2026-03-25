@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /embed/
+
+Sitemap: https://sceneview.github.io/sitemap.xml
