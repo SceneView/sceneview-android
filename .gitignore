@@ -61,3 +61,12 @@ website/.gradle/
 sceneview-web/build/
 sceneview-desktop/build/
 mcp/.mcpregistry_*
+
+# Private strategy and business files
+pro/
+marketing/
+branding/SECRETS.md
+branding/SPONSOR_TIERS.md
+.claude/handoff.md
+.claude/branding.md
+.mcpregistry_*
