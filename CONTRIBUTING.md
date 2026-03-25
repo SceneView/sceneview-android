@@ -1,4 +1,49 @@
-# How to contribute
+# Contributing to SceneView
+
+Thanks for your interest in contributing! This guide covers everything you need to get started.
+
+---
+
+## Development environment setup
+
+### Prerequisites
+
+- **JDK 17** (for Android/KMP modules)
+- **Android Studio** (latest stable recommended)
+- **Xcode 15+** (for SceneViewSwift / iOS work only)
+
+### Clone and open
+
+```bash
+git clone https://github.com/SceneView/sceneview-android.git
+cd sceneview-android
+```
+
+Open the project in Android Studio. Gradle sync will pull all dependencies automatically.
+
+### Build
+
+```bash
+# Android libraries
+./gradlew assembleDebug
+
+# Android demo app
+./gradlew :samples:android-demo:assembleDebug
+```
+
+For iOS (SceneViewSwift), open `SceneViewSwift/Package.swift` in Xcode and build from there.
+
+### Run tests
+
+```bash
+# All tests
+./gradlew test
+
+# KMP core tests only
+./gradlew :sceneview-core:allTests
+```
+
+---
 
 ## AI-assisted workflow (recommended)
 
@@ -10,6 +55,8 @@ from the first keystroke — no context-gathering needed.
 1. Install [Claude Code](https://claude.ai/code)
 2. Clone the repo and open it: `claude` inside the project root
 3. Run `/contribute` — Claude walks you through the entire workflow
+
+See [CLAUDE.md](CLAUDE.md) for the full module map, architecture overview, threading rules, and AI contributor guidelines.
 
 ### Available slash commands
 
@@ -35,42 +82,34 @@ for full API context in any chat:
 
 ---
 
-## Issues
+## Pull request guidelines
 
-Use the issue templates on GitHub. For questions, open a [Discussion](https://github.com/SceneView/sceneview/discussions) instead.
-
-Feature requests are welcomed too!
-
-## Discussions
-
-You can create a discussion if you have a question rather than a problem report. You should also copy your questions and provided answers from the Discord server if you feel that other developers can benefit from them in future.
-
-## Pull requests
-
-You can create a pull request if you know how to fix a problem, improve the documentation or implement a new feature. You just need to fork the repository, commit your changes and create a pull request from there. After the changes are merged the Discord bot will award you the **Contributor** role :tada:
+1. **One feature per PR.** Keep changes focused and reviewable.
+2. **Tests required.** Add or update tests for any behavior change.
+3. **Follow existing code style.** Match the patterns in the module you are editing.
+4. **Describe the why.** PR descriptions should explain the motivation, not just list changed files.
+5. **Keep commits clean.** Squash fixups before requesting review.
 
 Contributions to any part of the project are welcome — Android (`sceneview/`, `arsceneview/`), iOS (`SceneViewSwift/`), shared KMP core (`sceneview-core/`), samples, documentation, or the MCP server.
 
-### Title
+After your changes are merged, the Discord bot will award you the **Contributor** role.
 
-You should start the title of the pull request with an uppercase letter.
+### Code style
 
-### Description
-
-You should provide a short description of your changes so other contributors can better understand them.
-
-### Author
-
-You need to make sure that you use the same name and email as in your GitHub account when committing changes. Otherwise, the Discord bot may have difficulties with awarding you the **Contributor** role.
-
-### Code Style
-
-We use the official [Kotlin style guide](https://developer.android.com/kotlin/style-guide) in the project. The code style is stored in the repository so everything should be configured automatically when you open the project in Android Studio.
-
-### Changes in source code
-
-You should keep changes as minimal as possible, however, you can fix obvious mistakes in the source code, formatting or documentation.
+- **Kotlin**: follow the official [Kotlin style guide](https://developer.android.com/kotlin/style-guide) and existing Compose API conventions (composable functions, `remember*` helpers, named parameters). The code style is stored in the repository and auto-configured by Android Studio.
+- **Swift**: follow the existing SceneViewSwift patterns (builder-style modifiers, RealityKit conventions).
+- No wildcard imports. No unused imports.
+- Keep changes minimal — you can fix obvious mistakes in formatting or documentation along the way.
 
 ### Changes in Filament materials
 
-You should recompile the Filament materials using the [current Filament version](https://github.com/google/filament/releases) if you make any changes to them. The recommended way to do that is to enable the [Filament plugin](https://github.com/SceneView/sceneview/blob/main/gradle.properties) and build the project.
+Recompile Filament materials using the [current Filament version](https://github.com/google/filament/releases) if you modify them. Enable the [Filament plugin](https://github.com/SceneView/sceneview/blob/main/gradle.properties) and build.
+
+---
+
+## Issues and discussions
+
+- **Bug reports**: use the issue templates on [GitHub Issues](https://github.com/SceneView/sceneview-android/issues). Include platform, SceneView version, minimal reproduction steps, and relevant logs.
+- **Questions**: open a [Discussion](https://github.com/SceneView/sceneview/discussions) instead of an issue.
+- **Feature requests**: welcomed as issues or discussions.
+- **Chat**: join the [Discord](https://discord.gg/UbNDDBTNqb) to talk with the community and maintainers.
