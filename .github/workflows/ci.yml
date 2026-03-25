@@ -103,7 +103,7 @@ jobs:
         run: ./gradlew :samples:android-tv-demo:compileDebugKotlin --stacktrace
 
       - name: Build desktop module
-        run: ./gradlew :sceneview-desktop:compileKotlinDesktop --stacktrace
+        run: ./gradlew :samples:desktop-demo:compileKotlinDesktop --stacktrace
 
   # ── Kobweb website ──────────────────────────────────────────────────────
   website:

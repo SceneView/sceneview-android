@@ -49,9 +49,9 @@ One unified showcase app per platform — all features integrated into tabs.
 | `samples/android-tv-demo` | Android TV | D-pad controls, model cycling, auto-rotation |
 | `samples/web-demo` | Web | Browser 3D viewer, Filament.js (WASM), WebXR AR/VR |
 | `samples/ios-demo` | iOS | App Store app — 3-tab SwiftUI (3D, AR, Samples) |
-| `sceneview-desktop` | Desktop | Software 3D renderer, Compose Desktop (Windows/macOS/Linux) |
-| `flutter/sceneview_flutter/example` | Flutter | PlatformView bridge demo (Android + iOS) |
-| `react-native/react-native-sceneview/example` | React Native | Fabric bridge demo (Android + iOS) |
+| `samples/desktop-demo` | Desktop | Software 3D renderer, Compose Desktop (Windows/macOS/Linux) |
+| `samples/flutter-demo` | Flutter | PlatformView bridge demo (Android + iOS) |
+| `samples/react-native-demo` | React Native | Fabric bridge demo (Android + iOS) |
 | `samples/common` | Shared | Helpers and utilities for all Android samples |
 | `samples/recipes` | Docs | Markdown code recipes (model-viewer, AR, physics, geometry, text) |
 
