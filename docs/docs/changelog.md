@@ -1,5 +1,35 @@
 # Changelog
 
+## 3.4.0 — Multi-platform expansion
+
+### New platforms
+- **Web** — sceneview-web module with Filament.js (WASM) rendering + WebXR AR/VR
+- **Desktop** — Compose Desktop with software 3D renderer (Windows/macOS/Linux)
+- **Android TV** — D-pad controlled 3D viewer sample
+- **Flutter** — PlatformView bridge (Android + iOS)
+- **React Native** — Fabric bridge (Android + iOS)
+
+### Android Demo
+- Unified Material 3 Expressive showcase: 4 tabs, 14 interactive demos
+- Blue branding with isometric cube icon
+
+### Samples reorganization
+- 15 obsolete samples deleted, merged into unified platform demos
+- `{platform}-demo` naming convention across all 7 platforms
+
+### Infrastructure
+- SceneView MCP on official MCP Registry (io.github.ThomasGorisse/sceneview)
+- 21 GitHub Secrets configured (Android + iOS + Maven + npm)
+- Apple Distribution certificate + App Store Connect API key
+- Kobweb website deployed with v3.4.0 content
+
+### Fixes
+- material-icons-extended pinned to 1.7.8 (1.10.5 not published)
+- wasmJs target disabled (kotlin-math lacks WASM variant)
+- CI workflows updated for new sample structure
+
+---
+
 ## 3.3.0 — Unified versioning, cross-platform, website
 
 ### Version unification
