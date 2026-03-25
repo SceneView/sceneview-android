@@ -5,14 +5,16 @@ const ANDROID_IDS = SAMPLE_IDS.filter((id) => !SAMPLES[id].language || SAMPLES[i
 const IOS_IDS = SAMPLE_IDS.filter((id) => SAMPLES[id].language === "swift");
 
 describe("SAMPLE_IDS", () => {
-  it("contains all 14 Android sample directories", () => {
+  it("contains all 23 Android sample directories", () => {
     expect(ANDROID_IDS).toContain("model-viewer");
     expect(ANDROID_IDS).toContain("ar-model-viewer");
     expect(ANDROID_IDS).toContain("ar-augmented-image");
     expect(ANDROID_IDS).toContain("ar-cloud-anchor");
     expect(ANDROID_IDS).toContain("ar-point-cloud");
+    expect(ANDROID_IDS).toContain("ar-face-mesh");
     expect(ANDROID_IDS).toContain("gltf-camera");
     expect(ANDROID_IDS).toContain("camera-manipulator");
+    expect(ANDROID_IDS).toContain("camera-animation");
     expect(ANDROID_IDS).toContain("autopilot-demo");
     expect(ANDROID_IDS).toContain("physics-demo");
     expect(ANDROID_IDS).toContain("dynamic-sky");
@@ -20,7 +22,14 @@ describe("SAMPLE_IDS", () => {
     expect(ANDROID_IDS).toContain("text-labels");
     expect(ANDROID_IDS).toContain("reflection-probe");
     expect(ANDROID_IDS).toContain("post-processing");
-    expect(ANDROID_IDS).toHaveLength(14);
+    expect(ANDROID_IDS).toContain("video-texture");
+    expect(ANDROID_IDS).toContain("multi-model-scene");
+    expect(ANDROID_IDS).toContain("gesture-interaction");
+    expect(ANDROID_IDS).toContain("environment-lighting");
+    expect(ANDROID_IDS).toContain("procedural-geometry");
+    expect(ANDROID_IDS).toContain("compose-ui-3d");
+    expect(ANDROID_IDS).toContain("node-hierarchy");
+    expect(ANDROID_IDS).toHaveLength(23);
   });
 
   it("contains all 8 iOS samples", () => {
@@ -35,8 +44,8 @@ describe("SAMPLE_IDS", () => {
     expect(IOS_IDS).toHaveLength(8);
   });
 
-  it("has 24 total samples (14 Android + 8 iOS + 2 Web)", () => {
-    expect(SAMPLE_IDS).toHaveLength(24);
+  it("has 33 total samples (23 Android + 8 iOS + 2 Web)", () => {
+    expect(SAMPLE_IDS).toHaveLength(33);
   });
 
   it("SAMPLE_IDS matches keys of SAMPLES", () => {
@@ -124,8 +133,8 @@ describe("AR samples", () => {
     }
   });
 
-  it("has 4 Android AR samples", () => {
-    expect(androidArIds).toHaveLength(4);
+  it("has 5 Android AR samples", () => {
+    expect(androidArIds).toHaveLength(5);
   });
 
   it("has 2 iOS AR samples", () => {
@@ -155,8 +164,8 @@ describe("3D samples", () => {
     }
   });
 
-  it("has 10 Android pure-3D samples", () => {
-    expect(android3dIds).toHaveLength(10);
+  it("has 18 Android pure-3D samples", () => {
+    expect(android3dIds).toHaveLength(18);
   });
 
   it("has 6 iOS 3D samples", () => {
@@ -196,13 +205,13 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'ar' returns only AR samples", () => {
     const results = filterByTag("ar");
-    expect(results.length).toBe(6); // 4 Android + 2 iOS
+    expect(results.length).toBe(7); // 5 Android + 2 iOS
     results.forEach((s) => expect(s.tags).toContain("ar"));
   });
 
   it("tag '3d' returns only 3D samples", () => {
     const results = filterByTag("3d");
-    expect(results.length).toBe(18); // 10 Android + 6 iOS + 2 Web
+    expect(results.length).toBe(26); // 18 Android + 6 iOS + 2 Web
     results.forEach((s) => expect(s.tags).toContain("3d"));
   });
 
@@ -243,15 +252,47 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'video' returns video samples", () => {
     const results = filterByTag("video");
-    expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("ios-video-player");
+    expect(results).toHaveLength(2);
+    expect(results.map((s) => s.id).sort()).toEqual(["ios-video-player", "video-texture"]);
   });
 
   it("tag 'lighting' returns lighting samples", () => {
     const results = filterByTag("lighting");
-    expect(results).toHaveLength(2);
+    expect(results).toHaveLength(3);
+    expect(results.map((s) => s.id)).toContain("environment-lighting");
     expect(results.map((s) => s.id)).toContain("ios-lighting");
     expect(results.map((s) => s.id)).toContain("web-environment");
+  });
+
+  it("tag 'face-tracking' returns face mesh sample", () => {
+    const results = filterByTag("face-tracking");
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe("ar-face-mesh");
+  });
+
+  it("tag 'multi-model' returns multi-model sample", () => {
+    const results = filterByTag("multi-model");
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe("multi-model-scene");
+  });
+
+  it("tag 'hierarchy' returns node hierarchy sample", () => {
+    const results = filterByTag("hierarchy");
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe("node-hierarchy");
+  });
+
+  it("tag 'compose-ui' returns compose UI in 3D sample", () => {
+    const results = filterByTag("compose-ui");
+    expect(results).toHaveLength(1);
+    expect(results[0].id).toBe("compose-ui-3d");
+  });
+
+  it("tag 'gestures' returns gesture samples", () => {
+    const results = filterByTag("gestures");
+    expect(results.length).toBeGreaterThanOrEqual(2);
+    expect(results.map((s) => s.id)).toContain("gesture-interaction");
+    expect(results.map((s) => s.id)).toContain("camera-manipulator");
   });
 
   it("unknown tag returns empty array", () => {

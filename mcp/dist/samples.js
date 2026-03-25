@@ -183,6 +183,50 @@ fun PointCloudScreen() {
     }
 }`,
     },
+    "ar-face-mesh": {
+        id: "ar-face-mesh",
+        title: "AR Face Mesh",
+        description: "AR face tracking with AugmentedFaceNode — applies a textured mesh overlay to detected faces using the front camera.",
+        tags: ["ar", "face-tracking", "model"],
+        dependency: "io.github.sceneview:arsceneview:3.3.0",
+        prompt: "Create an AR screen that uses the front camera to detect faces and overlay a 3D mesh on them. Use SceneView `io.github.sceneview:arsceneview:3.3.0`.",
+        code: `@Composable
+fun ARFaceMeshScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    var trackedFaces by remember { mutableStateOf(listOf<AugmentedFace>()) }
+
+    val faceMaterial = remember(materialLoader) {
+        materialLoader.createColorInstance(
+            color = Color(0.8f, 0.6f, 0.4f, 0.5f),
+            metallic = 0f,
+            roughness = 0.9f
+        )
+    }
+
+    ARScene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        sessionFeatures = setOf(Session.Feature.FRONT_CAMERA),
+        sessionConfiguration = { _, config ->
+            config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
+        },
+        onSessionUpdated = { session, _ ->
+            trackedFaces = session.getAllTrackables(AugmentedFace::class.java)
+                .filter { it.trackingState == TrackingState.TRACKING }
+        }
+    ) {
+        trackedFaces.forEach { face ->
+            AugmentedFaceNode(
+                augmentedFace = face,
+                meshMaterialInstance = faceMaterial
+            )
+        }
+    }
+}`,
+    },
     "gltf-camera": {
         id: "gltf-camera",
         title: "glTF Camera",
@@ -240,6 +284,67 @@ fun CameraManipulatorScreen() {
     ) {
         rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
             ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
+        }
+    }
+}`,
+    },
+    "camera-animation": {
+        id: "camera-animation",
+        title: "Camera Animation",
+        description: "Animated camera flythrough around a 3D model — smooth orbit using LaunchedEffect and trigonometric interpolation.",
+        tags: ["3d", "camera", "animation", "model"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D scene with a camera that automatically orbits around a model in a smooth circle. Include a play/pause button. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun CameraAnimationScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    var isOrbiting by remember { mutableStateOf(true) }
+    var angle by remember { mutableFloatStateOf(0f) }
+
+    val cameraNode = rememberCameraNode(engine) {
+        position = Position(x = 0f, y = 1.5f, z = 4f)
+        lookAt(Position(0f, 0f, 0f))
+    }
+
+    // Animate camera orbit
+    LaunchedEffect(isOrbiting) {
+        while (isOrbiting) {
+            withFrameNanos { _ ->
+                angle += 0.5f
+                val radians = Math.toRadians(angle.toDouble())
+                cameraNode.position = Position(
+                    x = (4f * sin(radians)).toFloat(),
+                    y = 1.5f,
+                    z = (4f * cos(radians)).toFloat()
+                )
+                cameraNode.lookAt(Position(0f, 0f, 0f))
+            }
+        }
+    }
+
+    Column {
+        Scene(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraNode = cameraNode,
+            environment = rememberEnvironment(environmentLoader) {
+                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                    ?: createEnvironment(environmentLoader)
+            },
+            mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+        ) {
+            rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+                ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
+            }
+        }
+        Button(
+            onClick = { isOrbiting = !isOrbiting },
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+        ) {
+            Text(if (isOrbiting) "Stop Orbit" else "Start Orbit")
         }
     }
 }`,
@@ -466,6 +571,465 @@ fun PostProcessingScreen() {
     }
     // Configure view.bloomOptions, view.vignetteOptions, etc.
     // See samples/post-processing for full interactive controls
+}`,
+    },
+    "video-texture": {
+        id: "video-texture",
+        title: "Video Texture",
+        description: "Video playback on a 3D plane using VideoNode with MediaPlayer — supports looping, chroma-key, and auto-sizing.",
+        tags: ["3d", "video", "model"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D scene with a video playing on a floating 3D plane. Include play/pause controls and chroma-key support. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun VideoTextureScreen() {
+    val context = LocalContext.current
+    val engine = rememberEngine()
+    var isPlaying by remember { mutableStateOf(true) }
+
+    val player = remember {
+        MediaPlayer().apply {
+            setDataSource(context, Uri.parse("android.resource://\${context.packageName}/raw/video"))
+            isLooping = true
+            prepare()
+            start()
+        }
+    }
+    DisposableEffect(Unit) { onDispose { player.release() } }
+
+    Column {
+        Scene(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            engine = engine
+        ) {
+            VideoNode(
+                player = player,
+                // size = null auto-sizes from video aspect ratio (longer edge = 1 unit)
+                position = Position(z = -2f),
+                chromaKeyColor = null // set to android.graphics.Color.GREEN for green-screen
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(onClick = {
+                if (isPlaying) player.pause() else player.start()
+                isPlaying = !isPlaying
+            }) {
+                Text(if (isPlaying) "Pause" else "Play")
+            }
+        }
+    }
+}`,
+    },
+    "multi-model-scene": {
+        id: "multi-model-scene",
+        title: "Multi-Model Scene",
+        description: "Scene with multiple 3D models loaded independently, positioned and scaled to create a complete environment.",
+        tags: ["3d", "model", "multi-model", "environment"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D scene that loads multiple GLB models (a car, a building, and trees) and positions them to form a street scene. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun MultiModelScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraManipulator = rememberCameraManipulator(
+            orbitHomePosition = Position(x = 0f, y = 3f, z = 8f),
+            targetPosition = Position(0f, 0f, 0f)
+        ),
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
+        },
+        mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+    ) {
+        // Ground plane
+        val groundMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.DarkGray, roughness = 0.9f)
+        }
+        PlaneNode(size = Size(20f, 20f), materialInstance = groundMat)
+
+        // Car in the center
+        rememberModelInstance(modelLoader, "models/car.glb")?.let { car ->
+            ModelNode(
+                modelInstance = car,
+                scaleToUnits = 2.0f,
+                position = Position(x = 0f, y = 0f, z = 0f),
+                autoAnimate = true
+            )
+        }
+
+        // Building on the left
+        rememberModelInstance(modelLoader, "models/building.glb")?.let { building ->
+            ModelNode(
+                modelInstance = building,
+                scaleToUnits = 5.0f,
+                position = Position(x = -6f, y = 0f, z = -3f)
+            )
+        }
+
+        // Trees along the right side
+        for (i in 0..2) {
+            rememberModelInstance(modelLoader, "models/tree.glb")?.let { tree ->
+                ModelNode(
+                    modelInstance = tree,
+                    scaleToUnits = 3.0f,
+                    position = Position(x = 5f, y = 0f, z = i * -3f)
+                )
+            }
+        }
+    }
+}`,
+    },
+    "gesture-interaction": {
+        id: "gesture-interaction",
+        title: "Gesture Interaction",
+        description: "Full gesture handling — tap to select, double-tap to scale, long-press for info, pinch-to-scale, drag-to-move on editable nodes.",
+        tags: ["3d", "gestures", "model"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D scene with a model that responds to tap (select), double-tap (scale up), long-press (show info), and supports pinch-to-scale and drag-to-move. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun GestureInteractionScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    var selectedNode by remember { mutableStateOf<String?>(null) }
+    var infoText by remember { mutableStateOf("Tap a model to select it") }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraManipulator = rememberCameraManipulator(),
+            environment = rememberEnvironment(environmentLoader) {
+                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                    ?: createEnvironment(environmentLoader)
+            },
+            onGestureListener = rememberOnGestureListener(
+                onSingleTapConfirmed = { event, node ->
+                    selectedNode = node?.name
+                    infoText = if (node != null) "Selected: \${node.name}" else "Tap a model to select it"
+                },
+                onDoubleTap = { event, node ->
+                    node?.let {
+                        it.scale = if (it.scale.x > 1.5f) Scale(1f) else Scale(2f)
+                        infoText = "Double-tap: toggled scale"
+                    }
+                },
+                onLongPress = { event, node ->
+                    node?.let {
+                        infoText = "Position: \${it.worldPosition}, Scale: \${it.scale}"
+                    }
+                }
+            )
+        ) {
+            rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 1.0f,
+                    isEditable = true, // enables pinch-to-scale and drag-to-move
+                    autoAnimate = true
+                )
+            }
+        }
+
+        // Info overlay
+        Text(
+            text = infoText,
+            modifier = Modifier.align(Alignment.TopCenter).padding(24.dp)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                .padding(12.dp),
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}`,
+    },
+    "environment-lighting": {
+        id: "environment-lighting",
+        title: "Environment & Lighting",
+        description: "Complete lighting setup — HDR environment (IBL + skybox), main directional light, point light, and spot light with LightNode.",
+        tags: ["3d", "environment", "lighting", "model"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D scene with full HDR environment lighting (IBL + skybox), a directional sun light, a red point light, and a blue spot light. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun EnvironmentLightingScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraManipulator = rememberCameraManipulator(
+            orbitHomePosition = Position(x = 0f, y = 2f, z = 5f),
+            targetPosition = Position(0f, 0f, 0f)
+        ),
+        // HDR environment provides both IBL (indirect lighting) and skybox (background)
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
+        },
+        // Main directional light (sun)
+        mainLightNode = rememberMainLightNode(engine) {
+            intensity = 100_000f
+            // castShadows is true by default for the main light
+        }
+    ) {
+        // Floor to receive shadows
+        val floorMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.LightGray, roughness = 0.8f)
+        }
+        PlaneNode(size = Size(10f, 10f), materialInstance = floorMat)
+
+        // Model
+        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+            ModelNode(modelInstance = instance, scaleToUnits = 1.0f, position = Position(y = 0.5f))
+        }
+
+        // Red point light on the left
+        LightNode(
+            type = LightManager.Type.POINT,
+            apply = {
+                color(1.0f, 0.2f, 0.2f)
+                intensity(200_000f)
+                falloff(5.0f)
+            },
+            position = Position(x = -2f, y = 2f, z = 1f)
+        )
+
+        // Blue spot light on the right
+        LightNode(
+            type = LightManager.Type.SPOT,
+            apply = {
+                color(0.2f, 0.4f, 1.0f)
+                intensity(300_000f)
+                falloff(8.0f)
+                castShadows(true)
+            },
+            position = Position(x = 2f, y = 3f, z = 1f)
+        )
+    }
+}`,
+    },
+    "procedural-geometry": {
+        id: "procedural-geometry",
+        title: "Procedural Geometry",
+        description: "Procedural shapes — CubeNode, SphereNode, CylinderNode, PlaneNode — with PBR materials (metallic, roughness, color).",
+        tags: ["3d", "geometry", "model"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D scene showing procedural geometry shapes (cube, sphere, cylinder, plane) with different PBR materials. No model files needed. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun ProceduralGeometryScreen() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        cameraManipulator = rememberCameraManipulator(
+            orbitHomePosition = Position(x = 0f, y = 2f, z = 6f),
+            targetPosition = Position(0f, 0.5f, 0f)
+        ),
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
+        },
+        mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+    ) {
+        // Floor
+        val floorMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.DarkGray, roughness = 0.9f)
+        }
+        PlaneNode(size = Size(8f, 8f), materialInstance = floorMat)
+
+        // Red matte cube
+        val redMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.Red, metallic = 0f, roughness = 0.6f)
+        }
+        CubeNode(
+            size = Size(0.6f),
+            center = Position(0f, 0.3f, 0f),
+            materialInstance = redMat,
+            position = Position(x = -2f)
+        )
+
+        // Chrome sphere
+        val chromeMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.Gray, metallic = 1f, roughness = 0.05f, reflectance = 0.9f)
+        }
+        SphereNode(
+            radius = 0.4f,
+            materialInstance = chromeMat,
+            position = Position(x = -0.7f, y = 0.4f)
+        )
+
+        // Green cylinder
+        val greenMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.Green, metallic = 0.2f, roughness = 0.4f)
+        }
+        CylinderNode(
+            radius = 0.25f,
+            height = 0.8f,
+            materialInstance = greenMat,
+            position = Position(x = 0.7f, y = 0.4f)
+        )
+
+        // Gold sphere
+        val goldMat = remember(materialLoader) {
+            materialLoader.createColorInstance(
+                Color(1f, 0.84f, 0f),
+                metallic = 1f,
+                roughness = 0.3f
+            )
+        }
+        SphereNode(
+            radius = 0.35f,
+            materialInstance = goldMat,
+            position = Position(x = 2f, y = 0.35f)
+        )
+    }
+}`,
+    },
+    "compose-ui-3d": {
+        id: "compose-ui-3d",
+        title: "Compose UI in 3D",
+        description: "Embed interactive Jetpack Compose UI (Cards, Buttons, Text) inside 3D space using ViewNode.",
+        tags: ["3d", "compose-ui", "text"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D scene with interactive Compose UI elements (Card with text and a button) floating in 3D space using ViewNode. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun ComposeUI3DScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val windowManager = rememberViewNodeManager()
+    var clickCount by remember { mutableIntStateOf(0) }
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraManipulator = rememberCameraManipulator(),
+        viewNodeWindowManager = windowManager
+    ) {
+        // 3D model behind the UI
+        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+            ModelNode(modelInstance = instance, scaleToUnits = 1.0f, position = Position(z = -1f))
+        }
+
+        // Floating Compose Card in 3D space
+        ViewNode(
+            windowManager = windowManager,
+            position = Position(x = 0f, y = 1.2f, z = 0.5f)
+        ) {
+            Card(
+                modifier = Modifier.width(200.dp).padding(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Hello 3D World!", style = MaterialTheme.typography.titleMedium)
+                    Text("Clicks: \$clickCount", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { clickCount++ }) {
+                        Text("Click Me")
+                    }
+                }
+            }
+        }
+    }
+}`,
+    },
+    "node-hierarchy": {
+        id: "node-hierarchy",
+        title: "Node Hierarchy",
+        description: "Parent-child node relationships — a spinning solar system with planet groups orbiting a central sun.",
+        tags: ["3d", "hierarchy", "geometry", "animation"],
+        dependency: "io.github.sceneview:sceneview:3.3.0",
+        prompt: "Create a 3D solar system where planets orbit a sun using parent-child node hierarchies. Each planet group rotates independently. Use SceneView `io.github.sceneview:sceneview:3.3.0`.",
+        code: `@Composable
+fun NodeHierarchyScreen() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    var earthAngle by remember { mutableFloatStateOf(0f) }
+    var marsAngle by remember { mutableFloatStateOf(0f) }
+
+    // Animate planet orbits
+    LaunchedEffect(Unit) {
+        while (true) {
+            withFrameNanos { _ ->
+                earthAngle += 0.3f
+                marsAngle += 0.18f
+            }
+        }
+    }
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        cameraManipulator = rememberCameraManipulator(
+            orbitHomePosition = Position(x = 0f, y = 4f, z = 8f),
+            targetPosition = Position(0f, 0f, 0f)
+        ),
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
+        }
+    ) {
+        // Sun (center)
+        val sunMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.Yellow, metallic = 0f, roughness = 1f)
+        }
+        SphereNode(radius = 0.5f, materialInstance = sunMat)
+
+        // Earth orbit group — parent node rotates, child offset creates orbit
+        Node(rotation = Rotation(y = earthAngle)) {
+            // Earth sphere
+            val earthMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Blue, metallic = 0f, roughness = 0.7f)
+            }
+            SphereNode(radius = 0.2f, materialInstance = earthMat, position = Position(x = 2.5f))
+
+            // Moon orbits Earth (nested hierarchy)
+            Node(position = Position(x = 2.5f), rotation = Rotation(y = earthAngle * 3f)) {
+                val moonMat = remember(materialLoader) {
+                    materialLoader.createColorInstance(Color.LightGray, metallic = 0f, roughness = 0.9f)
+                }
+                SphereNode(radius = 0.06f, materialInstance = moonMat, position = Position(x = 0.4f))
+            }
+        }
+
+        // Mars orbit group
+        Node(rotation = Rotation(y = marsAngle)) {
+            val marsMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Red, metallic = 0f, roughness = 0.8f)
+            }
+            SphereNode(radius = 0.15f, materialInstance = marsMat, position = Position(x = 4f))
+        }
+
+        // Sun light
+        LightNode(
+            type = LightManager.Type.POINT,
+            apply = {
+                color(1.0f, 0.95f, 0.8f)
+                intensity(500_000f)
+                falloff(15.0f)
+            }
+        )
+    }
 }`,
     },
     // ─── iOS Samples ────────────────────────────────────────────────────────────
