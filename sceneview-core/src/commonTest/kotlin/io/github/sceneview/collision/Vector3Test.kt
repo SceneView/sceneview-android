@@ -94,4 +94,183 @@ class Vector3Test {
         assertEquals(5f, result.y)
         assertEquals(5f, result.z)
     }
+
+    // --- Additional tests ---
+
+    @Test
+    fun normalizeUnitVector() {
+        val v = Vector3(1f, 0f, 0f)
+        val n = v.normalized()
+        assertEquals(1f, n.x)
+        assertEquals(0f, n.y)
+        assertEquals(0f, n.z)
+    }
+
+    @Test
+    fun normalizeArbitraryVector() {
+        val v = Vector3(3f, 4f, 0f)
+        val n = v.normalized()
+        assertTrue(kotlin.math.abs(n.length() - 1f) < 1e-5f, "Normalized length should be 1")
+        assertTrue(kotlin.math.abs(n.x - 0.6f) < 1e-5f)
+        assertTrue(kotlin.math.abs(n.y - 0.8f) < 1e-5f)
+    }
+
+    @Test
+    fun normalizeZeroVectorReturnsZero() {
+        val v = Vector3(0f, 0f, 0f)
+        val n = v.normalized()
+        assertEquals(0f, n.x)
+        assertEquals(0f, n.y)
+        assertEquals(0f, n.z)
+    }
+
+    @Test
+    fun negatedVector() {
+        val v = Vector3(1f, -2f, 3f)
+        val n = v.negated()
+        assertEquals(-1f, n.x)
+        assertEquals(2f, n.y)
+        assertEquals(-3f, n.z)
+    }
+
+    @Test
+    fun scaledVector() {
+        val v = Vector3(1f, 2f, 3f)
+        val s = v.scaled(3f)
+        assertEquals(3f, s.x)
+        assertEquals(6f, s.y)
+        assertEquals(9f, s.z)
+    }
+
+    @Test
+    fun lengthSquared() {
+        val v = Vector3(1f, 2f, 3f)
+        assertEquals(14f, v.lengthSquared())
+    }
+
+    @Test
+    fun copyConstructor() {
+        val a = Vector3(1f, 2f, 3f)
+        val b = Vector3(a)
+        assertEquals(1f, b.x)
+        assertEquals(2f, b.y)
+        assertEquals(3f, b.z)
+        // Verify it's a copy, not a reference
+        a.x = 99f
+        assertEquals(1f, b.x)
+    }
+
+    @Test
+    fun multiplyComponentWise() {
+        val a = Vector3(2f, 3f, 4f)
+        val b = Vector3(5f, 6f, 7f)
+        val result = Vector3.multiply(a, b)
+        assertEquals(10f, result.x)
+        assertEquals(18f, result.y)
+        assertEquals(28f, result.z)
+    }
+
+    @Test
+    fun minVector() {
+        val a = Vector3(1f, 5f, 3f)
+        val b = Vector3(4f, 2f, 6f)
+        val result = Vector3.min(a, b)
+        assertEquals(1f, result.x)
+        assertEquals(2f, result.y)
+        assertEquals(3f, result.z)
+    }
+
+    @Test
+    fun maxVector() {
+        val a = Vector3(1f, 5f, 3f)
+        val b = Vector3(4f, 2f, 6f)
+        val result = Vector3.max(a, b)
+        assertEquals(4f, result.x)
+        assertEquals(5f, result.y)
+        assertEquals(6f, result.z)
+    }
+
+    @Test
+    fun angleBetweenPerpendicularVectors() {
+        val a = Vector3(1f, 0f, 0f)
+        val b = Vector3(0f, 1f, 0f)
+        val angle = Vector3.angleBetweenVectors(a, b)
+        assertTrue(kotlin.math.abs(angle - 90f) < 0.1f, "Expected ~90 degrees, got $angle")
+    }
+
+    @Test
+    fun angleBetweenParallelVectors() {
+        val a = Vector3(1f, 0f, 0f)
+        val b = Vector3(2f, 0f, 0f)
+        val angle = Vector3.angleBetweenVectors(a, b)
+        assertTrue(kotlin.math.abs(angle) < 0.1f, "Expected ~0 degrees, got $angle")
+    }
+
+    @Test
+    fun angleBetweenOppositeVectors() {
+        val a = Vector3(1f, 0f, 0f)
+        val b = Vector3(-1f, 0f, 0f)
+        val angle = Vector3.angleBetweenVectors(a, b)
+        assertTrue(kotlin.math.abs(angle - 180f) < 0.1f, "Expected ~180 degrees, got $angle")
+    }
+
+    @Test
+    fun vectorEquality() {
+        val a = Vector3(1f, 2f, 3f)
+        val b = Vector3(1f, 2f, 3f)
+        assertTrue(a == b)
+    }
+
+    @Test
+    fun vectorInequality() {
+        val a = Vector3(1f, 2f, 3f)
+        val b = Vector3(1f, 2f, 4f)
+        assertTrue(a != b)
+    }
+
+    @Test
+    fun lerpAtBoundaries() {
+        val a = Vector3(0f, 0f, 0f)
+        val b = Vector3(10f, 20f, 30f)
+        val atZero = Vector3.lerp(a, b, 0f)
+        assertEquals(0f, atZero.x)
+        val atOne = Vector3.lerp(a, b, 1f)
+        assertEquals(10f, atOne.x)
+        assertEquals(20f, atOne.y)
+        assertEquals(30f, atOne.z)
+    }
+
+    @Test
+    fun factoryMethods() {
+        val zero = Vector3.zero()
+        assertEquals(0f, zero.x)
+        assertEquals(0f, zero.y)
+        assertEquals(0f, zero.z)
+
+        val one = Vector3.one()
+        assertEquals(1f, one.x)
+        assertEquals(1f, one.y)
+        assertEquals(1f, one.z)
+
+        val up = Vector3.up()
+        assertEquals(0f, up.x)
+        assertEquals(1f, up.y)
+        assertEquals(0f, up.z)
+
+        val forward = Vector3.forward()
+        assertEquals(0f, forward.x)
+        assertEquals(0f, forward.y)
+        assertEquals(-1f, forward.z)
+    }
+
+    @Test
+    fun crossProductAnticommutative() {
+        val a = Vector3(1f, 2f, 3f)
+        val b = Vector3(4f, 5f, 6f)
+        val ab = Vector3.cross(a, b)
+        val ba = Vector3.cross(b, a)
+        assertEquals(ab.x, -ba.x)
+        assertEquals(ab.y, -ba.y)
+        assertEquals(ab.z, -ba.z)
+    }
 }
