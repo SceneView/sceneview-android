@@ -76,27 +76,31 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-25)
+### Current state (last updated: 2026-03-25, final)
 
 - **Active branch**: `main`
-- **Latest release**: v3.4.3 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
+- **Latest release**: v3.4.4 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
 - **MCP server**: `io.github.sceneview/mcp` v3.4.7 (npm + registry)
-- **GitHub org**: renamed `SceneView` → `sceneview` (lowercase)
-- **Website**: sceneview.github.io (static HTML + playground + embed widget, deployed)
+- **GitHub org**: renamed `SceneView` -> `sceneview` (lowercase)
+- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO, deployed)
 
-- **What was done (2026-03-25 marathon — 90+ commits)**:
+- **What was done (2026-03-25 marathon — 100+ commits, 5 releases)**:
 
-  Massive marathon session covering releases, infrastructure, bugs, branding, docs, and monetization:
-  - **Releases**: v3.4.0, v3.4.1, v3.4.2, v3.4.3 on GitHub; MCP v3.4.7 on npm + official registry
+  Full-day marathon covering releases, MCP ecosystem, website, bugs, branding, docs, legal, and monetization:
+  - **Releases**: v3.4.0 through v3.4.4 on GitHub; MCP v3.4.7 on npm + official registry
+  - **MCP ecosystem**: 7+ MCP servers published (sceneview, realestate, ecommerce, architecture, french-admin, social-media, legal-docs)
+  - **AI tools**: Chrome extension, prompt store, n8n templates, Telegram bot, AI invoice tool
   - **Bug fixes**: AR crash #713 (materials for Filament 1.70.0), MeshNode boundingBox #711
   - **15 audit issues fixed**, 6 Dependabot vulns resolved, 28 stale refs cleaned
-  - **Website**: static HTML (replaced Kobweb), playground page, 3D embed widget, smart links (/go/)
+  - **Website**: static HTML (replaced Kobweb), playground page, 3D embed widget, smart links (/go/), comprehensive SEO (meta tags, JSON-LD, sitemap)
   - **iOS**: Xcode project, signing config, App Store workflow (macos-14 runner) — needs real Apple cert
+  - **Android demo**: Play Store readiness (crash prevention, dark mode, store listing)
   - **Branding**: SVG logos, adaptive icons, favicon, social preview
+  - **Legal**: all projects have LICENSE, TERMS, PRIVACY, disclaimers
   - **Docs**: platforms page, Android XR, visionOS, community, issue templates, SPONSORS.md, CONTRIBUTING.md
-  - **Pro/Revenue**: strategy doc, MCP Pro API scaffold, GPT Store prep
-  - **Revenue active**: GitHub Sponsors (Stripe verified), Polar.sh (test mode), W-8BEN filed
-  - **DevOps**: Discord webhook, render_3d_preview MCP tool
+  - **Pro/Revenue**: strategy doc, MCP Pro API scaffold, GPT Store prep, market opportunities doc
+  - **Revenue active**: GitHub Sponsors (Stripe verified, 4 tiers documented), Polar.sh (test mode), W-8BEN filed
+  - **DevOps**: Discord webhook, render_3d_preview MCP tool, secrets inventory
   - **GitHub org renamed** to lowercase `sceneview`
   - **LinkedIn**: 3 posts drafted (DO NOT POST without Thomas approval)
 
@@ -127,6 +131,8 @@ Never say "everything is good" without verifying published packages.
   - Polar.sh Go Live (switch from test mode to production)
   - Delete old Play Store apps (AR Wall Paint, AR for TikTok, Info Trafic Nantes)
   - Re-enable Mac sleep (Battery settings)
+  - Configure GitHub Sponsors tiers on github.com/sponsors/sceneview
+  - Play Store key reset completion (~27 March)
 
 - **What's next (for future sessions)**:
   - **PRIORITY 1 — Maven Central v3.4.0 publish**: gradle.properties still says 3.3.0, needs version bump + Sonatype publish
@@ -160,7 +166,8 @@ Never say "everything is good" without verifying published packages.
   Showcase, Gallery, QA), Material 3 Expressive
 - **MCP server** (`mcp/`): `io.github.sceneview/mcp` v3.4.7 on npm + registry; iOS support
   (8 Swift samples, `get_ios_setup` tool, Swift code validation), `render_3d_preview` tool
-- **Website**: sceneview.github.io (static HTML + playground + embed widget, deployed)
+- **MCP ecosystem**: 7+ servers published across verticals (real estate, ecommerce, architecture, etc.)
+- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO, deployed)
 - **Pending**: Maven Central v3.4.0 publish, App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
 
 ### How to update this section
