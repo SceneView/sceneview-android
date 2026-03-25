@@ -41,4 +41,7 @@ dependencies {
 
     // SceneView
     implementation project(":sceneview")
+
+    // Material Icons
+    implementation libs.androidx.compose.material.icons
 }
