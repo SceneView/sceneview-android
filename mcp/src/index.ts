@@ -21,6 +21,19 @@ import { buildPreviewUrl, validatePreviewInput, formatPreviewResponse } from "./
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// ─── Legal disclaimer ─────────────────────────────────────────────────────────
+
+const DISCLAIMER = '\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/SceneView/sceneview/blob/main/mcp/TERMS.md).*';
+
+function withDisclaimer<T extends { type: string; text: string }>(content: T[]): T[] {
+  if (content.length === 0) return content;
+  const last = content[content.length - 1];
+  return [
+    ...content.slice(0, -1),
+    { ...last, text: last.text + DISCLAIMER },
+  ];
+}
+
 let API_DOCS: string;
 try {
   API_DOCS = readFileSync(resolve(__dirname, "../llms.txt"), "utf-8");
@@ -311,7 +324,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const codeLabel = isIos ? "**Swift (SwiftUI):**" : "**Kotlin (Jetpack Compose):**";
 
       return {
-        content: [
+        content: withDisclaimer([
           {
             type: "text",
             text: [
@@ -330,7 +343,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               `> ${sample.prompt}`,
             ].join("\n"),
           },
-        ],
+        ]),
       };
     }
 
@@ -365,7 +378,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         )
         .join("\n\n---\n\n");
 
-      return { content: [{ type: "text", text: header + rows }] };
+      return { content: withDisclaimer([{ type: "text", text: header + rows }]) };
     }
 
     // ── get_setup ─────────────────────────────────────────────────────────────
@@ -373,7 +386,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const type = request.params.arguments?.type as "3d" | "ar";
       if (type === "3d") {
         return {
-          content: [
+          content: withDisclaimer([
             {
               type: "text",
               text: [
@@ -389,12 +402,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `No manifest changes required for 3D-only scenes.`,
               ].join("\n"),
             },
-          ],
+          ]),
         };
       }
       if (type === "ar") {
         return {
-          content: [
+          content: withDisclaimer([
             {
               type: "text",
               text: [
@@ -417,7 +430,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `\`\`\``,
               ].join("\n"),
             },
-          ],
+          ]),
         };
       }
       return {
@@ -437,12 +450,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       const issues = validateCode(code);
       const report = formatValidationReport(issues);
-      return { content: [{ type: "text", text: report }] };
+      return { content: withDisclaimer([{ type: "text", text: report }]) };
     }
 
     // ── get_migration_guide ───────────────────────────────────────────────────
     case "get_migration_guide": {
-      return { content: [{ type: "text", text: MIGRATION_GUIDE }] };
+      return { content: withDisclaimer([{ type: "text", text: MIGRATION_GUIDE }]) };
     }
 
     // ── get_node_reference ────────────────────────────────────────────────────
@@ -475,7 +488,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       return {
-        content: [
+        content: withDisclaimer([
           {
             type: "text",
             text: [
@@ -484,30 +497,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               section.content,
             ].join("\n"),
           },
-        ],
+        ]),
       };
     }
 
     // ── get_platform_roadmap ────────────────────────────────────────────────
     case "get_platform_roadmap": {
-      return { content: [{ type: "text", text: PLATFORM_ROADMAP }] };
+      return { content: withDisclaimer([{ type: "text", text: PLATFORM_ROADMAP }]) };
     }
 
     // ── get_best_practices ───────────────────────────────────────────────────
     case "get_best_practices": {
       const category = (request.params.arguments?.category as string) || "all";
       const text = BEST_PRACTICES[category] ?? BEST_PRACTICES["all"];
-      return { content: [{ type: "text", text }] };
+      return { content: withDisclaimer([{ type: "text", text }]) };
     }
 
     // ── get_ar_setup ─────────────────────────────────────────────────────────
     case "get_ar_setup": {
-      return { content: [{ type: "text", text: AR_SETUP_GUIDE }] };
+      return { content: withDisclaimer([{ type: "text", text: AR_SETUP_GUIDE }]) };
     }
 
     // ── get_troubleshooting ──────────────────────────────────────────────────
     case "get_troubleshooting": {
-      return { content: [{ type: "text", text: TROUBLESHOOTING_GUIDE }] };
+      return { content: withDisclaimer([{ type: "text", text: TROUBLESHOOTING_GUIDE }]) };
     }
 
     // ── get_ios_setup ─────────────────────────────────────────────────────────
@@ -515,7 +528,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const iosType = request.params.arguments?.type as "3d" | "ar";
       if (iosType === "3d") {
         return {
-          content: [
+          content: withDisclaimer([
             {
               type: "text",
               text: [
@@ -595,12 +608,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `No manifest or permission changes needed for 3D-only scenes.`,
               ].join("\n"),
             },
-          ],
+          ]),
         };
       }
       if (iosType === "ar") {
         return {
-          content: [
+          content: withDisclaimer([
             {
               type: "text",
               text: [
@@ -686,7 +699,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `\`\`\``,
               ].join("\n"),
             },
-          ],
+          ]),
         };
       }
       return {
@@ -698,7 +711,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // ── get_web_setup ────────────────────────────────────────────────────────
     case "get_web_setup": {
       return {
-        content: [
+        content: withDisclaimer([
           {
             type: "text",
             text: [
@@ -783,7 +796,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               `- glTF/GLB format only (same as Android)`,
             ].join("\n"),
           },
-        ],
+        ]),
       };
     }
 
@@ -806,7 +819,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const result = buildPreviewUrl({ modelUrl, codeSnippet, autoRotate, ar, title });
       const text = formatPreviewResponse(result);
 
-      return { content: [{ type: "text", text }] };
+      return { content: withDisclaimer([{ type: "text", text }]) };
     }
 
     default:
