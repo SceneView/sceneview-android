@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SceneView 3D Preview</title>
+  <meta name="description" content="Interactive 3D preview — powered by SceneView">
+
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #111827;
+      color: #f9fafb;
+      min-height: 100vh;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: #1f2937;
+      border-bottom: 1px solid #374151;
+    }
+    .header a { color: #8ab4f8; text-decoration: none; font-weight: 600; }
+    .header .actions { display: flex; gap: 12px; }
+    .header .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .btn-ar { background: #1a73e8; color: white; }
+    .btn-share { background: #374151; color: #d1d5db; }
+    .viewer {
+      width: 100%;
+      height: calc(100vh - 56px);
+    }
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      --poster-color: #111827;
+    }
+    .empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 56px);
+      text-align: center;
+      color: #6b7280;
+    }
+    .empty h2 { color: #8ab4f8; margin-bottom: 0.5rem; }
+    .empty code {
+      display: block;
+      background: #1f2937;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #d1d5db;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="/">SceneView</a>
+    <div class="actions" id="actions" style="display:none">
+      <a class="btn btn-share" id="share-btn" href="#">Share</a>
+      <a class="btn btn-ar" id="ar-btn" href="#">View in AR</a>
+    </div>
+  </div>
+
+  <div class="viewer" id="viewer"></div>
+  <div class="empty" id="empty" style="display:none">
+    <div>
+      <h2>3D Preview</h2>
+      <p>Pass a model URL to preview it:</p>
+      <code>sceneview.github.io/preview?model=https://example.com/model.glb</code>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const modelUrl = params.get('model');
+    const env = params.get('env') || 'neutral';
+    const autoRotate = params.get('rotate') !== 'false';
+    const ar = params.get('ar') !== 'false';
+
+    const viewer = document.getElementById('viewer');
+    const empty = document.getElementById('empty');
+    const actions = document.getElementById('actions');
+
+    if (modelUrl) {
+      viewer.innerHTML = `
+        <model-viewer
+          src="${modelUrl}"
+          alt="3D model preview"
+          ${autoRotate ? 'auto-rotate' : ''}
+          camera-controls
+          ${ar ? 'ar ar-modes="webxr scene-viewer quick-look"' : ''}
+          shadow-intensity="1"
+          environment-image="${env}"
+          exposure="1"
+          style="width:100%;height:100%"
+        ></model-viewer>
+      `;
+      actions.style.display = 'flex';
+
+      // Share button
+      document.getElementById('share-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (navigator.share) {
+          navigator.share({ title: 'SceneView 3D Preview', url: window.location.href });
+        } else {
+          navigator.clipboard.writeText(window.location.href);
+          e.target.textContent = 'Link copied!';
+          setTimeout(() => e.target.textContent = 'Share', 2000);
+        }
+      });
+
+      // AR button — uses model-viewer's built-in AR
+      document.getElementById('ar-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        const mv = document.querySelector('model-viewer');
+        if (mv && mv.canActivateAR) {
+          mv.activateAR();
+        } else {
+          alert('AR is not available on this device. Try opening this link on a mobile device.');
+        }
+      });
+    } else {
+      viewer.style.display = 'none';
+      empty.style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
