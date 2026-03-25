@@ -11,13 +11,22 @@ import org.jetbrains.compose.web.dom.*
 private data class Release(val version: String, val date: String, val highlights: List<String>, val isLatest: Boolean = false)
 
 private val releases = listOf(
+    Release("3.4.0", "2026-03-25", listOf(
+        "WebXR AR/VR support in the browser (sceneview-web + Filament.js)",
+        "Desktop software 3D renderer (Compose Desktop — Windows/macOS/Linux)",
+        "Unified android-demo Material 3 app (4 tabs, 14 interactive demos)",
+        "Samples reorganized: 7 platform demos with {platform}-demo naming",
+        "WASM target prepared in sceneview-core (blocked by kotlin-math)",
+        "Branding: blue isometric cube logo, store asset checklist",
+        "Android XR added to roadmap (Jetpack XR SceneCore)"
+    ), isLatest = true),
     Release("3.3.0", "2026-03-24", listOf(
         "iOS support via SceneViewSwift (SwiftUI + RealityKit)",
         "Cross-platform recipes: model-viewer, AR, procedural geometry, text",
         "Kotlin Multiplatform core module with shared collision, math, animation",
         "New SceneViewDemo Android app (Play Store ready)",
         "MCP server for AI assistant integration"
-    ), isLatest = true),
+    )),
     Release("3.2.0", "2025-12-15", listOf(
         "Kotlin Multiplatform migration of sceneview-core",
         "Shared collision system (Vector3, Quaternion, Matrix, Ray, Box, Sphere)",

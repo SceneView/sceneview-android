@@ -63,8 +63,8 @@ private fun StructuredData() {
   "description": "Open-source 3D and AR SDK for Android (Jetpack Compose) and iOS (SwiftUI)",
   "url": "https://sceneview.github.io/",
   "applicationCategory": "DeveloperApplication",
-  "operatingSystem": "Android, iOS, macOS, visionOS",
-  "softwareVersion": "3.3.0",
+  "operatingSystem": "Android, iOS, macOS, visionOS, Web, Windows, Linux, Android TV",
+  "softwareVersion": "3.4.0",
   "author": {"@type": "Organization", "name": "SceneView", "url": "https://github.com/SceneView"},
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
   "license": "https://opensource.org/licenses/Apache-2.0"
@@ -128,7 +128,7 @@ private fun HeroSection() {
                         property("margin-bottom", "32px")
                         property("border", "1px solid ${if (colorMode == ColorMode.LIGHT) "rgba(26,115,232,0.2)" else "rgba(138,180,248,0.2)"}")
                     }
-                }) { Text("v3.3.0 — Now with iOS support") }
+                }) { Text("v3.4.0 — 9 platforms") }
 
                 // M3 Display Large
                 H1(attrs = {
@@ -163,7 +163,7 @@ private fun HeroSection() {
                         property("font-family", Fonts.SYSTEM)
                         property("letter-spacing", "0.02em")
                     }
-                }) { Text("Android  ·  iOS  ·  macOS  ·  visionOS") }
+                }) { Text("Android · iOS · Web · Desktop · TV · Flutter · React Native") }
 
                 Div(attrs = {
                     style {
@@ -173,7 +173,7 @@ private fun HeroSection() {
                     }
                 }) {
                     PrimaryButton("Get Started", "/quickstart")
-                    SecondaryButton("View on GitHub", "https://github.com/sceneview/sceneview-android")
+                    SecondaryButton("View on GitHub", "https://github.com/SceneView/sceneview")
                 }
             }
 
@@ -202,7 +202,7 @@ private fun HeroSection() {
                         property("font-family", Fonts.SYSTEM)
                         property("opacity", "0.7")
                     }
-                }) { Text("Drag to orbit  ·  Scroll to zoom  ·  Powered by Filament") }
+                }) { Text("Drag to orbit  ·  Scroll to zoom") }
             }
         }
     }
@@ -349,7 +349,7 @@ private fun InstallSection() {
             SectionTitle("Get started in seconds")
 
             var selectedTab by remember { mutableStateOf(0) }
-            val tabs = listOf("Android 3D", "Android AR", "iOS (Swift)")
+            val tabs = listOf("Android 3D", "Android AR", "iOS (Swift)", "Web", "Desktop", "Flutter")
 
             // M3 segmented buttons
             Div(attrs = {
@@ -387,9 +387,12 @@ private fun InstallSection() {
             }
 
             when (selectedTab) {
-                0 -> CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:sceneview:3.3.0\")\n}", "Gradle (Kotlin DSL)")
-                1 -> CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:arsceneview:3.3.0\")\n}", "Gradle (Kotlin DSL)")
+                0 -> CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:sceneview:3.4.0\")\n}", "Gradle (Kotlin DSL)")
+                1 -> CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:arsceneview:3.4.0\")\n}", "Gradle (Kotlin DSL)")
                 2 -> CodeBlock("// Package.swift\ndependencies: [\n    .package(\n        url: \"https://github.com/SceneView/SceneViewSwift.git\",\n        from: \"3.3.0\"\n    )\n]", "Swift Package Manager")
+                3 -> CodeBlock("// build.gradle.kts (Kotlin/JS)\ndependencies {\n    implementation(\"io.github.sceneview:sceneview-web:3.4.0\")\n}", "Gradle (Kotlin DSL)")
+                4 -> CodeBlock("// Run with Compose Desktop\n./gradlew :samples:desktop-demo:run", "Terminal")
+                5 -> CodeBlock("# pubspec.yaml\ndependencies:\n  sceneview_flutter: ^3.4.0", "Flutter (Dart)")
             }
         }
     }
@@ -430,7 +433,7 @@ private fun CommunitySection() {
                 }
             }) {
                 SecondaryButton("Discord", "https://discord.gg/UbNDDBTNqb")
-                SecondaryButton("GitHub Discussions", "https://github.com/sceneview/sceneview-android/discussions")
+                SecondaryButton("GitHub Discussions", "https://github.com/SceneView/sceneview/discussions")
             }
         }
     }
