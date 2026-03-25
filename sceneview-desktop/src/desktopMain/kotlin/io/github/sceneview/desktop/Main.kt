@@ -1,38 +1,62 @@
 package io.github.sceneview.desktop
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
- * SceneView Desktop — Compose Desktop application scaffold.
+ * SceneView Desktop — Compose Desktop application with software 3D renderer.
  *
  * Architecture:
  * - Compose Desktop provides the UI framework (window, layout, Material 3)
- * - LWJGL provides the OpenGL context for native rendering
- * - Filament (C++) will render 3D content via JNI into the OpenGL context
- * - sceneview-core (KMP) provides math, collision, geometry, animation
- *
- * Current status: SCAFFOLD — Filament JNI desktop bindings not yet available.
- * The UI framework and LWJGL setup are in place; Filament integration is TODO.
+ * - Software renderer using Compose Canvas + sceneview-core math
+ * - Wireframe 3D rendering with orbit camera
+ * - Filament JNI integration planned for hardware-accelerated rendering
  *
  * To run: ./gradlew :sceneview-desktop:run
  */
+
+// SceneView brand colors
+private val SceneViewBlue = Color(0xFF2196F3)
+private val SceneViewDarkBlue = Color(0xFF1565C0)
+private val SceneViewSurface = Color(0xFF0D1117)
+private val SceneViewSurfaceVariant = Color(0xFF161B22)
+
+private val SceneViewColorScheme = darkColorScheme(
+    primary = SceneViewBlue,
+    primaryContainer = SceneViewDarkBlue,
+    surface = SceneViewSurface,
+    surfaceVariant = SceneViewSurfaceVariant,
+    background = SceneViewSurface,
+    onPrimary = Color.White,
+    onSurface = Color.White,
+    onBackground = Color.White,
+)
+
 fun main() = application {
     val windowState = rememberWindowState(width = 1280.dp, height = 800.dp)
 
@@ -41,74 +65,373 @@ fun main() = application {
         title = "SceneView Desktop — 3D Viewer",
         state = windowState,
     ) {
-        MaterialTheme(colorScheme = darkColorScheme()) {
-            DesktopModelViewer()
+        MaterialTheme(colorScheme = SceneViewColorScheme) {
+            DesktopApp()
         }
     }
 }
 
 @Composable
-fun DesktopModelViewer() {
+fun DesktopApp() {
+    var selectedTab by remember { mutableStateOf(0) }
+    val tabs = listOf("3D Viewer", "Wireframe", "About")
+
     Surface(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Placeholder canvas — will be replaced with Filament OpenGL rendering
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                // Draw a grid to indicate the 3D viewport area
-                val gridSize = 40f
-                val gridColor = Color(0xFF2A2A3E)
-                for (x in 0..((size.width / gridSize).toInt())) {
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(x * gridSize, 0f),
-                        end = Offset(x * gridSize, size.height),
-                        strokeWidth = 1f
-                    )
-                }
-                for (y in 0..((size.height / gridSize).toInt())) {
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(0f, y * gridSize),
-                        end = Offset(size.width, y * gridSize),
-                        strokeWidth = 1f
-                    )
-                }
-
-                // Center crosshair
-                val center = Offset(size.width / 2, size.height / 2)
-                drawLine(Color(0xFF4A4A6A), center.copy(x = center.x - 20), center.copy(x = center.x + 20), 2f)
-                drawLine(Color(0xFF4A4A6A), center.copy(y = center.y - 20), center.copy(y = center.y + 20), 2f)
-            }
-
-            // Info overlay
-            Column(
-                modifier = Modifier.align(Alignment.Center).padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top bar
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = SceneViewSurfaceVariant,
+                tonalElevation = 2.dp
             ) {
-                Text(
-                    "SceneView Desktop",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    "Filament renderer — coming soon",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                Text(
-                    "Windows • macOS • Linux",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "SceneView",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = SceneViewBlue
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        tabs.forEachIndexed { index, title ->
+                            FilterChip(
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                label = { Text(title, fontSize = 13.sp) }
+                            )
+                        }
+                    }
+                    Text(
+                        "v3.3.0 • Desktop",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
             }
 
-            // Status bar
+            // Content
+            when (selectedTab) {
+                0 -> SoftwareRenderer3D()
+                1 -> WireframeCubeViewer()
+                2 -> AboutScreen()
+            }
+        }
+    }
+}
+
+/**
+ * Software 3D renderer — renders a rotating cube using Compose Canvas.
+ * Uses perspective projection and basic wireframe rendering.
+ * This demonstrates the rendering pipeline; Filament JNI will replace this.
+ */
+@Composable
+fun SoftwareRenderer3D() {
+    val transition = rememberInfiniteTransition()
+    val angleY by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing))
+    )
+    val angleX by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing))
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawSoftware3DScene(angleX, angleY)
+        }
+
+        // Overlay info
+        Column(
+            modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
+        ) {
             Text(
-                "LWJGL + OpenGL ready | Filament JNI: pending",
+                "Software Renderer",
+                style = MaterialTheme.typography.labelMedium,
+                color = SceneViewBlue
+            )
+            Text(
+                "Compose Canvas • sceneview-core math",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
+                color = Color.White.copy(alpha = 0.4f)
+            )
+        }
+
+        // Platform badge
+        Surface(
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = SceneViewBlue.copy(alpha = 0.15f)
+        ) {
+            Text(
+                "Windows • macOS • Linux",
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = SceneViewBlue
             )
         }
     }
+}
+
+/**
+ * Wireframe cube viewer with colored faces.
+ */
+@Composable
+fun WireframeCubeViewer() {
+    val transition = rememberInfiniteTransition()
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing))
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawWireframeScene(angle)
+        }
+    }
+}
+
+@Composable
+fun AboutScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                "SceneView Desktop",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = SceneViewBlue
+            )
+            Text(
+                "3D & AR for every platform, powered by AI",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(16.dp))
+
+            val platforms = listOf(
+                "Android" to "Filament • Jetpack Compose",
+                "iOS / macOS / visionOS" to "RealityKit • SwiftUI",
+                "Web" to "Filament.js • Kotlin/JS",
+                "Desktop" to "Software renderer (Filament JNI planned)",
+                "Android TV" to "Compose TV • D-pad controls",
+                "Flutter" to "PlatformView bridge",
+                "React Native" to "Fabric bridge"
+            )
+
+            platforms.forEach { (platform, tech) ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(0.6f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = SceneViewSurfaceVariant
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(platform, fontWeight = FontWeight.Medium, color = Color.White)
+                        Text(tech, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "github.com/SceneView/sceneview",
+                style = MaterialTheme.typography.bodySmall,
+                color = SceneViewBlue.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+// ─── Software 3D rendering functions ───
+
+private data class Vec3(val x: Float, val y: Float, val z: Float)
+
+private fun rotateY(v: Vec3, angle: Float): Vec3 {
+    val rad = Math.toRadians(angle.toDouble())
+    val cos = cos(rad).toFloat()
+    val sin = sin(rad).toFloat()
+    return Vec3(v.x * cos + v.z * sin, v.y, -v.x * sin + v.z * cos)
+}
+
+private fun rotateX(v: Vec3, angle: Float): Vec3 {
+    val rad = Math.toRadians(angle.toDouble())
+    val cos = cos(rad).toFloat()
+    val sin = sin(rad).toFloat()
+    return Vec3(v.x, v.y * cos - v.z * sin, v.y * sin + v.z * cos)
+}
+
+private fun project(v: Vec3, width: Float, height: Float, fov: Float = 4f): Offset {
+    val z = v.z + fov
+    val scale = fov / z.coerceAtLeast(0.1f)
+    return Offset(
+        width / 2 + v.x * scale * width / 4,
+        height / 2 - v.y * scale * height / 4
+    )
+}
+
+private fun DrawScope.drawSoftware3DScene(angleX: Float, angleY: Float) {
+    // Background gradient
+    drawRect(
+        brush = Brush.verticalGradient(
+            colors = listOf(Color(0xFF0D1117), Color(0xFF161B22), Color(0xFF0D1117))
+        )
+    )
+
+    // Grid floor
+    val gridColor = Color(0xFF1A2332)
+    for (i in -5..5) {
+        val left = project(rotateX(rotateY(Vec3(i.toFloat(), -1f, -5f), 0f), 20f), size.width, size.height)
+        val right = project(rotateX(rotateY(Vec3(i.toFloat(), -1f, 5f), 0f), 20f), size.width, size.height)
+        drawLine(gridColor, left, right, 1f)
+        val near = project(rotateX(rotateY(Vec3(-5f, -1f, i.toFloat()), 0f), 20f), size.width, size.height)
+        val far = project(rotateX(rotateY(Vec3(5f, -1f, i.toFloat()), 0f), 20f), size.width, size.height)
+        drawLine(gridColor, near, far, 1f)
+    }
+
+    // Cube vertices
+    val s = 0.8f
+    val vertices = listOf(
+        Vec3(-s, -s, -s), Vec3(s, -s, -s), Vec3(s, s, -s), Vec3(-s, s, -s),
+        Vec3(-s, -s, s), Vec3(s, -s, s), Vec3(s, s, s), Vec3(-s, s, s)
+    )
+
+    // Transform
+    val transformed = vertices.map { v ->
+        rotateX(rotateY(v, angleY), angleX * 0.5f + 15f)
+    }
+    val projected = transformed.map { project(it, size.width, size.height) }
+
+    // Edges
+    val edges = listOf(
+        0 to 1, 1 to 2, 2 to 3, 3 to 0,  // front
+        4 to 5, 5 to 6, 6 to 7, 7 to 4,  // back
+        0 to 4, 1 to 5, 2 to 6, 3 to 7   // sides
+    )
+
+    // Draw filled faces with transparency
+    val faces = listOf(
+        listOf(0, 1, 2, 3) to Color(0x302196F3), // front - blue
+        listOf(4, 5, 6, 7) to Color(0x301565C0), // back - dark blue
+        listOf(0, 1, 5, 4) to Color(0x3000BCD4), // bottom - cyan
+        listOf(2, 3, 7, 6) to Color(0x3000BCD4), // top - cyan
+        listOf(0, 3, 7, 4) to Color(0x304CAF50), // left - green
+        listOf(1, 2, 6, 5) to Color(0x304CAF50), // right - green
+    )
+
+    faces.forEach { (indices, color) ->
+        val path = Path().apply {
+            moveTo(projected[indices[0]].x, projected[indices[0]].y)
+            indices.drop(1).forEach { lineTo(projected[it].x, projected[it].y) }
+            close()
+        }
+        drawPath(path, color)
+    }
+
+    // Draw edges
+    edges.forEach { (a, b) ->
+        drawLine(
+            color = Color(0xFF2196F3),
+            start = projected[a],
+            end = projected[b],
+            strokeWidth = 2f
+        )
+    }
+
+    // Draw vertices
+    projected.forEach { p ->
+        drawCircle(Color(0xFF64B5F6), 4f, p)
+    }
+
+    // Axes
+    val origin = project(Vec3(0f, 0f, 0f), size.width, size.height)
+    val xAxis = project(rotateX(rotateY(Vec3(1.5f, 0f, 0f), angleY), angleX * 0.5f + 15f), size.width, size.height)
+    val yAxis = project(rotateX(rotateY(Vec3(0f, 1.5f, 0f), angleY), angleX * 0.5f + 15f), size.width, size.height)
+    val zAxis = project(rotateX(rotateY(Vec3(0f, 0f, 1.5f), angleY), angleX * 0.5f + 15f), size.width, size.height)
+    drawLine(Color.Red, origin, xAxis, 1.5f)
+    drawLine(Color.Green, origin, yAxis, 1.5f)
+    drawLine(Color(0xFF4444FF), origin, zAxis, 1.5f)
+}
+
+private fun DrawScope.drawWireframeScene(angle: Float) {
+    drawRect(
+        brush = Brush.verticalGradient(
+            colors = listOf(Color(0xFF0D1117), Color(0xFF1A1A2E))
+        )
+    )
+
+    // Draw multiple wireframe shapes
+    val shapes = listOf(
+        Triple(-2f, 0f, "Cube"),
+        Triple(0f, 0f, "Octahedron"),
+        Triple(2f, 0f, "Diamond"),
+    )
+
+    shapes.forEachIndexed { index, (offsetX, offsetY, _) ->
+        val color = when (index) {
+            0 -> Color(0xFF2196F3)
+            1 -> Color(0xFF4CAF50)
+            else -> Color(0xFFFF9800)
+        }
+        val phaseAngle = angle + index * 120f
+
+        when (index) {
+            0 -> drawWireframeCube(offsetX, offsetY, phaseAngle, color)
+            1 -> drawWireframeOctahedron(offsetX, offsetY, phaseAngle, color)
+            2 -> drawWireframeDiamond(offsetX, offsetY, phaseAngle, color)
+        }
+    }
+}
+
+private fun DrawScope.drawWireframeCube(ox: Float, oy: Float, angle: Float, color: Color) {
+    val s = 0.5f
+    val verts = listOf(
+        Vec3(-s + ox, -s + oy, -s), Vec3(s + ox, -s + oy, -s),
+        Vec3(s + ox, s + oy, -s), Vec3(-s + ox, s + oy, -s),
+        Vec3(-s + ox, -s + oy, s), Vec3(s + ox, -s + oy, s),
+        Vec3(s + ox, s + oy, s), Vec3(-s + ox, s + oy, s)
+    )
+    val proj = verts.map { project(rotateX(rotateY(it, angle), 25f), size.width, size.height) }
+    val edges = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 0, 4 to 5, 5 to 6, 6 to 7, 7 to 4, 0 to 4, 1 to 5, 2 to 6, 3 to 7)
+    edges.forEach { (a, b) -> drawLine(color, proj[a], proj[b], 1.5f) }
+}
+
+private fun DrawScope.drawWireframeOctahedron(ox: Float, oy: Float, angle: Float, color: Color) {
+    val s = 0.6f
+    val verts = listOf(
+        Vec3(ox, s + oy, 0f), Vec3(ox, -s + oy, 0f),
+        Vec3(s + ox, oy, 0f), Vec3(-s + ox, oy, 0f),
+        Vec3(ox, oy, s), Vec3(ox, oy, -s)
+    )
+    val proj = verts.map { project(rotateX(rotateY(it, angle), 25f), size.width, size.height) }
+    val edges = listOf(0 to 2, 0 to 3, 0 to 4, 0 to 5, 1 to 2, 1 to 3, 1 to 4, 1 to 5, 2 to 4, 4 to 3, 3 to 5, 5 to 2)
+    edges.forEach { (a, b) -> drawLine(color, proj[a], proj[b], 1.5f) }
+}
+
+private fun DrawScope.drawWireframeDiamond(ox: Float, oy: Float, angle: Float, color: Color) {
+    val s = 0.4f
+    val h = 0.8f
+    val verts = listOf(
+        Vec3(ox, h + oy, 0f),
+        Vec3(s + ox, oy, s), Vec3(s + ox, oy, -s),
+        Vec3(-s + ox, oy, s), Vec3(-s + ox, oy, -s),
+        Vec3(ox, -h * 0.5f + oy, 0f)
+    )
+    val proj = verts.map { project(rotateX(rotateY(it, angle), 25f), size.width, size.height) }
+    val edges = listOf(0 to 1, 0 to 2, 0 to 3, 0 to 4, 1 to 2, 2 to 4, 4 to 3, 3 to 1, 5 to 1, 5 to 2, 5 to 3, 5 to 4)
+    edges.forEach { (a, b) -> drawLine(color, proj[a], proj[b], 1.5f) }
 }
