@@ -133,3 +133,23 @@ Open-source SDK + commercial services around it is generally compatible.
 4. First 3D app generated entirely by AI
 5. iOS App Store launch
 6. Flutter/React Native stable bridges
+
+## Beyond SceneView — Market Opportunities
+
+Thomas veut maximiser les revenus de la vague AI. Pas limité à SceneView ou aux MCPs.
+
+### Active revenue streams to explore:
+- **MCP servers** (thématiques : immobilier, e-commerce, archi, admin FR, legal)
+- **Chrome extensions** AI-powered (marché énorme, distribution facile)
+- **SaaS micro-tools** (Cloudflare Workers, 0 ops, high margin)
+- **Templates/Starter kits** (Gumroad/Polar, one-shot revenue)
+- **Cours/Formation** (Udemy, passive income)
+- **Bots WhatsApp/Telegram** (business automation)
+- **VS Code / Cursor extensions** (dev tools market)
+
+### Rules:
+- Be PROACTIVE — don't wait for Thomas to ask
+- Alert immediately when a market opportunity is spotted
+- Fast releasing — ship fast, iterate later
+- Autonomous — Thomas has a CDI + kids, minimal management
+- Legal check — no conflict with Octopus Community (CDI)
