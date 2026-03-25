@@ -2,26 +2,51 @@
 
 SceneView is free and open source. Development is supported by generous sponsors.
 
-## Enterprise Sponsors
+## Enterprise Sponsors — $200/month
 
-<!-- Your company logo and link here -->
+> Logo on website hero, monthly support call, priority feature requests
+
+<!-- Enterprise sponsor logos here -->
 
 *Become the first enterprise sponsor — [get in touch](https://github.com/sponsors/ThomasGorisse)*
 
-## Team Sponsors
+## Team Sponsors — $50/month
+
+> Logo on README and website, 1 priority bug fix/month, pre-release access
 
 <!-- Team sponsor logos here -->
 
-*No team sponsors yet.*
+*No team sponsors yet — [become one!](https://github.com/sponsors/ThomasGorisse)*
 
-## Individual Sponsors
+## Pro Developers — $15/month
 
-<!-- Individual sponsor names here -->
+> Priority issue responses, roadmap voting, private Discord channel
 
-*No individual sponsors yet.*
+<!-- Pro developer names here -->
+
+*No pro developer sponsors yet — [join!](https://github.com/sponsors/ThomasGorisse)*
+
+## Supporters — $5/month
+
+> Name listed here, sponsor badge, early release notes
+
+<!-- Supporter names here -->
+
+*No supporters yet — [be the first!](https://github.com/sponsors/ThomasGorisse)*
 
 ---
 
-Want to see your name or logo here? [Become a sponsor!](https://github.com/sponsors/ThomasGorisse)
+## Become a Sponsor
 
-Funds go directly toward maintaining SceneView, fixing bugs, adding features, and keeping the documentation up to date across all platforms (Android, iOS, Web, Desktop, Flutter, React Native).
+| Tier | Price | Benefits |
+|------|-------|----------|
+| **Supporter** | $5/mo | Name in SPONSORS.md, sponsor badge, early release notes |
+| **Pro Developer** | $15/mo | + Priority issues, roadmap voting, private Discord |
+| **Team** | $50/mo | + Logo on README/website, 1 priority bug fix/month |
+| **Enterprise** | $200/mo | + Logo on hero, monthly support call, priority features |
+
+[**Sponsor SceneView on GitHub**](https://github.com/sponsors/ThomasGorisse)
+
+Funds go directly toward maintaining SceneView, fixing bugs, adding features,
+and keeping the documentation up to date across all platforms
+(Android, iOS, Web, Desktop, Flutter, React Native).
