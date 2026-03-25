@@ -18,6 +18,7 @@ import { fetchKnownIssues } from "./issues.js";
 import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
 import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
 import { buildPreviewUrl, validatePreviewInput, formatPreviewResponse } from "./preview.js";
+import { validateArtifactInput, generateArtifact, formatArtifactResponse, type ArtifactType } from "./artifact.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -44,7 +45,7 @@ try {
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
 
 const server = new Server(
-  { name: "@sceneview/mcp", version: "3.3.0" },
+  { name: "@sceneview/mcp", version: "3.4.9" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
@@ -282,6 +283,70 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
         },
         required: [],
+      },
+    },
+    {
+      name: "create_3d_artifact",
+      description:
+        'Generates a complete, self-contained HTML page with interactive 3D content that Claude can render as an artifact. Returns valid HTML using model-viewer (Google\'s web component for 3D). Use this when the user asks to "show", "preview", "visualize" 3D models, create 3D charts/dashboards, or view products in 360°. The HTML works standalone in any browser, supports AR on mobile, and includes orbit controls. Types: "model-viewer" for 3D model viewing, "chart-3d" for 3D data visualization (bar charts with perspective), "scene" for rich 3D scenes with lighting, "product-360" for product turntables with hotspot annotations.',
+      inputSchema: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: ["model-viewer", "chart-3d", "scene", "product-360"],
+            description:
+              '"model-viewer": interactive 3D model viewer with orbit + AR. "chart-3d": 3D bar chart for data visualization (revenue, analytics). "scene": rich 3D scene with lighting and environment. "product-360": product turntable with hotspot annotations + AR.',
+          },
+          modelUrl: {
+            type: "string",
+            description:
+              "Public HTTPS URL to a .glb or .gltf model. If omitted, a default model is used. Not needed for chart-3d type.",
+          },
+          title: {
+            type: "string",
+            description: "Title displayed on the artifact. Defaults to a sensible name per type.",
+          },
+          data: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                label: { type: "string", description: "Data point label (e.g. 'Q1 2025')" },
+                value: { type: "number", description: "Numeric value" },
+                color: { type: "string", description: "Optional hex color (e.g. '#4285F4'). Auto-assigned if omitted." },
+              },
+              required: ["label", "value"],
+            },
+            description:
+              'Data array for chart-3d type. Each item has {label, value, color?}. Required for "chart-3d", ignored for other types.',
+          },
+          options: {
+            type: "object",
+            properties: {
+              autoRotate: { type: "boolean", description: "Auto-rotate the model (default: true)" },
+              ar: { type: "boolean", description: "Enable AR on mobile devices (default: true)" },
+              backgroundColor: { type: "string", description: "Background color as hex (default: '#1a1a2e')" },
+              cameraOrbit: { type: "string", description: "Camera orbit string (default: '0deg 75deg 105%')" },
+            },
+            description: "Visual options for the 3D artifact.",
+          },
+          hotspots: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                position: { type: "string", description: 'Hotspot 3D position, e.g. "0.5 1.2 0.3"' },
+                normal: { type: "string", description: 'Hotspot surface normal, e.g. "0 1 0"' },
+                label: { type: "string", description: "Hotspot label" },
+                description: { type: "string", description: "Hotspot description" },
+              },
+              required: ["position", "normal", "label"],
+            },
+            description: "Annotation hotspots for product-360 type. Each has position, normal, label, and optional description.",
+          },
+        },
+        required: ["type"],
       },
     },
   ],
@@ -819,6 +884,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const result = buildPreviewUrl({ modelUrl, codeSnippet, autoRotate, ar, title });
       const text = formatPreviewResponse(result);
 
+      return { content: withDisclaimer([{ type: "text", text }]) };
+    }
+
+    // ── create_3d_artifact ───────────────────────────────────────────────────
+    case "create_3d_artifact": {
+      const artifactInput = {
+        type: request.params.arguments?.type as ArtifactType,
+        modelUrl: request.params.arguments?.modelUrl as string | undefined,
+        title: request.params.arguments?.title as string | undefined,
+        data: request.params.arguments?.data as any[] | undefined,
+        options: request.params.arguments?.options as any | undefined,
+        hotspots: request.params.arguments?.hotspots as any[] | undefined,
+      };
+
+      const validationError = validateArtifactInput(artifactInput);
+      if (validationError) {
+        return {
+          content: [{ type: "text", text: `Error: ${validationError}` }],
+          isError: true,
+        };
+      }
+
+      const result = generateArtifact(artifactInput);
+      const text = formatArtifactResponse(result);
       return { content: withDisclaimer([{ type: "text", text }]) };
     }
 
