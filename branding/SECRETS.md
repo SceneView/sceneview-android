@@ -36,15 +36,22 @@
 |---|---|---|---|
 | Personal access token | `PERSONAL_TOKEN` | ✅ | Created 2026-03-17 |
 
-### iOS (App Store) — MISSING
+### iOS (App Store)
 | Secret | GitHub Name | Status | Notes |
 |---|---|---|---|
-| Build certificate (base64) | `IOS_BUILD_CERTIFICATE_BASE64` | ❌ | Need from Apple Developer |
-| Certificate password | `IOS_BUILD_CERTIFICATE_PASSWORD` | ❌ | Set when exporting cert |
-| Provisioning profile (base64) | `IOS_PROVISIONING_PROFILE_BASE64` | ❌ | Need from Apple Developer |
-| App Store Connect API key | `APP_STORE_CONNECT_API_KEY` | ❌ | Need from App Store Connect |
-| App Store Connect issuer ID | `APP_STORE_CONNECT_ISSUER_ID` | ❌ | Need from App Store Connect |
-| App Store Connect key ID | `APP_STORE_CONNECT_KEY_ID` | ❌ | Need from App Store Connect |
+| Build certificate (base64) | `IOS_BUILD_CERTIFICATE_BASE64` | ✅ | Created 2026-03-25, Apple Distribution, expires 2027-03-25 |
+| Certificate password | `IOS_BUILD_CERTIFICATE_PASSWORD` | ✅ | Created 2026-03-25 |
+| Provisioning profile (base64) | `IOS_PROVISIONING_PROFILE_BASE64` | ✅ | Created 2026-03-25, App Store type, io.github.sceneview.demo |
+| App Store Connect API key | `APP_STORE_CONNECT_API_KEY` | ✅ | Created 2026-03-25, .p8 key, Gestionnaire d'apps role |
+| App Store Connect issuer ID | `APP_STORE_CONNECT_ISSUER_ID` | ✅ | Created 2026-03-25 |
+| App Store Connect key ID | `APP_STORE_CONNECT_KEY_ID` | ✅ | Created 2026-03-25, key C77W6AGSZT |
+
+### Apple Developer Account
+- **Team ID:** 5G3DZ3TH45
+- **Team name:** Thomas Gorisse
+- **Type:** Personne physique
+- **Renewal:** 24 mars 2027
+- **Bundle ID:** io.github.sceneview.demo
 
 ## How to add iOS secrets
 
