@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SceneView — 3D & AR for every platform</title>
+  <meta name="description" content="SceneView is an AI-first SDK for building 3D and AR applications with Jetpack Compose, SwiftUI, Kotlin/JS, Flutter, and React Native.">
+  <meta name="keywords" content="SceneView, 3D, AR, Augmented Reality, Jetpack Compose, SwiftUI, Kotlin Multiplatform, ARCore, ARKit, Filament, RealityKit">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="SceneView — 3D & AR for every platform">
+  <meta property="og:description" content="AI-first SDK for 3D and AR on Android, iOS, Web, Desktop, TV, Flutter, and React Native.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sceneview.github.io">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SceneView — 3D & AR for every platform">
+  <meta name="twitter:description" content="AI-first SDK for 3D and AR on Android, iOS, Web, Desktop, TV, Flutter, and React Native.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- model-viewer -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="nav" id="nav">
+    <div class="nav__container">
+      <a href="#" class="nav__logo">
+        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <span class="nav__logo-text">SceneView</span>
+      </a>
+
+      <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="nav__links" id="navLinks">
+        <a href="https://sceneview.github.io/docs" class="nav__link">Docs</a>
+        <a href="#samples" class="nav__link">Samples</a>
+        <a href="https://github.com/SceneView/sceneview-android" class="nav__link">GitHub</a>
+        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
+        <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero__container">
+      <div class="hero__content">
+        <h1 class="hero__title">SceneView</h1>
+        <p class="hero__subtitle">3D & AR for every platform</p>
+        <p class="hero__platforms">Android &middot; iOS &middot; Web &middot; Desktop &middot; TV &middot; Flutter &middot; React Native</p>
+        <div class="hero__actions">
+          <a href="https://sceneview.github.io/docs/quickstart" class="btn btn--primary">Get Started</a>
+          <a href="https://github.com/SceneView/sceneview-android" class="btn btn--outline">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            View on GitHub
+          </a>
+        </div>
+      </div>
+      <div class="hero__model">
+        <model-viewer
+          src="models/DamagedHelmet.glb"
+          alt="3D model preview"
+          auto-rotate
+          camera-controls
+          shadow-intensity="1"
+          shadow-softness="1"
+          exposure="1"
+          environment-image="neutral"
+          style="width:100%;height:100%"
+        ></model-viewer>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CODE EXAMPLE ===== -->
+  <section class="section code-section" id="code">
+    <div class="container">
+      <h2 class="section__title">Declarative 3D in a few lines</h2>
+      <p class="section__subtitle">Write 3D scenes the same way you write UI &mdash; composable, reactive, simple.</p>
+
+      <div class="tabs" data-tabs="code">
+        <div class="tabs__nav">
+          <button class="tabs__btn tabs__btn--active" data-tab="kotlin">Kotlin (Android)</button>
+          <button class="tabs__btn" data-tab="swift">Swift (iOS)</button>
+        </div>
+        <div class="tabs__panels">
+          <div class="tabs__panel tabs__panel--active" data-panel="kotlin">
+            <pre class="code-block"><code><span class="kw">Scene</span>(
+    modifier = Modifier.<span class="fn">fillMaxSize</span>(),
+    engine = <span class="fn">rememberEngine</span>(),
+    modelLoader = <span class="fn">rememberModelLoader</span>(engine),
+    environmentLoader = <span class="fn">rememberEnvironmentLoader</span>(engine),
+    environment = <span class="fn">rememberEnvironment</span>(environmentLoader, <span class="str">"envs/sky.hdr"</span>),
+    cameraNode = <span class="fn">rememberCameraNode</span>(engine) {
+        <span class="fn">position</span>(<span class="num">0f</span>, <span class="num">0f</span>, <span class="num">4f</span>)
+    },
+    cameraManipulator = <span class="fn">rememberCameraManipulator</span>()
+) {
+    <span class="kw">ModelNode</span>(
+        modelInstance = <span class="fn">rememberModelInstance</span>(
+            modelLoader, <span class="str">"models/helmet.glb"</span>
+        )
+    )
+}</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="swift">
+            <pre class="code-block"><code><span class="kw">import</span> SceneViewSwift
+
+<span class="kw">struct</span> <span class="fn">ContentView</span>: <span class="fn">View</span> {
+    <span class="kw">var</span> body: <span class="kw">some</span> <span class="fn">View</span> {
+        <span class="kw">SceneView</span> {
+            <span class="kw">ModelNode</span>(
+                name: <span class="str">"helmet"</span>,
+                modelName: <span class="str">"DamagedHelmet"</span>,
+                modelExtension: <span class="str">"usdz"</span>
+            )
+            .<span class="fn">position</span>([<span class="num">0</span>, <span class="num">0</span>, <span class="num">-1</span>])
+            .<span class="fn">scale</span>(<span class="num">0.3</span>)
+
+            <span class="kw">LightNode</span>(
+                lightType: .<span class="fn">directional</span>,
+                intensity: <span class="num">1000</span>
+            )
+        }
+    }
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section class="section features" id="features">
+    <div class="container">
+      <h2 class="section__title">Everything you need for 3D & AR</h2>
+      <p class="section__subtitle">Production-ready primitives built on native renderers &mdash; Filament on Android, RealityKit on Apple.</p>
+
+      <div class="features__grid">
+        <div class="card">
+          <div class="card__icon">
+            <svg viewBox="0 0 48 48" width="48" height="48" fill="none"><rect x="4" y="8" width="40" height="32" rx="4" stroke="var(--color-primary)" stroke-width="2.5"/><path d="M24 16l8 6-8 6-8-6z" stroke="var(--color-primary)" stroke-width="2" fill="var(--color-primary)" fill-opacity=".12"/></svg>
+          </div>
+          <h3 class="card__title">Model Viewer</h3>
+          <p class="card__text">Load glTF, GLB, and USDZ models with one composable. Auto-orbit, camera controls, HDR lighting, and shadows out of the box.</p>
+        </div>
+
+        <div class="card">
+          <div class="card__icon">
+            <svg viewBox="0 0 48 48" width="48" height="48" fill="none"><circle cx="24" cy="24" r="18" stroke="var(--color-primary)" stroke-width="2.5"/><path d="M24 6v36M6 24h36" stroke="var(--color-primary)" stroke-width="1.5" opacity=".4"/><circle cx="24" cy="24" r="6" fill="var(--color-primary)" fill-opacity=".15" stroke="var(--color-primary)" stroke-width="2"/></svg>
+          </div>
+          <h3 class="card__title">Augmented Reality</h3>
+          <p class="card__text">Plane detection, hit testing, cloud anchors, augmented images, and point clouds. ARCore on Android, ARKit on iOS.</p>
+        </div>
+
+        <div class="card">
+          <div class="card__icon">
+            <svg viewBox="0 0 48 48" width="48" height="48" fill="none"><path d="M12 36L24 8l12 28H12z" stroke="var(--color-primary)" stroke-width="2.5" fill="var(--color-primary)" fill-opacity=".1"/><circle cx="24" cy="20" r="4" stroke="var(--color-primary)" stroke-width="2"/></svg>
+          </div>
+          <h3 class="card__title">Procedural Geometry</h3>
+          <p class="card__text">Generate cubes, spheres, cylinders, paths, lines, and shapes at runtime. Earcut triangulation, physics simulation, and spring animations.</p>
+        </div>
+
+        <div class="card">
+          <div class="card__icon">
+            <svg viewBox="0 0 48 48" width="48" height="48" fill="none"><rect x="4" y="14" width="16" height="20" rx="3" stroke="var(--color-primary)" stroke-width="2.5"/><rect x="28" y="14" width="16" height="20" rx="3" stroke="var(--color-primary)" stroke-width="2.5"/><path d="M20 24h8" stroke="var(--color-primary)" stroke-width="2" stroke-dasharray="3 2"/></svg>
+          </div>
+          <h3 class="card__title">Cross-Platform</h3>
+          <p class="card__text">One API across Android, iOS, macOS, visionOS, Web, TV, Flutter, and React Native. Shared KMP logic, native renderers per platform.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== INSTALL ===== -->
+  <section class="section install" id="install">
+    <div class="container">
+      <h2 class="section__title">Quick install</h2>
+      <p class="section__subtitle">Add SceneView to your project in seconds.</p>
+
+      <div class="tabs" data-tabs="install">
+        <div class="tabs__nav">
+          <button class="tabs__btn tabs__btn--active" data-tab="android">Android</button>
+          <button class="tabs__btn" data-tab="ios">iOS</button>
+          <button class="tabs__btn" data-tab="web">Web</button>
+          <button class="tabs__btn" data-tab="flutter">Flutter</button>
+          <button class="tabs__btn" data-tab="desktop">Desktop</button>
+        </div>
+        <div class="tabs__panels">
+          <div class="tabs__panel tabs__panel--active" data-panel="android">
+            <pre class="code-block"><code><span class="cm">// build.gradle.kts</span>
+<span class="kw">dependencies</span> {
+    <span class="cm">// 3D only</span>
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview:3.4.0"</span>)
+    <span class="cm">// 3D + AR</span>
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:arsceneview:3.4.0"</span>)
+}</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="ios">
+            <pre class="code-block"><code><span class="cm">// Swift Package Manager</span>
+<span class="cm">// Add in Xcode: File &rarr; Add Package Dependencies</span>
+
+<span class="str">"https://github.com/SceneView/sceneview-swift"</span>
+<span class="cm">// Version: 3.3.0</span>
+
+<span class="kw">import</span> SceneViewSwift</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="web">
+            <pre class="code-block"><code><span class="cm">// build.gradle.kts (Kotlin/JS)</span>
+<span class="kw">dependencies</span> {
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-web:3.4.0"</span>)
+}
+
+<span class="cm">// Or use Filament.js directly</span>
+<span class="kw">npm</span> install <span class="str">filament-js</span></code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="flutter">
+            <pre class="code-block"><code><span class="cm"># pubspec.yaml</span>
+<span class="kw">dependencies</span>:
+  <span class="fn">sceneview_flutter</span>: <span class="str">^3.4.0</span>
+
+<span class="cm"># Then run:</span>
+<span class="kw">flutter</span> pub get</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="desktop">
+            <pre class="code-block"><code><span class="cm">// build.gradle.kts (Compose Desktop)</span>
+<span class="kw">dependencies</span> {
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-desktop:3.4.0"</span>)
+}
+
+<span class="cm">// Filament JNI on Windows, Linux, macOS</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SAMPLES ===== -->
+  <section class="section samples" id="samples">
+    <div class="container">
+      <h2 class="section__title">Sample apps</h2>
+      <p class="section__subtitle">Explore working demos across every supported platform.</p>
+
+      <div class="samples__grid">
+        <a href="https://github.com/SceneView/sceneview-android/tree/main/samples/model-viewer" class="sample-card">
+          <div class="sample-card__badge">Android</div>
+          <h3 class="sample-card__title">Model Viewer</h3>
+          <p class="sample-card__text">3D model, HDR environment, orbit camera</p>
+        </a>
+        <a href="https://github.com/SceneView/sceneview-android/tree/main/samples/ar-model-viewer" class="sample-card">
+          <div class="sample-card__badge sample-card__badge--ar">AR</div>
+          <h3 class="sample-card__title">AR Model Viewer</h3>
+          <p class="sample-card__text">Tap-to-place, plane detection, pinch/rotate</p>
+        </a>
+        <a href="https://github.com/SceneView/sceneview-android/tree/main/samples/sceneview-demo" class="sample-card">
+          <div class="sample-card__badge sample-card__badge--demo">Demo</div>
+          <h3 class="sample-card__title">SceneView Demo</h3>
+          <p class="sample-card__text">Play Store demo, 4-tab Material 3 Expressive</p>
+        </a>
+        <a href="https://github.com/SceneView/sceneview-android/tree/main/samples/ios-demo" class="sample-card">
+          <div class="sample-card__badge sample-card__badge--ios">iOS</div>
+          <h3 class="sample-card__title">iOS Demo</h3>
+          <p class="sample-card__text">SwiftUI 3-tab app for App Store</p>
+        </a>
+        <a href="https://github.com/SceneView/sceneview-android/tree/main/samples/tv-model-viewer" class="sample-card">
+          <div class="sample-card__badge sample-card__badge--tv">TV</div>
+          <h3 class="sample-card__title">TV Model Viewer</h3>
+          <p class="sample-card__text">Android TV, D-pad controls, auto-rotation</p>
+        </a>
+        <a href="https://github.com/SceneView/sceneview-android/tree/main/samples/physics-demo" class="sample-card">
+          <div class="sample-card__badge">Android</div>
+          <h3 class="sample-card__title">Physics Demo</h3>
+          <p class="sample-card__text">Rigid body physics, colored balls, bounciness</p>
+        </a>
+        <a href="https://github.com/SceneView/sceneview-android/tree/main/samples/web-model-viewer" class="sample-card">
+          <div class="sample-card__badge sample-card__badge--web">Web</div>
+          <h3 class="sample-card__title">Web Model Viewer</h3>
+          <p class="sample-card__text">Browser-based 3D with Filament.js (WASM)</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AI / MCP ===== -->
+  <section class="section ai-section" id="ai">
+    <div class="container">
+      <div class="ai-section__inner">
+        <div class="ai-section__content">
+          <div class="ai-section__badge">AI-first SDK</div>
+          <h2 class="section__title">Built for AI assistants</h2>
+          <p class="section__subtitle">SceneView is the first 3D SDK designed so AI assistants can generate correct, working code on the first try. MCP integration gives Claude, Cursor, and Windsurf full access to the API reference, samples, and best practices.</p>
+          <pre class="code-block code-block--compact"><code><span class="kw">npx</span> <span class="str">@anthropic-ai/sceneview-mcp</span></code></pre>
+          <p class="ai-section__hint">Add to your MCP config for instant AI-powered 3D & AR development.</p>
+        </div>
+        <div class="ai-section__graphic">
+          <div class="ai-section__terminal">
+            <div class="ai-section__terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="ai-section__terminal-body">
+              <p><span class="kw">$</span> Ask Claude: "Build me an AR app"</p>
+              <p class="ai-section__terminal-dim">&gt; Searching SceneView API reference...</p>
+              <p class="ai-section__terminal-dim">&gt; Loading AR best practices...</p>
+              <p class="ai-section__terminal-dim">&gt; Generating composable code...</p>
+              <p><span class="fn">Done.</span> ARScene with tap-to-place ready.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== COMMUNITY ===== -->
+  <section class="section community" id="community">
+    <div class="container">
+      <h2 class="section__title">Join the community</h2>
+      <p class="section__subtitle">Get help, share your projects, and contribute to SceneView.</p>
+
+      <div class="community__grid">
+        <a href="https://discord.gg/sceneview" class="community-card community-card--discord">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+          <h3>Discord</h3>
+          <p>Chat with developers, ask questions, share your creations</p>
+        </a>
+        <a href="https://github.com/SceneView/sceneview-android" class="community-card community-card--github">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          <h3>GitHub</h3>
+          <p>Star the repo, report issues, submit pull requests</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <svg class="footer__logo" viewBox="0 0 32 32" width="24" height="24" fill="none">
+            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
+            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          <span>SceneView</span>
+        </div>
+        <div class="footer__links">
+          <a href="https://github.com/SceneView/sceneview-android/blob/main/LICENSE">Apache 2.0 License</a>
+          <a href="https://github.com/sponsors/SceneView">GitHub Sponsors</a>
+          <a href="https://github.com/SceneView/sceneview-android">Source Code</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
