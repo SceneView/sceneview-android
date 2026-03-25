@@ -52,43 +52,27 @@ No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 
 ## Install
 
-=== "Android 3D"
+**Android** (3D + AR):
+```kotlin
+dependencies {
+    implementation("io.github.sceneview:sceneview:3.4.0")     // 3D
+    implementation("io.github.sceneview:arsceneview:3.4.0")   // AR (includes 3D)
+}
+```
 
-    ```kotlin
-    dependencies {
-        implementation("io.github.sceneview:sceneview:3.4.0")
-    }
-    ```
+**iOS / macOS / visionOS** (Swift Package Manager):
+```
+https://github.com/SceneView/SceneViewSwift.git  (from: 3.3.0)
+```
 
-=== "Android AR"
+**Web** (Kotlin/JS + Filament.js):
+```kotlin
+dependencies {
+    implementation("io.github.sceneview:sceneview-web:3.4.0")
+}
+```
 
-    ```kotlin
-    dependencies {
-        implementation("io.github.sceneview:arsceneview:3.4.0")
-    }
-    ```
-
-=== "iOS"
-
-    ```swift
-    // Xcode → File → Add Package Dependencies
-    // URL: https://github.com/SceneView/SceneViewSwift.git
-    // Version: from 3.3.0
-    ```
-
-=== "Web"
-
-    ```kotlin
-    dependencies {
-        implementation("io.github.sceneview:sceneview-web:3.4.0")
-    }
-    ```
-
-=== "Desktop"
-
-    ```bash
-    ./gradlew :samples:desktop-demo:run
-    ```
+**Desktop** / **Flutter** / **React Native**: see [samples/](samples/)
 
 ---
 
