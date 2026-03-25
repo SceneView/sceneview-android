@@ -63,6 +63,7 @@ nav:
   - Platforms: platforms.md
   - Guides:
     - Architecture: architecture.md
+    - Android XR: android-xr.md
     - Integrations: integrations.md
     - Performance: performance.md
     - Testing: testing.md

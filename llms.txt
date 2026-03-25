@@ -2247,12 +2247,46 @@ ARSceneView.checkSupport { supported ->
 
 ---
 
+## Android XR (Planned)
+
+SceneView can be used inside Android XR's spatial layout system via the Jetpack XR SDK
+(Developer Preview). The integration embeds SceneView's `Scene {}` composable inside a
+`SpatialPanel`, giving full Filament rendering inside an XR spatial panel.
+
+**Dependencies (in addition to SceneView):**
+```kotlin
+implementation("androidx.xr.scenecore:scenecore:1.0.0-alpha12")
+implementation("androidx.xr.compose:compose:1.0.0-alpha12")
+```
+
+**Basic pattern:**
+```kotlin
+Subspace {
+    SpatialPanel(SubspaceModifier.width(1200.dp).height(800.dp)) {
+        val engine = rememberEngine()
+        val modelLoader = rememberModelLoader(engine)
+        Scene(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader) {
+            rememberModelInstance(modelLoader, "models/helmet.glb")?.let {
+                ModelNode(modelInstance = it)
+            }
+        }
+    }
+}
+```
+
+Key XR composables: `Subspace`, `SpatialPanel`, `SpatialRow`, `SpatialColumn`, `Orbiter`,
+`SceneCoreEntity`. SceneCore entities: `GltfModelEntity`, `PanelEntity`, `AnchorEntity`,
+`SpatialEnvironment`. Status: **experimental / planned** — Jetpack XR SDK is alpha.
+
+---
+
 ## Platform Coverage Summary
 
 | Platform | Renderer | Framework | Sample | Status |
 |---|---|---|---|---|
 | Android | Filament | Jetpack Compose | `samples/android-demo` | Stable |
 | Android TV | Filament | Compose TV | `samples/android-tv-demo` | Alpha |
+| Android XR | Filament + SceneCore | Compose for XR | — | Planned |
 | iOS | RealityKit | SwiftUI | `samples/ios-demo` | Alpha |
 | macOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
 | visionOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
