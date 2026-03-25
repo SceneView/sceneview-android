@@ -1,6 +1,6 @@
 # react-native-sceneview
 
-React Native bindings for [SceneView](https://github.com/sceneview/sceneview-android) — 3D and AR scenes powered by Filament (Android) and RealityKit (iOS).
+React Native bindings for [SceneView](https://github.com/sceneview/sceneview) — 3D and AR scenes powered by Filament (Android) and RealityKit (iOS).
 
 > **Status:** Scaffold / work-in-progress. Not yet functional.
 

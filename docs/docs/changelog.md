@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.4.0 — Multi-platform expansion
+## 3.3.0 — Multi-platform expansion
 
 ### New platforms
 - **Web** — sceneview-web module with Filament.js (WASM) rendering + WebXR AR/VR
@@ -21,7 +21,7 @@
 - SceneView MCP on official MCP Registry (io.github.ThomasGorisse/sceneview)
 - 21 GitHub Secrets configured (Android + iOS + Maven + npm)
 - Apple Distribution certificate + App Store Connect API key
-- Kobweb website deployed with v3.4.0 content
+- Kobweb website deployed with v3.3.0 content
 
 ### Fixes
 - material-icons-extended pinned to 1.7.8 (1.10.5 not published)
@@ -55,7 +55,7 @@
 
 ### Documentation
 - **`llms.txt`** — added 8 missing v3.2.0 node types: PhysicsNode, DynamicSkyNode, FogNode, ReflectionProbeNode, LineNode, PathNode, BillboardNode, TextNode; added 6 new samples to table
-- **`ROADMAP.md`** — consolidated: v3.2.0 marked as shipped, v3.3.0/v3.4.0 updated with correct remaining scope
+- **`ROADMAP.md`** — consolidated: v3.2.0 marked as shipped, v3.3.0/v3.3.0 updated with correct remaining scope
 
 ### Code quality
 - **Zero TODO/FIXME comments** in both `sceneview/` and `arsceneview/` SDK modules (was 14)
