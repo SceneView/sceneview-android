@@ -27,13 +27,56 @@
             pointer-events: auto;
         }
         .overlay a:hover { text-decoration: underline; }
+
+        /* XR buttons */
+        #xr-buttons {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        .xr-button {
+            display: none; /* Hidden until support is detected */
+            padding: 12px 24px;
+            border: none;
+            border-radius: 28px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            letter-spacing: 0.02em;
+        }
+        .xr-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+        .xr-button:active {
+            transform: translateY(0);
+        }
+        #enter-ar {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white;
+        }
+        #enter-vr {
+            background: linear-gradient(135deg, #00b894, #55efc4);
+            color: #1a1a2e;
+        }
     </style>
 </head>
 <body>
     <canvas id="scene-canvas"></canvas>
+
+    <div id="xr-buttons">
+        <button id="enter-ar" class="xr-button">Enter AR</button>
+        <button id="enter-vr" class="xr-button">Enter VR</button>
+    </div>
+
     <div class="overlay">
         Powered by <a href="https://github.com/SceneView/sceneview" target="_blank">SceneView</a>
-        + Filament.js
+        + Filament.js + WebXR
     </div>
     <script src="web-model-viewer.js"></script>
 </body>
