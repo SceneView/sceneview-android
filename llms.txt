@@ -2280,6 +2280,83 @@ Key XR composables: `Subspace`, `SpatialPanel`, `SpatialRow`, `SpatialColumn`, `
 
 ---
 
+## visionOS Spatial Computing (Planned)
+
+SceneViewSwift targets visionOS 1+ via RealityKit. Spatial features are planned for future
+releases, building on the existing `SceneView` and node types.
+
+### Scene Types
+
+| Type | Style | Description | SceneViewSwift |
+|---|---|---|---|
+| Window | 2D | Standard SwiftUI window in shared space | `SceneView { }` (existing) |
+| Volume | 3D bounded | Fixed-size 3D container in shared space | `VolumetricSceneView` (planned) |
+| Immersive Space | `.mixed` | Virtual content blends with passthrough | `ImmersiveSceneView` (planned) |
+| Immersive Space | `.progressive` | Partial passthrough replacement | `ImmersiveSceneView` (planned) |
+| Immersive Space | `.full` | Fully virtual, passthrough off | `ImmersiveSceneView` (planned) |
+
+### Hand Tracking (visionOS 1+, Full Space required)
+
+ARKit `HandTrackingProvider` tracks 27 joints per hand at display refresh rate.
+Requires `NSHandsTrackingUsageDescription` in Info.plist and a `SpatialTrackingSession`.
+
+**Planned API:**
+```swift
+ImmersiveSceneView { root in /* content */ }
+    .handTracking(enabled: true)
+    .onHandUpdate { hands in
+        if let d = hands.jointDistance(.thumbTip, .indexFingerTip, hand: .right), d < 0.02 {
+            // Pinch detected
+        }
+    }
+```
+
+### Spatial Anchors
+
+`SpatialTrackingSession` (visionOS 2.0+) unlocks ARKit data in RealityKit: anchor
+geometry extents, real-world offset, and scene understanding mesh.
+
+**Planned API:**
+```swift
+// World anchor
+SpatialAnchorNode.world(position: SIMD3<Float>(0, 1, -2))
+
+// Plane anchor (on detected surface)
+SpatialAnchorNode.plane(alignment: .horizontal)
+
+// Hand anchor (attached to a joint)
+SpatialAnchorNode.hand(.right, joint: .indexFingerTip)
+```
+
+### Scene Understanding
+
+Real-time mesh of surroundings enabling collision, physics, surface classification
+(floor, wall, ceiling, table, seat, door, window), and environment occlusion.
+
+### Object Manipulation (visionOS 26)
+
+`ManipulationComponent` enables look, tap, drag, rotate, scale on entities with a
+single call. `EnvironmentBlendingComponent` for real-world occlusion.
+`MeshInstancesComponent` for efficient GPU instanced rendering.
+
+**Planned API:**
+```swift
+let model = try await ModelNode.load("models/chair.usdz")
+model.enableManipulation()  // look + grab + drag + rotate + scale via system gestures
+```
+
+### Cross-Platform Mapping (visionOS <-> Android XR)
+
+| Feature | visionOS | Android XR |
+|---|---|---|
+| Spatial container | Volume (`.volumetric`) | `SpatialPanel` |
+| Immersive mode | `ImmersiveSpace` | `SpatialEnvironment` |
+| Hand tracking | `HandTrackingProvider` | Jetpack XR hand tracking |
+| Spatial anchors | `WorldAnchor` | `AnchorEntity` (SceneCore) |
+| Scene understanding | Scene mesh + classification | Perception APIs |
+
+---
+
 ## Platform Coverage Summary
 
 | Platform | Renderer | Framework | Sample | Status |
