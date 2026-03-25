@@ -4,8 +4,8 @@
 set -e
 
 API_KEY="[REDACTED-API-KEY]"
-MODELS_DIR="samples/sceneview-demo/src/main/assets/models"
-ENV_DIR="samples/sceneview-demo/src/main/assets/environments"
+MODELS_DIR="samples/android-demo/src/main/assets/models"
+ENV_DIR="samples/android-demo/src/main/assets/environments"
 
 mkdir -p "$MODELS_DIR" "$ENV_DIR"
 

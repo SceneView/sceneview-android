@@ -62,7 +62,7 @@ fun Footer() {
             ), colorMode)
 
             FooterColumn("Community", listOf(
-                "GitHub" to "https://github.com/sceneview/sceneview-android",
+                "GitHub" to "https://github.com/sceneview/sceneview",
                 "Discord" to "https://discord.gg/UbNDDBTNqb",
                 "Stack Overflow" to "https://stackoverflow.com/questions/tagged/sceneview"
             ), colorMode)

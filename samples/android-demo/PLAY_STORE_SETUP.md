@@ -131,7 +131,7 @@ The first release **must** be uploaded manually:
    export SCENEVIEW_DEMO_KEY_PASSWORD=YOUR_KEY_PASSWORD
    ./gradlew :samples:sceneview-demo:bundleRelease
    ```
-2. Find the AAB at `samples/sceneview-demo/build/outputs/bundle/release/`
+2. Find the AAB at `samples/android-demo/build/outputs/bundle/release/`
 3. In Play Console → **Production → Create new release**
 4. Upload the AAB
 5. Add release notes
@@ -168,7 +168,7 @@ Promote in Play Console: **Release → Testing → [track]** → Promote to next
 
 ## 10. Version Management
 
-Before each release, update `samples/sceneview-demo/build.gradle`:
+Before each release, update `samples/android-demo/build.gradle`:
 
 ```groovy
 defaultConfig {

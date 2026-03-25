@@ -1,6 +1,6 @@
 # sceneview_flutter
 
-Flutter plugin for [SceneView](https://github.com/SceneView/sceneview-android) — 3D and AR scenes using native renderers.
+Flutter plugin for [SceneView](https://github.com/SceneView/sceneview) — 3D and AR scenes using native renderers.
 
 | Platform | Renderer | Status |
 |----------|----------|--------|
