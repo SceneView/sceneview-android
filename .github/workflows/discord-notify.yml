@@ -1,0 +1,95 @@
+name: Discord Notifications
+
+# Posts to Discord when a release is published or an issue is opened.
+#
+# SETUP: Add a DISCORD_WEBHOOK_URL secret in your repo settings:
+#   1. In Discord, go to Server Settings > Integrations > Webhooks > New Webhook
+#   2. Choose the channel (e.g. #releases or #announcements)
+#   3. Copy the webhook URL
+#   4. In GitHub, go to Settings > Secrets and variables > Actions > New repository secret
+#   5. Name: DISCORD_WEBHOOK_URL   Value: <the webhook URL>
+
+on:
+  release:
+    types: [published]
+  issues:
+    types: [opened]
+
+jobs:
+  notify-release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post release to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL secret is not set — skipping notification."
+            exit 0
+          fi
+
+          TAG="${{ github.event.release.tag_name }}"
+          NAME="${{ github.event.release.name }}"
+          URL="${{ github.event.release.html_url }}"
+          PRERELEASE="${{ github.event.release.prerelease }}"
+
+          if [ "$PRERELEASE" = "true" ]; then
+            EMOJI="🧪"
+            LABEL="Pre-release"
+          else
+            EMOJI="🚀"
+            LABEL="New Release"
+          fi
+
+          PAYLOAD=$(cat <<EOF
+          {
+            "embeds": [{
+              "title": "$EMOJI $LABEL: $TAG",
+              "description": "**$NAME**\n\n[View release notes]($URL)",
+              "color": 3447003,
+              "footer": { "text": "SceneView — 3D & AR SDK" },
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }]
+          }
+          EOF
+          )
+
+          curl -s -H "Content-Type: application/json" \
+               -d "$PAYLOAD" \
+               "$DISCORD_WEBHOOK_URL"
+
+  notify-issue:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post new issue to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL secret is not set — skipping notification."
+            exit 0
+          fi
+
+          TITLE="${{ github.event.issue.title }}"
+          NUMBER="${{ github.event.issue.number }}"
+          URL="${{ github.event.issue.html_url }}"
+          AUTHOR="${{ github.event.issue.user.login }}"
+
+          PAYLOAD=$(cat <<EOF
+          {
+            "embeds": [{
+              "title": "🐛 New Issue #$NUMBER",
+              "description": "**$TITLE**\n\nOpened by [$AUTHOR](https://github.com/$AUTHOR)\n[View issue]($URL)",
+              "color": 15105570,
+              "footer": { "text": "SceneView — 3D & AR SDK" },
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }]
+          }
+          EOF
+          )
+
+          curl -s -H "Content-Type: application/json" \
+               -d "$PAYLOAD" \
+               "$DISCORD_WEBHOOK_URL"
