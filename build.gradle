@@ -9,6 +9,15 @@ plugins {
     id 'com.vanniktech.maven.publish' version '0.33.0' apply false
 }
 
+// Force patched versions of transitive npm dependencies (Dependabot security alerts)
+plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin) {
+    extensions.getByType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension).tap {
+        resolution("serialize-javascript", ">=7.0.3")
+        resolution("webpack", ">=5.104.1")
+        resolution("webpack-dev-server", ">=5.2.1")
+    }
+}
+
 subprojects {
     plugins.withId("com.vanniktech.maven.publish") {
         mavenPublishing {
