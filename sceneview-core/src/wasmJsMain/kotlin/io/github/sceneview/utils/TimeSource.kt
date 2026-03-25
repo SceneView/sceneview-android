@@ -1,3 +1,9 @@
 package io.github.sceneview.utils
 
-actual fun nanoTime(): Long = (kotlinx.browser.window.performance.now() * 1_000_000).toLong()
+/**
+ * Returns performance.now() from the browser, in milliseconds.
+ */
+@JsFun("() => performance.now()")
+private external fun performanceNow(): Double
+
+actual fun nanoTime(): Long = (performanceNow() * 1_000_000).toLong()
