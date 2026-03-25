@@ -8,23 +8,29 @@ import io.github.sceneview.website.components.*
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
 
-private data class SampleEntry(val title: String, val description: String, val directory: String, val platform: String, val tags: List<String>)
+private data class SampleEntry(
+    val title: String,
+    val description: String,
+    val directory: String,
+    val platform: String,
+    val tags: List<String>,
+    val modelUrl: String? = null
+)
 
 private val samples = listOf(
-    SampleEntry("Model Viewer", "Load and display a 3D model with HDR environment lighting and orbit camera controls.", "samples/model-viewer", "Android", listOf("3D", "glTF", "HDR")),
-    SampleEntry("AR Model Viewer", "Tap on a detected plane to place a 3D model. Supports pinch-to-scale and rotate gestures.", "samples/ar-model-viewer", "Android", listOf("AR", "Planes", "Gestures")),
-    SampleEntry("Camera Manipulator", "Orbit, pan, and zoom camera with configurable sensitivity and damping.", "samples/camera-manipulator", "Android", listOf("3D", "Camera")),
-    SampleEntry("glTF Camera", "Use cameras embedded in a glTF file for cinematic scene playback.", "samples/gltf-camera", "Android", listOf("3D", "glTF", "Camera")),
-    SampleEntry("AR Augmented Image", "Detect real-world images and overlay 3D content on them.", "samples/ar-augmented-image", "Android", listOf("AR", "Image Tracking")),
-    SampleEntry("AR Cloud Anchor", "Create persistent, cross-device AR anchors using Google Cloud Anchors.", "samples/ar-cloud-anchor", "Android", listOf("AR", "Cloud")),
-    SampleEntry("AR Point Cloud", "Visualize ARCore feature points as a real-time point cloud.", "samples/ar-point-cloud", "Android", listOf("AR", "Debug")),
-    SampleEntry("Cross-Platform Model Viewer", "Side-by-side recipe showing identical 3D model viewers in Kotlin and Swift.", "samples/recipes/model-viewer", "Android + iOS", listOf("3D", "Cross-Platform")),
-    SampleEntry("Cross-Platform AR", "Recipe for tap-to-place AR on both Android (ARCore) and iOS (ARKit).", "samples/recipes/ar-tap-to-place", "Android + iOS", listOf("AR", "Cross-Platform")),
-    SampleEntry("Procedural Geometry", "Create cubes, spheres, cylinders, and custom shapes from code on both platforms.", "samples/recipes/procedural-geometry", "Android + iOS", listOf("3D", "Procedural", "Cross-Platform")),
-    SampleEntry("Text Labels", "Render 3D text labels and billboards in your scene.", "samples/recipes/text-labels", "Android + iOS", listOf("3D", "Text", "Cross-Platform")),
-    SampleEntry("Web Model Viewer", "Browser-based 3D viewer using Filament.js (WASM) — same engine as Android.", "samples/web-model-viewer", "Web", listOf("3D", "Web", "Filament.js")),
-    SampleEntry("Android TV Viewer", "3D model viewer for Android TV with D-pad controls (rotate, zoom, cycle).", "samples/tv-model-viewer", "Android TV", listOf("3D", "TV", "D-pad")),
-    SampleEntry("iOS Demo App", "SwiftUI App Store demo with 3D viewer, AR viewer, and samples browser.", "samples/ios-demo", "iOS", listOf("3D", "AR", "SwiftUI")),
+    // Platform showcase apps
+    SampleEntry("Android Demo", "Unified showcase: 3D viewer, AR tap-to-place, 14 interactive demos, Material 3 Expressive.", "samples/android-demo", "Android", listOf("3D", "AR", "Material 3"), modelUrl = "/models/DamagedHelmet.glb"),
+    SampleEntry("iOS Demo", "SwiftUI 3-tab app: 3D scenes, AR with ARKit, sample gallery.", "samples/ios-demo", "iOS", listOf("3D", "AR", "SwiftUI")),
+    SampleEntry("Web Demo", "Browser 3D viewer with Filament.js (WASM) and WebXR AR/VR support.", "samples/web-demo", "Web", listOf("3D", "WebXR", "Filament.js")),
+    SampleEntry("Desktop Demo", "Software 3D renderer: wireframe cube, octahedron, diamond. Compose Desktop.", "samples/desktop-demo", "Desktop", listOf("3D", "Compose Desktop")),
+    SampleEntry("Android TV Demo", "D-pad controlled 3D viewer with model cycling and auto-rotation.", "samples/android-tv-demo", "Android TV", listOf("3D", "TV", "D-pad")),
+    SampleEntry("Flutter Demo", "PlatformView bridge to SceneView on Android and iOS.", "samples/flutter-demo", "Flutter", listOf("3D", "Flutter", "Cross-Platform")),
+    SampleEntry("React Native Demo", "Fabric bridge to SceneView on Android and iOS.", "samples/react-native-demo", "React Native", listOf("3D", "React Native", "Cross-Platform")),
+    // Cross-platform recipes
+    SampleEntry("Model Viewer Recipe", "Side-by-side recipe: identical 3D model viewers in Kotlin and Swift.", "samples/recipes/model-viewer.md", "Android + iOS", listOf("3D", "Cross-Platform", "Recipe"), modelUrl = "/models/DamagedHelmet.glb"),
+    SampleEntry("AR Tap-to-Place Recipe", "Recipe for tap-to-place AR on both Android (ARCore) and iOS (ARKit).", "samples/recipes/ar-tap-to-place.md", "Android + iOS", listOf("AR", "Cross-Platform", "Recipe")),
+    SampleEntry("Physics Recipe", "Rigid body physics with gravity, collision, and bounce on both platforms.", "samples/recipes/physics.md", "Android + iOS", listOf("3D", "Physics", "Recipe")),
+    SampleEntry("Procedural Geometry Recipe", "Create cubes, spheres, cylinders, and custom shapes from code.", "samples/recipes/procedural-geometry.md", "Android + iOS", listOf("3D", "Procedural", "Recipe"))
 )
 
 @Page
@@ -114,15 +120,28 @@ private fun SampleCard(sample: SampleEntry, colorMode: ColorMode) {
             property("flex", "1 1 340px"); maxWidth(400.px)
             property("background-color", colorMode.surfaceContainer())
             property("border-radius", Shape.EXTRA_LARGE)
-            padding(28.px)
             property("text-decoration", "none")
             property("border", "1px solid ${colorMode.outlineVariant()}")
             property("transition", Motion.HOVER_TRANSITION)
             display(DisplayStyle.Block)
             property("box-shadow", Elevation.LEVEL1)
+            property("overflow", "hidden")
         }
         classes("m3-sample-card")
     }) {
+        // 3D preview if a model URL is available
+        if (sample.modelUrl != null) {
+            CardModelViewer(
+                src = sample.modelUrl,
+                alt = "3D preview for ${sample.title} sample"
+            )
+        }
+
+        // Card content with padding
+        Div(attrs = {
+            style { padding(28.px) }
+        }) {
+
         // Platform badge
         Span(attrs = {
             style {
@@ -177,6 +196,8 @@ private fun SampleCard(sample: SampleEntry, colorMode: ColorMode) {
                 }) { Text(tag) }
             }
         }
+
+        } // Close card content Div wrapper
     }
 
     Style {
