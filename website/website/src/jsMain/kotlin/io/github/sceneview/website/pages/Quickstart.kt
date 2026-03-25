@@ -44,7 +44,7 @@ fun QuickstartPage() {
 
             DocSection("Android — 3D Scene", colorMode) {
                 Step("1", "Add the dependency", colorMode) {
-                    CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:sceneview:3.3.0\")\n}", "Gradle")
+                    CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:sceneview:3.4.0\")\n}", "Gradle")
                 }
                 Step("2", "Add a 3D model to your assets", colorMode) {
                     P(attrs = {
@@ -66,7 +66,7 @@ fun QuickstartPage() {
 
             DocSection("Android — Augmented Reality", colorMode) {
                 Step("1", "Add the AR dependency", colorMode) {
-                    CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:arsceneview:3.3.0\")\n}", "Gradle")
+                    CodeBlock("// build.gradle.kts\ndependencies {\n    implementation(\"io.github.sceneview:arsceneview:3.4.0\")\n}", "Gradle")
                 }
                 Step("2", "Add AR permissions to your manifest", colorMode) {
                     CodeBlock("<uses-permission android:name=\"android.permission.CAMERA\" />\n<uses-feature android:name=\"android.hardware.camera.ar\" android:required=\"true\" />\n\n<application ...>\n    <meta-data android:name=\"com.google.ar.core\" android:value=\"required\" />\n</application>", "XML")
