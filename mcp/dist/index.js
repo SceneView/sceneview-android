@@ -11,7 +11,19 @@ import { MIGRATION_GUIDE } from "./migration.js";
 import { fetchKnownIssues } from "./issues.js";
 import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
 import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
+import { buildPreviewUrl, validatePreviewInput, formatPreviewResponse } from "./preview.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
+// ─── Legal disclaimer ─────────────────────────────────────────────────────────
+const DISCLAIMER = '\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/SceneView/sceneview/blob/main/mcp/TERMS.md).*';
+function withDisclaimer(content) {
+    if (content.length === 0)
+        return content;
+    const last = content[content.length - 1];
+    return [
+        ...content.slice(0, -1),
+        { ...last, text: last.text + DISCLAIMER },
+    ];
+}
 let API_DOCS;
 try {
     API_DOCS = readFileSync(resolve(__dirname, "../llms.txt"), "utf-8");
@@ -205,24 +217,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
         {
             name: "render_3d_preview",
-            description: "Generates an interactive 3D preview link for a glTF/GLB model. Returns a URL to sceneview.github.io/preview that renders the model in the browser with orbit controls, AR support, and sharing. Use this when you want to show a 3D model to the user — paste the link in your response and they can click to see it live. Also works with any publicly accessible .glb URL.",
+            description: "Generates an interactive 3D preview link. Accepts a model URL, a SceneView code snippet, or both. Returns a URL to sceneview.github.io/preview that renders the model in the browser with orbit controls, AR support, and sharing. For model URLs: embeds a model-viewer link directly. For code snippets: shows the 3D preview with the code in a companion panel. Use this when you want to show a 3D model to the user — paste the link in your response and they can click to see it live.",
             inputSchema: {
                 type: "object",
                 properties: {
                     modelUrl: {
                         type: "string",
-                        description: "Public URL to a .glb or .gltf model file. Must be HTTPS and CORS-enabled.",
+                        description: "Public URL to a .glb or .gltf model file. Must be HTTPS and CORS-enabled. If omitted, a default model is used.",
+                    },
+                    codeSnippet: {
+                        type: "string",
+                        description: "SceneView code snippet (Kotlin or Swift) to display alongside the 3D preview in a companion panel. Useful when showing generated code together with a live preview.",
                     },
                     autoRotate: {
                         type: "boolean",
-                        description: "Auto-rotate the model (default: true)",
+                        description: "Auto-rotate the model (default: true).",
                     },
                     ar: {
                         type: "boolean",
-                        description: "Enable AR mode on supported devices (default: true)",
+                        description: "Enable AR mode on supported devices (default: true).",
+                    },
+                    title: {
+                        type: "string",
+                        description: "Custom title shown above the preview.",
                     },
                 },
-                required: ["modelUrl"],
+                required: [],
             },
         },
     ],
@@ -262,7 +282,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const codeLang = isIos ? "swift" : "kotlin";
             const codeLabel = isIos ? "**Swift (SwiftUI):**" : "**Kotlin (Jetpack Compose):**";
             return {
-                content: [
+                content: withDisclaimer([
                     {
                         type: "text",
                         text: [
@@ -281,7 +301,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                             `> ${sample.prompt}`,
                         ].join("\n"),
                     },
-                ],
+                ]),
             };
         }
         // ── list_samples ──────────────────────────────────────────────────────────
@@ -307,14 +327,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 return `### \`${s.id}\`\n**${s.title}**${s.language === "swift" ? " (Swift/iOS)" : ""}\n${s.description}\n*Tags:* ${s.tags.join(", ")}\n${depLabel} \`${s.dependency}\`\n\nCall \`get_sample("${s.id}")\` for the full code.`;
             })
                 .join("\n\n---\n\n");
-            return { content: [{ type: "text", text: header + rows }] };
+            return { content: withDisclaimer([{ type: "text", text: header + rows }]) };
         }
         // ── get_setup ─────────────────────────────────────────────────────────────
         case "get_setup": {
             const type = request.params.arguments?.type;
             if (type === "3d") {
                 return {
-                    content: [
+                    content: withDisclaimer([
                         {
                             type: "text",
                             text: [
@@ -330,12 +350,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `No manifest changes required for 3D-only scenes.`,
                             ].join("\n"),
                         },
-                    ],
+                    ]),
                 };
             }
             if (type === "ar") {
                 return {
-                    content: [
+                    content: withDisclaimer([
                         {
                             type: "text",
                             text: [
@@ -358,7 +378,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `\`\`\``,
                             ].join("\n"),
                         },
-                    ],
+                    ]),
                 };
             }
             return {
@@ -377,11 +397,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }
             const issues = validateCode(code);
             const report = formatValidationReport(issues);
-            return { content: [{ type: "text", text: report }] };
+            return { content: withDisclaimer([{ type: "text", text: report }]) };
         }
         // ── get_migration_guide ───────────────────────────────────────────────────
         case "get_migration_guide": {
-            return { content: [{ type: "text", text: MIGRATION_GUIDE }] };
+            return { content: withDisclaimer([{ type: "text", text: MIGRATION_GUIDE }]) };
         }
         // ── get_node_reference ────────────────────────────────────────────────────
         case "get_node_reference": {
@@ -410,7 +430,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 };
             }
             return {
-                content: [
+                content: withDisclaimer([
                     {
                         type: "text",
                         text: [
@@ -419,33 +439,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                             section.content,
                         ].join("\n"),
                     },
-                ],
+                ]),
             };
         }
         // ── get_platform_roadmap ────────────────────────────────────────────────
         case "get_platform_roadmap": {
-            return { content: [{ type: "text", text: PLATFORM_ROADMAP }] };
+            return { content: withDisclaimer([{ type: "text", text: PLATFORM_ROADMAP }]) };
         }
         // ── get_best_practices ───────────────────────────────────────────────────
         case "get_best_practices": {
             const category = request.params.arguments?.category || "all";
             const text = BEST_PRACTICES[category] ?? BEST_PRACTICES["all"];
-            return { content: [{ type: "text", text }] };
+            return { content: withDisclaimer([{ type: "text", text }]) };
         }
         // ── get_ar_setup ─────────────────────────────────────────────────────────
         case "get_ar_setup": {
-            return { content: [{ type: "text", text: AR_SETUP_GUIDE }] };
+            return { content: withDisclaimer([{ type: "text", text: AR_SETUP_GUIDE }]) };
         }
         // ── get_troubleshooting ──────────────────────────────────────────────────
         case "get_troubleshooting": {
-            return { content: [{ type: "text", text: TROUBLESHOOTING_GUIDE }] };
+            return { content: withDisclaimer([{ type: "text", text: TROUBLESHOOTING_GUIDE }]) };
         }
         // ── get_ios_setup ─────────────────────────────────────────────────────────
         case "get_ios_setup": {
             const iosType = request.params.arguments?.type;
             if (iosType === "3d") {
                 return {
-                    content: [
+                    content: withDisclaimer([
                         {
                             type: "text",
                             text: [
@@ -525,12 +545,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `No manifest or permission changes needed for 3D-only scenes.`,
                             ].join("\n"),
                         },
-                    ],
+                    ]),
                 };
             }
             if (iosType === "ar") {
                 return {
-                    content: [
+                    content: withDisclaimer([
                         {
                             type: "text",
                             text: [
@@ -616,7 +636,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `\`\`\``,
                             ].join("\n"),
                         },
-                    ],
+                    ]),
                 };
             }
             return {
@@ -627,7 +647,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // ── get_web_setup ────────────────────────────────────────────────────────
         case "get_web_setup": {
             return {
-                content: [
+                content: withDisclaimer([
                     {
                         type: "text",
                         text: [
@@ -712,47 +732,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                             `- glTF/GLB format only (same as Android)`,
                         ].join("\n"),
                     },
-                ],
+                ]),
             };
         }
         // ── render_3d_preview ──────────────────────────────────────────────────
         case "render_3d_preview": {
             const modelUrl = request.params.arguments?.modelUrl;
-            const autoRotate = request.params.arguments?.autoRotate ?? true;
-            const ar = request.params.arguments?.ar ?? true;
-            if (!modelUrl) {
+            const codeSnippet = request.params.arguments?.codeSnippet;
+            const autoRotate = request.params.arguments?.autoRotate;
+            const ar = request.params.arguments?.ar;
+            const title = request.params.arguments?.title;
+            const validationError = validatePreviewInput(modelUrl, codeSnippet);
+            if (validationError) {
                 return {
-                    content: [{ type: "text", text: "Error: modelUrl is required. Provide a public HTTPS URL to a .glb or .gltf file." }],
+                    content: [{ type: "text", text: `Error: ${validationError}` }],
                     isError: true,
                 };
             }
-            const params = new URLSearchParams();
-            params.set("model", modelUrl);
-            if (!autoRotate)
-                params.set("rotate", "false");
-            if (!ar)
-                params.set("ar", "false");
-            const previewUrl = `https://sceneview.github.io/preview?${params.toString()}`;
-            return {
-                content: [{
-                        type: "text",
-                        text: `## 3D Preview
-
-**[Click to view the 3D model interactively →](${previewUrl})**
-
-The link opens an interactive 3D viewer where you can:
-- 🖱️ Drag to orbit, scroll to zoom
-- 📱 "View in AR" on mobile devices (ARCore/ARKit)
-- 🔗 Share the link with anyone
-
-**Preview URL:** ${previewUrl}
-
-**Model:** ${modelUrl}
-
----
-*Powered by SceneView — 3D & AR for every platform*`,
-                    }],
-            };
+            const result = buildPreviewUrl({ modelUrl, codeSnippet, autoRotate, ar, title });
+            const text = formatPreviewResponse(result);
+            return { content: withDisclaimer([{ type: "text", text }]) };
         }
         default:
             return {
