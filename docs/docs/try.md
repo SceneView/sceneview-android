@@ -21,17 +21,14 @@ That's it. The script builds the demo app and installs it on your connected Andr
     - **Java 17+** installed
     - **adb** on your PATH (comes with Android Studio)
 
-### Try a specific sample
+### Try a specific platform demo
 
 ```bash
-./try-demo --sample ar-model-viewer    # AR tap-to-place
-./try-demo --sample physics-demo       # Bouncing spheres
-./try-demo --sample autopilot-demo     # Automotive HUD
-./try-demo --sample dynamic-sky        # Day/night cycle
-./try-demo --sample post-processing    # Bloom, SSAO, vignette
+./try-demo --sample android-demo       # Full showcase (4 tabs, 14 demos)
+./try-demo --sample android-tv-demo    # D-pad controlled TV viewer
 ```
 
-All 15 samples are available. Run `./try-demo --help` for the full list.
+Run `./try-demo --help` for the full list.
 
 ---
 
@@ -40,17 +37,17 @@ All 15 samples are available. Run `./try-demo --help` for the full list.
 <div class="try-download-grid">
 
 <div class="try-download-card">
-<h3>SceneView Demo</h3>
-<p>Full showcase: 11 models, 6 HDR environments, 26+ node types, animations, physics, post-processing.</p>
-<a href="https://github.com/SceneView/sceneview/releases/latest/download/sceneview-demo.apk" class="md-button md-button--primary">
+<h3>Android Demo</h3>
+<p>Full showcase: 4 tabs, 14 interactive demos, 26+ node types, animations, physics, post-processing.</p>
+<a href="https://github.com/SceneView/sceneview/releases/latest/download/android-demo.apk" class="md-button md-button--primary">
 Download APK
 </a>
 <p class="try-download-note">Debug-signed — works on any device, no Play Store needed.</p>
 </div>
 
 <div class="try-download-card">
-<h3>All 15 samples</h3>
-<p>Individual APKs for each sample: model viewer, AR, physics, camera, sky, path, text, effects.</p>
+<h3>All Platform Demos</h3>
+<p>APKs for Android, Android TV. iOS and Web demos available from source.</p>
 <a href="https://github.com/SceneView/sceneview/releases/latest" class="md-button">
 Browse all APKs
 </a>
@@ -62,9 +59,9 @@ Browse all APKs
 
 ```bash
 # Download and install in one line
-curl -fSL -o /tmp/sceneview-demo.apk \
-  https://github.com/SceneView/sceneview/releases/latest/download/sceneview-demo.apk \
-  && adb install -r /tmp/sceneview-demo.apk
+curl -fSL -o /tmp/android-demo.apk \
+  https://github.com/SceneView/sceneview/releases/latest/download/android-demo.apk \
+  && adb install -r /tmp/android-demo.apk
 ```
 
 Or use the script's download mode (no build required):
@@ -78,7 +75,7 @@ Or use the script's download mode (no build required):
 ## Option 3 — Android Studio
 
 1. Open the project in Android Studio
-2. Select the **`samples:sceneview-demo`** run configuration
+2. Select the **`samples:android-demo`** run configuration
 3. Click **Run**
 
 ---
@@ -87,11 +84,10 @@ Or use the script's download mode (no build required):
 
 | Tab | What it shows |
 |---|---|
-| **Explore** | Full-screen 3D viewer — orbit camera, 8 models, 6 HDR environments |
-| **Showcase** | Live previews of every node type with code snippets |
-| **Gallery** | 14 curated cards — realistic models, animated characters, procedural geometry |
-| **Effects** | Post-processing: bloom, vignette, tone mapping, FXAA, SSAO |
-| **QA** | Stress tests, spring animations, edge cases |
+| **3D** | Full-screen 3D viewer — orbit camera, 8 models, 6 HDR environments |
+| **AR** | Tap-to-place, plane detection, 4 AR models, gesture controls |
+| **Samples** | Model viewer, geometry, animation, dynamic sky demos |
+| **About** | Platform info, GitHub links |
 
 <div class="try-demo-features">
 
@@ -127,13 +123,13 @@ git clone https://github.com/SceneView/sceneview.git
 cd sceneview
 
 # Build just the demo
-./gradlew :samples:sceneview-demo:assembleDebug
+./gradlew :samples:android-demo:assembleDebug
 
 # Build all samples
 ./gradlew assembleDebug
 
 # Run lint
-./gradlew :samples:sceneview-demo:lint
+./gradlew :samples:android-demo:lint
 ```
 
 The APK lands in `samples/android-demo/build/outputs/apk/debug/`.
