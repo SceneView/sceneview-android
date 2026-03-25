@@ -1,0 +1,14 @@
+name = "sceneview-pro-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Secrets (set via `wrangler secret put`):
+# - STRIPE_SECRET_KEY
+# - UPSTASH_REDIS_URL
+# - UPSTASH_REDIS_TOKEN
+
+[dev]
+port = 8787

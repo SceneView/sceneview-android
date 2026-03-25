@@ -1,0 +1,20 @@
+{
+  "name": "@sceneview/pro-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SceneView MCP Pro API — Cloudflare Workers serverless gateway",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.28.0",
+    "stripe": "^14.14.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.24.0"
+  }
+}
