@@ -1,0 +1,482 @@
+2026-03-24 20:33:47.180 [main] DEBUG ktor.application - Java Home: /Library/Java/JavaVirtualMachines/jdk-22.jdk/Contents
+2026-03-24 20:33:47.181 [main] DEBUG ktor.application - Class Loader: jdk.internal.loader.ClassLoaders$AppClassLoader@43e45247: [file:/Users/thomasgorisse/Projects/sceneview/website/.kobweb/server/server.jar!/okio]
+2026-03-24 20:33:47.188 [main] WARN  ktor.application - API jar specified but does not exist! Please fix conf.yaml. Invalid path: "build/libs/sceneview-website.jar"
+2026-03-24 20:33:47.212 [main] INFO  ktor.application - Application started in 0.061 seconds.
+2026-03-24 20:33:47.278 [main] INFO  ktor.application - Responding at http://0.0.0.0:8082
+2026-03-24 20:34:02.316 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 20:34:02.881 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 20:34:03.067 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 20:34:03.496 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 20:34:03.594 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 20:34:03.875 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 20:34:04.201 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 20:34:04.369 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 20:34:04.536 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 20:34:04.978 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 20:34:05.050 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 20:34:05.245 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 20:34:05.658 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 20:34:05.731 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 20:34:06.340 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:18:23.866 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 22:18:24.447 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:18:24.650 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 22:18:25.062 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:18:25.155 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:18:25.376 [eventLoopGroupProxy-3-4] DEBUG ktor.application - I/O operation failed
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:403)
+	at java.base/sun.nio.ch.SocketChannelImpl.implRead(SocketChannelImpl.java:435)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:493)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:356)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+2026-03-24 22:18:25.402 [eventLoopGroupProxy-4-1] DEBUG ktor.application - 200 OK: GET - /models/DamagedHelmet.glb. Exception class io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithFailure(NettyHttpResponsePipeline.kt:102)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:252)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.access$respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:26)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBodyAndTrailerMessage$1.invokeSuspend(NettyHttpResponsePipeline.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:469)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:566)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+Caused by: io.netty.channel.StacklessClosedChannelException: null
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.write(Object, ChannelPromise)(Unknown Source)
+2026-03-24 22:18:25.424 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 22:18:25.763 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:18:25.912 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:18:26.104 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 22:18:26.515 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:18:26.594 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:18:26.774 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 22:18:27.198 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:18:27.275 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:18:27.880 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:31:59.965 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 22:32:00.487 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:00.681 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 22:32:01.096 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:01.177 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:01.393 [eventLoopGroupProxy-4-7] DEBUG ktor.application - 200 OK: GET - /models/DamagedHelmet.glb. Exception class io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:103)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:90)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt.tryCopyException(ExceptionUtilsJvm.kt:45)
+	at io.ktor.utils.io.ByteBufferChannelKt.rethrowClosed(ByteBufferChannel.kt:2404)
+	at io.ktor.utils.io.ByteBufferChannelKt.access$rethrowClosed(ByteBufferChannel.kt:1)
+	at io.ktor.utils.io.ByteBufferChannel.setupStateForWrite$ktor_io(ByteBufferChannel.kt:234)
+	at io.ktor.utils.io.ByteBufferChannel.copyDirect$ktor_io(ByteBufferChannel.kt:3372)
+	at io.ktor.utils.io.ByteBufferChannel$copyDirect$1.invokeSuspend(ByteBufferChannel.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.EventLoop.processUnconfinedEvent(EventLoop.common.kt:65)
+	at kotlinx.coroutines.internal.DispatchedContinuation.resumeWith(DispatchedContinuation.kt:343)
+	at io.ktor.utils.io.internal.CancellableReusableContinuation.resumeWith(CancellableReusableContinuation.kt:93)
+	at io.ktor.utils.io.ByteBufferChannel.resumeReadOp(ByteBufferChannel.kt:2104)
+	at io.ktor.utils.io.ByteBufferChannel.flushImpl(ByteBufferChannel.kt:188)
+	at io.ktor.utils.io.ByteBufferChannel.flush(ByteBufferChannel.kt:198)
+	at io.ktor.util.cio.FileChannelsKt$readChannel$1$3$1.invokeSuspend(FileChannels.kt:48)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+Caused by: io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithFailure(NettyHttpResponsePipeline.kt:102)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:252)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.access$respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:26)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBodyAndTrailerMessage$1.invokeSuspend(NettyHttpResponsePipeline.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:469)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:566)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+Caused by: io.netty.channel.StacklessClosedChannelException: null
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.write(Object, ChannelPromise)(Unknown Source)
+2026-03-24 22:32:01.440 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 22:32:01.783 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:01.902 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:02.104 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 22:32:02.508 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:02.605 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:02.808 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 22:32:03.215 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:03.311 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:03.917 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:54.339 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 22:32:54.854 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:55.045 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 22:32:55.460 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:55.531 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:55.744 [eventLoopGroupProxy-4-5] DEBUG ktor.application - 200 OK: GET - /models/DamagedHelmet.glb. Exception class io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithFailure(NettyHttpResponsePipeline.kt:102)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:252)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.access$respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:26)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBodyAndTrailerMessage$1.invokeSuspend(NettyHttpResponsePipeline.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:469)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+Caused by: java.io.IOException: Broken pipe
+	at java.base/sun.nio.ch.SocketDispatcher.writev0(Native Method)
+	at java.base/sun.nio.ch.SocketDispatcher.writev(SocketDispatcher.java:66)
+	at java.base/sun.nio.ch.IOUtil.write(IOUtil.java:227)
+	at java.base/sun.nio.ch.IOUtil.write(IOUtil.java:158)
+	at java.base/sun.nio.ch.SocketChannelImpl.implWrite(SocketChannelImpl.java:597)
+	at java.base/sun.nio.ch.SocketChannelImpl.write(SocketChannelImpl.java:631)
+	at io.netty.channel.socket.nio.NioSocketChannel.doWrite(NioSocketChannel.java:429)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush0(AbstractChannel.java:929)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.flush0(AbstractNioChannel.java:359)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush(AbstractChannel.java:893)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.flush(DefaultChannelPipeline.java:1369)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:935)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:921)
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:907)
+	at io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.flush(CombinedChannelDuplexHandler.java:531)
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:125)
+	at io.netty.channel.CombinedChannelDuplexHandler.flush(CombinedChannelDuplexHandler.java:356)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:937)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:921)
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:907)
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:125)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:939)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeWriteAndFlush(AbstractChannelHandlerContext.java:957)
+	at io.netty.channel.AbstractChannelHandlerContext.write(AbstractChannelHandlerContext.java:982)
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:950)
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:1000)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBigBody$2.invokeSuspend(NettyHttpResponsePipeline.kt:345)
+	... 11 common frames omitted
+2026-03-24 22:32:55.783 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 22:32:56.140 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:56.263 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:56.452 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 22:32:56.873 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:56.932 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:57.116 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 22:32:57.540 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:32:57.629 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:32:58.237 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:34:31.317 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 22:34:31.827 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:34:32.015 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 22:34:32.434 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:34:32.517 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:34:32.699 [eventLoopGroupProxy-4-3] DEBUG ktor.application - 200 OK: GET - /models/DamagedHelmet.glb. Exception class io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:103)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:90)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt.tryCopyException(ExceptionUtilsJvm.kt:45)
+	at io.ktor.utils.io.ByteBufferChannelKt.rethrowClosed(ByteBufferChannel.kt:2404)
+	at io.ktor.utils.io.ByteBufferChannelKt.access$rethrowClosed(ByteBufferChannel.kt:1)
+	at io.ktor.utils.io.ByteBufferChannel.setupStateForWrite$ktor_io(ByteBufferChannel.kt:234)
+	at io.ktor.utils.io.ByteBufferChannel.copyDirect$ktor_io(ByteBufferChannel.kt:3372)
+	at io.ktor.utils.io.ByteBufferChannel$copyDirect$1.invokeSuspend(ByteBufferChannel.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.EventLoop.processUnconfinedEvent(EventLoop.common.kt:65)
+	at kotlinx.coroutines.internal.DispatchedContinuation.resumeWith(DispatchedContinuation.kt:343)
+	at io.ktor.utils.io.internal.CancellableReusableContinuation.resumeWith(CancellableReusableContinuation.kt:93)
+	at io.ktor.utils.io.ByteBufferChannel.resumeReadOp(ByteBufferChannel.kt:2104)
+	at io.ktor.utils.io.ByteBufferChannel.flushImpl(ByteBufferChannel.kt:188)
+	at io.ktor.utils.io.ByteBufferChannel.flush(ByteBufferChannel.kt:198)
+	at io.ktor.util.cio.FileChannelsKt$readChannel$1$3$1.invokeSuspend(FileChannels.kt:48)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+Caused by: io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithFailure(NettyHttpResponsePipeline.kt:102)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:252)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.access$respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:26)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBodyAndTrailerMessage$1.invokeSuspend(NettyHttpResponsePipeline.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:469)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+Caused by: io.netty.channel.StacklessClosedChannelException: null
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.write(Object, ChannelPromise)(Unknown Source)
+2026-03-24 22:34:32.744 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 22:34:33.127 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:34:33.222 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:34:33.411 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 22:34:33.830 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:34:33.894 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:34:34.095 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 22:34:34.501 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:34:34.562 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:34:35.166 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:36:16.786 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 22:36:17.295 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:36:17.500 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 22:36:17.901 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:36:18.009 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:36:18.230 [eventLoopGroupProxy-3-3] DEBUG ktor.application - I/O operation failed
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:403)
+	at java.base/sun.nio.ch.SocketChannelImpl.implRead(SocketChannelImpl.java:435)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:493)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:356)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+2026-03-24 22:36:18.232 [eventLoopGroupProxy-4-1] DEBUG ktor.application - 200 OK: GET - /models/DamagedHelmet.glb. Exception class io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:103)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:90)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt.tryCopyException(ExceptionUtilsJvm.kt:45)
+	at io.ktor.utils.io.ByteBufferChannelKt.rethrowClosed(ByteBufferChannel.kt:2404)
+	at io.ktor.utils.io.ByteBufferChannelKt.access$rethrowClosed(ByteBufferChannel.kt:1)
+	at io.ktor.utils.io.ByteBufferChannel.setupStateForWrite$ktor_io(ByteBufferChannel.kt:234)
+	at io.ktor.utils.io.ByteBufferChannel.copyDirect$ktor_io(ByteBufferChannel.kt:3372)
+	at io.ktor.utils.io.ByteBufferChannel$copyDirect$1.invokeSuspend(ByteBufferChannel.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.EventLoop.processUnconfinedEvent(EventLoop.common.kt:65)
+	at kotlinx.coroutines.internal.DispatchedContinuation.resumeWith(DispatchedContinuation.kt:343)
+	at io.ktor.utils.io.internal.CancellableReusableContinuation.resumeWith(CancellableReusableContinuation.kt:93)
+	at io.ktor.utils.io.ByteBufferChannel.resumeReadOp(ByteBufferChannel.kt:2104)
+	at io.ktor.utils.io.ByteBufferChannel.flushImpl(ByteBufferChannel.kt:188)
+	at io.ktor.utils.io.ByteBufferChannel.flush(ByteBufferChannel.kt:198)
+	at io.ktor.util.cio.FileChannelsKt$readChannel$1$3$1.invokeSuspend(FileChannels.kt:48)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+Caused by: io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithFailure(NettyHttpResponsePipeline.kt:102)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:252)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.access$respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:26)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBodyAndTrailerMessage$1.invokeSuspend(NettyHttpResponsePipeline.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:469)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:566)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+Caused by: io.netty.channel.StacklessClosedChannelException: null
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.write(Object, ChannelPromise)(Unknown Source)
+2026-03-24 22:36:18.278 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 22:36:18.616 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:36:18.761 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:36:18.943 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 22:36:19.371 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:36:19.427 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:36:19.631 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 22:36:20.035 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:36:20.120 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:36:20.726 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:38:44.077 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 22:38:44.586 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:38:44.797 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 22:38:45.194 [eventLoopGroupProxy-4-5] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:38:45.300 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:38:45.515 [eventLoopGroupProxy-4-7] DEBUG ktor.application - 200 OK: GET - /models/DamagedHelmet.glb. Exception class io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithFailure(NettyHttpResponsePipeline.kt:102)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:252)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.access$respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:26)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBodyAndTrailerMessage$1.invokeSuspend(NettyHttpResponsePipeline.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:469)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:569)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+Caused by: java.io.IOException: Broken pipe
+	at java.base/sun.nio.ch.SocketDispatcher.writev0(Native Method)
+	at java.base/sun.nio.ch.SocketDispatcher.writev(SocketDispatcher.java:66)
+	at java.base/sun.nio.ch.IOUtil.write(IOUtil.java:227)
+	at java.base/sun.nio.ch.IOUtil.write(IOUtil.java:158)
+	at java.base/sun.nio.ch.SocketChannelImpl.implWrite(SocketChannelImpl.java:597)
+	at java.base/sun.nio.ch.SocketChannelImpl.write(SocketChannelImpl.java:631)
+	at io.netty.channel.socket.nio.NioSocketChannel.doWrite(NioSocketChannel.java:429)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush0(AbstractChannel.java:929)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.flush0(AbstractNioChannel.java:359)
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.flush(AbstractChannel.java:893)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.flush(DefaultChannelPipeline.java:1369)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:935)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:921)
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:907)
+	at io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.flush(CombinedChannelDuplexHandler.java:531)
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:125)
+	at io.netty.channel.CombinedChannelDuplexHandler.flush(CombinedChannelDuplexHandler.java:356)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:937)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush(AbstractChannelHandlerContext.java:921)
+	at io.netty.channel.AbstractChannelHandlerContext.flush(AbstractChannelHandlerContext.java:907)
+	at io.netty.channel.ChannelOutboundHandlerAdapter.flush(ChannelOutboundHandlerAdapter.java:125)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeFlush0(AbstractChannelHandlerContext.java:939)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeWriteAndFlush(AbstractChannelHandlerContext.java:957)
+	at io.netty.channel.AbstractChannelHandlerContext.write(AbstractChannelHandlerContext.java:982)
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:950)
+	at io.netty.channel.AbstractChannelHandlerContext.writeAndFlush(AbstractChannelHandlerContext.java:1000)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBigBody$2.invokeSuspend(NettyHttpResponsePipeline.kt:345)
+	... 11 common frames omitted
+2026-03-24 22:38:45.558 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 22:38:45.909 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:38:46.039 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:38:46.230 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 22:38:46.650 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:38:46.729 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:38:46.946 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 22:38:47.338 [eventLoopGroupProxy-4-1] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:38:47.430 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:38:48.037 [eventLoopGroupProxy-4-2] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:40:05.882 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Served fallback index.html file in response to "/changelog"
+2026-03-24 22:40:06.392 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:40:06.582 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Served fallback index.html file in response to "/"
+2026-03-24 22:40:06.997 [eventLoopGroupProxy-4-3] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:40:07.062 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:40:07.267 [eventLoopGroupProxy-3-5] DEBUG ktor.application - I/O operation failed
+java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.SocketChannelImpl.throwConnectionReset(SocketChannelImpl.java:403)
+	at java.base/sun.nio.ch.SocketChannelImpl.implRead(SocketChannelImpl.java:435)
+	at java.base/sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:493)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:356)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+2026-03-24 22:40:07.269 [eventLoopGroupProxy-4-5] DEBUG ktor.application - 200 OK: GET - /models/DamagedHelmet.glb. Exception class io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:103)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt$createConstructor$$inlined$safeCtor$1.invoke(ExceptionUtilsJvm.kt:90)
+	at io.ktor.utils.io.ExceptionUtilsJvmKt.tryCopyException(ExceptionUtilsJvm.kt:45)
+	at io.ktor.utils.io.ByteBufferChannelKt.rethrowClosed(ByteBufferChannel.kt:2404)
+	at io.ktor.utils.io.ByteBufferChannelKt.access$rethrowClosed(ByteBufferChannel.kt:1)
+	at io.ktor.utils.io.ByteBufferChannel.setupStateForWrite$ktor_io(ByteBufferChannel.kt:234)
+	at io.ktor.utils.io.ByteBufferChannel.copyDirect$ktor_io(ByteBufferChannel.kt:3372)
+	at io.ktor.utils.io.ByteBufferChannel$copyDirect$1.invokeSuspend(ByteBufferChannel.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.EventLoop.processUnconfinedEvent(EventLoop.common.kt:65)
+	at kotlinx.coroutines.internal.DispatchedContinuation.resumeWith(DispatchedContinuation.kt:343)
+	at io.ktor.utils.io.internal.CancellableReusableContinuation.resumeWith(CancellableReusableContinuation.kt:93)
+	at io.ktor.utils.io.ByteBufferChannel.resumeReadOp(ByteBufferChannel.kt:2104)
+	at io.ktor.utils.io.ByteBufferChannel.flushImpl(ByteBufferChannel.kt:188)
+	at io.ktor.utils.io.ByteBufferChannel.flush(ByteBufferChannel.kt:198)
+	at io.ktor.util.cio.FileChannelsKt$readChannel$1$3$1.invokeSuspend(FileChannels.kt:48)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+Caused by: io.ktor.util.cio.ChannelWriteException: Cannot write to a channel
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithFailure(NettyHttpResponsePipeline.kt:102)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:252)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline.access$respondWithBodyAndTrailerMessage(NettyHttpResponsePipeline.kt:26)
+	at io.ktor.server.netty.cio.NettyHttpResponsePipeline$respondWithBodyAndTrailerMessage$1.invokeSuspend(NettyHttpResponsePipeline.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at io.netty.util.concurrent.AbstractEventExecutor.runTask(AbstractEventExecutor.java:173)
+	at io.netty.util.concurrent.AbstractEventExecutor.safeExecute(AbstractEventExecutor.java:166)
+	at io.netty.util.concurrent.SingleThreadEventExecutor.runAllTasks(SingleThreadEventExecutor.java:469)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:566)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:994)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.ktor.server.netty.EventLoopGroupProxy$Companion.create$lambda$1$lambda$0(NettyApplicationEngine.kt:296)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1570)
+Caused by: io.netty.channel.StacklessClosedChannelException: null
+	at io.netty.channel.AbstractChannel$AbstractUnsafe.write(Object, ChannelPromise)(Unknown Source)
+2026-03-24 22:40:07.312 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Served fallback index.html file in response to "/playground"
+2026-03-24 22:40:07.674 [eventLoopGroupProxy-4-4] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:40:07.786 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:40:08.041 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Served fallback index.html file in response to "/quickstart"
+2026-03-24 22:40:08.405 [eventLoopGroupProxy-4-6] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:40:08.537 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:40:08.736 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Served fallback index.html file in response to "/samples"
+2026-03-24 22:40:09.149 [eventLoopGroupProxy-4-7] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)
+2026-03-24 22:40:09.227 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Client connected and is requesting kobweb status events.
+2026-03-24 22:40:09.842 [eventLoopGroupProxy-4-8] DEBUG ktor.application - Stopped sending kobweb status events, probably because client disconnected or server is shutting down. (ChannelWriteException: Cannot write to a channel)

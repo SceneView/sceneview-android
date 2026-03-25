@@ -71,29 +71,13 @@ jobs:
         run: |
           ./gradlew \
             :samples:sceneview-demo:assembleDebug \
-            :samples:model-viewer:assembleDebug \
-            :samples:camera-manipulator:assembleDebug \
-            :samples:gltf-camera:assembleDebug \
-            :samples:autopilot-demo:assembleDebug \
-            :samples:physics-demo:assembleDebug \
-            :samples:post-processing:assembleDebug \
-            :samples:dynamic-sky:assembleDebug \
-            :samples:line-path:assembleDebug \
-            :samples:text-labels:assembleDebug \
-            :samples:reflection-probe:assembleDebug \
-            :samples:ar-model-viewer:assembleDebug \
-            :samples:ar-augmented-image:assembleDebug \
-            :samples:ar-cloud-anchor:assembleDebug \
-            :samples:ar-point-cloud:assembleDebug \
+            :samples:tv-model-viewer:assembleDebug \
             --stacktrace
 
       - name: Collect APKs
         run: |
           mkdir -p dist
-          for sample in sceneview-demo model-viewer camera-manipulator gltf-camera \
-                        autopilot-demo physics-demo post-processing dynamic-sky \
-                        line-path text-labels reflection-probe \
-                        ar-model-viewer ar-augmented-image ar-cloud-anchor ar-point-cloud; do
+          for sample in sceneview-demo tv-model-viewer; do
             apk=$(find "samples/$sample/build/outputs/apk/debug" -name "*.apk" | head -1)
             if [ -n "$apk" ]; then
               cp "$apk" "dist/sceneview-${sample}.apk"
