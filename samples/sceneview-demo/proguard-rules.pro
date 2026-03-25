@@ -11,3 +11,6 @@
 
 # Keep Compose
 -dontwarn androidx.compose.**
+
+# Keep SceneView AR
+-keep class io.github.sceneview.ar.** { *; }

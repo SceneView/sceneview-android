@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SceneView Demo</string>
-    <string name="tab_explore">Explore</string>
-    <string name="tab_showcase">Showcase</string>
-    <string name="tab_qa">QA Tests</string>
+    <string name="app_name">SceneView</string>
+    <string name="tab_3d">3D</string>
+    <string name="tab_ar">AR</string>
+    <string name="tab_samples">Samples</string>
+    <string name="tab_about">About</string>
+    <string name="scan_surface">Point your camera at a flat surface</string>
+    <string name="model_placed">Model placed — tap to reposition</string>
     <string name="update_available">Update available</string>
     <string name="update_downloading">Downloading update…</string>
     <string name="update_ready">Update ready — restart to apply</string>
     <string name="update_restart">Restart</string>
     <string name="update_check">Check for updates</string>
-    <string name="qa_pass">PASS</string>
-    <string name="qa_fail">FAIL</string>
-    <string name="qa_running">Running…</string>
-    <string name="qa_run_all">Run All Tests</string>
 </resources>

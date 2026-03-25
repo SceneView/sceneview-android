@@ -13,8 +13,8 @@ android {
         applicationId "io.github.sceneview.demo"
         minSdk 28
         targetSdk 36
-        versionCode 2
-        versionName "1.1.0"
+        versionCode 3
+        versionName "2.0.0"
     }
 
     signingConfigs {
@@ -68,8 +68,9 @@ dependencies {
     // Material 3 Expressive APIs require a newer alpha than the version catalog's stable release
     implementation 'androidx.compose.material3:material3:1.5.0-alpha15'
 
-    // SceneView (3D only — no AR features in this app)
+    // SceneView — 3D + AR
     implementation project(":sceneview")
+    implementation project(":arsceneview")
 
     // Google Play In-App Updates
     implementation 'com.google.android.play:app-update:2.1.0'

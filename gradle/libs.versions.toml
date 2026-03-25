@@ -9,6 +9,7 @@ fragmentKtx = "1.8.9"
 composeUi = "1.10.5"
 composeFoundation = "1.10.5"
 composeMaterial = "1.10.5"
+composeMaterialIcons = "1.7.8"
 composeMaterial3 = "1.4.0"
 activityCompose = "1.13.0"
 navigationCompose = "2.9.7"
@@ -36,8 +37,8 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "composeUi" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "composeFoundation" }
 androidx-compose-material = { group = "androidx.compose.material", name = "material", version.ref = "composeMaterial" }
-androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "composeMaterial" }
-androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "composeMaterial" }
+androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "composeMaterialIcons" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "composeMaterialIcons" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
