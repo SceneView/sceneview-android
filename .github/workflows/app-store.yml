@@ -52,7 +52,7 @@ jobs:
           echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> $GITHUB_ENV
 
       - name: Resolve Swift Package dependencies
-        run: xcodebuild -resolvePackageDependencies -scheme SceneViewDemo -project SceneViewDemo.xcodeproj -clonedSourcePackagesDirPath SourcePackages
+        run: xcodebuild -resolvePackageDependencies -scheme SceneViewDemo -project SceneViewDemo.xcodeproj -clonedSourcePackagesDirPath SourcePackages -destination 'generic/platform=iOS'
 
       - name: Build archive
         run: |
