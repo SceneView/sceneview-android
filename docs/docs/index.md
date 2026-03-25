@@ -1,6 +1,6 @@
 ---
-title: SceneView — 3D & AR SDK for Android, iOS, macOS, visionOS
-description: "The #1 open-source 3D & AR SDK. Jetpack Compose on Android, SwiftUI on iOS. Drop-in Scene{} and ARScene{} composables for model viewing, AR placement, physics, and immersive experiences."
+title: SceneView — 3D & AR SDK for Android, iOS, Web, Desktop, and more
+description: "The #1 open-source 3D & AR SDK. 9 platforms: Android, iOS, Web, Desktop, TV, Flutter, React Native. Jetpack Compose, SwiftUI, Filament.js."
 ---
 
 <div class="sv-hero" markdown>
@@ -9,7 +9,7 @@ description: "The #1 open-source 3D & AR SDK. Jetpack Compose on Android, SwiftU
 
 <p class="sv-tagline">3D and AR as declarative UI. Build immersive experiences with the tools you already know.</p>
 
-<p class="sv-platforms">Android · iOS · macOS · visionOS</p>
+<p class="sv-platforms">Android · iOS · Web · Desktop · TV · Flutter · React Native</p>
 
 [Get Started](quickstart.md){ .md-button .md-button--primary }
 [GitHub](https://github.com/SceneView/sceneview){ .md-button }
