@@ -3,124 +3,437 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Get SceneView</title>
-  <meta name="description" content="Download SceneView for your platform — Android, iOS, Web, Desktop.">
+  <title>Get SceneView — Download for your platform</title>
+  <meta name="description" content="Download SceneView for your platform — Android, iOS, Web, Desktop. 3D & AR for every platform.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Get SceneView">
+  <meta property="og:description" content="Download SceneView for your platform — Android, iOS, Web, Desktop.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sceneview.github.io/go/">
 
   <!-- Smart App Banners -->
-  <meta name="apple-itunes-app" content="app-id=TODO">
   <meta name="google-play-app" content="app-id=io.github.sceneview.demo">
 
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: #111827;
-      color: #f9fafb;
+      background: #0D2137;
+      color: #f0f4f8;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      overflow-x: hidden;
     }
-    .container {
+
+    /* Ambient glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(26,115,232,0.15) 0%, rgba(26,115,232,0.05) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
       text-align: center;
       padding: 2rem;
-      max-width: 500px;
+      max-width: 560px;
+      width: 100%;
     }
-    .logo { font-size: 2rem; font-weight: 700; color: #8ab4f8; margin-bottom: 0.5rem; }
-    .subtitle { color: #9ca3af; margin-bottom: 2rem; }
-    .detecting { color: #6b7280; font-size: 0.875rem; margin-bottom: 1.5rem; }
-    .btn {
-      display: inline-block;
-      padding: 14px 32px;
-      border-radius: 16px;
-      font-size: 1rem;
+
+    /* Logo */
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .logo svg {
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #8ab4f8, #42a5f5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      color: #7b8fa6;
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Status badge */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: rgba(26,115,232,0.12);
+      color: #8ab4f8;
+      font-size: 0.85rem;
       font-weight: 600;
-      text-decoration: none;
-      margin: 0.5rem;
-      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 1.5rem;
+      animation: pulse-glow 2s ease-in-out infinite;
     }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,115,232,0.3); }
-    .btn-primary { background: #1a73e8; color: white; }
-    .btn-secondary { background: #1f2937; color: #8ab4f8; border: 1px solid #374151; }
-    .platforms { margin-top: 2rem; }
-    .platforms a {
-      display: block;
-      padding: 12px 20px;
-      margin: 8px 0;
-      border-radius: 12px;
-      background: #1f2937;
-      color: #d1d5db;
-      text-decoration: none;
-      transition: background 0.2s;
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(26,115,232,0.2); }
+      50% { box-shadow: 0 0 20px 4px rgba(26,115,232,0.15); }
     }
-    .platforms a:hover { background: #374151; }
-    .platforms a .label { font-weight: 500; }
-    .platforms a .desc { font-size: 0.8rem; color: #6b7280; }
-    .redirect-msg { color: #4ade80; font-size: 0.875rem; margin-top: 1rem; }
+
+    .status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Primary CTA */
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 36px;
+      border-radius: 16px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: #fff;
+      background: linear-gradient(135deg, #1a73e8, #1557b0);
+      box-shadow: 0 4px 20px rgba(26,115,232,0.35);
+      transition: transform 0.2s cubic-bezier(0.2,0,0,1), box-shadow 0.2s;
+      margin-bottom: 0.5rem;
+    }
+
+    .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(26,115,232,0.45);
+    }
+
+    .cta svg {
+      flex-shrink: 0;
+    }
+
+    .redirect-note {
+      color: #4ade80;
+      font-size: 0.8rem;
+      margin-top: 8px;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .redirect-note.visible {
+      opacity: 1;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 1.5rem 0;
+      color: #4a5e73;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, #1e3a5f, transparent);
+    }
+
+    /* Platform grid */
+    .platforms {
+      display: grid;
+      gap: 10px;
+    }
+
+    .platform-link {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      text-decoration: none;
+      color: #d1d9e3;
+      transition: all 0.2s cubic-bezier(0.2,0,0,1);
+    }
+
+    .platform-link:hover {
+      background: rgba(26,115,232,0.1);
+      border-color: rgba(26,115,232,0.25);
+      transform: translateX(4px);
+    }
+
+    .platform-link svg {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      opacity: 0.7;
+    }
+
+    .platform-link:hover svg {
+      opacity: 1;
+    }
+
+    .platform-info {
+      text-align: left;
+      flex: 1;
+    }
+
+    .platform-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .platform-desc {
+      font-size: 0.78rem;
+      color: #5e7a94;
+      margin-top: 2px;
+    }
+
+    .platform-arrow {
+      color: #3a5a78;
+      transition: color 0.2s;
+    }
+
+    .platform-link:hover .platform-arrow {
+      color: #8ab4f8;
+    }
+
+    /* Quick links footer */
+    .quick-links {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .quick-link {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #5e7a94;
+      text-decoration: none;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      transition: all 0.2s;
+    }
+
+    .quick-link:hover {
+      color: #8ab4f8;
+      border-color: rgba(26,115,232,0.3);
+      background: rgba(26,115,232,0.08);
+    }
+
+    /* Hidden by default */
+    .hidden { display: none; }
+
+    @media (max-width: 480px) {
+      .logo-text { font-size: 1.5rem; }
+      .cta { padding: 14px 28px; font-size: 0.95rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">SceneView</div>
-    <div class="subtitle">3D & AR for every platform</div>
-    <p class="detecting" id="detecting">Detecting your platform...</p>
+  <div class="page">
+    <!-- Logo -->
+    <div class="logo">
+      <svg viewBox="0 0 32 32" width="40" height="40">
+        <defs>
+          <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#8AB4F8"/>
+            <stop offset="100%" stop-color="#42A5F5"/>
+          </linearGradient>
+          <linearGradient id="rg" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#4A90D9"/>
+            <stop offset="100%" stop-color="#1A73E8"/>
+          </linearGradient>
+          <linearGradient id="lg" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#1A73E8"/>
+            <stop offset="100%" stop-color="#0D47A1"/>
+          </linearGradient>
+        </defs>
+        <polygon points="16,18 7,13 7,22 16,27" fill="url(#lg)"/>
+        <polygon points="16,18 25,13 25,22 16,27" fill="url(#rg)"/>
+        <polygon points="16,9 25,14 16,19 7,14" fill="url(#tg)"/>
+        <polyline points="4,7 4,4 7,4" fill="none" stroke="#1A73E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="28,7 28,4 25,4" fill="none" stroke="#1A73E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="4,25 4,28 7,28" fill="none" stroke="#1A73E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="28,25 28,28 25,28" fill="none" stroke="#1A73E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="logo-text">SceneView</span>
+    </div>
 
-    <div id="primary-action"></div>
+    <p class="tagline">3D & AR for every platform</p>
 
-    <div class="platforms" id="all-platforms" style="display:none">
-      <a href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">
-        <span class="label">Android</span>
-        <span class="desc">Google Play Store</span>
+    <!-- Status -->
+    <div class="status" id="status">
+      <span class="dot"></span>
+      <span id="status-text">Detecting your platform...</span>
+    </div>
+
+    <!-- Primary CTA (filled by JS) -->
+    <div id="primary-cta"></div>
+    <p class="redirect-note" id="redirect-note">Redirecting automatically...</p>
+
+    <!-- Divider -->
+    <div class="divider">All platforms</div>
+
+    <!-- Platform list -->
+    <div class="platforms">
+      <a class="platform-link" href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 010 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.635-8.635z"/></svg>
+        <div class="platform-info">
+          <div class="platform-name">Android</div>
+          <div class="platform-desc">Google Play Store</div>
+        </div>
+        <svg class="platform-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4l4 4-4 4"/></svg>
       </a>
-      <a href="https://sceneview.github.io">
-        <span class="label">iOS</span>
-        <span class="desc">Coming soon to App Store</span>
+
+      <a class="platform-link" href="https://sceneview.github.io">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        <div class="platform-info">
+          <div class="platform-name">iOS</div>
+          <div class="platform-desc">Coming soon to App Store</div>
+        </div>
+        <svg class="platform-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4l4 4-4 4"/></svg>
       </a>
-      <a href="https://sceneview.github.io">
-        <span class="label">Web</span>
-        <span class="desc">Try in browser</span>
+
+      <a class="platform-link" href="https://github.com/SceneView/sceneview/releases">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 16V7a2 2 0 00-2-2H6a2 2 0 00-2 2v9m16 0H4m16 0l1.28 2.55a1 1 0 01-.9 1.45H3.62a1 1 0 01-.9-1.45L4 16"/></svg>
+        <div class="platform-info">
+          <div class="platform-name">macOS / Desktop</div>
+          <div class="platform-desc">GitHub Releases</div>
+        </div>
+        <svg class="platform-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4l4 4-4 4"/></svg>
       </a>
-      <a href="https://github.com/SceneView/sceneview">
-        <span class="label">Developer?</span>
-        <span class="desc">View on GitHub — docs, samples, MCP</span>
+
+      <a class="platform-link" href="https://sceneview.github.io/preview/">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        <div class="platform-info">
+          <div class="platform-name">Web</div>
+          <div class="platform-desc">Try in your browser</div>
+        </div>
+        <svg class="platform-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4l4 4-4 4"/></svg>
       </a>
+
+      <a class="platform-link" href="https://github.com/SceneView/sceneview">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 002 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg>
+        <div class="platform-info">
+          <div class="platform-name">Developer?</div>
+          <div class="platform-desc">Source code, docs, and samples on GitHub</div>
+        </div>
+        <svg class="platform-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4l4 4-4 4"/></svg>
+      </a>
+    </div>
+
+    <!-- Quick links -->
+    <div class="quick-links">
+      <a class="quick-link" href="/go/github">GitHub</a>
+      <a class="quick-link" href="/go/sponsor">Sponsor</a>
+      <a class="quick-link" href="/go/mcp">MCP</a>
+      <a class="quick-link" href="/go/claude">Claude</a>
+      <a class="quick-link" href="/go/web">Web Demo</a>
     </div>
   </div>
 
   <script>
-    const ua = navigator.userAgent.toLowerCase();
-    const isAndroid = /android/.test(ua);
-    const isIOS = /iphone|ipad|ipod/.test(ua);
-    const isMac = /macintosh/.test(ua);
+    (function() {
+      var ua = navigator.userAgent || '';
+      var platform = navigator.platform || '';
+      var uaLower = ua.toLowerCase();
 
-    const detecting = document.getElementById('detecting');
-    const primary = document.getElementById('primary-action');
-    const all = document.getElementById('all-platforms');
+      var isAndroid = /android/i.test(ua);
+      var isIOS = /iphone|ipad|ipod/i.test(ua);
+      var isMac = /macintosh|mac os x/i.test(ua) && !isIOS;
+      var isWindows = /windows/i.test(ua);
+      var isLinux = /linux/i.test(ua) && !isAndroid;
 
-    if (isAndroid) {
-      detecting.textContent = 'Android detected';
-      primary.innerHTML = '<a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">Download on Play Store</a>';
-      // Auto-redirect after 2 seconds
-      setTimeout(() => {
-        document.querySelector('.redirect-msg')?.remove();
-        window.location.href = 'https://play.google.com/store/apps/details?id=io.github.sceneview.demo';
-      }, 2000);
-      primary.innerHTML += '<p class="redirect-msg">Redirecting to Play Store...</p>';
-    } else if (isIOS) {
-      detecting.textContent = 'iOS detected';
-      primary.innerHTML = '<a class="btn btn-primary" href="https://sceneview.github.io">Coming soon to App Store</a>';
-    } else {
-      detecting.textContent = 'Choose your platform';
-      all.style.display = 'block';
-    }
+      var statusText = document.getElementById('status-text');
+      var primaryCta = document.getElementById('primary-cta');
+      var redirectNote = document.getElementById('redirect-note');
 
-    // Show all platforms link
-    if (isAndroid || isIOS) {
-      setTimeout(() => {
-        all.style.display = 'block';
-        detecting.textContent += ' — or choose another platform:';
-      }, 1000);
-    }
+      var urls = {
+        playStore: 'https://play.google.com/store/apps/details?id=io.github.sceneview.demo',
+        appStore: 'https://sceneview.github.io',
+        releases: 'https://github.com/SceneView/sceneview/releases',
+        website: 'https://sceneview.github.io'
+      };
+
+      function makeButton(text, href, icon) {
+        return '<a class="cta" href="' + href + '">' + (icon || '') + text + '</a>';
+      }
+
+      var playIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      var appleIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>';
+      var downloadIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+
+      if (isAndroid) {
+        statusText.textContent = 'Android detected';
+        primaryCta.innerHTML = makeButton('Get it on Google Play', urls.playStore, playIcon);
+        redirectNote.classList.add('visible');
+        setTimeout(function() { window.location.href = urls.playStore; }, 2500);
+      } else if (isIOS) {
+        statusText.textContent = 'iOS detected';
+        primaryCta.innerHTML = makeButton('Coming soon to App Store', urls.appStore, appleIcon);
+      } else if (isMac) {
+        statusText.textContent = 'macOS detected';
+        primaryCta.innerHTML = makeButton('Download from GitHub', urls.releases, downloadIcon);
+      } else if (isWindows) {
+        statusText.textContent = 'Windows detected';
+        primaryCta.innerHTML = makeButton('Download from GitHub', urls.releases, downloadIcon);
+      } else if (isLinux) {
+        statusText.textContent = 'Linux detected';
+        primaryCta.innerHTML = makeButton('Download from GitHub', urls.releases, downloadIcon);
+      } else {
+        statusText.textContent = 'Choose your platform';
+        primaryCta.innerHTML = makeButton('Visit SceneView', urls.website, '');
+      }
+    })();
   </script>
 </body>
 </html>
