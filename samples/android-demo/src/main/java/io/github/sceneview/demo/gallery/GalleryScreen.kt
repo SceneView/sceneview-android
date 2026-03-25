@@ -54,6 +54,8 @@ import io.github.sceneview.rememberEnvironmentLoader
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.StrokeCap
 
 /**
  * Gallery item representing a 3D model or procedural geometry to display in the list.
@@ -326,20 +328,32 @@ private fun ModelScene(
     }
     val modelInstance = rememberModelInstance(modelLoader, modelPath)
 
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        modelLoader = modelLoader,
-        cameraNode = cameraNode,
-        cameraManipulator = null,
-        environment = environment
-    ) {
-        modelInstance?.let { instance ->
-            ModelNode(
-                modelInstance = instance,
-                scaleToUnits = scaleToUnits,
-                autoAnimate = true,
-                animationLoop = true
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = null,
+            environment = environment
+        ) {
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = scaleToUnits,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(28.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.6f),
+                strokeWidth = 2.dp,
+                strokeCap = StrokeCap.Round
             )
         }
     }

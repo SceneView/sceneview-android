@@ -68,6 +68,8 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNode
 import io.github.sceneview.rememberOnGestureListener
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.StrokeCap
 
 private data class ExploreModel(
     val label: String,
@@ -168,6 +170,21 @@ fun ExploreScreen() {
                     scaleToUnits = selectedModel.scale,
                     autoAnimate = isPlaying && animationCount > 0,
                     animationLoop = true
+                )
+            }
+        }
+
+        // ── Loading indicator — visible while model loads ─────────────────
+        if (modelInstance == null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = Color.White.copy(alpha = 0.8f),
+                    strokeWidth = 3.dp,
+                    strokeCap = StrokeCap.Round
                 )
             }
         }

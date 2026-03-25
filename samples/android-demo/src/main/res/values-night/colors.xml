@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SceneView brand blue — dark mode variant -->
+    <color name="md_theme_primary">#8AB4F8</color>
+    <color name="md_theme_onPrimary">#003258</color>
+    <color name="md_theme_primaryContainer">#004880</color>
+    <color name="md_theme_secondary">#C3C7CF</color>
+</resources>
