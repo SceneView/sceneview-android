@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    namespace "io.github.sceneview.demo"
+    namespace "io.github.sceneview.sample.android"
 
     compileSdk 36
 
     defaultConfig {
-        applicationId "io.github.sceneview.demo"
+        applicationId "io.github.sceneview.sample.android"
         minSdk 28
         targetSdk 36
         versionCode 3

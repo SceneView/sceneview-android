@@ -28,8 +28,12 @@ include ":arsceneview"
 include ":sceneview-web"
 include ":sceneview-desktop"
 
-// Samples — one unified showcase per platform
+// Samples — one unified showcase per platform ({platform}-demo)
 include ":samples:common"
-include ":samples:sceneview-demo"       // Android showcase (Play Store)
-include ":samples:tv-model-viewer"      // Android TV
-include ":samples:web-model-viewer"     // Web (Filament.js + WebXR)
+include ":samples:android-demo"         // Android (Play Store)
+include ":samples:android-tv-demo"      // Android TV
+include ":samples:web-demo"             // Web (Filament.js + WebXR)
+// Desktop demo: see sceneview-desktop/ module (./gradlew :sceneview-desktop:run)
+// Flutter demo: see flutter/sceneview_flutter/example/
+// React Native demo: see react-native/react-native-sceneview/example/
+// iOS demo: see samples/ios-demo/ (Xcode project, not Gradle)
