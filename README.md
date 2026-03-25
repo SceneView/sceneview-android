@@ -233,10 +233,11 @@ The MCP server provides API reference, code samples, setup guides, validation, a
 - [Website](https://sceneview.github.io/)
 - [Documentation](https://sceneview.github.io/quickstart/)
 - [Discord](https://discord.gg/UbNDDBTNqb)
+- [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
 - [Migration v2 → v3](MIGRATION.md)
 
 ## Support
 
-- [GitHub Sponsors](https://github.com/sponsors/ThomasGorisse)
+- [GitHub Sponsors](https://github.com/sponsors/ThomasGorisse) — [Sponsors](SPONSORS.md)
 - [Open Collective](https://opencollective.com/sceneview)
