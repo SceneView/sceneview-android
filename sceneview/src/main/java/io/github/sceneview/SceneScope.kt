@@ -9,6 +9,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.google.android.filament.Box
 import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.LightManager
@@ -881,6 +882,8 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param primitiveType    How vertices are interpreted (TRIANGLES, LINES, POINTS, etc.).
      * @param vertexBuffer     The GPU vertex buffer.
      * @param indexBuffer      The GPU index buffer.
+     * @param boundingBox      Optional bounding box for culling. When `null` (default), culling is
+     *                         disabled and Filament auto-computes the bounding box.
      * @param materialInstance Optional material to apply to the mesh.
      * @param apply            Additional configuration on the [MeshNodeImpl].
      * @param content          Optional child nodes.
@@ -890,6 +893,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         primitiveType: RenderableManager.PrimitiveType,
         vertexBuffer: VertexBuffer,
         indexBuffer: IndexBuffer,
+        boundingBox: Box? = null,
         materialInstance: MaterialInstance? = null,
         apply: MeshNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
@@ -900,6 +904,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 primitiveType = primitiveType,
                 vertexBuffer = vertexBuffer,
                 indexBuffer = indexBuffer,
+                boundingBox = boundingBox,
                 materialInstance = materialInstance
             ).apply(apply)
         }
