@@ -19,11 +19,13 @@ kotlin {
     }
 
     // WASM target for Compose Multiplatform Web
-    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
-    wasmJs {
-        browser()
-        binaries.library()
-    }
+    // BLOCKED: kotlin-math (dev.romainguy:kotlin-math) does not publish a wasmJs variant.
+    // Uncomment when kotlin-math adds wasmJs support.
+    // @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    // wasmJs {
+    //     browser()
+    //     binaries.library()
+    // }
 
     applyDefaultHierarchyTemplate()
 
