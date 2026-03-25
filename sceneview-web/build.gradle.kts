@@ -4,6 +4,7 @@ plugins {
 
 kotlin {
     js(IR) {
+        moduleName = "sceneview"
         browser {
             commonWebpackConfig {
                 outputFileName = "sceneview-web.js"
@@ -14,7 +15,9 @@ kotlin {
                 }
             }
         }
-        binaries.library()
+        // Use executable() for a single webpack-bundled JS file usable via <script>
+        // The @JsExport APIs are registered on globalThis.sceneview by the Kotlin/JS runtime
+        binaries.executable()
     }
 
     sourceSets {
@@ -30,4 +33,12 @@ kotlin {
             implementation(kotlin("test"))
         }
     }
+}
+
+// Task to copy the production webpack bundle to website-static
+tasks.register<Copy>("copyToWebsite") {
+    dependsOn("jsBrowserProductionWebpack")
+    from(layout.buildDirectory.dir("dist/js/productionExecutable"))
+    into("${rootProject.projectDir}/website-static/js")
+    include("*.js", "*.js.map")
 }
