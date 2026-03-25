@@ -87,7 +87,7 @@ Never say "everything is good" without verifying published packages.
     - External bindings for filament-js npm package (Engine, Scene, View, Camera, Renderer, AssetLoader)
     - SceneView DSL builder (camera, light, model, environment)
     - sceneview-core JS target added (math, collision, geometry shared with web)
-  - **Android TV sample**: `samples/tv-model-viewer` — D-pad controls, model cycling, auto-rotation
+  - **Android TV sample**: `samples/android-tv-demo` — D-pad controls, model cycling, auto-rotation
   - **iOS demo app**: `samples/ios-demo` — SwiftUI 3-tab app (3D, AR, Samples) for App Store
   - **App Store workflow**: `.github/workflows/app-store.yml` — TestFlight CI/CD with certificate management
   - **Release workflow updated**: sceneview-web npm publish added to release.yml
@@ -195,7 +195,7 @@ Never say "everything is good" without verifying published packages.
 - **SceneViewSwift** (`SceneViewSwift/`): now 16 node types — Apple library — Swift Package,
   iOS 17+ / macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift
   native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
-- **Demo app** (`samples/sceneview-demo/`): Play Store ready, 4-tab architecture (Explore,
+- **Demo app** (`samples/android-demo/`): Play Store ready, 4-tab architecture (Explore,
   Showcase, Gallery, QA), Material 3 Expressive
 - **MCP server** (`mcp/`): published npm package for AI assistant integration; now with
   iOS support (8 Swift samples, `get_ios_setup` tool, Swift code validation)

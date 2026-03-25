@@ -7,7 +7,7 @@ The SceneView logo is a **3D isometric cube** in blue gradient.
 - Left face: Dark blue (#1565C0)
 - Background: Blue (#1565C0 or #2196F3)
 
-The vector source is in `samples/sceneview-demo/src/main/res/drawable/ic_launcher_foreground.xml`.
+The vector source is in `samples/android-demo/src/main/res/drawable/ic_launcher_foreground.xml`.
 
 ## Brand Colors
 | Name | Hex | Usage |

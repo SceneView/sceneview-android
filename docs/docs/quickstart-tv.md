@@ -9,7 +9,7 @@ Add SceneView to your TV app module:
 ```groovy
 // build.gradle
 dependencies {
-    implementation "io.github.sceneview:sceneview:3.4.0"
+    implementation "io.github.sceneview:sceneview:3.3.0"
     implementation "androidx.tv:tv-material:1.0.0"
 }
 ```
@@ -66,4 +66,4 @@ Box(modifier = Modifier
 
 ## Sample
 
-See `samples/tv-model-viewer/` for a complete Android TV sample with D-pad orbit/zoom controls and model cycling.
+See `samples/android-tv-demo/` for a complete Android TV sample with D-pad orbit/zoom controls and model cycling.

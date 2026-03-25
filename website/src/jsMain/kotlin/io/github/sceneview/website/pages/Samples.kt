@@ -114,7 +114,7 @@ private fun FilterChip(label: String, isSelected: Boolean, colorMode: ColorMode,
 
 @Composable
 private fun SampleCard(sample: SampleEntry, colorMode: ColorMode) {
-    A(href = "https://github.com/sceneview/sceneview-android/tree/main/${sample.directory}", attrs = {
+    A(href = "https://github.com/sceneview/sceneview/tree/main/${sample.directory}", attrs = {
         attr("target", "_blank"); attr("rel", "noopener noreferrer")
         style {
             property("flex", "1 1 340px"); maxWidth(400.px)

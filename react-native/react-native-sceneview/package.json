@@ -31,7 +31,7 @@
     "arcore",
     "arkit"
   ],
-  "repository": "https://github.com/sceneview/sceneview-android",
+  "repository": "https://github.com/sceneview/sceneview",
   "license": "Apache-2.0",
   "peerDependencies": {
     "react": ">=18.0.0",

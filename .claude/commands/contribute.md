@@ -9,7 +9,7 @@ Run `/contribute` with a description of what you want to fix or add:
 ```
 /contribute Fix ModelNode not updating when modelInstance changes
 /contribute Add support for point light color temperature
-/contribute Update samples/model-viewer to use new CameraManipulator API
+/contribute Update samples/android-demo to use new CameraManipulator API
 ```
 
 Or run it with no arguments after you've already made changes to get a full pre-PR checklist.

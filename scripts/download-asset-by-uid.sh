@@ -4,7 +4,7 @@
 set -e
 
 API_KEY="[REDACTED-API-KEY]"
-MODELS_DIR="samples/sceneview-demo/src/main/assets/models"
+MODELS_DIR="samples/android-demo/src/main/assets/models"
 
 uid=$1
 name=$2

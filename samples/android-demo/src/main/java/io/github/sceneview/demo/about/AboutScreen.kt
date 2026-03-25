@@ -210,7 +210,7 @@ fun AboutScreen() {
                 FilledTonalButton(
                     onClick = {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SceneView/sceneview-android"))
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/SceneView/sceneview"))
                         )
                     },
                     modifier = Modifier.weight(1f),
