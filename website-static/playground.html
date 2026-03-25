@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playground — SceneView</title>
+  <meta name="description" content="Interactive SceneView playground — explore code examples for 3D and AR with live 3D preview.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Playground — SceneView">
+  <meta property="og:description" content="Interactive code playground for SceneView — 3D & AR SDK for every platform.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sceneview.github.io/playground">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Playground — SceneView">
+  <meta name="twitter:description" content="Interactive code playground for SceneView — 3D & AR SDK for every platform.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- model-viewer -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ===== PLAYGROUND LAYOUT ===== */
+    .playground {
+      padding-top: var(--nav-height);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--color-surface);
+    }
+
+    .playground__toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      background: var(--color-surface-dim);
+      border-bottom: 1px solid var(--color-outline);
+      flex-wrap: wrap;
+    }
+
+    .playground__toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .playground__toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-shrink: 0;
+    }
+
+    .playground__select {
+      appearance: none;
+      background: var(--color-surface-container);
+      color: var(--color-on-surface);
+      border: 1px solid var(--color-outline);
+      border-radius: var(--radius-xs);
+      padding: 8px 36px 8px 14px;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color var(--duration-short) var(--ease-expressive);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .playground__select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .playground__label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-on-surface-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .playground__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--color-outline);
+      background: var(--color-surface-container);
+      color: var(--color-on-surface-dim);
+      cursor: pointer;
+      transition: all var(--duration-short) var(--ease-expressive);
+      white-space: nowrap;
+    }
+
+    .playground__btn:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .playground__btn--primary {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+
+    [data-theme="dark"] .playground__btn--primary {
+      color: #111827;
+    }
+
+    .playground__btn--primary:hover {
+      background: var(--color-primary-hover);
+      border-color: var(--color-primary-hover);
+      color: #fff;
+    }
+
+    .playground__btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Split panes */
+    .playground__split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* Code editor pane */
+    .playground__editor {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--color-outline);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .playground__editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-sm) var(--space-md);
+      background: #1a1b26;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .playground__editor-tab {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #8ab4f8;
+      font-weight: 500;
+    }
+
+    .playground__editor-lang {
+      font-size: 0.7rem;
+      color: #6c7086;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .playground__code-wrap {
+      flex: 1;
+      overflow: auto;
+      background: #0d1117;
+      position: relative;
+    }
+
+    .playground__code {
+      display: block;
+      width: 100%;
+      min-height: 100%;
+      padding: var(--space-lg);
+      padding-left: 60px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: #c9d1d9;
+      background: transparent;
+      border: none;
+      resize: none;
+      outline: none;
+      white-space: pre;
+      overflow-x: auto;
+      tab-size: 4;
+      -moz-tab-size: 4;
+    }
+
+    .playground__line-numbers {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 44px;
+      padding: var(--space-lg) 0;
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: #3d4452;
+      user-select: none;
+      pointer-events: none;
+      border-right: 1px solid rgba(255,255,255,0.04);
+      padding-right: 8px;
+    }
+
+    /* Preview pane */
+    .playground__preview {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--color-surface-dim);
+    }
+
+    .playground__preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-surface-dim);
+      border-bottom: 1px solid var(--color-outline);
+      flex-shrink: 0;
+    }
+
+    .playground__preview-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-on-surface-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .playground__preview-hint {
+      font-size: 0.75rem;
+      color: var(--color-on-surface-faint);
+    }
+
+    .playground__model-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: radial-gradient(ellipse at 50% 40%,
+        rgba(138, 180, 248, 0.08) 0%,
+        rgba(187, 134, 252, 0.04) 40%,
+        var(--color-surface-dim) 80%);
+    }
+
+    [data-theme="light"] .playground__model-wrap {
+      background: radial-gradient(ellipse at 50% 40%,
+        rgba(26, 115, 232, 0.06) 0%,
+        rgba(108, 92, 231, 0.03) 40%,
+        var(--color-surface-dim) 80%);
+    }
+
+    .playground__model-wrap model-viewer {
+      width: 100%;
+      height: 100%;
+      --poster-color: transparent;
+    }
+
+    /* Description panel */
+    .playground__description {
+      padding: var(--space-md) var(--space-lg);
+      background: var(--color-surface-container);
+      border-top: 1px solid var(--color-outline);
+      flex-shrink: 0;
+    }
+
+    .playground__description h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .playground__description p {
+      font-size: 0.8rem;
+      color: var(--color-on-surface-dim);
+      line-height: 1.5;
+    }
+
+    /* Copy feedback */
+    .playground__btn--copied {
+      border-color: #34d399 !important;
+      color: #34d399 !important;
+      background: rgba(52, 211, 153, 0.08) !important;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .playground__split {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+      }
+
+      .playground__editor {
+        border-right: none;
+        border-bottom: 1px solid var(--color-outline);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .playground__toolbar {
+        padding: var(--space-sm) var(--space-md);
+        gap: var(--space-sm);
+      }
+
+      .playground__toolbar-left {
+        flex-wrap: wrap;
+      }
+
+      .playground__toolbar-right {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .playground__code {
+        font-size: 0.78rem;
+        padding: var(--space-md);
+        padding-left: 50px;
+      }
+
+      .playground__line-numbers {
+        width: 36px;
+        font-size: 0.78rem;
+        padding-right: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="nav" id="nav">
+    <div class="nav__container">
+      <a href="/" class="nav__logo">
+        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <span class="nav__logo-text">SceneView</span>
+      </a>
+
+      <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="nav__links" id="navLinks">
+        <a href="https://sceneview.github.io/docs" class="nav__link">Docs</a>
+        <a href="/#samples" class="nav__link">Samples</a>
+        <a href="/playground" class="nav__link" style="color:var(--color-primary);font-weight:600">Playground</a>
+        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
+        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
+        <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== PLAYGROUND ===== -->
+  <main class="playground">
+    <!-- Toolbar -->
+    <div class="playground__toolbar">
+      <div class="playground__toolbar-left">
+        <span class="playground__label">Example</span>
+        <select class="playground__select" id="exampleSelect">
+          <option value="model-viewer">Model Viewer</option>
+          <option value="ar-placement">AR Placement</option>
+          <option value="custom-geometry">Custom Geometry</option>
+          <option value="animation">Animation</option>
+        </select>
+      </div>
+      <div class="playground__toolbar-right">
+        <button class="playground__btn" id="copyBtn" title="Copy code to clipboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+          <span id="copyLabel">Copy code</span>
+        </button>
+        <a class="playground__btn playground__btn--primary" id="claudeLink" href="#" target="_blank" rel="noopener" title="Open in Claude with this code as context">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+          Open in Claude
+        </a>
+      </div>
+    </div>
+
+    <!-- Split panes -->
+    <div class="playground__split">
+      <!-- Left: Code editor -->
+      <div class="playground__editor">
+        <div class="playground__editor-header">
+          <span class="playground__editor-tab" id="editorTab">MainActivity.kt</span>
+          <span class="playground__editor-lang" id="editorLang">Kotlin</span>
+        </div>
+        <div class="playground__code-wrap">
+          <div class="playground__line-numbers" id="lineNumbers"></div>
+          <pre class="playground__code" id="codeDisplay"></pre>
+        </div>
+      </div>
+
+      <!-- Right: 3D Preview -->
+      <div class="playground__preview">
+        <div class="playground__preview-header">
+          <span class="playground__preview-label">3D Preview</span>
+          <span class="playground__preview-hint">Drag to rotate, scroll to zoom</span>
+        </div>
+        <div class="playground__model-wrap">
+          <model-viewer
+            id="previewModel"
+            src="models/DamagedHelmet.glb"
+            alt="3D model preview"
+            auto-rotate
+            auto-rotate-delay="0"
+            rotation-per-second="30deg"
+            camera-controls
+            touch-action="pan-y"
+            interaction-prompt="none"
+            shadow-intensity="1.2"
+            shadow-softness="0.8"
+            exposure="1.1"
+            environment-image="neutral"
+            camera-orbit="45deg 70deg 2.5m"
+            loading="eager"
+          ></model-viewer>
+        </div>
+        <div class="playground__description" id="description">
+          <h3 id="descTitle">Model Viewer</h3>
+          <p id="descText">A basic 3D scene with a glTF model, HDR environment lighting, orbit camera controls, and shadows. This is the simplest way to display a 3D model in your app.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ===== THEME =====
+    (function initTheme() {
+      var saved = localStorage.getItem('sceneview-theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+
+    document.getElementById('themeToggle').addEventListener('click', function () {
+      var current = document.documentElement.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('sceneview-theme', next);
+    });
+
+    // ===== HAMBURGER =====
+    var hamburger = document.getElementById('hamburger');
+    var navLinks = document.getElementById('navLinks');
+    var overlay = document.createElement('div');
+    overlay.className = 'nav-overlay';
+    document.body.appendChild(overlay);
+
+    function toggleMenu() {
+      hamburger.classList.toggle('active');
+      navLinks.classList.toggle('open');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = navLinks.classList.contains('open') ? 'hidden' : '';
+    }
+    hamburger.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
+    navLinks.querySelectorAll('.nav__link').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (navLinks.classList.contains('open')) toggleMenu();
+      });
+    });
+
+    // ===== CODE EXAMPLES =====
+    var examples = {
+      'model-viewer': {
+        file: 'ModelViewerScreen.kt',
+        lang: 'Kotlin',
+        title: 'Model Viewer',
+        description: 'A basic 3D scene with a glTF model, HDR environment lighting, orbit camera controls, and shadows. This is the simplest way to display a 3D model in your app.',
+        code:
+'package com.example.sceneviewdemo\n\
+\n\
+import androidx.compose.foundation.layout.fillMaxSize\n\
+import androidx.compose.runtime.Composable\n\
+import androidx.compose.ui.Modifier\n\
+import io.github.sceneview.Scene\n\
+import io.github.sceneview.node.ModelNode\n\
+import io.github.sceneview.rememberCameraNode\n\
+import io.github.sceneview.rememberEngine\n\
+import io.github.sceneview.rememberEnvironment\n\
+import io.github.sceneview.rememberEnvironmentLoader\n\
+import io.github.sceneview.rememberModelLoader\n\
+import io.github.sceneview.rememberCameraManipulator\n\
+import io.github.sceneview.rememberModelInstance\n\
+\n\
+@Composable\n\
+fun ModelViewerScreen() {\n\
+    val engine = rememberEngine()\n\
+    val modelLoader = rememberModelLoader(engine)\n\
+    val environmentLoader = rememberEnvironmentLoader(engine)\n\
+\n\
+    Scene(\n\
+        modifier = Modifier.fillMaxSize(),\n\
+        engine = engine,\n\
+        modelLoader = modelLoader,\n\
+        environmentLoader = environmentLoader,\n\
+        environment = rememberEnvironment(\n\
+            environmentLoader, "envs/sky.hdr"\n\
+        ),\n\
+        cameraNode = rememberCameraNode(engine) {\n\
+            position(0f, 0f, 4f)\n\
+        },\n\
+        cameraManipulator = rememberCameraManipulator()\n\
+    ) {\n\
+        ModelNode(\n\
+            modelInstance = rememberModelInstance(\n\
+                modelLoader, "models/helmet.glb"\n\
+            )\n\
+        )\n\
+    }\n\
+}'
+      },
+      'ar-placement': {
+        file: 'ARPlacementScreen.kt',
+        lang: 'Kotlin',
+        title: 'AR Placement',
+        description: 'An AR scene with plane detection and tap-to-place. Users point their camera at a surface, then tap to place a 3D model. Supports ARCore on Android.',
+        code:
+'package com.example.sceneviewdemo\n\
+\n\
+import androidx.compose.foundation.layout.fillMaxSize\n\
+import androidx.compose.runtime.*\n\
+import androidx.compose.ui.Modifier\n\
+import io.github.sceneview.ar.ARScene\n\
+import io.github.sceneview.ar.node.AnchorNode\n\
+import io.github.sceneview.node.ModelNode\n\
+import io.github.sceneview.rememberEngine\n\
+import io.github.sceneview.rememberModelLoader\n\
+import io.github.sceneview.rememberModelInstance\n\
+import io.github.sceneview.ar.rememberARCameraNode\n\
+import com.google.ar.core.HitResult\n\
+import com.google.ar.core.Plane\n\
+\n\
+@Composable\n\
+fun ARPlacementScreen() {\n\
+    val engine = rememberEngine()\n\
+    val modelLoader = rememberModelLoader(engine)\n\
+    var placedModel by remember { mutableStateOf(false) }\n\
+\n\
+    ARScene(\n\
+        modifier = Modifier.fillMaxSize(),\n\
+        engine = engine,\n\
+        modelLoader = modelLoader,\n\
+        planeRenderer = true,\n\
+        onSessionConfiguration = { session, config ->\n\
+            config.planeFindingMode =\n\
+                com.google.ar.core.Config\n\
+                    .PlaneFindingMode.HORIZONTAL\n\
+        },\n\
+        onTapAR = { motionEvent, hitResult ->\n\
+            if (!placedModel) {\n\
+                hitResult\n\
+                    ?.takeIf {\n\
+                        it.trackable is Plane\n\
+                    }?.let { hit ->\n\
+                        val anchor = hit.createAnchor()\n\
+                        val anchorNode = AnchorNode(\n\
+                            engine = engine,\n\
+                            anchor = anchor\n\
+                        )\n\
+                        anchorNode.addChildNode(\n\
+                            ModelNode(\n\
+                                modelInstance =\n\
+                                    modelLoader\n\
+                                        .createModelInstance(\n\
+                                            "models/chair.glb"\n\
+                                        )\n\
+                            )\n\
+                        )\n\
+                        placedModel = true\n\
+                    }\n\
+            }\n\
+        }\n\
+    )\n\
+}'
+      },
+      'custom-geometry': {
+        file: 'CustomGeometryScreen.kt',
+        lang: 'Kotlin',
+        title: 'Custom Geometry',
+        description: 'Procedurally generated 3D geometry using MeshNode. Create cubes, spheres, cylinders, and custom shapes at runtime with material properties.',
+        code:
+'package com.example.sceneviewdemo\n\
+\n\
+import androidx.compose.foundation.layout.fillMaxSize\n\
+import androidx.compose.runtime.Composable\n\
+import androidx.compose.ui.Modifier\n\
+import io.github.sceneview.Scene\n\
+import io.github.sceneview.math.Position\n\
+import io.github.sceneview.node.CubeNode\n\
+import io.github.sceneview.node.SphereNode\n\
+import io.github.sceneview.node.CylinderNode\n\
+import io.github.sceneview.rememberCameraNode\n\
+import io.github.sceneview.rememberEngine\n\
+import io.github.sceneview.rememberMaterialLoader\n\
+import io.github.sceneview.rememberCameraManipulator\n\
+import io.github.sceneview.math.Color\n\
+\n\
+@Composable\n\
+fun CustomGeometryScreen() {\n\
+    val engine = rememberEngine()\n\
+    val materialLoader = rememberMaterialLoader(engine)\n\
+\n\
+    Scene(\n\
+        modifier = Modifier.fillMaxSize(),\n\
+        engine = engine,\n\
+        cameraNode = rememberCameraNode(engine) {\n\
+            position(0f, 2f, 6f)\n\
+            lookAt(0f, 0f, 0f)\n\
+        },\n\
+        cameraManipulator = rememberCameraManipulator()\n\
+    ) {\n\
+        // Red cube on the left\n\
+        CubeNode(\n\
+            engine = engine,\n\
+            size = Position(1f, 1f, 1f),\n\
+            materialLoader = materialLoader,\n\
+            color = Color(1f, 0.2f, 0.2f)\n\
+        ) {\n\
+            position(x = -2f, y = 0.5f, z = 0f)\n\
+        }\n\
+\n\
+        // Green sphere in the center\n\
+        SphereNode(\n\
+            engine = engine,\n\
+            radius = 0.6f,\n\
+            materialLoader = materialLoader,\n\
+            color = Color(0.2f, 0.9f, 0.4f)\n\
+        ) {\n\
+            position(x = 0f, y = 0.6f, z = 0f)\n\
+        }\n\
+\n\
+        // Blue cylinder on the right\n\
+        CylinderNode(\n\
+            engine = engine,\n\
+            radius = 0.5f,\n\
+            height = 1.5f,\n\
+            materialLoader = materialLoader,\n\
+            color = Color(0.2f, 0.5f, 1f)\n\
+        ) {\n\
+            position(x = 2f, y = 0.75f, z = 0f)\n\
+        }\n\
+    }\n\
+}'
+      },
+      'animation': {
+        file: 'AnimationScreen.kt',
+        lang: 'Kotlin',
+        title: 'Animation',
+        description: 'A model with animation playback controls. Load an animated glTF model and control playback with play, pause, and animation switching.',
+        code:
+'package com.example.sceneviewdemo\n\
+\n\
+import androidx.compose.foundation.layout.*\n\
+import androidx.compose.material3.*\n\
+import androidx.compose.runtime.*\n\
+import androidx.compose.ui.Alignment\n\
+import androidx.compose.ui.Modifier\n\
+import androidx.compose.ui.unit.dp\n\
+import io.github.sceneview.Scene\n\
+import io.github.sceneview.node.ModelNode\n\
+import io.github.sceneview.rememberCameraNode\n\
+import io.github.sceneview.rememberEngine\n\
+import io.github.sceneview.rememberModelLoader\n\
+import io.github.sceneview.rememberEnvironmentLoader\n\
+import io.github.sceneview.rememberEnvironment\n\
+import io.github.sceneview.rememberModelInstance\n\
+import io.github.sceneview.rememberCameraManipulator\n\
+\n\
+@Composable\n\
+fun AnimationScreen() {\n\
+    val engine = rememberEngine()\n\
+    val modelLoader = rememberModelLoader(engine)\n\
+    val envLoader = rememberEnvironmentLoader(engine)\n\
+\n\
+    var isPlaying by remember { mutableStateOf(true) }\n\
+    var animIndex by remember { mutableIntStateOf(0) }\n\
+\n\
+    val modelInstance = rememberModelInstance(\n\
+        modelLoader, "models/character.glb"\n\
+    )\n\
+\n\
+    Box(modifier = Modifier.fillMaxSize()) {\n\
+        Scene(\n\
+            modifier = Modifier.fillMaxSize(),\n\
+            engine = engine,\n\
+            modelLoader = modelLoader,\n\
+            environment = rememberEnvironment(\n\
+                envLoader, "envs/studio.hdr"\n\
+            ),\n\
+            cameraNode = rememberCameraNode(engine) {\n\
+                position(0f, 1f, 3f)\n\
+            },\n\
+            cameraManipulator =\n\
+                rememberCameraManipulator()\n\
+        ) {\n\
+            modelInstance?.let { instance ->\n\
+                ModelNode(\n\
+                    modelInstance = instance\n\
+                ) {\n\
+                    if (isPlaying) {\n\
+                        playAnimation(\n\
+                            index = animIndex,\n\
+                            loop = true\n\
+                        )\n\
+                    } else {\n\
+                        stopAnimation()\n\
+                    }\n\
+                }\n\
+            }\n\
+        }\n\
+\n\
+        // Playback controls\n\
+        Row(\n\
+            modifier = Modifier\n\
+                .align(Alignment.BottomCenter)\n\
+                .padding(24.dp),\n\
+            horizontalArrangement =\n\
+                Arrangement.spacedBy(12.dp)\n\
+        ) {\n\
+            FilledTonalButton(\n\
+                onClick = { isPlaying = !isPlaying }\n\
+            ) {\n\
+                Text(\n\
+                    if (isPlaying) "Pause"\n\
+                    else "Play"\n\
+                )\n\
+            }\n\
+            FilledTonalButton(\n\
+                onClick = { animIndex++ }\n\
+            ) {\n\
+                Text("Next Animation")\n\
+            }\n\
+        }\n\
+    }\n\
+}'
+      }
+    };
+
+    // ===== STATE =====
+    var currentExample = 'model-viewer';
+    var codeDisplay = document.getElementById('codeDisplay');
+    var lineNumbers = document.getElementById('lineNumbers');
+    var exampleSelect = document.getElementById('exampleSelect');
+    var editorTab = document.getElementById('editorTab');
+    var editorLang = document.getElementById('editorLang');
+    var descTitle = document.getElementById('descTitle');
+    var descText = document.getElementById('descText');
+    var copyBtn = document.getElementById('copyBtn');
+    var copyLabel = document.getElementById('copyLabel');
+    var claudeLink = document.getElementById('claudeLink');
+
+    function syntaxHighlight(code) {
+      // Escape HTML first
+      var html = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Apply syntax highlighting
+      // Comments
+      html = html.replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
+      // Strings
+      html = html.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
+      // Numbers
+      html = html.replace(/\b(\d+(?:\.\d+)?f?)\b/g, '<span class="num">$1</span>');
+      // Keywords
+      html = html.replace(/\b(package|import|fun|val|var|if|else|let|by|remember|is|return)\b/g, '<span class="kw">$1</span>');
+      // Compose / SceneView types
+      html = html.replace(/\b(Scene|ARScene|ModelNode|AnchorNode|CubeNode|SphereNode|CylinderNode|Box|Row|Column|Text|Button|FilledTonalButton|Modifier|Composable|mutableStateOf|mutableIntStateOf)\b/g, '<span class="fn">$1</span>');
+      // Function calls (word followed by parenthesis)
+      html = html.replace(/\b(rememberEngine|rememberModelLoader|rememberModelInstance|rememberEnvironmentLoader|rememberEnvironment|rememberCameraNode|rememberCameraManipulator|rememberMaterialLoader|fillMaxSize|position|lookAt|playAnimation|stopAnimation|createAnchor|createModelInstance|addChildNode|padding|align|spacedBy|onClick|takeIf)\b/g, '<span class="fn">$1</span>');
+
+      return html;
+    }
+
+    function updateLineNumbers(code) {
+      var lines = code.split('\n').length;
+      var html = '';
+      for (var i = 1; i <= lines; i++) {
+        html += i + '\n';
+      }
+      lineNumbers.textContent = html;
+    }
+
+    function loadExample(key) {
+      var ex = examples[key];
+      if (!ex) return;
+      currentExample = key;
+
+      codeDisplay.innerHTML = syntaxHighlight(ex.code);
+      updateLineNumbers(ex.code);
+      editorTab.textContent = ex.file;
+      editorLang.textContent = ex.lang;
+      descTitle.textContent = ex.title;
+      descText.textContent = ex.description;
+
+      // Update Claude link
+      var prompt = encodeURIComponent(
+        'Help me build a SceneView Android app. Here is the code I want to use:\n\n' + ex.code
+      );
+      claudeLink.href = 'https://claude.ai/new?q=' + prompt;
+    }
+
+    // Initial load
+    loadExample('model-viewer');
+
+    // Dropdown change
+    exampleSelect.addEventListener('change', function () {
+      loadExample(this.value);
+    });
+
+    // Copy button
+    copyBtn.addEventListener('click', function () {
+      var ex = examples[currentExample];
+      if (!ex) return;
+
+      navigator.clipboard.writeText(ex.code).then(function () {
+        copyBtn.classList.add('playground__btn--copied');
+        copyLabel.textContent = 'Copied!';
+        setTimeout(function () {
+          copyBtn.classList.remove('playground__btn--copied');
+          copyLabel.textContent = 'Copy code';
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
