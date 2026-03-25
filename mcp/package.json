@@ -1,7 +1,7 @@
 {
   "name": "sceneview-mcp",
-  "version": "3.4.3",
-  "mcpName": "io.github.ThomasGorisse/sceneview",
+  "version": "3.4.4",
+  "mcpName": "io.github.SceneView/mcp",
   "description": "MCP server for SceneView — cross-platform 3D & AR SDK for Android and iOS. Give Claude the full SceneView SDK so it writes correct, compilable code.",
   "keywords": [
     "mcp",
