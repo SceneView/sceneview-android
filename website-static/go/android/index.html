@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SceneView for Android — Google Play Store</title>
+  <meta name="description" content="Download SceneView Demo for Android from the Google Play Store.">
+  <meta http-equiv="refresh" content="2;url=https://play.google.com/store/apps/details?id=io.github.sceneview.demo">
+  <meta property="og:title" content="SceneView for Android">
+  <meta property="og:description" content="3D & AR demo app — download from Google Play Store.">
+  <meta property="og:url" content="https://sceneview.github.io/go/android">
+  <meta name="google-play-app" content="app-id=io.github.sceneview.demo">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0D2137; color: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    body::before { content: ''; position: fixed; top: -40%; left: 50%; transform: translateX(-50%); width: 800px; height: 800px; background: radial-gradient(circle, rgba(26,115,232,0.15) 0%, transparent 70%); pointer-events: none; }
+    .page { position: relative; z-index: 1; text-align: center; padding: 2rem; max-width: 480px; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(135deg, #8ab4f8, #42a5f5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .desc { color: #7b8fa6; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .cta { display: inline-flex; align-items: center; gap: 10px; padding: 16px 36px; border-radius: 16px; font-size: 1rem; font-weight: 700; text-decoration: none; color: #fff; background: linear-gradient(135deg, #1a73e8, #1557b0); box-shadow: 0 4px 20px rgba(26,115,232,0.35); transition: transform 0.2s, box-shadow 0.2s; }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(26,115,232,0.45); }
+    .note { color: #4ade80; font-size: 0.8rem; margin-top: 1rem; }
+    .fallback { margin-top: 2rem; color: #4a5e73; font-size: 0.8rem; }
+    .fallback a { color: #5e7a94; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="icon">&#9654;&#65039;</div>
+    <h1>SceneView for Android</h1>
+    <p class="desc">3D & AR demo app on Google Play</p>
+    <a class="cta" href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      Open Play Store
+    </a>
+    <p class="note">Redirecting to Google Play...</p>
+    <p class="fallback">Not working? <a href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">Click here</a> or go <a href="/go/">back</a></p>
+  </div>
+  <script>
+    setTimeout(function() {
+      window.location.href = 'https://play.google.com/store/apps/details?id=io.github.sceneview.demo';
+    }, 1500);
+  </script>
+</body>
+</html>
