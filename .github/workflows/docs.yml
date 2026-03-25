@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'website-static/**'
       - 'website/**'
       - 'docs/**'
       - 'marketing/**'
@@ -33,36 +34,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── 1. Build Kobweb website (marketing site — root) ──────────────────
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-          cache: gradle
-
-      - name: Build Kobweb website
-        working-directory: website
-        run: |
-          chmod +x ./gradlew
-          ./gradlew kobwebExport --stacktrace
-
-      - name: Inject responsive CSS
-        working-directory: website
-        run: |
-          ./gradlew injectResponsiveCss --stacktrace
-
-      - name: Assemble site root from Kobweb export
+      # ── 1. Copy static website (marketing site — root) ─────────────────
+      - name: Assemble site root from static HTML
         run: |
           mkdir -p site
 
-          # Kobweb pages become the root
-          cp -r website/.kobweb/site/pages/* site/
-
-          # Kobweb resources (JS, CSS, models, images)
-          cp -r website/.kobweb/site/resources/* site/ 2>/dev/null || true
-
-          # Kobweb system files (JS runtime)
-          cp -r website/.kobweb/site/system/* site/ 2>/dev/null || true
+          # Static HTML/CSS/JS landing page
+          cp -r website-static/* site/
 
           touch site/.nojekyll
 
@@ -95,20 +73,12 @@ jobs:
       # ── 3. Copy extra files ─────────────────────────────────────────────
       - name: Copy SEO and meta files
         run: |
-          # Root-level SEO files from Kobweb public resources
-          for f in robots.txt sitemap.xml structured-data.json llms.txt llms-full.txt; do
-            [ -f "website/src/jsMain/resources/public/$f" ] && cp "website/src/jsMain/resources/public/$f" "site/$f" || true
-          done
-
-          # Also copy from docs if Kobweb doesn't have them
-          for f in CNAME manifest.json llms.txt llms-full.txt; do
+          # Copy SEO files from docs if not in website-static
+          for f in CNAME llms.txt llms-full.txt; do
             [ ! -f "site/$f" ] && [ -f "docs/docs/$f" ] && cp "docs/docs/$f" "site/$f" || true
           done
-
-          # 3D model for hero viewer
-          mkdir -p site/models
-          [ -f "website/src/jsMain/resources/public/models/DamagedHelmet.glb" ] && \
-            cp website/src/jsMain/resources/public/models/DamagedHelmet.glb site/models/ || true
+          # Root llms.txt
+          [ ! -f "site/llms.txt" ] && [ -f "llms.txt" ] && cp llms.txt site/ || true
 
       # ── 4. Include Dokka API docs if available ──────────────────────────
       - name: Download Dokka API docs (if available)
