@@ -1,5 +1,36 @@
 # Changelog
 
+## 3.4.0 — Multi-platform expansion (2026-03-25)
+
+### New platforms
+- **Web** — `sceneview-web` module: Filament.js (WASM) rendering + WebXR AR/VR
+- **Desktop** — `samples/desktop-demo`: Compose Desktop, software 3D renderer
+- **Android TV** — `samples/android-tv-demo`: D-pad controls, model cycling
+- **Flutter** — `samples/flutter-demo`: PlatformView bridge (Android + iOS)
+- **React Native** — `samples/react-native-demo`: Fabric bridge (Android + iOS)
+
+### Android showcase
+- Unified `samples/android-demo` — Material 3 Expressive, 4 tabs, 14 demos
+- Blue branding with isometric cube icon
+
+### Infrastructure
+- **MCP Registry** — SceneView MCP published at `io.github.ThomasGorisse/sceneview`
+- **21 GitHub Secrets** — Android + iOS + Maven + npm fully configured
+- **Apple Developer** — Distribution certificate, provisioning profile, API key
+- **CI/CD** — Play Store + App Store workflows ready
+
+### Samples cleanup
+- 15 obsolete samples deleted, merged into unified platform demos
+- `{platform}-demo` naming convention across all 7 platforms
+- Code recipes preserved in `samples/recipes/`
+
+### Fixes
+- material-icons-extended pinned to 1.7.8 (1.10.5 not published on Google Maven)
+- wasmJs target disabled (kotlin-math lacks WASM variant)
+- AR emulator script updated for new sample structure
+
+---
+
 ## 3.3.0 — Unified versioning, cross-platform, website
 
 ### Version unification
