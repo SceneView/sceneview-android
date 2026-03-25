@@ -12,4 +12,12 @@
     <string name="update_ready">Update ready — restart to apply</string>
     <string name="update_restart">Restart</string>
     <string name="update_check">Check for updates</string>
+
+    <!-- Error states -->
+    <string name="ar_not_available">AR is not available on this device</string>
+    <string name="ar_not_installed">Google Play Services for AR is not installed</string>
+    <string name="ar_camera_permission">Camera permission is required for AR</string>
+    <string name="model_loading">Loading 3D model…</string>
+    <string name="model_loading_error">Failed to load model</string>
+    <string name="scene_error">Something went wrong rendering the scene</string>
 </resources>
