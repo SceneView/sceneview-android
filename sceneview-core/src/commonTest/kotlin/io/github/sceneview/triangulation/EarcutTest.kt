@@ -64,4 +64,81 @@ class EarcutTest {
         val deviation = Earcut.deviation(vertices, holeIndices, 2, indices)
         assertTrue(deviation < 1e-10, "Triangulation should cover the polygon area accurately, deviation=$deviation")
     }
+
+    // --- Additional tests ---
+
+    @Test
+    fun triangulatePentagon() {
+        // Regular-ish pentagon
+        val vertices = doubleArrayOf(
+            0.0, 1.0,
+            0.95, 0.31,
+            0.59, -0.81,
+            -0.59, -0.81,
+            -0.95, 0.31
+        )
+        val indices = Earcut.triangulate(vertices)
+        // 5 vertices -> 3 triangles -> 9 indices
+        assertEquals(9, indices.size, "Pentagon should produce 9 indices (3 triangles)")
+        assertTrue(indices.all { it in 0..4 }, "All indices should reference valid vertices")
+    }
+
+    @Test
+    fun triangulateHexagon() {
+        val vertices = doubleArrayOf(
+            1.0, 0.0,
+            0.5, 0.866,
+            -0.5, 0.866,
+            -1.0, 0.0,
+            -0.5, -0.866,
+            0.5, -0.866
+        )
+        val indices = Earcut.triangulate(vertices)
+        // 6 vertices -> 4 triangles -> 12 indices
+        assertEquals(12, indices.size, "Hexagon should produce 12 indices (4 triangles)")
+    }
+
+    @Test
+    fun triangulateDegenerate2Vertices() {
+        val vertices = doubleArrayOf(0.0, 0.0, 1.0, 1.0)
+        val indices = Earcut.triangulate(vertices)
+        assertEquals(0, indices.size, "Two vertices cannot form a triangle")
+    }
+
+    @Test
+    fun triangulateEmptyArray() {
+        val vertices = doubleArrayOf()
+        val indices = Earcut.triangulate(vertices)
+        assertEquals(0, indices.size, "Empty input should produce no indices")
+    }
+
+    @Test
+    fun triangulateSquareDeviationIsZero() {
+        val vertices = doubleArrayOf(
+            0.0, 0.0,
+            4.0, 0.0,
+            4.0, 3.0,
+            0.0, 3.0
+        )
+        val indices = Earcut.triangulate(vertices)
+        val deviation = Earcut.deviation(vertices, null, 2, indices)
+        assertTrue(deviation < 1e-10, "Square triangulation deviation should be ~0, got $deviation")
+    }
+
+    @Test
+    fun triangulateConcavePolygon() {
+        // L-shaped polygon (concave)
+        val vertices = doubleArrayOf(
+            0.0, 0.0,
+            2.0, 0.0,
+            2.0, 1.0,
+            1.0, 1.0,
+            1.0, 2.0,
+            0.0, 2.0
+        )
+        val indices = Earcut.triangulate(vertices)
+        assertEquals(0, indices.size % 3, "Index count must be a multiple of 3")
+        assertTrue(indices.size >= 12, "L-shape (6 vertices) should produce at least 4 triangles")
+        assertTrue(indices.all { it in 0..5 }, "All indices should reference valid vertices")
+    }
 }
