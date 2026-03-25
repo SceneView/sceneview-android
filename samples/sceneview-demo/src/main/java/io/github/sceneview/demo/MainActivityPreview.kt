@@ -6,9 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -26,30 +26,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import io.github.sceneview.demo.qa.QAScreen
+import io.github.sceneview.demo.about.AboutScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 
-@Preview(showSystemUi = true, name = "App - Explore Tab")
+@Preview(showSystemUi = true, name = "App - 3D Tab")
 @Composable
-private fun AppExplorePreview() {
+private fun App3DPreview() {
     SceneViewDemoTheme(dynamicColor = false) {
         NavigationShellPreview(selectedTab = 0)
     }
 }
 
-@Preview(showSystemUi = true, name = "App - Showcase Tab")
+@Preview(showSystemUi = true, name = "App - About Tab")
 @Composable
-private fun AppShowcasePreview() {
+private fun AppAboutPreview() {
     SceneViewDemoTheme(dynamicColor = false) {
-        NavigationShellPreview(selectedTab = 1)
-    }
-}
-
-@Preview(showSystemUi = true, name = "App - QA Tab")
-@Composable
-private fun AppQAPreview() {
-    SceneViewDemoTheme(dynamicColor = false) {
-        NavigationShellPreview(selectedTab = 2)
+        NavigationShellPreview(selectedTab = 3)
     }
 }
 
@@ -57,7 +49,7 @@ private fun AppQAPreview() {
 @Composable
 private fun AppDarkPreview() {
     SceneViewDemoTheme(darkTheme = true, dynamicColor = false) {
-        NavigationShellPreview(selectedTab = 0)
+        NavigationShellPreview(selectedTab = 3)
     }
 }
 
@@ -65,10 +57,10 @@ private fun AppDarkPreview() {
 private fun NavigationShellPreview(selectedTab: Int) {
     var selected by remember { mutableIntStateOf(selectedTab) }
     val tabs = listOf(
-        Triple("Explore", Icons.Default.Explore, "Explore"),
-        Triple("Showcase", Icons.Default.ViewInAr, "Showcase"),
-        Triple("Gallery", Icons.Default.PhotoLibrary, "Gallery"),
-        Triple("QA Tests", Icons.Default.BugReport, "QA Tests")
+        Triple("3D", Icons.Default.ViewInAr, "3D"),
+        Triple("AR", Icons.Default.CameraAlt, "AR"),
+        Triple("Samples", Icons.Default.GridView, "Samples"),
+        Triple("About", Icons.Default.Info, "About")
     )
 
     Scaffold(
@@ -103,21 +95,21 @@ private fun NavigationShellPreview(selectedTab: Int) {
         ) {
             when (selected) {
                 0 -> Text(
-                    "Explore Screen\n(3D Scene — not available in preview)",
+                    "3D Scene\n(Filament — not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 1 -> Text(
-                    "Showcase Screen\n(3D previews — not available in preview)",
+                    "AR Scene\n(ARCore — not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 2 -> Text(
-                    "Gallery Screen\n(3D scenes — not available in preview)",
+                    "Samples Grid\n(3D scenes — not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                3 -> QAScreen()
+                3 -> AboutScreen()
             }
         }
     }
