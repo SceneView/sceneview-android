@@ -1,108 +1,20 @@
 {
-  "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
-  "name": "io.github.sceneview/mcp",
-  "displayName": "SceneView — 3D & AR SDK",
-  "description": "MCP server for building 3D and AR apps with SceneView. Provides API reference, code samples, setup guides, validation, and migration tools for Android (Jetpack Compose + Filament), iOS (SwiftUI + RealityKit), Web (Filament.js), and 6+ platforms.",
-  "homepage": "https://sceneview.github.io",
-  "repository": "https://github.com/SceneView/sceneview",
-  "license": "Apache-2.0",
-  "authors": [
-    {
-      "name": "Thomas Gorisse",
-      "url": "https://github.com/ThomasGorisse"
-    }
-  ],
-  "categories": [
-    "development",
-    "3d",
-    "augmented-reality",
-    "mobile",
-    "web"
-  ],
-  "tags": [
-    "3d",
-    "ar",
-    "android",
-    "ios",
-    "web",
-    "compose",
-    "swiftui",
-    "filament",
-    "realitykit",
-    "gltf",
-    "sceneview",
-    "kotlin",
-    "swift",
-    "webxr"
-  ],
-  "packages": {
-    "npm": {
-      "name": "@sceneview/mcp",
-      "version": "3.3.0"
-    }
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ThomasGorisse/sceneview",
+  "description": "3D & AR SDK for Android, iOS, Web — API docs, samples, validation, and code generation.",
+  "repository": {
+    "url": "https://github.com/SceneView/sceneview",
+    "source": "github"
   },
-  "runtime": {
-    "transport": "stdio",
-    "command": "npx",
-    "args": ["-y", "@sceneview/mcp"]
-  },
-  "capabilities": {
-    "resources": true,
-    "tools": true,
-    "prompts": false
-  },
-  "tools": [
+  "version": "3.4.2",
+  "packages": [
     {
-      "name": "get_sample",
-      "description": "Get a complete working code sample for a SceneView feature (24 samples: Android, iOS, Web)"
-    },
-    {
-      "name": "list_samples",
-      "description": "List all available sample IDs and descriptions"
-    },
-    {
-      "name": "validate_code",
-      "description": "Validate SceneView code for threading, API, and style issues"
-    },
-    {
-      "name": "get_migration_guide",
-      "description": "Get migration guide between SceneView versions"
-    },
-    {
-      "name": "get_ar_setup",
-      "description": "Get AR setup guide (ARCore/ARKit configuration)"
-    },
-    {
-      "name": "get_best_practices",
-      "description": "Get SceneView best practices and performance tips"
-    },
-    {
-      "name": "get_troubleshooting",
-      "description": "Get troubleshooting guide for common issues"
-    },
-    {
-      "name": "get_ios_setup",
-      "description": "Get complete iOS/macOS/visionOS setup guide (SPM, SwiftUI)"
-    },
-    {
-      "name": "get_web_setup",
-      "description": "Get complete Web setup guide (Filament.js, Kotlin/JS)"
-    },
-    {
-      "name": "get_node_reference",
-      "description": "Get detailed API reference for a specific node type"
-    }
-  ],
-  "resources": [
-    {
-      "uri": "sceneview://api",
-      "name": "SceneView API Reference",
-      "description": "Complete API reference — composables, node types, threading rules"
-    },
-    {
-      "uri": "sceneview://known-issues",
-      "name": "Open GitHub Issues",
-      "description": "Live list of open issues with workarounds"
+      "registryType": "npm",
+      "identifier": "sceneview-mcp",
+      "version": "3.4.2",
+      "transport": {
+        "type": "stdio"
+      }
     }
   ]
 }

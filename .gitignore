@@ -60,3 +60,4 @@ website/.gradle/
 # Module build artifacts
 sceneview-web/build/
 sceneview-desktop/build/
+mcp/.mcpregistry_*
