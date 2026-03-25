@@ -60,6 +60,7 @@ nav:
     - Recipes: recipes.md
     - FAQ: faq.md
     - Troubleshooting: troubleshooting.md
+  - Platforms: platforms.md
   - Guides:
     - Architecture: architecture.md
     - Integrations: integrations.md
