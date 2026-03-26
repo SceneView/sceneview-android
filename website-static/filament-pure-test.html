@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Filament.js Pure Test</title>
+<style>
+body { margin: 0; background: #1a1a2e; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; color: #fff; flex-direction: column; }
+canvas { width: 800px; height: 600px; border: 1px solid #333; }
+#status { margin: 20px; font-size: 14px; color: #8ab4f8; }
+</style>
+</head>
+<body>
+<div id="status">Loading Filament.js WASM...</div>
+<canvas id="canvas" width="800" height="600"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
+<script>
+const status = document.getElementById('status');
+
+Filament.init([], () => {
+  status.textContent = 'Filament WASM ready! Creating engine...';
+
+  try {
+    const canvas = document.getElementById('canvas');
+    const engine = Filament.Engine.create(canvas);
+    status.textContent = 'Engine created! Setting up scene...';
+
+    const scene = engine.createScene();
+    const renderer = engine.createRenderer();
+    const camera = engine.createCamera(Filament.EntityManager.get().create());
+    const view = engine.createView();
+    const swapChain = engine.createSwapChain();
+
+    view.setCamera(camera);
+    view.setScene(scene);
+    view.setViewport([0, 0, canvas.width, canvas.height]);
+
+    // Set clear color to blue-ish
+    renderer.setClearOptions({ clearColor: [0.05, 0.07, 0.15, 1.0], clear: true });
+
+    // Set camera
+    const eye = [0, 1, 5];
+    const center = [0, 0, 0];
+    const up = [0, 1, 0];
+    camera.lookAt(eye, center, up);
+
+    const aspect = canvas.width / canvas.height;
+    camera.setProjectionFov(45, aspect, 0.1, 100, Filament.Camera$Fov.VERTICAL);
+
+    // Add a light
+    const sunlight = Filament.EntityManager.get().create();
+    Filament.LightManager.Builder(Filament.LightManager$Type.SUN)
+      .color([0.98, 0.92, 0.89])
+      .intensity(100000)
+      .direction([0.6, -1.0, -0.8])
+      .sunAngularRadius(1.9)
+      .sunHaloSize(10.0)
+      .sunHaloFalloff(80.0)
+      .build(engine, sunlight);
+    scene.addEntity(sunlight);
+
+    status.textContent = 'Scene ready! Rendering...';
+
+    // Render loop
+    function render() {
+      if (renderer.beginFrame(swapChain)) {
+        renderer.render(view);
+        renderer.endFrame();
+      }
+      engine.execute();
+      requestAnimationFrame(render);
+    }
+
+    render();
+    status.textContent = 'Filament.js rendering! (dark scene — no model loaded yet, but the engine works!)';
+    status.style.color = '#34a853';
+
+  } catch(e) {
+    status.textContent = 'Error: ' + e.message;
+    status.style.color = '#ea4335';
+    console.error('Filament error:', e);
+  }
+});
+</script>
+</body>
+</html>
