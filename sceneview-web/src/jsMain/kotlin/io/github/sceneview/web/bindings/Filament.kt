@@ -49,11 +49,15 @@ external interface Box {
 
 // --- Engine ---
 
+// Static methods on JS classes don't map to Kotlin companion objects.
+// Filament.Engine.create() is a JS static method, accessed via this external object.
+@JsName("Engine")
+external object EngineFactory {
+    fun create(canvas: HTMLCanvasElement, contextOptions: dynamic = definedExternally): Engine
+    fun destroy(engine: Engine)
+}
+
 external class Engine {
-    companion object {
-        fun create(canvas: HTMLCanvasElement, contextOptions: dynamic = definedExternally): Engine
-        fun destroy(engine: Engine)
-    }
 
     fun execute()
     fun createCamera(entity: Entity): Camera
