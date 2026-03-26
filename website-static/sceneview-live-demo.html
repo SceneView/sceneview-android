@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView Web Live Demo - Real 3D Rendering with Filament.js WASM</title>
+<meta name="description" content="SceneView Web: real-time 3D rendering in the browser using Filament.js WebAssembly. Load glTF/GLB models with one line of JavaScript.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1117; font-family: 'Inter', system-ui, sans-serif; color: #fff; }
+  canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  .overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #0d1117; z-index: 100; transition: opacity 0.5s;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .loader { text-align: center; }
+  .loader-spinner {
+    width: 40px; height: 40px; border: 3px solid rgba(26,115,232,0.2);
+    border-top-color: #1a73e8; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text { font-size: 14px; color: rgba(255,255,255,0.6); }
+  .loader-progress {
+    margin-top: 12px; width: 200px; height: 4px;
+    background: rgba(255,255,255,0.1); border-radius: 2px;
+    overflow: hidden;
+  }
+  .loader-progress-bar {
+    height: 100%; width: 0%; background: #1a73e8;
+    border-radius: 2px; transition: width 0.3s;
+  }
+
+  .controls {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .model-btn {
+    padding: 8px 16px; border-radius: 8px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.7); font-size: 13px; font-family: inherit;
+    cursor: pointer; transition: all 0.15s; text-align: left;
+  }
+  .model-btn:hover { background: rgba(26,115,232,0.2); border-color: #1a73e8; color: #fff; }
+  .model-btn.active { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+
+  .badge {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    padding: 6px 16px; border-radius: 20px;
+    background: rgba(26,115,232,0.15); border: 1px solid rgba(26,115,232,0.3);
+    color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500;
+    backdrop-filter: blur(8px); pointer-events: none; z-index: 10;
+  }
+  .badge a { color: #4a9af5; text-decoration: none; pointer-events: auto; }
+
+  .info {
+    position: fixed; bottom: 16px; right: 16px; z-index: 10;
+    color: rgba(255,255,255,0.4); font-size: 11px; text-align: right;
+    pointer-events: none;
+  }
+
+  .code-badge {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    padding: 8px 12px; border-radius: 8px;
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px;
+    color: rgba(255,255,255,0.5); max-width: 360px;
+    backdrop-filter: blur(8px);
+  }
+  .code-badge code { color: #7dd3fc; }
+  .code-badge .comment { color: #6b7280; }
+
+  .status {
+    position: fixed; top: 60px; right: 16px; z-index: 10;
+    padding: 6px 10px; border-radius: 6px;
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08);
+    font-size: 11px; color: rgba(255,255,255,0.4);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    backdrop-filter: blur(8px);
+  }
+  .status .ok { color: #4ade80; }
+  .status .err { color: #f87171; }
+</style>
+</head>
+<body>
+
+<canvas id="viewer"></canvas>
+
+<div class="overlay" id="loading">
+  <div class="loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text" id="loading-text">Loading Filament.js WASM engine...</div>
+    <div class="loader-progress">
+      <div class="loader-progress-bar" id="progress-bar"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls" id="controls" style="display:none;">
+  <button class="model-btn active" data-url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">Damaged Helmet</button>
+  <button class="model-btn" data-url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/glTF-Binary/Avocado.glb">Avocado</button>
+  <button class="model-btn" data-url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Lantern/glTF-Binary/Lantern.glb">Lantern</button>
+  <button class="model-btn" data-url="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlightHelmet/glTF-Binary/FlightHelmet.glb">Flight Helmet</button>
+</div>
+
+<div class="code-badge">
+  <span class="comment">// Load Filament.js from CDN, then SceneView</span><br>
+  <code>sceneview.modelViewer("canvas", "model.glb");</code>
+</div>
+
+<div class="badge">Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> + Filament.js WASM</div>
+<div class="info">Drag to orbit | Scroll to zoom | Right-click to pan</div>
+<div class="status" id="status"></div>
+
+<!--
+  Step 1: Load Filament.js from CDN (includes WASM binary loader).
+  This must load BEFORE sceneview-web.js because our Kotlin/JS bundle
+  references the global `Filament` object as an external dependency.
+
+  Filament.js v1.52.3 from npm via jsdelivr CDN.
+  The WASM binary (~3.4MB) is fetched automatically by the Emscripten
+  loader from the same CDN path.
+-->
+<script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
+
+<!--
+  Step 2: Load SceneView Web (Kotlin/JS bundle, ~25KB).
+  This registers window.sceneview with createViewer(), modelViewer(), etc.
+  Filament is referenced as an external (not bundled).
+-->
+<script src="js/sceneview-web.js"></script>
+
+<script>
+// SceneView Web Live Demo
+// This demonstrates real Filament.js WASM rendering through SceneView's Kotlin/JS API.
+
+var MODELS = {
+  "DamagedHelmet": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
+  "Avocado": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/glTF-Binary/Avocado.glb",
+  "Lantern": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Lantern/glTF-Binary/Lantern.glb",
+  "FlightHelmet": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlightHelmet/glTF-Binary/FlightHelmet.glb"
+};
+
+var statusEl = document.getElementById("status");
+var loadingText = document.getElementById("loading-text");
+var progressBar = document.getElementById("progress-bar");
+var viewer = null;
+
+function log(msg, isError) {
+  console.log("[SceneView Demo] " + msg);
+  statusEl.innerHTML += '<div class="' + (isError ? 'err' : 'ok') + '">' + msg + '</div>';
+}
+
+// Verify prerequisites
+if (typeof Filament === "undefined") {
+  loadingText.textContent = "Error: Filament.js failed to load from CDN";
+  log("Filament.js not found on window", true);
+} else if (typeof sceneview === "undefined") {
+  loadingText.textContent = "Error: sceneview-web.js failed to load";
+  log("sceneview not found on window", true);
+} else {
+  log("Filament.js loaded (global)");
+  log("SceneView Web v" + sceneview.version + " loaded");
+  progressBar.style.width = "30%";
+
+  loadingText.textContent = "Initializing Filament WASM engine...";
+
+  // Create the viewer - this calls Filament.init() internally,
+  // which downloads and compiles the WASM binary (~3.4MB)
+  sceneview.createViewer("viewer").then(function(sv) {
+    viewer = sv;
+    sv.setAutoRotate(true);
+    sv.setAutoRotateSpeed(0.003);
+    log("Filament engine created");
+    progressBar.style.width = "60%";
+
+    loadingText.textContent = "Loading 3D model...";
+
+    return sv.loadModel(MODELS.DamagedHelmet);
+  }).then(function() {
+    log("Model loaded: DamagedHelmet");
+    progressBar.style.width = "100%";
+
+    // Hide loading overlay
+    setTimeout(function() {
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("controls").style.display = "flex";
+    }, 300);
+
+    log("Rendering active");
+  }).catch(function(err) {
+    var msg = err && err.message ? err.message : String(err);
+    console.error("SceneView init failed:", err);
+    loadingText.textContent = "Error: " + msg;
+    log("Init failed: " + msg, true);
+  });
+
+  // Model switching buttons
+  document.querySelectorAll(".model-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      if (!viewer) return;
+      document.querySelectorAll(".model-btn").forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      var url = btn.dataset.url;
+      log("Loading model: " + url.split("/").pop());
+      viewer.loadModel(url);
+    });
+  });
+}
+</script>
+</body>
+</html>
