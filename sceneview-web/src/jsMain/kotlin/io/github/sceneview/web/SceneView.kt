@@ -104,7 +104,7 @@ class SceneView private constructor(
             init(assets) {
                 try {
                     // Step 2: Create the Filament engine with WebGL2 context
-                    val engine = Engine.create(canvas)
+                    val engine = EngineFactory.create(canvas)
                     val renderer = engine.createRenderer()
                     val scene = engine.createScene()
                     val swapChain = engine.createSwapChain()
@@ -386,7 +386,7 @@ class SceneView private constructor(
         engine.destroyScene(scene)
         engine.destroyCameraComponent(cameraEntity)
         engine.destroySwapChain(swapChain)
-        Engine.destroy(engine)
+        EngineFactory.destroy(engine)
     }
 
     /**
