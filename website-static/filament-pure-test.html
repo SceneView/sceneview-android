@@ -2,32 +2,44 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Filament.js Pure Test</title>
+<title>SceneView Web — Filament.js 3D Rendering</title>
 <style>
-body { margin: 0; background: #1a1a2e; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; color: #fff; flex-direction: column; }
-canvas { width: 800px; height: 600px; border: 1px solid #333; }
-#status { margin: 20px; font-size: 14px; color: #8ab4f8; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0d1117; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Inter', system-ui, sans-serif; color: #fff; }
+canvas { width: 90vw; height: 70vh; max-width: 1200px; border-radius: 12px; }
+#status { margin: 16px; font-size: 14px; color: #8ab4f8; text-align: center; }
+h1 { font-size: 1.5rem; margin-bottom: 4px; background: linear-gradient(135deg, #fff, #8ab4f8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.sub { font-size: 0.8rem; color: #9aa0a6; margin-bottom: 16px; }
+.badge { position: fixed; bottom: 16px; right: 16px; font-size: 0.7rem; color: #9aa0a6; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 6px; }
 </style>
 </head>
 <body>
-<div id="status">Loading Filament.js WASM...</div>
-<canvas id="canvas" width="800" height="600"></canvas>
+<h1>SceneView Web</h1>
+<div class="sub">Real-time 3D rendering with Filament.js WASM — 25KB SDK</div>
+<div id="status">Loading Filament.js WASM (3.4MB)...</div>
+<canvas id="canvas"></canvas>
+<div class="badge">Powered by SceneView + Filament.js</div>
 
 <script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
 <script>
 const status = document.getElementById('status');
+const canvas = document.getElementById('canvas');
 
-Filament.init([], () => {
-  status.textContent = 'Filament WASM ready! Creating engine...';
+// Set canvas size to device pixels
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+
+const MODEL_URL = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
+
+Filament.init([MODEL_URL], () => {
+  status.textContent = 'Filament WASM ready! Creating scene...';
 
   try {
-    const canvas = document.getElementById('canvas');
     const engine = Filament.Engine.create(canvas);
-    status.textContent = 'Engine created! Setting up scene...';
-
     const scene = engine.createScene();
     const renderer = engine.createRenderer();
-    const camera = engine.createCamera(Filament.EntityManager.get().create());
+    const cameraEntity = Filament.EntityManager.get().create();
+    const camera = engine.createCamera(cameraEntity);
     const view = engine.createView();
     const swapChain = engine.createSwapChain();
 
@@ -35,34 +47,77 @@ Filament.init([], () => {
     view.setScene(scene);
     view.setViewport([0, 0, canvas.width, canvas.height]);
 
-    // Set clear color to blue-ish
-    renderer.setClearOptions({ clearColor: [0.05, 0.07, 0.15, 1.0], clear: true });
+    // Clear color
+    renderer.setClearOptions({ clearColor: [0.05, 0.06, 0.1, 1.0], clear: true });
 
-    // Set camera
-    const eye = [0, 1, 5];
-    const center = [0, 0, 0];
-    const up = [0, 1, 0];
-    camera.lookAt(eye, center, up);
-
+    // Camera
     const aspect = canvas.width / canvas.height;
-    camera.setProjectionFov(45, aspect, 0.1, 100, Filament.Camera$Fov.VERTICAL);
+    camera.setProjectionFov(45, aspect, 0.1, 1000, Filament.Camera$Fov.VERTICAL);
+    camera.lookAt([0, 0, 4], [0, 0, 0], [0, 1, 0]);
 
-    // Add a light
-    const sunlight = Filament.EntityManager.get().create();
+    // Sunlight
+    const sun = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.SUN)
       .color([0.98, 0.92, 0.89])
-      .intensity(100000)
+      .intensity(110000)
       .direction([0.6, -1.0, -0.8])
       .sunAngularRadius(1.9)
       .sunHaloSize(10.0)
       .sunHaloFalloff(80.0)
-      .build(engine, sunlight);
-    scene.addEntity(sunlight);
+      .build(engine, sun);
+    scene.addEntity(sun);
 
-    status.textContent = 'Scene ready! Rendering...';
+    // IBL (indirect light) — simple white ambient
+    const ibl = Filament.EntityManager.get().create();
+    Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
+      .color([0.6, 0.65, 0.75])
+      .intensity(30000)
+      .direction([-0.5, 0.5, 1.0])
+      .build(engine, ibl);
+    scene.addEntity(ibl);
 
-    // Render loop
+    // Load glTF model
+    status.textContent = 'Loading 3D model...';
+
+    const loader = engine.createAssetLoader();
+    const modelData = Filament.assets[MODEL_URL];
+
+    if (modelData) {
+      const asset = loader.createAsset(modelData);
+
+      if (asset) {
+        // Load resources (textures, materials)
+        const resourceLoader = asset.getResourceLoader ? asset.getResourceLoader() : null;
+        if (resourceLoader) {
+          resourceLoader.loadResources();
+        }
+
+        // Add all entities to the scene
+        const entities = asset.getEntities();
+        scene.addEntities(entities);
+
+        status.textContent = 'SceneView Web — Filament.js rendering!';
+        status.style.color = '#34a853';
+      } else {
+        status.textContent = 'Model loaded but asset creation failed. Rendering empty scene.';
+        status.style.color = '#fbbc04';
+      }
+    } else {
+      status.textContent = 'Model preload failed. Rendering empty scene with lights.';
+      status.style.color = '#fbbc04';
+    }
+
+    // Auto-rotation
+    let angle = 0;
+    const radius = 4;
+
     function render() {
+      // Rotate camera
+      angle += 0.005;
+      const x = Math.sin(angle) * radius;
+      const z = Math.cos(angle) * radius;
+      camera.lookAt([x, 1, z], [0, 0, 0], [0, 1, 0]);
+
       if (renderer.beginFrame(swapChain)) {
         renderer.render(swapChain, view);
         renderer.endFrame();
@@ -72,8 +127,6 @@ Filament.init([], () => {
     }
 
     render();
-    status.textContent = 'Filament.js rendering! (dark scene — no model loaded yet, but the engine works!)';
-    status.style.color = '#34a853';
 
   } catch(e) {
     status.textContent = 'Error: ' + e.message;
