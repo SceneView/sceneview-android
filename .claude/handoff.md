@@ -4,32 +4,56 @@
 
 ## Last Session Summary
 
-**Date:** 2026-03-26 (continuation of 03-25 marathon)
+**Date:** 2026-03-26 (final update, end of marathon)
 **Branch:** `main`
-**Releases:** v3.4.0 through v3.4.5 (GitHub), MCP v3.4.7 (npm + official registry)
+**Releases:** v3.4.0 through v3.4.5 (GitHub), MCP v3.4.7 (npm + official registry), sceneview.js v1.1.0 (npm)
 **Total commits on main:** ~1250+
 
 ---
 
-### Everything delivered — 2026-03-26 session
+### Everything delivered — 2026-03-26 session (FINAL)
 
-#### Filament.js Web — PROVEN
+#### Filament.js Web — PROVEN AND LIVE
 - **SceneView Web Filament.js renders PBR models in the browser** — DamagedHelmet.glb loaded and rendered correctly
 - `filament-pure-test.html` — minimal proof of concept, Filament.js WASM rendering confirmed working
 - `sceneview-demo.html` — full demo with 4 model switching (DamagedHelmet, Lantern, Fox, Avocado)
-- `sceneview.js` — 15KB wrapper library created (simplified Filament.js API for SceneView)
-- Known issue: `sceneview.js` has a double-init bug being investigated/fixed
+- **sceneview.js v1.1.0 published on npm** — one-liner 3D for the web
+- Double-init bug fixed, library production-ready
+
+#### Procedural Geometry in MCP Artifacts
+- Procedural geometry generation working in MCP artifact responses
+- **676 tests** across all MCP servers
+
+#### 9 MCP Servers — All v2.0.0
+- SceneView MCP, Real Estate, E-commerce, Architecture, French Admin, Legal Docs — upgraded to v2.0.0
+- **2 NEW MCPs**: Education MCP + Finance MCP
+- Social Media MCP **RETIRED** ([REDACTED] clause with employer)
+- All servers anonymized under "SceneView Tools" / orgs
+
+#### GitHub Orgs Reorganized
+- **sceneview-tools** org created — commercial/tool repos
+- **mcp-tools-lab** org created — MCP ecosystem repos
+- Clean separation between open-source (sceneview) and commercial (sceneview-tools, mcp-tools-lab)
+
+#### Open Source Contributions
+- **PR #472 on Anthropic Claude Cookbooks** — SceneView MCP featured
+- **2 PRs on awesome-mcp-servers** — SceneView MCPs listed
 
 #### v3.4.5 Released
 - New GitHub Release published
 
-#### MCP & Branding
-- 8 MCP servers anonymized under "SceneView Tools" branding
-- All hooks removed from settings
-
 #### Revenue & Monetization
 - **Polar.sh**: account approved, Stripe connected (ready for production)
 - **GitHub Sponsors**: 5 tiers configured ($5/$15/$50/$99/$200)
+- **Pro link on website** now points to Polar.sh
+
+#### Profile & Credentials
+- npm profile cleaned up
+- All credentials saved/documented
+- Social Media MCP retired for [REDACTED] safety
+
+#### Quality Automation
+- Quality check scheduled every 3 hours (automated monitoring)
 
 #### Communication
 - Wave 1 communication drafts ready (LinkedIn, etc.)
@@ -88,9 +112,11 @@
 ### Pending (Thomas — manual actions required)
 - [ ] Login to Apple Developer to create real iOS distribution certificate
 - [ ] Publish LinkedIn post (drafts ready, DO NOT POST without approval)
+- [ ] Polar.sh Go Live (switch from test mode to production)
 - [ ] Delete old Play Store apps (AR Wall Paint, AR for TikTok, Info Trafic Nantes)
 - [ ] Re-enable Mac sleep (Battery settings)
 - [ ] Play Store key reset completion (~27 March)
+- [ ] Configure GitHub Sponsors tiers on github.com/sponsors/sceneview
 
 ---
 
@@ -102,32 +128,36 @@
 | arsceneview (Android) | 3.3.0 | Maven Central | v3.4.x NOT yet on Maven Central |
 | SceneViewSwift (iOS) | 3.3.0 | Swift Package (GitHub) | SPM direct from repo |
 | @sceneview/mcp | 3.4.7 | npm + MCP Registry | Live and current |
+| sceneview.js | 1.1.0 | npm | One-liner 3D for the web |
 | GitHub Releases | v3.4.5 | GitHub | Latest tag |
-| sceneview.js | 15KB | Local (not published) | Filament.js wrapper library |
+| Education MCP | 2.0.0 | npm | NEW |
+| Finance MCP | 2.0.0 | npm | NEW |
+| All other MCPs | 2.0.0 | npm | 9 total (Social Media retired) |
 
 ---
 
 ### What's Next (prioritized, for future sessions)
-1. **Fix sceneview.js double-init bug** — wrapper library has initialization race condition
-2. **Maven Central v3.4.0 publish** — gradle.properties still says 3.3.0, needs version bump + Sonatype publish
-3. **Publish sceneview.js to npm** — `@sceneview/sceneview-web` or `@sceneview/sceneview.js`
-4. **App Store first TestFlight build** — needs real Apple cert (Thomas action first)
-5. **Play Store deploy** — key reset should be done by ~27 March
-6. **MCP Pro backend** — connect Stripe + Redis via Cloudflare Workers
-7. **LinkedIn posts** — approve and publish (drafts ready, DO NOT POST)
-8. Filament JNI Desktop (18-29 day effort, high complexity)
-9. Android XR module
-10. KMP core XCFramework: build and integrate into SceneViewSwift
-11. visionOS spatial features (immersive spaces, hand tracking)
+1. **Maven Central v3.4.0 publish** — gradle.properties still says 3.3.0, needs version bump + Sonatype publish
+2. **App Store first TestFlight build** — needs real Apple cert (Thomas action first)
+3. **Play Store deploy** — key reset should be done by ~27 March
+4. **MCP Pro backend** — connect Stripe + Redis via Cloudflare Workers
+5. **LinkedIn posts** — approve and publish (drafts ready, DO NOT POST)
+6. Filament JNI Desktop (18-29 day effort, high complexity)
+7. Android XR module
+8. KMP core XCFramework: build and integrate into SceneViewSwift
+9. visionOS spatial features (immersive spaces, hand tracking)
+10. Publish Flutter plugin to pub.dev
+11. Publish React Native module to npm
 12. AI 3D app prototype
 13. Merge sceneview+arsceneview (v3.5.0)
 14. Unify naming: SceneView {} everywhere
-15. Publish Flutter plugin to pub.dev
-16. Publish React Native module to npm
 
 ---
 
 ## Previous Sessions (archived)
+
+**2026-03-26 marathon — Filament.js web, sceneview.js npm, 9 MCPs v2.0.0, orgs, PRs:**
+- See "Everything delivered — 2026-03-26 session" section above
 
 **2026-03-25 marathon — Full-day (100+ commits, 5 releases):**
 - See "Everything delivered — 2026-03-25 marathon" section above

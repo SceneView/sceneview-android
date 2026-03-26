@@ -76,28 +76,32 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-26)
+### Current state (last updated: 2026-03-26, final)
 
 - **Active branch**: `main`
 - **Latest release**: v3.4.5 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
-- **MCP server**: `io.github.sceneview/mcp` v3.4.7 (npm + registry)
-- **GitHub org**: renamed `SceneView` -> `sceneview` (lowercase)
-- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO, deployed)
+- **MCP servers**: 9 MCPs all v2.0.0 on npm (Education + Finance new, Social Media retired)
+- **sceneview.js**: v1.1.0 on npm — one-liner 3D for the web
+- **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
+- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
 
-- **What was done (2026-03-26 session)**:
+- **What was done (2026-03-26 session — FINAL)**:
 
-  Filament.js web proof, sceneview.js wrapper, release v3.4.5, revenue finalization:
-  - **Filament.js Web PROVEN**: DamagedHelmet PBR renders in browser via Filament.js WASM
-  - **sceneview.js**: 15KB wrapper library created (simplified Filament.js API)
-  - **sceneview-demo.html**: working demo with 4 model switching
-  - **filament-pure-test.html**: minimal proof of concept confirmed working
+  Filament.js WASM proven, sceneview.js v1.1.0 npm, 9 MCPs v2.0.0, orgs, open source PRs:
+  - **Filament.js Web PROVEN AND LIVE**: DamagedHelmet PBR renders in browser via Filament.js WASM
+  - **sceneview.js v1.1.0 published on npm** — one-liner 3D for the web, double-init bug fixed
+  - **Procedural geometry in MCP artifacts** — 676 tests across all MCP servers
+  - **9 MCPs all v2.0.0**: Education MCP + Finance MCP new; Social Media MCP retired ([REDACTED])
+  - **PR #472 on Anthropic Claude Cookbooks** — SceneView MCP featured
+  - **2 PRs on awesome-mcp-servers** — SceneView MCPs listed
+  - **Orgs reorganized**: sceneview-tools (commercial) + mcp-tools-lab (MCP ecosystem)
   - **v3.4.5 released** on GitHub
-  - **8 MCPs anonymized** under "SceneView Tools" branding
-  - **All hooks removed** from settings
   - **Polar.sh**: account approved, Stripe connected (production ready)
+  - **Pro link on website** now points to Polar.sh
   - **GitHub Sponsors**: 5 tiers configured ($5/$15/$50/$99/$200)
+  - **npm profile cleaned**, credentials saved
+  - **Quality check scheduled** every 3 hours (automated monitoring)
   - **Communication wave 1**: drafts ready (LinkedIn, etc.)
-  - **Known bug**: sceneview.js has double-init race condition (needs fix)
 
 - **What was done (2026-03-25 marathon — 100+ commits, 5 releases)**:
 
@@ -143,21 +147,22 @@ Never say "everything is good" without verifying published packages.
 - **Pending for Thomas (manual actions)**:
   - Login to Apple Developer to create real iOS distribution certificate
   - Publish LinkedIn post (3 drafts ready, DO NOT POST without approval)
+  - Polar.sh Go Live (switch from test mode to production)
   - Delete old Play Store apps (AR Wall Paint, AR for TikTok, Info Trafic Nantes)
   - Re-enable Mac sleep (Battery settings)
   - Play Store key reset completion (~27 March)
+  - Configure GitHub Sponsors tiers on github.com/sponsors/sceneview
 
 - **What's next (for future sessions)**:
-  - **PRIORITY 0 — Fix sceneview.js double-init bug**: wrapper library race condition
   - **PRIORITY 1 — Maven Central v3.4.0 publish**: gradle.properties still says 3.3.0, needs version bump + Sonatype publish
   - **PRIORITY 2 — App Store first TestFlight build**: needs real Apple cert (Thomas action first)
   - **PRIORITY 3 — Play Store deploy**: key reset should be done by ~27 March
-  - **PRIORITY 5 — MCP Pro backend**: connect Stripe + Redis via Cloudflare Workers
-  - **PRIORITY 6 — LinkedIn post**: publish when approved (3 drafts ready)
+  - **PRIORITY 4 — MCP Pro backend**: connect Stripe + Redis via Cloudflare Workers
+  - **PRIORITY 5 — LinkedIn post**: publish when approved (3 drafts ready)
   - Filament JNI Desktop (18-29 day effort, high complexity)
+  - Android XR module
   - KMP core XCFramework: build and integrate into SceneViewSwift
   - visionOS spatial features (immersive spaces, hand tracking)
-  - Publish sceneview-web to npm: `@sceneview/sceneview-web`
   - Publish Flutter plugin to pub.dev
   - Publish React Native module to npm
 
@@ -179,9 +184,11 @@ Never say "everything is good" without verifying published packages.
   Showcase, Gallery, QA), Material 3 Expressive
 - **MCP server** (`mcp/`): `io.github.sceneview/mcp` v3.4.7 on npm + registry; iOS support
   (8 Swift samples, `get_ios_setup` tool, Swift code validation), `render_3d_preview` tool
-- **MCP ecosystem**: 8 servers published, anonymized as "SceneView Tools"
-- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO, deployed)
-- **sceneview.js**: 15KB Filament.js wrapper (web 3D rendering proven, double-init bug pending)
+- **MCP ecosystem**: 9 MCPs all v2.0.0 (Education + Finance new, Social Media retired for [REDACTED])
+- **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
+- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
+- **sceneview.js**: v1.1.0 on npm — one-liner 3D for the web (Filament.js WASM, double-init fixed)
+- **Open source PRs**: PR #472 Claude Cookbooks, 2 PRs awesome-mcp-servers
 - **Pending**: Maven Central v3.4.0 publish, App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
 
 ### How to update this section
