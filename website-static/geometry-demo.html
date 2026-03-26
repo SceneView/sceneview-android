@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SceneView Geometry — Procedural 3D City</title>
-<meta name="description" content="SceneView procedural 3D geometry renderer. Interactive mini-city with PBR shading — add shapes, change colors, explore in real-time.">
+<title>SceneView Geometry — Interactive 3D Showcase</title>
+<meta name="description" content="SceneView procedural 3D geometry renderer. Professional scenes with PBR shading — architecture, product display, data viz, landscapes.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://sceneview.github.io/geometry-demo.html">
-<meta property="og:title" content="SceneView Geometry — Procedural 3D City">
-<meta property="og:description" content="Interactive procedural 3D city rendered in the browser with PBR shading. Add shapes, change materials, orbit in real-time.">
+<meta property="og:title" content="SceneView Geometry — Interactive 3D Showcase">
+<meta property="og:description" content="Professional 3D scenes rendered in the browser with PBR shading. Architecture, product display, data visualization, and landscapes.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sceneview.github.io/geometry-demo.html">
 <meta property="og:image" content="https://sceneview.github.io/favicon.svg">
 <meta property="og:site_name" content="SceneView">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="SceneView Geometry — Procedural 3D City">
+<meta name="twitter:title" content="SceneView Geometry — Interactive 3D Showcase">
 <meta name="twitter:image" content="https://sceneview.github.io/favicon.svg">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
@@ -140,7 +140,7 @@
 
 <div id="loading">
   <div class="spinner"></div>
-  <div class="loading-text">Building the city...</div>
+  <div class="loading-text">Loading scene...</div>
 </div>
 
 <canvas id="c"></canvas>
@@ -149,10 +149,10 @@
 <div class="shape-count" id="shapeCount"></div>
 
 <div class="presets">
-  <button class="active" onclick="loadScene('city')">Mini City</button>
-  <button onclick="loadScene('solar')">Solar System</button>
-  <button onclick="loadScene('house')">Cozy House</button>
-  <button onclick="loadScene('abstract')">Abstract Art</button>
+  <button class="active" data-scene="architecture" onclick="loadScene('architecture')">Architecture</button>
+  <button data-scene="product" onclick="loadScene('product')">Product Display</button>
+  <button data-scene="dataviz" onclick="loadScene('dataviz')">Data Viz</button>
+  <button data-scene="landscape" onclick="loadScene('landscape')">Landscape</button>
 </div>
 
 <div class="controls">
@@ -585,204 +585,254 @@ function makeBuilding(x, z, w, h, d, color, metallic, roughness) {
 }
 
 const SCENES = {
-  city: (function() {
+  architecture: (function() {
     const shapes = [];
 
-    // Ground
-    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.12, 0.14, 0.16], metallic: 0.0, roughness: 0.9 });
+    // Ground plane — concrete plaza
+    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [16, 1, 16], color: [0.18, 0.18, 0.17], metallic: 0.0, roughness: 0.85 });
 
-    // Roads (dark strips)
-    shapes.push({ type: 'plane', position: [0, 0.005, 0], scale: [14, 1, 1.2], color: [0.06, 0.07, 0.08], metallic: 0.0, roughness: 0.95 });
-    shapes.push({ type: 'plane', position: [0, 0.005, 0], scale: [1.2, 1, 14], color: [0.06, 0.07, 0.08], metallic: 0.0, roughness: 0.95 });
-
-    // === Downtown cluster (tall glass buildings) ===
-    shapes.push(makeBuilding(0, -2.5, 1.2, 4.5, 1.2, [0.3, 0.5, 0.8], 0.9, 0.1));  // Blue glass tower
-    shapes.push(makeBuilding(1.6, -2.8, 0.9, 3.5, 0.9, [0.7, 0.75, 0.8], 0.85, 0.12)); // Silver tower
-    shapes.push(makeBuilding(-1.5, -2.2, 1.0, 3.0, 1.4, [0.25, 0.35, 0.5], 0.8, 0.15)); // Dark steel
-    shapes.push(makeBuilding(0.2, -4.2, 0.8, 5.2, 0.8, [0.2, 0.6, 0.7], 0.95, 0.08)); // Tallest - teal glass
-
-    // Antenna on tallest building
-    shapes.push({ type: 'cylinder', position: [0.2, 5.5, -4.2], scale: [0.05, 1.0, 0.05], color: [0.9, 0.9, 0.9], metallic: 1.0, roughness: 0.1 });
-    // Red light on antenna
-    shapes.push({ type: 'sphere', position: [0.2, 6.05, -4.2], scale: [0.1, 0.1, 0.1], color: [1.0, 0.15, 0.1], metallic: 0.0, roughness: 0.3 });
-
-    // === Residential area (shorter, warmer colors) ===
-    shapes.push(makeBuilding(-3.5, 1.5, 1.0, 1.5, 1.2, [0.85, 0.55, 0.3], 0.05, 0.7));  // Terracotta
-    shapes.push(makeBuilding(-3.2, 3.5, 1.4, 1.8, 1.0, [0.9, 0.82, 0.65], 0.05, 0.65)); // Sand
-    shapes.push(makeBuilding(-4.8, 2.5, 0.9, 1.2, 0.9, [0.75, 0.4, 0.35], 0.05, 0.6));  // Red brick
-
-    // === Commercial district (mid-height, varied) ===
-    shapes.push(makeBuilding(3.0, 1.5, 1.5, 2.5, 1.0, [0.4, 0.4, 0.45], 0.6, 0.25));  // Gray office
-    shapes.push(makeBuilding(4.5, 2.0, 0.8, 2.0, 1.5, [0.6, 0.65, 0.5], 0.3, 0.4));   // Green tint
-    shapes.push(makeBuilding(3.5, 3.8, 1.2, 1.5, 1.2, [0.5, 0.45, 0.55], 0.4, 0.35)); // Purple-ish
-
-    // === Parks and features ===
-    // Park area (green plane)
-    shapes.push({ type: 'plane', position: [2.0, 0.01, -1.0], scale: [2.5, 1, 2.0], color: [0.15, 0.45, 0.12], metallic: 0.0, roughness: 0.9 });
-    // Trees (cylinders + spheres)
-    shapes.push({ type: 'cylinder', position: [1.5, 0.4, -1.2], scale: [0.12, 0.8, 0.12], color: [0.35, 0.22, 0.12], metallic: 0.0, roughness: 0.9 });
-    shapes.push({ type: 'sphere', position: [1.5, 1.0, -1.2], scale: [0.7, 0.7, 0.7], color: [0.12, 0.55, 0.15], metallic: 0.0, roughness: 0.8 });
-    shapes.push({ type: 'cylinder', position: [2.5, 0.35, -0.6], scale: [0.1, 0.7, 0.1], color: [0.3, 0.2, 0.1], metallic: 0.0, roughness: 0.9 });
-    shapes.push({ type: 'sphere', position: [2.5, 0.85, -0.6], scale: [0.6, 0.65, 0.6], color: [0.15, 0.5, 0.1], metallic: 0.0, roughness: 0.85 });
-
-    // Water feature (reflective plane)
-    shapes.push({ type: 'plane', position: [-1.5, 0.015, 3.5], scale: [2.5, 1, 2.0], color: [0.1, 0.2, 0.5], metallic: 0.9, roughness: 0.05 });
-
-    // Dome building
-    shapes.push({ type: 'cube', position: [-1.5, 0.5, 3.5], scale: [1.2, 1.0, 1.2], color: [0.85, 0.85, 0.8], metallic: 0.1, roughness: 0.5 });
-    shapes.push({ type: 'sphere', position: [-1.5, 1.15, 3.5], scale: [1.0, 0.6, 1.0], color: [0.95, 0.85, 0.4], metallic: 0.8, roughness: 0.15 });
-
-    // Distant small buildings for depth
-    shapes.push(makeBuilding(5.5, -4.5, 0.7, 1.0, 0.7, [0.5, 0.5, 0.55], 0.3, 0.5));
-    shapes.push(makeBuilding(5.0, -3.5, 0.6, 0.8, 0.6, [0.55, 0.5, 0.45], 0.2, 0.6));
-    shapes.push(makeBuilding(-5.0, -4.0, 0.8, 1.3, 0.6, [0.45, 0.5, 0.55], 0.25, 0.5));
-
-    return shapes;
-  })(),
-
-  solar: (function() {
-    const shapes = [];
-    // Space ground (dark)
-    shapes.push({ type: 'plane', position: [0, -0.5, 0], scale: [20, 1, 20], color: [0.02, 0.02, 0.05], metallic: 0.0, roughness: 1.0 });
-
-    // Sun
-    shapes.push({ type: 'sphere', position: [0, 1.5, 0], scale: [1.8, 1.8, 1.8], color: [1.0, 0.85, 0.2], metallic: 0.0, roughness: 0.3 });
-    // Sun glow ring
-    shapes.push({ type: 'torus', position: [0, 1.5, 0], scale: [2.4, 2.4, 2.4], color: [1.0, 0.6, 0.1], metallic: 0.0, roughness: 0.5 });
-
-    // Mercury
-    shapes.push({ type: 'sphere', position: [2.5, 1.2, 0.5], scale: [0.25, 0.25, 0.25], color: [0.6, 0.55, 0.5], metallic: 0.3, roughness: 0.7 });
-    // Venus
-    shapes.push({ type: 'sphere', position: [-1.0, 1.4, 3.2], scale: [0.4, 0.4, 0.4], color: [0.9, 0.7, 0.3], metallic: 0.1, roughness: 0.6 });
-    // Earth
-    shapes.push({ type: 'sphere', position: [3.5, 1.5, -2.5], scale: [0.45, 0.45, 0.45], color: [0.15, 0.4, 0.8], metallic: 0.1, roughness: 0.5 });
-    // Moon
-    shapes.push({ type: 'sphere', position: [4.0, 1.6, -2.2], scale: [0.12, 0.12, 0.12], color: [0.75, 0.75, 0.7], metallic: 0.0, roughness: 0.8 });
-    // Mars
-    shapes.push({ type: 'sphere', position: [-4.0, 1.3, -1.5], scale: [0.38, 0.38, 0.38], color: [0.85, 0.3, 0.12], metallic: 0.05, roughness: 0.7 });
-    // Jupiter
-    shapes.push({ type: 'sphere', position: [1.5, 1.5, -5.5], scale: [1.2, 1.2, 1.2], color: [0.8, 0.65, 0.4], metallic: 0.05, roughness: 0.6 });
-    // Jupiter ring
-    shapes.push({ type: 'torus', position: [1.5, 1.5, -5.5], scale: [2.0, 0.15, 2.0], color: [0.7, 0.55, 0.35], metallic: 0.1, roughness: 0.5 });
-    // Saturn
-    shapes.push({ type: 'sphere', position: [-3.0, 1.5, 5.0], scale: [1.0, 1.0, 1.0], color: [0.9, 0.8, 0.5], metallic: 0.05, roughness: 0.55 });
-    // Saturn ring
-    shapes.push({ type: 'torus', position: [-3.0, 1.5, 5.0], scale: [2.2, 0.1, 2.2], color: [0.85, 0.75, 0.5], metallic: 0.2, roughness: 0.4 });
-    // Uranus
-    shapes.push({ type: 'sphere', position: [5.5, 1.5, 3.0], scale: [0.65, 0.65, 0.65], color: [0.5, 0.8, 0.85], metallic: 0.1, roughness: 0.5 });
-    // Neptune
-    shapes.push({ type: 'sphere', position: [-5.5, 1.5, -5.0], scale: [0.6, 0.6, 0.6], color: [0.2, 0.3, 0.9], metallic: 0.15, roughness: 0.4 });
-
-    // Asteroid belt (small cubes/spheres)
-    for (let i = 0; i < 20; i++) {
-      const angle = (i / 20) * Math.PI * 2;
-      const r = 6.5 + Math.sin(i * 7) * 0.5;
-      const x = Math.cos(angle) * r;
-      const z = Math.sin(angle) * r;
-      const s = 0.06 + Math.random() * 0.08;
-      shapes.push({ type: i % 3 === 0 ? 'cube' : 'sphere', position: [x, 1.2 + Math.sin(i * 3) * 0.3, z], scale: [s, s, s], color: [0.5, 0.45, 0.4], metallic: 0.2, roughness: 0.8 });
+    // Subtle grid overlay on ground (thin lines as cubes)
+    for (let i = -6; i <= 6; i++) {
+      shapes.push({ type: 'cube', position: [i, 0.005, 0], scale: [0.02, 0.01, 14], color: [0.25, 0.25, 0.24], metallic: 0.0, roughness: 0.9 });
+      shapes.push({ type: 'cube', position: [0, 0.005, i], scale: [14, 0.01, 0.02], color: [0.25, 0.25, 0.24], metallic: 0.0, roughness: 0.9 });
     }
 
-    return shapes;
-  })(),
+    // === Main tower — modern glass skyscraper ===
+    shapes.push({ type: 'cube', position: [0, 3.5, -1.5], scale: [2.0, 7.0, 1.8], color: [0.35, 0.55, 0.75], metallic: 1.0, roughness: 0.05 }); // Glass facade
+    // Floor lines (horizontal bands)
+    for (let f = 0; f < 7; f++) {
+      shapes.push({ type: 'cube', position: [0, f + 0.3, -1.5], scale: [2.05, 0.04, 1.85], color: [0.2, 0.22, 0.25], metallic: 0.8, roughness: 0.2 });
+    }
+    // Roof accent
+    shapes.push({ type: 'cube', position: [0, 7.05, -1.5], scale: [2.1, 0.1, 1.9], color: [0.9, 0.9, 0.92], metallic: 1.0, roughness: 0.1 });
 
-  house: (function() {
-    const shapes = [];
+    // === Secondary building — shorter, wider ===
+    shapes.push({ type: 'cube', position: [-3.0, 2.0, 0.5], scale: [2.5, 4.0, 2.0], color: [0.6, 0.62, 0.65], metallic: 0.9, roughness: 0.08 }); // Silver glass
+    for (let f = 0; f < 4; f++) {
+      shapes.push({ type: 'cube', position: [-3.0, f + 0.3, 0.5], scale: [2.55, 0.04, 2.05], color: [0.15, 0.15, 0.18], metallic: 0.7, roughness: 0.3 });
+    }
+    shapes.push({ type: 'cube', position: [-3.0, 4.05, 0.5], scale: [2.6, 0.1, 2.1], color: [0.85, 0.85, 0.88], metallic: 1.0, roughness: 0.1 });
 
-    // Ground / lawn
-    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.18, 0.5, 0.12], metallic: 0.0, roughness: 0.9 });
+    // === Third building — warm tones, mid-height ===
+    shapes.push({ type: 'cube', position: [3.2, 1.75, 1.0], scale: [1.6, 3.5, 2.2], color: [0.75, 0.65, 0.55], metallic: 0.1, roughness: 0.3 }); // Marble-like
+    for (let f = 0; f < 3; f++) {
+      shapes.push({ type: 'cube', position: [3.2, f + 0.5, 1.0], scale: [1.65, 0.03, 2.25], color: [0.6, 0.5, 0.42], metallic: 0.05, roughness: 0.5 });
+    }
 
-    // Path to door
-    shapes.push({ type: 'plane', position: [0, 0.008, 2.5], scale: [1.0, 1, 3.0], color: [0.65, 0.6, 0.5], metallic: 0.0, roughness: 0.85 });
+    // === Low building — entrance / lobby ===
+    shapes.push({ type: 'cube', position: [0.5, 0.75, 2.0], scale: [5.0, 1.5, 1.5], color: [0.85, 0.85, 0.82], metallic: 0.1, roughness: 0.3 }); // Marble lobby
+    // Glass entrance door
+    shapes.push({ type: 'cube', position: [0.5, 0.5, 2.77], scale: [1.5, 1.0, 0.04], color: [0.4, 0.6, 0.8], metallic: 0.9, roughness: 0.05 });
 
-    // === Main house body ===
-    shapes.push({ type: 'cube', position: [0, 1.2, 0], scale: [3.5, 2.4, 3.0], color: [0.92, 0.88, 0.78], metallic: 0.02, roughness: 0.75 });
-
-    // Roof (wide cone)
-    shapes.push({ type: 'cone', position: [0, 3.2, 0], scale: [4.5, 1.8, 3.8], color: [0.65, 0.22, 0.12], metallic: 0.05, roughness: 0.7 });
-
-    // Door
-    shapes.push({ type: 'cube', position: [0, 0.7, 1.52], scale: [0.6, 1.4, 0.06], color: [0.4, 0.22, 0.1], metallic: 0.05, roughness: 0.6 });
-    // Door knob
-    shapes.push({ type: 'sphere', position: [0.2, 0.65, 1.56], scale: [0.06, 0.06, 0.06], color: [0.95, 0.8, 0.3], metallic: 1.0, roughness: 0.15 });
-
-    // Windows
-    shapes.push({ type: 'cube', position: [-0.9, 1.5, 1.52], scale: [0.55, 0.55, 0.04], color: [0.5, 0.7, 0.9], metallic: 0.7, roughness: 0.05 });
-    shapes.push({ type: 'cube', position: [0.9, 1.5, 1.52], scale: [0.55, 0.55, 0.04], color: [0.5, 0.7, 0.9], metallic: 0.7, roughness: 0.05 });
-
-    // Chimney
-    shapes.push({ type: 'cube', position: [1.0, 3.5, -0.6], scale: [0.5, 1.5, 0.5], color: [0.6, 0.28, 0.18], metallic: 0.0, roughness: 0.8 });
-    shapes.push({ type: 'cube', position: [1.0, 4.3, -0.6], scale: [0.6, 0.12, 0.6], color: [0.55, 0.25, 0.15], metallic: 0.0, roughness: 0.8 });
-
-    // === Garage ===
-    shapes.push({ type: 'cube', position: [3.0, 0.9, 0.3], scale: [2.0, 1.8, 2.5], color: [0.88, 0.84, 0.75], metallic: 0.02, roughness: 0.75 });
-    shapes.push({ type: 'cone', position: [3.0, 2.3, 0.3], scale: [2.6, 1.0, 3.2], color: [0.6, 0.2, 0.1], metallic: 0.05, roughness: 0.7 });
-    // Garage door
-    shapes.push({ type: 'cube', position: [3.0, 0.65, 1.56], scale: [1.4, 1.3, 0.06], color: [0.7, 0.68, 0.62], metallic: 0.1, roughness: 0.5 });
-
-    // === Trees ===
-    const treePositions = [[-3.5, 0, 2.5], [-4.0, 0, -1.5], [4.5, 0, -2.0], [-2.0, 0, -3.0], [3.0, 0, -3.5]];
+    // === Landscaping — trees ===
+    const treePositions = [[-1.5, 0, 3.5], [2.5, 0, 3.5], [-5.0, 0, 3.0], [5.5, 0, -2.0], [-5.5, 0, -3.0], [5.0, 0, 3.5]];
     for (const [tx, , tz] of treePositions) {
-      const h = 1.5 + Math.random() * 1.0;
-      shapes.push({ type: 'cylinder', position: [tx, h * 0.4, tz], scale: [0.15, h * 0.8, 0.15], color: [0.35, 0.22, 0.1], metallic: 0.0, roughness: 0.9 });
-      shapes.push({ type: 'sphere', position: [tx, h * 0.9, tz], scale: [1.0, 1.1, 1.0], color: [0.1 + Math.random() * 0.1, 0.4 + Math.random() * 0.2, 0.08], metallic: 0.0, roughness: 0.85 });
+      // Trunk (brown wood)
+      shapes.push({ type: 'cylinder', position: [tx, 0.5, tz], scale: [0.12, 1.0, 0.12], color: [0.35, 0.22, 0.1], metallic: 0.0, roughness: 0.8 });
+      // Canopy (green sphere)
+      shapes.push({ type: 'sphere', position: [tx, 1.3, tz], scale: [0.8, 0.9, 0.8], color: [0.1, 0.42, 0.08], metallic: 0.0, roughness: 0.85 });
     }
 
-    // Fence posts
-    for (let i = -4; i <= 4; i++) {
-      if (Math.abs(i) < 1) continue; // Gap for path
-      shapes.push({ type: 'cube', position: [i * 0.9, 0.25, 4.0], scale: [0.06, 0.5, 0.06], color: [0.9, 0.85, 0.75], metallic: 0.0, roughness: 0.7 });
+    // === Reflective water feature — decorative pool ===
+    shapes.push({ type: 'plane', position: [3.5, 0.02, -3.0], scale: [3.0, 1, 2.5], color: [0.08, 0.15, 0.35], metallic: 0.9, roughness: 0.05 });
+    // Pool edge
+    shapes.push({ type: 'cube', position: [3.5, 0.06, -1.76], scale: [3.1, 0.08, 0.08], color: [0.7, 0.7, 0.68], metallic: 0.1, roughness: 0.3 });
+    shapes.push({ type: 'cube', position: [3.5, 0.06, -4.26], scale: [3.1, 0.08, 0.08], color: [0.7, 0.7, 0.68], metallic: 0.1, roughness: 0.3 });
+
+    // === Street lamps ===
+    const lampPositions = [[-1.0, 0, 4.5], [2.0, 0, 4.5], [5.5, 0, 0.5], [-5.5, 0, 0.5]];
+    for (const [lx, , lz] of lampPositions) {
+      shapes.push({ type: 'cylinder', position: [lx, 1.2, lz], scale: [0.05, 2.4, 0.05], color: [0.25, 0.25, 0.25], metallic: 0.7, roughness: 0.3 });
+      shapes.push({ type: 'sphere', position: [lx, 2.5, lz], scale: [0.2, 0.15, 0.2], color: [1.0, 0.95, 0.7], metallic: 0.0, roughness: 0.3 });
     }
-    // Fence rail
-    shapes.push({ type: 'cube', position: [-2.7, 0.3, 4.0], scale: [2.7, 0.06, 0.04], color: [0.9, 0.85, 0.75], metallic: 0.0, roughness: 0.7 });
-    shapes.push({ type: 'cube', position: [2.7, 0.3, 4.0], scale: [2.7, 0.06, 0.04], color: [0.9, 0.85, 0.75], metallic: 0.0, roughness: 0.7 });
-
-    // Mailbox
-    shapes.push({ type: 'cylinder', position: [1.5, 0.5, 3.8], scale: [0.06, 1.0, 0.06], color: [0.3, 0.3, 0.3], metallic: 0.5, roughness: 0.4 });
-    shapes.push({ type: 'cube', position: [1.5, 1.05, 3.8], scale: [0.3, 0.2, 0.2], color: [0.15, 0.3, 0.7], metallic: 0.3, roughness: 0.4 });
-
-    // Flower pots
-    shapes.push({ type: 'cylinder', position: [-0.6, 0.12, 1.7], scale: [0.2, 0.25, 0.2], color: [0.7, 0.35, 0.2], metallic: 0.0, roughness: 0.7 });
-    shapes.push({ type: 'sphere', position: [-0.6, 0.32, 1.7], scale: [0.25, 0.2, 0.25], color: [0.9, 0.2, 0.3], metallic: 0.0, roughness: 0.6 });
-    shapes.push({ type: 'cylinder', position: [0.6, 0.12, 1.7], scale: [0.2, 0.25, 0.2], color: [0.7, 0.35, 0.2], metallic: 0.0, roughness: 0.7 });
-    shapes.push({ type: 'sphere', position: [0.6, 0.32, 1.7], scale: [0.25, 0.2, 0.25], color: [0.95, 0.8, 0.15], metallic: 0.0, roughness: 0.6 });
 
     return shapes;
   })(),
 
-  abstract: (function() {
+  product: (function() {
     const shapes = [];
-    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.03, 0.03, 0.06], metallic: 0.8, roughness: 0.1 });
 
-    // Floating chrome spheres in spiral
-    for (let i = 0; i < 24; i++) {
-      const t = i / 24;
-      const angle = t * Math.PI * 6;
-      const r = 1.0 + t * 4.0;
-      const x = Math.cos(angle) * r;
-      const z = Math.sin(angle) * r;
-      const y = 0.5 + t * 3.0;
-      const s = 0.15 + t * 0.35;
-      const hue = t;
-      const rgb = hslToRgb(hue, 0.7, 0.5);
-      shapes.push({ type: 'sphere', position: [x, y, z], scale: [s, s, s], color: rgb, metallic: 0.9, roughness: 0.08 });
+    // Dark studio floor
+    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.04, 0.04, 0.05], metallic: 0.3, roughness: 0.4 });
+
+    // === Central pedestal — marble ===
+    shapes.push({ type: 'cylinder', position: [0, 0.4, 0], scale: [2.0, 0.8, 2.0], color: [0.88, 0.86, 0.82], metallic: 0.1, roughness: 0.3 });
+    // Pedestal top ring
+    shapes.push({ type: 'cylinder', position: [0, 0.82, 0], scale: [2.1, 0.04, 2.1], color: [0.92, 0.9, 0.86], metallic: 0.15, roughness: 0.25 });
+    // Pedestal base ring
+    shapes.push({ type: 'cylinder', position: [0, 0.02, 0], scale: [2.2, 0.04, 2.2], color: [0.8, 0.78, 0.74], metallic: 0.15, roughness: 0.35 });
+
+    // === Hero product — chrome torus (like a luxury ring) ===
+    shapes.push({ type: 'torus', position: [0, 1.6, 0], scale: [1.0, 1.0, 1.0], color: [0.95, 0.93, 0.88], metallic: 1.0, roughness: 0.08 });
+
+    // === Floating chrome sphere inside torus ===
+    shapes.push({ type: 'sphere', position: [0, 1.6, 0], scale: [0.5, 0.5, 0.5], color: [0.3, 0.5, 0.9], metallic: 1.0, roughness: 0.05 });
+
+    // === Secondary products on smaller pedestals ===
+    // Left pedestal + sphere
+    shapes.push({ type: 'cylinder', position: [-3.5, 0.25, 1.5], scale: [1.0, 0.5, 1.0], color: [0.85, 0.83, 0.8], metallic: 0.1, roughness: 0.3 });
+    shapes.push({ type: 'sphere', position: [-3.5, 0.8, 1.5], scale: [0.6, 0.6, 0.6], color: [0.9, 0.25, 0.2], metallic: 0.8, roughness: 0.12 });
+
+    // Right pedestal + cube (gemstone style)
+    shapes.push({ type: 'cylinder', position: [3.5, 0.25, 1.5], scale: [1.0, 0.5, 1.0], color: [0.85, 0.83, 0.8], metallic: 0.1, roughness: 0.3 });
+    shapes.push({ type: 'cube', position: [3.5, 0.85, 1.5], scale: [0.5, 0.5, 0.5], color: [0.15, 0.8, 0.5], metallic: 0.9, roughness: 0.05 });
+
+    // Back pedestal + cone (crystal)
+    shapes.push({ type: 'cylinder', position: [0, 0.25, -3.5], scale: [1.0, 0.5, 1.0], color: [0.85, 0.83, 0.8], metallic: 0.1, roughness: 0.3 });
+    shapes.push({ type: 'cone', position: [0, 1.0, -3.5], scale: [0.6, 1.2, 0.6], color: [0.6, 0.3, 0.9], metallic: 0.95, roughness: 0.05 });
+
+    // === Studio lighting accents (glowing spheres off-screen suggest spot lights) ===
+    shapes.push({ type: 'sphere', position: [-5.0, 5.0, -4.0], scale: [0.3, 0.3, 0.3], color: [1.0, 0.98, 0.9], metallic: 0.0, roughness: 0.2 });
+    shapes.push({ type: 'sphere', position: [5.0, 5.0, -4.0], scale: [0.3, 0.3, 0.3], color: [1.0, 0.98, 0.9], metallic: 0.0, roughness: 0.2 });
+    shapes.push({ type: 'sphere', position: [0, 6.0, 3.0], scale: [0.25, 0.25, 0.25], color: [0.9, 0.92, 1.0], metallic: 0.0, roughness: 0.2 });
+
+    // === Subtle floor reflection marks (very thin cubes) ===
+    shapes.push({ type: 'cube', position: [0, 0.003, 0], scale: [2.5, 0.002, 2.5], color: [0.08, 0.08, 0.1], metallic: 0.8, roughness: 0.1 });
+
+    return shapes;
+  })(),
+
+  dataviz: (function() {
+    const shapes = [];
+
+    // Ground plane — dark with grid
+    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.06, 0.07, 0.1], metallic: 0.2, roughness: 0.6 });
+
+    // Grid lines on ground
+    for (let i = -5; i <= 5; i++) {
+      shapes.push({ type: 'cube', position: [i, 0.004, 0], scale: [0.015, 0.005, 10], color: [0.15, 0.2, 0.35], metallic: 0.3, roughness: 0.5 });
+      shapes.push({ type: 'cube', position: [0, 0.004, i], scale: [10, 0.005, 0.015], color: [0.15, 0.2, 0.35], metallic: 0.3, roughness: 0.5 });
     }
 
-    // Central pillar
-    shapes.push({ type: 'cylinder', position: [0, 2.0, 0], scale: [0.2, 4.0, 0.2], color: [0.95, 0.95, 0.98], metallic: 1.0, roughness: 0.05 });
-    // Top gem
-    shapes.push({ type: 'torus', position: [0, 4.2, 0], scale: [0.8, 0.8, 0.8], color: [0.2, 0.8, 1.0], metallic: 0.95, roughness: 0.05 });
-    shapes.push({ type: 'sphere', position: [0, 4.2, 0], scale: [0.5, 0.5, 0.5], color: [1.0, 0.3, 0.6], metallic: 0.95, roughness: 0.05 });
+    // === 3D Bar chart ===
+    const barData = [
+      { x: -3, z: -1, h: 4.5, color: [0.2, 0.55, 0.95] },  // Blue
+      { x: -1.5, z: -1, h: 3.2, color: [0.2, 0.55, 0.95] },
+      { x: 0, z: -1, h: 5.8, color: [0.2, 0.55, 0.95] },
+      { x: 1.5, z: -1, h: 2.5, color: [0.2, 0.55, 0.95] },
+      { x: 3, z: -1, h: 4.0, color: [0.2, 0.55, 0.95] },
 
-    // Floating cubes at corners
-    const corners = [[3,1.5,3],[-3,2.0,3],[3,2.5,-3],[-3,1.0,-3]];
-    corners.forEach(([cx,cy,cz], i) => {
-      const rgb = hslToRgb(i / 4 + 0.1, 0.8, 0.5);
-      shapes.push({ type: 'cube', position: [cx, cy, cz], scale: [0.8, 0.8, 0.8], color: rgb, metallic: 0.7, roughness: 0.15 });
-    });
+      { x: -3, z: 1, h: 3.0, color: [0.15, 0.75, 0.4] },   // Green
+      { x: -1.5, z: 1, h: 4.8, color: [0.15, 0.75, 0.4] },
+      { x: 0, z: 1, h: 2.2, color: [0.15, 0.75, 0.4] },
+      { x: 1.5, z: 1, h: 5.5, color: [0.15, 0.75, 0.4] },
+      { x: 3, z: 1, h: 3.8, color: [0.15, 0.75, 0.4] },
 
-    // Torus ring on ground
-    shapes.push({ type: 'torus', position: [0, 0.4, 0], scale: [5.0, 0.5, 5.0], color: [0.3, 0.1, 0.6], metallic: 0.9, roughness: 0.1 });
+      { x: -3, z: 3, h: 2.0, color: [0.95, 0.5, 0.15] },    // Orange
+      { x: -1.5, z: 3, h: 3.5, color: [0.95, 0.5, 0.15] },
+      { x: 0, z: 3, h: 4.2, color: [0.95, 0.5, 0.15] },
+      { x: 1.5, z: 3, h: 1.8, color: [0.95, 0.5, 0.15] },
+      { x: 3, z: 3, h: 3.0, color: [0.95, 0.5, 0.15] },
+    ];
+
+    for (const bar of barData) {
+      shapes.push({ type: 'cube', position: [bar.x, bar.h / 2, bar.z], scale: [0.8, bar.h, 0.8], color: bar.color, metallic: 0.4, roughness: 0.25 });
+      // Top cap (slightly brighter)
+      shapes.push({ type: 'cube', position: [bar.x, bar.h + 0.02, bar.z], scale: [0.82, 0.04, 0.82], color: [bar.color[0] + 0.1, bar.color[1] + 0.1, bar.color[2] + 0.1], metallic: 0.5, roughness: 0.2 });
+    }
+
+    // === Axes ===
+    // X axis
+    shapes.push({ type: 'cube', position: [0, 0.01, -2.5], scale: [8, 0.04, 0.04], color: [0.7, 0.7, 0.75], metallic: 0.5, roughness: 0.3 });
+    // Y axis
+    shapes.push({ type: 'cube', position: [-4.2, 3.0, -2.5], scale: [0.04, 6.0, 0.04], color: [0.7, 0.7, 0.75], metallic: 0.5, roughness: 0.3 });
+    // Z axis
+    shapes.push({ type: 'cube', position: [-4.2, 0.01, 1.0], scale: [0.04, 0.04, 7.0], color: [0.7, 0.7, 0.75], metallic: 0.5, roughness: 0.3 });
+
+    // Y-axis tick marks
+    for (let y = 1; y <= 6; y++) {
+      shapes.push({ type: 'cube', position: [-4.2, y, -2.5], scale: [0.2, 0.02, 0.02], color: [0.5, 0.5, 0.55], metallic: 0.3, roughness: 0.4 });
+    }
+
+    // === Legend ===
+    // Blue legend
+    shapes.push({ type: 'cube', position: [5.5, 3.5, 0], scale: [0.4, 0.4, 0.4], color: [0.2, 0.55, 0.95], metallic: 0.4, roughness: 0.25 });
+    // Green legend
+    shapes.push({ type: 'cube', position: [5.5, 2.5, 0], scale: [0.4, 0.4, 0.4], color: [0.15, 0.75, 0.4], metallic: 0.4, roughness: 0.25 });
+    // Orange legend
+    shapes.push({ type: 'cube', position: [5.5, 1.5, 0], scale: [0.4, 0.4, 0.4], color: [0.95, 0.5, 0.15], metallic: 0.4, roughness: 0.25 });
+
+    // Legend label planes (colored indicators next to legend)
+    shapes.push({ type: 'plane', position: [6.2, 3.5, 0], scale: [0.8, 1, 0.15], color: [0.2, 0.55, 0.95], metallic: 0.0, roughness: 0.5 });
+    shapes.push({ type: 'plane', position: [6.2, 2.5, 0], scale: [0.8, 1, 0.15], color: [0.15, 0.75, 0.4], metallic: 0.0, roughness: 0.5 });
+    shapes.push({ type: 'plane', position: [6.2, 1.5, 0], scale: [0.8, 1, 0.15], color: [0.95, 0.5, 0.15], metallic: 0.0, roughness: 0.5 });
+
+    return shapes;
+  })(),
+
+  landscape: (function() {
+    const shapes = [];
+
+    // Ground — earthy green
+    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [20, 1, 20], color: [0.22, 0.5, 0.15], metallic: 0.0, roughness: 0.9 });
+
+    // === Rolling hills (half-buried scaled spheres) ===
+    const hills = [
+      { x: -4, z: -5, sx: 4.0, sy: 1.5, sz: 3.5, color: [0.2, 0.48, 0.12] },
+      { x: 3, z: -6, sx: 5.0, sy: 2.0, sz: 4.0, color: [0.18, 0.45, 0.1] },
+      { x: -6, z: 2, sx: 3.5, sy: 1.2, sz: 3.0, color: [0.25, 0.52, 0.15] },
+      { x: 6, z: 3, sx: 4.5, sy: 1.8, sz: 4.0, color: [0.2, 0.46, 0.11] },
+      { x: 0, z: -8, sx: 6.0, sy: 2.5, sz: 5.0, color: [0.17, 0.42, 0.1] },
+      { x: -2, z: 6, sx: 3.0, sy: 1.0, sz: 2.5, color: [0.24, 0.5, 0.14] },
+    ];
+    for (const h of hills) {
+      shapes.push({ type: 'sphere', position: [h.x, h.sy * 0.3, h.z], scale: [h.sx, h.sy, h.sz], color: h.color, metallic: 0.0, roughness: 0.9 });
+    }
+
+    // === Trees (cone canopy + cylinder trunk) ===
+    const treePositions = [
+      [-2, 0, -2], [-3.5, 0, -3], [1, 0, -3.5], [4, 0, -1], [-1, 0, 1.5],
+      [2.5, 0, 2], [-4, 0, 4], [5, 0, 5], [-5.5, 0, -1], [0, 0, 4.5],
+      [3, 0, -4.5], [-2.5, 0, -6], [1.5, 0, 6], [-6, 0, -4],
+    ];
+    for (const [tx, , tz] of treePositions) {
+      const h = 1.0 + Math.random() * 1.5;
+      const tilt = (Math.random() - 0.5) * 0.1;
+      // Trunk (wood)
+      shapes.push({ type: 'cylinder', position: [tx, h * 0.35, tz], scale: [0.1, h * 0.7, 0.1], color: [0.4, 0.25, 0.1], metallic: 0.0, roughness: 0.8 });
+      // Canopy (cone)
+      shapes.push({ type: 'cone', position: [tx + tilt, h * 0.7 + 0.4, tz], scale: [0.6 + Math.random() * 0.3, h * 0.7, 0.6 + Math.random() * 0.3], color: [0.08 + Math.random() * 0.1, 0.35 + Math.random() * 0.2, 0.05], metallic: 0.0, roughness: 0.85 });
+    }
+
+    // === Lake / water ===
+    shapes.push({ type: 'plane', position: [3, 0.015, 0], scale: [4.0, 1, 3.5], color: [0.08, 0.2, 0.55], metallic: 0.9, roughness: 0.05 });
+    // Shore stones
+    const stonePositions = [[1.2, 0.05, -1.5], [1.0, 0.04, 1.3], [4.8, 0.06, -1.2], [5.1, 0.05, 1.5], [1.5, 0.05, 0.5]];
+    for (const [sx, sy, sz] of stonePositions) {
+      const ss = 0.1 + Math.random() * 0.15;
+      shapes.push({ type: 'sphere', position: [sx, sy, sz], scale: [ss, ss * 0.6, ss], color: [0.45, 0.43, 0.4], metallic: 0.0, roughness: 0.8 });
+    }
+
+    // === Sun in the sky ===
+    shapes.push({ type: 'sphere', position: [-6, 8, -8], scale: [1.5, 1.5, 1.5], color: [1.0, 0.9, 0.4], metallic: 0.0, roughness: 0.2 });
+
+    // === Small bridge over water ===
+    shapes.push({ type: 'cube', position: [3, 0.25, 0], scale: [0.6, 0.08, 3.8], color: [0.45, 0.28, 0.12], metallic: 0.0, roughness: 0.8 });
+    // Bridge railings
+    shapes.push({ type: 'cube', position: [2.7, 0.4, 0], scale: [0.04, 0.3, 3.8], color: [0.4, 0.25, 0.1], metallic: 0.0, roughness: 0.8 });
+    shapes.push({ type: 'cube', position: [3.3, 0.4, 0], scale: [0.04, 0.3, 3.8], color: [0.4, 0.25, 0.1], metallic: 0.0, roughness: 0.8 });
+    // Bridge posts
+    for (let bp = -1.5; bp <= 1.5; bp += 1.0) {
+      shapes.push({ type: 'cylinder', position: [2.7, 0.35, bp], scale: [0.04, 0.5, 0.04], color: [0.4, 0.25, 0.1], metallic: 0.0, roughness: 0.8 });
+      shapes.push({ type: 'cylinder', position: [3.3, 0.35, bp], scale: [0.04, 0.5, 0.04], color: [0.4, 0.25, 0.1], metallic: 0.0, roughness: 0.8 });
+    }
+
+    // === Clouds (white flattened spheres) ===
+    shapes.push({ type: 'sphere', position: [-3, 7, -3], scale: [2.0, 0.5, 1.5], color: [0.95, 0.95, 0.97], metallic: 0.0, roughness: 0.9 });
+    shapes.push({ type: 'sphere', position: [-2, 7.2, -3.5], scale: [1.5, 0.4, 1.2], color: [0.92, 0.92, 0.95], metallic: 0.0, roughness: 0.9 });
+    shapes.push({ type: 'sphere', position: [4, 6.5, -6], scale: [2.5, 0.6, 1.8], color: [0.93, 0.93, 0.96], metallic: 0.0, roughness: 0.9 });
+    shapes.push({ type: 'sphere', position: [5, 6.8, -5.5], scale: [1.8, 0.4, 1.3], color: [0.9, 0.9, 0.94], metallic: 0.0, roughness: 0.9 });
+
+    // === Flowers (tiny colored spheres near ground) ===
+    for (let fi = 0; fi < 20; fi++) {
+      const fx = -7 + Math.random() * 14;
+      const fz = -7 + Math.random() * 14;
+      // Skip if on water
+      if (fx > 1 && fx < 5 && fz > -1.75 && fz < 1.75) continue;
+      const fcolors = [[0.9, 0.2, 0.3], [0.95, 0.85, 0.15], [0.85, 0.4, 0.7], [0.95, 0.6, 0.1]];
+      const fc = fcolors[fi % fcolors.length];
+      shapes.push({ type: 'sphere', position: [fx, 0.08, fz], scale: [0.08, 0.08, 0.08], color: fc, metallic: 0.0, roughness: 0.6 });
+    }
 
     return shapes;
   })(),
@@ -802,7 +852,7 @@ function hslToRgb(h, s, l) {
 // ── Scene state ──────────────────────────────────────────────────────────────
 
 let sceneShapes = [];
-let currentPreset = 'city';
+let currentPreset = 'architecture';
 let animatedShapes = []; // indices of shapes that should animate
 
 // Camera orbit state (must be declared before loadScene uses them)
@@ -818,13 +868,13 @@ function loadScene(name) {
   updateShapeCount();
   // Update preset buttons
   document.querySelectorAll('.presets button').forEach(btn => {
-    btn.classList.toggle('active', btn.textContent.toLowerCase().replace(/\s/g, '') === name.replace(/\s/g, ''));
+    btn.classList.toggle('active', btn.dataset.scene === name);
   });
   // Reset camera for different scenes
-  if (name === 'solar') { targetDist = 14; targetPhi = 0.6; }
-  else if (name === 'house') { targetDist = 10; targetPhi = 0.7; targetTheta = 0.3; }
-  else if (name === 'abstract') { targetDist = 10; targetPhi = 0.65; }
-  else { targetDist = 12; targetPhi = 0.6; }
+  if (name === 'product') { targetDist = 10; targetPhi = 0.7; targetTheta = 0.4; }
+  else if (name === 'dataviz') { targetDist = 14; targetPhi = 0.55; targetTheta = -0.3; }
+  else if (name === 'landscape') { targetDist = 14; targetPhi = 0.6; targetTheta = 0.5; }
+  else { targetDist = 14; targetPhi = 0.55; targetTheta = 0.4; }
 }
 
 function updateShapeCount() {
@@ -867,8 +917,8 @@ function openClaude() {
   window.open('https://claude.ai/new?q=' + prompt, '_blank');
 }
 
-// Initialize with city scene
-loadScene('city');
+// Initialize with architecture scene
+loadScene('architecture');
 
 // ── Camera orbit controls ────────────────────────────────────────────────────
 
@@ -879,8 +929,8 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointermove', e => {
   if (!isDragging) return;
-  targetTheta -= (e.clientX - lastX) * 0.008;
-  targetPhi = Math.max(0.1, Math.min(Math.PI - 0.1, targetPhi - (e.clientY - lastY) * 0.008));
+  targetTheta += (e.clientX - lastX) * 0.008;
+  targetPhi = Math.max(0.1, Math.min(Math.PI - 0.1, targetPhi + (e.clientY - lastY) * 0.008));
   lastX = e.clientX; lastY = e.clientY;
 });
 canvas.addEventListener('pointerup', () => { isDragging = false; });
