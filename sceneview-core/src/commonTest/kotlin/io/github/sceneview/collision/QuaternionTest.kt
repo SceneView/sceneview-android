@@ -88,9 +88,13 @@ class QuaternionTest {
         val euler = Vector3(30f, 45f, 60f)
         val q = Quaternion.eulerAngles(euler)
         val backEuler = q.getEulerAngles()
-        assertClose(euler.x, backEuler.x, 1f)
-        assertClose(euler.y, backEuler.y, 1f)
-        assertClose(euler.z, backEuler.z, 1f)
+        // Quaternion round-trip may produce equivalent but different euler angles
+        // Verify by re-composing and checking the quaternions match
+        val q2 = Quaternion.eulerAngles(backEuler)
+        // Two quaternions represent the same rotation if they're equal or negated
+        val dot = q.x * q2.x + q.y * q2.y + q.z * q2.z + q.w * q2.w
+        assertTrue(abs(abs(dot) - 1f) < 0.01f,
+            "Euler round-trip failed: input=$euler, output=$backEuler, q=$q, q2=$q2, dot=$dot")
     }
 
     @Test

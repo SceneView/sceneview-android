@@ -1,0 +1,115 @@
+import { describe, it, expect } from "vitest";
+import { getPlatformSetup, listPlatforms, PLATFORM_IDS, type Platform, type SetupType } from "./platform-setup.js";
+
+describe("PLATFORM_IDS", () => {
+  it("contains all 7 platforms", () => {
+    expect(PLATFORM_IDS).toHaveLength(7);
+    expect(PLATFORM_IDS).toContain("android");
+    expect(PLATFORM_IDS).toContain("ios");
+    expect(PLATFORM_IDS).toContain("web");
+    expect(PLATFORM_IDS).toContain("flutter");
+    expect(PLATFORM_IDS).toContain("react-native");
+    expect(PLATFORM_IDS).toContain("desktop");
+    expect(PLATFORM_IDS).toContain("tv");
+  });
+});
+
+describe("getPlatformSetup", () => {
+  it("returns Android 3D setup with Gradle dependency", () => {
+    const result = getPlatformSetup("android", "3d");
+    expect(result).toContain("io.github.sceneview:sceneview:3.3.0");
+    expect(result).toContain("rememberEngine");
+    expect(result).toContain("Scene(");
+  });
+
+  it("returns Android AR setup with manifest and permissions", () => {
+    const result = getPlatformSetup("android", "ar");
+    expect(result).toContain("arsceneview");
+    expect(result).toContain("CAMERA");
+    expect(result).toContain("com.google.ar.core");
+    expect(result).toContain("ARScene");
+  });
+
+  it("returns iOS 3D setup with SPM dependency", () => {
+    const result = getPlatformSetup("ios", "3d");
+    expect(result).toContain("SceneViewSwift");
+    expect(result).toContain("Package.swift");
+    expect(result).toContain("RealityKit");
+  });
+
+  it("returns iOS AR setup with Info.plist", () => {
+    const result = getPlatformSetup("ios", "ar");
+    expect(result).toContain("NSCameraUsageDescription");
+    expect(result).toContain("ARSceneView");
+  });
+
+  it("returns Web setup with npm install", () => {
+    const result = getPlatformSetup("web", "3d");
+    expect(result).toContain("npm install");
+    expect(result).toContain("Filament.js");
+  });
+
+  it("returns 'AR not supported' for web AR", () => {
+    const result = getPlatformSetup("web", "ar");
+    expect(result).toContain("AR is not supported");
+  });
+
+  it("returns Flutter setup with pubspec", () => {
+    const result = getPlatformSetup("flutter", "3d");
+    expect(result).toContain("pubspec.yaml");
+    expect(result).toContain("sceneview_flutter");
+  });
+
+  it("returns React Native setup with npm install", () => {
+    const result = getPlatformSetup("react-native", "3d");
+    expect(result).toContain("npm install");
+    expect(result).toContain("@sceneview/react-native");
+  });
+
+  it("returns Desktop setup with Compose Desktop", () => {
+    const result = getPlatformSetup("desktop", "3d");
+    expect(result).toContain("Compose Desktop");
+  });
+
+  it("returns 'AR not supported' for desktop AR", () => {
+    const result = getPlatformSetup("desktop", "ar");
+    expect(result).toContain("AR is not supported");
+  });
+
+  it("returns TV setup with D-pad controls", () => {
+    const result = getPlatformSetup("tv", "3d");
+    expect(result).toContain("D-pad");
+    expect(result).toContain("leanback");
+  });
+
+  it("returns 'AR not supported' for TV AR", () => {
+    const result = getPlatformSetup("tv", "ar");
+    expect(result).toContain("AR is not supported");
+  });
+
+  it("returns error for unknown platform", () => {
+    const result = getPlatformSetup("unknown" as Platform, "3d");
+    expect(result).toContain("Unknown platform");
+  });
+});
+
+describe("listPlatforms", () => {
+  it("returns a markdown table with all platforms", () => {
+    const result = listPlatforms();
+    expect(result).toContain("Android");
+    expect(result).toContain("iOS");
+    expect(result).toContain("Web");
+    expect(result).toContain("Flutter");
+    expect(result).toContain("React Native");
+    expect(result).toContain("Desktop");
+    expect(result).toContain("Android TV");
+  });
+
+  it("shows AR support status per platform", () => {
+    const result = listPlatforms();
+    // Platforms with AR
+    expect(result).toContain("| Yes | Yes |");  // Android, iOS, Flutter, React Native
+    // Platforms without AR
+    expect(result).toContain("| Yes | No |");   // Web, Desktop, TV
+  });
+});
