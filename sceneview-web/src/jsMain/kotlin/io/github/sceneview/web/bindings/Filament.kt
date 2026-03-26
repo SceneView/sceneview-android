@@ -351,31 +351,3 @@ external class EntityManager {
     fun create(): Entity
 }
 
-// --- Utility helpers ---
-
-/**
- * Create a float3 array [x, y, z] for Filament.js API calls.
- */
-fun float3(x: Double, y: Double, z: Double): dynamic {
-    val arr = js("[]")
-    arr.push(x, y, z)
-    return arr
-}
-
-/**
- * Create a float4 array [x, y, z, w] for Filament.js API calls.
- */
-fun float4(x: Double, y: Double, z: Double, w: Double): dynamic {
-    val arr = js("[]")
-    arr.push(x, y, z, w)
-    return arr
-}
-
-/**
- * Create a viewport array [x, y, width, height] for View.setViewport().
- */
-fun viewport(x: Int, y: Int, width: Int, height: Int): dynamic {
-    val arr = js("[]")
-    arr.push(x, y, width, height)
-    return arr
-}
