@@ -92,9 +92,14 @@
 <div class="info">Drag to orbit | Scroll to zoom | Right-click to pan</div>
 
 <!--
-  SceneView Web library (Kotlin/JS compiled + Filament.js WASM)
+  Step 1: Load Filament.js from CDN (includes WASM binary loader).
+  Must load BEFORE sceneview-web.js since Filament is an external dependency.
+-->
+<script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
+
+<!--
+  Step 2: SceneView Web (Kotlin/JS bundle, ~25KB).
   Build with: ./gradlew :sceneview-web:copyToWebsite
-  The output JS file bundles Kotlin runtime + Filament.js bindings + SceneView API
 -->
 <script src="js/sceneview-web.js"></script>
 <script>

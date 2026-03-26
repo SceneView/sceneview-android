@@ -38,7 +38,7 @@ kotlin {
 // Task to copy the production webpack bundle to website-static
 tasks.register<Copy>("copyToWebsite") {
     dependsOn("jsBrowserProductionWebpack")
-    from(layout.buildDirectory.dir("dist/js/productionExecutable"))
+    from(layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable"))
     into("${rootProject.projectDir}/website-static/js")
     include("*.js", "*.js.map")
 }
