@@ -88,6 +88,8 @@ import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberView
 import io.github.sceneview.node.DynamicSkyNode
 import io.github.sceneview.node.FogNode
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.StrokeCap
 
 /**
  * Represents a feature demo in the Samples grid.
@@ -471,19 +473,31 @@ private fun ModelViewerDemo() {
     }
     val modelInstance = rememberModelInstance(modelLoader, "models/toy_car.glb")
 
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        modelLoader = modelLoader,
-        cameraNode = cameraNode,
-        environment = environment
-    ) {
-        modelInstance?.let { instance ->
-            ModelNode(
-                modelInstance = instance,
-                scaleToUnits = 0.8f,
-                autoAnimate = true,
-                animationLoop = true
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraNode = cameraNode,
+            environment = environment
+        ) {
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.8f,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
             )
         }
     }
@@ -555,20 +569,32 @@ private fun AnimationDemo() {
     }
     val modelInstance = rememberModelInstance(modelLoader, "models/animated_robot_mantis.glb")
 
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        modelLoader = modelLoader,
-        cameraNode = cameraNode,
-        cameraManipulator = null,
-        environment = environment
-    ) {
-        modelInstance?.let { instance ->
-            ModelNode(
-                modelInstance = instance,
-                scaleToUnits = 0.7f,
-                autoAnimate = true,
-                animationLoop = true
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = null,
+            environment = environment
+        ) {
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.7f,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
             )
         }
     }
@@ -590,31 +616,43 @@ private fun DynamicSkyDemo() {
     }
     val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
 
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        view = view,
-        modelLoader = modelLoader,
-        cameraNode = cameraNode,
-        cameraManipulator = null,
-        environment = environment
-    ) {
-        DynamicSkyNode(
-            timeOfDay = 16f,
-            turbidity = 3f
-        )
-        FogNode(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
             view = view,
-            density = 0.03f,
-            height = 2f,
-            color = Color(0xFFCCDDFF),
-            enabled = true
-        )
-        modelInstance?.let { instance ->
-            ModelNode(
-                modelInstance = instance,
-                scaleToUnits = 0.8f,
-                autoAnimate = false
+            modelLoader = modelLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = null,
+            environment = environment
+        ) {
+            DynamicSkyNode(
+                timeOfDay = 16f,
+                turbidity = 3f
+            )
+            FogNode(
+                view = view,
+                density = 0.03f,
+                height = 2f,
+                color = Color(0xFFCCDDFF),
+                enabled = true
+            )
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.8f,
+                    autoAnimate = false
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
             )
         }
     }
