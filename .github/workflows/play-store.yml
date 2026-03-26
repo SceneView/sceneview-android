@@ -62,5 +62,5 @@ jobs:
           packageName: io.github.sceneview.demo
           releaseFiles: samples/android-demo/build/outputs/bundle/release/*.aab
           track: ${{ github.event.inputs.track || 'internal' }}
-          status: completed
+          status: draft
           whatsNewDirectory: samples/android-demo/play/release-notes
