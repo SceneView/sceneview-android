@@ -191,7 +191,7 @@ const IOS_3D = `## SceneViewSwift — iOS/macOS/visionOS 3D Setup
 
 In Xcode: **File > Add Package Dependencies** > paste:
 \`\`\`
-https://github.com/SceneView/sceneview
+https://github.com/sceneview/sceneview
 \`\`\`
 Set version rule to **"from: 3.3.0"**.
 
@@ -204,7 +204,7 @@ let package = Package(
     name: "MyApp",
     platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],
     dependencies: [
-        .package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+        .package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")
     ],
     targets: [
         .executableTarget(
@@ -267,7 +267,7 @@ const IOS_AR = `## SceneViewSwift — iOS AR Setup
 ### 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")
 \`\`\`
 
 ### 2. Info.plist — Camera Permission (Required)

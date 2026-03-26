@@ -78,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
 import dev.romainguy.kotlin.math.Float3
+import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
@@ -88,8 +89,20 @@ import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberView
 import io.github.sceneview.node.DynamicSkyNode
 import io.github.sceneview.node.FogNode
+import io.github.sceneview.node.PhysicsNode
+import io.github.sceneview.node.SphereNode as SphereNodeImpl
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.StrokeCap
+import com.google.android.filament.LightManager
+import io.github.sceneview.math.Position
 
 /**
  * Represents a feature demo in the Samples grid.
@@ -142,14 +155,16 @@ private val sampleDemos = listOf(
         subtitle = "Point, directional, and spot lights with shadows",
         icon = Icons.Default.Brightness7,
         category = "3D",
-        accentColor = Color(0xFFFF6D00)
+        accentColor = Color(0xFFFF6D00),
+        content = { LightingDemo() }
     ),
     SampleDemo(
         title = "Camera Controls",
         subtitle = "Orbit, pan, zoom camera manipulator",
         icon = Icons.Default.PhotoCamera,
         category = "3D",
-        accentColor = Color(0xFF9C27B0)
+        accentColor = Color(0xFF9C27B0),
+        content = { CameraControlsDemo() }
     ),
     SampleDemo(
         title = "Post-Processing",
@@ -163,28 +178,32 @@ private val sampleDemos = listOf(
         subtitle = "Height-based atmospheric volumetric fog",
         icon = Icons.Default.Cloud,
         category = "Effects",
-        accentColor = Color(0xFF607D8B)
+        accentColor = Color(0xFF607D8B),
+        content = { FogDemo() }
     ),
     SampleDemo(
         title = "Text Labels",
         subtitle = "3D text rendering with billboard facing",
         icon = Icons.Default.TextFields,
         category = "Content",
-        accentColor = Color(0xFF00BCD4)
+        accentColor = Color(0xFF00BCD4),
+        content = { TextLabelsDemo() }
     ),
     SampleDemo(
         title = "Line Paths",
         subtitle = "3D polylines and Lissajous curves",
         icon = Icons.Default.LinearScale,
         category = "Content",
-        accentColor = Color(0xFF4CAF50)
+        accentColor = Color(0xFF4CAF50),
+        content = { LinePathsDemo() }
     ),
     SampleDemo(
         title = "Physics",
         subtitle = "Rigid body simulation with bouncing balls",
         icon = Icons.Default.Science,
         category = "Advanced",
-        accentColor = Color(0xFFFF5722)
+        accentColor = Color(0xFFFF5722),
+        content = { PhysicsDemo() }
     ),
     SampleDemo(
         title = "Image Detection",
@@ -654,6 +673,531 @@ private fun DynamicSkyDemo() {
                 strokeWidth = 3.dp,
                 strokeCap = StrokeCap.Round
             )
+        }
+    }
+}
+
+@Composable
+private fun LightingDemo() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 4.0f, y = 1.5f)
+        lookAt(Float3(0f, 0.3f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+    val modelInstance = rememberModelInstance(modelLoader, "models/seal_statuette.glb")
+
+    var sunIntensity by remember { mutableFloatStateOf(80000f) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            cameraNode = cameraNode,
+            environment = environment
+        ) {
+            // Sun light
+            LightNode(
+                type = LightManager.Type.SUN,
+                apply = {
+                    intensity(sunIntensity)
+                    direction(0f, -1f, -0.5f)
+                    castShadows(true)
+                    color(1f, 0.95f, 0.85f)
+                }
+            )
+            // Colored point light — orange accent
+            LightNode(
+                type = LightManager.Type.POINT,
+                apply = {
+                    intensity(50000f)
+                    color(1f, 0.5f, 0.1f)
+                    falloff(5f)
+                },
+                nodeApply = { position = Position(x = -1.5f, y = 1.5f, z = 1f) }
+            )
+            // Colored point light — blue accent
+            LightNode(
+                type = LightManager.Type.POINT,
+                apply = {
+                    intensity(50000f)
+                    color(0.2f, 0.4f, 1f)
+                    falloff(5f)
+                },
+                nodeApply = { position = Position(x = 1.5f, y = 1.5f, z = 1f) }
+            )
+            // Floor plane
+            val floorMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color(0xFF333333))
+            }
+            PlaneNode(
+                size = Float3(6f, 6f, 1f),
+                center = Position(0f, 0f, 0f),
+                materialInstance = floorMat
+            )
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.6f,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
+            )
+        }
+        // Sun intensity slider
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding()
+        ) {
+            Text(
+                text = "Sun Intensity: ${sunIntensity.toInt()} lux",
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium
+            )
+            Slider(
+                value = sunIntensity,
+                onValueChange = { sunIntensity = it },
+                valueRange = 0f..200000f,
+                colors = SliderDefaults.colors(
+                    thumbColor = Color(0xFFFF6D00),
+                    activeTrackColor = Color(0xFFFF6D00)
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun CameraControlsDemo() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 4.0f, y = 1.0f)
+        lookAt(Float3(0f, 0f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+    val cameraManipulator = rememberCameraManipulator(
+        orbitHomePosition = Position(z = 4.0f, y = 1.0f),
+        targetPosition = Position(0f, 0f, 0f)
+    )
+    val modelInstance = rememberModelInstance(modelLoader, "models/iridescence_lamp.glb")
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = cameraManipulator,
+            environment = environment
+        ) {
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 1.2f,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+            // Floor reference grid of cubes
+            val gridMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color(0xFF444444))
+            }
+            for (x in -2..2) {
+                for (z in -2..2) {
+                    CubeNode(
+                        size = Float3(0.08f),
+                        center = Position(x.toFloat(), -0.5f, z.toFloat()),
+                        materialInstance = gridMat
+                    )
+                }
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
+            )
+        }
+        // Instruction overlay
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding(),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.Black.copy(alpha = 0.55f)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("1 finger — Orbit", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Text("2 fingers — Pan", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Text("Pinch — Zoom", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Text("Double tap — Reset", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FogDemo() {
+    val engine = rememberEngine()
+    val view = rememberView(engine)
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 4.0f, y = 0.8f)
+        lookAt(Float3(0f, 0f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+    val modelInstance = rememberModelInstance(modelLoader, "models/geisha_mask.glb")
+
+    var fogDensity by remember { mutableFloatStateOf(0.05f) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            view = view,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = null,
+            environment = environment
+        ) {
+            DynamicSkyNode(
+                timeOfDay = 7f,
+                turbidity = 5f
+            )
+            FogNode(
+                view = view,
+                density = fogDensity,
+                height = 3f,
+                color = Color(0xFFBBCCDD),
+                enabled = true
+            )
+            // Ground plane
+            val groundMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color(0xFF556655))
+            }
+            PlaneNode(
+                size = Float3(10f, 10f, 1f),
+                center = Position(0f, -0.5f, 0f),
+                materialInstance = groundMat
+            )
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.8f,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
+            )
+        }
+        // Fog density slider
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding()
+        ) {
+            Text(
+                text = "Fog Density: ${"%.3f".format(fogDensity)}",
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium
+            )
+            Slider(
+                value = fogDensity,
+                onValueChange = { fogDensity = it },
+                valueRange = 0f..0.15f,
+                colors = SliderDefaults.colors(
+                    thumbColor = Color(0xFF607D8B),
+                    activeTrackColor = Color(0xFF607D8B)
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun TextLabelsDemo() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 4.0f, y = 1.5f)
+        lookAt(Float3(0f, 0.5f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        materialLoader = materialLoader,
+        cameraNode = cameraNode,
+        environment = environment
+    ) {
+        // Geometry shapes with labels
+        val blue = remember(materialLoader) { materialLoader.createColorInstance(Color(0xFF1A73E8)) }
+        val red = remember(materialLoader) { materialLoader.createColorInstance(Color(0xFFEA4335)) }
+        val green = remember(materialLoader) { materialLoader.createColorInstance(Color(0xFF34A853)) }
+
+        CubeNode(
+            size = Float3(0.7f),
+            center = Position(-1.5f, 0.35f, 0f),
+            materialInstance = blue
+        )
+        TextNode(
+            text = "Cube",
+            position = Position(-1.5f, 1.1f, 0f),
+            widthMeters = 0.5f,
+            heightMeters = 0.15f,
+            fontSize = 42f,
+            cameraPositionProvider = { cameraNode.worldPosition }
+        )
+
+        SphereNode(
+            radius = 0.45f,
+            center = Position(0f, 0.45f, 0f),
+            materialInstance = red
+        )
+        TextNode(
+            text = "Sphere",
+            position = Position(0f, 1.2f, 0f),
+            widthMeters = 0.5f,
+            heightMeters = 0.15f,
+            fontSize = 42f,
+            cameraPositionProvider = { cameraNode.worldPosition }
+        )
+
+        CylinderNode(
+            radius = 0.3f,
+            height = 0.8f,
+            center = Position(1.5f, 0.4f, 0f),
+            materialInstance = green
+        )
+        TextNode(
+            text = "Cylinder",
+            position = Position(1.5f, 1.1f, 0f),
+            widthMeters = 0.6f,
+            heightMeters = 0.15f,
+            fontSize = 42f,
+            cameraPositionProvider = { cameraNode.worldPosition }
+        )
+    }
+}
+
+@Composable
+private fun LinePathsDemo() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 5.0f, y = 2.0f)
+        lookAt(Float3(0f, 0f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        materialLoader = materialLoader,
+        cameraNode = cameraNode,
+        cameraManipulator = null,
+        environment = environment
+    ) {
+        val spiralMat = remember(materialLoader) { materialLoader.createColorInstance(Color(0xFFFF9800)) }
+        val axisMat = remember(materialLoader) { materialLoader.createColorInstance(Color(0xFFE91E63)) }
+
+        // Axis lines
+        val xAxisMat = remember(materialLoader) { materialLoader.createColorInstance(Color.Red) }
+        val yAxisMat = remember(materialLoader) { materialLoader.createColorInstance(Color(0xFF00FF00)) }
+        val zAxisMat = remember(materialLoader) { materialLoader.createColorInstance(Color(0xFF4488FF)) }
+        LineNode(start = Position(0f, 0f, 0f), end = Position(2f, 0f, 0f), materialInstance = xAxisMat)
+        LineNode(start = Position(0f, 0f, 0f), end = Position(0f, 2f, 0f), materialInstance = yAxisMat)
+        LineNode(start = Position(0f, 0f, 0f), end = Position(0f, 0f, 2f), materialInstance = zAxisMat)
+
+        // Helix spiral as a PathNode
+        val helixPoints = remember {
+            (0..120).map { i ->
+                val t = i / 120f * 4f * Math.PI.toFloat()
+                Position(
+                    x = kotlin.math.cos(t) * 1.2f,
+                    y = i / 120f * 2f - 0.5f,
+                    z = kotlin.math.sin(t) * 1.2f
+                )
+            }
+        }
+        PathNode(
+            points = helixPoints,
+            closed = false,
+            materialInstance = spiralMat
+        )
+
+        // Lissajous curve
+        val lissajousPoints = remember {
+            (0..200).map { i ->
+                val t = i / 200f * 2f * Math.PI.toFloat()
+                Position(
+                    x = kotlin.math.sin(3f * t) * 1.5f - 3f,
+                    y = kotlin.math.sin(2f * t) * 1f + 0.5f,
+                    z = 0f
+                )
+            }
+        }
+        PathNode(
+            points = lissajousPoints,
+            closed = true,
+            materialInstance = axisMat
+        )
+    }
+}
+
+@Composable
+private fun PhysicsDemo() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 5.0f, y = 2.5f)
+        lookAt(Float3(0f, 0.5f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+
+    // Restart counter — incrementing this triggers recomposition to reset balls
+    var resetKey by remember { mutableIntStateOf(0) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            materialLoader = materialLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = null,
+            environment = environment
+        ) {
+            // Floor
+            val floorMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color(0xFF555555))
+            }
+            PlaneNode(
+                size = Float3(6f, 6f, 1f),
+                center = Position(0f, 0f, 0f),
+                materialInstance = floorMat
+            )
+
+            // Physics balls — each keyed by resetKey to force recreation on reset
+            val ballColors = listOf(
+                Color(0xFFEA4335),
+                Color(0xFF1A73E8),
+                Color(0xFF34A853),
+                Color(0xFFFBBC04),
+                Color(0xFFFF5722)
+            )
+            val ballConfigs = remember(resetKey) {
+                listOf(
+                    Triple(Position(-1.0f, 3.0f, 0f), Position(0.5f, 0f, 0f), 0.7f),
+                    Triple(Position(0.5f, 4.0f, 0.3f), Position(-0.3f, 0f, 0.2f), 0.8f),
+                    Triple(Position(-0.3f, 5.0f, -0.5f), Position(0.1f, 0f, -0.1f), 0.6f),
+                    Triple(Position(0.8f, 3.5f, -0.2f), Position(-0.2f, 1f, 0.3f), 0.75f),
+                    Triple(Position(0f, 6.0f, 0f), Position(0f, 0f, 0f), 0.85f)
+                )
+            }
+
+            ballConfigs.forEachIndexed { index, (startPos, velocity, restitution) ->
+                val ballMat = remember(materialLoader, index) {
+                    materialLoader.createColorInstance(ballColors[index % ballColors.size])
+                }
+                val radius = 0.15f
+                val sphereNode = remember(engine, resetKey, index) {
+                    SphereNodeImpl(
+                        engine = engine,
+                        radius = radius,
+                        materialInstance = ballMat
+                    ).apply {
+                        position = startPos
+                    }
+                }
+                NodeLifecycle(sphereNode, null)
+                PhysicsNode(
+                    node = sphereNode,
+                    restitution = restitution,
+                    linearVelocity = velocity,
+                    floorY = 0f,
+                    radius = radius
+                )
+            }
+        }
+
+        // Reset button
+        Button(
+            onClick = { resetKey++ },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF5722)
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text("Drop Again", fontWeight = FontWeight.Bold)
         }
     }
 }

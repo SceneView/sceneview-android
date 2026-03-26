@@ -7,7 +7,7 @@ const mockIssues = [
   {
     number: 123,
     title: "SIGABRT on dispose",
-    html_url: "https://github.com/SceneView/sceneview/issues/123",
+    html_url: "https://github.com/sceneview/sceneview/issues/123",
     body: "Calling destroy() causes a native crash.",
     labels: [{ name: "bug" }],
     created_at: "2026-01-01T00:00:00Z",
@@ -17,7 +17,7 @@ const mockIssues = [
   {
     number: 124,
     title: "How do I add shadows?",
-    html_url: "https://github.com/SceneView/sceneview/issues/124",
+    html_url: "https://github.com/sceneview/sceneview/issues/124",
     body: "I want to enable shadows for my AR scene.",
     labels: [{ name: "question" }],
     created_at: "2026-01-02T00:00:00Z",
@@ -97,7 +97,7 @@ describe("fetchKnownIssues", () => {
     const { fetchKnownIssues } = await import("./issues.js");
     const result = await fetchKnownIssues();
 
-    expect(result).toContain("https://github.com/SceneView/sceneview/issues/123");
+    expect(result).toContain("https://github.com/sceneview/sceneview/issues/123");
     vi.unstubAllGlobals();
   });
 

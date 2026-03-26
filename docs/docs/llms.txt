@@ -853,9 +853,9 @@ fun ARImageTracking(coverBitmap: Bitmap) {
 
 ## AI Integration
 
-MCP server: `@sceneview/mcp`. Add to `.claude/mcp.json`:
+MCP server: `sceneview-mcp`. Add to `.claude/mcp.json`:
 ```json
-{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "@sceneview/mcp"] } } }
+{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
 ```
 
 ## Why SceneView
@@ -2359,7 +2359,7 @@ model.enableManipulation()  // look + grab + drag + rotate + scale via system ge
 
 ## MCP Server Tools
 
-The `@sceneview/mcp` server (npm: `sceneview-mcp`) exposes 18 tools and 2 resources for AI assistants.
+The `sceneview-mcp` server exposes 18 tools and 2 resources for AI assistants.
 
 ### Setup tools
 | Tool | Parameters | Description |

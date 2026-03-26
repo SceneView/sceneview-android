@@ -23,12 +23,13 @@ import { getPlatformSetup, listPlatforms, PLATFORM_IDS, type Platform, type Setu
 import { migrateCode, formatMigrationResult } from "./migrate-code.js";
 import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES, type DebugCategory } from "./debug-issue.js";
 import { generateScene, formatGeneratedScene } from "./generate-scene.js";
+import { ANIMATION_GUIDE, GESTURE_GUIDE, PERFORMANCE_TIPS } from "./advanced-guides.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Legal disclaimer ─────────────────────────────────────────────────────────
 
-const DISCLAIMER = '\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/SceneView/sceneview/blob/main/mcp/TERMS.md).*';
+const DISCLAIMER = '\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/sceneview/sceneview/blob/main/mcp/TERMS.md).*';
 
 function withDisclaimer<T extends { type: string; text: string }>(content: T[]): T[] {
   if (content.length === 0) return content;
@@ -473,6 +474,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: [],
       },
     },
+    {
+      name: "get_animation_guide",
+      description:
+        "Returns a comprehensive guide for animating 3D models in SceneView — playing embedded glTF animations, Spring physics animations (KMP core), Compose property animations (animateFloatAsState, InfiniteTransition), SmoothTransform for smooth following, and AR animated models. Includes compilable Kotlin code samples. Use this when a user asks about animation, motion, springs, smooth movement, or how to play model animations.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "get_gesture_guide",
+      description:
+        "Returns a comprehensive guide for adding gestures to 3D objects in SceneView — isEditable for one-line pinch-to-scale/drag-to-rotate/tap-to-select, custom onTouchEvent handlers, AR tap-to-place, drag-to-rotate with sensitivity, pinch-to-scale with limits, multi-model selection, and HitResultNode surface cursor. Includes compilable Kotlin code samples. Use this when a user asks about touch, gestures, interaction, drag, pinch, tap, or editing 3D objects.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: "get_performance_tips",
+      description:
+        "Returns a comprehensive performance optimization guide for SceneView — polygon budgets per device tier, LOD, texture compression (KTX2/Basis Universal), mesh compression (Draco/Meshopt), engine reuse, per-frame allocation avoidance, frustum culling, instancing, lighting optimization, post-processing costs, and profiling with Systrace and Android GPU Inspector. Includes code samples and CLI commands. Use this when a user asks about performance, optimization, FPS, memory, profiling, or slow rendering.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
   ],
 }));
 
@@ -727,7 +758,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ``,
                 `In Xcode: **File → Add Package Dependencies** → paste:`,
                 `\`\`\``,
-                `https://github.com/SceneView/sceneview`,
+                `https://github.com/sceneview/sceneview`,
                 `\`\`\``,
                 `Set version rule to **"from: 3.3.0"**.`,
                 ``,
@@ -740,7 +771,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `    name: "MyApp",`,
                 `    platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],`,
                 `    dependencies: [`,
-                `        .package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")`,
+                `        .package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")`,
                 `    ],`,
                 `    targets: [`,
                 `        .executableTarget(`,
@@ -811,7 +842,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `### 1. Add SPM Dependency`,
                 ``,
                 `\`\`\`swift`,
-                `.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")`,
+                `.package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")`,
                 `\`\`\``,
                 ``,
                 `### 2. Minimum Platform`,
@@ -1139,6 +1170,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       ];
 
       return { content: withDisclaimer([{ type: "text", text: lines.join("\n") }]) };
+    }
+
+    // ── get_animation_guide ─────────────────────────────────────────────────
+    case "get_animation_guide": {
+      return { content: withDisclaimer([{ type: "text", text: ANIMATION_GUIDE }]) };
+    }
+
+    // ── get_gesture_guide ────────────────────────────────────────────────────
+    case "get_gesture_guide": {
+      return { content: withDisclaimer([{ type: "text", text: GESTURE_GUIDE }]) };
+    }
+
+    // ── get_performance_tips ─────────────────────────────────────────────────
+    case "get_performance_tips": {
+      return { content: withDisclaimer([{ type: "text", text: PERFORMANCE_TIPS }]) };
     }
 
     default:

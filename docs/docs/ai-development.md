@@ -26,7 +26,7 @@ Install [Claude Code](https://claude.ai/code), then in your project:
 # Add SceneView MCP server to your project
 echo '{
   "mcpServers": {
-    "sceneview": { "command": "npx", "args": ["-y", "@sceneview/mcp"] }
+    "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] }
   }
 }' > .claude/mcp.json
 ```
@@ -109,7 +109,7 @@ The `@sceneview/mcp` package provides tools that AI assistants can call:
   "mcpServers": {
     "sceneview": {
       "command": "npx",
-      "args": ["-y", "@sceneview/mcp"]
+      "args": ["-y", "sceneview-mcp"]
     }
   }
 }

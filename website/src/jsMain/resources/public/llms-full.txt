@@ -855,7 +855,7 @@ fun ARImageTracking(coverBitmap: Bitmap) {
 
 MCP server: `@sceneview/mcp`. Add to `.claude/mcp.json`:
 ```json
-{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "@sceneview/mcp"] } } }
+{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
 ```
 
 ## Why SceneView

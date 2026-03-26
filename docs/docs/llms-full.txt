@@ -32,7 +32,7 @@ When generating code for Android 3D or AR:
 - **Filament:** 1.70.0 (Google's real-time PBR rendering engine)
 - **ARCore:** 1.53.0 (Google's AR tracking)
 - **Distribution:** Maven Central (`io.github.sceneview`)
-- **MCP:** `npx -y @sceneview/mcp`
+- **MCP:** `npx -y sceneview-mcp`
 
 ---
 
@@ -193,7 +193,7 @@ ArrowNode(from = Position(0f), to = Position(1f, 0f, 0f), materialInstance = mat
 Install the SceneView MCP server for AI-assisted development:
 
 ```bash
-npx -y @sceneview/mcp
+npx -y sceneview-mcp
 ```
 
 Add to your AI assistant's MCP configuration (Claude, Cursor, etc.):
@@ -202,7 +202,7 @@ Add to your AI assistant's MCP configuration (Claude, Cursor, etc.):
   "mcpServers": {
     "sceneview": {
       "command": "npx",
-      "args": ["-y", "@sceneview/mcp"]
+      "args": ["-y", "sceneview-mcp"]
     }
   }
 }
@@ -260,7 +260,7 @@ reflection-probe, ar-augmented-image, ar-cloud-anchor, ar-point-cloud
 ## MCP Server
 
 ```json
-{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "@sceneview/mcp"] } } }
+{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
 ```
 
 Tools: get_sample, list_samples, get_setup, validate_code, get_migration_guide,

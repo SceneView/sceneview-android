@@ -15,8 +15,15 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const model = params.get('model');
-    if (model) {
-      document.body.innerHTML = `<model-viewer src="${model}" auto-rotate camera-controls shadow-intensity="1" environment-image="neutral" style="width:100%;height:100%"></model-viewer>`;
+    if (model && /^https?:\/\/.+\.(glb|gltf|usdz)(\?.*)?$/i.test(model)) {
+      const mv = document.createElement('model-viewer');
+      mv.setAttribute('src', model);
+      mv.setAttribute('auto-rotate', '');
+      mv.setAttribute('camera-controls', '');
+      mv.setAttribute('shadow-intensity', '1');
+      mv.setAttribute('environment-image', 'neutral');
+      mv.style.cssText = 'width:100%;height:100%';
+      document.body.appendChild(mv);
     }
   </script>
 </body>

@@ -32,7 +32,6 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
 import io.github.sceneview.animation.Transition.animateRotation
-import io.github.sceneview.createEnvironment
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.rememberCameraManipulator
@@ -50,8 +49,11 @@ import kotlin.time.DurationUnit
 private data class ModelEntry(val label: String, val assetPath: String, val scale: Float)
 
 private val models = listOf(
-    ModelEntry("Damaged Helmet", "models/damaged_helmet.glb", 1.0f),
-    ModelEntry("Fox", "models/Fox.glb", 0.012f),
+    ModelEntry("Space Helmet", "models/space_helmet.glb", 1.0f),
+    ModelEntry("Toy Car", "models/toy_car.glb", 1.0f),
+    ModelEntry("Geisha Mask", "models/geisha_mask.glb", 1.0f),
+    ModelEntry("Iridescence Lamp", "models/iridescence_lamp.glb", 1.0f),
+    ModelEntry("Sheen Chair", "models/sheen_chair.glb", 1.0f),
 )
 
 /**
@@ -143,8 +145,8 @@ private fun TvModelViewerScreen() {
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetPath)
         val environment = rememberEnvironment(environmentLoader) {
-            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
-                ?: createEnvironment(environmentLoader)
+            environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+                ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
         }
 
         Scene(

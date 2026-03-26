@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView — 3D Data Dashboard</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --blue: #1a73e8;
+    --blue-light: #4da3ff;
+    --blue-glow: rgba(26, 115, 232, 0.4);
+    --blue-dim: rgba(26, 115, 232, 0.15);
+    --cyan: #00e5ff;
+    --green: #00e676;
+    --orange: #ff9100;
+    --red: #ff5252;
+    --purple: #b388ff;
+    --bg: #0a0e1a;
+    --card: rgba(15, 22, 42, 0.7);
+    --card-border: rgba(26, 115, 232, 0.2);
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --font: 'Inter', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Ambient background effects */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(26, 115, 232, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(0, 229, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(179, 136, 255, 0.03) 0%, transparent 60%);
+    z-index: 0;
+    animation: ambientShift 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes ambientShift {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-2%, 1%) rotate(3deg); }
+  }
+
+  /* Grid overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(26, 115, 232, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26, 115, 232, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .dashboard {
+    position: relative;
+    z-index: 1;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-rows: auto 1fr auto;
+    gap: 20px;
+    min-height: 100vh;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--blue), var(--cyan), var(--blue), transparent);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 18px;
+    color: white;
+    box-shadow: 0 0 20px var(--blue-glow);
+  }
+
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #fff 0%, var(--blue-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header h1 span {
+    font-weight: 400;
+    opacity: 0.7;
+    -webkit-text-fill-color: var(--text-dim);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.8); }
+  }
+
+  .header-stat {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .header-stat strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ─── Cards (glassmorphism) ─── */
+  .glass-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .glass-card:hover {
+    border-color: rgba(26, 115, 232, 0.4);
+    box-shadow: 0 0 30px rgba(26, 115, 232, 0.1);
+  }
+
+  .glass-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .card-value {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff, var(--blue-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .card-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .card-sub .up { color: var(--green); }
+  .card-sub .down { color: var(--red); }
+
+  /* ─── Left sidebar ─── */
+  .sidebar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .stat-card {
+    padding: 20px;
+  }
+
+  .stat-card .icon-ring {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .stat-card.revenue .icon-ring { background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.2); }
+  .stat-card.users .icon-ring { background: rgba(26, 115, 232, 0.1); border: 1px solid rgba(26, 115, 232, 0.2); }
+  .stat-card.perf .icon-ring { background: rgba(179, 136, 255, 0.1); border: 1px solid rgba(179, 136, 255, 0.2); }
+  .stat-card.render .icon-ring { background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.2); }
+
+  /* Spark line */
+  .spark-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 24px;
+    margin-top: 12px;
+  }
+
+  .spark-bar {
+    flex: 1;
+    border-radius: 2px;
+    animation: sparkGrow 1s ease-out forwards;
+    transform-origin: bottom;
+    transform: scaleY(0);
+  }
+
+  @keyframes sparkGrow {
+    to { transform: scaleY(1); }
+  }
+
+  /* ─── Center: 3D viewer ─── */
+  .viewer-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .viewer-container {
+    flex: 1;
+    min-height: 420px;
+    position: relative;
+  }
+
+  .viewer-container model-viewer {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    background: radial-gradient(ellipse at center, rgba(26, 115, 232, 0.08), var(--bg));
+    --poster-color: transparent;
+    outline: none;
+  }
+
+  .viewer-container::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 17px;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--blue), transparent 40%, transparent 60%, var(--cyan));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Floating annotation cards */
+  .annotation {
+    position: absolute;
+    z-index: 3;
+    padding: 10px 14px;
+    background: rgba(15, 22, 42, 0.85);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    backdrop-filter: blur(12px);
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    animation: fadeSlideIn 0.6s ease-out forwards;
+    pointer-events: none;
+  }
+
+  .annotation .ann-title {
+    font-weight: 600;
+    color: var(--blue-light);
+    margin-bottom: 2px;
+  }
+
+  .annotation .ann-value {
+    font-family: var(--mono);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .annotation::before {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--blue);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--blue-glow);
+  }
+
+  .ann-tl { top: 15%; left: -8px; }
+  .ann-tl::before { right: -3px; top: 50%; transform: translateY(-50%); }
+  .ann-tr { top: 25%; right: -8px; }
+  .ann-tr::before { left: -3px; top: 50%; transform: translateY(-50%); }
+  .ann-bl { bottom: 25%; left: -8px; }
+  .ann-bl::before { right: -3px; top: 50%; transform: translateY(-50%); }
+  .ann-br { bottom: 15%; right: -8px; }
+  .ann-br::before { left: -3px; top: 50%; transform: translateY(-50%); }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .ann-tl { animation-delay: 0.8s; }
+  .ann-tr { animation-delay: 1.1s; }
+  .ann-bl { animation-delay: 1.4s; }
+  .ann-br { animation-delay: 1.7s; }
+
+  /* Viewer info bar */
+  .viewer-info {
+    display: flex;
+    gap: 12px;
+  }
+
+  .viewer-info .info-chip {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .info-chip .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .info-chip .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .info-chip .dot.blue { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+  .info-chip .dot.cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+  .info-chip .dot.purple { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+
+  .info-chip strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ─── Right sidebar ─── */
+  .sidebar-right {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Ring chart */
+  .ring-chart {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .ring-svg {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+
+  .ring-svg circle {
+    fill: none;
+    stroke-width: 6;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: center;
+  }
+
+  .ring-bg { stroke: rgba(26, 115, 232, 0.1); }
+  .ring-fill {
+    stroke: var(--blue);
+    stroke-dasharray: 220;
+    stroke-dashoffset: 220;
+    animation: ringDraw 1.5s ease-out 0.5s forwards;
+    filter: drop-shadow(0 0 4px var(--blue-glow));
+  }
+
+  @keyframes ringDraw {
+    to { stroke-dashoffset: var(--ring-offset); }
+  }
+
+  .ring-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .ring-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+  }
+
+  .ring-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  /* Activity feed */
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    opacity: 0;
+    animation: fadeSlideIn 0.4s ease-out forwards;
+  }
+
+  .activity-item:nth-child(1) { animation-delay: 0.6s; }
+  .activity-item:nth-child(2) { animation-delay: 0.8s; }
+  .activity-item:nth-child(3) { animation-delay: 1.0s; }
+  .activity-item:nth-child(4) { animation-delay: 1.2s; }
+  .activity-item:nth-child(5) { animation-delay: 1.4s; }
+
+  .activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .activity-text {
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .activity-text strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .activity-time {
+    color: var(--text-dim);
+    opacity: 0.5;
+    font-size: 10px;
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+
+  /* ─── Bottom bar chart ─── */
+  .bottom-bar {
+    grid-column: 1 / -1;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .chart-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .chart-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .chart-tab {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    background: transparent;
+  }
+
+  .chart-tab.active {
+    background: var(--blue-dim);
+    color: var(--blue-light);
+  }
+
+  .chart-3d-wrapper {
+    perspective: 800px;
+    padding: 20px 0 0;
+  }
+
+  .chart-3d {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    height: 160px;
+    padding: 0 8px;
+    transform: rotateX(8deg);
+    transform-style: preserve-3d;
+  }
+
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar-3d {
+    width: 100%;
+    max-width: 48px;
+    border-radius: 6px 6px 2px 2px;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    animation: barGrow 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    cursor: pointer;
+    transition: filter 0.2s;
+  }
+
+  .bar-3d:hover {
+    filter: brightness(1.3);
+  }
+
+  .bar-3d:hover .bar-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  /* 3D side faces */
+  .bar-3d::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -8px;
+    width: 8px;
+    height: 100%;
+    background: inherit;
+    filter: brightness(0.6);
+    transform: skewY(-35deg);
+    transform-origin: top left;
+    border-radius: 0 4px 2px 0;
+  }
+
+  .bar-3d::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    background: inherit;
+    filter: brightness(1.2);
+    transform: skewX(-35deg);
+    transform-origin: bottom left;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .bar-tooltip {
+    position: absolute;
+    top: -32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  @keyframes barGrow {
+    to { transform: scaleY(1); }
+  }
+
+  .bar-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  /* Horizontal rule line */
+  .chart-grid {
+    position: relative;
+    height: 160px;
+    margin-bottom: -160px;
+    pointer-events: none;
+    transform: rotateX(8deg);
+    perspective: 800px;
+  }
+
+  .chart-grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(26, 115, 232, 0.06);
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 1100px) {
+    .dashboard {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+    }
+    .sidebar-left, .sidebar-right {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .viewer-container { min-height: 350px; }
+  }
+
+  @media (max-width: 600px) {
+    .dashboard { padding: 12px; gap: 12px; }
+    .sidebar-left, .sidebar-right { grid-template-columns: 1fr; }
+    .viewer-info { flex-direction: column; }
+    .header { flex-direction: column; gap: 12px; text-align: center; }
+    .header-right { flex-wrap: wrap; justify-content: center; }
+  }
+
+  /* Loading shimmer */
+  .shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(26, 115, 232, 0.05) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+
+  <!-- ═══ Header ═══ -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-mark">SV</div>
+      <h1>SceneView <span>3D Data Dashboard</span></h1>
+    </div>
+    <div class="header-right">
+      <div class="status-dot"></div>
+      <span class="header-stat">FPS <strong>60</strong></span>
+      <span class="header-stat">GPU <strong>24%</strong></span>
+      <span class="header-stat">Mem <strong>128MB</strong></span>
+      <span class="header-stat" id="clock"></span>
+    </div>
+  </header>
+
+  <!-- ═══ Left Sidebar ═══ -->
+  <aside class="sidebar-left">
+
+    <div class="glass-card stat-card revenue">
+      <div class="icon-ring">$</div>
+      <div class="card-label">Revenue</div>
+      <div class="card-value" data-target="1200000" data-prefix="$" data-format="currency">$0</div>
+      <div class="card-sub"><span class="up">+12.5%</span> vs last month</div>
+      <div class="spark-row">
+        <div class="spark-bar" style="height:40%;background:rgba(0,230,118,0.3);animation-delay:0.1s"></div>
+        <div class="spark-bar" style="height:55%;background:rgba(0,230,118,0.4);animation-delay:0.15s"></div>
+        <div class="spark-bar" style="height:45%;background:rgba(0,230,118,0.35);animation-delay:0.2s"></div>
+        <div class="spark-bar" style="height:70%;background:rgba(0,230,118,0.5);animation-delay:0.25s"></div>
+        <div class="spark-bar" style="height:60%;background:rgba(0,230,118,0.45);animation-delay:0.3s"></div>
+        <div class="spark-bar" style="height:80%;background:rgba(0,230,118,0.6);animation-delay:0.35s"></div>
+        <div class="spark-bar" style="height:75%;background:rgba(0,230,118,0.55);animation-delay:0.4s"></div>
+        <div class="spark-bar" style="height:90%;background:rgba(0,230,118,0.7);animation-delay:0.45s"></div>
+        <div class="spark-bar" style="height:85%;background:rgba(0,230,118,0.65);animation-delay:0.5s"></div>
+        <div class="spark-bar" style="height:100%;background:rgba(0,230,118,0.8);animation-delay:0.55s"></div>
+      </div>
+    </div>
+
+    <div class="glass-card stat-card users">
+      <div class="icon-ring">U</div>
+      <div class="card-label">Active Users</div>
+      <div class="card-value" data-target="45800" data-suffix="K" data-divisor="1000">0</div>
+      <div class="card-sub"><span class="up">+8.3%</span> this week</div>
+      <div class="spark-row">
+        <div class="spark-bar" style="height:50%;background:rgba(26,115,232,0.3);animation-delay:0.15s"></div>
+        <div class="spark-bar" style="height:65%;background:rgba(26,115,232,0.4);animation-delay:0.2s"></div>
+        <div class="spark-bar" style="height:55%;background:rgba(26,115,232,0.35);animation-delay:0.25s"></div>
+        <div class="spark-bar" style="height:80%;background:rgba(26,115,232,0.55);animation-delay:0.3s"></div>
+        <div class="spark-bar" style="height:70%;background:rgba(26,115,232,0.5);animation-delay:0.35s"></div>
+        <div class="spark-bar" style="height:75%;background:rgba(26,115,232,0.5);animation-delay:0.4s"></div>
+        <div class="spark-bar" style="height:90%;background:rgba(26,115,232,0.65);animation-delay:0.45s"></div>
+        <div class="spark-bar" style="height:85%;background:rgba(26,115,232,0.6);animation-delay:0.5s"></div>
+        <div class="spark-bar" style="height:95%;background:rgba(26,115,232,0.7);animation-delay:0.55s"></div>
+        <div class="spark-bar" style="height:100%;background:rgba(26,115,232,0.8);animation-delay:0.6s"></div>
+      </div>
+    </div>
+
+    <div class="glass-card stat-card perf">
+      <div class="icon-ring">%</div>
+      <div class="card-label">Performance</div>
+      <div class="card-value" data-target="997" data-suffix="%" data-divisor="10" data-decimals="1">0%</div>
+      <div class="card-sub"><span class="up">+0.2%</span> uptime SLA</div>
+      <div class="spark-row">
+        <div class="spark-bar" style="height:92%;background:rgba(179,136,255,0.5);animation-delay:0.2s"></div>
+        <div class="spark-bar" style="height:95%;background:rgba(179,136,255,0.55);animation-delay:0.25s"></div>
+        <div class="spark-bar" style="height:90%;background:rgba(179,136,255,0.45);animation-delay:0.3s"></div>
+        <div class="spark-bar" style="height:98%;background:rgba(179,136,255,0.6);animation-delay:0.35s"></div>
+        <div class="spark-bar" style="height:96%;background:rgba(179,136,255,0.58);animation-delay:0.4s"></div>
+        <div class="spark-bar" style="height:100%;background:rgba(179,136,255,0.7);animation-delay:0.45s"></div>
+        <div class="spark-bar" style="height:99%;background:rgba(179,136,255,0.65);animation-delay:0.5s"></div>
+        <div class="spark-bar" style="height:97%;background:rgba(179,136,255,0.6);animation-delay:0.55s"></div>
+        <div class="spark-bar" style="height:100%;background:rgba(179,136,255,0.7);animation-delay:0.6s"></div>
+        <div class="spark-bar" style="height:100%;background:rgba(179,136,255,0.75);animation-delay:0.65s"></div>
+      </div>
+    </div>
+
+    <div class="glass-card stat-card render">
+      <div class="icon-ring">ms</div>
+      <div class="card-label">Render Time</div>
+      <div class="card-value" data-target="16" data-suffix="ms">0ms</div>
+      <div class="card-sub"><span class="up">-2ms</span> optimized</div>
+      <div class="spark-row">
+        <div class="spark-bar" style="height:60%;background:rgba(0,229,255,0.4);animation-delay:0.25s"></div>
+        <div class="spark-bar" style="height:50%;background:rgba(0,229,255,0.35);animation-delay:0.3s"></div>
+        <div class="spark-bar" style="height:55%;background:rgba(0,229,255,0.38);animation-delay:0.35s"></div>
+        <div class="spark-bar" style="height:45%;background:rgba(0,229,255,0.3);animation-delay:0.4s"></div>
+        <div class="spark-bar" style="height:40%;background:rgba(0,229,255,0.28);animation-delay:0.45s"></div>
+        <div class="spark-bar" style="height:42%;background:rgba(0,229,255,0.29);animation-delay:0.5s"></div>
+        <div class="spark-bar" style="height:38%;background:rgba(0,229,255,0.26);animation-delay:0.55s"></div>
+        <div class="spark-bar" style="height:35%;background:rgba(0,229,255,0.24);animation-delay:0.6s"></div>
+        <div class="spark-bar" style="height:30%;background:rgba(0,229,255,0.22);animation-delay:0.65s"></div>
+        <div class="spark-bar" style="height:28%;background:rgba(0,229,255,0.2);animation-delay:0.7s"></div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══ Center: 3D Viewer ═══ -->
+  <main class="viewer-area">
+    <div class="viewer-container glass-card" style="padding:0;overflow:hidden">
+      <model-viewer
+        src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+        alt="3D Asset Visualization"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1"
+        shadow-softness="0.5"
+        exposure="1.1"
+        camera-orbit="45deg 65deg 2.5m"
+        environment-image="neutral"
+        tone-mapping="aces"
+        style="width:100%;height:100%;min-height:420px"
+      ></model-viewer>
+
+      <!-- Floating annotations -->
+      <div class="annotation ann-tl" style="animation-delay:0.8s">
+        <div class="ann-title">Vertices</div>
+        <div class="ann-value">14,556</div>
+      </div>
+      <div class="annotation ann-tr" style="animation-delay:1.1s">
+        <div class="ann-title">Material</div>
+        <div class="ann-value">PBR Metallic</div>
+      </div>
+      <div class="annotation ann-bl" style="animation-delay:1.4s">
+        <div class="ann-title">Textures</div>
+        <div class="ann-value">5 maps</div>
+      </div>
+      <div class="annotation ann-br" style="animation-delay:1.7s">
+        <div class="ann-title">File Size</div>
+        <div class="ann-value">3.7 MB</div>
+      </div>
+    </div>
+
+    <div class="viewer-info">
+      <div class="info-chip"><span class="dot green"></span> Model Loaded <strong>DamagedHelmet.glb</strong></div>
+      <div class="info-chip"><span class="dot blue"></span> Renderer <strong>WebGL 2.0</strong></div>
+      <div class="info-chip"><span class="dot cyan"></span> Shading <strong>PBR</strong></div>
+      <div class="info-chip"><span class="dot purple"></span> Shadows <strong>Enabled</strong></div>
+    </div>
+  </main>
+
+  <!-- ═══ Right Sidebar ═══ -->
+  <aside class="sidebar-right">
+
+    <div class="glass-card">
+      <div class="card-label">Platform Distribution</div>
+      <div class="ring-chart">
+        <svg class="ring-svg" viewBox="0 0 80 80">
+          <circle class="ring-bg" cx="40" cy="40" r="35" />
+          <circle class="ring-fill" cx="40" cy="40" r="35" style="--ring-offset:66;stroke:var(--blue)" />
+          <circle class="ring-fill" cx="40" cy="40" r="28" style="--ring-offset:88;stroke:var(--cyan);animation-delay:0.7s" />
+          <circle class="ring-fill" cx="40" cy="40" r="21" style="--ring-offset:110;stroke:var(--purple);animation-delay:0.9s" />
+        </svg>
+        <div class="ring-legend">
+          <div class="ring-legend-item">
+            <div class="ring-legend-dot" style="background:var(--blue)"></div>
+            Android 70%
+          </div>
+          <div class="ring-legend-item">
+            <div class="ring-legend-dot" style="background:var(--cyan)"></div>
+            iOS 20%
+          </div>
+          <div class="ring-legend-item">
+            <div class="ring-legend-dot" style="background:var(--purple)"></div>
+            Web 10%
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card">
+      <div class="card-label">Scene Metrics</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:var(--text-dim)">Draw Calls</span>
+          <span style="font-family:var(--mono);color:var(--text)">124</span>
+        </div>
+        <div style="height:4px;border-radius:2px;background:rgba(26,115,232,0.1);overflow:hidden">
+          <div style="width:0;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--cyan));animation:barWidth 1s 0.5s ease-out forwards"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:var(--text-dim)">Triangles</span>
+          <span style="font-family:var(--mono);color:var(--text)">46.2K</span>
+        </div>
+        <div style="height:4px;border-radius:2px;background:rgba(26,115,232,0.1);overflow:hidden">
+          <div style="width:0;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--green),var(--cyan));animation:barWidth2 1s 0.7s ease-out forwards"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span style="color:var(--text-dim)">Texture Mem</span>
+          <span style="font-family:var(--mono);color:var(--text)">18 MB</span>
+        </div>
+        <div style="height:4px;border-radius:2px;background:rgba(26,115,232,0.1);overflow:hidden">
+          <div style="width:0;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--purple),var(--blue));animation:barWidth3 1s 0.9s ease-out forwards"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card">
+      <div class="card-label">Live Activity</div>
+      <div class="activity-list">
+        <div class="activity-item">
+          <div class="activity-dot" style="background:var(--green)"></div>
+          <div>
+            <div class="activity-text"><strong>Model loaded</strong> in 1.2s</div>
+            <div class="activity-time">just now</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-dot" style="background:var(--blue)"></div>
+          <div>
+            <div class="activity-text"><strong>Shader compiled</strong> PBR pipeline</div>
+            <div class="activity-time">2s ago</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-dot" style="background:var(--cyan)"></div>
+          <div>
+            <div class="activity-text"><strong>Shadow map</strong> rendered 1024x</div>
+            <div class="activity-time">3s ago</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-dot" style="background:var(--purple)"></div>
+          <div>
+            <div class="activity-text"><strong>Env probe</strong> generated</div>
+            <div class="activity-time">4s ago</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-dot" style="background:var(--orange)"></div>
+          <div>
+            <div class="activity-text"><strong>Tone mapping</strong> ACES active</div>
+            <div class="activity-time">5s ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══ Bottom Bar Chart ═══ -->
+  <section class="bottom-bar glass-card">
+    <div class="chart-header">
+      <h3>Monthly Render Sessions</h3>
+      <div class="chart-tabs">
+        <button class="chart-tab active">12M</button>
+        <button class="chart-tab">6M</button>
+        <button class="chart-tab">30D</button>
+        <button class="chart-tab">7D</button>
+      </div>
+    </div>
+
+    <div class="chart-3d-wrapper">
+      <div class="chart-grid">
+        <div class="chart-grid-line" style="bottom:25%"></div>
+        <div class="chart-grid-line" style="bottom:50%"></div>
+        <div class="chart-grid-line" style="bottom:75%"></div>
+        <div class="chart-grid-line" style="bottom:100%"></div>
+      </div>
+      <div class="chart-3d" id="barChart"></div>
+    </div>
+  </section>
+
+</div>
+
+<style>
+  @keyframes barWidth { to { width: 62%; } }
+  @keyframes barWidth2 { to { width: 46%; } }
+  @keyframes barWidth3 { to { width: 28%; } }
+</style>
+
+<script>
+  // ─── Animated counters ───
+  function animateCounters() {
+    document.querySelectorAll('.card-value[data-target]').forEach(el => {
+      const target = parseInt(el.dataset.target);
+      const prefix = el.dataset.prefix || '';
+      const suffix = el.dataset.suffix || '';
+      const divisor = parseFloat(el.dataset.divisor) || 1;
+      const decimals = parseInt(el.dataset.decimals) || 0;
+      const format = el.dataset.format;
+      const duration = 1500;
+      const start = performance.now();
+
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = target * eased;
+
+        let display;
+        if (format === 'currency') {
+          display = prefix + (current / 1000000).toFixed(1) + 'M';
+        } else if (divisor !== 1) {
+          display = prefix + (current / divisor).toFixed(decimals) + suffix;
+        } else {
+          display = prefix + Math.round(current) + suffix;
+        }
+        el.textContent = display;
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    });
+  }
+
+  // ─── 3D Bar chart ───
+  function buildBarChart() {
+    const data = [
+      { label: 'Jan', value: 45, color: '#1a73e8' },
+      { label: 'Feb', value: 52, color: '#2979ff' },
+      { label: 'Mar', value: 68, color: '#1a73e8' },
+      { label: 'Apr', value: 61, color: '#2979ff' },
+      { label: 'May', value: 74, color: '#1a73e8' },
+      { label: 'Jun', value: 82, color: '#2979ff' },
+      { label: 'Jul', value: 79, color: '#1a73e8' },
+      { label: 'Aug', value: 88, color: '#2979ff' },
+      { label: 'Sep', value: 95, color: '#1a73e8' },
+      { label: 'Oct', value: 91, color: '#2979ff' },
+      { label: 'Nov', value: 97, color: '#1a73e8' },
+      { label: 'Dec', value: 100, color: '#2979ff' },
+    ];
+
+    const chart = document.getElementById('barChart');
+    data.forEach((d, i) => {
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+
+      const bar = document.createElement('div');
+      bar.className = 'bar-3d';
+      bar.style.height = d.value + '%';
+      bar.style.background = `linear-gradient(180deg, ${d.color}, ${d.color}88)`;
+      bar.style.animationDelay = (0.3 + i * 0.08) + 's';
+
+      const tooltip = document.createElement('div');
+      tooltip.className = 'bar-tooltip';
+      tooltip.textContent = (d.value * 1.2).toFixed(0) + 'K sessions';
+      bar.appendChild(tooltip);
+
+      const label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = d.label;
+
+      col.appendChild(bar);
+      col.appendChild(label);
+      chart.appendChild(col);
+    });
+  }
+
+  // ─── Clock ───
+  function updateClock() {
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2, '0');
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const s = now.getSeconds().toString().padStart(2, '0');
+    document.getElementById('clock').innerHTML = `<strong>${h}:${m}:${s}</strong>`;
+  }
+
+  // ─── Init ───
+  document.addEventListener('DOMContentLoaded', () => {
+    animateCounters();
+    buildBarChart();
+    updateClock();
+    setInterval(updateClock, 1000);
+  });
+</script>
+
+</body>
+</html>

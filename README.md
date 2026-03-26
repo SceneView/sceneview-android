@@ -194,7 +194,7 @@ The lightest way to add 3D to any website. One script tag, one function call.
 ~25 KB library powered by Filament.js WASM — the same engine behind Android SceneView.
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.1.0/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.2.0/sceneview.js"></script>
 <script> SceneView.modelViewer("canvas", "model.glb") </script>
 ```
 
@@ -244,7 +244,7 @@ sceneview-core (Kotlin Multiplatform)
 
 SceneView is **AI-first** — designed so AI assistants generate correct, compilable 3D/AR code on the first try.
 
-The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **18 specialized tools**, **33 compilable samples**, a full API reference, and a code validator — all verified by 612 tests.
+The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **18 specialized tools**, **33 compilable samples**, a full API reference, and a code validator — all verified by 834 tests.
 
 ```bash
 # One command — works with any MCP client

@@ -29,9 +29,6 @@ jobs:
             exit 0
           fi
 
-          TAG="${{ github.event.release.tag_name }}"
-          NAME="${{ github.event.release.name }}"
-          URL="${{ github.event.release.html_url }}"
           PRERELEASE="${{ github.event.release.prerelease }}"
 
           if [ "$PRERELEASE" = "true" ]; then
@@ -42,18 +39,12 @@ jobs:
             LABEL="New Release"
           fi
 
-          PAYLOAD=$(cat <<EOF
-          {
-            "embeds": [{
-              "title": "$EMOJI $LABEL: $TAG",
-              "description": "**$NAME**\n\n[View release notes]($URL)",
-              "color": 3447003,
-              "footer": { "text": "SceneView — 3D & AR SDK" },
-              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            }]
-          }
-          EOF
-          )
+          PAYLOAD=$(jq -n \
+            --arg title "$EMOJI $LABEL: ${{ github.event.release.tag_name }}" \
+            --arg name "${{ github.event.release.name }}" \
+            --arg url "${{ github.event.release.html_url }}" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{embeds: [{title: $title, description: ("**" + $name + "**\n\n[View release notes](" + $url + ")"), color: 3447003, footer: {text: "SceneView — 3D & AR SDK"}, timestamp: $ts}]}')
 
           curl -s -H "Content-Type: application/json" \
                -d "$PAYLOAD" \
@@ -72,23 +63,13 @@ jobs:
             exit 0
           fi
 
-          TITLE="${{ github.event.issue.title }}"
-          NUMBER="${{ github.event.issue.number }}"
-          URL="${{ github.event.issue.html_url }}"
-          AUTHOR="${{ github.event.issue.user.login }}"
-
-          PAYLOAD=$(cat <<EOF
-          {
-            "embeds": [{
-              "title": "🐛 New Issue #$NUMBER",
-              "description": "**$TITLE**\n\nOpened by [$AUTHOR](https://github.com/$AUTHOR)\n[View issue]($URL)",
-              "color": 15105570,
-              "footer": { "text": "SceneView — 3D & AR SDK" },
-              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            }]
-          }
-          EOF
-          )
+          PAYLOAD=$(jq -n \
+            --arg title "🐛 New Issue #${{ github.event.issue.number }}" \
+            --arg issue_title "${{ github.event.issue.title }}" \
+            --arg url "${{ github.event.issue.html_url }}" \
+            --arg author "${{ github.event.issue.user.login }}" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{embeds: [{title: $title, description: ("**" + $issue_title + "**\n\nOpened by [" + $author + "](https://github.com/" + $author + ")\n[View issue](" + $url + ")"), color: 15105570, footer: {text: "SceneView — 3D & AR SDK"}, timestamp: $ts}]}')
 
           curl -s -H "Content-Type: application/json" \
                -d "$PAYLOAD" \
