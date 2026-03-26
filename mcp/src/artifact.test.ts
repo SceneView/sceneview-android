@@ -451,6 +451,282 @@ describe("HTML escaping", () => {
   });
 });
 
+// ─── validateArtifactInput — geometry ────────────────────────────────────────
+
+describe("validateArtifactInput — geometry", () => {
+  it("accepts valid geometry input", () => {
+    expect(
+      validateArtifactInput({
+        type: "geometry",
+        shapes: [{ type: "cube", position: [0, 0, 0], scale: [1, 1, 1], color: [1, 0, 0] }],
+      })
+    ).toBeNull();
+  });
+
+  it("rejects geometry without shapes", () => {
+    const err = validateArtifactInput({ type: "geometry" });
+    expect(err).toContain("non-empty `shapes` array");
+  });
+
+  it("rejects geometry with empty shapes array", () => {
+    const err = validateArtifactInput({ type: "geometry", shapes: [] });
+    expect(err).toContain("non-empty `shapes` array");
+  });
+
+  it("rejects invalid shape type", () => {
+    const err = validateArtifactInput({
+      type: "geometry",
+      shapes: [{ type: "pyramid" as any }],
+    });
+    expect(err).toContain("Invalid shape type");
+  });
+
+  it("rejects invalid position array", () => {
+    const err = validateArtifactInput({
+      type: "geometry",
+      shapes: [{ type: "cube", position: [1, 2] as any }],
+    });
+    expect(err).toContain("position must be an array of 3 numbers");
+  });
+
+  it("rejects invalid scale array", () => {
+    const err = validateArtifactInput({
+      type: "geometry",
+      shapes: [{ type: "cube", scale: [1] as any }],
+    });
+    expect(err).toContain("scale must be an array of 3 numbers");
+  });
+
+  it("rejects invalid color array", () => {
+    const err = validateArtifactInput({
+      type: "geometry",
+      shapes: [{ type: "cube", color: [1, 0] as any }],
+    });
+    expect(err).toContain("color must be an array of 3 numbers");
+  });
+
+  it("accepts all valid shape types", () => {
+    for (const shapeType of ["cube", "sphere", "cylinder", "plane", "line"] as const) {
+      expect(
+        validateArtifactInput({
+          type: "geometry",
+          shapes: [{ type: shapeType }],
+        })
+      ).toBeNull();
+    }
+  });
+
+  it("accepts multiple shapes", () => {
+    expect(
+      validateArtifactInput({
+        type: "geometry",
+        shapes: [
+          { type: "cube", position: [0, 0.5, 0], color: [1, 0, 0] },
+          { type: "sphere", position: [0, 1.8, 0], color: [0, 0, 1] },
+          { type: "line", position: [0, 1, 0], scale: [2, 0.05, 0.05] },
+        ],
+      })
+    ).toBeNull();
+  });
+});
+
+// ─── generateArtifact — geometry ────────────────────────────────────────────
+
+describe("generateArtifact — geometry (WebGL PBR)", () => {
+  const geoInput: ArtifactInput = {
+    type: "geometry",
+    shapes: [
+      { type: "cube", position: [0, 0.5, 0], scale: [1, 1, 1], color: [1, 0, 0] },
+      { type: "sphere", position: [0, 1.8, 0], scale: [0.6, 0.6, 0.6], color: [0, 0, 1] },
+    ],
+  };
+
+  it("generates valid HTML with WebGL canvas", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.type).toBe("geometry");
+    expect(result.html).toContain("<!DOCTYPE html>");
+    expect(result.html).toContain('<canvas id="c"');
+    expect(result.html).toContain("webgl2");
+  });
+
+  it("does NOT use Filament.js (pure WebGL)", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).not.toContain("filament.js");
+    expect(result.html).not.toContain("Filament.init");
+  });
+
+  it("includes PBR shader code", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("D_GGX");
+    expect(result.html).toContain("F_Schlick");
+    expect(result.html).toContain("G_Smith");
+  });
+
+  it("includes all geometry generators", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("genSphere");
+    expect(result.html).toContain("genCube");
+    expect(result.html).toContain("genCyl");
+    expect(result.html).toContain("genPlane");
+  });
+
+  it("embeds shapes as JSON data", () => {
+    const result = generateArtifact(geoInput);
+    // The shapes should be serialized into the HTML
+    expect(result.html).toContain('"cube"');
+    expect(result.html).toContain('"sphere"');
+  });
+
+  it("includes orbit controls", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("pointerdown");
+    expect(result.html).toContain("pointermove");
+    expect(result.html).toContain("wheel");
+  });
+
+  it("includes render loop", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("requestAnimationFrame(render)");
+  });
+
+  it("uses custom title", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      title: "My Building",
+      shapes: [{ type: "cube" }],
+    });
+    expect(result.title).toBe("My Building");
+    expect(result.html).toContain("My Building");
+  });
+
+  it("uses default title when none given", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "cube" }],
+    });
+    expect(result.title).toBe("3D Geometry");
+  });
+
+  it("shows shape count", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("2 shapes");
+  });
+
+  it("shows singular for single shape", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "sphere" }],
+    });
+    expect(result.html).toContain("1 shape");
+    expect(result.html).not.toContain("1 shapes");
+  });
+
+  it("auto-rotates by default", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("autoR=true");
+  });
+
+  it("can disable auto-rotate", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "cube" }],
+      options: { autoRotate: false },
+    });
+    expect(result.html).toContain("autoR=false");
+  });
+
+  it("uses custom background color", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "cube" }],
+      options: { backgroundColor: "#1a1a2e" },
+    });
+    // #1a1a2e = rgb(26, 26, 46) => 0.102, 0.102, 0.180
+    expect(result.html).toContain("0.102");
+  });
+
+  it("includes SceneView branding", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("Powered by SceneView");
+  });
+
+  it("includes grid floor", () => {
+    const result = generateArtifact(geoInput);
+    expect(result.html).toContain("genGrid");
+  });
+
+  it("handles all five shape types", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [
+        { type: "cube", position: [0, 0.5, 0] },
+        { type: "sphere", position: [2, 1, 0] },
+        { type: "cylinder", position: [-2, 0.5, 0] },
+        { type: "plane", position: [0, 0, 0] },
+        { type: "line", position: [0, 2, 0] },
+      ],
+    });
+    expect(result.html).toContain("5 shapes");
+    expect(result.html).toContain('"cube"');
+    expect(result.html).toContain('"sphere"');
+    expect(result.html).toContain('"cylinder"');
+    expect(result.html).toContain('"plane"');
+    expect(result.html).toContain('"line"');
+  });
+
+  it("applies default values for missing shape properties", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "cube" }], // no position, scale, color
+    });
+    // Defaults should be applied: position [0,0,0], scale [1,1,1], color [0.8,0.8,0.8]
+    expect(result.html).toContain("[0,0,0]");
+    expect(result.html).toContain("[1,1,1]");
+    expect(result.html).toContain("[0.8,0.8,0.8]");
+  });
+
+  it("preserves metallic and roughness values", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "sphere", metallic: 0.9, roughness: 0.1 }],
+    });
+    expect(result.html).toContain('"metallic":0.9');
+    expect(result.html).toContain('"roughness":0.1');
+  });
+
+  it("escapes HTML in title", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      title: '<script>alert("xss")</script>',
+      shapes: [{ type: "cube" }],
+    });
+    expect(result.html).not.toContain("<script>alert");
+    expect(result.html).toContain("&lt;script&gt;");
+  });
+});
+
+// ─── formatArtifactResponse — geometry ──────────────────────────────────────
+
+describe("formatArtifactResponse — geometry", () => {
+  it("shows scene label for geometry type", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "cube" }],
+    });
+    const text = formatArtifactResponse(result);
+    expect(text).toContain("3D scene");
+  });
+
+  it("mentions WebGL PBR for geometry type", () => {
+    const result = generateArtifact({
+      type: "geometry",
+      shapes: [{ type: "cube" }],
+    });
+    const text = formatArtifactResponse(result);
+    expect(text).toContain("WebGL PBR");
+  });
+});
+
 // ─── Filament.js integration ─────────────────────────────────────────────────
 
 describe("Filament.js integration", () => {
@@ -488,10 +764,18 @@ describe("Filament.js integration", () => {
     const sceneResult = generateArtifact({ type: "scene" });
     const prodResult = generateArtifact({ type: "product-360" });
     const chartResult = generateArtifact({ type: "chart-3d", data: [{ label: "Q1", value: 100 }] });
+    const geoResult = generateArtifact({ type: "geometry", shapes: [{ type: "cube" }] });
 
     expect(mvResult.html).toContain("#0d1117");
     expect(sceneResult.html).toContain("#0d1117");
     expect(prodResult.html).toContain("#0d1117");
     expect(chartResult.html).toContain("#0d1117");
+    expect(geoResult.html).toContain("#0d1117");
+  });
+
+  it("geometry uses WebGL2 (not Filament.js)", () => {
+    const result = generateArtifact({ type: "geometry", shapes: [{ type: "cube" }] });
+    expect(result.html).not.toContain("filament.js");
+    expect(result.html).toContain("webgl2");
   });
 });

@@ -43,7 +43,7 @@ function escapeHtml(s) {
 }
 // ─── Validation ──────────────────────────────────────────────────────────────
 export function validateArtifactInput(input) {
-    const validTypes = ["model-viewer", "chart-3d", "scene", "product-360"];
+    const validTypes = ["model-viewer", "chart-3d", "scene", "product-360", "geometry"];
     if (!validTypes.includes(input.type)) {
         return `Invalid type "${input.type}". Must be one of: ${validTypes.join(", ")}`;
     }
@@ -54,6 +54,26 @@ export function validateArtifactInput(input) {
         for (const d of input.data) {
             if (typeof d.label !== "string" || typeof d.value !== "number") {
                 return "Each data item must have a string `label` and numeric `value`.";
+            }
+        }
+    }
+    if (input.type === "geometry") {
+        if (!input.shapes || !Array.isArray(input.shapes) || input.shapes.length === 0) {
+            return 'Type "geometry" requires a non-empty `shapes` array.';
+        }
+        const validShapeTypes = ["cube", "sphere", "cylinder", "plane", "line"];
+        for (const s of input.shapes) {
+            if (!validShapeTypes.includes(s.type)) {
+                return `Invalid shape type "${s.type}". Must be one of: ${validShapeTypes.join(", ")}`;
+            }
+            if (s.position && (!Array.isArray(s.position) || s.position.length !== 3)) {
+                return "Shape position must be an array of 3 numbers [x, y, z].";
+            }
+            if (s.scale && (!Array.isArray(s.scale) || s.scale.length !== 3)) {
+                return "Shape scale must be an array of 3 numbers [x, y, z].";
+            }
+            if (s.color && (!Array.isArray(s.color) || s.color.length !== 3)) {
+                return "Shape color must be an array of 3 numbers [r, g, b] in 0-1 range.";
             }
         }
     }
@@ -75,6 +95,8 @@ export function generateArtifact(input) {
             return generateScene(input);
         case "product-360":
             return generateProduct360(input);
+        case "geometry":
+            return generateGeometry(input);
     }
 }
 // ─── Filament.js renderer core ──────────────────────────────────────────────
@@ -339,6 +361,269 @@ ${filamentRendererScript({ modelUrl: model, bgColor: hexToBgColor(bg), autoRotat
         type: "product-360",
     };
 }
+// ── geometry ──────────────────────────────────────────────────────────────────
+//
+// Procedural 3D geometry renderer — zero dependencies, pure WebGL2 PBR.
+// Claude can "draw" in 3D: cubes, spheres, cylinders, planes, lines.
+function generateGeometry(input) {
+    const title = input.title || "3D Geometry";
+    const opts = input.options || {};
+    const bg = opts.backgroundColor || "#0d1117";
+    const autoRotate = opts.autoRotate !== false;
+    const shapes = input.shapes || [];
+    // Compute camera distance from scene bounds
+    let maxDist = 2;
+    for (const s of shapes) {
+        const p = s.position || [0, 0, 0];
+        const sc = s.scale || [1, 1, 1];
+        const d = Math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]) + Math.max(sc[0], sc[1], sc[2]);
+        if (d > maxDist)
+            maxDist = d;
+    }
+    const camDist = Math.max(4, maxDist * 1.8);
+    // Compute center-of-mass for the look-at target
+    let cx = 0, cy = 0, cz = 0;
+    for (const s of shapes) {
+        const p = s.position || [0, 0, 0];
+        cx += p[0];
+        cy += p[1];
+        cz += p[2];
+    }
+    if (shapes.length > 0) {
+        cx /= shapes.length;
+        cy /= shapes.length;
+        cz /= shapes.length;
+    }
+    const shapesJson = JSON.stringify(shapes.map(s => ({
+        type: s.type,
+        position: s.position || [0, 0, 0],
+        scale: s.scale || [1, 1, 1],
+        color: s.color || [0.8, 0.8, 0.8],
+        metallic: s.metallic ?? 0.0,
+        roughness: s.roughness ?? 0.5,
+    })));
+    const bgRgb = hexToRgb(bg);
+    const bgR = (bgRgb.r / 255).toFixed(3);
+    const bgG = (bgRgb.g / 255).toFixed(3);
+    const bgB = (bgRgb.b / 255).toFixed(3);
+    const body = `
+<style>
+canvas{width:100%;height:100%;display:block;cursor:grab}
+canvas:active{cursor:grabbing}
+.geo-title{position:absolute;top:16px;left:16px;font-size:18px;font-weight:700;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.5);z-index:10}
+.geo-info{position:absolute;top:42px;left:16px;font-size:12px;color:#888;z-index:10}
+.controls-hint{position:absolute;bottom:16px;left:16px;font-size:11px;color:#666;z-index:10}
+</style>
+<div class="geo-title">${escapeHtml(title)}</div>
+<div class="geo-info">${shapes.length} shape${shapes.length !== 1 ? "s" : ""} &bull; Procedural geometry</div>
+<canvas id="c"></canvas>
+<div class="controls-hint">Drag to orbit &bull; Scroll to zoom</div>
+${BRANDING}
+<script>
+(function(){
+var canvas=document.getElementById('c');
+var gl=canvas.getContext('webgl2');
+if(!gl){document.body.innerHTML='<p style="color:#fff;padding:40px">WebGL2 not supported</p>';return;}
+
+var VS=\`#version 300 es
+precision highp float;
+in vec3 aPos;
+in vec3 aNormal;
+uniform mat4 uMVP;
+uniform mat4 uModel;
+uniform mat3 uNormalMatrix;
+out vec3 vNormal;
+out vec3 vWorldPos;
+void main(){
+  vec4 wp=uModel*vec4(aPos,1.0);
+  vWorldPos=wp.xyz;
+  vNormal=normalize(uNormalMatrix*aNormal);
+  gl_Position=uMVP*vec4(aPos,1.0);
+}\`;
+
+var FS=\`#version 300 es
+precision highp float;
+in vec3 vNormal;
+in vec3 vWorldPos;
+uniform vec3 uCamPos;
+uniform vec3 uLightDir;
+uniform vec3 uLightColor;
+uniform vec3 uBaseColor;
+uniform float uMetallic;
+uniform float uRoughness;
+out vec4 fragColor;
+const float PI=3.14159265;
+float D_GGX(float NdotH,float r){float a=r*r;float a2=a*a;float d=NdotH*NdotH*(a2-1.0)+1.0;return a2/(PI*d*d);}
+vec3 F_Schlick(float ct,vec3 F0){return F0+(1.0-F0)*pow(1.0-ct,5.0);}
+float G_Smith(float NdotV,float NdotL,float r){float k=((r+1.0)*(r+1.0))/8.0;return(NdotV/(NdotV*(1.0-k)+k))*(NdotL/(NdotL*(1.0-k)+k));}
+void main(){
+  vec3 N=normalize(vNormal);vec3 V=normalize(uCamPos-vWorldPos);vec3 L=normalize(uLightDir);vec3 H=normalize(V+L);
+  float NdotL=max(dot(N,L),0.0);float NdotV=max(dot(N,V),0.001);float NdotH=max(dot(N,H),0.0);float HdotV=max(dot(H,V),0.0);
+  vec3 F0=mix(vec3(0.04),uBaseColor,uMetallic);vec3 F=F_Schlick(HdotV,F0);
+  float D=D_GGX(NdotH,uRoughness);float G=G_Smith(NdotV,NdotL,uRoughness);
+  vec3 spec=(D*F*G)/(4.0*NdotV*NdotL+0.001);
+  vec3 kD=(1.0-F)*(1.0-uMetallic);vec3 diff=kD*uBaseColor/PI;
+  vec3 color=(diff+spec)*uLightColor*NdotL;
+  float hem=dot(N,vec3(0,1,0))*0.5+0.5;
+  color+=mix(vec3(0.05,0.04,0.03),vec3(0.15,0.2,0.35),hem)*uBaseColor*0.4;
+  color+=vec3(0.1,0.15,0.3)*pow(1.0-NdotV,3.0)*0.5;
+  color=color*(2.51*color+0.03)/(color*(2.43*color+0.59)+0.14);
+  color=pow(color,vec3(1.0/2.2));
+  fragColor=vec4(color,1.0);
+}\`;
+
+var GVS=\`#version 300 es
+precision highp float;
+in vec3 aPos;
+uniform mat4 uMVP;
+void main(){gl_Position=uMVP*vec4(aPos,1.0);}\`;
+var GFS=\`#version 300 es
+precision highp float;
+out vec4 fragColor;
+void main(){fragColor=vec4(1.0,1.0,1.0,0.06);}\`;
+
+function cShader(t,s){var sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh;}
+function cProg(v,f){var p=gl.createProgram();gl.attachShader(p,v);gl.attachShader(p,f);gl.linkProgram(p);return p;}
+
+var prog=cProg(cShader(gl.VERTEX_SHADER,VS),cShader(gl.FRAGMENT_SHADER,FS));
+var L={aPos:gl.getAttribLocation(prog,'aPos'),aNormal:gl.getAttribLocation(prog,'aNormal'),
+  uMVP:gl.getUniformLocation(prog,'uMVP'),uModel:gl.getUniformLocation(prog,'uModel'),
+  uNormalMatrix:gl.getUniformLocation(prog,'uNormalMatrix'),uCamPos:gl.getUniformLocation(prog,'uCamPos'),
+  uLightDir:gl.getUniformLocation(prog,'uLightDir'),uLightColor:gl.getUniformLocation(prog,'uLightColor'),
+  uBaseColor:gl.getUniformLocation(prog,'uBaseColor'),uMetallic:gl.getUniformLocation(prog,'uMetallic'),
+  uRoughness:gl.getUniformLocation(prog,'uRoughness')};
+
+var gProg=cProg(cShader(gl.VERTEX_SHADER,GVS),cShader(gl.FRAGMENT_SHADER,GFS));
+var gL={aPos:gl.getAttribLocation(gProg,'aPos'),uMVP:gl.getUniformLocation(gProg,'uMVP')};
+
+function genSphere(r,ws,hs){var p=[],n=[],ix=[];
+for(var y=0;y<=hs;y++)for(var x=0;x<=ws;x++){var u=x/ws,v=y/hs,th=u*Math.PI*2,ph=v*Math.PI;
+var sp=Math.sin(ph),cp=Math.cos(ph),st=Math.sin(th),ct=Math.cos(th);
+var nx=sp*ct,ny=cp,nz=sp*st;p.push(r*nx,r*ny,r*nz);n.push(nx,ny,nz);}
+for(var y=0;y<hs;y++)for(var x=0;x<ws;x++){var a=y*(ws+1)+x,b=a+ws+1;ix.push(a,b,a+1,b,b+1,a+1);}
+return{positions:new Float32Array(p),normals:new Float32Array(n),indices:new Uint16Array(ix)};}
+
+function genCube(sz){var s=sz/2;var faces=[
+{n:[0,0,1],v:[[-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]]},{n:[0,0,-1],v:[[s,-s,-s],[-s,-s,-s],[-s,s,-s],[s,s,-s]]},
+{n:[0,1,0],v:[[-s,s,s],[s,s,s],[s,s,-s],[-s,s,-s]]},{n:[0,-1,0],v:[[-s,-s,-s],[s,-s,-s],[s,-s,s],[-s,-s,s]]},
+{n:[1,0,0],v:[[s,-s,s],[s,-s,-s],[s,s,-s],[s,s,s]]},{n:[-1,0,0],v:[[-s,-s,-s],[-s,-s,s],[-s,s,s],[-s,s,-s]]}];
+var p=[],n=[],ix=[];faces.forEach(function(f,i){f.v.forEach(function(vt){p.push(vt[0],vt[1],vt[2]);n.push(f.n[0],f.n[1],f.n[2]);});
+var o=i*4;ix.push(o,o+1,o+2,o,o+2,o+3);});
+return{positions:new Float32Array(p),normals:new Float32Array(n),indices:new Uint16Array(ix)};}
+
+function genCyl(rT,rB,h,seg){var p=[],n=[],ix=[],hH=h/2;
+for(var i=0;i<=seg;i++){var u=i/seg,a=u*Math.PI*2,c=Math.cos(a),s=Math.sin(a),sl=(rB-rT)/h,nl=Math.sqrt(1+sl*sl);
+p.push(rT*c,hH,rT*s);n.push(c/nl,sl/nl,s/nl);p.push(rB*c,-hH,rB*s);n.push(c/nl,sl/nl,s/nl);}
+for(var i=0;i<seg;i++){var a=i*2;ix.push(a,a+1,a+2,a+1,a+3,a+2);}
+function addCap(y,r,ny){var ct=p.length/3;p.push(0,y,0);n.push(0,ny,0);
+for(var i=0;i<=seg;i++){var a=(i/seg)*Math.PI*2;p.push(r*Math.cos(a),y,r*Math.sin(a));n.push(0,ny,0);}
+for(var i=0;i<seg;i++){if(ny>0)ix.push(ct,ct+i+1,ct+i+2);else ix.push(ct,ct+i+2,ct+i+1);}}
+addCap(hH,rT,1);addCap(-hH,rB,-1);
+return{positions:new Float32Array(p),normals:new Float32Array(n),indices:new Uint16Array(ix)};}
+
+function genPlane(w,d){var hw=w/2,hd=d/2;
+return{positions:new Float32Array([-hw,0,-hd,hw,0,-hd,hw,0,hd,-hw,0,hd]),
+normals:new Float32Array([0,1,0,0,1,0,0,1,0,0,1,0]),indices:new Uint16Array([0,1,2,0,2,3])};}
+
+function genGrid(sz,div){var p=[],n=[],ix=[],st=sz/div,h=sz/2,vi=0;
+for(var i=0;i<=div;i++){var t=i*st-h;p.push(-h,0,t,h,0,t);n.push(0,1,0,0,1,0);ix.push(vi,vi+1);vi+=2;
+p.push(t,0,-h,t,0,h);n.push(0,1,0,0,1,0);ix.push(vi,vi+1);vi+=2;}
+return{positions:new Float32Array(p),normals:new Float32Array(n),indices:new Uint16Array(ix)};}
+
+function mkMesh(g){var vao=gl.createVertexArray();gl.bindVertexArray(vao);
+var pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,g.positions,gl.STATIC_DRAW);
+gl.enableVertexAttribArray(L.aPos);gl.vertexAttribPointer(L.aPos,3,gl.FLOAT,false,0,0);
+var nb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.bufferData(gl.ARRAY_BUFFER,g.normals,gl.STATIC_DRAW);
+gl.enableVertexAttribArray(L.aNormal);gl.vertexAttribPointer(L.aNormal,3,gl.FLOAT,false,0,0);
+var ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,g.indices,gl.STATIC_DRAW);
+gl.bindVertexArray(null);return{vao:vao,count:g.indices.length};}
+
+function mkGridMesh(g){var vao=gl.createVertexArray();gl.bindVertexArray(vao);
+var pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,g.positions,gl.STATIC_DRAW);
+gl.enableVertexAttribArray(gL.aPos);gl.vertexAttribPointer(gL.aPos,3,gl.FLOAT,false,0,0);
+var ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,g.indices,gl.STATIC_DRAW);
+gl.bindVertexArray(null);return{vao:vao,count:g.indices.length};}
+
+var protos={cube:mkMesh(genCube(1)),sphere:mkMesh(genSphere(0.5,32,24)),
+cylinder:mkMesh(genCyl(0.5,0.5,1,32)),plane:mkMesh(genPlane(1,1)),line:mkMesh(genCyl(0.02,0.02,1,8))};
+var grid=mkGridMesh(genGrid(10,20));
+
+var shapes=${shapesJson};
+
+function m4Persp(fov,asp,n,f){var t=1/Math.tan(fov/2),nf=1/(n-f);return new Float32Array([t/asp,0,0,0,0,t,0,0,0,0,(f+n)*nf,-1,0,0,2*f*n*nf,0]);}
+function vNorm(v){var l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);return l>0?[v[0]/l,v[1]/l,v[2]/l]:[0,0,0];}
+function vSub(a,b){return[a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function vCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function vDot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function m4LookAt(e,c,u){var z=vNorm(vSub(e,c)),x=vNorm(vCross(u,z)),y=vCross(z,x);
+return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-vDot(x,e),-vDot(y,e),-vDot(z,e),1]);}
+function m4Mul(a,b){var r=new Float32Array(16);for(var i=0;i<4;i++)for(var j=0;j<4;j++){var s=0;for(var k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];r[i*4+j]=s;}return r;}
+function m4Trans(x,y,z){return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,x,y,z,1]);}
+function m4Scale(x,y,z){return new Float32Array([x,0,0,0,0,y,0,0,0,0,z,0,0,0,0,1]);}
+function m3Normal(m){return new Float32Array([m[0],m[1],m[2],m[4],m[5],m[6],m[8],m[9],m[10]]);}
+
+var oTheta=0.4,oPhi=0.7,oDist=${camDist.toFixed(1)};
+var autoR=${autoRotate},isDrag=false,lx=0,ly=0;
+canvas.addEventListener('pointerdown',function(e){isDrag=true;lx=e.clientX;ly=e.clientY;autoR=false;canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',function(e){if(!isDrag)return;oTheta-=(e.clientX-lx)*0.008;oPhi=Math.max(0.1,Math.min(Math.PI-0.1,oPhi-(e.clientY-ly)*0.008));lx=e.clientX;ly=e.clientY;});
+canvas.addEventListener('pointerup',function(){isDrag=false;});
+canvas.addEventListener('wheel',function(e){oDist=Math.max(2,Math.min(30,oDist+e.deltaY*0.005));e.preventDefault();},{passive:false});
+var lpd=0;
+canvas.addEventListener('touchstart',function(e){if(e.touches.length===2){var dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;lpd=Math.sqrt(dx*dx+dy*dy);}},{passive:true});
+canvas.addEventListener('touchmove',function(e){if(e.touches.length===2){var dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;var d=Math.sqrt(dx*dx+dy*dy);oDist=Math.max(2,Math.min(30,oDist-(d-lpd)*0.02));lpd=d;}},{passive:true});
+
+function resize(){var dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=canvas.clientWidth*dpr;canvas.height=canvas.clientHeight*dpr;gl.viewport(0,0,canvas.width,canvas.height);}
+resize();window.addEventListener('resize',resize);
+
+function render(){
+  requestAnimationFrame(render);
+  if(autoR)oTheta+=0.004;
+  var cx=oDist*Math.sin(oPhi)*Math.cos(oTheta),cy=oDist*Math.cos(oPhi),cz=oDist*Math.sin(oPhi)*Math.sin(oTheta);
+  var camPos=[cx,cy,cz];
+  var proj=m4Persp(Math.PI/4,canvas.width/canvas.height,0.1,100);
+  var view=m4LookAt(camPos,[${cx.toFixed(2)},${cy.toFixed(2)},${cz.toFixed(2)}],[0,1,0]);
+  var vp=m4Mul(proj,view);
+
+  gl.clearColor(${bgR},${bgG},${bgB},1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+
+  gl.useProgram(gProg);
+  gl.uniformMatrix4fv(gL.uMVP,false,vp);
+  gl.bindVertexArray(grid.vao);
+  gl.drawElements(gl.LINES,grid.count,gl.UNSIGNED_SHORT,0);
+
+  gl.useProgram(prog);
+  gl.uniform3fv(L.uCamPos,camPos);
+  gl.uniform3f(L.uLightDir,0.5,0.8,0.3);
+  gl.uniform3f(L.uLightColor,3.0,2.9,2.7);
+
+  for(var i=0;i<shapes.length;i++){
+    var sh=shapes[i],mesh=protos[sh.type];if(!mesh)continue;
+    var p=sh.position,s=sh.scale;
+    var model=m4Mul(m4Trans(p[0],p[1],p[2]),m4Scale(s[0],s[1],s[2]));
+    var mvp=m4Mul(vp,model),nm=m3Normal(model);
+    gl.uniformMatrix4fv(L.uMVP,false,mvp);
+    gl.uniformMatrix4fv(L.uModel,false,model);
+    gl.uniformMatrix3fv(L.uNormalMatrix,false,nm);
+    gl.uniform3fv(L.uBaseColor,sh.color);
+    gl.uniform1f(L.uMetallic,sh.metallic);
+    gl.uniform1f(L.uRoughness,sh.roughness);
+    gl.bindVertexArray(mesh.vao);
+    gl.drawElements(gl.TRIANGLES,mesh.count,gl.UNSIGNED_SHORT,0);
+  }
+}
+requestAnimationFrame(render);
+})();
+<\/script>`;
+    return {
+        html: htmlShell(title, body),
+        title,
+        type: "geometry",
+    };
+}
 // ─── Utilities ───────────────────────────────────────────────────────────────
 function formatNumber(n) {
     if (n >= 1_000_000)
@@ -373,7 +658,7 @@ export function formatArtifactResponse(result) {
     const lines = [
         `## ${result.title}`,
         ``,
-        `Here is your interactive 3D ${result.type === "chart-3d" ? "chart" : "content"} powered by Filament.js (same engine as SceneView Android):`,
+        `Here is your interactive 3D ${result.type === "chart-3d" ? "chart" : result.type === "geometry" ? "scene" : "content"} powered by ${result.type === "geometry" ? "WebGL PBR" : "Filament.js"} (SceneView engine):`,
         ``,
         `\`\`\`html`,
         result.html,
