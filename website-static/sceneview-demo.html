@@ -32,9 +32,11 @@ canvas:active { cursor: grabbing; }
 
 <div class="models">
 <button class="active" onclick="load(this, 'DamagedHelmet')">Damaged Helmet</button>
-<button onclick="load(this, 'FlightHelmet')">Flight Helmet</button>
-<button onclick="load(this, 'Avocado')">Avocado</button>
-<button onclick="load(this, 'Lantern')">Lantern</button>
+<button onclick="load(this, 'SheenChair')">Sheen Chair</button>
+<button onclick="load(this, 'ToyCar')">Toy Car</button>
+<button onclick="load(this, 'GlassVaseFlowers')">Glass Vase</button>
+<button onclick="load(this, 'Fox')">Fox</button>
+<button onclick="load(this, 'Duck')">Duck</button>
 </div>
 
 <div class="code">
@@ -47,11 +49,14 @@ canvas:active { cursor: grabbing; }
 <script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
 <script src="js/sceneview.js"></script>
 <script>
+const BASE = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
 const MODELS = {
-  'DamagedHelmet': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
-  'FlightHelmet': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/FlightHelmet/glTF-Binary/FlightHelmet.glb',
-  'Avocado': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Avocado/glTF-Binary/Avocado.glb',
-  'Lantern': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb'
+  'DamagedHelmet': BASE + '/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+  'SheenChair':    BASE + '/SheenChair/glTF-Binary/SheenChair.glb',
+  'ToyCar':        BASE + '/ToyCar/glTF-Binary/ToyCar.glb',
+  'GlassVaseFlowers': BASE + '/GlassVaseFlowers/glTF-Binary/GlassVaseFlowers.glb',
+  'Fox':           BASE + '/Fox/glTF-Binary/Fox.glb',
+  'Duck':          BASE + '/Duck/glTF-Binary/Duck.glb'
 };
 
 const status = document.getElementById('status');
