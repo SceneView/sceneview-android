@@ -135,12 +135,12 @@ Filament.init([DEFAULT_MODEL], function() {
     let angle = 0, orbitR = 3.5, orbitH = 0.8, dragging = false, lastX = 0, lastY = 0, autoRotate = true;
 
     canvas.addEventListener('mousedown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; autoRotate = false; });
-    canvas.addEventListener('mousemove', e => { if (!dragging) return; angle += (e.clientX - lastX) * 0.005; orbitH -= (e.clientY - lastY) * 0.01; lastX = e.clientX; lastY = e.clientY; });
+    canvas.addEventListener('mousemove', e => { if (!dragging) return; angle -= (e.clientX - lastX) * 0.005; orbitH += (e.clientY - lastY) * 0.01; lastX = e.clientX; lastY = e.clientY; });
     canvas.addEventListener('mouseup', () => dragging = false);
     canvas.addEventListener('mouseleave', () => dragging = false);
     canvas.addEventListener('wheel', e => { e.preventDefault(); orbitR *= (1 + e.deltaY * 0.001); orbitR = Math.max(0.5, Math.min(20, orbitR)); }, { passive: false });
     canvas.addEventListener('touchstart', e => { if (e.touches.length === 1) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; autoRotate = false; } });
-    canvas.addEventListener('touchmove', e => { if (!dragging) return; e.preventDefault(); angle += (e.touches[0].clientX - lastX) * 0.005; orbitH -= (e.touches[0].clientY - lastY) * 0.01; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
+    canvas.addEventListener('touchmove', e => { if (!dragging) return; e.preventDefault(); angle -= (e.touches[0].clientX - lastX) * 0.005; orbitH += (e.touches[0].clientY - lastY) * 0.01; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
     canvas.addEventListener('touchend', () => dragging = false);
 
     // Render loop
