@@ -23,7 +23,41 @@ const OBJECT_MAPPINGS = [
     { keywords: ["car", "vehicle"], nodeType: "ModelNode", defaultScale: 2.0, defaultPosition: [0, 0, 0], comment: "Car (use GLB model)" },
     { keywords: ["house", "building"], nodeType: "ModelNode", defaultScale: 5.0, defaultPosition: [0, 0, -5], comment: "Building (use GLB model)" },
     // People / characters
-    { keywords: ["person", "character", "human", "avatar", "robot"], nodeType: "ModelNode", defaultScale: 1.7, defaultPosition: [0, 0, 0], comment: "Character (use GLB model)" },
+    { keywords: ["person", "character", "human", "avatar"], nodeType: "ModelNode", defaultScale: 1.7, defaultPosition: [0, 0, 0], comment: "Character (use GLB model)" },
+    { keywords: ["robot", "android"], nodeType: "ModelNode", defaultScale: 1.5, defaultPosition: [0, 0, 0], comment: "Robot (use GLB model)" },
+    // Animals
+    { keywords: ["dog", "puppy"], nodeType: "ModelNode", defaultScale: 0.6, defaultPosition: [1, 0, 0], comment: "Dog (use GLB model)" },
+    { keywords: ["cat", "kitten"], nodeType: "ModelNode", defaultScale: 0.4, defaultPosition: [-1, 0, 0], comment: "Cat (use GLB model)" },
+    { keywords: ["bird"], nodeType: "ModelNode", defaultScale: 0.2, defaultPosition: [0, 2, 0], comment: "Bird (use GLB model)" },
+    { keywords: ["horse"], nodeType: "ModelNode", defaultScale: 2.5, defaultPosition: [0, 0, 2], comment: "Horse (use GLB model)" },
+    { keywords: ["fish"], nodeType: "ModelNode", defaultScale: 0.3, defaultPosition: [0, 0.5, 0], comment: "Fish (use GLB model)" },
+    { keywords: ["dinosaur", "dino", "t-rex"], nodeType: "ModelNode", defaultScale: 5.0, defaultPosition: [0, 0, -3], comment: "Dinosaur (use GLB model)" },
+    { keywords: ["dragon"], nodeType: "ModelNode", defaultScale: 4.0, defaultPosition: [0, 2, -3], comment: "Dragon (use GLB model)" },
+    // More vehicles
+    { keywords: ["airplane", "plane", "jet"], nodeType: "ModelNode", defaultScale: 5.0, defaultPosition: [0, 5, 0], comment: "Airplane (use GLB model)" },
+    { keywords: ["boat", "ship"], nodeType: "ModelNode", defaultScale: 4.0, defaultPosition: [0, 0, -3], comment: "Boat (use GLB model)" },
+    { keywords: ["bicycle", "bike"], nodeType: "ModelNode", defaultScale: 1.2, defaultPosition: [2, 0, 0], comment: "Bicycle (use GLB model)" },
+    { keywords: ["motorcycle", "motorbike"], nodeType: "ModelNode", defaultScale: 1.5, defaultPosition: [2, 0, 0], comment: "Motorcycle (use GLB model)" },
+    { keywords: ["truck"], nodeType: "ModelNode", defaultScale: 3.0, defaultPosition: [0, 0, -2], comment: "Truck (use GLB model)" },
+    // More environment
+    { keywords: ["flower", "rose"], nodeType: "ModelNode", defaultScale: 0.3, defaultPosition: [1, 0, 1], comment: "Flower (use GLB model)" },
+    { keywords: ["rock", "stone", "boulder"], nodeType: "SphereNode", geometryType: "sphere", defaultScale: 0.8, defaultPosition: [1, 0.4, 1], comment: "Rock" },
+    { keywords: ["mountain", "hill"], nodeType: "ModelNode", defaultScale: 10.0, defaultPosition: [0, 0, -10], comment: "Mountain (use GLB model)" },
+    { keywords: ["fence"], nodeType: "CubeNode", geometryType: "cube", defaultScale: 2.0, defaultPosition: [3, 0.5, 0], comment: "Fence" },
+    { keywords: ["bridge"], nodeType: "ModelNode", defaultScale: 5.0, defaultPosition: [0, 0, 0], comment: "Bridge (use GLB model)" },
+    // More furniture / objects
+    { keywords: ["lamp", "light fixture"], nodeType: "ModelNode", defaultScale: 0.5, defaultPosition: [1, 0.8, 0], comment: "Lamp (use GLB model)" },
+    { keywords: ["tv", "television", "screen", "monitor"], nodeType: "CubeNode", geometryType: "cube", defaultScale: 1.2, defaultPosition: [0, 0.8, -2], comment: "TV/Screen (flat cube)" },
+    { keywords: ["door", "gate"], nodeType: "CubeNode", geometryType: "cube", defaultScale: 2.0, defaultPosition: [0, 1, -3], comment: "Door" },
+    { keywords: ["window"], nodeType: "CubeNode", geometryType: "cube", defaultScale: 1.0, defaultPosition: [2, 1.5, -3], comment: "Window" },
+    { keywords: ["stairs", "staircase"], nodeType: "ModelNode", defaultScale: 2.0, defaultPosition: [3, 0, 0], comment: "Stairs (use GLB model)" },
+    { keywords: ["book", "books"], nodeType: "CubeNode", geometryType: "cube", defaultScale: 0.2, defaultPosition: [0, 0.5, 0], comment: "Book" },
+    { keywords: ["bottle", "vase"], nodeType: "CylinderNode", geometryType: "cylinder", defaultScale: 0.2, defaultPosition: [0, 0.3, 0], comment: "Bottle/Vase" },
+    { keywords: ["trophy", "cup"], nodeType: "ModelNode", defaultScale: 0.3, defaultPosition: [0, 0.5, 0], comment: "Trophy (use GLB model)" },
+    // Food
+    { keywords: ["pizza"], nodeType: "CylinderNode", geometryType: "cylinder", defaultScale: 0.3, defaultPosition: [0, 0.5, 0], comment: "Pizza (flat cylinder)" },
+    { keywords: ["cake"], nodeType: "CylinderNode", geometryType: "cylinder", defaultScale: 0.3, defaultPosition: [0, 0.5, 0], comment: "Cake (cylinder)" },
+    { keywords: ["apple", "fruit"], nodeType: "SphereNode", geometryType: "sphere", defaultScale: 0.08, defaultPosition: [0, 0.5, 0], comment: "Apple/Fruit" },
 ];
 const LIGHT_KEYWORDS = ["sun", "sunlight", "daylight", "bright", "lit", "sunny", "well-lit"];
 const INDOOR_KEYWORDS = ["room", "indoor", "inside", "interior"];
