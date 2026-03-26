@@ -45,7 +45,7 @@ try {
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
 
 const server = new Server(
-  { name: "@sceneview/mcp", version: "3.4.10" },
+  { name: "@sceneview/mcp", version: "3.4.11" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
@@ -294,9 +294,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           type: {
             type: "string",
-            enum: ["model-viewer", "chart-3d", "scene", "product-360"],
+            enum: ["model-viewer", "chart-3d", "scene", "product-360", "geometry"],
             description:
-              '"model-viewer": interactive 3D model viewer with orbit + AR. "chart-3d": 3D bar chart for data visualization (revenue, analytics). "scene": rich 3D scene with lighting and environment. "product-360": product turntable with hotspot annotations + AR.',
+              '"model-viewer": interactive 3D model viewer with orbit + AR. "chart-3d": 3D bar chart for data visualization. "scene": rich 3D scene with lighting. "product-360": product turntable with hotspot annotations. "geometry": procedural 3D shapes (cubes, spheres, cylinders, planes, lines) — Claude can DRAW in 3D! Use this when the user asks to draw, build, or visualize 3D shapes.',
           },
           modelUrl: {
             type: "string",
@@ -344,6 +344,45 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
               required: ["position", "normal", "label"],
             },
             description: "Annotation hotspots for product-360 type. Each has position, normal, label, and optional description.",
+          },
+          shapes: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                type: {
+                  type: "string",
+                  enum: ["cube", "sphere", "cylinder", "plane", "line"],
+                  description: 'Shape type: "cube", "sphere", "cylinder", "plane" (flat surface), or "line" (thin cylinder connecting points).',
+                },
+                position: {
+                  type: "array",
+                  items: { type: "number" },
+                  description: "Position [x, y, z] in world space. Y is up. Default: [0, 0, 0].",
+                },
+                scale: {
+                  type: "array",
+                  items: { type: "number" },
+                  description: "Scale [x, y, z]. For cube: edge sizes. For sphere: diameters. For line: [length, thickness, thickness]. Default: [1, 1, 1].",
+                },
+                color: {
+                  type: "array",
+                  items: { type: "number" },
+                  description: "Color [r, g, b] in 0-1 range. E.g. [1, 0, 0] for red, [0.2, 0.5, 1] for sky blue. Default: [0.8, 0.8, 0.8].",
+                },
+                metallic: {
+                  type: "number",
+                  description: "Metallic factor 0-1. 0 = plastic/matte, 1 = metal. Default: 0.",
+                },
+                roughness: {
+                  type: "number",
+                  description: "Roughness factor 0-1. 0 = mirror/glossy, 1 = rough/matte. Default: 0.5.",
+                },
+              },
+              required: ["type"],
+            },
+            description:
+              'Array of procedural 3D shapes for "geometry" type. Each shape has type, position, scale, color, metallic, roughness. Required for "geometry" type. Example: [{type:"cube",position:[0,0.5,0],scale:[1,1,1],color:[1,0,0]},{type:"sphere",position:[0,1.8,0],scale:[0.6,0.6,0.6],color:[0,0,1]}]',
           },
         },
         required: ["type"],
@@ -896,6 +935,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         data: request.params.arguments?.data as any[] | undefined,
         options: request.params.arguments?.options as any | undefined,
         hotspots: request.params.arguments?.hotspots as any[] | undefined,
+        shapes: request.params.arguments?.shapes as any[] | undefined,
       };
 
       const validationError = validateArtifactInput(artifactInput);
