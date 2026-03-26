@@ -91,7 +91,7 @@
   <!-- ===== NAVIGATION ===== -->
   <nav class="nav" id="nav">
     <div class="nav__container">
-      <a href="#" class="nav__logo">
+      <a href="/" class="nav__logo">
         <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
           <rect width="32" height="32" rx="8" fill="currentColor"/>
           <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
@@ -491,14 +491,14 @@
         var dragging = false, lastX = 0, lastY = 0, autoRotate = true;
 
         canvas.addEventListener('mousedown', function(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; autoRotate = false; canvas.style.cursor = 'grabbing'; });
-        canvas.addEventListener('mousemove', function(e) { if (!dragging) return; angle += (e.clientX - lastX) * 0.005; orbitH += (e.clientY - lastY) * 0.01; orbitH = Math.max(-2, Math.min(2, orbitH)); lastX = e.clientX; lastY = e.clientY; });
+        canvas.addEventListener('mousemove', function(e) { if (!dragging) return; angle -= (e.clientX - lastX) * 0.005; orbitH += (e.clientY - lastY) * 0.01; orbitH = Math.max(-2, Math.min(2, orbitH)); lastX = e.clientX; lastY = e.clientY; });
         canvas.addEventListener('mouseup', function() { dragging = false; canvas.style.cursor = 'grab'; });
         canvas.addEventListener('mouseleave', function() { dragging = false; canvas.style.cursor = 'grab'; });
         canvas.addEventListener('wheel', function(e) { e.preventDefault(); orbitR *= (1 + e.deltaY * 0.001); orbitR = Math.max(1.5, Math.min(10, orbitR)); }, { passive: false });
 
         // Touch controls
         canvas.addEventListener('touchstart', function(e) { if (e.touches.length === 1) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; autoRotate = false; } });
-        canvas.addEventListener('touchmove', function(e) { if (!dragging || e.touches.length !== 1) return; e.preventDefault(); angle += (e.touches[0].clientX - lastX) * 0.005; orbitH += (e.touches[0].clientY - lastY) * 0.01; orbitH = Math.max(-2, Math.min(2, orbitH)); lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
+        canvas.addEventListener('touchmove', function(e) { if (!dragging || e.touches.length !== 1) return; e.preventDefault(); angle -= (e.touches[0].clientX - lastX) * 0.005; orbitH += (e.touches[0].clientY - lastY) * 0.01; orbitH = Math.max(-2, Math.min(2, orbitH)); lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
         canvas.addEventListener('touchend', function() { dragging = false; });
 
         // Handle resize
