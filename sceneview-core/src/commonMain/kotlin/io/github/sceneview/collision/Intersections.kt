@@ -68,14 +68,6 @@ internal object Intersections {
             return false
         }
 
-        if (MathHelper.almostEqualRelativeAndAbs(sphereDiffLengthSquared, 0.0f)) {
-            val boxDiff = Vector3.subtract(point, box.getCenter())
-            val boxDiffLengthSquared = Vector3.dot(boxDiff, boxDiff)
-            if (MathHelper.almostEqualRelativeAndAbs(boxDiffLengthSquared, 0.0f)) {
-                return false
-            }
-        }
-
         return true
     }
 

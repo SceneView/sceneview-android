@@ -325,7 +325,8 @@ class Quaternion {
             val qX = Quaternion(Vector3.right(), eulerAngles.x)
             val qY = Quaternion(Vector3.up(), eulerAngles.y)
             val qZ = Quaternion(Vector3.back(), eulerAngles.z)
-            return multiply(multiply(qY, qX), qZ)
+            // Compose as intrinsic ZYX (extrinsic XYZ) to match getEulerAngles() decomposition
+            return multiply(multiply(qZ, qY), qX)
         }
 
         fun rotationBetweenVectors(start: Vector3, end: Vector3): Quaternion {
