@@ -76,32 +76,33 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-26, final)
+### Current state (last updated: 2026-03-26, end of marathon)
 
 - **Active branch**: `main`
-- **Latest release**: v3.4.5 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
-- **MCP servers**: 9 MCPs all v2.0.0 on npm (Education + Finance new, Social Media retired)
-- **sceneview.js**: v1.1.0 on npm — one-liner 3D for the web
+- **Latest release**: v3.4.7 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
+- **MCP servers**: 9 MCPs all v2.0.0 on npm, 18 MCP tools, 834 tests (Education + Finance new, Social Media retired)
+- **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web
 - **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
 - **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
 
 - **What was done (2026-03-26 session — FINAL)**:
 
-  Filament.js WASM proven, sceneview.js v1.1.0 npm, 9 MCPs v2.0.0, orgs, open source PRs:
+  Filament.js WASM proven, sceneview.js v1.2.0 npm, 9 MCPs v2.0.0, 18 tools, 834 tests, 0 open issues:
   - **Filament.js Web PROVEN AND LIVE**: DamagedHelmet PBR renders in browser via Filament.js WASM
-  - **sceneview.js v1.1.0 published on npm** — one-liner 3D for the web, double-init bug fixed
-  - **Procedural geometry in MCP artifacts** — 676 tests across all MCP servers
+  - **sceneview.js v1.2.0 published on npm** — one-liner 3D for the web, double-init bug fixed
+  - **Procedural geometry in MCP artifacts** — 834 tests across all MCP servers
   - **9 MCPs all v2.0.0**: Education MCP + Finance MCP new; Social Media MCP retired (non-concurrence)
   - **PR #472 on Anthropic Claude Cookbooks** — SceneView MCP featured
   - **2 PRs on awesome-mcp-servers** — SceneView MCPs listed
   - **Orgs reorganized**: sceneview-tools (commercial) + mcp-tools-lab (MCP ecosystem)
-  - **v3.4.5 released** on GitHub
+  - **v3.4.7 released** on GitHub
   - **Polar.sh**: account approved, Stripe connected (production ready)
   - **Pro link on website** now points to Polar.sh
   - **GitHub Sponsors**: 5 tiers configured ($5/$15/$50/$99/$200)
   - **npm profile cleaned**, credentials saved
   - **Quality check scheduled** every 3 hours (automated monitoring)
   - **Communication wave 1**: drafts ready (LinkedIn, etc.)
+  - **0 open issues** on main repo
 
 - **What was done (2026-03-25 marathon — 100+ commits, 5 releases)**:
 
@@ -187,7 +188,7 @@ Never say "everything is good" without verifying published packages.
 - **MCP ecosystem**: 9 MCPs all v2.0.0 (Education + Finance new, Social Media retired for non-concurrence)
 - **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
 - **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
-- **sceneview.js**: v1.1.0 on npm — one-liner 3D for the web (Filament.js WASM, double-init fixed)
+- **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web (Filament.js WASM, double-init fixed)
 - **Open source PRs**: PR #472 Claude Cookbooks, 2 PRs awesome-mcp-servers
 - **Pending**: Maven Central v3.4.0 publish, App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
 

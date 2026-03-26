@@ -6,12 +6,20 @@
 
 **Date:** 2026-03-26 (final update, end of marathon)
 **Branch:** `main`
-**Releases:** v3.4.0 through v3.4.5 (GitHub), MCP v3.4.7 (npm + official registry), sceneview.js v1.1.0 (npm)
-**Total commits on main:** ~1250+
+**Releases:** v3.4.0 through v3.4.7 (GitHub), MCP v3.4.7 (npm + official registry), sceneview.js v1.2.0 (npm)
+**Total commits on main:** ~1300+
 
 ---
 
 ### Everything delivered — 2026-03-26 session (FINAL)
+
+#### Final Numbers
+- **18 MCP tools** across SceneView MCP server
+- **834 tests** across all MCP servers
+- **9 MCPs total** (Education + Finance new, Social Media retired)
+- **sceneview-web v1.2.0** (npm)
+- **v3.4.7 release** (GitHub)
+- **0 open issues** on main repo
 
 #### Filament.js Web — PROVEN AND LIVE
 - **SceneView Web Filament.js renders PBR models in the browser** — DamagedHelmet.glb loaded and rendered correctly
@@ -22,7 +30,7 @@
 
 #### Procedural Geometry in MCP Artifacts
 - Procedural geometry generation working in MCP artifact responses
-- **676 tests** across all MCP servers
+- **834 tests** across all MCP servers
 
 #### 9 MCP Servers — All v2.0.0
 - SceneView MCP, Real Estate, E-commerce, Architecture, French Admin, Legal Docs — upgraded to v2.0.0
@@ -39,7 +47,7 @@
 - **PR #472 on Anthropic Claude Cookbooks** — SceneView MCP featured
 - **2 PRs on awesome-mcp-servers** — SceneView MCPs listed
 
-#### v3.4.5 Released
+#### v3.4.7 Released
 - New GitHub Release published
 
 #### Revenue & Monetization
@@ -128,8 +136,8 @@
 | arsceneview (Android) | 3.3.0 | Maven Central | v3.4.x NOT yet on Maven Central |
 | SceneViewSwift (iOS) | 3.3.0 | Swift Package (GitHub) | SPM direct from repo |
 | @sceneview/mcp | 3.4.7 | npm + MCP Registry | Live and current |
-| sceneview.js | 1.1.0 | npm | One-liner 3D for the web |
-| GitHub Releases | v3.4.5 | GitHub | Latest tag |
+| sceneview.js | 1.2.0 | npm | One-liner 3D for the web |
+| GitHub Releases | v3.4.7 | GitHub | Latest tag |
 | Education MCP | 2.0.0 | npm | NEW |
 | Finance MCP | 2.0.0 | npm | NEW |
 | All other MCPs | 2.0.0 | npm | 9 total (Social Media retired) |
