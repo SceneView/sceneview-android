@@ -188,6 +188,27 @@ ARSceneView(planeDetection: .horizontal) { position, arView in
 
 ---
 
+## SceneView Web (JavaScript)
+
+The lightest way to add 3D to any website. One script tag, one function call.
+~25 KB library powered by Filament.js WASM — the same engine behind Android SceneView.
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.1.0/sceneview.js"></script>
+<script> SceneView.modelViewer("canvas", "model.glb") </script>
+```
+
+**API:**
+- `SceneView.modelViewer(canvasOrId, url, options?)` — all-in-one viewer with orbit + auto-rotate
+- `SceneView.create(canvasOrId, options?)` — empty viewer, load model later
+- `viewer.loadModel(url)` — load/replace glTF/GLB model
+- `viewer.setAutoRotate(enabled)` — toggle rotation
+- `viewer.dispose()` — clean up resources
+
+**Install:** `npm install sceneview-web` or CDN — [Landing page](https://sceneview.github.io/web.html) — [npm](https://www.npmjs.com/package/sceneview-web)
+
+---
+
 ## Architecture
 
 Each platform uses its **native renderer**. Shared logic lives in KMP.
