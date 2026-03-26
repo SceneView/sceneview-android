@@ -30,8 +30,8 @@ samples/
 │   ├── procedural-geometry/
 │   └── ...
 │
-├── desktop/                     # Kotlin + Compose Desktop + Filament
-│   ├── model-viewer/
+├── desktop/                     # Kotlin + Compose Desktop (software wireframe placeholder)
+│   ├── model-viewer/            # (future — requires Filament JNI)
 │   └── ...
 │
 ├── web/                         # Kotlin/JS or Kotlin/Wasm + Filament WASM
@@ -48,11 +48,11 @@ samples/
 |---|---|---|---|---|
 | Scene container | `Scene { }` composable | `SceneView { }` SwiftUI | `Scene { }` Compose Desktop | `<SceneView>` Kotlin/JS |
 | AR container | `ARScene { }` | `ARSceneView { }` | N/A | WebXR |
-| Renderer | Google Filament | RealityKit | Filament Desktop | Filament WASM |
+| Renderer | Google Filament | RealityKit | Software wireframe (Filament JNI planned) | Filament WASM |
 | AR framework | ARCore | ARKit | N/A | WebXR |
 | Model format | glTF/GLB | USDZ + glTF (GLTFKit2) | glTF/GLB | glTF/GLB |
-| Camera | Filament Camera | RealityKit PerspectiveCamera | Filament Camera | Filament Camera |
-| Materials | Filament PBR | RealityKit PBR | Filament PBR | Filament PBR |
+| Camera | Filament Camera | RealityKit PerspectiveCamera | Manual projection (placeholder) | Filament Camera |
+| Materials | Filament PBR | RealityKit PBR | Wireframe only (placeholder) | Filament PBR |
 
 ## Recipe → Platform code pattern
 
@@ -84,14 +84,15 @@ SceneView { content in
 .cameraControls(.orbit)
 ```
 
-**Desktop (future):**
+**Desktop (future — requires Filament JNI, not yet available):**
 ```kotlin
+// This API does NOT work yet — Filament JNI desktop binaries must be built from source.
+// The current desktop-demo is a wireframe placeholder, not a real SceneView integration.
 Scene(cameraManipulator = rememberCameraManipulator()) {
     rememberModelInstance(modelLoader, "model.glb")?.let {
         ModelNode(modelInstance = it, scaleToUnits = 1f)
     }
 }
-// Same API as Android — Compose Desktop uses same Filament backend
 ```
 
 ## Available recipes

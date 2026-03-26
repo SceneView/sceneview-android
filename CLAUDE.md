@@ -49,7 +49,7 @@ One unified showcase app per platform — all features integrated into tabs.
 | `samples/android-tv-demo` | Android TV | D-pad controls, model cycling, auto-rotation |
 | `samples/web-demo` | Web | Browser 3D viewer, Filament.js (WASM), WebXR AR/VR |
 | `samples/ios-demo` | iOS | App Store app — 3-tab SwiftUI (3D, AR, Samples) |
-| `samples/desktop-demo` | Desktop | Software 3D renderer, Compose Desktop (Windows/macOS/Linux) |
+| `samples/desktop-demo` | Desktop | Wireframe placeholder (NOT SceneView) — Compose Canvas, no Filament |
 | `samples/flutter-demo` | Flutter | PlatformView bridge demo (Android + iOS) |
 | `samples/react-native-demo` | React Native | Fabric bridge demo (Android + iOS) |
 | `samples/common` | Shared | Helpers and utilities for all Android samples |
@@ -269,7 +269,7 @@ Rationale:
 | macOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
 | visionOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
 | Web | Filament.js (WASM) | Kotlin/JS | Alpha (sceneview-web + WebXR) |
-| Desktop | Software / Filament JNI | Compose Desktop | Alpha (software renderer) |
+| Desktop | Wireframe placeholder (not SceneView) | Compose Desktop | Placeholder (Filament JNI not available) |
 | Flutter | Filament / RealityKit | PlatformView | Alpha (bridge implemented) |
 | React Native | Filament / RealityKit | Fabric | Alpha (bridge implemented) |
 

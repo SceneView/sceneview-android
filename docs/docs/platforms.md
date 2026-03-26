@@ -18,7 +18,7 @@ SceneView uses **native renderers per platform** for the best performance and to
 | **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.3.0) |
 | **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.3.0) |
 | **Web** | Filament.js (WASM) | Kotlin/JS | `sceneview-web` | Alpha |
-| **Desktop** | Software renderer | Compose Desktop | `samples/desktop-demo` | Alpha |
+| **Desktop** | Software wireframe (placeholder) | Compose Desktop | `samples/desktop-demo` | Placeholder (not SceneView) |
 | **Android TV** | Filament | Compose TV | `sceneview` | Alpha |
 | **Flutter** | Filament / RealityKit | PlatformView | `flutter/sceneview_flutter` | Alpha |
 | **React Native** | Filament / RealityKit | Fabric | `react-native/react-native-sceneview` | Alpha |
@@ -45,7 +45,7 @@ SceneViewSwift provides a native SwiftUI library powered by RealityKit and ARKit
 - **3D**: `SceneView { }` with ModelNode, GeometryNode, LightNode, and more
 - **AR**: `ARSceneView()` with plane detection and tap-to-place (iOS only)
 - **Min versions**: iOS 17+, macOS 14+, visionOS 1+
-- **Install**: `.package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")`
+- **Install**: `.package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.3.0")`
 
 [:octicons-arrow-right-24: Apple Quickstart](quickstart-ios.md)
 
@@ -64,15 +64,20 @@ SceneView Web uses **Filament.js** -- the same Filament rendering engine as Andr
 
 ---
 
-## Desktop
+## Desktop (Placeholder)
 
-Compose Desktop with a software 3D renderer for Windows, macOS, and Linux. Demonstrates wireframe rendering with perspective projection.
+> **Not SceneView.** The desktop demo is a Compose Canvas wireframe renderer -- it does
+> not use SceneView or Filament. It exists as a UI placeholder for a future Filament JNI
+> desktop integration.
 
-- **Renderer**: Software (Canvas-based)
+- **Renderer**: Software wireframe (Compose Canvas 2D drawing, not GPU-accelerated)
 - **Framework**: Compose Desktop
 - **Sample**: `samples/desktop-demo/`
+- **Missing**: GPU acceleration, PBR materials, glTF loading, shadows, scene graph
 
-A future version may use Filament JNI for full PBR rendering on desktop.
+A future version would use Filament JNI for full PBR rendering. This requires building
+Filament from source with JNI enabled (estimated 18-29 days). See
+[Filament Desktop Research](desktop-filament.md) for details.
 
 ---
 

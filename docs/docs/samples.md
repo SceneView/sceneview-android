@@ -8,7 +8,7 @@ description: "Platform demo apps and code recipes for SceneView: Android, iOS, W
 One unified showcase app per platform. Clone the repo and run:
 
 ```bash
-git clone https://github.com/SceneView/sceneview.git
+git clone https://github.com/sceneview/sceneview.git
 ```
 
 ---
@@ -58,12 +58,13 @@ Browser 3D viewer with:
 
 ### Desktop Demo
 
-**`samples/desktop-demo/`** — Compose Desktop
+**`samples/desktop-demo/`** — Compose Desktop (Software Wireframe Placeholder)
 
-Software 3D renderer for Windows, macOS, Linux:
+> **Note:** This demo does **not** use SceneView or Filament. It is a Compose Canvas
+> wireframe renderer that serves as a UI placeholder for a future Filament JNI integration.
 
-- Rotating wireframe cube, octahedron, diamond
-- Perspective projection, grid floor, axis gizmo
+- Rotating wireframe cube, octahedron, diamond (Canvas 2D drawing, not GPU-accelerated)
+- Manual perspective projection with basic trigonometry
 - Material 3 dark theme
 
 ```bash
