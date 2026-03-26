@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SceneView Web — One Line 3D for the Web</title>
+  <meta name="description" content="SceneView Web: the lightest way to add 3D to any website. One script tag, one function call, powered by Filament.js WASM. 25KB vs Three.js 600KB.">
+  <meta name="keywords" content="SceneView Web, 3D web, JavaScript 3D, Filament.js, WASM 3D, glTF viewer, GLB viewer, lightweight 3D, model viewer, web 3D library">
+  <meta name="author" content="SceneView">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#1565C0">
+
+  <link rel="canonical" href="https://sceneview.github.io/web.html">
+
+  <meta property="og:title" content="SceneView Web — One Line 3D for the Web">
+  <meta property="og:description" content="The lightest way to add 3D to any website. One script tag, one function call. 25KB library powered by Filament.js WASM.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sceneview.github.io/web.html">
+  <meta property="og:site_name" content="SceneView">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SceneView Web — One Line 3D for the Web">
+  <meta name="twitter:description" content="The lightest way to add 3D to any website. One script tag, one function call. 25KB library powered by Filament.js WASM.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    /* Page-specific styles */
+    .demo-canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      max-width: 720px;
+      margin: 0 auto;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: #0d1117;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .demo-canvas-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    .demo-canvas-wrap canvas:active { cursor: grabbing; }
+
+    .demo-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0d1117;
+      z-index: 10;
+      transition: opacity 0.5s;
+    }
+    .demo-loading.hidden { opacity: 0; pointer-events: none; }
+    .demo-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(26,115,232,0.2);
+      border-top-color: #1a73e8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .demo-badge {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      background: rgba(26,115,232,0.15);
+      border: 1px solid rgba(26,115,232,0.3);
+      color: rgba(255,255,255,0.8);
+      font-size: 0.75rem;
+      font-weight: 500;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .demo-hint {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--color-on-surface-faint);
+      margin-top: var(--space-md);
+    }
+
+    /* Two-line code hero */
+    .hero-code {
+      background: var(--color-code-bg);
+      border-radius: var(--radius-sm);
+      padding: var(--space-lg) var(--space-xl);
+      font-family: var(--font-mono);
+      font-size: clamp(0.78rem, 1.5vw, 0.9rem);
+      line-height: 1.8;
+      color: var(--color-code-text);
+      box-shadow: var(--shadow-md);
+      max-width: 620px;
+      margin: var(--space-xl) auto 0;
+      overflow-x: auto;
+    }
+
+    /* Comparison table */
+    .compare-table {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .compare-table th,
+    .compare-table td {
+      padding: 14px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--color-outline);
+    }
+    .compare-table thead th {
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-on-surface-faint);
+    }
+    .compare-table tbody td:first-child {
+      font-weight: 600;
+    }
+    .compare-table .highlight {
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+    .compare-table .dim {
+      color: var(--color-on-surface-faint);
+    }
+
+    /* Install tabs */
+    .install-methods {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--space-lg);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .install-card {
+      background: var(--color-surface-container);
+      border: 1px solid var(--color-outline);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+    }
+    .install-card__label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-primary);
+      margin-bottom: var(--space-sm);
+    }
+    .install-card__code {
+      background: var(--color-code-bg);
+      color: var(--color-code-text);
+      padding: var(--space-md);
+      border-radius: var(--radius-xs);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* API reference */
+    .api-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: var(--space-lg);
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .api-card {
+      background: var(--color-surface-container);
+      border: 1px solid var(--color-outline);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      transition: all var(--duration-medium) var(--ease-expressive);
+    }
+    .api-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary-subtle);
+      transform: translateY(-2px);
+    }
+    .api-card__name {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: var(--space-xs);
+    }
+    .api-card__sig {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--color-on-surface-faint);
+      margin-bottom: var(--space-sm);
+    }
+    .api-card__desc {
+      font-size: 0.88rem;
+      color: var(--color-on-surface-dim);
+      line-height: 1.6;
+    }
+
+    /* Powered-by footer badge */
+    .powered-by {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      padding: var(--space-lg) 0;
+      font-size: 0.9rem;
+      color: var(--color-on-surface-dim);
+      font-weight: 500;
+    }
+    .powered-by__tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      background: var(--color-primary-subtle);
+      color: var(--color-primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .install-methods {
+        grid-template-columns: 1fr;
+      }
+      .api-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SceneView Web",
+    "description": "The lightest way to add 3D to any website. One script tag, one function call. Powered by Filament.js WASM.",
+    "url": "https://sceneview.github.io/web.html",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "softwareVersion": "1.1.0",
+    "license": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": {
+      "@type": "Organization",
+      "name": "SceneView",
+      "url": "https://github.com/sceneview"
+    },
+    "codeRepository": "https://github.com/sceneview/sceneview",
+    "programmingLanguage": "JavaScript"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ===== NAV ===== -->
+  <nav class="nav">
+    <div class="nav__container">
+      <a href="/" class="nav__logo">
+        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <span class="nav__logo-text">SceneView</span>
+      </a>
+
+      <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="nav__links" id="navLinks">
+        <a href="/" class="nav__link">Home</a>
+        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
+        <a href="/playground.html" class="nav__link">Playground</a>
+        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
+        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
+        <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="nav-overlay" id="navOverlay"></div>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero__container" style="grid-template-columns: 1fr; text-align: center;">
+      <div>
+        <h1 class="hero__title">One Line 3D for the Web</h1>
+        <p class="hero__subtitle">SceneView Web</p>
+        <p class="hero__description" style="margin: var(--space-md) auto 0; max-width: 560px;">
+          The lightest way to add interactive 3D models to any website.
+          One script tag. One function call. Powered by Filament.js WASM.
+        </p>
+        <div class="hero__actions" style="justify-content: center;">
+          <a href="#install" class="btn btn--primary">Get started</a>
+          <a href="https://github.com/sceneview/sceneview/tree/main/sceneview-web" class="btn btn--outline">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            GitHub
+          </a>
+          <a href="https://www.npmjs.com/package/sceneview-web" class="btn btn--outline">npm</a>
+        </div>
+
+        <!-- Two-line code example -->
+        <div class="hero-code">
+<span class="cm">&lt;!-- That's it. Two lines. --&gt;</span>
+&lt;script src="<span class="str">https://cdn.jsdelivr.net/npm/sceneview-web@1.1.0/sceneview.js</span>"&gt;&lt;/script&gt;
+&lt;script&gt; <span class="fn">SceneView.modelViewer</span>(<span class="str">"canvas"</span>, <span class="str">"model.glb"</span>) &lt;/script&gt;
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== LIVE DEMO ===== -->
+  <section class="section" id="demo" style="background: var(--color-surface-dim);">
+    <div class="container">
+      <h2 class="section__title">Live demo</h2>
+      <p class="section__subtitle">
+        The DamagedHelmet model rendered in real-time with Filament.js WASM.
+        Drag to orbit. Scroll to zoom.
+      </p>
+
+      <div class="demo-canvas-wrap">
+        <div class="demo-loading" id="demoLoading">
+          <div class="demo-spinner"></div>
+        </div>
+        <canvas id="demoCanvas"></canvas>
+        <div class="demo-badge">Filament.js WASM</div>
+      </div>
+      <p class="demo-hint">Powered by the same Filament engine used in Android SceneView</p>
+    </div>
+  </section>
+
+  <!-- ===== COMPARISON ===== -->
+  <section class="section" id="compare">
+    <div class="container">
+      <h2 class="section__title">Why SceneView Web?</h2>
+      <p class="section__subtitle">
+        Production-quality rendering at a fraction of the bundle size.
+        The same Filament engine that powers Android SceneView.
+      </p>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>SceneView Web</th>
+            <th>Three.js</th>
+            <th>model-viewer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Library size</td>
+            <td class="highlight">~25 KB</td>
+            <td class="dim">~600 KB</td>
+            <td class="dim">~200 KB</td>
+          </tr>
+          <tr>
+            <td>Rendering engine</td>
+            <td class="highlight">Filament (WASM)</td>
+            <td>Custom WebGL</td>
+            <td>Three.js</td>
+          </tr>
+          <tr>
+            <td>PBR quality</td>
+            <td class="highlight">Production (matches Android)</td>
+            <td>Good</td>
+            <td>Good</td>
+          </tr>
+          <tr>
+            <td>Setup complexity</td>
+            <td class="highlight">1 function call</td>
+            <td>~50 lines boilerplate</td>
+            <td>1 HTML tag</td>
+          </tr>
+          <tr>
+            <td>glTF / GLB</td>
+            <td class="highlight">Native</td>
+            <td>Plugin (GLTFLoader)</td>
+            <td>Native</td>
+          </tr>
+          <tr>
+            <td>Auto-rotate / orbit</td>
+            <td class="highlight">Built-in</td>
+            <td>Manual (OrbitControls)</td>
+            <td>Built-in</td>
+          </tr>
+          <tr>
+            <td>Programmatic API</td>
+            <td class="highlight">Full JS API</td>
+            <td>Full JS API</td>
+            <td>Limited (attributes)</td>
+          </tr>
+          <tr>
+            <td>WebXR AR/VR</td>
+            <td>Planned</td>
+            <td>Yes</td>
+            <td>AR only</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== INSTALL ===== -->
+  <section class="section install" id="install">
+    <div class="container">
+      <h2 class="section__title">Install</h2>
+      <p class="section__subtitle">Pick whatever fits your stack.</p>
+
+      <div class="install-methods">
+        <div class="install-card">
+          <div class="install-card__label">CDN (fastest)</div>
+          <div class="install-card__code">&lt;script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.1.0/sceneview.js"&gt;&lt;/script&gt;</div>
+        </div>
+
+        <div class="install-card">
+          <div class="install-card__label">npm</div>
+          <div class="install-card__code">npm install sceneview-web</div>
+        </div>
+
+        <div class="install-card">
+          <div class="install-card__label">ES Module import</div>
+          <div class="install-card__code">import SceneView from "sceneview-web";</div>
+        </div>
+
+        <div class="install-card">
+          <div class="install-card__label">Script tag + init</div>
+          <div class="install-card__code">&lt;canvas id="viewer"&gt;&lt;/canvas&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.1.0/sceneview.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  SceneView.modelViewer("viewer", "model.glb", {
+    autoRotate: true
+  });
+&lt;/script&gt;</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== API REFERENCE ===== -->
+  <section class="section" id="api">
+    <div class="container">
+      <h2 class="section__title">API reference</h2>
+      <p class="section__subtitle">Five functions. That's the entire surface.</p>
+
+      <div class="api-grid">
+        <div class="api-card">
+          <div class="api-card__name">SceneView.modelViewer</div>
+          <div class="api-card__sig">modelViewer(canvasOrId, modelUrl, options?)</div>
+          <div class="api-card__desc">
+            All-in-one: creates a viewer, loads Filament.js from CDN,
+            loads your glTF/GLB model, sets up orbit camera and auto-rotation.
+            Returns a viewer instance.
+          </div>
+        </div>
+
+        <div class="api-card">
+          <div class="api-card__name">SceneView.create</div>
+          <div class="api-card__sig">create(canvasOrId, options?)</div>
+          <div class="api-card__desc">
+            Creates an empty viewer without loading a model.
+            Call <code>loadModel(url)</code> later. Useful when the model URL is dynamic.
+          </div>
+        </div>
+
+        <div class="api-card">
+          <div class="api-card__name">viewer.loadModel</div>
+          <div class="api-card__sig">loadModel(url) &rarr; Promise</div>
+          <div class="api-card__desc">
+            Loads a glTF or GLB model from any URL. Replaces the current model.
+            Returns a promise that resolves when the model is ready.
+          </div>
+        </div>
+
+        <div class="api-card">
+          <div class="api-card__name">viewer.setAutoRotate</div>
+          <div class="api-card__sig">setAutoRotate(enabled)</div>
+          <div class="api-card__desc">
+            Enables or disables automatic Y-axis rotation.
+            Pauses on user interaction, resumes after idle.
+          </div>
+        </div>
+
+        <div class="api-card">
+          <div class="api-card__name">viewer.setCameraDistance</div>
+          <div class="api-card__sig">setCameraDistance(distance)</div>
+          <div class="api-card__desc">
+            Sets the orbit camera distance from the model center.
+            Useful for controlling the initial zoom level.
+          </div>
+        </div>
+
+        <div class="api-card">
+          <div class="api-card__name">viewer.dispose</div>
+          <div class="api-card__sig">dispose()</div>
+          <div class="api-card__desc">
+            Cleans up all GPU resources, removes event listeners,
+            and stops the render loop. Call when removing the viewer.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== POWERED BY ===== -->
+  <section class="section" style="padding: var(--space-2xl) 0;">
+    <div class="container">
+      <div class="powered-by">
+        Powered by
+        <span class="powered-by__tag">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Filament.js WASM
+        </span>
+        &mdash; the same engine behind Android SceneView
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== COMMUNITY ===== -->
+  <section class="section" id="community" style="background: var(--color-surface-dim);">
+    <div class="container">
+      <h2 class="section__title">Get involved</h2>
+      <p class="section__subtitle">SceneView Web is open source. Contributions welcome.</p>
+
+      <div class="community__grid">
+        <a href="https://github.com/sceneview/sceneview" class="community-card community-card--github">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          <h3>GitHub</h3>
+          <p>Star the repo, report issues, submit pull requests</p>
+        </a>
+        <a href="https://discord.gg/sceneview" class="community-card community-card--discord">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+          <h3>Discord</h3>
+          <p>Chat with developers, ask questions, share your creations</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <svg viewBox="0 0 32 32" width="20" height="20" fill="none">
+            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
+            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          SceneView Web v1.1.0
+        </div>
+        <div class="footer__links">
+          <a href="/">Home</a>
+          <a href="https://github.com/sceneview/sceneview">GitHub</a>
+          <a href="https://www.npmjs.com/package/sceneview-web">npm</a>
+          <a href="https://discord.gg/sceneview">Discord</a>
+          <a href="https://github.com/sponsors/ThomasGorisse">Sponsor</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.1.0/sceneview.js"></script>
+  <script>
+    // Theme toggle
+    (function() {
+      const html = document.documentElement;
+      const saved = localStorage.getItem('theme');
+      if (saved) html.setAttribute('data-theme', saved);
+      else if (window.matchMedia('(prefers-color-scheme: dark)').matches) html.setAttribute('data-theme', 'dark');
+
+      const toggle = document.getElementById('themeToggle');
+      if (toggle) toggle.addEventListener('click', () => {
+        const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+    })();
+
+    // Hamburger
+    (function() {
+      const hamburger = document.getElementById('hamburger');
+      const navLinks = document.getElementById('navLinks');
+      const overlay = document.getElementById('navOverlay');
+      if (!hamburger) return;
+
+      function toggleMenu() {
+        hamburger.classList.toggle('active');
+        navLinks.classList.toggle('open');
+        overlay.classList.toggle('active');
+      }
+      hamburger.addEventListener('click', toggleMenu);
+      overlay.addEventListener('click', toggleMenu);
+      navLinks.querySelectorAll('.nav__link').forEach(link =>
+        link.addEventListener('click', () => {
+          if (navLinks.classList.contains('open')) toggleMenu();
+        })
+      );
+    })();
+
+    // Live demo
+    (function() {
+      var loading = document.getElementById('demoLoading');
+      try {
+        SceneView.modelViewer('demoCanvas',
+          'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+          { autoRotate: true }
+        ).then(function() {
+          if (loading) loading.classList.add('hidden');
+        }).catch(function() {
+          if (loading) loading.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:13px;">Could not load demo. Try a WebGL2-capable browser.</p>';
+        });
+      } catch(e) {
+        if (loading) loading.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:13px;">Could not load demo. Try a WebGL2-capable browser.</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
