@@ -238,7 +238,8 @@
     options = options || {};
     return new Promise(function(resolve, reject) {
       ensureFilament(function() {
-        Filament.init([], function() {
+        // If Filament WASM is already initialized (Engine exists), skip init
+        function setup() {
           try {
             const canvas = typeof canvasOrId === 'string'
               ? document.getElementById(canvasOrId)
@@ -299,7 +300,13 @@
           } catch (e) {
             reject(e);
           }
-        });
+        }
+        // Check if Filament WASM is already ready
+        if (Filament.Engine) {
+          setup();
+        } else {
+          Filament.init([], setup);
+        }
       });
     });
   }
