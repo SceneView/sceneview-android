@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SceneView Geometry — Procedural 3D Shapes</title>
-<meta name="description" content="SceneView procedural 3D geometry renderer. Draw cubes, spheres, cylinders, lines, planes — all in the browser with PBR shading.">
+<title>SceneView Geometry — Procedural 3D City</title>
+<meta name="description" content="SceneView procedural 3D geometry renderer. Interactive mini-city with PBR shading — add shapes, change colors, explore in real-time.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://sceneview.github.io/geometry-demo.html">
-<meta property="og:title" content="SceneView Geometry — Procedural 3D Shapes">
-<meta property="og:description" content="Procedural 3D geometry rendered in the browser with PBR shading. Cubes, spheres, cylinders, lines, and planes.">
+<meta property="og:title" content="SceneView Geometry — Procedural 3D City">
+<meta property="og:description" content="Interactive procedural 3D city rendered in the browser with PBR shading. Add shapes, change materials, orbit in real-time.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sceneview.github.io/geometry-demo.html">
 <meta property="og:image" content="https://sceneview.github.io/favicon.svg">
 <meta property="og:site_name" content="SceneView">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="SceneView Geometry — Procedural 3D Shapes">
+<meta name="twitter:title" content="SceneView Geometry — Procedural 3D City">
 <meta name="twitter:image" content="https://sceneview.github.io/favicon.svg">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
@@ -22,6 +22,7 @@
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1117; font-family: 'Inter', system-ui, sans-serif; }
   canvas { width: 100%; height: 100%; display: block; cursor: grab; }
   canvas:active { cursor: grabbing; }
+
   .badge {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     padding: 6px 16px; border-radius: 20px;
@@ -31,6 +32,7 @@
     pointer-events: none; z-index: 10;
   }
   .badge a { color: #4a9af5; text-decoration: none; pointer-events: auto; }
+
   .info {
     position: fixed; top: 16px; left: 16px; z-index: 10;
     color: rgba(255,255,255,0.5); font-size: 11px; line-height: 1.6;
@@ -41,6 +43,7 @@
     font-size: 18px; font-weight: 700; color: #fff;
     text-shadow: 0 2px 8px rgba(0,0,0,0.5);
   }
+
   /* Loading overlay */
   #loading {
     position: fixed; inset: 0; z-index: 100;
@@ -56,34 +59,134 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { color: rgba(255,255,255,0.6); font-size: 13px; margin-top: 14px; }
+
+  /* Controls panel */
+  .controls {
+    position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; align-items: center; z-index: 20;
+    padding: 8px 14px; border-radius: 14px;
+    background: rgba(13,17,23,0.85); border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    flex-wrap: wrap; justify-content: center;
+  }
+  .controls select, .controls button {
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+    background: rgba(255,255,255,0.08); color: #fff;
+    padding: 6px 12px; cursor: pointer; outline: none;
+    transition: all 0.2s;
+  }
+  .controls select:hover, .controls button:hover {
+    background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.25);
+  }
+  .controls input[type="color"] {
+    width: 30px; height: 30px; border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 8px; cursor: pointer; background: transparent; padding: 1px;
+  }
+  .controls .add-btn {
+    background: rgba(26,115,232,0.5); border-color: rgba(26,115,232,0.6);
+    font-weight: 600;
+  }
+  .controls .add-btn:hover { background: rgba(26,115,232,0.7); }
+  .controls .claude-btn {
+    background: linear-gradient(135deg, rgba(204,119,51,0.6), rgba(180,90,40,0.6));
+    border-color: rgba(204,119,51,0.5); font-weight: 600;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .controls .claude-btn:hover {
+    background: linear-gradient(135deg, rgba(204,119,51,0.8), rgba(180,90,40,0.8));
+  }
+  .controls .reset-btn {
+    background: rgba(255,60,60,0.3); border-color: rgba(255,60,60,0.3);
+    font-size: 11px;
+  }
+  .controls .reset-btn:hover { background: rgba(255,60,60,0.5); }
+  .controls label {
+    color: rgba(255,255,255,0.5); font-size: 11px; display: flex; align-items: center; gap: 4px;
+  }
+  .controls .slider {
+    -webkit-appearance: none; width: 60px; height: 4px;
+    border-radius: 2px; background: rgba(255,255,255,0.15);
+    outline: none;
+  }
+  .controls .slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: #4a9af5; cursor: pointer;
+  }
+
+  .shape-count {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.4); font-size: 11px; z-index: 10;
+    pointer-events: none;
+  }
+
+  /* Scene preset buttons */
+  .presets {
+    position: fixed; top: 50px; right: 16px; z-index: 10;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .presets button {
+    font-family: inherit; font-size: 11px; font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
+    padding: 5px 10px; cursor: pointer; outline: none;
+    transition: all 0.2s; text-align: right;
+  }
+  .presets button:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .presets button.active { background: rgba(26,115,232,0.3); border-color: rgba(26,115,232,0.5); color: #fff; }
 </style>
 </head>
 <body>
 
 <div id="loading">
   <div class="spinner"></div>
-  <div class="loading-text">Initializing WebGL...</div>
+  <div class="loading-text">Building the city...</div>
 </div>
 
 <canvas id="c"></canvas>
-<div class="info">Drag to orbit | Scroll to zoom</div>
+<div class="info">Drag to orbit | Scroll to zoom | Add shapes below</div>
 <div class="title">Geometry Demo</div>
+<div class="shape-count" id="shapeCount"></div>
+
+<div class="presets">
+  <button class="active" onclick="loadScene('city')">Mini City</button>
+  <button onclick="loadScene('solar')">Solar System</button>
+  <button onclick="loadScene('house')">Cozy House</button>
+  <button onclick="loadScene('abstract')">Abstract Art</button>
+</div>
+
+<div class="controls">
+  <select id="shapeType">
+    <option value="cube">Cube</option>
+    <option value="sphere">Sphere</option>
+    <option value="cylinder">Cylinder</option>
+    <option value="cone">Cone</option>
+    <option value="torus">Torus</option>
+    <option value="plane">Plane</option>
+  </select>
+  <input type="color" id="shapeColor" value="#4a9af5" title="Shape color">
+  <label>Metal <input type="range" class="slider" id="metalSlider" min="0" max="100" value="20"></label>
+  <label>Rough <input type="range" class="slider" id="roughSlider" min="0" max="100" value="40"></label>
+  <button class="add-btn" onclick="addUserShape()">+ Add Shape</button>
+  <button class="reset-btn" onclick="loadScene(currentPreset)">Reset</button>
+  <button class="claude-btn" onclick="openClaude()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Generate with Claude
+  </button>
+</div>
+
 <div class="badge">Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> — Procedural 3D Geometry</div>
 
 <script>
 // SceneView Geometry Renderer — procedural 3D shapes with PBR shading
 // Zero dependencies, pure WebGL2, designed for Claude artifacts
-//
-// Demonstrates: cube, sphere, cylinder, plane, line, torus, cone
-// Each shape has position, scale, color, metallic, roughness
-// 3-point lighting: key (sun), fill, rim
 
 const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl2', { antialias: true });
+const gl = canvas.getContext('webgl2', { antialias: true, alpha: false });
 if (!gl) { document.body.innerHTML = '<p style="color:#fff;padding:40px">WebGL2 not supported</p>'; throw new Error('no webgl2'); }
 
-// ─── Shaders ────────────────────────────────────────────────────────────────
-// Multi-light PBR with 3-point lighting (key, fill, rim)
+// ── Shaders ──────────────────────────────────────────────────────────────────
+// PBR with 3-point lighting, shadow approximation, and fog
 
 const VS = `#version 300 es
 precision highp float;
@@ -109,17 +212,18 @@ uniform vec3 uCamPos;
 uniform vec3 uBaseColor;
 uniform float uMetallic;
 uniform float uRoughness;
+uniform float uTime;
 out vec4 fragColor;
 
 const float PI = 3.14159265;
 
-// 3-point light setup (key, fill, rim)
-const vec3 KEY_DIR   = normalize(vec3(0.6, 0.9, 0.4));
-const vec3 KEY_COLOR = vec3(3.2, 3.0, 2.7);
+// 3-point light setup
+const vec3 KEY_DIR   = normalize(vec3(0.5, 0.85, 0.3));
+const vec3 KEY_COLOR = vec3(3.5, 3.2, 2.8);
 const vec3 FILL_DIR  = normalize(vec3(-0.7, 0.3, -0.5));
-const vec3 FILL_COLOR = vec3(0.6, 0.7, 1.0);
+const vec3 FILL_COLOR = vec3(0.5, 0.6, 1.0);
 const vec3 RIM_DIR   = normalize(vec3(-0.2, -0.1, -0.9));
-const vec3 RIM_COLOR = vec3(0.5, 0.5, 0.7);
+const vec3 RIM_COLOR = vec3(0.4, 0.4, 0.6);
 
 float D_GGX(float NdotH, float roughness) {
   float a = roughness * roughness;
@@ -127,11 +231,9 @@ float D_GGX(float NdotH, float roughness) {
   float d = NdotH * NdotH * (a2 - 1.0) + 1.0;
   return a2 / (PI * d * d);
 }
-
 vec3 F_Schlick(float cosTheta, vec3 F0) {
   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
-
 float G_Smith(float NdotV, float NdotL, float roughness) {
   float r = roughness + 1.0;
   float k = (r * r) / 8.0;
@@ -146,11 +248,9 @@ vec3 evalLight(vec3 N, vec3 V, vec3 L, vec3 lightColor, vec3 F0, float NdotV) {
   float NdotH = max(dot(N, H), 0.0);
   float HdotV = max(dot(H, V), 0.0);
   if (NdotL <= 0.0) return vec3(0.0);
-
   vec3 F = F_Schlick(HdotV, F0);
   float D = D_GGX(NdotH, uRoughness);
   float G = G_Smith(NdotV, NdotL, uRoughness);
-
   vec3 spec = (D * F * G) / (4.0 * NdotV * NdotL + 0.001);
   vec3 kD = (1.0 - F) * (1.0 - uMetallic);
   vec3 diffuse = kD * uBaseColor / PI;
@@ -163,27 +263,46 @@ void main() {
   float NdotV = max(dot(N, V), 0.001);
   vec3 F0 = mix(vec3(0.04), uBaseColor, uMetallic);
 
-  // Accumulate 3-point lighting
   vec3 color = vec3(0.0);
   color += evalLight(N, V, KEY_DIR, KEY_COLOR, F0, NdotV);
   color += evalLight(N, V, FILL_DIR, FILL_COLOR, F0, NdotV);
   color += evalLight(N, V, RIM_DIR, RIM_COLOR, F0, NdotV);
 
   // Hemisphere ambient with ground bounce
-  vec3 skyColor = vec3(0.18, 0.22, 0.38);
+  vec3 skyColor = vec3(0.15, 0.18, 0.35);
   vec3 groundColor = vec3(0.06, 0.05, 0.04);
   float hemisphere = dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
-  vec3 ambient = mix(groundColor, skyColor, hemisphere) * uBaseColor * 0.5;
+  vec3 ambient = mix(groundColor, skyColor, hemisphere) * uBaseColor * 0.45;
 
-  // Rim/fresnel highlight for depth
+  // Fresnel rim
   float rim = pow(1.0 - NdotV, 4.0);
-  ambient += vec3(0.12, 0.16, 0.3) * rim * 0.6;
+  ambient += vec3(0.1, 0.14, 0.28) * rim * 0.7;
 
-  // Simple AO approximation: darken crevices based on normal facing down
+  // AO approximation
   float ao = smoothstep(-0.3, 0.5, dot(N, vec3(0, 1, 0))) * 0.3 + 0.7;
   ambient *= ao;
 
+  // Fake contact shadow: darken near ground
+  float contactShadow = smoothstep(0.0, 0.3, vWorldPos.y);
+  ambient *= mix(0.5, 1.0, contactShadow);
+
   color += ambient;
+
+  // Environment reflection approximation for metallic surfaces
+  if (uMetallic > 0.3) {
+    vec3 R = reflect(-V, N);
+    float envUp = max(R.y, 0.0);
+    vec3 envColor = mix(vec3(0.08, 0.06, 0.12), vec3(0.3, 0.5, 0.9), envUp);
+    envColor += vec3(0.9, 0.8, 0.6) * pow(max(dot(R, KEY_DIR), 0.0), 16.0);
+    float envFresnel = pow(1.0 - NdotV, 3.0);
+    color += envColor * uMetallic * mix(0.15, 0.6, envFresnel) * (1.0 - uRoughness);
+  }
+
+  // Distance fog
+  float fogDist = length(vWorldPos - uCamPos);
+  float fog = 1.0 - exp(-fogDist * 0.02);
+  vec3 fogColor = vec3(0.05, 0.065, 0.09);
+  color = mix(color, fogColor, fog * 0.5);
 
   // ACES tone mapping
   color = color * (2.51 * color + 0.03) / (color * (2.43 * color + 0.59) + 0.14);
@@ -191,27 +310,33 @@ void main() {
   fragColor = vec4(color, 1.0);
 }`;
 
-// ─── Grid shader ────────────────────────────────────────────────────────────
+// ── Grid shader ──────────────────────────────────────────────────────────────
 
 const GRID_VS = `#version 300 es
 precision highp float;
 in vec3 aPos;
 uniform mat4 uMVP;
 out float vDist;
+out vec2 vXZ;
 void main() {
   gl_Position = uMVP * vec4(aPos, 1.0);
   vDist = length(aPos.xz);
+  vXZ = aPos.xz;
 }`;
 const GRID_FS = `#version 300 es
 precision highp float;
 in float vDist;
+in vec2 vXZ;
 out vec4 fragColor;
 void main() {
-  float fade = 1.0 - smoothstep(3.0, 8.0, vDist);
-  fragColor = vec4(1.0, 1.0, 1.0, 0.07 * fade);
+  float fade = 1.0 - smoothstep(4.0, 12.0, vDist);
+  // Brighter at center
+  float center = 1.0 - smoothstep(0.0, 3.0, vDist);
+  float alpha = (0.06 + center * 0.04) * fade;
+  fragColor = vec4(0.3, 0.5, 1.0, alpha);
 }`;
 
-// ─── Shader compilation ─────────────────────────────────────────────────────
+// ── Shader compilation ───────────────────────────────────────────────────────
 
 function createShader(type, src) {
   const s = gl.createShader(type);
@@ -220,7 +345,6 @@ function createShader(type, src) {
   if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); return null; }
   return s;
 }
-
 function createProgram(vs, fs) {
   const p = gl.createProgram();
   gl.attachShader(p, vs);
@@ -241,15 +365,15 @@ const loc = {
   uBaseColor: gl.getUniformLocation(prog, 'uBaseColor'),
   uMetallic: gl.getUniformLocation(prog, 'uMetallic'),
   uRoughness: gl.getUniformLocation(prog, 'uRoughness'),
+  uTime: gl.getUniformLocation(prog, 'uTime'),
 };
-
 const gridProg = createProgram(createShader(gl.VERTEX_SHADER, GRID_VS), createShader(gl.FRAGMENT_SHADER, GRID_FS));
 const gridLoc = {
   aPos: gl.getAttribLocation(gridProg, 'aPos'),
   uMVP: gl.getUniformLocation(gridProg, 'uMVP'),
 };
 
-// ─── Geometry generators ────────────────────────────────────────────────────
+// ── Geometry generators ──────────────────────────────────────────────────────
 
 function generateSphere(radius, widthSeg, heightSeg) {
   const pos = [], nrm = [], idx = [];
@@ -264,13 +388,11 @@ function generateSphere(radius, widthSeg, heightSeg) {
       nrm.push(nx, ny, nz);
     }
   }
-  for (let y = 0; y < heightSeg; y++) {
+  for (let y = 0; y < heightSeg; y++)
     for (let x = 0; x < widthSeg; x++) {
-      const a = y * (widthSeg + 1) + x;
-      const b = a + widthSeg + 1;
+      const a = y * (widthSeg + 1) + x, b = a + widthSeg + 1;
       idx.push(a, b, a + 1, b, b + 1, a + 1);
     }
-  }
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
 
@@ -287,8 +409,7 @@ function generateCube(size) {
   const pos = [], nrm = [], idx = [];
   faces.forEach((f, i) => {
     f.verts.forEach(v => { pos.push(...v); nrm.push(...f.n); });
-    const o = i * 4;
-    idx.push(o, o+1, o+2, o, o+2, o+3);
+    const o = i * 4; idx.push(o, o+1, o+2, o, o+2, o+3);
   });
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
@@ -331,19 +452,16 @@ function generateCylinder(radiusTop, radiusBottom, height, segments) {
 function generatePlane(width, depth, widthSeg, depthSeg) {
   const pos = [], nrm = [], idx = [];
   const hw = width / 2, hd = depth / 2;
-  for (let z = 0; z <= depthSeg; z++) {
+  for (let z = 0; z <= depthSeg; z++)
     for (let x = 0; x <= widthSeg; x++) {
       pos.push(x / widthSeg * width - hw, 0, z / depthSeg * depth - hd);
       nrm.push(0, 1, 0);
     }
-  }
-  for (let z = 0; z < depthSeg; z++) {
+  for (let z = 0; z < depthSeg; z++)
     for (let x = 0; x < widthSeg; x++) {
-      const a = z * (widthSeg + 1) + x;
-      const b = a + widthSeg + 1;
+      const a = z * (widthSeg + 1) + x, b = a + widthSeg + 1;
       idx.push(a, b, a + 1, b, b + 1, a + 1);
     }
-  }
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
 
@@ -355,21 +473,15 @@ function generateTorus(majorR, minorR, majorSeg, minorSeg) {
     for (let i = 0; i <= minorSeg; i++) {
       const theta = (i / minorSeg) * Math.PI * 2;
       const ct = Math.cos(theta), st = Math.sin(theta);
-      const x = (majorR + minorR * ct) * cp;
-      const y = minorR * st;
-      const z = (majorR + minorR * ct) * sp;
-      pos.push(x, y, z);
-      const nx = ct * cp, ny = st, nz = ct * sp;
-      nrm.push(nx, ny, nz);
+      pos.push((majorR + minorR * ct) * cp, minorR * st, (majorR + minorR * ct) * sp);
+      nrm.push(ct * cp, st, ct * sp);
     }
   }
-  for (let j = 0; j < majorSeg; j++) {
+  for (let j = 0; j < majorSeg; j++)
     for (let i = 0; i < minorSeg; i++) {
-      const a = j * (minorSeg + 1) + i;
-      const b = a + minorSeg + 1;
+      const a = j * (minorSeg + 1) + i, b = a + minorSeg + 1;
       idx.push(a, b, a + 1, b, b + 1, a + 1);
     }
-  }
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
 
@@ -379,17 +491,13 @@ function generateGrid(size, divisions) {
   let vi = 0;
   for (let i = 0; i <= divisions; i++) {
     const t = i * step - half;
-    pos.push(-half, 0, t, half, 0, t);
-    nrm.push(0, 1, 0, 0, 1, 0);
-    idx.push(vi, vi + 1); vi += 2;
-    pos.push(t, 0, -half, t, 0, half);
-    nrm.push(0, 1, 0, 0, 1, 0);
-    idx.push(vi, vi + 1); vi += 2;
+    pos.push(-half, 0, t, half, 0, t); nrm.push(0,1,0, 0,1,0); idx.push(vi, vi+1); vi += 2;
+    pos.push(t, 0, -half, t, 0, half); nrm.push(0,1,0, 0,1,0); idx.push(vi, vi+1); vi += 2;
   }
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx), mode: gl.LINES };
 }
 
-// ─── Mesh creation ──────────────────────────────────────────────────────────
+// ── Mesh creation ────────────────────────────────────────────────────────────
 
 function createMesh(geom) {
   const vao = gl.createVertexArray();
@@ -426,7 +534,7 @@ function createGridMesh(geom) {
   return { vao, count: geom.indices.length };
 }
 
-// ─── Prototype meshes (unit-sized) ──────────────────────────────────────────
+// ── Prototype meshes ─────────────────────────────────────────────────────────
 
 const prototypes = {
   cube: createMesh(generateCube(1)),
@@ -437,95 +545,328 @@ const prototypes = {
   line: createMesh(generateCylinder(0.02, 0.02, 1, 8)),
   torus: createMesh(generateTorus(0.35, 0.15, 48, 24)),
 };
-const gridMesh = createGridMesh(generateGrid(12, 24));
+const gridMesh = createGridMesh(generateGrid(16, 32));
 
-// ─── Math utilities ─────────────────────────────────────────────────────────
+// ── Math utilities ───────────────────────────────────────────────────────────
 
 function mat4Perspective(fov, aspect, near, far) {
   const f = 1 / Math.tan(fov / 2), nf = 1 / (near - far);
   return new Float32Array([f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0]);
 }
-
 function mat4LookAt(eye, center, up) {
   const z = vecNormalize(vecSub(eye, center));
   const x = vecNormalize(vecCross(up, z));
   const y = vecCross(z, x);
-  return new Float32Array([
-    x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0,
-    -vecDot(x,eye),-vecDot(y,eye),-vecDot(z,eye),1
-  ]);
+  return new Float32Array([x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -vecDot(x,eye),-vecDot(y,eye),-vecDot(z,eye),1]);
 }
-
 function mat4Multiply(a, b) {
   const r = new Float32Array(16);
   for (let i = 0; i < 4; i++)
-    for (let j = 0; j < 4; j++) {
-      let s = 0;
-      for (let k = 0; k < 4; k++) s += a[k*4+j] * b[i*4+k];
-      r[i*4+j] = s;
-    }
+    for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k*4+j] * b[i*4+k]; r[i*4+j] = s; }
   return r;
 }
-
 function mat4Identity() { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
-
-function mat4Translate(tx, ty, tz) {
-  return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, tx,ty,tz,1]);
+function mat4Translate(tx, ty, tz) { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, tx,ty,tz,1]); }
+function mat4Scale(sx, sy, sz) { return new Float32Array([sx,0,0,0, 0,sy,0,0, 0,0,sz,0, 0,0,0,1]); }
+function mat4RotateY(angle) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return new Float32Array([c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1]);
 }
-
-function mat4Scale(sx, sy, sz) {
-  return new Float32Array([sx,0,0,0, 0,sy,0,0, 0,0,sz,0, 0,0,0,1]);
-}
-
-function mat3NormalFromMat4(m) {
-  return new Float32Array([m[0],m[1],m[2], m[4],m[5],m[6], m[8],m[9],m[10]]);
-}
-
+function mat3NormalFromMat4(m) { return new Float32Array([m[0],m[1],m[2], m[4],m[5],m[6], m[8],m[9],m[10]]); }
 function vecNormalize(v) { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return l > 0 ? [v[0]/l,v[1]/l,v[2]/l] : [0,0,0]; }
 function vecSub(a,b) { return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
 function vecCross(a,b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
 function vecDot(a,b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
 
-// ─── Scene definition ───────────────────────────────────────────────────────
-// Showcase scene: every primitive type with a pleasing composition
+// ── Scene presets ────────────────────────────────────────────────────────────
 
-const sceneShapes = [
-  // === Ground plane (yellow-ish, large) ===
-  { type: 'plane', position: [0, 0.005, 0], scale: [8, 1, 8], color: [0.85, 0.75, 0.35], metallic: 0.1, roughness: 0.7 },
+function makeBuilding(x, z, w, h, d, color, metallic, roughness) {
+  return { type: 'cube', position: [x, h/2, z], scale: [w, h, d], color, metallic, roughness };
+}
 
-  // === Red cube at origin ===
-  { type: 'cube', position: [0, 0.5, 0], scale: [1, 1, 1], color: [0.9, 0.12, 0.12], metallic: 0.0, roughness: 0.35 },
+const SCENES = {
+  city: (function() {
+    const shapes = [];
 
-  // === Blue sphere floating above the cube ===
-  { type: 'sphere', position: [0, 1.7, 0], scale: [0.7, 0.7, 0.7], color: [0.12, 0.35, 0.95], metallic: 0.85, roughness: 0.15 },
+    // Ground
+    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.12, 0.14, 0.16], metallic: 0.0, roughness: 0.9 });
 
-  // === Green cylinder to the right ===
-  { type: 'cylinder', position: [2.2, 0.6, 0], scale: [0.8, 1.2, 0.8], color: [0.12, 0.8, 0.25], metallic: 0.15, roughness: 0.45 },
+    // Roads (dark strips)
+    shapes.push({ type: 'plane', position: [0, 0.005, 0], scale: [14, 1, 1.2], color: [0.06, 0.07, 0.08], metallic: 0.0, roughness: 0.95 });
+    shapes.push({ type: 'plane', position: [0, 0.005, 0], scale: [1.2, 1, 14], color: [0.06, 0.07, 0.08], metallic: 0.0, roughness: 0.95 });
 
-  // === Orange cone to the left ===
-  { type: 'cone', position: [-2.2, 0.5, 0], scale: [0.9, 1.0, 0.9], color: [0.95, 0.5, 0.1], metallic: 0.1, roughness: 0.4 },
+    // === Downtown cluster (tall glass buildings) ===
+    shapes.push(makeBuilding(0, -2.5, 1.2, 4.5, 1.2, [0.3, 0.5, 0.8], 0.9, 0.1));  // Blue glass tower
+    shapes.push(makeBuilding(1.6, -2.8, 0.9, 3.5, 0.9, [0.7, 0.75, 0.8], 0.85, 0.12)); // Silver tower
+    shapes.push(makeBuilding(-1.5, -2.2, 1.0, 3.0, 1.4, [0.25, 0.35, 0.5], 0.8, 0.15)); // Dark steel
+    shapes.push(makeBuilding(0.2, -4.2, 0.8, 5.2, 0.8, [0.2, 0.6, 0.7], 0.95, 0.08)); // Tallest - teal glass
 
-  // === Purple torus in back ===
-  { type: 'torus', position: [0, 0.9, -2.0], scale: [1.4, 1.4, 1.4], color: [0.6, 0.15, 0.85], metallic: 0.7, roughness: 0.2 },
+    // Antenna on tallest building
+    shapes.push({ type: 'cylinder', position: [0.2, 5.5, -4.2], scale: [0.05, 1.0, 0.05], color: [0.9, 0.9, 0.9], metallic: 1.0, roughness: 0.1 });
+    // Red light on antenna
+    shapes.push({ type: 'sphere', position: [0.2, 6.05, -4.2], scale: [0.1, 0.1, 0.1], color: [1.0, 0.15, 0.1], metallic: 0.0, roughness: 0.3 });
 
-  // === Small chrome sphere (reflective) ===
-  { type: 'sphere', position: [1.3, 0.3, 1.5], scale: [0.5, 0.5, 0.5], color: [0.95, 0.95, 0.98], metallic: 1.0, roughness: 0.05 },
+    // === Residential area (shorter, warmer colors) ===
+    shapes.push(makeBuilding(-3.5, 1.5, 1.0, 1.5, 1.2, [0.85, 0.55, 0.3], 0.05, 0.7));  // Terracotta
+    shapes.push(makeBuilding(-3.2, 3.5, 1.4, 1.8, 1.0, [0.9, 0.82, 0.65], 0.05, 0.65)); // Sand
+    shapes.push(makeBuilding(-4.8, 2.5, 0.9, 1.2, 0.9, [0.75, 0.4, 0.35], 0.05, 0.6));  // Red brick
 
-  // === Small gold cube ===
-  { type: 'cube', position: [-1.3, 0.25, 1.5], scale: [0.5, 0.5, 0.5], color: [1.0, 0.76, 0.33], metallic: 1.0, roughness: 0.15 },
+    // === Commercial district (mid-height, varied) ===
+    shapes.push(makeBuilding(3.0, 1.5, 1.5, 2.5, 1.0, [0.4, 0.4, 0.45], 0.6, 0.25));  // Gray office
+    shapes.push(makeBuilding(4.5, 2.0, 0.8, 2.0, 1.5, [0.6, 0.65, 0.5], 0.3, 0.4));   // Green tint
+    shapes.push(makeBuilding(3.5, 3.8, 1.2, 1.5, 1.2, [0.5, 0.45, 0.55], 0.4, 0.35)); // Purple-ish
 
-  // === White connection lines ===
-  // Cube to cylinder
-  { type: 'line', position: [1.1, 1.0, 0], scale: [2.2, 0.04, 0.04], color: [0.9, 0.9, 0.95], metallic: 0.9, roughness: 0.1 },
-  // Cube to cone
-  { type: 'line', position: [-1.1, 1.0, 0], scale: [2.2, 0.04, 0.04], color: [0.9, 0.9, 0.95], metallic: 0.9, roughness: 0.1 },
-  // Cube top to torus
-  { type: 'line', position: [0, 1.3, -1.0], scale: [0.04, 0.04, 2.0], color: [0.9, 0.9, 0.95], metallic: 0.9, roughness: 0.1 },
-];
+    // === Parks and features ===
+    // Park area (green plane)
+    shapes.push({ type: 'plane', position: [2.0, 0.01, -1.0], scale: [2.5, 1, 2.0], color: [0.15, 0.45, 0.12], metallic: 0.0, roughness: 0.9 });
+    // Trees (cylinders + spheres)
+    shapes.push({ type: 'cylinder', position: [1.5, 0.4, -1.2], scale: [0.12, 0.8, 0.12], color: [0.35, 0.22, 0.12], metallic: 0.0, roughness: 0.9 });
+    shapes.push({ type: 'sphere', position: [1.5, 1.0, -1.2], scale: [0.7, 0.7, 0.7], color: [0.12, 0.55, 0.15], metallic: 0.0, roughness: 0.8 });
+    shapes.push({ type: 'cylinder', position: [2.5, 0.35, -0.6], scale: [0.1, 0.7, 0.1], color: [0.3, 0.2, 0.1], metallic: 0.0, roughness: 0.9 });
+    shapes.push({ type: 'sphere', position: [2.5, 0.85, -0.6], scale: [0.6, 0.65, 0.6], color: [0.15, 0.5, 0.1], metallic: 0.0, roughness: 0.85 });
 
-// ─── Camera orbit controls ──────────────────────────────────────────────────
+    // Water feature (reflective plane)
+    shapes.push({ type: 'plane', position: [-1.5, 0.015, 3.5], scale: [2.5, 1, 2.0], color: [0.1, 0.2, 0.5], metallic: 0.9, roughness: 0.05 });
 
-let orbitTheta = 0.5, orbitPhi = 0.75, orbitDist = 7.5;
+    // Dome building
+    shapes.push({ type: 'cube', position: [-1.5, 0.5, 3.5], scale: [1.2, 1.0, 1.2], color: [0.85, 0.85, 0.8], metallic: 0.1, roughness: 0.5 });
+    shapes.push({ type: 'sphere', position: [-1.5, 1.15, 3.5], scale: [1.0, 0.6, 1.0], color: [0.95, 0.85, 0.4], metallic: 0.8, roughness: 0.15 });
+
+    // Distant small buildings for depth
+    shapes.push(makeBuilding(5.5, -4.5, 0.7, 1.0, 0.7, [0.5, 0.5, 0.55], 0.3, 0.5));
+    shapes.push(makeBuilding(5.0, -3.5, 0.6, 0.8, 0.6, [0.55, 0.5, 0.45], 0.2, 0.6));
+    shapes.push(makeBuilding(-5.0, -4.0, 0.8, 1.3, 0.6, [0.45, 0.5, 0.55], 0.25, 0.5));
+
+    return shapes;
+  })(),
+
+  solar: (function() {
+    const shapes = [];
+    // Space ground (dark)
+    shapes.push({ type: 'plane', position: [0, -0.5, 0], scale: [20, 1, 20], color: [0.02, 0.02, 0.05], metallic: 0.0, roughness: 1.0 });
+
+    // Sun
+    shapes.push({ type: 'sphere', position: [0, 1.5, 0], scale: [1.8, 1.8, 1.8], color: [1.0, 0.85, 0.2], metallic: 0.0, roughness: 0.3 });
+    // Sun glow ring
+    shapes.push({ type: 'torus', position: [0, 1.5, 0], scale: [2.4, 2.4, 2.4], color: [1.0, 0.6, 0.1], metallic: 0.0, roughness: 0.5 });
+
+    // Mercury
+    shapes.push({ type: 'sphere', position: [2.5, 1.2, 0.5], scale: [0.25, 0.25, 0.25], color: [0.6, 0.55, 0.5], metallic: 0.3, roughness: 0.7 });
+    // Venus
+    shapes.push({ type: 'sphere', position: [-1.0, 1.4, 3.2], scale: [0.4, 0.4, 0.4], color: [0.9, 0.7, 0.3], metallic: 0.1, roughness: 0.6 });
+    // Earth
+    shapes.push({ type: 'sphere', position: [3.5, 1.5, -2.5], scale: [0.45, 0.45, 0.45], color: [0.15, 0.4, 0.8], metallic: 0.1, roughness: 0.5 });
+    // Moon
+    shapes.push({ type: 'sphere', position: [4.0, 1.6, -2.2], scale: [0.12, 0.12, 0.12], color: [0.75, 0.75, 0.7], metallic: 0.0, roughness: 0.8 });
+    // Mars
+    shapes.push({ type: 'sphere', position: [-4.0, 1.3, -1.5], scale: [0.38, 0.38, 0.38], color: [0.85, 0.3, 0.12], metallic: 0.05, roughness: 0.7 });
+    // Jupiter
+    shapes.push({ type: 'sphere', position: [1.5, 1.5, -5.5], scale: [1.2, 1.2, 1.2], color: [0.8, 0.65, 0.4], metallic: 0.05, roughness: 0.6 });
+    // Jupiter ring
+    shapes.push({ type: 'torus', position: [1.5, 1.5, -5.5], scale: [2.0, 0.15, 2.0], color: [0.7, 0.55, 0.35], metallic: 0.1, roughness: 0.5 });
+    // Saturn
+    shapes.push({ type: 'sphere', position: [-3.0, 1.5, 5.0], scale: [1.0, 1.0, 1.0], color: [0.9, 0.8, 0.5], metallic: 0.05, roughness: 0.55 });
+    // Saturn ring
+    shapes.push({ type: 'torus', position: [-3.0, 1.5, 5.0], scale: [2.2, 0.1, 2.2], color: [0.85, 0.75, 0.5], metallic: 0.2, roughness: 0.4 });
+    // Uranus
+    shapes.push({ type: 'sphere', position: [5.5, 1.5, 3.0], scale: [0.65, 0.65, 0.65], color: [0.5, 0.8, 0.85], metallic: 0.1, roughness: 0.5 });
+    // Neptune
+    shapes.push({ type: 'sphere', position: [-5.5, 1.5, -5.0], scale: [0.6, 0.6, 0.6], color: [0.2, 0.3, 0.9], metallic: 0.15, roughness: 0.4 });
+
+    // Asteroid belt (small cubes/spheres)
+    for (let i = 0; i < 20; i++) {
+      const angle = (i / 20) * Math.PI * 2;
+      const r = 6.5 + Math.sin(i * 7) * 0.5;
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      const s = 0.06 + Math.random() * 0.08;
+      shapes.push({ type: i % 3 === 0 ? 'cube' : 'sphere', position: [x, 1.2 + Math.sin(i * 3) * 0.3, z], scale: [s, s, s], color: [0.5, 0.45, 0.4], metallic: 0.2, roughness: 0.8 });
+    }
+
+    return shapes;
+  })(),
+
+  house: (function() {
+    const shapes = [];
+
+    // Ground / lawn
+    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.18, 0.5, 0.12], metallic: 0.0, roughness: 0.9 });
+
+    // Path to door
+    shapes.push({ type: 'plane', position: [0, 0.008, 2.5], scale: [1.0, 1, 3.0], color: [0.65, 0.6, 0.5], metallic: 0.0, roughness: 0.85 });
+
+    // === Main house body ===
+    shapes.push({ type: 'cube', position: [0, 1.2, 0], scale: [3.5, 2.4, 3.0], color: [0.92, 0.88, 0.78], metallic: 0.02, roughness: 0.75 });
+
+    // Roof (wide cone)
+    shapes.push({ type: 'cone', position: [0, 3.2, 0], scale: [4.5, 1.8, 3.8], color: [0.65, 0.22, 0.12], metallic: 0.05, roughness: 0.7 });
+
+    // Door
+    shapes.push({ type: 'cube', position: [0, 0.7, 1.52], scale: [0.6, 1.4, 0.06], color: [0.4, 0.22, 0.1], metallic: 0.05, roughness: 0.6 });
+    // Door knob
+    shapes.push({ type: 'sphere', position: [0.2, 0.65, 1.56], scale: [0.06, 0.06, 0.06], color: [0.95, 0.8, 0.3], metallic: 1.0, roughness: 0.15 });
+
+    // Windows
+    shapes.push({ type: 'cube', position: [-0.9, 1.5, 1.52], scale: [0.55, 0.55, 0.04], color: [0.5, 0.7, 0.9], metallic: 0.7, roughness: 0.05 });
+    shapes.push({ type: 'cube', position: [0.9, 1.5, 1.52], scale: [0.55, 0.55, 0.04], color: [0.5, 0.7, 0.9], metallic: 0.7, roughness: 0.05 });
+
+    // Chimney
+    shapes.push({ type: 'cube', position: [1.0, 3.5, -0.6], scale: [0.5, 1.5, 0.5], color: [0.6, 0.28, 0.18], metallic: 0.0, roughness: 0.8 });
+    shapes.push({ type: 'cube', position: [1.0, 4.3, -0.6], scale: [0.6, 0.12, 0.6], color: [0.55, 0.25, 0.15], metallic: 0.0, roughness: 0.8 });
+
+    // === Garage ===
+    shapes.push({ type: 'cube', position: [3.0, 0.9, 0.3], scale: [2.0, 1.8, 2.5], color: [0.88, 0.84, 0.75], metallic: 0.02, roughness: 0.75 });
+    shapes.push({ type: 'cone', position: [3.0, 2.3, 0.3], scale: [2.6, 1.0, 3.2], color: [0.6, 0.2, 0.1], metallic: 0.05, roughness: 0.7 });
+    // Garage door
+    shapes.push({ type: 'cube', position: [3.0, 0.65, 1.56], scale: [1.4, 1.3, 0.06], color: [0.7, 0.68, 0.62], metallic: 0.1, roughness: 0.5 });
+
+    // === Trees ===
+    const treePositions = [[-3.5, 0, 2.5], [-4.0, 0, -1.5], [4.5, 0, -2.0], [-2.0, 0, -3.0], [3.0, 0, -3.5]];
+    for (const [tx, , tz] of treePositions) {
+      const h = 1.5 + Math.random() * 1.0;
+      shapes.push({ type: 'cylinder', position: [tx, h * 0.4, tz], scale: [0.15, h * 0.8, 0.15], color: [0.35, 0.22, 0.1], metallic: 0.0, roughness: 0.9 });
+      shapes.push({ type: 'sphere', position: [tx, h * 0.9, tz], scale: [1.0, 1.1, 1.0], color: [0.1 + Math.random() * 0.1, 0.4 + Math.random() * 0.2, 0.08], metallic: 0.0, roughness: 0.85 });
+    }
+
+    // Fence posts
+    for (let i = -4; i <= 4; i++) {
+      if (Math.abs(i) < 1) continue; // Gap for path
+      shapes.push({ type: 'cube', position: [i * 0.9, 0.25, 4.0], scale: [0.06, 0.5, 0.06], color: [0.9, 0.85, 0.75], metallic: 0.0, roughness: 0.7 });
+    }
+    // Fence rail
+    shapes.push({ type: 'cube', position: [-2.7, 0.3, 4.0], scale: [2.7, 0.06, 0.04], color: [0.9, 0.85, 0.75], metallic: 0.0, roughness: 0.7 });
+    shapes.push({ type: 'cube', position: [2.7, 0.3, 4.0], scale: [2.7, 0.06, 0.04], color: [0.9, 0.85, 0.75], metallic: 0.0, roughness: 0.7 });
+
+    // Mailbox
+    shapes.push({ type: 'cylinder', position: [1.5, 0.5, 3.8], scale: [0.06, 1.0, 0.06], color: [0.3, 0.3, 0.3], metallic: 0.5, roughness: 0.4 });
+    shapes.push({ type: 'cube', position: [1.5, 1.05, 3.8], scale: [0.3, 0.2, 0.2], color: [0.15, 0.3, 0.7], metallic: 0.3, roughness: 0.4 });
+
+    // Flower pots
+    shapes.push({ type: 'cylinder', position: [-0.6, 0.12, 1.7], scale: [0.2, 0.25, 0.2], color: [0.7, 0.35, 0.2], metallic: 0.0, roughness: 0.7 });
+    shapes.push({ type: 'sphere', position: [-0.6, 0.32, 1.7], scale: [0.25, 0.2, 0.25], color: [0.9, 0.2, 0.3], metallic: 0.0, roughness: 0.6 });
+    shapes.push({ type: 'cylinder', position: [0.6, 0.12, 1.7], scale: [0.2, 0.25, 0.2], color: [0.7, 0.35, 0.2], metallic: 0.0, roughness: 0.7 });
+    shapes.push({ type: 'sphere', position: [0.6, 0.32, 1.7], scale: [0.25, 0.2, 0.25], color: [0.95, 0.8, 0.15], metallic: 0.0, roughness: 0.6 });
+
+    return shapes;
+  })(),
+
+  abstract: (function() {
+    const shapes = [];
+    shapes.push({ type: 'plane', position: [0, 0.001, 0], scale: [14, 1, 14], color: [0.03, 0.03, 0.06], metallic: 0.8, roughness: 0.1 });
+
+    // Floating chrome spheres in spiral
+    for (let i = 0; i < 24; i++) {
+      const t = i / 24;
+      const angle = t * Math.PI * 6;
+      const r = 1.0 + t * 4.0;
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      const y = 0.5 + t * 3.0;
+      const s = 0.15 + t * 0.35;
+      const hue = t;
+      const rgb = hslToRgb(hue, 0.7, 0.5);
+      shapes.push({ type: 'sphere', position: [x, y, z], scale: [s, s, s], color: rgb, metallic: 0.9, roughness: 0.08 });
+    }
+
+    // Central pillar
+    shapes.push({ type: 'cylinder', position: [0, 2.0, 0], scale: [0.2, 4.0, 0.2], color: [0.95, 0.95, 0.98], metallic: 1.0, roughness: 0.05 });
+    // Top gem
+    shapes.push({ type: 'torus', position: [0, 4.2, 0], scale: [0.8, 0.8, 0.8], color: [0.2, 0.8, 1.0], metallic: 0.95, roughness: 0.05 });
+    shapes.push({ type: 'sphere', position: [0, 4.2, 0], scale: [0.5, 0.5, 0.5], color: [1.0, 0.3, 0.6], metallic: 0.95, roughness: 0.05 });
+
+    // Floating cubes at corners
+    const corners = [[3,1.5,3],[-3,2.0,3],[3,2.5,-3],[-3,1.0,-3]];
+    corners.forEach(([cx,cy,cz], i) => {
+      const rgb = hslToRgb(i / 4 + 0.1, 0.8, 0.5);
+      shapes.push({ type: 'cube', position: [cx, cy, cz], scale: [0.8, 0.8, 0.8], color: rgb, metallic: 0.7, roughness: 0.15 });
+    });
+
+    // Torus ring on ground
+    shapes.push({ type: 'torus', position: [0, 0.4, 0], scale: [5.0, 0.5, 5.0], color: [0.3, 0.1, 0.6], metallic: 0.9, roughness: 0.1 });
+
+    return shapes;
+  })(),
+};
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q - p) * 6 * t; if (t < 1/2) return q; if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3);
+  }
+  return [r, g, b];
+}
+
+// ── Scene state ──────────────────────────────────────────────────────────────
+
+let sceneShapes = [];
+let currentPreset = 'city';
+let animatedShapes = []; // indices of shapes that should animate
+
+function loadScene(name) {
+  currentPreset = name;
+  sceneShapes = JSON.parse(JSON.stringify(SCENES[name] || SCENES.city));
+  animatedShapes = [];
+  updateShapeCount();
+  // Update preset buttons
+  document.querySelectorAll('.presets button').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.toLowerCase().replace(/\s/g, '') === name.replace(/\s/g, ''));
+  });
+  // Reset camera for different scenes
+  if (name === 'solar') { targetDist = 14; targetPhi = 0.6; }
+  else if (name === 'house') { targetDist = 10; targetPhi = 0.7; targetTheta = 0.3; }
+  else if (name === 'abstract') { targetDist = 10; targetPhi = 0.65; }
+  else { targetDist = 12; targetPhi = 0.6; }
+}
+
+function updateShapeCount() {
+  document.getElementById('shapeCount').textContent = sceneShapes.length + ' shapes';
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return [r, g, b];
+}
+
+function addUserShape() {
+  const type = document.getElementById('shapeType').value;
+  const color = hexToRgb(document.getElementById('shapeColor').value);
+  const metallic = document.getElementById('metalSlider').value / 100;
+  const roughness = document.getElementById('roughSlider').value / 100;
+
+  // Place shape at a random position near center, slightly above ground
+  const x = (Math.random() - 0.5) * 6;
+  const z = (Math.random() - 0.5) * 6;
+  const s = 0.5 + Math.random() * 0.8;
+  const y = type === 'plane' ? 0.02 : s / 2 + 0.5;
+
+  const shape = { type, position: [x, y, z], scale: [s, s, s], color, metallic, roughness };
+  sceneShapes.push(shape);
+  animatedShapes.push({ idx: sceneShapes.length - 1, startTime: performance.now() / 1000, fromY: y + 3 });
+  updateShapeCount();
+}
+
+function openClaude() {
+  const prompt = encodeURIComponent(
+    "Using SceneView for Android (Jetpack Compose), create a 3D scene with procedural geometry. " +
+    "Use Scene { } composable with CubeNode, SphereNode, CylinderNode to build a miniature city " +
+    "with buildings of different heights, a park with trees (cylinder trunks + sphere canopies), " +
+    "and a reflective water feature. Apply PBR materials with varying metallic and roughness values. " +
+    "Include the dependency: io.github.sceneview:sceneview:3.3.0"
+  );
+  window.open('https://claude.ai/new?q=' + prompt, '_blank');
+}
+
+// Initialize with city scene
+loadScene('city');
+
+// ── Camera orbit controls ────────────────────────────────────────────────────
+
+let orbitTheta = 0.5, orbitPhi = 0.6, orbitDist = 12;
 let targetTheta = orbitTheta, targetPhi = orbitPhi, targetDist = orbitDist;
 let autoRotate = true;
 let isDragging = false, lastX = 0, lastY = 0;
@@ -543,7 +884,7 @@ canvas.addEventListener('pointermove', e => {
 });
 canvas.addEventListener('pointerup', () => { isDragging = false; });
 canvas.addEventListener('wheel', e => {
-  targetDist = Math.max(2, Math.min(20, targetDist + e.deltaY * 0.005));
+  targetDist = Math.max(2, Math.min(25, targetDist + e.deltaY * 0.008));
   e.preventDefault();
 }, { passive: false });
 
@@ -560,12 +901,12 @@ canvas.addEventListener('touchmove', e => {
     const dx = e.touches[0].clientX - e.touches[1].clientX;
     const dy = e.touches[0].clientY - e.touches[1].clientY;
     const dist = Math.sqrt(dx*dx + dy*dy);
-    targetDist = Math.max(2, Math.min(20, targetDist - (dist - lastPinchDist) * 0.02));
+    targetDist = Math.max(2, Math.min(25, targetDist - (dist - lastPinchDist) * 0.02));
     lastPinchDist = dist;
   }
 }, { passive: true });
 
-// ─── Render loop ────────────────────────────────────────────────────────────
+// ── Render loop ──────────────────────────────────────────────────────────────
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -576,16 +917,14 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// Hide loading overlay after first frame
 let loadingHidden = false;
 
 function render(time) {
   requestAnimationFrame(render);
   const t = time * 0.001;
 
-  // Smooth camera interpolation (lerp)
   const smoothing = 0.08;
-  if (autoRotate) targetTheta += 0.003;
+  if (autoRotate) targetTheta += 0.002;
   orbitTheta += (targetTheta - orbitTheta) * smoothing;
   orbitPhi += (targetPhi - orbitPhi) * smoothing;
   orbitDist += (targetDist - orbitDist) * smoothing;
@@ -597,7 +936,7 @@ function render(time) {
 
   const aspect = canvas.width / canvas.height;
   const proj = mat4Perspective(Math.PI / 4, aspect, 0.1, 100);
-  const view = mat4LookAt(camPos, [0, 0.7, 0], [0, 1, 0]);
+  const view = mat4LookAt(camPos, [0, 1.0, 0], [0, 1, 0]);
   const vp = mat4Multiply(proj, view);
 
   gl.clearColor(0.051, 0.067, 0.09, 1.0);
@@ -615,13 +954,26 @@ function render(time) {
   // Draw each shape
   gl.useProgram(prog);
   gl.uniform3fv(loc.uCamPos, camPos);
+  gl.uniform1f(loc.uTime, t);
 
-  for (const shape of sceneShapes) {
+  for (let si = 0; si < sceneShapes.length; si++) {
+    const shape = sceneShapes[si];
     const mesh = prototypes[shape.type];
     if (!mesh) continue;
 
-    const p = shape.position || [0, 0, 0];
+    let p = shape.position || [0, 0, 0];
     const s = shape.scale || [1, 1, 1];
+
+    // Animate newly added shapes (drop in from above)
+    const anim = animatedShapes.find(a => a.idx === si);
+    if (anim) {
+      const elapsed = t - anim.startTime;
+      if (elapsed < 1.0) {
+        const ease = 1 - Math.pow(1 - elapsed, 3); // ease-out cubic
+        const bounce = Math.sin(elapsed * Math.PI * 2) * 0.1 * (1 - elapsed);
+        p = [p[0], anim.fromY + (p[1] - anim.fromY) * ease + bounce, p[2]];
+      }
+    }
 
     const model = mat4Multiply(mat4Translate(p[0], p[1], p[2]), mat4Scale(s[0], s[1], s[2]));
     const mvp = mat4Multiply(vp, model);
@@ -638,7 +990,6 @@ function render(time) {
     gl.drawElements(mesh.mode, mesh.count, gl.UNSIGNED_SHORT, 0);
   }
 
-  // Hide loading overlay after first rendered frame
   if (!loadingHidden) {
     loadingHidden = true;
     document.getElementById('loading').classList.add('hidden');
