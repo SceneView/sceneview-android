@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Showcase — SceneView 3D & AR SDK</title>
+  <meta name="description" content="Interactive showcase of SceneView capabilities: e-commerce product viewers, AR furniture preview, automotive configurators, medical visualization, and multi-platform 3D.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- model-viewer web component -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
+  <style>
+    /* ===== SHOWCASE-SPECIFIC STYLES ===== */
+
+    .showcase-hero {
+      padding-top: calc(var(--nav-height) + var(--space-3xl));
+      padding-bottom: var(--space-3xl);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .showcase-hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(26,115,232,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    [data-theme="dark"] .showcase-hero::before {
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(138,180,248,0.08) 0%, transparent 70%);
+    }
+
+    .showcase-hero__title {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--color-primary) 0%, #6c5ce7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--space-md);
+    }
+
+    [data-theme="dark"] .showcase-hero__title {
+      background: linear-gradient(135deg, #8ab4f8 0%, #bb86fc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .showcase-hero__sub {
+      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+      color: var(--color-on-surface-dim);
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ===== SHOWCASE SECTIONS ===== */
+    .showcase-section {
+      padding: var(--space-4xl) 0;
+      position: relative;
+    }
+
+    .showcase-section:nth-child(even) {
+      background: var(--color-surface-dim);
+    }
+
+    .showcase-section__header {
+      text-align: center;
+      margin-bottom: var(--space-2xl);
+    }
+
+    .showcase-section__badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: var(--space-sm);
+    }
+
+    .badge--ecommerce { background: rgba(52,168,83,0.12); color: #34a853; }
+    .badge--ar { background: rgba(234,67,53,0.12); color: #ea4335; }
+    .badge--auto { background: rgba(251,188,4,0.12); color: #c8960a; }
+    .badge--medical { background: rgba(66,133,244,0.12); color: #4285f4; }
+    .badge--luxury { background: rgba(171,71,188,0.12); color: #ab47bc; }
+    .badge--multi { background: rgba(26,115,232,0.12); color: var(--color-primary); }
+
+    [data-theme="dark"] .badge--ecommerce { background: rgba(52,168,83,0.2); color: #81c995; }
+    [data-theme="dark"] .badge--ar { background: rgba(234,67,53,0.2); color: #f28b82; }
+    [data-theme="dark"] .badge--auto { background: rgba(251,188,4,0.2); color: #fdd663; }
+    [data-theme="dark"] .badge--medical { background: rgba(66,133,244,0.2); color: #8ab4f8; }
+    [data-theme="dark"] .badge--luxury { background: rgba(171,71,188,0.2); color: #d59fe8; }
+    [data-theme="dark"] .badge--multi { background: rgba(138,180,248,0.15); color: #8ab4f8; }
+
+    .showcase-section__title {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: var(--space-sm);
+    }
+
+    .showcase-section__subtitle {
+      font-size: 1.05rem;
+      color: var(--color-on-surface-dim);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ===== DEVICE MOCKUP ===== */
+    .device-frame {
+      position: relative;
+      border-radius: 36px;
+      background: #000;
+      padding: 12px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.15);
+      max-width: 380px;
+      margin: 0 auto;
+      aspect-ratio: 9 / 18;
+      overflow: hidden;
+    }
+
+    .device-frame--wide {
+      max-width: 520px;
+      aspect-ratio: 4 / 3;
+      border-radius: 20px;
+    }
+
+    .device-frame__screen {
+      border-radius: 24px;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: var(--color-surface-dim);
+    }
+
+    .device-frame--wide .device-frame__screen {
+      border-radius: 12px;
+    }
+
+    .device-frame__notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 28px;
+      background: #000;
+      border-radius: 0 0 16px 16px;
+      z-index: 10;
+    }
+
+    .device-frame model-viewer {
+      width: 100%;
+      height: 100%;
+      display: block;
+      --poster-color: transparent;
+    }
+
+    /* ===== DEMO LAYOUTS ===== */
+    .demo-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3xl);
+      align-items: center;
+    }
+
+    .demo-layout--reverse {
+      direction: rtl;
+    }
+
+    .demo-layout--reverse > * {
+      direction: ltr;
+    }
+
+    .demo-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    .demo-info__title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .demo-info__desc {
+      color: var(--color-on-surface-dim);
+      line-height: 1.7;
+    }
+
+    /* ===== FAKE UI OVERLAYS ===== */
+    .app-overlay {
+      position: absolute;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Ecommerce app UI */
+    .ecom-app {
+      position: relative;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ecom-app__top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 36px 16px 8px;
+      z-index: 5;
+      position: relative;
+    }
+
+    .ecom-app__top-icon {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .ecom-app__viewer {
+      flex: 1;
+      position: relative;
+    }
+
+    .ecom-app__viewer model-viewer {
+      width: 100%;
+      height: 100%;
+    }
+
+    .ecom-app__bottom {
+      background: var(--color-surface-container);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 16px 16px;
+      z-index: 5;
+      position: relative;
+    }
+
+    .ecom-app__name {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 2px;
+    }
+
+    .ecom-app__price {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--color-primary);
+      margin-bottom: 10px;
+    }
+
+    .ecom-app__swatches {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .swatch {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .swatch--active {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px var(--color-primary);
+    }
+
+    .ecom-app__cart-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      background: var(--color-primary);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .ecom-app__cart-btn:hover {
+      background: var(--color-primary-hover);
+    }
+
+    /* AR Scene */
+    .ar-scene {
+      position: relative;
+      height: 100%;
+    }
+
+    .ar-scene model-viewer {
+      width: 100%;
+      height: 100%;
+    }
+
+    .ar-scene__grid {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 40%;
+      background: linear-gradient(to top, rgba(26,115,232,0.08) 0%, transparent 100%);
+      background-image:
+        linear-gradient(to top, rgba(26,115,232,0.08) 0%, transparent 100%),
+        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(26,115,232,0.15) 19px, rgba(26,115,232,0.15) 20px),
+        repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(26,115,232,0.15) 19px, rgba(26,115,232,0.15) 20px);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .ar-scene__badge {
+      position: absolute;
+      top: 40px;
+      left: 16px;
+      background: rgba(234,67,53,0.9);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      backdrop-filter: blur(6px);
+    }
+
+    .ar-scene__controls {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+
+    .ar-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      background: rgba(255,255,255,0.9);
+      color: #1f2937;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    [data-theme="dark"] .ar-btn {
+      background: rgba(31,41,55,0.9);
+      color: #f3f4f6;
+    }
+
+    /* Auto studio */
+    .auto-studio {
+      position: relative;
+      height: 100%;
+      background: radial-gradient(ellipse at 50% 60%, #1a1a2e 0%, #0a0a0f 100%);
+    }
+
+    .auto-studio model-viewer {
+      width: 100%;
+      height: 100%;
+    }
+
+    .auto-studio__floor {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 30%;
+      background: linear-gradient(to top, rgba(255,255,255,0.03) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .auto-studio__controls {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 5;
+      display: flex;
+      gap: 6px;
+    }
+
+    .auto-chip {
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #e5e7eb;
+      font-size: 0.7rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .auto-chip--active {
+      background: rgba(251,188,4,0.2);
+      border-color: rgba(251,188,4,0.5);
+      color: #fdd663;
+    }
+
+    .auto-studio__label {
+      position: absolute;
+      top: 40px;
+      left: 16px;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      z-index: 5;
+    }
+
+    /* Medical / Education */
+    .edu-viewer {
+      position: relative;
+      height: 100%;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+
+    .edu-viewer model-viewer {
+      width: 100%;
+      height: 100%;
+    }
+
+    .edu-viewer__labels {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .edu-label {
+      position: absolute;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: #8ab4f8;
+      padding: 3px 8px;
+      background: rgba(13,17,23,0.8);
+      border-radius: 6px;
+      border: 1px solid rgba(138,180,248,0.3);
+      white-space: nowrap;
+      backdrop-filter: blur(4px);
+    }
+
+    .edu-label::before {
+      content: '';
+      position: absolute;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #8ab4f8;
+      box-shadow: 0 0 6px rgba(138,180,248,0.6);
+    }
+
+    .edu-label--1 { top: 25%; left: 15%; }
+    .edu-label--1::before { right: -10px; top: 50%; transform: translateY(-50%); }
+    .edu-label--2 { top: 40%; right: 12%; }
+    .edu-label--2::before { left: -10px; top: 50%; transform: translateY(-50%); }
+    .edu-label--3 { bottom: 30%; left: 20%; }
+    .edu-label--3::before { right: -10px; top: 50%; transform: translateY(-50%); }
+    .edu-label--4 { top: 55%; right: 18%; }
+    .edu-label--4::before { left: -10px; top: 50%; transform: translateY(-50%); }
+
+    .edu-viewer__toolbar {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      z-index: 5;
+      background: rgba(13,17,23,0.85);
+      border-radius: var(--radius-full);
+      padding: 4px;
+      backdrop-filter: blur(8px);
+    }
+
+    .edu-tool {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.5);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .edu-tool--active {
+      background: rgba(138,180,248,0.2);
+      color: #8ab4f8;
+    }
+
+    /* Luxury/Watch */
+    .luxury-viewer {
+      position: relative;
+      height: 100%;
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+
+    .luxury-viewer model-viewer {
+      width: 100%;
+      height: 100%;
+    }
+
+    .luxury-viewer__brand {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: rgba(255,255,255,0.4);
+      z-index: 5;
+    }
+
+    .luxury-viewer__price-tag {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 5;
+    }
+
+    .luxury-viewer__price-tag span {
+      display: block;
+    }
+
+    .luxury-viewer__product-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 2px;
+    }
+
+    .luxury-viewer__product-price {
+      font-size: 0.7rem;
+      color: rgba(213,159,232,0.8);
+      font-weight: 500;
+    }
+
+    .luxury-viewer__options {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+
+    .luxury-opt {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .luxury-opt--active {
+      border-color: rgba(255,255,255,0.8);
+      box-shadow: 0 0 8px rgba(255,255,255,0.3);
+    }
+
+    /* ===== MULTI-PLATFORM GRID ===== */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-lg);
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .platform-card {
+      background: var(--color-surface-container);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-outline);
+      overflow: hidden;
+      transition: transform 0.3s var(--ease-expressive), box-shadow 0.3s var(--ease-expressive);
+    }
+
+    .platform-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .platform-card__viewer {
+      aspect-ratio: 1;
+      position: relative;
+      background: var(--color-surface-dim);
+    }
+
+    .platform-card__viewer model-viewer {
+      width: 100%;
+      height: 100%;
+    }
+
+    .platform-card__device-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      font-size: 0.6rem;
+      font-weight: 600;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      z-index: 5;
+      backdrop-filter: blur(4px);
+    }
+
+    .platform-card__label {
+      padding: 12px;
+      text-align: center;
+    }
+
+    .platform-card__name {
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-bottom: 2px;
+    }
+
+    .platform-card__tech {
+      font-size: 0.7rem;
+      color: var(--color-on-surface-dim);
+    }
+
+    /* ===== FEATURE PILLS (UI elements around demos) ===== */
+    .feature-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      border: 1px solid rgba(26,115,232,0.15);
+    }
+
+    [data-theme="dark"] .pill {
+      border-color: rgba(138,180,248,0.2);
+    }
+
+    .pill svg {
+      width: 14px; height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* ===== CODE SNIPPET INLINE ===== */
+    .demo-code {
+      background: var(--color-code-bg);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 1.6;
+      color: var(--color-code-text);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .demo-code .kw { color: #c678dd; }
+    .demo-code .fn { color: #61afef; }
+    .demo-code .str { color: #98c379; }
+    .demo-code .cm { color: #5c6370; font-style: italic; }
+
+    /* ===== CTA SECTION ===== */
+    .showcase-cta {
+      padding: var(--space-4xl) 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .showcase-cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(26,115,232,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .showcase-cta__title {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: var(--space-md);
+    }
+
+    .showcase-cta__sub {
+      color: var(--color-on-surface-dim);
+      font-size: 1.05rem;
+      max-width: 500px;
+      margin: 0 auto var(--space-xl);
+    }
+
+    .showcase-cta__actions {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    /* ===== STATS ROW ===== */
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-3xl);
+      padding: var(--space-2xl) 0;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat__number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--color-primary);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat__label {
+      font-size: 0.85rem;
+      color: var(--color-on-surface-dim);
+      font-weight: 500;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .demo-layout {
+        grid-template-columns: 1fr;
+        gap: var(--space-xl);
+      }
+
+      .demo-layout--reverse {
+        direction: ltr;
+      }
+
+      .platform-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .device-frame {
+        max-width: 300px;
+      }
+
+      .device-frame--wide {
+        max-width: 400px;
+      }
+
+      .stats-row {
+        gap: var(--space-xl);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .platform-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-md);
+      }
+
+      .device-frame {
+        max-width: 260px;
+      }
+
+      .ecom-app__bottom {
+        padding: 14px 12px 12px;
+      }
+
+      .demo-code {
+        font-size: 0.65rem;
+        padding: 12px;
+      }
+
+      .stats-row {
+        gap: var(--space-lg);
+      }
+
+      .stat__number {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="nav" id="nav">
+    <div class="nav__container">
+      <a href="/" class="nav__logo">
+        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <span class="nav__logo-text">SceneView</span>
+      </a>
+
+      <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="nav__links" id="navLinks">
+        <a href="/" class="nav__link">Home</a>
+        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
+        <a href="/playground.html" class="nav__link">Playground</a>
+        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
+        <a href="https://polar.sh/sceneview" class="nav__link" style="color:#34a853;font-weight:600">Pro</a>
+        <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <section class="showcase-hero">
+    <div class="container">
+      <h1 class="showcase-hero__title">Built with SceneView</h1>
+      <p class="showcase-hero__sub">Interactive 3D experiences across every industry. Drag, rotate, and explore what's possible with a few lines of code.</p>
+
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat__number">10+</div>
+          <div class="stat__label">Platforms</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">50k+</div>
+          <div class="stat__label">Downloads</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">3.4.7</div>
+          <div class="stat__label">Latest Release</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">9</div>
+          <div class="stat__label">MCP Servers</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 1. E-COMMERCE PRODUCT VIEWER ===== -->
+  <section class="showcase-section" id="ecommerce">
+    <div class="container">
+      <div class="showcase-section__header">
+        <span class="showcase-section__badge badge--ecommerce">E-Commerce</span>
+        <h2 class="showcase-section__title">Product Viewer</h2>
+        <p class="showcase-section__subtitle">Let customers interact with products in 3D before buying. Increase conversions by up to 94%.</p>
+      </div>
+
+      <div class="demo-layout">
+        <!-- Phone mockup -->
+        <div class="device-frame">
+          <div class="device-frame__screen">
+            <div class="device-frame__notch"></div>
+            <div class="ecom-app">
+              <div class="ecom-app__top-bar">
+                <div class="ecom-app__top-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </div>
+                <div class="ecom-app__top-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                </div>
+              </div>
+              <div class="ecom-app__viewer">
+                <model-viewer
+                  src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
+                  alt="3D Sneaker product viewer"
+                  auto-rotate
+                  camera-controls
+                  shadow-intensity="1.2"
+                  shadow-softness="0.8"
+                  exposure="0.9"
+                  camera-orbit="30deg 75deg 0.35m"
+                  min-camera-orbit="auto auto 0.2m"
+                  max-camera-orbit="auto auto 1m"
+                  style="background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);"
+                  interaction-prompt="none"
+                  loading="eager"
+                ></model-viewer>
+              </div>
+              <div class="ecom-app__bottom">
+                <div class="ecom-app__name">Air Max Pulse</div>
+                <div style="font-size:0.7rem;color:var(--color-on-surface-dim);margin-bottom:6px;">
+                  <span style="color:#fbbc04;">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 4.8 (2,847 reviews)
+                </div>
+                <div class="ecom-app__price">$159.99</div>
+                <div class="ecom-app__swatches">
+                  <div class="swatch swatch--active" style="background:#1f2937;"></div>
+                  <div class="swatch" style="background:#dc2626;"></div>
+                  <div class="swatch" style="background:#2563eb;"></div>
+                  <div class="swatch" style="background:#f5f5f4;border:1px solid #d1d5db;"></div>
+                </div>
+                <button class="ecom-app__cart-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="demo-info">
+          <h3 class="demo-info__title">Boost conversions with interactive 3D</h3>
+          <p class="demo-info__desc">Replace flat product images with fully interactive 3D models. Customers can rotate, zoom, and examine products from every angle. Material variants let them switch colors and finishes in real time.</p>
+          <div class="feature-pills">
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              360&deg; View
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              Material Variants
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              Shadow & Lighting
+            </span>
+          </div>
+          <div class="demo-code"><span class="fn">Scene</span> {
+    <span class="fn">ModelNode</span>(
+        model = <span class="fn">rememberModelInstance</span>(
+            modelLoader, <span class="str">"models/shoe.glb"</span>
+        )
+    )
+}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2. FURNITURE AR PREVIEW ===== -->
+  <section class="showcase-section" id="furniture">
+    <div class="container">
+      <div class="showcase-section__header">
+        <span class="showcase-section__badge badge--ar">Augmented Reality</span>
+        <h2 class="showcase-section__title">Furniture AR Preview</h2>
+        <p class="showcase-section__subtitle">Place furniture in your room with AR. See how it fits before you buy.</p>
+      </div>
+
+      <div class="demo-layout demo-layout--reverse">
+        <!-- Phone mockup -->
+        <div class="device-frame">
+          <div class="device-frame__screen">
+            <div class="device-frame__notch"></div>
+            <div class="ar-scene">
+              <div class="ar-scene__badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>
+                AR LIVE
+              </div>
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
+                alt="3D Chair in AR preview"
+                auto-rotate
+                camera-controls
+                shadow-intensity="1.5"
+                shadow-softness="1"
+                exposure="1"
+                camera-orbit="150deg 70deg 2.5m"
+                min-camera-orbit="auto auto 1m"
+                max-camera-orbit="auto auto 5m"
+                style="background: linear-gradient(180deg, #e8eaed 0%, #d5d8dc 100%);"
+                interaction-prompt="none"
+                loading="eager"
+              ></model-viewer>
+              <div class="ar-scene__grid"></div>
+              <div class="ar-scene__controls">
+                <button class="ar-btn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+                  Place
+                </button>
+                <button class="ar-btn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  Snap
+                </button>
+                <button class="ar-btn">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>
+                  Scale
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="demo-info">
+          <h3 class="demo-info__title">Try before you buy, right in your space</h3>
+          <p class="demo-info__desc">ARCore plane detection places furniture on real surfaces. Customers can walk around, resize, and reposition items. Reduces returns by letting people verify fit and style in their actual room.</p>
+          <div class="feature-pills">
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+              ARCore / ARKit
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Plane Detection
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Real-World Scale
+            </span>
+          </div>
+          <div class="demo-code"><span class="fn">ARScene</span>(
+    sessionConfiguration = <span class="fn">ARSession</span>.<span class="fn">Config</span>(
+        planeDetection = listOf(Plane.Type.Horizontal)
+    )
+) {
+    <span class="fn">AnchorNode</span>(anchor) {
+        <span class="fn">ModelNode</span>(model = chairModel)
+    }
+}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3. AUTOMOTIVE CONFIGURATOR ===== -->
+  <section class="showcase-section" id="automotive">
+    <div class="container">
+      <div class="showcase-section__header">
+        <span class="showcase-section__badge badge--auto">Automotive</span>
+        <h2 class="showcase-section__title">Vehicle Configurator</h2>
+        <p class="showcase-section__subtitle">Stunning studio-quality 3D visualization for automotive experiences.</p>
+      </div>
+
+      <div class="demo-layout">
+        <!-- Wide device frame -->
+        <div class="device-frame device-frame--wide">
+          <div class="device-frame__screen">
+            <div class="auto-studio">
+              <div class="auto-studio__label">Studio Mode</div>
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb"
+                alt="3D car configurator"
+                auto-rotate
+                camera-controls
+                shadow-intensity="2"
+                shadow-softness="1"
+                exposure="0.7"
+                camera-orbit="-30deg 65deg 0.2m"
+                min-camera-orbit="auto auto 0.1m"
+                max-camera-orbit="auto auto 0.5m"
+                environment-image="neutral"
+                style="background: radial-gradient(ellipse at 50% 60%, #1a1a2e 0%, #0a0a0f 100%);"
+                interaction-prompt="none"
+                loading="eager"
+              ></model-viewer>
+              <div class="auto-studio__floor"></div>
+              <div class="auto-studio__controls">
+                <span class="auto-chip auto-chip--active">Exterior</span>
+                <span class="auto-chip">Interior</span>
+                <span class="auto-chip">Wheels</span>
+                <span class="auto-chip">Colors</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="demo-info">
+          <h3 class="demo-info__title">Photorealistic vehicle presentation</h3>
+          <p class="demo-info__desc">PBR materials deliver showroom-quality rendering. Studio lighting, environment reflections, and real-time shadows make the model indistinguishable from a photo. Perfect for dealership apps and configurators.</p>
+          <div class="feature-pills">
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              PBR Materials
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v1m0 16v1m-8-9H3m18 0h-1m-2.636-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707"/><circle cx="12" cy="12" r="4"/></svg>
+              HDR Lighting
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+              Configurator Ready
+            </span>
+          </div>
+          <div class="demo-code"><span class="fn">Scene</span>(
+    environment = <span class="fn">rememberEnvironment</span>(
+        environmentLoader, <span class="str">"studio_hdr.ktx"</span>
+    )
+) {
+    <span class="fn">ModelNode</span>(model = carModel) {
+        <span class="fn">LightNode</span>(apply = { <span class="fn">intensity</span>(<span class="str">150_000f</span>) })
+    }
+}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4. MEDICAL / EDUCATION ===== -->
+  <section class="showcase-section" id="education">
+    <div class="container">
+      <div class="showcase-section__header">
+        <span class="showcase-section__badge badge--medical">Education</span>
+        <h2 class="showcase-section__title">3D Anatomy Viewer</h2>
+        <p class="showcase-section__subtitle">Interactive 3D models with annotations for immersive learning experiences.</p>
+      </div>
+
+      <div class="demo-layout demo-layout--reverse">
+        <!-- Phone mockup -->
+        <div class="device-frame">
+          <div class="device-frame__screen">
+            <div class="device-frame__notch"></div>
+            <div class="edu-viewer">
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+                alt="3D anatomy viewer"
+                auto-rotate
+                rotation-per-second="12deg"
+                camera-controls
+                shadow-intensity="0.5"
+                exposure="0.8"
+                camera-orbit="30deg 80deg 2.5m"
+                min-camera-orbit="auto auto 1.5m"
+                max-camera-orbit="auto auto 5m"
+                style="background: transparent;"
+                interaction-prompt="none"
+                loading="eager"
+              ></model-viewer>
+              <div class="edu-viewer__labels">
+                <div class="edu-label edu-label--1">Frontal Cortex</div>
+                <div class="edu-label edu-label--2">Visor Assembly</div>
+                <div class="edu-label edu-label--3">Ventilation</div>
+                <div class="edu-label edu-label--4">Comm Module</div>
+              </div>
+              <div class="edu-viewer__toolbar">
+                <div class="edu-tool edu-tool--active" title="Rotate">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                </div>
+                <div class="edu-tool" title="Labels">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                </div>
+                <div class="edu-tool" title="Explode">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <div class="edu-tool" title="Measure">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 2h20v20H2z"/><path d="M6 2v4M10 2v2M14 2v4M18 2v2M2 6h4M2 10h2M2 14h4M2 18h2"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="demo-info">
+          <h3 class="demo-info__title">Interactive learning with 3D annotations</h3>
+          <p class="demo-info__desc">Overlay labels, hotspots, and annotations on 3D models for immersive education. Students can rotate, zoom, and explore complex structures. Works for anatomy, engineering, architecture, and scientific visualization.</p>
+          <div class="feature-pills">
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              Hotspot Labels
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>
+              Zoom to Detail
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+              Cross-Platform
+            </span>
+          </div>
+          <div class="demo-code"><span class="fn">Scene</span> {
+    <span class="fn">ModelNode</span>(model = anatomyModel) {
+        <span class="fn">OverlayNode</span>(
+            position = <span class="fn">Float3</span>(<span class="str">0.5f</span>, <span class="str">1.2f</span>, <span class="str">0f</span>),
+            content = { <span class="fn">AnnotationCard</span>(<span class="str">"Frontal Lobe"</span>) }
+        )
+    }
+}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 5. LUXURY / WATCH CONFIGURATOR ===== -->
+  <section class="showcase-section" id="luxury">
+    <div class="container">
+      <div class="showcase-section__header">
+        <span class="showcase-section__badge badge--luxury">Luxury</span>
+        <h2 class="showcase-section__title">Premium Product Showcase</h2>
+        <p class="showcase-section__subtitle">High-end rendering for luxury brands. Iridescence, transparency, and studio lighting.</p>
+      </div>
+
+      <div class="demo-layout">
+        <!-- Phone mockup -->
+        <div class="device-frame">
+          <div class="device-frame__screen">
+            <div class="device-frame__notch"></div>
+            <div class="luxury-viewer">
+              <div class="luxury-viewer__brand">Maison SceneView</div>
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/IridescenceLamp/glTF-Binary/IridescenceLamp.glb"
+                alt="Luxury product viewer"
+                auto-rotate
+                rotation-per-second="8deg"
+                camera-controls
+                shadow-intensity="1"
+                shadow-softness="0.5"
+                exposure="1.2"
+                camera-orbit="40deg 70deg 0.6m"
+                min-camera-orbit="auto auto 0.3m"
+                max-camera-orbit="auto auto 1.5m"
+                environment-image="neutral"
+                style="background: transparent;"
+                interaction-prompt="none"
+                loading="eager"
+              ></model-viewer>
+              <div class="luxury-viewer__price-tag">
+                <span class="luxury-viewer__product-name">Iridescence Lamp</span>
+                <span class="luxury-viewer__product-price">Limited Edition</span>
+              </div>
+              <div class="luxury-viewer__options">
+                <div class="luxury-opt luxury-opt--active" style="background: linear-gradient(135deg, #e8d5b7, #c4a882);"></div>
+                <div class="luxury-opt" style="background: linear-gradient(135deg, #2c3e50, #4a6741);"></div>
+                <div class="luxury-opt" style="background: linear-gradient(135deg, #c0392b, #8e44ad);"></div>
+                <div class="luxury-opt" style="background: linear-gradient(135deg, #1a1a2e, #16213e);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="demo-info">
+          <h3 class="demo-info__title">Elevate luxury experiences</h3>
+          <p class="demo-info__desc">Advanced PBR extensions like iridescence, sheen, and clearcoat deliver the visual fidelity luxury brands demand. Studio-quality environment lighting makes every material shine. Perfect for jewelry, watches, and high-end design.</p>
+          <div class="feature-pills">
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Iridescence
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v1m0 16v1m-8-9H3m18 0h-1"/><circle cx="12" cy="12" r="4"/></svg>
+              Studio Lighting
+            </span>
+            <span class="pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              Sheen & Clearcoat
+            </span>
+          </div>
+          <div class="demo-code"><span class="fn">Scene</span>(
+    environment = <span class="fn">rememberEnvironment</span>(
+        environmentLoader, <span class="str">"studio_soft.ktx"</span>
+    )
+) {
+    <span class="fn">ModelNode</span>(model = luxuryModel)
+    <span class="cm">// Iridescence, sheen, clearcoat</span>
+    <span class="cm">// handled automatically by glTF PBR</span>
+}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 6. MULTI-PLATFORM GRID ===== -->
+  <section class="showcase-section" id="multiplatform">
+    <div class="container">
+      <div class="showcase-section__header">
+        <span class="showcase-section__badge badge--multi">Multi-Platform</span>
+        <h2 class="showcase-section__title">One SDK, Every Screen</h2>
+        <p class="showcase-section__subtitle">The same 3D content rendered natively on every device and platform.</p>
+      </div>
+
+      <div class="platform-grid">
+        <!-- Android Phone -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">Android</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="Android 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="45deg 75deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">Android Phone</div>
+            <div class="platform-card__tech">Jetpack Compose + Filament</div>
+          </div>
+        </div>
+
+        <!-- iPhone -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">iOS</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="iOS 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="-30deg 80deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">iPhone</div>
+            <div class="platform-card__tech">SwiftUI + RealityKit</div>
+          </div>
+        </div>
+
+        <!-- iPad -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">iPadOS</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="iPad 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="60deg 70deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">iPad</div>
+            <div class="platform-card__tech">SwiftUI + RealityKit</div>
+          </div>
+        </div>
+
+        <!-- Vision Pro -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">visionOS</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="Vision Pro 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="0deg 85deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">Apple Vision Pro</div>
+            <div class="platform-card__tech">SwiftUI + RealityKit</div>
+          </div>
+        </div>
+
+        <!-- Android TV -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">TV</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="Android TV 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="120deg 75deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">Android TV</div>
+            <div class="platform-card__tech">Compose TV + Filament</div>
+          </div>
+        </div>
+
+        <!-- Web -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">Web</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="Web 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="-60deg 80deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">Web Browser</div>
+            <div class="platform-card__tech">Kotlin/JS + Filament.js</div>
+          </div>
+        </div>
+
+        <!-- Flutter -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">Flutter</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="Flutter 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="90deg 65deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">Flutter</div>
+            <div class="platform-card__tech">PlatformView Bridge</div>
+          </div>
+        </div>
+
+        <!-- React Native -->
+        <div class="platform-card">
+          <div class="platform-card__viewer">
+            <div class="platform-card__device-badge">React Native</div>
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              alt="React Native 3D viewer"
+              auto-rotate camera-controls
+              camera-orbit="-90deg 70deg 2.5m"
+              shadow-intensity="0.8" exposure="0.8"
+              style="background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);"
+              interaction-prompt="none" loading="lazy"
+            ></model-viewer>
+          </div>
+          <div class="platform-card__label">
+            <div class="platform-card__name">React Native</div>
+            <div class="platform-card__tech">Fabric Bridge</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section class="showcase-cta">
+    <div class="container">
+      <h2 class="showcase-cta__title">Ready to build?</h2>
+      <p class="showcase-cta__sub">Add 3D and AR to your app in minutes. Open source, free forever.</p>
+      <div class="showcase-cta__actions">
+        <a href="https://github.com/sceneview/sceneview#install" class="btn btn--primary">Get Started</a>
+        <a href="https://github.com/sceneview/sceneview" class="btn btn--outline">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+        <a href="/playground.html" class="btn btn--outline">Open Playground</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer style="padding: var(--space-xl) 0; text-align: center; color: var(--color-on-surface-faint); font-size: 0.85rem; border-top: 1px solid var(--color-outline);">
+    <div class="container">
+      SceneView &mdash; Open-source 3D & AR SDK &middot;
+      <a href="https://github.com/sceneview/sceneview" style="color: var(--color-primary);">GitHub</a> &middot;
+      <a href="https://discord.gg/sceneview" style="color: var(--color-primary);">Discord</a> &middot;
+      <a href="/" style="color: var(--color-primary);">Home</a>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

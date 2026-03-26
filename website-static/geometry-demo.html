@@ -930,7 +930,7 @@ canvas.addEventListener('pointerdown', e => {
 canvas.addEventListener('pointermove', e => {
   if (!isDragging) return;
   targetTheta += (e.clientX - lastX) * 0.008;
-  targetPhi = Math.max(0.1, Math.min(Math.PI - 0.1, targetPhi + (e.clientY - lastY) * 0.008));
+  targetPhi = Math.max(0.1, Math.min(Math.PI - 0.1, targetPhi - (e.clientY - lastY) * 0.008));
   lastX = e.clientX; lastY = e.clientY;
 });
 canvas.addEventListener('pointerup', () => { isDragging = false; });

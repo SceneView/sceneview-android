@@ -11,7 +11,7 @@
  * Powered by Filament.js (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
- * @version 1.1.0
+ * @version 1.2.0
  * @license MIT
  */
 (function(global) {
@@ -88,16 +88,20 @@
           }
           return;
         }
-        // Fetch via Filament.init with asset — this always fires the callback
-        // because it needs to fetch the asset even if WASM is already loaded
-        Filament.init([url], function() {
-          try {
-            self._showModel(url);
-            resolve(self);
-          } catch (e) {
-            reject(e);
-          }
-        });
+        // Fetch model via fetch() API to avoid Filament.init double-call bug
+        fetch(url)
+          .then(function(resp) { return resp.arrayBuffer(); })
+          .then(function(buffer) {
+            Filament.assets = Filament.assets || {};
+            Filament.assets[url] = new Uint8Array(buffer);
+            try {
+              self._showModel(url);
+              resolve(self);
+            } catch (e) {
+              reject(e);
+            }
+          })
+          .catch(reject);
       });
     }
 
@@ -301,11 +305,42 @@
     // Fill light
     var fill = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
-      .color([0.6, 0.65, 0.8])
-      .intensity(30000)
+      .color([0.7, 0.75, 0.9])
+      .intensity(60000)
       .direction([-0.5, 0.5, 1.0])
       .build(engine, fill);
     scene.addEntity(fill);
+
+    // Back/rim light for depth
+    var back = Filament.EntityManager.get().create();
+    Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
+      .color([0.4, 0.5, 0.8])
+      .intensity(40000)
+      .direction([0, 0.3, 1.0])
+      .build(engine, back);
+    scene.addEntity(back);
+
+    // Synthetic IBL (image-based lighting) from spherical harmonics
+    // Studio-like neutral environment for PBR reflections
+    try {
+      var ibl = Filament.IndirectLight.Builder()
+        .irradiance(3, [
+           0.65,  0.65,  0.70,   // L00 — ambient base (warm gray)
+           0.10,  0.10,  0.12,   // L1-1
+           0.15,  0.15,  0.18,   // L10 — slight top light
+          -0.02, -0.02, -0.01,   // L11
+           0.04,  0.04,  0.05,   // L2-2
+           0.08,  0.08,  0.10,   // L2-1
+           0.01,  0.01,  0.01,   // L20
+          -0.02, -0.02, -0.02,   // L21
+           0.03,  0.03,  0.03    // L22
+        ])
+        .intensity(35000)
+        .build(engine);
+      scene.setIndirectLight(ibl);
+    } catch (e) {
+      // IndirectLight not available in this Filament build — skip
+    }
 
     // Asset loader (reused across model loads)
     var loader = engine.createAssetLoader();
@@ -361,27 +396,14 @@
    * @returns {Promise<SceneViewInstance>}
    */
   function modelViewer(canvasOrId, modelUrl, options) {
-    return _ensureFilament().then(function() {
-      return new Promise(function(resolve, reject) {
-        // Always use Filament.init with the model URL in the assets array.
-        // This works whether WASM is already loaded or not, because Filament
-        // needs to fetch the model asset and will call back when done.
-        Filament.init([modelUrl], function() {
-          try {
-            var instance = _createEngine(canvasOrId, options);
-            instance._showModel(modelUrl);
-            resolve(instance);
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
+    return create(canvasOrId, options).then(function(instance) {
+      return instance.loadModel(modelUrl);
     });
   }
 
   // Public API
   global.SceneView = {
-    version: '1.1.0',
+    version: '1.2.0',
     create: create,
     modelViewer: modelViewer
   };

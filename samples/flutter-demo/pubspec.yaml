@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   sceneview_flutter:
-    path: ../
+    path: ../../flutter/sceneview_flutter
 
 dev_dependencies:
   flutter_test:

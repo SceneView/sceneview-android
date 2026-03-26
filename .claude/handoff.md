@@ -4,10 +4,54 @@
 
 ## Last Session Summary
 
-**Date:** 2026-03-26 (final update, end of marathon)
+**Date:** 2026-03-27 (full QA audit + fixes + visual demos)
 **Branch:** `main`
-**Releases:** v3.4.0 through v3.4.7 (GitHub), MCP v3.4.7 (npm + official registry), sceneview.js v1.2.0 (npm)
+**Releases:** v3.4.0 through v3.4.7 (GitHub), sceneview-mcp 3.4.14 (npm), sceneview.js v1.2.0 (npm)
 **Total commits on main:** ~1300+
+
+---
+
+### Everything delivered — 2026-03-27 session (QA audit + visual demos)
+
+#### Full QA Audit (7 parallel audit agents)
+- **15+ fixes**: XSS embed, badge npm, noindex test pages, sitemap lastmod, MCP 8 test failures (org rename), MCP README (19 tools/834 tests), server.json 3.4.14, Flutter demo path, TV demo assets, iOS demo API rewrite, dead code cleanup (8 files), POM_SCM_URL lowercase, workflows (JSON injection, dispatch, Xcode, Kobweb), mouse inversion fix, hero → SceneView Web + IBL
+- **CLAUDE.md accuracy**: 10 corrections — Maven Central is 2.3.0 (NOT 3.3.0), 19 MCP tools, package name `sceneview-mcp`, tab names, ghost references marked
+- **sceneview.js v1.2.0**: double-init bug fixed, IBL (spherical harmonics) added, 3 lights, mouse direction corrected
+
+#### Visual Demos (4 new pages)
+- **showcase.html**: E-commerce product viewer, furniture AR, auto configurator, medical viewer, watch configurator — all with real interactive 3D models
+- **platforms-showcase.html**: "One SDK, Every Screen" — 8 CSS device mockups (Android, iPhone, iPad, Vision Pro, TV, Car, Watch, Desktop) with live model-viewer models
+- **demo-dashboard.html**: Sci-fi glassmorphism dashboard — animated counters, sparklines, ring charts, 3D bar chart, floating annotations around a 3D model
+- **demo-ar-staging.html**: AR furniture placement — 3 furniture models with "View in AR" buttons, how-it-works steps, SceneView code snippet
+
+#### Android Demo Improvements
+- 6 new interactive demos (Lighting, Camera Controls, Fog, Text Labels, Line Paths, Physics) — from 4 to 10 live demos out of 14
+- Dead code removed (ShowcaseScreen, GalleryScreen, EffectsScreen, QAScreen + previews)
+- TV demo fixed (assets symlinked, model references updated)
+
+#### Website Content
+- Stats section (26+ nodes, 9 platforms, 60fps, 18 AI tools)
+- Use cases section (6 industries with code snippets)
+- Live demos section (playground, geometry, model viewer, charts)
+- "Trusted in production" section
+- Testimonials section
+- Platform comparison table (vs Unity, ARCore SDK, RealityKit SDK)
+- "Get involved" section
+
+#### 3D Assets Upgraded
+- 14 Khronos glTF models in web demos (was 6): + CarConcept, ChronographWatch, Sunglasses, MaterialsVariantsShoe, ABeautifulGame, IridescenceLamp, MosquitoInAmber, CommercialRefrigerator
+- Model selector added to playground.html
+
+#### QA Automation
+- Scheduled QA task every 3h (sceneview-qa-check)
+- QA feedback saved to memory for future sessions
+
+#### Critical Findings from Audit
+- **Maven Central latest is 2.3.0** — NOT 3.3.0. Every doc was wrong.
+- **sceneview-swift repo doesn't exist** as separate repo — SPM instructions are aspirational
+- **5 ghost references** in CLAUDE.md (Chrome ext, prompt store, n8n, Telegram, invoice) — code exists only in external repos
+- **Kotlin version mismatch**: root 2.1.21 vs catalog 2.3.20
+- **Flutter/RN plugins frozen** on Kotlin 1.9.x patterns
 
 ---
 

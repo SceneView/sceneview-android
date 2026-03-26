@@ -413,6 +413,23 @@
           <option value="custom-geometry">Custom Geometry</option>
           <option value="animation">Animation</option>
         </select>
+        <span class="playground__label" style="margin-left:16px">Model</span>
+        <select class="playground__select" id="modelSelect">
+          <option value="DamagedHelmet">Damaged Helmet</option>
+          <option value="SheenChair">Sheen Chair</option>
+          <option value="ToyCar">Toy Car</option>
+          <option value="CarConcept">Car Concept</option>
+          <option value="SunglassesKhronos">Sunglasses</option>
+          <option value="ChronographWatch">Watch</option>
+          <option value="MaterialsVariantsShoe">Shoe</option>
+          <option value="ABeautifulGame">Chess Set</option>
+          <option value="IridescenceLamp">Iridescent Lamp</option>
+          <option value="MosquitoInAmber">Mosquito in Amber</option>
+          <option value="CommercialRefrigerator">Refrigerator</option>
+          <option value="GlassVaseFlowers">Glass Vase</option>
+          <option value="Fox">Fox</option>
+          <option value="Duck">Duck</option>
+        </select>
       </div>
       <div class="playground__toolbar-right">
         <button class="playground__btn" id="copyBtn" title="Copy code to clipboard">
@@ -453,7 +470,7 @@
         <div class="playground__model-wrap">
           <model-viewer
             id="previewModel"
-            src="models/DamagedHelmet.glb"
+            src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
             alt="3D model preview"
             auto-rotate
             auto-rotate-delay="0"
@@ -859,9 +876,20 @@ fun AnimationScreen() {\n\
     // Initial load
     loadExample('model-viewer');
 
-    // Dropdown change
+    // Example dropdown change
     exampleSelect.addEventListener('change', function () {
       loadExample(this.value);
+    });
+
+    // Model preset switcher — loads Khronos glTF-Sample-Assets models from CDN
+    var MODEL_BASE = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+    var modelSelect = document.getElementById('modelSelect');
+    var previewModel = document.getElementById('previewModel');
+
+    modelSelect.addEventListener('change', function () {
+      var name = this.value;
+      var url = MODEL_BASE + '/' + name + '/glTF-Binary/' + name + '.glb';
+      previewModel.setAttribute('src', url);
     });
 
     // Copy button

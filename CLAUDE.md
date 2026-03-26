@@ -65,7 +65,7 @@ One unified showcase app per platform — all features integrated into tabs.
 | `sceneview-web/` | Web 3D library — Kotlin/JS + Filament.js (same engine as Android, WebGL2/WASM) |
 | `SceneViewSwift/` | Apple 3D+AR library — `SceneView`, `ARSceneView` (RealityKit renderer, iOS/macOS/visionOS) |
 | `samples/common/` | Shared helpers across sample apps |
-| `mcp/` | `@sceneview/mcp` — MCP server for AI assistant integration |
+| `mcp/` | `sceneview-mcp` — MCP server for AI assistant integration |
 | `flutter/` | Flutter plugin — PlatformView bridge to SceneView (Android + iOS), with native rendering |
 | `react-native/` | React Native module — Fabric/Turbo bridge to SceneView (Android + iOS), with native rendering |
 
@@ -76,22 +76,22 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-26, end of marathon)
+### Current state (last updated: 2026-03-27, accuracy audit)
 
 - **Active branch**: `main`
-- **Latest release**: v3.4.7 (GitHub Release), v3.3.0 (Maven Central — NOT yet published as 3.4.x)
-- **MCP servers**: 9 MCPs all v2.0.0 on npm, 18 MCP tools, 834 tests (Education + Finance new, Social Media retired)
+- **Latest release**: v3.4.7 (GitHub Release), v2.3.0 (Maven Central — NOT yet published as 3.4.x)
+- **MCP servers**: 9 MCPs on npm (versions vary: sceneview-mcp 3.4.14, french-admin 2.1.0, realestate 2.1.0, education 1.0.0, finance 1.0.0, others 2.0.0), 22 MCP tools, 858 tests + Healthcare MCP (134 tests) + Automotive MCP (160 tests) ready to publish
 - **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web
 - **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
 - **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
 
 - **What was done (2026-03-26 session — FINAL)**:
 
-  Filament.js WASM proven, sceneview.js v1.2.0 npm, 9 MCPs v2.0.0, 18 tools, 834 tests, 0 open issues:
+  Filament.js WASM proven, sceneview.js v1.2.0 npm, 9 MCPs on npm, 19 tools, 834 tests, 0 open issues:
   - **Filament.js Web PROVEN AND LIVE**: DamagedHelmet PBR renders in browser via Filament.js WASM
   - **sceneview.js v1.2.0 published on npm** — one-liner 3D for the web, double-init bug fixed
   - **Procedural geometry in MCP artifacts** — 834 tests across all MCP servers
-  - **9 MCPs all v2.0.0**: Education MCP + Finance MCP new; Social Media MCP retired (non-concurrence)
+  - **9 MCPs on npm** (versions vary): Education MCP + Finance MCP new; Social Media MCP retired (non-concurrence)
   - **PR #472 on Anthropic Claude Cookbooks** — SceneView MCP featured
   - **2 PRs on awesome-mcp-servers** — SceneView MCPs listed
   - **Orgs reorganized**: sceneview-tools (commercial) + mcp-tools-lab (MCP ecosystem)
@@ -107,9 +107,9 @@ Never say "everything is good" without verifying published packages.
 - **What was done (2026-03-25 marathon — 100+ commits, 5 releases)**:
 
   Full-day marathon covering releases, MCP ecosystem, website, bugs, branding, docs, legal, and monetization:
-  - **Releases**: v3.4.0 through v3.4.4 on GitHub; MCP v3.4.7 on npm + official registry
+  - **Releases**: v3.4.0 through v3.4.4 on GitHub; sceneview-mcp on npm + official registry
   - **MCP ecosystem**: 7+ MCP servers published (sceneview, realestate, ecommerce, architecture, french-admin, social-media, legal-docs)
-  - **AI tools**: Chrome extension, prompt store, n8n templates, Telegram bot, AI invoice tool
+  - **AI tools** (in external repos, not in this codebase): Chrome extension, prompt store, n8n templates, Telegram bot, AI invoice tool
   - **Bug fixes**: AR crash #713 (materials for Filament 1.70.0), MeshNode boundingBox #711
   - **15 audit issues fixed**, 6 Dependabot vulns resolved, 28 stale refs cleaned
   - **Website**: static HTML (replaced Kobweb), playground page, 3D embed widget, smart links (/go/), comprehensive SEO (meta tags, JSON-LD, sitemap)
@@ -155,7 +155,7 @@ Never say "everything is good" without verifying published packages.
   - Configure GitHub Sponsors tiers on github.com/sponsors/sceneview
 
 - **What's next (for future sessions)**:
-  - **PRIORITY 1 — Maven Central v3.4.0 publish**: gradle.properties still says 3.3.0, needs version bump + Sonatype publish
+  - **PRIORITY 1 — Maven Central v3.4.5 publish**: gradle.properties says 3.4.5, needs Sonatype publish (Maven Central currently at 2.3.0)
   - **PRIORITY 2 — App Store first TestFlight build**: needs real Apple cert (Thomas action first)
   - **PRIORITY 3 — Play Store deploy**: key reset should be done by ~27 March
   - **PRIORITY 4 — MCP Pro backend**: connect Stripe + Redis via Cloudflare Workers
@@ -181,16 +181,16 @@ Never say "everything is good" without verifying published packages.
 - **SceneViewSwift** (`SceneViewSwift/`): now 16 node types — Apple library — Swift Package,
   iOS 17+ / macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift
   native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
-- **Demo app** (`samples/android-demo/`): Play Store ready, 4-tab architecture (Explore,
-  Showcase, Gallery, QA), Material 3 Expressive
-- **MCP server** (`mcp/`): `io.github.sceneview/mcp` v3.4.7 on npm + registry; iOS support
+- **Demo app** (`samples/android-demo/`): Play Store ready, 4-tab architecture (3D, AR,
+  Samples, About), Material 3 Expressive
+- **MCP server** (`mcp/`): `sceneview-mcp` v3.4.14 on npm + registry; iOS support
   (8 Swift samples, `get_ios_setup` tool, Swift code validation), `render_3d_preview` tool
-- **MCP ecosystem**: 9 MCPs all v2.0.0 (Education + Finance new, Social Media retired for non-concurrence)
+- **MCP ecosystem**: 9 MCPs on npm (versions vary: sceneview-mcp 3.4.14, french-admin 2.1.0, realestate 2.1.0, education 1.0.0, finance 1.0.0, others 2.0.0; Education + Finance new, Social Media retired for non-concurrence)
 - **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
 - **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
 - **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web (Filament.js WASM, double-init fixed)
 - **Open source PRs**: PR #472 Claude Cookbooks, 2 PRs awesome-mcp-servers
-- **Pending**: Maven Central v3.4.0 publish, App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
+- **Pending**: Maven Central v3.4.5 publish (currently 2.3.0), App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
 
 ### How to update this section
 

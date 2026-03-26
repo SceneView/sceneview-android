@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/sceneview-mcp?color=6c35aa)](https://www.npmjs.com/package/sceneview-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/sceneview-mcp?color=blue)](https://www.npmjs.com/package/sceneview-mcp)
-[![Tests](https://img.shields.io/badge/tests-612%20passing-brightgreen)](#quality)
+[![Tests](https://img.shields.io/badge/tests-858%20passing-brightgreen)](#quality)
 [![MCP](https://img.shields.io/badge/MCP-v1.12-blue)](https://modelcontextprotocol.io/)
 [![Registry](https://img.shields.io/badge/MCP%20Registry-listed-blueviolet)](https://registry.modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
@@ -12,7 +12,7 @@
 
 The official [Model Context Protocol](https://modelcontextprotocol.io/) server for **[SceneView](https://sceneview.github.io)** -- the cross-platform 3D & AR SDK for Android (Jetpack Compose + Filament), iOS/macOS/visionOS (SwiftUI + RealityKit), and Web (Filament.js + WebXR).
 
-Connect it to Claude, Cursor, Windsurf, or any MCP client. The assistant gets 14 specialized tools, 33 compilable code samples, a full API reference, and a code validator -- so it writes correct, working 3D/AR code on the first try.
+Connect it to Claude, Cursor, Windsurf, or any MCP client. The assistant gets 22 specialized tools, 33 compilable code samples, a full API reference, and a code validator -- so it writes correct, working 3D/AR code on the first try.
 
 > **Disclaimer:** Generated code is provided "as is" without warranty. Always review before production use. See [TERMS.md](./TERMS.md) and [PRIVACY.md](./PRIVACY.md).
 
@@ -72,7 +72,7 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 
 ## What you get
 
-### 18 tools
+### 22 tools
 
 | Tool | What it does |
 |---|---|
@@ -80,7 +80,7 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 | `list_samples` | Browse all samples, filter by tag (`ar`, `3d`, `ios`, `animation`, `geometry`, ...) |
 | `validate_code` | Checks generated code against 15+ rules before presenting it to the user |
 | `get_node_reference` | Full API reference for any of 26+ node types -- exact signatures, defaults, examples |
-| `list_node_types` | List every composable node type available in SceneView |
+| `list_platforms` | List all supported platforms with their status, renderer, and framework |
 | `get_setup` | Gradle + manifest setup for Android 3D or AR projects |
 | `get_ios_setup` | SPM dependency, Info.plist, and SwiftUI integration for iOS/macOS/visionOS |
 | `get_web_setup` | Kotlin/JS + Filament.js (WASM) setup for browser-based 3D |
@@ -95,6 +95,9 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 | `migrate_code` | Automatically migrates SceneView 2.x code to 3.x with detailed changelog |
 | `debug_issue` | Targeted debugging guide by category or auto-detected from problem description |
 | `generate_scene` | Generates a complete composable from natural language (e.g., "a room with a table and two chairs") |
+| `get_animation_guide` | Guide for model animations, Spring physics, Compose property animations, SmoothTransform |
+| `get_gesture_guide` | Guide for gestures: isEditable, onTouchEvent, tap-to-place, drag-to-rotate, pinch-to-scale |
+| `get_performance_tips` | Performance optimization: LOD, texture compression, instancing, profiling with Systrace/AGI |
 
 ### 2 resources
 
@@ -151,7 +154,7 @@ The assistant calls `render_3d_preview` and returns an interactive link to a bro
 
 ## Quality
 
-The MCP server is tested with **612 unit tests** across 14 test suites covering:
+The MCP server is tested with **834 unit tests** across 22 test suites covering:
 
 - Every tool response (correct output, error handling, edge cases)
 - All 33 code samples (compilable structure, correct imports, no deprecated APIs)
@@ -160,9 +163,9 @@ The MCP server is tested with **612 unit tests** across 14 test suites covering:
 - Resource responses (API reference, GitHub issues integration)
 
 ```
- Test Files  14 passed (14)
-      Tests  612 passed (612)
-   Duration  491ms
+ Test Files  22 passed (22)
+      Tests  834 passed (834)
+   Duration  624ms
 ```
 
 All tools work **fully offline** except `sceneview://known-issues` (GitHub API, cached 10 min).
@@ -213,7 +216,7 @@ The only network call is to the GitHub API (for known issues). All other tools w
 cd mcp
 npm install
 npm run prepare  # Copy llms.txt + build TypeScript
-npm test         # 612 tests
+npm test         # 834 tests
 npm run dev      # Start with tsx (hot reload)
 ```
 
@@ -222,7 +225,7 @@ npm run dev      # Start with tsx (hot reload)
 ```
 mcp/
   src/
-    index.ts          # MCP server entry point (18 tools, 2 resources)
+    index.ts          # MCP server entry point (22 tools, 2 resources)
     samples.ts         # 33 compilable code samples (Kotlin + Swift)
     validator.ts       # Code validator (15+ rules, Kotlin + Swift)
     node-reference.ts  # Node type parser (extracts from llms.txt)
@@ -239,7 +242,7 @@ mcp/
 1. Fork the repository
 2. Create a feature branch
 3. Add tests for new tools or rules
-4. Run `npm test` -- all 612+ tests must pass
+4. Run `npm test` -- all 834+ tests must pass
 5. Submit a pull request
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full guide.
