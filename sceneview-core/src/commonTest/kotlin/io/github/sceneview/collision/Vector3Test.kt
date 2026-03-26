@@ -273,4 +273,167 @@ class Vector3Test {
         assertEquals(ab.y, -ba.y)
         assertEquals(ab.z, -ba.z)
     }
+
+    // --- Zero vector edge cases ---
+
+    @Test
+    fun zeroVectorLength() {
+        val v = Vector3(0f, 0f, 0f)
+        assertEquals(0f, v.length())
+    }
+
+    @Test
+    fun zeroVectorLengthSquared() {
+        val v = Vector3(0f, 0f, 0f)
+        assertEquals(0f, v.lengthSquared())
+    }
+
+    @Test
+    fun zeroVectorDotProduct() {
+        val zero = Vector3(0f, 0f, 0f)
+        val v = Vector3(1f, 2f, 3f)
+        assertEquals(0f, Vector3.dot(zero, v))
+    }
+
+    @Test
+    fun zeroVectorCrossProduct() {
+        val zero = Vector3(0f, 0f, 0f)
+        val v = Vector3(1f, 0f, 0f)
+        val result = Vector3.cross(zero, v)
+        assertEquals(0f, result.x)
+        assertEquals(0f, result.y)
+        assertEquals(0f, result.z)
+    }
+
+    @Test
+    fun normalizeZeroVectorStaysZero() {
+        val v = Vector3(0f, 0f, 0f)
+        val n = v.normalized()
+        assertEquals(0f, n.x)
+        assertEquals(0f, n.y)
+        assertEquals(0f, n.z)
+    }
+
+    @Test
+    fun angleBetweenZeroVectors() {
+        val a = Vector3(0f, 0f, 0f)
+        val b = Vector3(1f, 0f, 0f)
+        val angle = Vector3.angleBetweenVectors(a, b)
+        assertEquals(0f, angle)
+    }
+
+    // --- Negative vector operations ---
+
+    @Test
+    fun negatedZeroVector() {
+        val v = Vector3(0f, 0f, 0f)
+        val n = v.negated()
+        // -0f == 0f in IEEE 754, but assertEquals uses toBits() which distinguishes them
+        assertTrue(kotlin.math.abs(n.x) == 0f)
+        assertTrue(kotlin.math.abs(n.y) == 0f)
+        assertTrue(kotlin.math.abs(n.z) == 0f)
+    }
+
+    @Test
+    fun scaledByZero() {
+        val v = Vector3(3f, 4f, 5f)
+        val s = v.scaled(0f)
+        assertEquals(0f, s.x)
+        assertEquals(0f, s.y)
+        assertEquals(0f, s.z)
+    }
+
+    @Test
+    fun scaledByNegative() {
+        val v = Vector3(1f, 2f, 3f)
+        val s = v.scaled(-1f)
+        assertEquals(-1f, s.x)
+        assertEquals(-2f, s.y)
+        assertEquals(-3f, s.z)
+    }
+
+    // --- Very large and very small vectors ---
+
+    @Test
+    fun normalizeLargeVector() {
+        val v = Vector3(1e6f, 0f, 0f)
+        val n = v.normalized()
+        assertTrue(kotlin.math.abs(n.length() - 1f) < 1e-4f)
+        assertTrue(kotlin.math.abs(n.x - 1f) < 1e-4f)
+    }
+
+    @Test
+    fun normalizeSmallVectorBelowThresholdReturnsZero() {
+        // Vector with lengthSquared < MAX_DELTA (1e-10) is treated as zero
+        val v = Vector3(1e-6f, 0f, 0f)
+        val n = v.normalized()
+        // lengthSquared = 1e-12 < 1e-10, so normalized returns zero
+        assertTrue(n.length() == 0f, "Very small vector should normalize to zero")
+    }
+
+    @Test
+    fun normalizeSmallButAboveThreshold() {
+        // Vector with lengthSquared > MAX_DELTA normalizes correctly
+        val v = Vector3(1e-4f, 0f, 0f)
+        val n = v.normalized()
+        assertTrue(kotlin.math.abs(n.length() - 1f) < 1e-3f)
+    }
+
+    // --- lerp extrapolation ---
+
+    @Test
+    fun lerpBeyondOne() {
+        val a = Vector3(0f, 0f, 0f)
+        val b = Vector3(10f, 0f, 0f)
+        val result = Vector3.lerp(a, b, 2f)
+        assertEquals(20f, result.x)
+    }
+
+    @Test
+    fun lerpNegativeT() {
+        val a = Vector3(0f, 0f, 0f)
+        val b = Vector3(10f, 0f, 0f)
+        val result = Vector3.lerp(a, b, -1f)
+        assertEquals(-10f, result.x)
+    }
+
+    // --- Dot product sign ---
+
+    @Test
+    fun dotProductOppositeVectors() {
+        val a = Vector3(1f, 0f, 0f)
+        val b = Vector3(-1f, 0f, 0f)
+        assertEquals(-1f, Vector3.dot(a, b))
+    }
+
+    @Test
+    fun dotProductSameVector() {
+        val v = Vector3(3f, 4f, 0f)
+        assertEquals(25f, Vector3.dot(v, v))
+    }
+
+    // --- Cross product with self ---
+
+    @Test
+    fun crossProductWithSelfIsZero() {
+        val v = Vector3(1f, 2f, 3f)
+        val result = Vector3.cross(v, v)
+        assertEquals(0f, result.x)
+        assertEquals(0f, result.y)
+        assertEquals(0f, result.z)
+    }
+
+    // --- componentMin / componentMax ---
+
+    @Test
+    fun componentMaxReturnsLargest() {
+        val v = Vector3(-5f, 3f, 10f)
+        assertEquals(10f, Vector3.componentMax(v))
+    }
+
+    @Test
+    fun componentMinReturnsSmallest() {
+        val v = Vector3(-5f, 3f, 10f)
+        assertEquals(-5f, Vector3.componentMin(v))
+    }
 }

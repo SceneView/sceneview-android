@@ -241,4 +241,177 @@ class MatrixTest {
         b.data[0] = 99f
         assertFalse(Matrix.equals(a, b))
     }
+
+    // --- Rotation round-trip through extractQuaternion ---
+
+    @Test
+    fun rotationMatrixToQuaternionAndBack() {
+        val q = Quaternion.axisAngle(Vector3(1f, 1f, 1f).normalized(), 60f)
+        val m = Matrix()
+        m.makeRotation(q)
+        val extracted = Quaternion()
+        m.extractQuaternion(extracted)
+        // Quaternions should match (up to sign)
+        val dot = kotlin.math.abs(q.x * extracted.x + q.y * extracted.y + q.z * extracted.z + q.w * extracted.w)
+        assertTrue(dot > 0.999f, "Quaternion round-trip via matrix failed: dot=$dot")
+    }
+
+    @Test
+    fun extractQuaternion90AroundX() {
+        val q = Quaternion.axisAngle(Vector3.right(), 90f)
+        val m = Matrix()
+        m.makeRotation(q)
+        val extracted = Quaternion()
+        m.extractQuaternion(extracted)
+        val dot = kotlin.math.abs(q.x * extracted.x + q.y * extracted.y + q.z * extracted.z + q.w * extracted.w)
+        assertTrue(dot > 0.999f, "Quaternion extraction 90 X failed: dot=$dot")
+    }
+
+    @Test
+    fun extractQuaternion90AroundZ() {
+        val q = Quaternion.axisAngle(Vector3(0f, 0f, 1f), 90f)
+        val m = Matrix()
+        m.makeRotation(q)
+        val extracted = Quaternion()
+        m.extractQuaternion(extracted)
+        val dot = kotlin.math.abs(q.x * extracted.x + q.y * extracted.y + q.z * extracted.z + q.w * extracted.w)
+        assertTrue(dot > 0.999f, "Quaternion extraction 90 Z failed: dot=$dot")
+    }
+
+    // --- TRS with rotation and scale ---
+
+    @Test
+    fun makeTrsWithRotationAndScale() {
+        val m = Matrix()
+        val t = Vector3(1f, 2f, 3f)
+        val r = Quaternion.axisAngle(Vector3.up(), 90f)
+        val s = Vector3(2f, 2f, 2f)
+        m.makeTrs(t, r, s)
+
+        // Transform a point and verify translation + rotation + scale applied
+        val point = m.transformPoint(Vector3(1f, 0f, 0f))
+        // Scaled by 2, rotated 90 around Y: (1,0,0) -> (0,0,-2), then translated: (1,2,1)
+        assertClose(1f, point.x, 0.05f)
+        assertClose(2f, point.y, 0.05f)
+        assertClose(1f, point.z, 0.05f)
+    }
+
+    @Test
+    fun makeTrsDecomposeScaleCorrectly() {
+        val m = Matrix()
+        m.makeTrs(Vector3(0f, 0f, 0f), Quaternion.identity(), Vector3(3f, 4f, 5f))
+        val s = Vector3()
+        m.decomposeScale(s)
+        assertClose(3f, s.x)
+        assertClose(4f, s.y)
+        assertClose(5f, s.z)
+    }
+
+    // --- Multiply with scale ---
+
+    @Test
+    fun multiplyScaleAndTranslation() {
+        val scale = Matrix()
+        scale.makeScale(2f)
+        val trans = Matrix()
+        trans.makeTranslation(Vector3(3f, 0f, 0f))
+        val result = Matrix()
+        // Scale * Translation: first translate, then scale
+        Matrix.multiply(scale, trans, result)
+        val point = result.transformPoint(Vector3(0f, 0f, 0f))
+        assertClose(6f, point.x)
+        assertClose(0f, point.y)
+        assertClose(0f, point.z)
+    }
+
+    @Test
+    fun multiplyTranslationAndScale() {
+        val trans = Matrix()
+        trans.makeTranslation(Vector3(3f, 0f, 0f))
+        val scale = Matrix()
+        scale.makeScale(2f)
+        val result = Matrix()
+        // Translation * Scale: first scale, then translate
+        Matrix.multiply(trans, scale, result)
+        val point = result.transformPoint(Vector3(1f, 0f, 0f))
+        // scale(1,0,0) = (2,0,0), then translate = (5,0,0)
+        assertClose(5f, point.x)
+    }
+
+    // --- Invert rotation ---
+
+    @Test
+    fun invertRotation() {
+        val m = Matrix()
+        m.makeRotation(Quaternion.axisAngle(Vector3.up(), 45f))
+        val inv = Matrix()
+        assertTrue(Matrix.invert(m, inv))
+        val product = Matrix()
+        Matrix.multiply(m, inv, product)
+        assertTrue(Matrix.equals(product, Matrix()))
+    }
+
+    // --- Invert singular matrix ---
+
+    @Test
+    fun invertSingularMatrixFails() {
+        val m = Matrix()
+        // Zero out the matrix to make it singular
+        for (i in 0..15) m.data[i] = 0f
+        val inv = Matrix()
+        assertFalse(Matrix.invert(m, inv))
+    }
+
+    // --- Transform direction with scale ---
+
+    @Test
+    fun transformDirectionWithScale() {
+        val m = Matrix()
+        m.makeScale(Vector3(2f, 3f, 4f))
+        val dir = m.transformDirection(Vector3(1f, 1f, 1f))
+        assertClose(2f, dir.x)
+        assertClose(3f, dir.y)
+        assertClose(4f, dir.z)
+    }
+
+    // --- Copy constructor ---
+
+    @Test
+    fun matrixFromFloatArray() {
+        val data = floatArrayOf(
+            2f, 0f, 0f, 0f,
+            0f, 3f, 0f, 0f,
+            0f, 0f, 4f, 0f,
+            0f, 0f, 0f, 1f
+        )
+        val m = Matrix(data)
+        assertClose(2f, m.data[0])
+        assertClose(3f, m.data[5])
+        assertClose(4f, m.data[10])
+        assertClose(1f, m.data[15])
+    }
+
+    @Test
+    fun matrixSetFromAnother() {
+        val a = Matrix()
+        a.makeTranslation(Vector3(7f, 8f, 9f))
+        val b = Matrix()
+        b.set(a)
+        assertTrue(Matrix.equals(a, b))
+    }
+
+    // --- decomposeRotation ---
+
+    @Test
+    fun decomposeRotationFromTRS() {
+        val m = Matrix()
+        val q = Quaternion.axisAngle(Vector3.up(), 45f)
+        m.makeTrs(Vector3(1f, 2f, 3f), q, Vector3(2f, 2f, 2f))
+        val scale = Vector3()
+        m.decomposeScale(scale)
+        val extractedQ = Quaternion()
+        m.decomposeRotation(scale, extractedQ)
+        val dot = kotlin.math.abs(q.x * extractedQ.x + q.y * extractedQ.y + q.z * extractedQ.z + q.w * extractedQ.w)
+        assertTrue(dot > 0.99f, "decomposeRotation failed: dot=$dot")
+    }
 }

@@ -372,8 +372,11 @@ class Quaternion {
         }
 
         fun equals(lhs: Quaternion, rhs: Quaternion): Boolean {
-            val dotVal = dot(lhs, rhs)
-            return MathHelper.almostEqualRelativeAndAbs(dotVal, 1.0f)
+            // Use abs(dot) to handle both q and -q representing the same rotation.
+            // Compare abs(1.0 - abs(dot)) <= epsilon to tolerate float precision
+            // where dot can slightly exceed 1.0 for normalized quaternions.
+            val dotVal = kotlin.math.abs(dot(lhs, rhs))
+            return kotlin.math.abs(1.0f - dotVal) <= MathHelper.FLT_EPSILON * 10f
         }
 
         fun identity(): Quaternion = Quaternion()
