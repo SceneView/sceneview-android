@@ -132,13 +132,13 @@ fun AboutScreen() {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "v3.3.0",
+                            text = "v3.4.7",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "3D & AR as declarative UI\nfor Android, iOS, and Web",
+                            text = "3D & AR as declarative UI\nfor Android, iOS, Web & more",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -187,14 +187,18 @@ fun AboutScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        "Platforms",
+                        "9 Platforms",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     PlatformRow("Android", "Filament + Jetpack Compose")
-                    PlatformRow("iOS / macOS / visionOS", "RealityKit + SwiftUI")
+                    PlatformRow("Android TV", "Filament + Compose TV")
+                    PlatformRow("iOS", "RealityKit + SwiftUI")
+                    PlatformRow("macOS", "RealityKit + SwiftUI")
+                    PlatformRow("visionOS", "RealityKit + SwiftUI")
                     PlatformRow("Web", "Filament.js (WASM) + Kotlin/JS")
+                    PlatformRow("Desktop", "Compose Desktop (wireframe)")
                     PlatformRow("Flutter", "PlatformView bridge")
                     PlatformRow("React Native", "Fabric bridge")
                 }
