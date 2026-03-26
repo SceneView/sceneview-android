@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SceneView Web — One Line 3D</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0d1117; font-family: 'Inter', system-ui, sans-serif; color: #fff; height: 100vh; display: flex; flex-direction: column; }
+.header { text-align: center; padding: 16px; }
+h1 { font-size: 1.3rem; background: linear-gradient(135deg, #fff, #8ab4f8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.sub { font-size: 0.75rem; color: #9aa0a6; margin-top: 2px; }
+#status { font-size: 0.8rem; color: #8ab4f8; margin-top: 8px; }
+canvas { flex: 1; width: 100%; cursor: grab; }
+canvas:active { cursor: grabbing; }
+.models { display: flex; gap: 8px; justify-content: center; padding: 12px; flex-wrap: wrap; }
+.models button { background: rgba(26,115,232,0.15); border: 1px solid rgba(26,115,232,0.3); color: #8ab4f8; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-family: inherit; transition: all 0.2s; }
+.models button:hover, .models button.active { background: rgba(26,115,232,0.3); border-color: #1a73e8; color: #fff; }
+.code { text-align: center; padding: 8px; font-size: 0.7rem; color: #9aa0a6; }
+.code code { background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 4px; color: #8ab4f8; font-family: 'JetBrains Mono', monospace; }
+.badge { position: fixed; bottom: 8px; right: 8px; font-size: 0.6rem; color: #666; }
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>SceneView Web</h1>
+<div class="sub">One line of code. Real-time PBR 3D. Powered by Filament.js WASM.</div>
+<div id="status">Loading...</div>
+</div>
+
+<canvas id="viewer"></canvas>
+
+<div class="models">
+<button class="active" onclick="load(this, 'DamagedHelmet')">Damaged Helmet</button>
+<button onclick="load(this, 'FlightHelmet')">Flight Helmet</button>
+<button onclick="load(this, 'Avocado')">Avocado</button>
+<button onclick="load(this, 'Lantern')">Lantern</button>
+</div>
+
+<div class="code">
+<code>&lt;script src="sceneview.js"&gt;&lt;/script&gt;</code><br>
+<code style="margin-top:4px;display:inline-block">SceneView.modelViewer("canvas", "model.glb")</code>
+</div>
+
+<div class="badge">Powered by SceneView + Filament.js</div>
+
+<script src="js/sceneview.js"></script>
+<script>
+const MODELS = {
+  'DamagedHelmet': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+  'FlightHelmet': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/FlightHelmet/glTF-Binary/FlightHelmet.glb',
+  'Avocado': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Avocado/glTF-Binary/Avocado.glb',
+  'Lantern': 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Lantern/glTF-Binary/Lantern.glb'
+};
+
+const status = document.getElementById('status');
+let viewer = null;
+
+// One liner!
+SceneView.modelViewer('viewer', MODELS['DamagedHelmet']).then(v => {
+  viewer = v;
+  status.textContent = 'Drag to rotate · Scroll to zoom';
+  status.style.color = '#34a853';
+}).catch(e => {
+  status.textContent = 'Error: ' + e.message;
+  status.style.color = '#ea4335';
+});
+
+function load(btn, name) {
+  document.querySelectorAll('.models button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (viewer) {
+    status.textContent = 'Loading ' + name + '...';
+    status.style.color = '#8ab4f8';
+    viewer.loadModel(MODELS[name]).then(() => {
+      status.textContent = 'Drag to rotate · Scroll to zoom';
+      status.style.color = '#34a853';
+    });
+  }
+}
+</script>
+</body>
+</html>
