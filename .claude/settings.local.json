@@ -1,10 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(grep -l \"sceneview\\\\|filament\" samples/web-demo/src/jsMain/kotlin/**/*.kt)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)"
-    ]
-  }
+    "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Glob(*)", "Grep(*)", "WebFetch(*)", "WebSearch(*)", "Agent(*)", "TodoWrite(*)", "NotebookEdit(*)"]
+  },
+  "hooks": {}
 }

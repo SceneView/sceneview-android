@@ -3,59 +3,232 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SceneView Empire</title>
+<title>SceneView Empire — Financial Dashboard</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#080c18;color:#e8eaed;padding:24px}
-.c{max-width:1200px;margin:0 auto}
-h1{font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,#fff,#8ab4f8,#1a73e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:8px}
-.sub{text-align:center;color:#9aa0a6;margin-bottom:32px}
-.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:32px}
-.s{background:rgba(19,45,74,0.6);border:1px solid rgba(26,115,232,0.15);border-radius:16px;padding:18px;text-align:center}
-.s .n{font-size:1.8rem;font-weight:800;color:#8ab4f8}
-.s .l{color:#9aa0a6;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
-h2{font-size:1.2rem;margin:28px 0 14px;color:#8ab4f8}
-.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:28px}
-.p{background:rgba(19,45,74,0.6);border:1px solid rgba(26,115,232,0.15);border-radius:16px;padding:18px;transition:border-color 0.3s}
-.p:hover{border-color:#1a73e8}
-.p .nm{font-weight:700;margin-bottom:4px}.p .v{display:inline-block;font-size:0.65rem;padding:2px 7px;border-radius:6px;font-weight:600;background:rgba(52,168,83,0.15);color:#34a853;margin-bottom:6px}
-.p .m{font-size:0.75rem;color:#9aa0a6;margin-bottom:4px}.p .r{color:#34a853;font-weight:700;font-size:0.9rem}.p .d{font-size:0.8rem;color:#9aa0a6;margin-top:4px}
-.tag{font-size:0.8rem;text-align:center;color:#9aa0a6;margin-top:32px;padding:16px;border-top:1px solid rgba(255,255,255,0.05)}
-.tag b{color:#8ab4f8}
-@media(max-width:700px){.stats{grid-template-columns:repeat(3,1fr)}.g{grid-template-columns:1fr}}
+body{font-family:'Inter',sans-serif;background:#080c18;color:#e8eaed;padding:20px;max-width:1400px;margin:0 auto}
+h1{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,#fff,#8ab4f8,#1a73e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:4px}
+.sub{text-align:center;color:#9aa0a6;margin-bottom:24px;font-size:0.9rem}
+h2{font-size:1.1rem;font-weight:700;color:#8ab4f8;margin:24px 0 12px;display:flex;align-items:center;gap:10px}
+h2::after{content:'';flex:1;height:1px;background:rgba(26,115,232,0.2)}
+.grid{display:grid;gap:12px;margin-bottom:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g5{grid-template-columns:repeat(5,1fr)}
+.c{background:rgba(19,45,74,0.5);border:1px solid rgba(26,115,232,0.12);border-radius:14px;padding:16px}
+.c:hover{border-color:rgba(26,115,232,0.4)}
+.big{font-size:1.8rem;font-weight:800;color:#8ab4f8}
+.big-green{font-size:1.8rem;font-weight:800;color:#34a853}
+.big-orange{font-size:1.8rem;font-weight:800;color:#fbbc04}
+.big-red{font-size:1.8rem;font-weight:800;color:#ea4335}
+.lbl{color:#9aa0a6;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.nm{font-weight:700;font-size:0.95rem;margin-bottom:2px}
+.sm{font-size:0.8rem;color:#9aa0a6}
+.green{color:#34a853}.orange{color:#fbbc04}.red{color:#ea4335}.blue{color:#8ab4f8}
+.tag{display:inline-block;font-size:0.6rem;padding:2px 6px;border-radius:4px;font-weight:600}
+.tag-live{background:rgba(52,168,83,0.15);color:#34a853}
+.tag-ready{background:rgba(251,188,4,0.15);color:#fbbc04}
+.tag-pending{background:rgba(154,160,166,0.15);color:#9aa0a6}
+table{width:100%;border-collapse:collapse;font-size:0.85rem}
+th{text-align:left;color:#8ab4f8;font-weight:600;padding:8px;border-bottom:1px solid rgba(26,115,232,0.15)}
+td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.bar-row{display:flex;align-items:center;gap:8px;margin:4px 0}
+.bar{height:20px;border-radius:4px;background:linear-gradient(90deg,#1a73e8,#8ab4f8);min-width:2px}
+.bar-label{font-size:0.75rem;color:#9aa0a6;min-width:100px}
+.bar-val{font-size:0.75rem;color:#8ab4f8;font-weight:600;min-width:60px;text-align:right}
+.section{background:rgba(19,45,74,0.3);border:1px solid rgba(26,115,232,0.1);border-radius:16px;padding:20px;margin-bottom:16px}
+.foot{text-align:center;color:#9aa0a6;font-size:0.75rem;padding:20px 0;border-top:1px solid rgba(255,255,255,0.03);margin-top:20px}
+@media(max-width:800px){.g2,.g3,.g4,.g5{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="c">
+
 <h1>SceneView Empire</h1>
-<div class="sub">14 produits · 9 plateformes · 750+ tests · Marathon 25-26 mars 2026</div>
-<div class="stats">
-<div class="s"><div class="n">14</div><div class="l">Produits</div></div>
-<div class="s"><div class="n">8</div><div class="l">npm</div></div>
-<div class="s"><div class="n">12</div><div class="l">Repos</div></div>
-<div class="s"><div class="n">750+</div><div class="l">Tests</div></div>
-<div class="s"><div class="n">9</div><div class="l">Platforms</div></div>
-<div class="s"><div class="n">5</div><div class="l">Releases</div></div>
+<div class="sub">Financial Dashboard — 26 mars 2026, 01:30</div>
+
+<!-- KEY METRICS -->
+<div class="grid g5">
+<div class="c" style="text-align:center"><div class="big">14</div><div class="lbl">Produits</div></div>
+<div class="c" style="text-align:center"><div class="big-green">~14 EUR</div><div class="lbl">Revenue/mois actuel</div></div>
+<div class="c" style="text-align:center"><div class="big-orange">$2,600</div><div class="lbl">Open Collective</div></div>
+<div class="c" style="text-align:center"><div class="big">200 EUR</div><div class="lbl">Invest (Claude Max)</div></div>
+<div class="c" style="text-align:center"><div class="big">0 EUR</div><div class="lbl">Depenses ops</div></div>
 </div>
-<h2>Produits</h2>
-<div class="g">
-<div class="p"><div class="nm">SceneView SDK</div><span class="v">v3.4.4</span><div class="m">9 plateformes · 1.5k+ stars</div><div class="d">SDK 3D &amp; AR open source</div></div>
-<div class="p"><div class="nm">SceneView MCP</div><span class="v">v3.4.8</span><div class="m">456 tests · 33 samples</div><div class="r">Freemium API</div></div>
-<div class="p"><div class="nm">E-commerce 3D</div><span class="v">v1.0.5</span><div class="m">7 tools · 52 tests</div><div class="r">$29-99/mois</div></div>
-<div class="p"><div class="nm">Architecture</div><span class="v">v1.0.5</span><div class="m">8 tools · 27 tests</div><div class="r">$49-149/mois</div></div>
-<div class="p"><div class="nm">Real Estate</div><span class="v">v1.0.5</span><div class="m">6 tools · 42 tests</div><div class="r">$19/mois</div></div>
-<div class="p"><div class="nm">French Admin</div><span class="v">v1.0.5</span><div class="m">9 tools · 52 tests</div><div class="r">9.99 EUR/mois</div></div>
-<div class="p"><div class="nm">Legal Docs</div><span class="v">v1.0.1</span><div class="m">8 tools · 34 tests</div><div class="r">19.99 EUR/mois</div></div>
-<div class="p"><div class="nm">Social Media</div><span class="v">v1.0.1</span><div class="m">7 tools · 47 tests</div><div class="r">$14.99-49.99/mois</div></div>
-<div class="p"><div class="nm">Chrome Extension</div><span class="v" style="background:rgba(251,188,4,0.15);color:#fbbc04">READY</span><div class="d">3D Viewer — Chrome Web Store</div></div>
-<div class="p"><div class="nm">Prompt Store</div><span class="v">DEPLOYED</span><div class="m">6 packs · 300 prompts</div><div class="r">9.99-39.99 EUR</div></div>
-<div class="p"><div class="nm">n8n Templates</div><span class="v">GITHUB</span><div class="m">5 workflows</div><div class="r">Bundle $149</div></div>
-<div class="p"><div class="nm">Telegram Bot</div><span class="v" style="background:rgba(251,188,4,0.15);color:#fbbc04">TEMPLATE</span><div class="r">$5-20/mois</div></div>
-<div class="p"><div class="nm">AI Invoice</div><span class="v" style="background:rgba(251,188,4,0.15);color:#fbbc04">DEPLOY</span><div class="r">4.99 EUR/mois</div></div>
-<div class="p"><div class="nm">Polar MCP Pro</div><span class="v">CREATED</span><div class="r">9.99 EUR/mois</div></div>
+
+<!-- REVENUE ACTUEL -->
+<h2>Revenue actuel (mars 2026)</h2>
+<div class="section">
+<table>
+<tr><th>Source</th><th>Montant/mois</th><th>Status</th><th>Notes</th></tr>
+<tr><td>GitHub Sponsors</td><td class="green">~14 EUR</td><td><span class="tag tag-live">ACTIF</span></td><td>1 sponsor recurrent, Stripe verifie, W-8BEN OK</td></tr>
+<tr><td>Open Collective</td><td class="green">$2,600 (balance)</td><td><span class="tag tag-live">ACTIF</span></td><td>Balance accumulee. Remboursement Claude Max possible</td></tr>
+<tr><td>Polar.sh (MCP Pro)</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">TEST MODE</span></td><td>Produit cree (9.99 EUR/mois), Go Live pending</td></tr>
+<tr><td>npm packages (8)</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">PUBLIE</span></td><td>Freemium, monetisation Stripe pas encore branchee</td></tr>
+<tr><td>Prompt Store</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">DEPLOYE</span></td><td>Site live, checkout links vers Polar (pas encore Go Live)</td></tr>
+<tr><td>n8n Templates</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">GITHUB</span></td><td>5 workflows prets, pas encore en vente</td></tr>
+<tr><td>Chrome Extension</td><td class="orange">0 EUR</td><td><span class="tag tag-pending">READY</span></td><td>Prete, pas soumise au Chrome Web Store</td></tr>
+<tr><td style="font-weight:700">TOTAL ACTUEL</td><td class="green" style="font-weight:700">~14 EUR/mois + $2,600 balance</td><td></td><td></td></tr>
+</table>
 </div>
-<div class="tag">Objectif #1 : <b>SceneView = THE 3D engine pour Claude artifacts (Filament.js — 20x plus leger que Three.js)</b></div>
+
+<!-- REVENUE POTENTIEL -->
+<h2>Revenue potentiel (quand tout active)</h2>
+<div class="section">
+<table>
+<tr><th>Produit</th><th>Prix</th><th>10 clients</th><th>100 clients</th><th>Marge</th></tr>
+<tr><td>Architecture MCP</td><td>$49-149/mois</td><td class="green">$490-1,490</td><td class="green">$4,900-14,900</td><td>~100%</td></tr>
+<tr><td>E-commerce 3D MCP</td><td>$29-99/mois</td><td class="green">$290-990</td><td class="green">$2,900-9,900</td><td>~100%</td></tr>
+<tr><td>Social Media MCP</td><td>$14.99-49.99/mois</td><td class="green">$150-500</td><td class="green">$1,500-5,000</td><td>~100%</td></tr>
+<tr><td>Legal Docs MCP</td><td>19.99 EUR/mois</td><td class="green">200 EUR</td><td class="green">2,000 EUR</td><td>~100%</td></tr>
+<tr><td>Real Estate MCP</td><td>$19/mois</td><td class="green">$190</td><td class="green">$1,900</td><td>~100%</td></tr>
+<tr><td>French Admin MCP</td><td>9.99 EUR/mois</td><td class="green">100 EUR</td><td class="green">1,000 EUR</td><td>~100%</td></tr>
+<tr><td>AI Invoice SaaS</td><td>4.99 EUR/mois</td><td class="green">50 EUR</td><td class="green">500 EUR</td><td>~95%</td></tr>
+<tr><td>Prompt Store (one-shot)</td><td>9.99-39.99 EUR</td><td class="green">100-400 EUR</td><td class="green">1,000-4,000 EUR</td><td>~100%</td></tr>
+<tr><td>n8n Templates (one-shot)</td><td>$29-149 bundle</td><td class="green">$290-1,490</td><td class="green">$2,900-14,900</td><td>~100%</td></tr>
+<tr><td>GitHub Sponsors</td><td>$5-200/mois</td><td class="green">$50-2,000</td><td class="green">$500-20,000</td><td>~97%</td></tr>
+<tr style="background:rgba(52,168,83,0.08)"><td style="font-weight:700">TOTAL POTENTIEL</td><td></td><td class="green" style="font-weight:700">$1,900-9,300/mois</td><td class="green" style="font-weight:700">$15,000-72,000/mois</td><td></td></tr>
+</table>
 </div>
+
+<!-- REVENUE BARS -->
+<h2>Revenue potentiel par produit (EUR/mois, scenario 10 clients)</h2>
+<div class="section">
+<div class="bar-row"><div class="bar-label">Architecture</div><div class="bar" style="width:300px"></div><div class="bar-val">1,490 EUR</div></div>
+<div class="bar-row"><div class="bar-label">n8n Bundle</div><div class="bar" style="width:280px"></div><div class="bar-val">1,390 EUR</div></div>
+<div class="bar-row"><div class="bar-label">E-commerce</div><div class="bar" style="width:200px"></div><div class="bar-val">990 EUR</div></div>
+<div class="bar-row"><div class="bar-label">GitHub Sponsors</div><div class="bar" style="width:170px"></div><div class="bar-val">500-2,000 EUR</div></div>
+<div class="bar-row"><div class="bar-label">Social Media</div><div class="bar" style="width:100px"></div><div class="bar-val">500 EUR</div></div>
+<div class="bar-row"><div class="bar-label">Prompt Store</div><div class="bar" style="width:80px"></div><div class="bar-val">400 EUR</div></div>
+<div class="bar-row"><div class="bar-label">Legal Docs</div><div class="bar" style="width:40px"></div><div class="bar-val">200 EUR</div></div>
+<div class="bar-row"><div class="bar-label">Real Estate</div><div class="bar" style="width:38px"></div><div class="bar-val">190 EUR</div></div>
+<div class="bar-row"><div class="bar-label">French Admin</div><div class="bar" style="width:20px"></div><div class="bar-val">100 EUR</div></div>
+<div class="bar-row"><div class="bar-label">AI Invoice</div><div class="bar" style="width:10px"></div><div class="bar-val">50 EUR</div></div>
+</div>
+
+<!-- INVESTISSEMENT / COUTS -->
+<h2>Investissement &amp; couts</h2>
+<div class="grid g3">
+<div class="c">
+<div class="nm">Couts fixes mensuels</div>
+<table>
+<tr><td>Claude Max 20x</td><td class="red">~200 EUR/mois</td></tr>
+<tr><td>Apple Developer</td><td class="red">~8 EUR/mois (99$/an)</td></tr>
+<tr><td>Hebergement</td><td class="green">0 EUR (GitHub Pages)</td></tr>
+<tr><td>Serveurs</td><td class="green">0 EUR (Cloudflare free)</td></tr>
+<tr><td>npm</td><td class="green">0 EUR</td></tr>
+<tr><td style="font-weight:700">TOTAL</td><td class="red" style="font-weight:700">~208 EUR/mois</td></tr>
+</table>
+</div>
+<div class="c">
+<div class="nm">Temps investi (mars 2026)</div>
+<table>
+<tr><td>Session 24 mars</td><td>~8h</td></tr>
+<tr><td>Marathon 25 mars</td><td>~16h</td></tr>
+<tr><td>Marathon 26 mars</td><td>~12h (en cours)</td></tr>
+<tr><td style="font-weight:700">TOTAL</td><td style="font-weight:700">~36h</td></tr>
+</table>
+</div>
+<div class="c">
+<div class="nm">Break-even analysis</div>
+<table>
+<tr><td>Cout mensuel</td><td class="red">208 EUR</td></tr>
+<tr><td>Revenue actuel</td><td class="green">14 EUR</td></tr>
+<tr><td>Gap</td><td class="red">-194 EUR</td></tr>
+<tr><td colspan="2" style="padding-top:12px;font-size:0.75rem;color:#9aa0a6">Break-even = 3 clients Architecture OU 7 clients E-commerce OU 21 clients French Admin</td></tr>
+</table>
+</div>
+</div>
+
+<!-- COMPTES & PLATEFORMES -->
+<h2>Comptes &amp; plateformes</h2>
+<div class="section">
+<table>
+<tr><th>Plateforme</th><th>Status</th><th>Lien</th></tr>
+<tr><td>GitHub (sceneview org)</td><td><span class="tag tag-live">ACTIF</span></td><td>github.com/sceneview</td></tr>
+<tr><td>GitHub Sponsors</td><td><span class="tag tag-live">ACTIF</span> Stripe verifie, W-8BEN</td><td>github.com/sponsors/ThomasGorisse</td></tr>
+<tr><td>Open Collective</td><td><span class="tag tag-live">ACTIF</span> $2,600 balance</td><td>opencollective.com/sceneview</td></tr>
+<tr><td>npm (thomasgorisse)</td><td><span class="tag tag-live">ACTIF</span> 8 packages publies</td><td>npmjs.com/~thomasgorisse</td></tr>
+<tr><td>Polar.sh (sceneview)</td><td><span class="tag tag-ready">TEST MODE</span></td><td>polar.sh/sceneview</td></tr>
+<tr><td>MCP Registry (Anthropic)</td><td><span class="tag tag-live">ACTIF</span> io.github.sceneview/mcp</td><td>registry.modelcontextprotocol.io</td></tr>
+<tr><td>Google Play Console</td><td><span class="tag tag-ready">W-8BEN OK</span> Key reset ~27 mars</td><td>play.google.com/console</td></tr>
+<tr><td>Apple Developer</td><td><span class="tag tag-live">ACTIF</span> jusqu'au 24/03/2027</td><td>developer.apple.com</td></tr>
+<tr><td>App Store Connect</td><td><span class="tag tag-pending">CERT MANQUANT</span></td><td>appstoreconnect.apple.com</td></tr>
+<tr><td>Stripe (via GH Sponsors)</td><td><span class="tag tag-live">ACTIF</span></td><td>connect.stripe.com</td></tr>
+</table>
+</div>
+
+<!-- STRUCTURE JURIDIQUE -->
+<h2>Structure juridique</h2>
+<div class="grid g2">
+<div class="c">
+<div class="nm">[REDACTED]</div>
+<div class="sm">
+Enregistrement : [a faire]<br>
+Plafond CA : 77,700 EUR/an (services)<br>
+Charges sociales : ~22%<br>
+TVA : Non applicable (art. 293 B CGI)<br>
+Compatibilite emploi : <span class="orange">Mail envoye, en attente reponse</span>
+</div>
+</div>
+<div class="c">
+<div class="nm">Protection</div>
+<div class="sm">
+Tous les projets : MIT License + TERMS.md + PRIVACY.md<br>
+Disclaimers dans chaque reponse MCP<br>
+Droit francais, Tribunal de Nantes<br>
+RGPD : conforme by design (0 data)<br>
+Repos commerciaux anonymises (SceneView Tools)<br>
+Git history purgee (donnees sensibles)
+</div>
+</div>
+</div>
+
+<!-- PRODUITS DETAIL -->
+<h2>14 Produits — detail</h2>
+<div class="section">
+<table>
+<tr><th>Produit</th><th>Type</th><th>Version</th><th>Tests</th><th>Prix</th><th>Status</th></tr>
+<tr><td>SceneView SDK</td><td>Open Source</td><td>v3.4.4</td><td>86 (core)</td><td>Gratuit</td><td><span class="tag tag-live">LIVE</span></td></tr>
+<tr><td>SceneView MCP</td><td>MCP npm</td><td>v3.4.9</td><td>590</td><td>Freemium</td><td><span class="tag tag-live">LIVE</span></td></tr>
+<tr><td>Real Estate MCP</td><td>MCP npm</td><td>v1.0.5</td><td>42</td><td>$19/mois</td><td><span class="tag tag-live">npm</span></td></tr>
+<tr><td>E-commerce 3D MCP</td><td>MCP npm</td><td>v1.0.5</td><td>52</td><td>$29-99/mois</td><td><span class="tag tag-live">npm</span></td></tr>
+<tr><td>Architecture MCP</td><td>MCP npm</td><td>v1.0.5</td><td>27</td><td>$49-149/mois</td><td><span class="tag tag-live">npm</span></td></tr>
+<tr><td>French Admin MCP</td><td>MCP npm</td><td>v1.0.5</td><td>52</td><td>9.99 EUR/mois</td><td><span class="tag tag-live">npm</span></td></tr>
+<tr><td>Legal Docs MCP</td><td>MCP npm</td><td>v1.0.1</td><td>34</td><td>19.99 EUR/mois</td><td><span class="tag tag-live">npm</span></td></tr>
+<tr><td>Social Media MCP</td><td>MCP npm</td><td>v1.0.1</td><td>47</td><td>$14.99-49.99/mois</td><td><span class="tag tag-live">npm</span></td></tr>
+<tr><td>Chrome Extension</td><td>Extension</td><td>1.0</td><td>—</td><td>Gratuit</td><td><span class="tag tag-ready">READY</span></td></tr>
+<tr><td>Prompt Store</td><td>Digital</td><td>—</td><td>—</td><td>9.99-39.99 EUR</td><td><span class="tag tag-live">DEPLOYE</span></td></tr>
+<tr><td>n8n Templates</td><td>Digital</td><td>—</td><td>—</td><td>$29-149</td><td><span class="tag tag-live">GITHUB</span></td></tr>
+<tr><td>Telegram Bot</td><td>SaaS</td><td>1.0.1</td><td>—</td><td>$5-20/mois</td><td><span class="tag tag-ready">TEMPLATE</span></td></tr>
+<tr><td>AI Invoice</td><td>SaaS</td><td>1.0.1</td><td>—</td><td>4.99 EUR/mois</td><td><span class="tag tag-ready">DEPLOY</span></td></tr>
+<tr><td>Polar MCP Pro</td><td>Sub</td><td>—</td><td>—</td><td>9.99 EUR/mois</td><td><span class="tag tag-ready">TEST</span></td></tr>
+</table>
+</div>
+
+<!-- ACTIONS PRIORITAIRES -->
+<h2>Actions prioritaires Thomas</h2>
+<div class="section">
+<table>
+<tr><th>Pri</th><th>Action</th><th>Impact</th><th>Temps</th></tr>
+<tr><td class="red">P1</td><td>Polar.sh Go Live</td><td>Active les paiements MCP Pro</td><td>1 clic</td></tr>
+<tr><td class="red">P1</td><td>GitHub Sponsors 4 tiers ($5/$15/$50/$200)</td><td>Augmente le revenu sponsors</td><td>5 min</td></tr>
+<tr><td class="red">P1</td><td>Org sceneview-tools (captcha GitHub)</td><td>Anonymise les repos commerciaux</td><td>2 min</td></tr>
+<tr><td class="orange">P2</td><td>Reponse (autorisation)</td><td>Securise l'emploi</td><td>Attente</td></tr>
+<tr><td class="orange">P2</td><td>Apple certificat Distribution</td><td>Debloque App Store</td><td>10 min</td></tr>
+<tr><td class="orange">P2</td><td>LinkedIn post (wave 2)</td><td>Visibilite, sponsors</td><td>5 min</td></tr>
+<tr><td class="blue">P3</td><td>Reddit/HN posts (wave 1)</td><td>Traction communaute dev</td><td>15 min</td></tr>
+<tr><td class="blue">P3</td><td>Discord reponses (Kamil + cloo)</td><td>Retention communaute</td><td>10 min</td></tr>
+<tr><td style="color:#9aa0a6">Low</td><td>Supprimer vieilles apps Play Store</td><td>Clean</td><td>3 min</td></tr>
+<tr><td style="color:#9aa0a6">Low</td><td>Remettre sleep Mac</td><td>Batterie</td><td>30 sec</td></tr>
+</table>
+</div>
+
+<div class="foot">
+SceneView Empire — Built with Claude Opus 4.6 Max 20x — Marathon 25-26 mars 2026
+</div>
+
 </body>
 </html>
