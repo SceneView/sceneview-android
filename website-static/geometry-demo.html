@@ -805,6 +805,12 @@ let sceneShapes = [];
 let currentPreset = 'city';
 let animatedShapes = []; // indices of shapes that should animate
 
+// Camera orbit state (must be declared before loadScene uses them)
+let orbitTheta = 0.5, orbitPhi = 0.6, orbitDist = 12;
+let targetTheta = orbitTheta, targetPhi = orbitPhi, targetDist = orbitDist;
+let autoRotate = true;
+let isDragging = false, lastX = 0, lastY = 0;
+
 function loadScene(name) {
   currentPreset = name;
   sceneShapes = JSON.parse(JSON.stringify(SCENES[name] || SCENES.city));
@@ -865,11 +871,6 @@ function openClaude() {
 loadScene('city');
 
 // ── Camera orbit controls ────────────────────────────────────────────────────
-
-let orbitTheta = 0.5, orbitPhi = 0.6, orbitDist = 12;
-let targetTheta = orbitTheta, targetPhi = orbitPhi, targetDist = orbitDist;
-let autoRotate = true;
-let isDragging = false, lastX = 0, lastY = 0;
 
 canvas.addEventListener('pointerdown', e => {
   isDragging = true; lastX = e.clientX; lastY = e.clientY;
