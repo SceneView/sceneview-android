@@ -156,12 +156,12 @@ Filament.init(['${modelUrl}'], function() {
     var dragging = false, lastX = 0, lastY = 0, autoRotate = ${autoRotate};
 
     canvas.addEventListener('mousedown', function(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; autoRotate = false; });
-    canvas.addEventListener('mousemove', function(e) { if (!dragging) return; angle += (e.clientX - lastX) * 0.005; orbitH += (e.clientY - lastY) * 0.01; lastX = e.clientX; lastY = e.clientY; });
+    canvas.addEventListener('mousemove', function(e) { if (!dragging) return; angle -= (e.clientX - lastX) * 0.005; orbitH += (e.clientY - lastY) * 0.01; lastX = e.clientX; lastY = e.clientY; });
     canvas.addEventListener('mouseup', function() { dragging = false; });
     canvas.addEventListener('mouseleave', function() { dragging = false; });
     canvas.addEventListener('wheel', function(e) { e.preventDefault(); orbitR *= (1 + e.deltaY * 0.001); orbitR = Math.max(0.5, Math.min(20, orbitR)); }, { passive: false });
     canvas.addEventListener('touchstart', function(e) { if (e.touches.length === 1) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; autoRotate = false; } });
-    canvas.addEventListener('touchmove', function(e) { if (!dragging) return; e.preventDefault(); angle += (e.touches[0].clientX - lastX) * 0.005; orbitH += (e.touches[0].clientY - lastY) * 0.01; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
+    canvas.addEventListener('touchmove', function(e) { if (!dragging) return; e.preventDefault(); angle -= (e.touches[0].clientX - lastX) * 0.005; orbitH += (e.touches[0].clientY - lastY) * 0.01; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
     canvas.addEventListener('touchend', function() { dragging = false; });
 
     // Handle resize
