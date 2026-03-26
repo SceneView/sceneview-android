@@ -303,9 +303,17 @@ button {
   letter-spacing: -0.015em;
 }
 
-.hero__platforms {
-  font-size: 0.95rem;
+.hero__description {
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   color: var(--color-on-surface-dim);
+  margin-top: var(--space-md);
+  line-height: 1.6;
+  max-width: 480px;
+}
+
+.hero__platforms {
+  font-size: 0.9rem;
+  color: var(--color-on-surface-faint);
   margin-top: var(--space-sm);
   font-weight: 500;
 }
@@ -802,6 +810,11 @@ button {
     justify-content: center;
   }
 
+  .hero__description {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   .hero__model {
     max-width: 360px;
     min-height: 300px;
@@ -834,6 +847,41 @@ button {
     width: 100%;
     overflow-x: auto;
     justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tabs__nav::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0 var(--space-md);
+  }
+
+  .features__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .samples__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .community__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero__actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero__actions .btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -856,9 +904,35 @@ button {
     padding: var(--space-3xl) 0;
   }
 
+  .hero {
+    padding-top: calc(var(--nav-height) + var(--space-xl));
+    padding-bottom: var(--space-3xl);
+  }
+
   .hero__model {
-    max-width: 300px;
-    min-height: 260px;
+    max-width: 280px;
+    min-height: 240px;
+  }
+
+  .section__title {
+    font-size: 1.5rem;
+  }
+
+  .section__subtitle {
+    font-size: 0.95rem;
+  }
+
+  .tabs__btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+
+  .card {
+    padding: var(--space-lg);
+  }
+
+  .sample-card {
+    padding: var(--space-md);
   }
 }
 
