@@ -37,14 +37,13 @@
   <!-- Preconnect hints for external resources -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://ajax.googleapis.com">
-  <link rel="dns-prefetch" href="https://ajax.googleapis.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- model-viewer -->
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <!-- Filament.js (SceneView Web renderer — replaces model-viewer/Three.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
@@ -141,25 +140,7 @@
         </div>
       </div>
       <div class="hero__model">
-        <model-viewer
-          src="models/DamagedHelmet.glb"
-          alt="3D damaged helmet rendered by SceneView"
-          auto-rotate
-          auto-rotate-delay="0"
-          rotation-per-second="30deg"
-          camera-controls
-          touch-action="pan-y"
-          interaction-prompt="none"
-          shadow-intensity="1.2"
-          shadow-softness="0.8"
-          exposure="1.1"
-          environment-image="neutral"
-          camera-orbit="45deg 70deg 2.5m"
-          min-camera-orbit="auto auto auto"
-          max-camera-orbit="auto auto auto"
-          loading="eager"
-          style="width:100%;height:100%;--poster-color:transparent"
-        ></model-viewer>
+        <canvas id="hero-canvas" style="width:100%;height:100%;cursor:grab;display:block" aria-label="3D damaged helmet rendered by SceneView Web (Filament.js)"></canvas>
       </div>
     </div>
   </section>
@@ -448,5 +429,112 @@
   </footer>
 
   <script src="script.js"></script>
+
+  <!-- Hero 3D renderer — Filament.js (SceneView Web) -->
+  <script>
+  (function() {
+    var MODEL_URL = 'models/DamagedHelmet.glb';
+    var canvas = document.getElementById('hero-canvas');
+    if (!canvas) return;
+
+    Filament.init([MODEL_URL], function() {
+      try {
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+
+        var engine = Filament.Engine.create(canvas);
+        var scene = engine.createScene();
+        var renderer = engine.createRenderer();
+        var cam = engine.createCamera(Filament.EntityManager.get().create());
+        var view = engine.createView();
+        var sc = engine.createSwapChain();
+
+        view.setCamera(cam);
+        view.setScene(scene);
+        view.setViewport([0, 0, canvas.width, canvas.height]);
+
+        // Transparent/dark clear matching site background
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        renderer.setClearOptions({ clearColor: isDark ? [0.07, 0.07, 0.11, 1.0] : [0.96, 0.97, 0.98, 1.0], clear: true });
+
+        cam.setProjectionFov(45, canvas.width / canvas.height, 0.1, 100, Filament.Camera$Fov.VERTICAL);
+
+        // Sun light
+        var sun = Filament.EntityManager.get().create();
+        Filament.LightManager.Builder(Filament.LightManager$Type.SUN)
+          .color([0.98, 0.92, 0.89]).intensity(110000).direction([0.6, -1, -0.8])
+          .sunAngularRadius(1.9).sunHaloSize(10).sunHaloFalloff(80)
+          .build(engine, sun);
+        scene.addEntity(sun);
+
+        // Fill light
+        var fill = Filament.EntityManager.get().create();
+        Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
+          .color([0.6, 0.65, 0.8]).intensity(30000).direction([-0.5, 0.5, 1])
+          .build(engine, fill);
+        scene.addEntity(fill);
+
+        // Load the glTF model
+        var loader = engine.createAssetLoader();
+        var asset = loader.createAsset(Filament.assets[MODEL_URL]);
+        if (asset) {
+          asset.loadResources();
+          scene.addEntity(asset.getRoot());
+          scene.addEntities(asset.getRenderableEntities());
+        }
+
+        // Orbit camera controls
+        var angle = 0.78, orbitR = 3.2, orbitH = 0.5;
+        var dragging = false, lastX = 0, lastY = 0, autoRotate = true;
+
+        canvas.addEventListener('mousedown', function(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; autoRotate = false; canvas.style.cursor = 'grabbing'; });
+        canvas.addEventListener('mousemove', function(e) { if (!dragging) return; angle += (e.clientX - lastX) * 0.005; orbitH += (e.clientY - lastY) * 0.01; orbitH = Math.max(-2, Math.min(2, orbitH)); lastX = e.clientX; lastY = e.clientY; });
+        canvas.addEventListener('mouseup', function() { dragging = false; canvas.style.cursor = 'grab'; });
+        canvas.addEventListener('mouseleave', function() { dragging = false; canvas.style.cursor = 'grab'; });
+        canvas.addEventListener('wheel', function(e) { e.preventDefault(); orbitR *= (1 + e.deltaY * 0.001); orbitR = Math.max(1.5, Math.min(10, orbitR)); }, { passive: false });
+
+        // Touch controls
+        canvas.addEventListener('touchstart', function(e) { if (e.touches.length === 1) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; autoRotate = false; } });
+        canvas.addEventListener('touchmove', function(e) { if (!dragging || e.touches.length !== 1) return; e.preventDefault(); angle += (e.touches[0].clientX - lastX) * 0.005; orbitH += (e.touches[0].clientY - lastY) * 0.01; orbitH = Math.max(-2, Math.min(2, orbitH)); lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
+        canvas.addEventListener('touchend', function() { dragging = false; });
+
+        // Handle resize
+        function onResize() {
+          var d = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = canvas.clientWidth * d;
+          canvas.height = canvas.clientHeight * d;
+          view.setViewport([0, 0, canvas.width, canvas.height]);
+          cam.setProjectionFov(45, canvas.width / canvas.height, 0.1, 100, Filament.Camera$Fov.VERTICAL);
+        }
+        window.addEventListener('resize', onResize);
+
+        // Listen for theme changes to update clear color
+        var observer = new MutationObserver(function() {
+          var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+          renderer.setClearOptions({ clearColor: dark ? [0.07, 0.07, 0.11, 1.0] : [0.96, 0.97, 0.98, 1.0], clear: true });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        // Render loop
+        function render() {
+          if (autoRotate) angle += 0.004;
+          cam.lookAt(
+            [Math.sin(angle) * orbitR, orbitH, Math.cos(angle) * orbitR],
+            [0, 0, 0],
+            [0, 1, 0]
+          );
+          if (renderer.beginFrame(sc)) { renderer.render(sc, view); renderer.endFrame(); }
+          engine.execute();
+          requestAnimationFrame(render);
+        }
+        render();
+
+      } catch(e) {
+        console.error('SceneView Web hero renderer error:', e);
+      }
+    });
+  })();
+  </script>
 </body>
 </html>
