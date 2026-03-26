@@ -1,5 +1,19 @@
 {
   "permissions": {
-    "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Glob(*)", "Grep(*)", "WebFetch(*)", "WebSearch(*)", "Agent(*)", "TodoWrite(*)", "NotebookEdit(*)"]
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "Agent(*)",
+      "TodoWrite(*)",
+      "NotebookEdit(*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
+    ]
   }
 }
