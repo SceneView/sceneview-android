@@ -3,244 +3,260 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SceneView Empire — Financial Dashboard</title>
+<title>SceneView — Ce qu'on a construit</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#080c18;color:#e8eaed;padding:20px;max-width:1400px;margin:0 auto}
-h1{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,#fff,#8ab4f8,#1a73e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:4px}
-.sub{text-align:center;color:#9aa0a6;margin-bottom:24px;font-size:0.9rem}
-h2{font-size:1.1rem;font-weight:700;color:#8ab4f8;margin:24px 0 12px;display:flex;align-items:center;gap:10px}
-h2::after{content:'';flex:1;height:1px;background:rgba(26,115,232,0.2)}
-.grid{display:grid;gap:12px;margin-bottom:16px}
-.g2{grid-template-columns:1fr 1fr}
-.g3{grid-template-columns:1fr 1fr 1fr}
-.g4{grid-template-columns:repeat(4,1fr)}
-.g5{grid-template-columns:repeat(5,1fr)}
-.c{background:rgba(19,45,74,0.5);border:1px solid rgba(26,115,232,0.12);border-radius:14px;padding:16px}
-.c:hover{border-color:rgba(26,115,232,0.4)}
-.big{font-size:1.8rem;font-weight:800;color:#8ab4f8}
-.big-green{font-size:1.8rem;font-weight:800;color:#34a853}
-.big-orange{font-size:1.8rem;font-weight:800;color:#fbbc04}
-.big-red{font-size:1.8rem;font-weight:800;color:#ea4335}
-.lbl{color:#9aa0a6;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
-.nm{font-weight:700;font-size:0.95rem;margin-bottom:2px}
-.sm{font-size:0.8rem;color:#9aa0a6}
-.green{color:#34a853}.orange{color:#fbbc04}.red{color:#ea4335}.blue{color:#8ab4f8}
-.tag{display:inline-block;font-size:0.6rem;padding:2px 6px;border-radius:4px;font-weight:600}
-.tag-live{background:rgba(52,168,83,0.15);color:#34a853}
-.tag-ready{background:rgba(251,188,4,0.15);color:#fbbc04}
-.tag-pending{background:rgba(154,160,166,0.15);color:#9aa0a6}
-table{width:100%;border-collapse:collapse;font-size:0.85rem}
-th{text-align:left;color:#8ab4f8;font-weight:600;padding:8px;border-bottom:1px solid rgba(26,115,232,0.15)}
-td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03)}
-.bar-row{display:flex;align-items:center;gap:8px;margin:4px 0}
-.bar{height:20px;border-radius:4px;background:linear-gradient(90deg,#1a73e8,#8ab4f8);min-width:2px}
-.bar-label{font-size:0.75rem;color:#9aa0a6;min-width:100px}
-.bar-val{font-size:0.75rem;color:#8ab4f8;font-weight:600;min-width:60px;text-align:right}
-.section{background:rgba(19,45,74,0.3);border:1px solid rgba(26,115,232,0.1);border-radius:16px;padding:20px;margin-bottom:16px}
-.foot{text-align:center;color:#9aa0a6;font-size:0.75rem;padding:20px 0;border-top:1px solid rgba(255,255,255,0.03);margin-top:20px}
-@media(max-width:800px){.g2,.g3,.g4,.g5{grid-template-columns:1fr 1fr}}
-@media(max-width:500px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
+body{font-family:'Inter',sans-serif;background:#0a0e1a;color:#e8eaed;padding:40px 20px;max-width:1200px;margin:0 auto}
+h1{font-size:3rem;font-weight:900;background:linear-gradient(135deg,#fff,#8ab4f8,#1a73e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:8px}
+.tagline{text-align:center;color:#8ab4f8;font-size:1.3rem;font-weight:600;margin-bottom:4px}
+.date{text-align:center;color:#5f6368;font-size:0.85rem;margin-bottom:40px}
+
+/* Big numbers */
+.numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:48px}
+.num-card{background:linear-gradient(135deg,rgba(26,115,232,0.15),rgba(138,180,248,0.05));border:1px solid rgba(26,115,232,0.2);border-radius:20px;padding:28px 20px;text-align:center}
+.num-card .value{font-size:2.8rem;font-weight:900;color:#fff}
+.num-card .value span{background:linear-gradient(135deg,#8ab4f8,#1a73e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.num-card .label{font-size:0.85rem;color:#9aa0a6;margin-top:6px}
+
+/* Sections */
+h2{font-size:1.6rem;font-weight:800;color:#fff;margin:40px 0 8px;display:flex;align-items:center;gap:12px}
+h2 .icon{font-size:1.4rem}
+.section-desc{color:#9aa0a6;margin-bottom:20px;font-size:0.95rem;line-height:1.5}
+
+/* Visual cards */
+.demo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+.demo-card{background:rgba(19,45,74,0.4);border:1px solid rgba(26,115,232,0.15);border-radius:16px;padding:24px;transition:transform 0.2s,border-color 0.2s}
+.demo-card:hover{transform:translateY(-2px);border-color:rgba(26,115,232,0.4)}
+.demo-card .emoji{font-size:2.4rem;margin-bottom:12px}
+.demo-card h3{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:6px}
+.demo-card p{font-size:0.85rem;color:#9aa0a6;line-height:1.5}
+.demo-card .link{display:inline-block;margin-top:12px;color:#8ab4f8;font-size:0.85rem;text-decoration:none;font-weight:600}
+.demo-card .link:hover{text-decoration:underline}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:700;margin-left:8px}
+.badge.live{background:rgba(52,168,83,0.2);color:#34a853}
+.badge.npm{background:rgba(203,36,49,0.2);color:#cb2431}
+.badge.pr{background:rgba(255,152,0,0.2);color:#ff9800}
+
+/* Explainer */
+.explainer{background:linear-gradient(135deg,rgba(26,115,232,0.1),rgba(19,45,74,0.3));border:1px solid rgba(26,115,232,0.2);border-radius:20px;padding:32px;margin-bottom:32px}
+.explainer h3{font-size:1.2rem;font-weight:700;color:#8ab4f8;margin-bottom:12px}
+.explainer p{color:#bdc1c6;line-height:1.7;font-size:0.95rem}
+.explainer .highlight{color:#fff;font-weight:700}
+
+/* Revenue */
+.revenue-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+.rev-card{background:rgba(19,45,74,0.4);border:1px solid rgba(26,115,232,0.15);border-radius:16px;padding:20px;text-align:center}
+.rev-card .channel{font-size:0.85rem;color:#9aa0a6;margin-bottom:4px}
+.rev-card .amount{font-size:1.4rem;font-weight:800;color:#34a853}
+.rev-card .status{font-size:0.75rem;color:#8ab4f8;margin-top:4px}
+
+/* Timeline */
+.timeline{position:relative;padding-left:28px;margin-bottom:32px}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,#1a73e8,#8ab4f8,#34a853)}
+.tl-item{position:relative;margin-bottom:20px}
+.tl-item::before{content:'';position:absolute;left:-24px;top:4px;width:12px;height:12px;border-radius:50%;background:#1a73e8;border:2px solid #8ab4f8}
+.tl-item .time{font-size:0.75rem;color:#5f6368;font-weight:600}
+.tl-item .what{font-size:0.9rem;color:#e8eaed;margin-top:2px}
+
+/* Platforms */
+.platforms{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:32px}
+.platform{background:rgba(19,45,74,0.5);border:1px solid rgba(26,115,232,0.15);border-radius:12px;padding:10px 16px;font-size:0.85rem;font-weight:600;color:#8ab4f8}
+
+/* Footer */
+.footer{text-align:center;color:#5f6368;font-size:0.8rem;margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.05)}
+
+@media(max-width:768px){
+  h1{font-size:2rem}
+  .numbers{grid-template-columns:repeat(2,1fr)}
+  .demo-grid{grid-template-columns:1fr}
+  .revenue-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
-<h1>SceneView Empire</h1>
-<div class="sub">Financial Dashboard — 26 mars 2026, FINAL (18 tools, 834 tests, 0 issues)</div>
+<h1>SceneView</h1>
+<p class="tagline">La 3D et la Realite Augmentee pour tous</p>
+<p class="date">Construit en 48h avec Claude AI — Mars 2026</p>
 
-<!-- KEY METRICS -->
-<div class="grid g5">
-<div class="c" style="text-align:center"><div class="big">18</div><div class="lbl">Produits</div></div>
-<div class="c" style="text-align:center"><div class="big-green">~14 EUR</div><div class="lbl">Revenue/mois actuel</div></div>
-<div class="c" style="text-align:center"><div class="big-orange">$2,600</div><div class="lbl">Open Collective</div></div>
-<div class="c" style="text-align:center"><div class="big">200 EUR</div><div class="lbl">Invest (Claude Max)</div></div>
-<div class="c" style="text-align:center"><div class="big">0 EUR</div><div class="lbl">Depenses ops</div></div>
-</div>
-
-<div class="grid g4">
-<div class="c" style="text-align:center"><div class="big">18</div><div class="lbl">MCP Tools</div></div>
-<div class="c" style="text-align:center"><div class="big-green">834</div><div class="lbl">Tests</div></div>
-<div class="c" style="text-align:center"><div class="big">9</div><div class="lbl">MCP Servers</div></div>
-<div class="c" style="text-align:center"><div class="big-green">0</div><div class="lbl">Open Issues</div></div>
+<!-- BIG NUMBERS -->
+<div class="numbers">
+  <div class="num-card"><div class="value"><span>9</span></div><div class="label">Plateformes</div></div>
+  <div class="num-card"><div class="value"><span>100+</span></div><div class="label">Commits ce week-end</div></div>
+  <div class="num-card"><div class="value"><span>1200+</span></div><div class="label">Tests automatiques</div></div>
+  <div class="num-card"><div class="value"><span>14</span></div><div class="label">Produits crees</div></div>
 </div>
 
-<!-- REVENUE ACTUEL -->
-<h2>Revenue actuel (mars 2026)</h2>
-<div class="section">
-<table>
-<tr><th>Source</th><th>Montant/mois</th><th>Status</th><th>Notes</th></tr>
-<tr><td>GitHub Sponsors</td><td class="green">~14 EUR</td><td><span class="tag tag-live">ACTIF</span></td><td>1 sponsor recurrent, Stripe verifie, W-8BEN OK</td></tr>
-<tr><td>Open Collective</td><td class="green">$2,600 (balance)</td><td><span class="tag tag-live">ACTIF</span></td><td>Balance accumulee. Remboursement Claude Max possible</td></tr>
-<tr><td>Polar.sh (MCP Pro)</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">TEST MODE</span></td><td>Produit cree (9.99 EUR/mois), Go Live pending</td></tr>
-<tr><td>npm packages (8)</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">PUBLIE</span></td><td>Freemium, monetisation Stripe pas encore branchee</td></tr>
-<tr><td>Prompt Store</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">DEPLOYE</span></td><td>Site live, checkout links vers Polar (pas encore Go Live)</td></tr>
-<tr><td>n8n Templates</td><td class="orange">0 EUR</td><td><span class="tag tag-ready">GITHUB</span></td><td>5 workflows prets, pas encore en vente</td></tr>
-<tr><td>Chrome Extension</td><td class="orange">0 EUR</td><td><span class="tag tag-pending">READY</span></td><td>Prete, pas soumise au Chrome Web Store</td></tr>
-<tr><td style="font-weight:700">TOTAL ACTUEL</td><td class="green" style="font-weight:700">~14 EUR/mois + $2,600 balance</td><td></td><td></td></tr>
-</table>
+<!-- WHAT IS IT -->
+<div class="explainer">
+  <h3>C'est quoi SceneView ?</h3>
+  <p>SceneView est un <span class="highlight">outil open-source</span> qui permet aux developpeurs d'ajouter de la <span class="highlight">3D et de la realite augmentee</span> dans leurs applications — en quelques lignes de code seulement.</p>
+  <p style="margin-top:12px">Imaginez : un agent immobilier montre un appartement en 3D depuis son telephone. Un site e-commerce affiche un meuble en realite augmentee dans votre salon. Un architecte presente une maquette 3D interactive a son client. <span class="highlight">SceneView rend tout cela possible.</span></p>
+  <p style="margin-top:12px">C'est utilise par les memes technologies que <span class="highlight">Google Maps</span> (Filament), <span class="highlight">IKEA</span> (AR), et <span class="highlight">Amazon</span> (3D produit).</p>
 </div>
 
-<!-- REVENUE POTENTIEL -->
-<h2>Revenue potentiel (quand tout active)</h2>
-<div class="section">
-<table>
-<tr><th>Produit</th><th>Prix</th><th>10 clients</th><th>100 clients</th><th>Marge</th></tr>
-<tr><td>Architecture MCP</td><td>$49-149/mois</td><td class="green">$490-1,490</td><td class="green">$4,900-14,900</td><td>~100%</td></tr>
-<tr><td>E-commerce 3D MCP</td><td>$29-99/mois</td><td class="green">$290-990</td><td class="green">$2,900-9,900</td><td>~100%</td></tr>
-<tr><td><s>Social Media MCP</s></td><td colspan="4" style="color:#9aa0a6">RETIRED ([REDACTED])</td></tr>
-<tr><td>Legal Docs MCP</td><td>19.99 EUR/mois</td><td class="green">200 EUR</td><td class="green">2,000 EUR</td><td>~100%</td></tr>
-<tr><td>Real Estate MCP</td><td>$19/mois</td><td class="green">$190</td><td class="green">$1,900</td><td>~100%</td></tr>
-<tr><td>French Admin MCP</td><td>9.99 EUR/mois</td><td class="green">100 EUR</td><td class="green">1,000 EUR</td><td>~100%</td></tr>
-<tr><td>AI Invoice SaaS</td><td>4.99 EUR/mois</td><td class="green">50 EUR</td><td class="green">500 EUR</td><td>~95%</td></tr>
-<tr><td>Prompt Store (one-shot)</td><td>9.99-39.99 EUR</td><td class="green">100-400 EUR</td><td class="green">1,000-4,000 EUR</td><td>~100%</td></tr>
-<tr><td>n8n Templates (one-shot)</td><td>$29-149 bundle</td><td class="green">$290-1,490</td><td class="green">$2,900-14,900</td><td>~100%</td></tr>
-<tr><td>GitHub Sponsors</td><td>$5-200/mois</td><td class="green">$50-2,000</td><td class="green">$500-20,000</td><td>~97%</td></tr>
-<tr style="background:rgba(52,168,83,0.08)"><td style="font-weight:700">TOTAL POTENTIEL</td><td></td><td class="green" style="font-weight:700">$1,900-9,300/mois</td><td class="green" style="font-weight:700">$15,000-72,000/mois</td><td></td></tr>
-</table>
+<!-- DEMOS -->
+<h2><span class="icon">🎯</span> Ce qu'on peut faire</h2>
+<p class="section-desc">Chaque demo est live et interactive — cliquez pour essayer !</p>
+<div class="demo-grid">
+  <div class="demo-card">
+    <div class="emoji">🏠</div>
+    <h3>Modele 3D interactif</h3>
+    <p>Affichez n'importe quel objet 3D avec rotation, zoom, eclairage realiste. Parfait pour l'e-commerce, l'immobilier, l'education.</p>
+    <a class="link" href="https://sceneview.github.io/sceneview-demo.html" target="_blank">Voir la demo →</a>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🎨</div>
+    <h3>Dessin 3D par l'IA</h3>
+    <p>Dites a Claude "dessine une ville" et il cree une scene 3D interactive. Architecture, data viz, paysages — tout est possible.</p>
+    <a class="link" href="https://sceneview.github.io/geometry-demo.html" target="_blank">Voir la demo →</a>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">📱</div>
+    <h3>Application mobile</h3>
+    <p>App Android avec 4 onglets : visionneuse 3D, realite augmentee, galerie de demos, infos. Prete pour le Play Store.</p>
+    <span class="badge live">Sur emulateur</span>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🌐</div>
+    <h3>Site web avec 3D</h3>
+    <p>Le casque 3D sur la page d'accueil tourne en temps reel dans votre navigateur. Aucune installation requise.</p>
+    <a class="link" href="https://sceneview.github.io" target="_blank">Voir le site →</a>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🔧</div>
+    <h3>Outils IA specialises</h3>
+    <p>9 assistants IA pour des metiers : immobilier (visites 3D), architecture (plans), admin francaise (impots), juridique (contrats)...</p>
+    <span class="badge npm">Sur npm</span>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">💻</div>
+    <h3>Playground interactif</h3>
+    <p>Testez du code 3D directement dans le navigateur. Copiez, modifiez, experimentez. Integre avec Claude.</p>
+    <a class="link" href="https://sceneview.github.io/playground.html" target="_blank">Essayer →</a>
+  </div>
 </div>
 
-<!-- REVENUE BARS -->
-<h2>Revenue potentiel par produit (EUR/mois, scenario 10 clients)</h2>
-<div class="section">
-<div class="bar-row"><div class="bar-label">Architecture</div><div class="bar" style="width:300px"></div><div class="bar-val">1,490 EUR</div></div>
-<div class="bar-row"><div class="bar-label">n8n Bundle</div><div class="bar" style="width:280px"></div><div class="bar-val">1,390 EUR</div></div>
-<div class="bar-row"><div class="bar-label">E-commerce</div><div class="bar" style="width:200px"></div><div class="bar-val">990 EUR</div></div>
-<div class="bar-row"><div class="bar-label">GitHub Sponsors</div><div class="bar" style="width:170px"></div><div class="bar-val">500-2,000 EUR</div></div>
-<div class="bar-row"><div class="bar-label"><s>Social Media</s></div><div class="bar" style="width:0px;background:#666"></div><div class="bar-val" style="color:#9aa0a6">RETIRED</div></div>
-<div class="bar-row"><div class="bar-label">Prompt Store</div><div class="bar" style="width:80px"></div><div class="bar-val">400 EUR</div></div>
-<div class="bar-row"><div class="bar-label">Legal Docs</div><div class="bar" style="width:40px"></div><div class="bar-val">200 EUR</div></div>
-<div class="bar-row"><div class="bar-label">Real Estate</div><div class="bar" style="width:38px"></div><div class="bar-val">190 EUR</div></div>
-<div class="bar-row"><div class="bar-label">French Admin</div><div class="bar" style="width:20px"></div><div class="bar-val">100 EUR</div></div>
-<div class="bar-row"><div class="bar-label">AI Invoice</div><div class="bar" style="width:10px"></div><div class="bar-val">50 EUR</div></div>
+<!-- PLATFORMS -->
+<h2><span class="icon">🌍</span> 9 plateformes supportees</h2>
+<p class="section-desc">Le meme SDK fonctionne partout — un seul outil, tous les ecrans.</p>
+<div class="platforms">
+  <span class="platform">📱 Android</span>
+  <span class="platform">📺 Android TV</span>
+  <span class="platform">🍎 iOS</span>
+  <span class="platform">💻 macOS</span>
+  <span class="platform">🥽 visionOS</span>
+  <span class="platform">🌐 Web</span>
+  <span class="platform">🖥️ Desktop</span>
+  <span class="platform">💙 Flutter</span>
+  <span class="platform">⚛️ React Native</span>
 </div>
 
-<!-- INVESTISSEMENT / COUTS -->
-<h2>Investissement &amp; couts</h2>
-<div class="grid g3">
-<div class="c">
-<div class="nm">Couts fixes mensuels</div>
-<table>
-<tr><td>Claude Max 20x</td><td class="red">~200 EUR/mois</td></tr>
-<tr><td>Apple Developer</td><td class="red">~8 EUR/mois (99$/an)</td></tr>
-<tr><td>Hebergement</td><td class="green">0 EUR (GitHub Pages)</td></tr>
-<tr><td>Serveurs</td><td class="green">0 EUR (Cloudflare free)</td></tr>
-<tr><td>npm</td><td class="green">0 EUR</td></tr>
-<tr><td style="font-weight:700">TOTAL</td><td class="red" style="font-weight:700">~208 EUR/mois</td></tr>
-</table>
-</div>
-<div class="c">
-<div class="nm">Temps investi (mars 2026)</div>
-<table>
-<tr><td>Session 24 mars</td><td>~8h</td></tr>
-<tr><td>Marathon 25 mars</td><td>~16h</td></tr>
-<tr><td>Marathon 26 mars</td><td>~18h (FINAL)</td></tr>
-<tr><td style="font-weight:700">TOTAL</td><td style="font-weight:700">~42h</td></tr>
-</table>
-</div>
-<div class="c">
-<div class="nm">Break-even analysis</div>
-<table>
-<tr><td>Cout mensuel</td><td class="red">208 EUR</td></tr>
-<tr><td>Revenue actuel</td><td class="green">14 EUR</td></tr>
-<tr><td>Gap</td><td class="red">-194 EUR</td></tr>
-<tr><td colspan="2" style="padding-top:12px;font-size:0.75rem;color:#9aa0a6">Break-even = 3 clients Architecture OU 7 clients E-commerce OU 21 clients French Admin</td></tr>
-</table>
-</div>
-</div>
-
-<!-- COMPTES & PLATEFORMES -->
-<h2>Comptes &amp; plateformes</h2>
-<div class="section">
-<table>
-<tr><th>Plateforme</th><th>Status</th><th>Lien</th></tr>
-<tr><td>GitHub (sceneview org)</td><td><span class="tag tag-live">ACTIF</span></td><td>github.com/sceneview</td></tr>
-<tr><td>GitHub (sceneview-tools)</td><td><span class="tag tag-live">ACTIF</span> Commercial repos</td><td>github.com/sceneview-tools</td></tr>
-<tr><td>GitHub (mcp-tools-lab)</td><td><span class="tag tag-live">ACTIF</span> MCP ecosystem</td><td>github.com/mcp-tools-lab</td></tr>
-<tr><td>GitHub Sponsors</td><td><span class="tag tag-live">ACTIF</span> Stripe verifie, W-8BEN</td><td>github.com/sponsors/ThomasGorisse</td></tr>
-<tr><td>Open Collective</td><td><span class="tag tag-live">ACTIF</span> $2,600 balance</td><td>opencollective.com/sceneview</td></tr>
-<tr><td>npm (thomasgorisse)</td><td><span class="tag tag-live">ACTIF</span> 9+ packages publies</td><td>npmjs.com/~thomasgorisse</td></tr>
-<tr><td>Polar.sh (sceneview)</td><td><span class="tag tag-ready">TEST MODE</span></td><td>polar.sh/sceneview</td></tr>
-<tr><td>MCP Registry (Anthropic)</td><td><span class="tag tag-live">ACTIF</span> io.github.sceneview/mcp</td><td>registry.modelcontextprotocol.io</td></tr>
-<tr><td>Google Play Console</td><td><span class="tag tag-ready">W-8BEN OK</span> Key reset ~27 mars</td><td>play.google.com/console</td></tr>
-<tr><td>Apple Developer</td><td><span class="tag tag-live">ACTIF</span> jusqu'au 24/03/2027</td><td>developer.apple.com</td></tr>
-<tr><td>App Store Connect</td><td><span class="tag tag-pending">CERT MANQUANT</span></td><td>appstoreconnect.apple.com</td></tr>
-<tr><td>Stripe (via GH Sponsors)</td><td><span class="tag tag-live">ACTIF</span></td><td>connect.stripe.com</td></tr>
-</table>
+<!-- AI TOOLS -->
+<h2><span class="icon">🤖</span> Outils IA (MCP Servers)</h2>
+<p class="section-desc">Des assistants specialises que Claude et ChatGPT peuvent utiliser pour aider dans des domaines precis.</p>
+<div class="demo-grid">
+  <div class="demo-card">
+    <div class="emoji">🏗️</div>
+    <h3>SceneView MCP <span class="badge live">v3.4.14</span></h3>
+    <p>18 outils : generation de code 3D, validation, debug, migration, previews interactives. 834 tests.</p>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🏠</div>
+    <h3>Immobilier <span class="badge npm">v2.1.0</span></h3>
+    <p>Plans d'etage, visites virtuelles, estimations de prix, diagnostic DPE, comparaison de biens.</p>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🛍️</div>
+    <h3>E-commerce 3D <span class="badge npm">v2.0.0</span></h3>
+    <p>Visuels produit 3D, essayage AR, configurateur, snippets Shopify/WooCommerce, SEO.</p>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🏛️</div>
+    <h3>Architecture <span class="badge npm">v2.0.0</span></h3>
+    <p>Concepts 3D, plans, design interieur, eclairage, walkthroughs, devis, analyse durabilite.</p>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🇫🇷</div>
+    <h3>Admin francaise <span class="badge npm">v2.1.0</span></h3>
+    <p>Impots 2026, charges URSSAF, factures, CAF, RSA, chomage, retraite, CPF. Baremes officiels.</p>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">⚖️</div>
+    <h3>Documents juridiques <span class="badge npm">v2.0.0</span></h3>
+    <p>CGV, CGU, NDA, contrats freelance, RGPD, mentions legales, devis, cessions.</p>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">💰</div>
+    <h3>Finance <span class="badge npm">v1.0.0</span></h3>
+    <p>Simulation pret, budget, comparaison investissements, retraite, optimisation fiscale, inflation.</p>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">🎓</div>
+    <h3>Education <span class="badge npm">v1.0.0</span></h3>
+    <p>Quiz, plans de cours, flashcards, explications adaptees, exercices, grilles d'evaluation.</p>
+  </div>
 </div>
 
-<!-- STRUCTURE JURIDIQUE -->
-<h2>Structure juridique</h2>
-<div class="grid g2">
-<div class="c">
-<div class="nm">[REDACTED]</div>
-<div class="sm">
-Enregistrement : [a faire]<br>
-Plafond CA : 77,700 EUR/an (services)<br>
-Charges sociales : ~22%<br>
-TVA : Non applicable (art. 293 B CGI)<br>
-Compatibilite emploi : <span class="orange">Mail envoye, en attente reponse</span>
-</div>
-</div>
-<div class="c">
-<div class="nm">Protection</div>
-<div class="sm">
-Tous les projets : MIT License + TERMS.md + PRIVACY.md<br>
-Disclaimers dans chaque reponse MCP<br>
-Droit francais, Tribunal de Nantes<br>
-RGPD : conforme by design (0 data)<br>
-Repos commerciaux anonymises (SceneView Tools)<br>
-Git history purgee (donnees sensibles)
-</div>
-</div>
+<!-- REVENUE -->
+<h2><span class="icon">💰</span> Sources de revenus</h2>
+<p class="section-desc">Revenus 100% passifs — aucune gestion manuelle requise.</p>
+<div class="revenue-grid">
+  <div class="rev-card">
+    <div class="channel">GitHub Sponsors</div>
+    <div class="amount">~14 EUR/mois</div>
+    <div class="status">✅ Actif — 1 sponsor recurrent</div>
+  </div>
+  <div class="rev-card">
+    <div class="channel">Open Collective</div>
+    <div class="amount">2 600 EUR</div>
+    <div class="status">✅ Balance disponible</div>
+  </div>
+  <div class="rev-card">
+    <div class="channel">Polar.sh</div>
+    <div class="amount">9.99 EUR/mois</div>
+    <div class="status">✅ Produit MCP Pro cree</div>
+  </div>
 </div>
 
-<!-- PRODUITS DETAIL -->
-<h2>18 Produits — detail</h2>
-<div class="section">
-<table>
-<tr><th>Produit</th><th>Type</th><th>Version</th><th>Tests</th><th>Prix</th><th>Status</th></tr>
-<tr><td>SceneView SDK</td><td>Open Source</td><td>v3.4.7</td><td>86 (core)</td><td>Gratuit</td><td><span class="tag tag-live">LIVE</span></td></tr>
-<tr><td>SceneView MCP</td><td>MCP npm</td><td>v2.0.0</td><td>834</td><td>Freemium</td><td><span class="tag tag-live">LIVE</span></td></tr>
-<tr><td>Real Estate MCP</td><td>MCP npm</td><td>v2.0.0</td><td>42</td><td>$19/mois</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>E-commerce 3D MCP</td><td>MCP npm</td><td>v2.0.0</td><td>52</td><td>$29-99/mois</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>Architecture MCP</td><td>MCP npm</td><td>v2.0.0</td><td>27</td><td>$49-149/mois</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>French Admin MCP</td><td>MCP npm</td><td>v2.0.0</td><td>52</td><td>9.99 EUR/mois</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>Legal Docs MCP</td><td>MCP npm</td><td>v2.0.0</td><td>34</td><td>19.99 EUR/mois</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td><s>Social Media MCP</s></td><td>MCP npm</td><td>RETIRED</td><td>—</td><td>—</td><td><span class="tag tag-pending">RETIRED</span></td></tr>
-<tr><td>Chrome Extension</td><td>Extension</td><td>1.0</td><td>—</td><td>Gratuit</td><td><span class="tag tag-ready">READY</span></td></tr>
-<tr><td>Prompt Store</td><td>Digital</td><td>—</td><td>—</td><td>9.99-39.99 EUR</td><td><span class="tag tag-live">DEPLOYE</span></td></tr>
-<tr><td>n8n Templates</td><td>Digital</td><td>—</td><td>—</td><td>$29-149</td><td><span class="tag tag-live">GITHUB</span></td></tr>
-<tr><td>Telegram Bot</td><td>SaaS</td><td>1.0.1</td><td>—</td><td>$5-20/mois</td><td><span class="tag tag-ready">TEMPLATE</span></td></tr>
-<tr><td>AI Invoice</td><td>SaaS</td><td>1.0.1</td><td>—</td><td>4.99 EUR/mois</td><td><span class="tag tag-ready">DEPLOY</span></td></tr>
-<tr><td>Education MCP</td><td>MCP npm</td><td>v2.0.0</td><td>—</td><td>TBD</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>Finance MCP</td><td>MCP npm</td><td>v2.0.0</td><td>—</td><td>TBD</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>sceneview.js</td><td>npm lib</td><td>v1.2.0</td><td>—</td><td>Gratuit</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>sceneview-web</td><td>npm lib</td><td>v1.2.0</td><td>—</td><td>Gratuit</td><td><span class="tag tag-live">npm</span></td></tr>
-<tr><td>Polar MCP Pro</td><td>Sub</td><td>—</td><td>—</td><td>9.99 EUR/mois</td><td><span class="tag tag-ready">TEST</span></td></tr>
-</table>
+<!-- TIMELINE -->
+<h2><span class="icon">⏱️</span> Ce week-end en 48h</h2>
+<div class="timeline">
+  <div class="tl-item"><div class="time">Vendredi soir</div><div class="what">Lancement du marathon — site web, releases v3.4.0 a v3.4.3</div></div>
+  <div class="tl-item"><div class="time">Nuit de vendredi</div><div class="what">8 MCP servers crees et publies sur npm — immobilier, archi, e-commerce, admin FR...</div></div>
+  <div class="tl-item"><div class="time">Samedi matin</div><div class="what">Filament.js WASM prouve — rendu 3D temps reel dans le navigateur !</div></div>
+  <div class="tl-item"><div class="time">Samedi apres-midi</div><div class="what">sceneview.js v1.2.0 — 3D en UNE ligne de code. Publie sur npm.</div></div>
+  <div class="tl-item"><div class="time">Samedi soir</div><div class="what">Geometrie procedurale — Claude dessine en 3D ! PR soumise a Anthropic.</div></div>
+  <div class="tl-item"><div class="time">Dimanche</div><div class="what">App Android polishee, AR fixe, 60+ modeles 3D, 26 GB emulateurs nettoyes.</div></div>
 </div>
 
-<!-- ACTIONS PRIORITAIRES -->
-<h2>Actions prioritaires Thomas</h2>
-<div class="section">
-<table>
-<tr><th>Pri</th><th>Action</th><th>Impact</th><th>Temps</th></tr>
-<tr><td class="red">P1</td><td>Polar.sh Go Live</td><td>Active les paiements MCP Pro</td><td>1 clic</td></tr>
-<tr><td class="red">P1</td><td>GitHub Sponsors 4 tiers ($5/$15/$50/$200)</td><td>Augmente le revenu sponsors</td><td>5 min</td></tr>
-<tr><td class="green">DONE</td><td><s>Org sceneview-tools</s></td><td>sceneview-tools + mcp-tools-lab created</td><td>DONE</td></tr>
-<tr><td class="orange">P2</td><td>Reponse (autorisation)</td><td>Securise l'emploi</td><td>Attente</td></tr>
-<tr><td class="orange">P2</td><td>Apple certificat Distribution</td><td>Debloque App Store</td><td>10 min</td></tr>
-<tr><td class="orange">P2</td><td>LinkedIn post (wave 2)</td><td>Visibilite, sponsors</td><td>5 min</td></tr>
-<tr><td class="blue">P3</td><td>Reddit/HN posts (wave 1)</td><td>Traction communaute dev</td><td>15 min</td></tr>
-<tr><td class="blue">P3</td><td>Discord reponses (Kamil + cloo)</td><td>Retention communaute</td><td>10 min</td></tr>
-<tr><td style="color:#9aa0a6">Low</td><td>Supprimer vieilles apps Play Store</td><td>Clean</td><td>3 min</td></tr>
-<tr><td style="color:#9aa0a6">Low</td><td>Remettre sleep Mac</td><td>Batterie</td><td>30 sec</td></tr>
-</table>
+<!-- VISIBILITY -->
+<h2><span class="icon">🔗</span> Liens et visibilite</h2>
+<div class="demo-grid">
+  <div class="demo-card">
+    <div class="emoji">⭐</div>
+    <h3>GitHub <span class="badge live">1500+ stars</span></h3>
+    <p>Projet open-source avec communaute active, Discord, contributions regulieres.</p>
+    <a class="link" href="https://github.com/sceneview/sceneview" target="_blank">github.com/sceneview →</a>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">📋</div>
+    <h3>PR Anthropic <span class="badge pr">En review</span></h3>
+    <p>Contribution au repo officiel d'Anthropic (Claude Cookbooks) — recette 3D avec SceneView MCP.</p>
+    <a class="link" href="https://github.com/anthropics/claude-cookbooks/pull/472" target="_blank">PR #472 →</a>
+  </div>
+  <div class="demo-card">
+    <div class="emoji">📦</div>
+    <h3>npm Registry <span class="badge npm">10+ packages</span></h3>
+    <p>Tous les outils installables en une commande. 1200+ tests automatiques au total.</p>
+    <a class="link" href="https://www.npmjs.com/package/sceneview-mcp" target="_blank">npmjs.com →</a>
+  </div>
 </div>
 
-<div class="foot">
-SceneView Empire — Built with Claude Opus 4.6 Max 20x — Marathon 25-26 mars 2026
+<div class="footer">
+  SceneView — Open-source, Apache 2.0 — Cree par Thomas Gorisse avec Claude AI<br>
+  Mars 2026
 </div>
 
 </body>

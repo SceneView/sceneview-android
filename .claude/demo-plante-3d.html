@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Plante 3D — SceneView</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;overflow:hidden}
+canvas{width:100vw;height:100vh;display:block;cursor:grab}
+canvas:active{cursor:grabbing}
+.title{position:fixed;top:20px;left:50%;transform:translateX(-50%);color:#fff;font-family:'Segoe UI',sans-serif;font-size:1rem;font-weight:700;z-index:10;text-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.title span{color:#34a853}
+.watermark{position:fixed;bottom:16px;right:16px;color:rgba(138,180,248,0.3);font-size:0.7rem;font-family:'Segoe UI',sans-serif;z-index:10}
+</style>
+</head>
+<body>
+<div class="title">🌿 Plante 3D — <span>Powered by SceneView</span></div>
+<canvas id="c"></canvas>
+<div class="watermark">SceneView + WebGL2</div>
+<script>
+const canvas=document.getElementById('c');
+const gl=canvas.getContext('webgl2',{antialias:true,alpha:false});
+const dpr=Math.min(devicePixelRatio,2);
+function resize(){canvas.width=innerWidth*dpr;canvas.height=innerHeight*dpr;gl.viewport(0,0,canvas.width,canvas.height)}
+resize();addEventListener('resize',resize);
+
+const vs=`#version 300 es
+in vec3 aP;in vec3 aN;in vec3 aC;
+uniform mat4 uMVP;uniform mat4 uM;uniform float uT;
+out vec3 vC,vN,vW;
+void main(){
+  vec3 p=aP;
+  // Gentle wind sway for leaves (y>1)
+  if(p.y>1.0){
+    float sway=sin(uT*1.5+p.x*2.0+p.z*2.0)*0.08*(p.y-1.0);
+    p.x+=sway;
+    p.z+=sway*0.5;
+  }
+  gl_Position=uMVP*vec4(p,1);
+  vC=aC;vN=mat3(uM)*aN;vW=(uM*vec4(p,1)).xyz;
+}`;
+const fs=`#version 300 es
+precision highp float;
+in vec3 vC,vN,vW;
+uniform vec3 uEye;uniform float uT;
+out vec4 fc;
+void main(){
+  vec3 n=normalize(vN);
+  vec3 l1=normalize(vec3(0.5,1.0,0.6));
+  vec3 l2=normalize(vec3(-0.4,0.3,-0.5));
+  float d1=max(dot(n,l1),0.0);
+  float d2=max(dot(n,l2),0.0)*0.25;
+  float amb=0.12;
+  vec3 v=normalize(uEye-vW);
+  vec3 h=normalize(l1+v);
+  float spec=pow(max(dot(n,h),0.0),32.0)*0.2;
+  // Subsurface scattering for leaves
+  float sss=max(dot(-n,l1),0.0)*0.15;
+  vec3 col=vC*(amb+d1+d2+sss)+vec3(spec)*0.5;
+  col=pow(col,vec3(0.85));
+  fc=vec4(col,1);
+}`;
+
+function compile(s,t){const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh}
+const prog=gl.createProgram();
+gl.attachShader(prog,compile(vs,gl.VERTEX_SHADER));
+gl.attachShader(prog,compile(fs,gl.FRAGMENT_SHADER));
+gl.linkProgram(prog);gl.useProgram(prog);
+
+const uMVP=gl.getUniformLocation(prog,'uMVP');
+const uM=gl.getUniformLocation(prog,'uM');
+const uT=gl.getUniformLocation(prog,'uT');
+const uEye=gl.getUniformLocation(prog,'uEye');
+
+// Generate geometry
+const V=[];
+
+function addTri(p1,p2,p3,c){
+  const ux=p2[0]-p1[0],uy=p2[1]-p1[1],uz=p2[2]-p1[2];
+  const vx=p3[0]-p1[0],vy=p3[1]-p1[1],vz=p3[2]-p1[2];
+  const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+  const l=Math.hypot(nx,ny,nz)||1;
+  const n=[nx/l,ny/l,nz/l];
+  V.push(...p1,...n,...c,...p2,...n,...c,...p3,...n,...c);
+}
+
+function addQuad(p1,p2,p3,p4,c){addTri(p1,p2,p3,c);addTri(p1,p3,p4,c)}
+
+// Pot (terracotta cylinder)
+const potR=0.5,potH=0.7,potSegs=24;
+const potColor=[0.72,0.42,0.25];
+const potDarkColor=[0.55,0.32,0.18];
+for(let i=0;i<potSegs;i++){
+  const a1=i/potSegs*Math.PI*2;
+  const a2=(i+1)/potSegs*Math.PI*2;
+  const c1=Math.cos(a1),s1=Math.sin(a1);
+  const c2=Math.cos(a2),s2=Math.sin(a2);
+  const topR=potR*1.1;
+  // Side
+  addQuad(
+    [c1*potR*0.85,0,s1*potR*0.85],
+    [c2*potR*0.85,0,s2*potR*0.85],
+    [c2*topR,potH,s2*topR],
+    [c1*topR,potH,s1*topR],
+    potColor
+  );
+  // Rim
+  addQuad(
+    [c1*topR,potH,s1*topR],
+    [c2*topR,potH,s2*topR],
+    [c2*topR*1.08,potH+0.06,s2*topR*1.08],
+    [c1*topR*1.08,potH+0.06,s1*topR*1.08],
+    potDarkColor
+  );
+  // Bottom
+  addTri([0,0,0],[c2*potR*0.85,0,s2*potR*0.85],[c1*potR*0.85,0,s1*potR*0.85],potDarkColor);
+}
+
+// Soil (dark disc on top of pot)
+const soilColor=[0.2,0.15,0.1];
+for(let i=0;i<potSegs;i++){
+  const a1=i/potSegs*Math.PI*2;
+  const a2=(i+1)/potSegs*Math.PI*2;
+  addTri(
+    [0,potH+0.02,0],
+    [Math.cos(a1)*potR*0.95,potH+0.02,Math.sin(a1)*potR*0.95],
+    [Math.cos(a2)*potR*0.95,potH+0.02,Math.sin(a2)*potR*0.95],
+    soilColor
+  );
+}
+
+// Main stem
+const stemSegs=8;const stemR=0.04;const stemH=2.2;
+const stemColor=[0.18,0.45,0.15];
+for(let i=0;i<stemSegs;i++){
+  const a1=i/stemSegs*Math.PI*2;
+  const a2=(i+1)/stemSegs*Math.PI*2;
+  addQuad(
+    [Math.cos(a1)*stemR,potH,Math.sin(a1)*stemR],
+    [Math.cos(a2)*stemR,potH,Math.sin(a2)*stemR],
+    [Math.cos(a2)*stemR*0.7,potH+stemH,Math.sin(a2)*stemR*0.7],
+    [Math.cos(a1)*stemR*0.7,potH+stemH,Math.sin(a1)*stemR*0.7],
+    stemColor
+  );
+}
+
+// Leaves (flat ellipses along stem)
+function addLeaf(baseY,angle,size,tilt,color){
+  const cx=Math.cos(angle)*0.1;
+  const cz=Math.sin(angle)*0.1;
+  const leafSegs=8;
+  const leafLen=size;
+  const leafW=size*0.4;
+
+  for(let i=0;i<leafSegs;i++){
+    const t1=i/leafSegs;
+    const t2=(i+1)/leafSegs;
+    const dx=Math.cos(angle);
+    const dz=Math.sin(angle);
+    const px=Math.cos(angle+Math.PI/2);
+    const pz=Math.sin(angle+Math.PI/2);
+
+    const r1=Math.sin(t1*Math.PI)*leafW;
+    const r2=Math.sin(t2*Math.PI)*leafW;
+    const droop1=t1*t1*tilt;
+    const droop2=t2*t2*tilt;
+
+    const x1=cx+dx*t1*leafLen;
+    const y1=baseY-droop1;
+    const z1=cz+dz*t1*leafLen;
+    const x2=cx+dx*t2*leafLen;
+    const y2=baseY-droop2;
+    const z2=cz+dz*t2*leafLen;
+
+    // Top surface
+    addTri(
+      [x1+px*r1,y1,z1+pz*r1],
+      [x2+px*r2,y2,z2+pz*r2],
+      [x2-px*r2,y2,z2-pz*r2],
+      color
+    );
+    addTri(
+      [x1+px*r1,y1,z1+pz*r1],
+      [x2-px*r2,y2,z2-pz*r2],
+      [x1-px*r1,y1,z1-pz*r1],
+      color
+    );
+    // Bottom surface (darker)
+    const dc=[color[0]*0.7,color[1]*0.7,color[2]*0.7];
+    addTri(
+      [x2-px*r2,y2,z2-pz*r2],
+      [x2+px*r2,y2,z2+pz*r2],
+      [x1+px*r1,y1,z1+pz*r1],
+      dc
+    );
+    addTri(
+      [x1-px*r1,y1,z1-pz*r1],
+      [x2-px*r2,y2,z2-pz*r2],
+      [x1+px*r1,y1,z1+pz*r1],
+      dc
+    );
+  }
+}
+
+// Multiple leaves at different heights and angles
+const leafColors=[
+  [0.55,0.35,0.15],[0.6,0.38,0.18],[0.50,0.30,0.12],[0.65,0.42,0.20],
+  [0.52,0.33,0.14],[0.58,0.36,0.16],[0.48,0.28,0.10],[0.62,0.40,0.18]
+];
+
+// Lower leaves (bigger, more droopy)
+for(let i=0;i<5;i++){
+  const angle=i/5*Math.PI*2+0.3;
+  addLeaf(potH+0.6+i*0.1,angle,0.7+Math.random()*0.3,0.4+Math.random()*0.2,leafColors[i%leafColors.length]);
+}
+// Middle leaves
+for(let i=0;i<6;i++){
+  const angle=i/6*Math.PI*2+0.8;
+  addLeaf(potH+1.2+i*0.08,angle,0.6+Math.random()*0.3,0.25+Math.random()*0.15,leafColors[(i+3)%leafColors.length]);
+}
+// Top leaves (smaller, more upright)
+for(let i=0;i<8;i++){
+  const angle=i/8*Math.PI*2+1.2;
+  addLeaf(potH+1.8+i*0.05,angle,0.4+Math.random()*0.25,0.1+Math.random()*0.1,leafColors[(i+5)%leafColors.length]);
+}
+// Crown leaves
+for(let i=0;i<5;i++){
+  const angle=i/5*Math.PI*2;
+  addLeaf(potH+stemH-0.1,angle,0.35+Math.random()*0.15,0.05,leafColors[(i+2)%leafColors.length]);
+}
+
+// Small flowers (pink/white spheres)
+function addFlower(x,y,z,r,color){
+  const segs=6;
+  for(let i=0;i<segs;i++){
+    for(let j=0;j<segs;j++){
+      const p1=i/segs*Math.PI,p2=(i+1)/segs*Math.PI;
+      const t1=j/segs*Math.PI*2,t2=(j+1)/segs*Math.PI*2;
+      addTri(
+        [x+r*Math.sin(p1)*Math.cos(t1),y+r*Math.cos(p1),z+r*Math.sin(p1)*Math.sin(t1)],
+        [x+r*Math.sin(p2)*Math.cos(t1),y+r*Math.cos(p2),z+r*Math.sin(p2)*Math.sin(t1)],
+        [x+r*Math.sin(p2)*Math.cos(t2),y+r*Math.cos(p2),z+r*Math.sin(p2)*Math.sin(t2)],
+        color
+      );
+      addTri(
+        [x+r*Math.sin(p1)*Math.cos(t1),y+r*Math.cos(p1),z+r*Math.sin(p1)*Math.sin(t1)],
+        [x+r*Math.sin(p2)*Math.cos(t2),y+r*Math.cos(p2),z+r*Math.sin(p2)*Math.sin(t2)],
+        [x+r*Math.sin(p1)*Math.cos(t2),y+r*Math.cos(p1),z+r*Math.sin(p1)*Math.sin(t2)],
+        color
+      );
+    }
+  }
+}
+
+// Flowers
+addFlower(0.3,potH+2.0,0.2,0.06,[0.95,0.6,0.7]);
+addFlower(-0.2,potH+1.9,-0.3,0.05,[0.98,0.85,0.85]);
+addFlower(0.1,potH+2.3,0.15,0.055,[0.95,0.55,0.65]);
+addFlower(-0.15,potH+2.1,0.25,0.045,[1.0,0.9,0.9]);
+addFlower(0.25,potH+1.7,-0.15,0.05,[0.93,0.5,0.6]);
+
+// Ground plane (subtle)
+const gndColor=[0.08,0.09,0.12];
+addQuad([-3,0,-3],[3,0,-3],[3,0,3],[-3,0,3],gndColor);
+
+// Upload
+const data=new Float32Array(V);
+const vertCount=data.length/9;
+const vbo=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
+gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+const stride=36;
+const aP=gl.getAttribLocation(prog,'aP');
+const aN=gl.getAttribLocation(prog,'aN');
+const aC=gl.getAttribLocation(prog,'aC');
+gl.enableVertexAttribArray(aP);gl.vertexAttribPointer(aP,3,gl.FLOAT,false,stride,0);
+gl.enableVertexAttribArray(aN);gl.vertexAttribPointer(aN,3,gl.FLOAT,false,stride,12);
+gl.enableVertexAttribArray(aC);gl.vertexAttribPointer(aC,3,gl.FLOAT,false,stride,24);
+
+// Camera
+let theta=0.5,phi=0.7,dist=4.5;
+let tTheta=theta,tPhi=phi,tDist=dist;
+let drag=false,lx=0,ly=0,auto=true;
+
+canvas.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;auto=false});
+canvas.addEventListener('mousemove',e=>{if(!drag)return;tTheta+=(e.clientX-lx)*0.005;tPhi+=(e.clientY-ly)*0.005;tPhi=Math.max(0.2,Math.min(1.4,tPhi));lx=e.clientX;ly=e.clientY});
+addEventListener('mouseup',()=>drag=false);
+canvas.addEventListener('wheel',e=>{e.preventDefault();tDist*=1+e.deltaY*0.001;tDist=Math.max(2,Math.min(10,tDist))},{passive:false});
+canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;auto=false}});
+canvas.addEventListener('touchmove',e=>{if(!drag)return;e.preventDefault();tTheta+=(e.touches[0].clientX-lx)*0.005;tPhi+=(e.touches[0].clientY-ly)*0.005;tPhi=Math.max(0.2,Math.min(1.4,tPhi));lx=e.touches[0].clientX;ly=e.touches[0].clientY},{passive:false});
+canvas.addEventListener('touchend',()=>drag=false);
+
+function mat4P(f,a,n,r){const t=Math.tan(f/2),m=new Float32Array(16);m[0]=1/(a*t);m[5]=1/t;m[10]=-(r+n)/(r-n);m[11]=-1;m[14]=-2*r*n/(r-n);return m}
+function mat4L(e,c,u){const z=[e[0]-c[0],e[1]-c[1],e[2]-c[2]];const zl=Math.hypot(...z);z[0]/=zl;z[1]/=zl;z[2]/=zl;const x=[u[1]*z[2]-u[2]*z[1],u[2]*z[0]-u[0]*z[2],u[0]*z[1]-u[1]*z[0]];const xl=Math.hypot(...x);x[0]/=xl;x[1]/=xl;x[2]/=xl;const y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];const m=new Float32Array(16);m[0]=x[0];m[1]=y[0];m[2]=z[0];m[4]=x[1];m[5]=y[1];m[6]=z[1];m[8]=x[2];m[9]=y[2];m[10]=z[2];m[12]=-(x[0]*e[0]+x[1]*e[1]+x[2]*e[2]);m[13]=-(y[0]*e[0]+y[1]*e[1]+y[2]*e[2]);m[14]=-(z[0]*e[0]+z[1]*e[1]+z[2]*e[2]);m[15]=1;return m}
+function mat4M(a,b){const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){o[i*4+j]=0;for(let k=0;k<4;k++)o[i*4+j]+=a[k*4+j]*b[i*4+k]}return o}
+function mat4I(){const m=new Float32Array(16);m[0]=m[5]=m[10]=m[15]=1;return m}
+
+gl.enable(gl.DEPTH_TEST);
+
+function render(t){
+  t/=1000;
+  if(auto)tTheta+=0.004;
+  theta+=(tTheta-theta)*0.06;
+  phi+=(tPhi-phi)*0.06;
+  dist+=(tDist-dist)*0.06;
+
+  const ex=dist*Math.sin(phi)*Math.cos(theta);
+  const ey=dist*Math.cos(phi)+1.2;
+  const ez=dist*Math.sin(phi)*Math.sin(theta);
+  const eye=[ex,ey,ez];
+
+  const proj=mat4P(0.8,canvas.width/canvas.height,0.1,50);
+  const view=mat4L(eye,[0,1.3,0],[0,1,0]);
+  const model=mat4I();
+  const mvp=mat4M(proj,mat4M(view,model));
+
+  gl.clearColor(0.04,0.05,0.1,1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+
+  gl.uniformMatrix4fv(uMVP,false,mvp);
+  gl.uniformMatrix4fv(uM,false,model);
+  gl.uniform1f(uT,t);
+  gl.uniform3fv(uEye,eye);
+
+  gl.drawArrays(gl.TRIANGLES,0,vertCount);
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
