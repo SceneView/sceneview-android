@@ -200,15 +200,14 @@ class WebXRSession private constructor(
     /**
      * Set the position of an entity using a 4x4 matrix from an [XRRigidTransform].
      *
-     * @param entity The Filament entity ID
+     * @param entity The Filament Entity object
      * @param transform The XR transform to apply
      */
-    fun setEntityTransform(entity: Int, transform: XRRigidTransform) {
-        sceneView.engine.transformManager.let { tm ->
+    fun setEntityTransform(entity: Entity, transform: XRRigidTransform) {
+        val tm = sceneView.engine.getTransformManager()
+        if (tm.hasComponent(entity)) {
             val instance = tm.getInstance(entity)
-            if (instance != 0) {
-                tm.setTransform(instance, transform.matrix)
-            }
+            tm.setTransform(instance, transform.matrix)
         }
     }
 
@@ -294,8 +293,11 @@ class WebXRSession private constructor(
         // Dispatch frame callback
         onFrame?.invoke(frame, pose)
 
+        // Process pending Filament async operations
+        sceneView.engine.execute()
+
         // Render with Filament
-        if (sceneView.renderer.beginFrame(sceneView.swapChain, timestamp)) {
+        if (sceneView.renderer.beginFrame(sceneView.swapChain)) {
             sceneView.renderer.renderView(sceneView.view)
             sceneView.renderer.endFrame()
         }

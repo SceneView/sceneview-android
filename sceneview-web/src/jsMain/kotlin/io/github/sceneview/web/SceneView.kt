@@ -217,14 +217,8 @@ class SceneView private constructor(
         val basePath = url.substringBeforeLast('/') + "/"
 
         window.fetch(url).then { response ->
-            if (!response.ok) {
-                console.error("SceneView: HTTP ${response.status} loading model from $url")
-                return@then js("undefined")
-            }
             response.arrayBuffer()
         }.then { buffer ->
-            if (buffer == null || buffer == js("undefined")) return@then
-
             val asset = loader.createAsset(buffer)
             if (asset != null) {
                 // Add all entities to the scene so they become visible
