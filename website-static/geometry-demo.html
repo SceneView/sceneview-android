@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView Geometry — Procedural 3D Shapes</title>
+<meta name="description" content="SceneView procedural 3D geometry renderer. Draw cubes, spheres, cylinders, lines, planes — all in the browser with PBR shading.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1117; font-family: 'Inter', system-ui, sans-serif; }
+  canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  .badge {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    padding: 6px 16px; border-radius: 20px;
+    background: rgba(26,115,232,0.15); border: 1px solid rgba(26,115,232,0.3);
+    color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 500;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    pointer-events: none; z-index: 10;
+  }
+  .badge a { color: #4a9af5; text-decoration: none; pointer-events: auto; }
+  .info {
+    position: fixed; top: 16px; left: 16px; z-index: 10;
+    color: rgba(255,255,255,0.5); font-size: 11px; line-height: 1.6;
+    pointer-events: none;
+  }
+  .title {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    font-size: 18px; font-weight: 700; color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="info">Drag to orbit | Scroll to zoom</div>
+<div class="title">Geometry Demo</div>
+<div class="badge">Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> — Procedural 3D Geometry</div>
+
+<script>
+// SceneView Geometry Renderer — procedural 3D shapes with PBR shading
+// Zero dependencies, pure WebGL2, designed for Claude artifacts
+//
+// Demonstrates: cube, sphere, cylinder, plane, line (thin cylinder)
+// Each shape has position, scale, color, metallic, roughness
+
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2');
+if (!gl) { document.body.innerHTML = '<p style="color:#fff;padding:40px">WebGL2 not supported</p>'; throw new Error('no webgl2'); }
+
+// ─── Shaders ────────────────────────────────────────────────────────────────
+
+const VS = `#version 300 es
+precision highp float;
+in vec3 aPos;
+in vec3 aNormal;
+uniform mat4 uMVP;
+uniform mat4 uModel;
+uniform mat3 uNormalMatrix;
+out vec3 vNormal;
+out vec3 vWorldPos;
+void main() {
+  vec4 worldPos = uModel * vec4(aPos, 1.0);
+  vWorldPos = worldPos.xyz;
+  vNormal = normalize(uNormalMatrix * aNormal);
+  gl_Position = uMVP * vec4(aPos, 1.0);
+}`;
+
+const FS = `#version 300 es
+precision highp float;
+in vec3 vNormal;
+in vec3 vWorldPos;
+uniform vec3 uCamPos;
+uniform vec3 uLightDir;
+uniform vec3 uLightColor;
+uniform vec3 uBaseColor;
+uniform float uMetallic;
+uniform float uRoughness;
+out vec4 fragColor;
+
+const float PI = 3.14159265;
+
+float D_GGX(float NdotH, float roughness) {
+  float a = roughness * roughness;
+  float a2 = a * a;
+  float d = NdotH * NdotH * (a2 - 1.0) + 1.0;
+  return a2 / (PI * d * d);
+}
+
+vec3 F_Schlick(float cosTheta, vec3 F0) {
+  return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+float G_Smith(float NdotV, float NdotL, float roughness) {
+  float r = roughness + 1.0;
+  float k = (r * r) / 8.0;
+  float g1 = NdotV / (NdotV * (1.0 - k) + k);
+  float g2 = NdotL / (NdotL * (1.0 - k) + k);
+  return g1 * g2;
+}
+
+void main() {
+  vec3 N = normalize(vNormal);
+  vec3 V = normalize(uCamPos - vWorldPos);
+  vec3 L = normalize(uLightDir);
+  vec3 H = normalize(V + L);
+
+  float NdotL = max(dot(N, L), 0.0);
+  float NdotV = max(dot(N, V), 0.001);
+  float NdotH = max(dot(N, H), 0.0);
+  float HdotV = max(dot(H, V), 0.0);
+
+  vec3 F0 = mix(vec3(0.04), uBaseColor, uMetallic);
+  vec3 F = F_Schlick(HdotV, F0);
+  float D = D_GGX(NdotH, uRoughness);
+  float G = G_Smith(NdotV, NdotL, uRoughness);
+
+  vec3 spec = (D * F * G) / (4.0 * NdotV * NdotL + 0.001);
+  vec3 kD = (1.0 - F) * (1.0 - uMetallic);
+  vec3 diffuse = kD * uBaseColor / PI;
+  vec3 color = (diffuse + spec) * uLightColor * NdotL;
+
+  vec3 skyColor = vec3(0.15, 0.2, 0.35);
+  vec3 groundColor = vec3(0.05, 0.04, 0.03);
+  float hemisphere = dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
+  vec3 ambient = mix(groundColor, skyColor, hemisphere) * uBaseColor * 0.4;
+  float rim = pow(1.0 - NdotV, 3.0);
+  ambient += vec3(0.1, 0.15, 0.3) * rim * 0.5;
+  color += ambient;
+
+  color = color * (2.51 * color + 0.03) / (color * (2.43 * color + 0.59) + 0.14);
+  color = pow(color, vec3(1.0 / 2.2));
+  fragColor = vec4(color, 1.0);
+}`;
+
+// ─── Grid shader ────────────────────────────────────────────────────────────
+
+const GRID_VS = `#version 300 es
+precision highp float;
+in vec3 aPos;
+uniform mat4 uMVP;
+void main() { gl_Position = uMVP * vec4(aPos, 1.0); }`;
+const GRID_FS = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+void main() { fragColor = vec4(1.0, 1.0, 1.0, 0.06); }`;
+
+// ─── Shader compilation ─────────────────────────────────────────────────────
+
+function createShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); return null; }
+  return s;
+}
+
+function createProgram(vs, fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, vs);
+  gl.attachShader(p, fs);
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(p)); return null; }
+  return p;
+}
+
+const prog = createProgram(createShader(gl.VERTEX_SHADER, VS), createShader(gl.FRAGMENT_SHADER, FS));
+const loc = {
+  aPos: gl.getAttribLocation(prog, 'aPos'),
+  aNormal: gl.getAttribLocation(prog, 'aNormal'),
+  uMVP: gl.getUniformLocation(prog, 'uMVP'),
+  uModel: gl.getUniformLocation(prog, 'uModel'),
+  uNormalMatrix: gl.getUniformLocation(prog, 'uNormalMatrix'),
+  uCamPos: gl.getUniformLocation(prog, 'uCamPos'),
+  uLightDir: gl.getUniformLocation(prog, 'uLightDir'),
+  uLightColor: gl.getUniformLocation(prog, 'uLightColor'),
+  uBaseColor: gl.getUniformLocation(prog, 'uBaseColor'),
+  uMetallic: gl.getUniformLocation(prog, 'uMetallic'),
+  uRoughness: gl.getUniformLocation(prog, 'uRoughness'),
+};
+
+const gridProg = createProgram(createShader(gl.VERTEX_SHADER, GRID_VS), createShader(gl.FRAGMENT_SHADER, GRID_FS));
+const gridLoc = {
+  aPos: gl.getAttribLocation(gridProg, 'aPos'),
+  uMVP: gl.getUniformLocation(gridProg, 'uMVP'),
+};
+
+// ─── Geometry generators ────────────────────────────────────────────────────
+
+function generateSphere(radius, widthSeg, heightSeg) {
+  const pos = [], nrm = [], idx = [];
+  for (let y = 0; y <= heightSeg; y++) {
+    for (let x = 0; x <= widthSeg; x++) {
+      const u = x / widthSeg, v = y / heightSeg;
+      const theta = u * Math.PI * 2, phi = v * Math.PI;
+      const sp = Math.sin(phi), cp = Math.cos(phi);
+      const st = Math.sin(theta), ct = Math.cos(theta);
+      const nx = sp * ct, ny = cp, nz = sp * st;
+      pos.push(radius * nx, radius * ny, radius * nz);
+      nrm.push(nx, ny, nz);
+    }
+  }
+  for (let y = 0; y < heightSeg; y++) {
+    for (let x = 0; x < widthSeg; x++) {
+      const a = y * (widthSeg + 1) + x;
+      const b = a + widthSeg + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  }
+  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
+}
+
+function generateCube(size) {
+  const s = size / 2;
+  const faces = [
+    { n: [0,0,1], verts: [[-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]] },
+    { n: [0,0,-1], verts: [[s,-s,-s],[-s,-s,-s],[-s,s,-s],[s,s,-s]] },
+    { n: [0,1,0], verts: [[-s,s,s],[s,s,s],[s,s,-s],[-s,s,-s]] },
+    { n: [0,-1,0], verts: [[-s,-s,-s],[s,-s,-s],[s,-s,s],[-s,-s,s]] },
+    { n: [1,0,0], verts: [[s,-s,s],[s,-s,-s],[s,s,-s],[s,s,s]] },
+    { n: [-1,0,0], verts: [[-s,-s,-s],[-s,-s,s],[-s,s,s],[-s,s,-s]] },
+  ];
+  const pos = [], nrm = [], idx = [];
+  faces.forEach((f, i) => {
+    f.verts.forEach(v => { pos.push(...v); nrm.push(...f.n); });
+    const o = i * 4;
+    idx.push(o, o+1, o+2, o, o+2, o+3);
+  });
+  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
+}
+
+function generateCylinder(radiusTop, radiusBottom, height, segments) {
+  const pos = [], nrm = [], idx = [];
+  const halfH = height / 2;
+  for (let i = 0; i <= segments; i++) {
+    const u = i / segments, angle = u * Math.PI * 2;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const slope = (radiusBottom - radiusTop) / height;
+    const nLen = Math.sqrt(1 + slope * slope);
+    pos.push(radiusTop * cos, halfH, radiusTop * sin);
+    nrm.push(cos / nLen, slope / nLen, sin / nLen);
+    pos.push(radiusBottom * cos, -halfH, radiusBottom * sin);
+    nrm.push(cos / nLen, slope / nLen, sin / nLen);
+  }
+  for (let i = 0; i < segments; i++) {
+    const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+    idx.push(a, b, c, b, d, c);
+  }
+  const addCap = (y, radius, ny) => {
+    const center = pos.length / 3;
+    pos.push(0, y, 0); nrm.push(0, ny, 0);
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      pos.push(radius * Math.cos(angle), y, radius * Math.sin(angle));
+      nrm.push(0, ny, 0);
+    }
+    for (let i = 0; i < segments; i++) {
+      if (ny > 0) idx.push(center, center + i + 1, center + i + 2);
+      else idx.push(center, center + i + 2, center + i + 1);
+    }
+  };
+  addCap(halfH, radiusTop, 1);
+  addCap(-halfH, radiusBottom, -1);
+  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
+}
+
+function generatePlane(width, depth, widthSeg, depthSeg) {
+  const pos = [], nrm = [], idx = [];
+  const hw = width / 2, hd = depth / 2;
+  for (let z = 0; z <= depthSeg; z++) {
+    for (let x = 0; x <= widthSeg; x++) {
+      pos.push(x / widthSeg * width - hw, 0, z / depthSeg * depth - hd);
+      nrm.push(0, 1, 0);
+    }
+  }
+  for (let z = 0; z < depthSeg; z++) {
+    for (let x = 0; x < widthSeg; x++) {
+      const a = z * (widthSeg + 1) + x;
+      const b = a + widthSeg + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  }
+  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
+}
+
+function generateGrid(size, divisions) {
+  const pos = [], nrm = [], idx = [];
+  const step = size / divisions, half = size / 2;
+  let vi = 0;
+  for (let i = 0; i <= divisions; i++) {
+    const t = i * step - half;
+    pos.push(-half, 0, t, half, 0, t);
+    nrm.push(0, 1, 0, 0, 1, 0);
+    idx.push(vi, vi + 1); vi += 2;
+    pos.push(t, 0, -half, t, 0, half);
+    nrm.push(0, 1, 0, 0, 1, 0);
+    idx.push(vi, vi + 1); vi += 2;
+  }
+  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx), mode: gl.LINES };
+}
+
+// ─── Mesh creation ──────────────────────────────────────────────────────────
+
+function createMesh(geom) {
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const posBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, geom.positions, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc.aPos);
+  gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 0, 0);
+  const nrmBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, nrmBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, geom.normals, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc.aNormal);
+  gl.vertexAttribPointer(loc.aNormal, 3, gl.FLOAT, false, 0, 0);
+  const idxBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geom.indices, gl.STATIC_DRAW);
+  gl.bindVertexArray(null);
+  return { vao, count: geom.indices.length, mode: geom.mode || gl.TRIANGLES };
+}
+
+function createGridMesh(geom) {
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const posBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, geom.positions, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(gridLoc.aPos);
+  gl.vertexAttribPointer(gridLoc.aPos, 3, gl.FLOAT, false, 0, 0);
+  const idxBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geom.indices, gl.STATIC_DRAW);
+  gl.bindVertexArray(null);
+  return { vao, count: geom.indices.length };
+}
+
+// ─── Prototype meshes (unit-sized) ──────────────────────────────────────────
+
+const prototypes = {
+  cube: createMesh(generateCube(1)),
+  sphere: createMesh(generateSphere(0.5, 32, 24)),
+  cylinder: createMesh(generateCylinder(0.5, 0.5, 1, 32)),
+  plane: createMesh(generatePlane(1, 1, 1, 1)),
+  line: createMesh(generateCylinder(0.02, 0.02, 1, 8)),
+};
+const gridMesh = createGridMesh(generateGrid(10, 20));
+
+// ─── Math utilities ─────────────────────────────────────────────────────────
+
+function mat4Perspective(fov, aspect, near, far) {
+  const f = 1 / Math.tan(fov / 2), nf = 1 / (near - far);
+  return new Float32Array([f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0]);
+}
+
+function mat4LookAt(eye, center, up) {
+  const z = vecNormalize(vecSub(eye, center));
+  const x = vecNormalize(vecCross(up, z));
+  const y = vecCross(z, x);
+  return new Float32Array([
+    x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0,
+    -vecDot(x,eye),-vecDot(y,eye),-vecDot(z,eye),1
+  ]);
+}
+
+function mat4Multiply(a, b) {
+  const r = new Float32Array(16);
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 4; j++) {
+      let s = 0;
+      for (let k = 0; k < 4; k++) s += a[k*4+j] * b[i*4+k];
+      r[i*4+j] = s;
+    }
+  return r;
+}
+
+function mat4Identity() { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+
+function mat4Translate(tx, ty, tz) {
+  return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, tx,ty,tz,1]);
+}
+
+function mat4Scale(sx, sy, sz) {
+  return new Float32Array([sx,0,0,0, 0,sy,0,0, 0,0,sz,0, 0,0,0,1]);
+}
+
+function mat3NormalFromMat4(m) {
+  return new Float32Array([m[0],m[1],m[2], m[4],m[5],m[6], m[8],m[9],m[10]]);
+}
+
+function vecNormalize(v) { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return l > 0 ? [v[0]/l,v[1]/l,v[2]/l] : [0,0,0]; }
+function vecSub(a,b) { return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
+function vecCross(a,b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function vecDot(a,b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+
+// ─── Scene definition ───────────────────────────────────────────────────────
+// This is the demo scene — in the MCP tool, this array is generated from input
+
+const sceneShapes = [
+  // Red cube
+  { type: 'cube', position: [-1.5, 0.5, 0], scale: [1, 1, 1], color: [0.9, 0.15, 0.15], metallic: 0.0, roughness: 0.4 },
+  // Blue sphere above the cube
+  { type: 'sphere', position: [-1.5, 1.8, 0], scale: [0.7, 0.7, 0.7], color: [0.15, 0.4, 0.9], metallic: 0.8, roughness: 0.2 },
+  // Green cylinder
+  { type: 'cylinder', position: [1.5, 0.6, 0], scale: [0.8, 1.2, 0.8], color: [0.15, 0.8, 0.3], metallic: 0.2, roughness: 0.5 },
+  // Gold plane (floor tile)
+  { type: 'plane', position: [0, 0.01, 0], scale: [6, 1, 6], color: [0.3, 0.25, 0.15], metallic: 0.6, roughness: 0.3 },
+  // Purple line connecting cube and cylinder
+  { type: 'line', position: [0, 1.2, 0], scale: [3, 0.05, 0.05], color: [0.7, 0.2, 0.9], metallic: 0.9, roughness: 0.1 },
+  // Small white sphere
+  { type: 'sphere', position: [0, 2.2, -1], scale: [0.3, 0.3, 0.3], color: [0.95, 0.95, 0.98], metallic: 1.0, roughness: 0.05 },
+];
+
+// ─── Camera orbit controls ──────────────────────────────────────────────────
+
+let orbitTheta = 0.4, orbitPhi = 0.7, orbitDist = 6.0;
+let autoRotate = true;
+let isDragging = false, lastX = 0, lastY = 0;
+
+canvas.addEventListener('pointerdown', e => {
+  isDragging = true; lastX = e.clientX; lastY = e.clientY;
+  autoRotate = false;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  orbitTheta -= (e.clientX - lastX) * 0.008;
+  orbitPhi = Math.max(0.1, Math.min(Math.PI - 0.1, orbitPhi - (e.clientY - lastY) * 0.008));
+  lastX = e.clientX; lastY = e.clientY;
+});
+canvas.addEventListener('pointerup', () => { isDragging = false; });
+canvas.addEventListener('wheel', e => {
+  orbitDist = Math.max(2, Math.min(20, orbitDist + e.deltaY * 0.005));
+  e.preventDefault();
+}, { passive: false });
+
+let lastPinchDist = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    orbitDist = Math.max(2, Math.min(20, orbitDist - (dist - lastPinchDist) * 0.02));
+    lastPinchDist = dist;
+  }
+}, { passive: true });
+
+// ─── Render loop ────────────────────────────────────────────────────────────
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+resize();
+window.addEventListener('resize', resize);
+
+function render(time) {
+  requestAnimationFrame(render);
+  const t = time * 0.001;
+
+  if (autoRotate) orbitTheta += 0.004;
+
+  const camX = orbitDist * Math.sin(orbitPhi) * Math.cos(orbitTheta);
+  const camY = orbitDist * Math.cos(orbitPhi);
+  const camZ = orbitDist * Math.sin(orbitPhi) * Math.sin(orbitTheta);
+  const camPos = [camX, camY, camZ];
+
+  const aspect = canvas.width / canvas.height;
+  const proj = mat4Perspective(Math.PI / 4, aspect, 0.1, 100);
+  const view = mat4LookAt(camPos, [0, 0.8, 0], [0, 1, 0]);
+  const vp = mat4Multiply(proj, view);
+
+  gl.clearColor(0.051, 0.067, 0.09, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  // Draw grid
+  gl.useProgram(gridProg);
+  gl.uniformMatrix4fv(gridLoc.uMVP, false, vp);
+  gl.bindVertexArray(gridMesh.vao);
+  gl.drawElements(gl.LINES, gridMesh.count, gl.UNSIGNED_SHORT, 0);
+
+  // Draw each shape
+  gl.useProgram(prog);
+  gl.uniform3fv(loc.uCamPos, camPos);
+  gl.uniform3f(loc.uLightDir, 0.5, 0.8, 0.3);
+  gl.uniform3f(loc.uLightColor, 3.0, 2.9, 2.7);
+
+  for (const shape of sceneShapes) {
+    const mesh = prototypes[shape.type];
+    if (!mesh) continue;
+
+    const p = shape.position || [0, 0, 0];
+    const s = shape.scale || [1, 1, 1];
+
+    const model = mat4Multiply(mat4Translate(p[0], p[1], p[2]), mat4Scale(s[0], s[1], s[2]));
+    const mvp = mat4Multiply(vp, model);
+    const normalMat = mat3NormalFromMat4(model);
+
+    gl.uniformMatrix4fv(loc.uMVP, false, mvp);
+    gl.uniformMatrix4fv(loc.uModel, false, model);
+    gl.uniformMatrix3fv(loc.uNormalMatrix, false, normalMat);
+    gl.uniform3fv(loc.uBaseColor, shape.color || [0.8, 0.8, 0.8]);
+    gl.uniform1f(loc.uMetallic, shape.metallic ?? 0.0);
+    gl.uniform1f(loc.uRoughness, shape.roughness ?? 0.5);
+
+    gl.bindVertexArray(mesh.vao);
+    gl.drawElements(mesh.mode, mesh.count, gl.UNSIGNED_SHORT, 0);
+  }
+}
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
