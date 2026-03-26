@@ -2357,6 +2357,52 @@ model.enableManipulation()  // look + grab + drag + rotate + scale via system ge
 
 ---
 
+## MCP Server Tools
+
+The `@sceneview/mcp` server (npm: `sceneview-mcp`) exposes 18 tools and 2 resources for AI assistants.
+
+### Setup tools
+| Tool | Parameters | Description |
+|---|---|---|
+| `get_setup` | `type: "3d" \| "ar"` | Gradle + manifest setup for Android 3D or AR projects |
+| `get_ios_setup` | `type: "3d" \| "ar"` | SPM dependency, Info.plist, and SwiftUI integration for iOS/macOS/visionOS |
+| `get_web_setup` | _(none)_ | Kotlin/JS + Filament.js (WASM) setup for browser-based 3D |
+| `get_ar_setup` | _(none)_ | Detailed AR config: permissions, session options, plane detection, image tracking |
+| `get_platform_setup` | `platform: "android" \| "ios" \| "web" \| "flutter" \| "react-native" \| "desktop" \| "tv"`, `type: "3d" \| "ar"` | Unified setup guide for any platform. Replaces `get_setup`, `get_ios_setup`, `get_web_setup` with a single tool |
+
+### Code tools
+| Tool | Parameters | Description |
+|---|---|---|
+| `get_sample` | `scenario: string` | Returns a complete, compilable code sample for any of 33 scenarios (Kotlin or Swift) |
+| `list_samples` | `tag?: string` | Browse all samples, filter by tag (`ar`, `3d`, `ios`, `animation`, `geometry`, ...) |
+| `validate_code` | `code: string`, `language?: "kotlin" \| "swift"` | Checks generated code against 15+ rules before presenting it to the user |
+| `migrate_code` | `code: string` | Automatically migrates SceneView 2.x Kotlin code to 3.x. Applies known renames, replaces deprecated APIs, fixes LightNode trailing-lambda bug, removes Sceneform imports. Returns migrated code with a detailed changelog |
+| `generate_scene` | `description: string` | Generates a complete, compilable `Scene{}` or `ARScene{}` Kotlin composable from a natural language description. Parses objects, quantities, environment, and mode |
+
+### Reference tools
+| Tool | Parameters | Description |
+|---|---|---|
+| `get_node_reference` | `nodeType: string` | Full API reference for any of 26+ node types -- exact signatures, defaults, examples |
+| `get_migration_guide` | _(none)_ | Every breaking change from SceneView 2.x to 3.0 with before/after code |
+| `get_platform_roadmap` | _(none)_ | Multi-platform status and timeline (Android, iOS, KMP, Web, Desktop) |
+| `get_best_practices` | `topic?: string` | Performance, architecture, memory, and threading guidance |
+| `get_troubleshooting` | _(none)_ | Common crashes, build failures, AR issues, and their fixes |
+| `debug_issue` | `category?: "model-not-showing" \| "ar-not-working" \| "crash" \| "performance" \| "build-error" \| "black-screen" \| "lighting" \| "gestures" \| "ios"`, `description?: string` | Targeted debugging guide for a specific issue. Provide a category or describe the problem for auto-detection |
+
+### Preview tools
+| Tool | Parameters | Description |
+|---|---|---|
+| `render_3d_preview` | `model: string`, `env?: string`, `bg?: string` | Generates an interactive 3D preview link the user can open in their browser |
+| `create_3d_artifact` | `type: "model-viewer" \| "chart-3d" \| "product-360" \| "scene-builder" \| "ar-preview"`, ... | Generates self-contained HTML artifacts |
+
+### Resources
+| URI | Description |
+|---|---|
+| `sceneview://api` | Complete SceneView API reference (the full `llms.txt`) |
+| `sceneview://known-issues` | Live open issues from GitHub (cached 10 min) |
+
+---
+
 ## Platform Coverage Summary
 
 | Platform | Renderer | Framework | Sample | Status |
