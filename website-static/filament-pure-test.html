@@ -64,7 +64,7 @@ Filament.init([], () => {
     // Render loop
     function render() {
       if (renderer.beginFrame(swapChain)) {
-        renderer.render(view);
+        renderer.render(swapChain, view);
         renderer.endFrame();
       }
       engine.execute();
