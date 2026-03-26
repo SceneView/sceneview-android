@@ -13,7 +13,8 @@
       "TodoWrite(*)",
       "NotebookEdit(*)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "mcp__d4f303ec-2a2d-4d53-b698-4de44a599d0f__gmail_create_draft"
     ]
   }
 }
