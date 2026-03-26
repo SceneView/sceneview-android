@@ -108,7 +108,7 @@
       <div class="nav__links" id="navLinks">
         <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
         <a href="#samples" class="nav__link">Samples</a>
-        <a href="/playground" class="nav__link">Playground</a>
+        <a href="/playground.html" class="nav__link">Playground</a>
         <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
         <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
         <a href="https://github.com/sponsors/ThomasGorisse" class="nav__link">Sponsor</a>
@@ -129,7 +129,8 @@
     <div class="hero__container">
       <div class="hero__content">
         <h1 class="hero__title">SceneView</h1>
-        <p class="hero__subtitle">3D & AR for every platform</p>
+        <p class="hero__subtitle">3D & AR in a few lines of code</p>
+        <p class="hero__description">Open-source, AI-first SDK for building 3D and augmented reality apps with Jetpack Compose and SwiftUI.</p>
         <p class="hero__platforms">Android &middot; iOS &middot; macOS &middot; visionOS &middot; Web &middot; Desktop &middot; TV &middot; Flutter &middot; React Native</p>
         <div class="hero__actions">
           <a href="https://github.com/sceneview/sceneview#install" class="btn btn--primary">Get Started</a>
@@ -302,24 +303,27 @@
     <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-web:3.3.0"</span>)
 }
 
-<span class="cm">// Or use Filament.js directly</span>
-<span class="kw">npm</span> install <span class="str">filament-js</span></code></pre>
+<span class="cm">// Or use Filament.js directly in HTML</span>
+<span class="cm">// See samples/web-demo for a full example</span></code></pre>
           </div>
           <div class="tabs__panel" data-panel="flutter">
-            <pre class="code-block"><code><span class="cm"># pubspec.yaml</span>
+            <pre class="code-block"><code><span class="cm"># pubspec.yaml (coming soon on pub.dev)</span>
 <span class="kw">dependencies</span>:
-  <span class="fn">sceneview_flutter</span>: <span class="str">^3.3.0</span>
+  <span class="fn">sceneview_flutter</span>:
+    <span class="kw">git</span>:
+      <span class="fn">url</span>: <span class="str">https://github.com/sceneview/sceneview</span>
+      <span class="fn">path</span>: <span class="str">flutter</span>
 
 <span class="cm"># Then run:</span>
 <span class="kw">flutter</span> pub get</code></pre>
           </div>
           <div class="tabs__panel" data-panel="desktop">
-            <pre class="code-block"><code><span class="cm">// build.gradle.kts (Compose Desktop)</span>
-<span class="kw">dependencies</span> {
-    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-desktop:3.3.0"</span>)
-}
+            <pre class="code-block"><code><span class="cm">// Compose Desktop (alpha &mdash; software renderer)</span>
+<span class="cm">// Clone the repo and run the desktop sample:</span>
 
-<span class="cm">// Filament JNI on Windows, Linux, macOS</span></code></pre>
+<span class="kw">git</span> clone <span class="str">https://github.com/sceneview/sceneview</span>
+<span class="kw">cd</span> sceneview/samples/desktop-demo
+<span class="kw">./gradlew</span> run</code></pre>
           </div>
         </div>
       </div>
