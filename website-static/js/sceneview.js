@@ -181,8 +181,8 @@
       });
       canvas.addEventListener('mousemove', function(e) {
         if (!self._isDragging) return;
-        self._angle += (e.clientX - self._lastMouse.x) * 0.005;
-        self._orbitHeight -= (e.clientY - self._lastMouse.y) * 0.01;
+        self._angle -= (e.clientX - self._lastMouse.x) * 0.005;
+        self._orbitHeight += (e.clientY - self._lastMouse.y) * 0.01;
         self._lastMouse = { x: e.clientX, y: e.clientY };
       });
       canvas.addEventListener('mouseup', function() { self._isDragging = false; });
@@ -206,8 +206,8 @@
       canvas.addEventListener('touchmove', function(e) {
         if (!self._isDragging || e.touches.length !== 1) return;
         e.preventDefault();
-        self._angle += (e.touches[0].clientX - self._lastMouse.x) * 0.005;
-        self._orbitHeight -= (e.touches[0].clientY - self._lastMouse.y) * 0.01;
+        self._angle -= (e.touches[0].clientX - self._lastMouse.x) * 0.005;
+        self._orbitHeight += (e.touches[0].clientY - self._lastMouse.y) * 0.01;
         self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }, { passive: false });
       canvas.addEventListener('touchend', function() { self._isDragging = false; });
