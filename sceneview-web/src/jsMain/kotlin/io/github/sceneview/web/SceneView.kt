@@ -104,14 +104,17 @@ class SceneView private constructor(
             init(assets) {
                 try {
                     // Step 2: Create the Filament engine with WebGL2 context
-                    val engine = EngineFactory.create(canvas)
+                    // Use dynamic call because webpack externals + Kotlin companion objects
+                    // don't resolve correctly for Filament's static Engine.create()
+                    val filament: dynamic = js("Filament")
+                    val engine: Engine = filament.Engine.create(canvas).unsafeCast<Engine>()
                     val renderer = engine.createRenderer()
                     val scene = engine.createScene()
                     val swapChain = engine.createSwapChain()
                     val view = engine.createView()
 
                     // Step 3: Create camera entity and camera
-                    val cameraEntity = EntityManager.get().create()
+                    val cameraEntity = (js("Filament.EntityManager.get().create()") as Entity)
                     val camera = engine.createCamera(cameraEntity)
 
                     // Step 4: Connect view to camera and scene
@@ -286,7 +289,7 @@ class SceneView private constructor(
      *   Filament.LightManager.Builder(type).intensity(n).direction([x,y,z]).build(engine, entity)
      */
     fun addLight(config: LightConfig) {
-        val entity = EntityManager.get().create()
+        val entity = (js("Filament.EntityManager.get().create()") as Entity)
 
         // Map our LightType enum to Filament's numeric type constants
         // In Filament.js: 0 = SUN, 1 = DIRECTIONAL, 2 = POINT, 3 = FOCUSED_SPOT, 4 = SPOT
@@ -386,7 +389,8 @@ class SceneView private constructor(
         engine.destroyScene(scene)
         engine.destroyCameraComponent(cameraEntity)
         engine.destroySwapChain(swapChain)
-        EngineFactory.destroy(engine)
+        val filament: dynamic = js("Filament")
+        filament.Engine.destroy(engine)
     }
 
     /**
