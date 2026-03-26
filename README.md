@@ -221,13 +221,21 @@ sceneview-core (Kotlin Multiplatform)
 
 ## AI integration
 
-SceneView is on the [MCP Registry](https://registry.modelcontextprotocol.io) — any AI assistant can use it to generate correct 3D/AR code.
+SceneView is **AI-first** — designed so AI assistants generate correct, compilable 3D/AR code on the first try.
+
+The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **14 specialized tools**, **33 compilable samples**, a full API reference, and a code validator — all verified by 612 tests.
 
 ```bash
+# One command — works with any MCP client
 npx sceneview-mcp
 ```
 
-The MCP server provides API reference, code samples, setup guides, validation, and migration tools for all platforms.
+```json
+// Claude Desktop config
+{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
+```
+
+Listed on the [MCP Registry](https://registry.modelcontextprotocol.io). See the [MCP README](./mcp/README.md) for full setup and tool reference.
 
 ---
 
