@@ -84,14 +84,25 @@ describe("validateArtifactInput", () => {
 
 // ─── generateArtifact — model-viewer ─────────────────────────────────────────
 
-describe("generateArtifact — model-viewer", () => {
-  it("generates valid HTML with model-viewer tag", () => {
+describe("generateArtifact — model-viewer (Filament.js)", () => {
+  it("generates valid HTML with Filament.js canvas", () => {
     const result = generateArtifact({ type: "model-viewer" });
     expect(result.type).toBe("model-viewer");
     expect(result.html).toContain("<!DOCTYPE html>");
-    expect(result.html).toContain("<model-viewer");
-    expect(result.html).toContain("camera-controls");
+    expect(result.html).toContain('<canvas id="viewer"');
+    expect(result.html).toContain("Filament.init");
     expect(result.html).toContain("Powered by SceneView");
+  });
+
+  it("includes Filament.js CDN script", () => {
+    const result = generateArtifact({ type: "model-viewer" });
+    expect(result.html).toContain("cdn.jsdelivr.net/npm/filament@1.52.3/filament.js");
+  });
+
+  it("does NOT include model-viewer web component", () => {
+    const result = generateArtifact({ type: "model-viewer" });
+    expect(result.html).not.toContain("<model-viewer");
+    expect(result.html).not.toContain("ajax.googleapis.com/ajax/libs/model-viewer");
   });
 
   it("uses default model when none provided", () => {
@@ -116,25 +127,9 @@ describe("generateArtifact — model-viewer", () => {
     expect(result.html).toContain("My Helmet");
   });
 
-  it("includes AR by default", () => {
-    const result = generateArtifact({ type: "model-viewer" });
-    expect(result.html).toContain("ar ");
-    expect(result.html).toContain("ar-modes");
-    expect(result.html).toContain("View in AR");
-  });
-
-  it("disables AR when option is false", () => {
-    const result = generateArtifact({
-      type: "model-viewer",
-      options: { ar: false },
-    });
-    expect(result.html).not.toContain("ar-modes");
-    expect(result.html).not.toContain("View in AR");
-  });
-
   it("includes auto-rotate by default", () => {
     const result = generateArtifact({ type: "model-viewer" });
-    expect(result.html).toContain("auto-rotate");
+    expect(result.html).toContain("autoRotate = true");
   });
 
   it("disables auto-rotate when option is false", () => {
@@ -142,7 +137,7 @@ describe("generateArtifact — model-viewer", () => {
       type: "model-viewer",
       options: { autoRotate: false },
     });
-    expect(result.html).not.toContain("auto-rotate");
+    expect(result.html).toContain("autoRotate = false");
   });
 
   it("uses custom background color", () => {
@@ -150,20 +145,45 @@ describe("generateArtifact — model-viewer", () => {
       type: "model-viewer",
       options: { backgroundColor: "#ff0000" },
     });
-    expect(result.html).toContain("#ff0000");
+    // #ff0000 = [1, 0, 0, 1] in Filament
+    expect(result.html).toContain("clearColor: [1,0,0,1]");
   });
 
-  it("uses custom camera orbit", () => {
-    const result = generateArtifact({
-      type: "model-viewer",
-      options: { cameraOrbit: "45deg 60deg 200%" },
-    });
-    expect(result.html).toContain("45deg 60deg 200%");
-  });
-
-  it("includes model-viewer CDN script", () => {
+  it("sets up orbit controls (mouse + touch)", () => {
     const result = generateArtifact({ type: "model-viewer" });
-    expect(result.html).toContain("ajax.googleapis.com/ajax/libs/model-viewer");
+    expect(result.html).toContain("mousedown");
+    expect(result.html).toContain("touchstart");
+    expect(result.html).toContain("wheel");
+  });
+
+  it("sets up Filament engine, scene, renderer", () => {
+    const result = generateArtifact({ type: "model-viewer" });
+    expect(result.html).toContain("Filament.Engine.create");
+    expect(result.html).toContain("engine.createScene");
+    expect(result.html).toContain("engine.createRenderer");
+  });
+
+  it("sets up PBR lighting (sun + fill)", () => {
+    const result = generateArtifact({ type: "model-viewer" });
+    expect(result.html).toContain("LightManager$Type.SUN");
+    expect(result.html).toContain("LightManager$Type.DIRECTIONAL");
+  });
+
+  it("has dark theme background (#0d1117)", () => {
+    const result = generateArtifact({ type: "model-viewer" });
+    expect(result.html).toContain("#0d1117");
+  });
+
+  it("includes render loop with requestAnimationFrame", () => {
+    const result = generateArtifact({ type: "model-viewer" });
+    expect(result.html).toContain("requestAnimationFrame(render)");
+  });
+
+  it("loads model via asset loader", () => {
+    const result = generateArtifact({ type: "model-viewer" });
+    expect(result.html).toContain("engine.createAssetLoader");
+    expect(result.html).toContain("loader.createAsset");
+    expect(result.html).toContain("asset.loadResources");
   });
 });
 
@@ -243,16 +263,28 @@ describe("generateArtifact — chart-3d", () => {
     expect(result.html).toContain("<!DOCTYPE html>");
     expect(result.html).toContain("</html>");
   });
+
+  it("does NOT use Filament.js (CSS 3D only)", () => {
+    const result = generateArtifact(chartInput);
+    expect(result.html).not.toContain("Filament.init");
+    expect(result.html).not.toContain("filament.js");
+  });
 });
 
 // ─── generateArtifact — scene ────────────────────────────────────────────────
 
-describe("generateArtifact — scene", () => {
-  it("generates scene with model-viewer", () => {
+describe("generateArtifact — scene (Filament.js)", () => {
+  it("generates scene with Filament.js canvas", () => {
     const result = generateArtifact({ type: "scene" });
     expect(result.type).toBe("scene");
-    expect(result.html).toContain("<model-viewer");
+    expect(result.html).toContain('<canvas id="viewer"');
+    expect(result.html).toContain("Filament.init");
     expect(result.html).toContain("Interactive 3D Scene");
+  });
+
+  it("does NOT include model-viewer web component", () => {
+    const result = generateArtifact({ type: "scene" });
+    expect(result.html).not.toContain("<model-viewer");
   });
 
   it("uses custom title", () => {
@@ -266,26 +298,33 @@ describe("generateArtifact — scene", () => {
     expect(result.html).toContain("Scroll to zoom");
   });
 
-  it("includes shadow and lighting", () => {
+  it("includes PBR lighting", () => {
     const result = generateArtifact({ type: "scene" });
-    expect(result.html).toContain("shadow-intensity");
-    expect(result.html).toContain("environment-image");
+    expect(result.html).toContain("LightManager$Type.SUN");
+    expect(result.html).toContain("LightManager$Type.DIRECTIONAL");
+  });
+
+  it("uses enhanced lighting for scenes", () => {
+    const result = generateArtifact({ type: "scene" });
+    expect(result.html).toContain("120000"); // higher sun intensity
+    expect(result.html).toContain("35000"); // higher fill intensity
   });
 });
 
 // ─── generateArtifact — product-360 ──────────────────────────────────────────
 
-describe("generateArtifact — product-360", () => {
-  it("generates product viewer", () => {
+describe("generateArtifact — product-360 (Filament.js)", () => {
+  it("generates product viewer with Filament.js", () => {
     const result = generateArtifact({ type: "product-360" });
     expect(result.type).toBe("product-360");
-    expect(result.html).toContain("<model-viewer");
+    expect(result.html).toContain('<canvas id="viewer"');
+    expect(result.html).toContain("Filament.init");
     expect(result.html).toContain("360");
   });
 
-  it("includes AR button with product text", () => {
+  it("does NOT include model-viewer web component", () => {
     const result = generateArtifact({ type: "product-360" });
-    expect(result.html).toContain("View in Your Space");
+    expect(result.html).not.toContain("<model-viewer");
   });
 
   it("renders hotspots when provided", () => {
@@ -333,9 +372,9 @@ describe("generateArtifact — product-360", () => {
     expect(result.html).toContain("Tap hotspots for details");
   });
 
-  it("uses tone-mapping commerce for product photography", () => {
+  it("always auto-rotates for product showcase", () => {
     const result = generateArtifact({ type: "product-360" });
-    expect(result.html).toContain('tone-mapping="commerce"');
+    expect(result.html).toContain("autoRotate = true");
   });
 });
 
@@ -353,8 +392,8 @@ describe("formatArtifactResponse", () => {
   it("includes usage instructions", () => {
     const result = generateArtifact({ type: "model-viewer" });
     const text = formatArtifactResponse(result);
-    expect(text).toContain("View in AR");
     expect(text).toContain("Drag to orbit");
+    expect(text).toContain("Filament.js");
   });
 
   it("includes SceneView branding", () => {
@@ -391,14 +430,6 @@ describe("HTML escaping", () => {
     expect(result.html).toContain("&lt;script&gt;");
   });
 
-  it("escapes HTML in model URL", () => {
-    const result = generateArtifact({
-      type: "model-viewer",
-      modelUrl: 'https://example.com/model.glb"><script>alert(1)</script>',
-    });
-    expect(result.html).not.toContain('"><script>');
-  });
-
   it("escapes HTML in chart labels", () => {
     const result = generateArtifact({
       type: "chart-3d",
@@ -417,5 +448,50 @@ describe("HTML escaping", () => {
     });
     expect(result.html).not.toContain("<img");
     expect(result.html).toContain("&lt;img");
+  });
+});
+
+// ─── Filament.js integration ─────────────────────────────────────────────────
+
+describe("Filament.js integration", () => {
+  it("all 3D types use Filament.js CDN", () => {
+    for (const type of ["model-viewer", "scene", "product-360"] as const) {
+      const result = generateArtifact({ type });
+      expect(result.html).toContain("cdn.jsdelivr.net/npm/filament@1.52.3/filament.js");
+    }
+  });
+
+  it("chart-3d does NOT use Filament.js", () => {
+    const result = generateArtifact({
+      type: "chart-3d",
+      data: [{ label: "Q1", value: 100 }],
+    });
+    expect(result.html).not.toContain("filament");
+  });
+
+  it("all 3D types use canvas element", () => {
+    for (const type of ["model-viewer", "scene", "product-360"] as const) {
+      const result = generateArtifact({ type });
+      expect(result.html).toContain('<canvas id="viewer"');
+    }
+  });
+
+  it("all 3D types include render loop", () => {
+    for (const type of ["model-viewer", "scene", "product-360"] as const) {
+      const result = generateArtifact({ type });
+      expect(result.html).toContain("requestAnimationFrame(render)");
+    }
+  });
+
+  it("all types use dark theme (#0d1117)", () => {
+    const mvResult = generateArtifact({ type: "model-viewer" });
+    const sceneResult = generateArtifact({ type: "scene" });
+    const prodResult = generateArtifact({ type: "product-360" });
+    const chartResult = generateArtifact({ type: "chart-3d", data: [{ label: "Q1", value: 100 }] });
+
+    expect(mvResult.html).toContain("#0d1117");
+    expect(sceneResult.html).toContain("#0d1117");
+    expect(prodResult.html).toContain("#0d1117");
+    expect(chartResult.html).toContain("#0d1117");
   });
 });
