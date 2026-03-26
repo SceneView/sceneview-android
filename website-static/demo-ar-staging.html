@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Room Staging — SceneView</title>
+    <meta name="description" content="Place furniture in your space with AR. Powered by SceneView SDK.">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --blue: #4A90FF;
+            --blue-glow: rgba(74, 144, 255, 0.25);
+            --blue-soft: rgba(74, 144, 255, 0.08);
+            --bg: #0a0e1a;
+            --bg-card: #111827;
+            --bg-card-hover: #1a2332;
+            --text: #e8eaf0;
+            --text-muted: #8b95a8;
+            --border: rgba(255,255,255,0.06);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Navigation ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(10, 14, 26, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+        .nav-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 64px;
+        }
+        .nav-brand {
+            font-weight: 700; font-size: 1.15rem; color: var(--text);
+            text-decoration: none; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .nav-brand span { color: var(--blue); }
+        .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+        .nav-links a {
+            color: var(--text-muted); text-decoration: none; font-size: 0.9rem;
+            font-weight: 500; transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+
+        /* ── Hero ── */
+        .hero {
+            padding: 140px 2rem 80px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+            width: 800px; height: 600px;
+            background: radial-gradient(ellipse, var(--blue-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: var(--blue-soft); border: 1px solid rgba(74,144,255,0.15);
+            border-radius: 100px; padding: 0.4rem 1.2rem;
+            font-size: 0.82rem; font-weight: 600; color: var(--blue);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .hero-badge svg { width: 16px; height: 16px; }
+        .hero h1 {
+            font-size: clamp(2.4rem, 5vw, 3.8rem);
+            font-weight: 800; line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.2rem;
+        }
+        .hero h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--blue), #7c5cfc);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 1.15rem; color: var(--text-muted);
+            max-width: 560px; margin: 0 auto 2.5rem;
+        }
+        .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.8rem 1.8rem; border-radius: 100px;
+            font-weight: 600; font-size: 0.95rem;
+            text-decoration: none; border: none; cursor: pointer;
+            transition: all 0.25s;
+        }
+        .btn-primary {
+            background: var(--blue); color: #fff;
+            box-shadow: 0 4px 24px rgba(74,144,255,0.3);
+        }
+        .btn-primary:hover {
+            background: #5a9cff; transform: translateY(-1px);
+            box-shadow: 0 6px 32px rgba(74,144,255,0.4);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06); color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+        .btn svg { width: 18px; height: 18px; }
+
+        /* ── Section ── */
+        section { padding: 80px 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section-header {
+            text-align: center; margin-bottom: 3.5rem;
+        }
+        .section-header h2 {
+            font-size: 2rem; font-weight: 700;
+            letter-spacing: -0.02em; margin-bottom: 0.8rem;
+        }
+        .section-header p {
+            color: var(--text-muted); font-size: 1.05rem;
+            max-width: 520px; margin: 0 auto;
+        }
+
+        /* ── Furniture Grid ── */
+        .furniture-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 2rem;
+        }
+        .furniture-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+        .furniture-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(74,144,255,0.2);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+        }
+        .furniture-card model-viewer {
+            width: 100%; height: 340px;
+            background: linear-gradient(180deg, #151c2c 0%, #0d1220 100%);
+            --poster-color: transparent;
+        }
+        .furniture-info {
+            padding: 1.5rem;
+        }
+        .furniture-tag {
+            display: inline-block;
+            font-size: 0.72rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--blue); background: var(--blue-soft);
+            border-radius: 6px; padding: 0.25rem 0.6rem;
+            margin-bottom: 0.75rem;
+        }
+        .furniture-name {
+            font-size: 1.25rem; font-weight: 700; margin-bottom: 0.3rem;
+        }
+        .furniture-desc {
+            font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;
+        }
+        .furniture-bottom {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .furniture-price {
+            font-size: 1.4rem; font-weight: 700; color: var(--blue);
+        }
+        .furniture-price span {
+            font-size: 0.82rem; color: var(--text-muted); font-weight: 400;
+        }
+        .btn-ar {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.55rem 1.2rem; border-radius: 100px;
+            background: var(--blue); color: #fff;
+            font-weight: 600; font-size: 0.85rem;
+            border: none; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-ar:hover { background: #5a9cff; }
+        .btn-ar svg { width: 16px; height: 16px; }
+
+        /* ── How it works ── */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        .step {
+            text-align: center; padding: 2.5rem 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            position: relative;
+            transition: border-color 0.3s;
+        }
+        .step:hover { border-color: rgba(74,144,255,0.2); }
+        .step-number {
+            width: 56px; height: 56px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue), #7c5cfc);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.3rem; color: #fff;
+            margin: 0 auto 1.2rem;
+            box-shadow: 0 4px 20px rgba(74,144,255,0.3);
+        }
+        .step h3 {
+            font-size: 1.15rem; font-weight: 700; margin-bottom: 0.6rem;
+        }
+        .step p {
+            font-size: 0.92rem; color: var(--text-muted); line-height: 1.6;
+        }
+        .step-icon {
+            width: 48px; height: 48px; margin: 0 auto 0.8rem;
+            color: var(--blue); opacity: 0.8;
+        }
+
+        /* ── Code Section ── */
+        .code-section {
+            background: linear-gradient(180deg, rgba(74,144,255,0.03) 0%, transparent 100%);
+        }
+        .code-wrapper {
+            max-width: 720px; margin: 0 auto;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .code-header {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.9rem 1.2rem;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid var(--border);
+        }
+        .code-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+        }
+        .code-dot:nth-child(1) { background: #ff5f57; }
+        .code-dot:nth-child(2) { background: #febc2e; }
+        .code-dot:nth-child(3) { background: #28c840; }
+        .code-filename {
+            margin-left: 0.8rem; font-size: 0.82rem;
+            color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
+        }
+        pre {
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88rem;
+            line-height: 1.7;
+            color: #c9d1d9;
+        }
+        .kw { color: #ff7b72; }
+        .fn { color: #d2a8ff; }
+        .str { color: #a5d6ff; }
+        .cm { color: #8b949e; font-style: italic; }
+        .num { color: #79c0ff; }
+        .op { color: #ff7b72; }
+        .param { color: #ffa657; }
+
+        /* ── CTA Banner ── */
+        .cta-banner {
+            text-align: center;
+            padding: 80px 2rem;
+        }
+        .cta-box {
+            max-width: 680px; margin: 0 auto;
+            background: linear-gradient(135deg, rgba(74,144,255,0.1), rgba(124,92,252,0.08));
+            border: 1px solid rgba(74,144,255,0.15);
+            border-radius: 24px;
+            padding: 3.5rem 2.5rem;
+        }
+        .cta-box h2 {
+            font-size: 1.8rem; font-weight: 700; margin-bottom: 0.8rem;
+        }
+        .cta-box p {
+            color: var(--text-muted); font-size: 1.05rem;
+            margin-bottom: 2rem; max-width: 460px; margin-left: auto; margin-right: auto;
+        }
+
+        /* ── Footer ── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        footer a { color: var(--blue); text-decoration: none; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .hero { padding: 120px 1.5rem 60px; }
+            section { padding: 60px 1.5rem; }
+            .furniture-grid { grid-template-columns: 1fr; }
+            .furniture-card model-viewer { height: 280px; }
+            .steps { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+        }
+
+        /* ── Animations ── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate { animation: fadeUp 0.7s ease-out both; }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <div class="nav-inner">
+        <a href="index.html" class="nav-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#4A90FF"/>
+                <path d="M2 17l10 5 10-5" stroke="#4A90FF" stroke-width="2" fill="none"/>
+                <path d="M2 12l10 5 10-5" stroke="#4A90FF" stroke-width="2" fill="none" opacity="0.5"/>
+            </svg>
+            Scene<span>View</span>
+        </a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="playground.html">Playground</a>
+            <a href="#furniture">Furniture</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#code">Code</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-badge animate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            AR Experience
+        </div>
+        <h1 class="animate delay-1">AR Room Staging<br><em>Place furniture in your space</em></h1>
+        <p class="animate delay-2">See how furniture looks in your room before you buy. Tap "View in AR" on any piece to place it in your space using your phone's camera.</p>
+        <div class="hero-actions animate delay-3">
+            <a href="#furniture" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Browse Furniture
+            </a>
+            <a href="#code" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                View Code
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Furniture Grid -->
+<section id="furniture">
+    <div class="container">
+        <div class="section-header">
+            <h2>Choose Your Furniture</h2>
+            <p>Browse our collection and tap "View in AR" to see each piece in your space at real scale.</p>
+        </div>
+
+        <div class="furniture-grid">
+            <!-- Chair -->
+            <div class="furniture-card animate">
+                <model-viewer
+                    src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
+                    alt="Modern Sheen Chair"
+                    ar
+                    ar-modes="webxr scene-viewer quick-look"
+                    camera-controls
+                    auto-rotate
+                    shadow-intensity="1.2"
+                    shadow-softness="0.8"
+                    environment-image="neutral"
+                    exposure="1"
+                    camera-orbit="30deg 75deg 2.5m"
+                    interaction-prompt="auto"
+                    loading="lazy"
+                >
+                    <button slot="ar-button" class="btn-ar" style="position:absolute;bottom:16px;right:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                        View in AR
+                    </button>
+                </model-viewer>
+                <div class="furniture-info">
+                    <span class="furniture-tag">Seating</span>
+                    <div class="furniture-name">Modern Sheen Chair</div>
+                    <div class="furniture-desc">Fabric upholstery with sheen finish. Perfect for living rooms and offices.</div>
+                    <div class="furniture-bottom">
+                        <div class="furniture-price">$349 <span>USD</span></div>
+                        <button class="btn-ar" onclick="document.querySelectorAll('model-viewer')[0].activateAR()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            View in AR
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lamp -->
+            <div class="furniture-card animate delay-1">
+                <model-viewer
+                    src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/IridescenceLamp/glTF-Binary/IridescenceLamp.glb"
+                    alt="Iridescence Table Lamp"
+                    ar
+                    ar-modes="webxr scene-viewer quick-look"
+                    camera-controls
+                    auto-rotate
+                    shadow-intensity="1.2"
+                    shadow-softness="0.8"
+                    environment-image="neutral"
+                    exposure="1.1"
+                    camera-orbit="40deg 70deg 1.8m"
+                    interaction-prompt="auto"
+                    loading="lazy"
+                >
+                    <button slot="ar-button" class="btn-ar" style="position:absolute;bottom:16px;right:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                        View in AR
+                    </button>
+                </model-viewer>
+                <div class="furniture-info">
+                    <span class="furniture-tag">Lighting</span>
+                    <div class="furniture-name">Iridescence Table Lamp</div>
+                    <div class="furniture-desc">Stunning iridescent finish that shifts color with viewing angle. Statement piece.</div>
+                    <div class="furniture-bottom">
+                        <div class="furniture-price">$189 <span>USD</span></div>
+                        <button class="btn-ar" onclick="document.querySelectorAll('model-viewer')[1].activateAR()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            View in AR
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Duck -->
+            <div class="furniture-card animate delay-2">
+                <model-viewer
+                    src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb"
+                    alt="Classic Rubber Duck Decor"
+                    ar
+                    ar-modes="webxr scene-viewer quick-look"
+                    camera-controls
+                    auto-rotate
+                    shadow-intensity="1.2"
+                    shadow-softness="0.8"
+                    environment-image="neutral"
+                    exposure="1"
+                    camera-orbit="35deg 72deg 3m"
+                    interaction-prompt="auto"
+                    loading="lazy"
+                >
+                    <button slot="ar-button" class="btn-ar" style="position:absolute;bottom:16px;right:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                        View in AR
+                    </button>
+                </model-viewer>
+                <div class="furniture-info">
+                    <span class="furniture-tag">Decor</span>
+                    <div class="furniture-name">Classic Duck Sculpture</div>
+                    <div class="furniture-desc">Whimsical golden duck figurine. An iconic conversation starter for any shelf.</div>
+                    <div class="furniture-bottom">
+                        <div class="furniture-price">$49 <span>USD</span></div>
+                        <button class="btn-ar" onclick="document.querySelectorAll('model-viewer')[2].activateAR()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            View in AR
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How it Works -->
+<section id="how-it-works" style="background: linear-gradient(180deg, rgba(74,144,255,0.02) 0%, transparent 100%);">
+    <div class="container">
+        <div class="section-header">
+            <h2>How It Works</h2>
+            <p>Three simple steps to see any piece of furniture in your actual room.</p>
+        </div>
+
+        <div class="steps">
+            <div class="step animate">
+                <div class="step-number">1</div>
+                <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                <h3>Choose Furniture</h3>
+                <p>Browse the catalog and find pieces that match your style. Orbit each model in 3D to see every angle and detail.</p>
+            </div>
+
+            <div class="step animate delay-1">
+                <div class="step-number">2</div>
+                <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="5" y="2" width="14" height="20" rx="2"/>
+                    <circle cx="12" cy="9" r="3"/>
+                    <path d="M8 18h8"/>
+                </svg>
+                <h3>Point at the Floor</h3>
+                <p>Tap "View in AR" and point your phone at a flat surface. AR detects your floor and shows a placement indicator.</p>
+            </div>
+
+            <div class="step animate delay-2">
+                <div class="step-number">3</div>
+                <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                </svg>
+                <h3>Place &amp; Resize</h3>
+                <p>Tap to place the furniture at real scale. Pinch to resize, drag to reposition. Walk around it to see how it fits.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Code Section -->
+<section id="code" class="code-section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Build This in 8 Lines</h2>
+            <p>With SceneView for Android, AR furniture placement is just a few lines of Kotlin.</p>
+        </div>
+
+        <div class="code-wrapper animate">
+            <div class="code-header">
+                <span class="code-dot"></span>
+                <span class="code-dot"></span>
+                <span class="code-dot"></span>
+                <span class="code-filename">ARFurnitureScreen.kt</span>
+            </div>
+            <pre><code><span class="cm">// AR furniture placement with SceneView</span>
+<span class="kw">val</span> chair = <span class="fn">rememberModelInstance</span>(modelLoader, <span class="str">"models/chair.glb"</span>)
+
+<span class="fn">ARScene</span>(<span class="param">planeRenderer</span> = <span class="kw">true</span>) {
+    anchor<span class="op">?.</span><span class="kw">let</span> {
+        <span class="fn">AnchorNode</span>(<span class="param">anchor</span> = it) {
+            <span class="fn">ModelNode</span>(
+                <span class="param">modelInstance</span> = chair,
+                <span class="param">scaleToUnits</span> = <span class="num">0.5f</span>
+            )
+        }
+    }
+}</code></pre>
+        </div>
+
+        <div style="text-align:center; margin-top:2.5rem;">
+            <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:1.2rem;">
+                SceneView handles ARCore session, plane detection, anchors, lighting, and shadows automatically.
+            </p>
+            <a href="https://github.com/sceneview/sceneview-android" class="btn btn-secondary" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                View on GitHub
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Banner -->
+<section class="cta-banner">
+    <div class="cta-box animate">
+        <h2>Ready to Build AR Experiences?</h2>
+        <p>Add 3D and AR to your Android app with just one Gradle dependency. SceneView makes it simple.</p>
+        <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+            <a href="https://github.com/sceneview/sceneview-android" class="btn btn-primary" target="_blank" rel="noopener">
+                Get Started
+            </a>
+            <a href="index.html" class="btn btn-secondary">
+                Back to Home
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p>Built with <a href="https://github.com/sceneview/sceneview-android">SceneView</a> &mdash; 3D and AR as declarative UI for Android &amp; Apple platforms.</p>
+        <p style="margin-top:0.5rem;">3D models from <a href="https://github.com/KhronosGroup/glTF-Sample-Assets" target="_blank" rel="noopener">Khronos glTF Sample Assets</a> (CC-BY 4.0)</p>
+    </div>
+</footer>
+
+<!-- Intersection Observer for animations -->
+<script>
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animationPlayState = 'running';
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate').forEach(el => {
+        el.style.animationPlayState = 'paused';
+        observer.observe(el);
+    });
+</script>
+
+</body>
+</html>

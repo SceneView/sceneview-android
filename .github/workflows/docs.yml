@@ -101,7 +101,7 @@ jobs:
             exit 1
           fi
           if [ ! -f site/index.html ]; then
-            echo "ERROR: No index.html in root. Kobweb export may have failed."
+            echo "ERROR: No index.html in root. Static site copy may have failed."
             exit 1
           fi
 

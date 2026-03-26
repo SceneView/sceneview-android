@@ -50,6 +50,7 @@
     "dist/migrate-code.js",
     "dist/debug-issue.js",
     "dist/generate-scene.js",
+    "dist/advanced-guides.js",
     "llms.txt"
   ],
   "engines": {

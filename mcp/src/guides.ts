@@ -62,8 +62,8 @@ Shared Kotlin Multiplatform module providing:
 
 ## How to Stay Updated
 
-- **GitHub:** https://github.com/SceneView/sceneview
-- **Releases:** https://github.com/SceneView/sceneview/releases
+- **GitHub:** https://github.com/sceneview/sceneview
+- **Releases:** https://github.com/sceneview/sceneview/releases
 - **Website:** https://sceneview.github.io
 `;
 
@@ -332,7 +332,7 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 **Fix:**
 - Ensure Xcode 15.0+ (required for iOS 17 / visionOS targets).
 - Clean derived data: Xcode → Product → Clean Build Folder, then File → Packages → Reset Package Caches.
-- Check the URL is exactly: \`https://github.com/SceneView/sceneview\`
+- Check the URL is exactly: \`https://github.com/sceneview/sceneview\`
 
 ### Image Tracking Not Working (iOS)
 **Fix:**
@@ -351,7 +351,7 @@ export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide (Android 
 ## 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/SceneView/sceneview", from: "3.3.0")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")
 \`\`\`
 
 ## 2. Info.plist — Camera Permission
