@@ -4,18 +4,47 @@
  * One line to render a 3D model:
  *   SceneView.modelViewer("canvas", "model.glb")
  *
- * Prerequisites: load Filament.js CDN via <script> BEFORE this file:
- *   <script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
+ * No prerequisites — sceneview.js loads Filament.js CDN automatically.
+ * Just include one script:
  *   <script src="js/sceneview.js"></script>
  *
  * Powered by Filament.js (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
- * @version 2.0.0
+ * @version 1.1.0
  * @license MIT
  */
 (function(global) {
   'use strict';
+
+  var FILAMENT_CDN = 'https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js';
+
+  /**
+   * Load Filament.js CDN dynamically if not already present.
+   * Returns a Promise that resolves when the Filament global is available.
+   */
+  function _ensureFilament() {
+    return new Promise(function(resolve, reject) {
+      // Already loaded
+      if (typeof Filament !== 'undefined') {
+        resolve();
+        return;
+      }
+      // Check if script tag already exists but hasn't finished loading
+      var existing = document.querySelector('script[src*="filament"]');
+      if (existing) {
+        existing.addEventListener('load', function() { resolve(); });
+        existing.addEventListener('error', function() { reject(new Error('SceneView: Failed to load Filament.js from CDN')); });
+        return;
+      }
+      // Inject script tag
+      var script = document.createElement('script');
+      script.src = FILAMENT_CDN;
+      script.onload = function() { resolve(); };
+      script.onerror = function() { reject(new Error('SceneView: Failed to load Filament.js from CDN (' + FILAMENT_CDN + ')')); };
+      document.head.appendChild(script);
+    });
+  }
 
   /**
    * SceneView instance — wraps Filament engine, scene, camera, renderer.
@@ -59,7 +88,8 @@
           }
           return;
         }
-        // Fetch via Filament.init (handles WASM + fetch)
+        // Fetch via Filament.init with asset — this always fires the callback
+        // because it needs to fetch the asset even if WASM is already loaded
         Filament.init([url], function() {
           try {
             self._showModel(url);
@@ -291,31 +321,39 @@
 
   /**
    * Create an empty SceneView on a canvas.
-   * Filament.js must be loaded via <script> before calling this.
+   * Filament.js is loaded automatically from CDN if not already present.
    *
    * @param {string|HTMLCanvasElement} canvasOrId - Canvas element or its ID
    * @param {Object} [options] - Configuration options
    * @returns {Promise<SceneViewInstance>}
    */
   function create(canvasOrId, options) {
-    return new Promise(function(resolve, reject) {
-      if (typeof Filament === 'undefined') {
-        reject(new Error('SceneView: Filament.js not loaded. Add <script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script> before sceneview.js'));
-        return;
-      }
-      Filament.init([], function() {
-        try {
-          resolve(_createEngine(canvasOrId, options));
-        } catch (e) {
-          reject(e);
+    return _ensureFilament().then(function() {
+      return new Promise(function(resolve, reject) {
+        // If WASM is already initialized (Engine exists), skip Filament.init
+        if (typeof Filament.Engine !== 'undefined') {
+          try {
+            resolve(_createEngine(canvasOrId, options));
+          } catch (e) {
+            reject(e);
+          }
+          return;
         }
+        // First time: initialize WASM
+        Filament.init([], function() {
+          try {
+            resolve(_createEngine(canvasOrId, options));
+          } catch (e) {
+            reject(e);
+          }
+        });
       });
     });
   }
 
   /**
    * One-liner: create viewer and load a model.
-   * Filament.js must be loaded via <script> before calling this.
+   * Filament.js is loaded automatically from CDN if not already present.
    *
    * @param {string|HTMLCanvasElement} canvasOrId
    * @param {string} modelUrl - URL to .glb/.gltf model
@@ -323,27 +361,27 @@
    * @returns {Promise<SceneViewInstance>}
    */
   function modelViewer(canvasOrId, modelUrl, options) {
-    return new Promise(function(resolve, reject) {
-      if (typeof Filament === 'undefined') {
-        reject(new Error('SceneView: Filament.js not loaded. Add <script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script> before sceneview.js'));
-        return;
-      }
-      // Pre-fetch model AND initialize WASM in one call
-      Filament.init([modelUrl], function() {
-        try {
-          var instance = _createEngine(canvasOrId, options);
-          instance._showModel(modelUrl);
-          resolve(instance);
-        } catch (e) {
-          reject(e);
-        }
+    return _ensureFilament().then(function() {
+      return new Promise(function(resolve, reject) {
+        // Always use Filament.init with the model URL in the assets array.
+        // This works whether WASM is already loaded or not, because Filament
+        // needs to fetch the model asset and will call back when done.
+        Filament.init([modelUrl], function() {
+          try {
+            var instance = _createEngine(canvasOrId, options);
+            instance._showModel(modelUrl);
+            resolve(instance);
+          } catch (e) {
+            reject(e);
+          }
+        });
       });
     });
   }
 
   // Public API
   global.SceneView = {
-    version: '2.0.0',
+    version: '1.1.0',
     create: create,
     modelViewer: modelViewer
   };
