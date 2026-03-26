@@ -263,7 +263,7 @@ fun AboutScreen() {
 
             Spacer(Modifier.height(16.dp))
             Text(
-                "github.com/SceneView/sceneview",
+                "github.com/sceneview/sceneview",
                 style = MaterialTheme.typography.bodySmall,
                 color = SceneViewBlue.copy(alpha = 0.7f)
             )
