@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView Supervisor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a25;
+    --border: #2a2a3a;
+    --text: #e0e0e8;
+    --text-dim: #6a6a80;
+    --accent: #7c5cfc;
+    --accent-glow: rgba(124, 92, 252, 0.15);
+    --green: #34d399;
+    --green-glow: rgba(52, 211, 153, 0.15);
+    --yellow: #fbbf24;
+    --yellow-glow: rgba(251, 191, 36, 0.15);
+    --blue: #60a5fa;
+    --blue-glow: rgba(96, 165, 250, 0.15);
+    --red: #f87171;
+    --red-glow: rgba(248, 113, 113, 0.15);
+    --orange: #fb923c;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124, 92, 252, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124, 92, 252, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 30px var(--accent-glow);
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+
+  .header h1 span {
+    color: var(--accent);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: 2px;
+  }
+
+  .pulse-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 10px var(--green);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .refresh-badge {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.blue::before { background: var(--blue); }
+  .stat-card.yellow::before { background: var(--yellow); }
+  .stat-card.accent::before { background: var(--accent); }
+
+  .stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.blue .stat-value { color: var(--blue); }
+  .stat-card.yellow .stat-value { color: var(--yellow); }
+  .stat-card.accent .stat-value { color: var(--accent); }
+
+  .stat-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Sections */
+  .section {
+    margin-bottom: 28px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Agent rows */
+  .agent-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .agent-row {
+    display: grid;
+    grid-template-columns: 44px 90px 140px 100px 1fr 80px;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    transition: all 0.2s;
+  }
+
+  .agent-row:hover {
+    border-color: var(--accent);
+    background: var(--surface2);
+  }
+
+  .status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    justify-self: center;
+  }
+
+  .status-indicator.running {
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .status-indicator.idle {
+    background: var(--yellow);
+    box-shadow: 0 0 8px var(--yellow-glow);
+  }
+
+  .status-indicator.server {
+    background: var(--blue);
+    box-shadow: 0 0 8px var(--blue-glow);
+  }
+
+  .status-indicator.longrun {
+    background: var(--orange);
+    box-shadow: 0 0 8px rgba(251, 146, 60, 0.3);
+  }
+
+  .agent-pid {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .agent-model {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .agent-model.opus { color: var(--accent); }
+  .agent-model.default { color: var(--yellow); }
+  .agent-model.mcp { color: var(--blue); }
+
+  .agent-uptime {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .agent-mcps {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .mcp-tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .agent-cpu {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  /* Worktree cards */
+  .worktree-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .worktree-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    position: relative;
+    transition: all 0.2s;
+  }
+
+  .worktree-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+
+  .worktree-card.active {
+    border-color: var(--green);
+    box-shadow: 0 0 20px var(--green-glow);
+  }
+
+  .worktree-card.ahead {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .wt-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wt-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .wt-badge.head { background: var(--green-glow); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+  .wt-badge.ahead { background: var(--accent-glow); color: var(--accent); border: 1px solid rgba(124,92,252,0.3); }
+
+  .wt-detail {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .wt-detail-icon {
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  .wt-branch {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  .wt-commit {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .wt-commit code {
+    color: var(--yellow);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .wt-files {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .wt-files.clean { background: var(--green-glow); color: var(--green); }
+  .wt-files.dirty { background: var(--yellow-glow); color: var(--yellow); }
+
+  /* Branch list */
+  .branch-list {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .branch-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .branch-tag.active {
+    border-color: var(--green);
+    background: var(--green-glow);
+  }
+
+  .branch-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+
+  .branch-tag.active .branch-dot {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  /* Timeline */
+  .timeline {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .timeline-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+    font-size: 13px;
+  }
+
+  .timeline-entry:last-child { border-bottom: none; }
+
+  .timeline-time {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    font-size: 11px;
+    min-width: 60px;
+    padding-top: 2px;
+  }
+
+  .timeline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+
+  .timeline-text { color: var(--text); line-height: 1.4; }
+  .timeline-text code {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  @media (max-width: 900px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .worktree-grid { grid-template-columns: 1fr; }
+    .agent-row { grid-template-columns: 44px 90px 1fr; }
+    .agent-mcps, .agent-cpu, .agent-uptime { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">🎛</div>
+      <div>
+        <h1><span>SceneView</span> Supervisor</h1>
+        <div class="refresh-badge">auto-refresh 30s</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="pulse-dot"></div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card green">
+      <div class="stat-label">Agents actifs</div>
+      <div class="stat-value" id="stat-agents">-</div>
+      <div class="stat-sub" id="stat-agents-sub"></div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">MCP Servers</div>
+      <div class="stat-value" id="stat-mcp">-</div>
+      <div class="stat-sub" id="stat-mcp-sub"></div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Worktrees</div>
+      <div class="stat-value" id="stat-wt">-</div>
+      <div class="stat-sub" id="stat-wt-sub"></div>
+    </div>
+    <div class="stat-card accent">
+      <div class="stat-label">Fichiers modifies</div>
+      <div class="stat-value" id="stat-files">-</div>
+      <div class="stat-sub" id="stat-files-sub"></div>
+    </div>
+  </div>
+
+  <!-- Agents -->
+  <div class="section">
+    <div class="section-title">Agents & Processus</div>
+    <div class="agent-grid" id="agent-grid"></div>
+  </div>
+
+  <!-- Worktrees -->
+  <div class="section">
+    <div class="section-title">Worktrees</div>
+    <div class="worktree-grid" id="worktree-grid"></div>
+  </div>
+
+  <!-- Branches -->
+  <div class="section">
+    <div class="section-title">Branches Claude</div>
+    <div class="branch-list" id="branch-list"></div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="section">
+    <div class="section-title">Activite recente</div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <div class="footer">
+    SceneView Supervisor Dashboard &middot; Polling local toutes les 30s &middot; <span id="last-update">--</span>
+  </div>
+</div>
+
+<script>
+// ── Data store (updated by polling script written to a JSON file) ──
+// Since we can't run shell commands from the browser, we use a static JSON
+// that gets rewritten by the cron job. For now, we embed the initial data
+// and the page refreshes itself every 30s to pick up new data.
+
+const DATA_URL = './supervisor-data.json';
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function relativeTime(startStr) {
+  // startStr like "Sat01AM", "1:33AM", "11:20PM", "Thu10PM"
+  // We'll compute from the data
+  return startStr;
+}
+
+function renderAgents(agents) {
+  const grid = document.getElementById('agent-grid');
+  grid.innerHTML = agents.map(a => `
+    <div class="agent-row">
+      <div class="status-indicator ${a.status}"></div>
+      <div class="agent-pid">PID ${a.pid}</div>
+      <div class="agent-model ${a.modelClass}">${a.model}</div>
+      <div class="agent-uptime">${a.uptime}</div>
+      <div class="agent-mcps">
+        ${a.mcps.map(m => `<span class="mcp-tag">${m}</span>`).join('')}
+      </div>
+      <div class="agent-cpu" style="color: ${a.cpuColor || 'var(--text-dim)'}">${a.cpu}</div>
+    </div>
+  `).join('');
+}
+
+function renderWorktrees(wts) {
+  const grid = document.getElementById('worktree-grid');
+  grid.innerHTML = wts.map(w => `
+    <div class="worktree-card ${w.cardClass || ''}">
+      <div class="wt-name">
+        ${w.icon} ${w.name}
+        ${w.badge ? `<span class="wt-badge ${w.badge.class}">${w.badge.text}</span>` : ''}
+      </div>
+      <div class="wt-detail">
+        <span class="wt-detail-icon">🔀</span>
+        <span class="wt-branch">${w.branch}</span>
+      </div>
+      <div class="wt-detail">
+        <span class="wt-detail-icon">📝</span>
+        <span class="wt-commit"><code>${w.commitHash}</code> ${w.commitMsg}</span>
+      </div>
+      <div class="wt-detail">
+        <span class="wt-detail-icon">📊</span>
+        <span class="wt-files ${w.filesClass}">${w.filesText}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderBranches(branches) {
+  const list = document.getElementById('branch-list');
+  list.innerHTML = branches.map(b => `
+    <div class="branch-tag ${b.active ? 'active' : ''}">
+      <span class="branch-dot"></span>
+      ${b.name}
+      ${b.active ? '<span style="font-size:10px;color:var(--green)">HEAD</span>' : ''}
+    </div>
+  `).join('');
+}
+
+function renderTimeline(entries) {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = entries.map(e => `
+    <div class="timeline-entry">
+      <div class="timeline-time">${e.time}</div>
+      <div class="timeline-dot" style="background:${e.color || 'var(--accent)'}"></div>
+      <div class="timeline-text">${e.text}</div>
+    </div>
+  `).join('');
+}
+
+function renderStats(data) {
+  document.getElementById('stat-agents').textContent = data.agentCount;
+  document.getElementById('stat-agents-sub').textContent = data.agentSub;
+  document.getElementById('stat-mcp').textContent = data.mcpCount;
+  document.getElementById('stat-mcp-sub').textContent = data.mcpSub;
+  document.getElementById('stat-wt').textContent = data.wtCount;
+  document.getElementById('stat-wt-sub').textContent = data.wtSub;
+  document.getElementById('stat-files').textContent = data.filesCount;
+  document.getElementById('stat-files-sub').textContent = data.filesSub;
+}
+
+async function fetchData() {
+  try {
+    const resp = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!resp.ok) throw new Error('No data file');
+    const data = await resp.json();
+    renderStats(data.stats);
+    renderAgents(data.agents);
+    renderWorktrees(data.worktrees);
+    renderBranches(data.branches);
+    renderTimeline(data.timeline);
+    document.getElementById('last-update').textContent = 'Updated: ' + new Date().toLocaleTimeString('fr-FR');
+  } catch(e) {
+    console.log('Waiting for data...', e);
+  }
+}
+
+// Initial fetch + poll every 30s
+fetchData();
+setInterval(fetchData, 30000);
+</script>
+</body>
+</html>

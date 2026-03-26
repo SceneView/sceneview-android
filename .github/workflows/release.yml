@@ -139,10 +139,10 @@ jobs:
             "main": "sceneview-web.js",
             "types": "sceneview-web.d.ts",
             "keywords": ["3d", "webgl", "filament", "sceneview", "gltf", "wasm"],
-            "homepage": "https://github.com/SceneView/sceneview",
+            "homepage": "https://github.com/sceneview/sceneview",
             "repository": {
               "type": "git",
-              "url": "https://github.com/SceneView/sceneview.git",
+              "url": "https://github.com/sceneview/sceneview.git",
               "directory": "sceneview-web"
             },
             "license": "Apache-2.0"

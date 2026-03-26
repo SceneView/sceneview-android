@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SceneView Empire</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#080c18;color:#e8eaed;padding:24px}
+.c{max-width:1200px;margin:0 auto}
+h1{font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,#fff,#8ab4f8,#1a73e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:8px}
+.sub{text-align:center;color:#9aa0a6;margin-bottom:32px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:32px}
+.s{background:rgba(19,45,74,0.6);border:1px solid rgba(26,115,232,0.15);border-radius:16px;padding:18px;text-align:center}
+.s .n{font-size:1.8rem;font-weight:800;color:#8ab4f8}
+.s .l{color:#9aa0a6;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+h2{font-size:1.2rem;margin:28px 0 14px;color:#8ab4f8}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:28px}
+.p{background:rgba(19,45,74,0.6);border:1px solid rgba(26,115,232,0.15);border-radius:16px;padding:18px;transition:border-color 0.3s}
+.p:hover{border-color:#1a73e8}
+.p .nm{font-weight:700;margin-bottom:4px}.p .v{display:inline-block;font-size:0.65rem;padding:2px 7px;border-radius:6px;font-weight:600;background:rgba(52,168,83,0.15);color:#34a853;margin-bottom:6px}
+.p .m{font-size:0.75rem;color:#9aa0a6;margin-bottom:4px}.p .r{color:#34a853;font-weight:700;font-size:0.9rem}.p .d{font-size:0.8rem;color:#9aa0a6;margin-top:4px}
+.tag{font-size:0.8rem;text-align:center;color:#9aa0a6;margin-top:32px;padding:16px;border-top:1px solid rgba(255,255,255,0.05)}
+.tag b{color:#8ab4f8}
+@media(max-width:700px){.stats{grid-template-columns:repeat(3,1fr)}.g{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="c">
+<h1>SceneView Empire</h1>
+<div class="sub">14 produits · 9 plateformes · 750+ tests · Marathon 25-26 mars 2026</div>
+<div class="stats">
+<div class="s"><div class="n">14</div><div class="l">Produits</div></div>
+<div class="s"><div class="n">8</div><div class="l">npm</div></div>
+<div class="s"><div class="n">12</div><div class="l">Repos</div></div>
+<div class="s"><div class="n">750+</div><div class="l">Tests</div></div>
+<div class="s"><div class="n">9</div><div class="l">Platforms</div></div>
+<div class="s"><div class="n">5</div><div class="l">Releases</div></div>
+</div>
+<h2>Produits</h2>
+<div class="g">
+<div class="p"><div class="nm">SceneView SDK</div><span class="v">v3.4.4</span><div class="m">9 plateformes · 1.5k+ stars</div><div class="d">SDK 3D &amp; AR open source</div></div>
+<div class="p"><div class="nm">SceneView MCP</div><span class="v">v3.4.8</span><div class="m">456 tests · 33 samples</div><div class="r">Freemium API</div></div>
+<div class="p"><div class="nm">E-commerce 3D</div><span class="v">v1.0.5</span><div class="m">7 tools · 52 tests</div><div class="r">$29-99/mois</div></div>
+<div class="p"><div class="nm">Architecture</div><span class="v">v1.0.5</span><div class="m">8 tools · 27 tests</div><div class="r">$49-149/mois</div></div>
+<div class="p"><div class="nm">Real Estate</div><span class="v">v1.0.5</span><div class="m">6 tools · 42 tests</div><div class="r">$19/mois</div></div>
+<div class="p"><div class="nm">French Admin</div><span class="v">v1.0.5</span><div class="m">9 tools · 52 tests</div><div class="r">9.99 EUR/mois</div></div>
+<div class="p"><div class="nm">Legal Docs</div><span class="v">v1.0.1</span><div class="m">8 tools · 34 tests</div><div class="r">19.99 EUR/mois</div></div>
+<div class="p"><div class="nm">Social Media</div><span class="v">v1.0.1</span><div class="m">7 tools · 47 tests</div><div class="r">$14.99-49.99/mois</div></div>
+<div class="p"><div class="nm">Chrome Extension</div><span class="v" style="background:rgba(251,188,4,0.15);color:#fbbc04">READY</span><div class="d">3D Viewer — Chrome Web Store</div></div>
+<div class="p"><div class="nm">Prompt Store</div><span class="v">DEPLOYED</span><div class="m">6 packs · 300 prompts</div><div class="r">9.99-39.99 EUR</div></div>
+<div class="p"><div class="nm">n8n Templates</div><span class="v">GITHUB</span><div class="m">5 workflows</div><div class="r">Bundle $149</div></div>
+<div class="p"><div class="nm">Telegram Bot</div><span class="v" style="background:rgba(251,188,4,0.15);color:#fbbc04">TEMPLATE</span><div class="r">$5-20/mois</div></div>
+<div class="p"><div class="nm">AI Invoice</div><span class="v" style="background:rgba(251,188,4,0.15);color:#fbbc04">DEPLOY</span><div class="r">4.99 EUR/mois</div></div>
+<div class="p"><div class="nm">Polar MCP Pro</div><span class="v">CREATED</span><div class="r">9.99 EUR/mois</div></div>
+</div>
+<div class="tag">Objectif #1 : <b>SceneView = THE 3D engine pour Claude artifacts (Filament.js — 20x plus leger que Three.js)</b></div>
+</div>
+</body>
+</html>

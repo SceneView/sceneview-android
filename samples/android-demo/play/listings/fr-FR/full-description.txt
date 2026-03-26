@@ -36,4 +36,4 @@ Construit avec les derniers composants Material 3 Expressif :
 Support de mise à jour intégré pour rester sur la dernière version.
 
 SceneView Demo est open source et fait partie du projet SceneView :
-https://github.com/SceneView/sceneview
+https://github.com/sceneview/sceneview

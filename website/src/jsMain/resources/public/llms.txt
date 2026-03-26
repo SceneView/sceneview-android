@@ -5,7 +5,7 @@
 
 ## Quick Links
 - Documentation: https://sceneview.github.io/
-- GitHub: https://github.com/SceneView/sceneview
+- GitHub: https://github.com/sceneview/sceneview
 - API Reference: https://sceneview.github.io/api/
 - Full API (machine-readable): https://sceneview.github.io/llms-full.txt
 - Quickstart Android: https://sceneview.github.io/quickstart/
@@ -17,4 +17,4 @@
 
 ## Install
 Android: implementation("io.github.sceneview:sceneview:3.3.0")
-iOS: .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
+iOS: .package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.3.0")

@@ -9,7 +9,7 @@ Get the demo app running on your device in under a minute.
 Clone the repo and run:
 
 ```bash
-git clone https://github.com/SceneView/sceneview.git
+git clone https://github.com/sceneview/sceneview.git
 cd sceneview
 ./try-demo
 ```
@@ -39,7 +39,7 @@ Run `./try-demo --help` for the full list.
 <div class="try-download-card">
 <h3>Android Demo</h3>
 <p>Full showcase: 4 tabs, 14 interactive demos, 26+ node types, animations, physics, post-processing.</p>
-<a href="https://github.com/SceneView/sceneview/releases/latest/download/android-demo.apk" class="md-button md-button--primary">
+<a href="https://github.com/sceneview/sceneview/releases/latest/download/android-demo.apk" class="md-button md-button--primary">
 Download APK
 </a>
 <p class="try-download-note">Debug-signed — works on any device, no Play Store needed.</p>
@@ -48,7 +48,7 @@ Download APK
 <div class="try-download-card">
 <h3>All Platform Demos</h3>
 <p>APKs for Android, Android TV. iOS and Web demos available from source.</p>
-<a href="https://github.com/SceneView/sceneview/releases/latest" class="md-button">
+<a href="https://github.com/sceneview/sceneview/releases/latest" class="md-button">
 Browse all APKs
 </a>
 </div>
@@ -60,7 +60,7 @@ Browse all APKs
 ```bash
 # Download and install in one line
 curl -fSL -o /tmp/android-demo.apk \
-  https://github.com/SceneView/sceneview/releases/latest/download/android-demo.apk \
+  https://github.com/sceneview/sceneview/releases/latest/download/android-demo.apk \
   && adb install -r /tmp/android-demo.apk
 ```
 
@@ -119,7 +119,7 @@ Filament rendering engine, optimized for mobile
 
 ```bash
 # Clone
-git clone https://github.com/SceneView/sceneview.git
+git clone https://github.com/sceneview/sceneview.git
 cd sceneview
 
 # Build just the demo

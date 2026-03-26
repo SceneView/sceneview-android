@@ -87,8 +87,8 @@ Enable the Filament plugin in `gradle.properties` and rebuild.
 
 ## Issues & discussions
 
-- **Bug reports** → [GitHub Issues](https://github.com/SceneView/sceneview/issues) (use the templates)
-- **Questions** → [GitHub Discussions](https://github.com/SceneView/sceneview/discussions)
+- **Bug reports** → [GitHub Issues](https://github.com/sceneview/sceneview/issues) (use the templates)
+- **Questions** → [GitHub Discussions](https://github.com/sceneview/sceneview/discussions)
 - **Chat** → [Discord](https://discord.gg/UbNDDBTNqb)
 
 ---
@@ -96,4 +96,4 @@ Enable the Filament plugin in `gradle.properties` and rebuild.
 ## License
 
 By contributing, you agree that your contributions will be licensed under the
-[Apache License 2.0](https://github.com/SceneView/sceneview/blob/main/LICENSE).
+[Apache License 2.0](https://github.com/sceneview/sceneview/blob/main/LICENSE).

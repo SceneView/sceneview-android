@@ -50,4 +50,4 @@ We may update this Privacy Policy from time to time. Changes will be reflected i
 
 ### Contact
 
-Thomas Gorisse — [https://github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
+Thomas Gorisse — [https://github.com/sceneview/sceneview](https://github.com/sceneview/sceneview)

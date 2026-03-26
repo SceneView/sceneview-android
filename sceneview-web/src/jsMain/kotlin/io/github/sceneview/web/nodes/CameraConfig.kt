@@ -1,6 +1,7 @@
 package io.github.sceneview.web.nodes
 
 import io.github.sceneview.web.bindings.Camera
+import io.github.sceneview.web.bindings.float3
 
 /**
  * Camera configuration for SceneView web.
@@ -55,8 +56,13 @@ class CameraConfig {
         this.sensitivity = sensitivity
     }
 
+    /** Apply this config to a Filament.js Camera using float3 arrays for lookAt. */
     fun applyTo(camera: Camera) {
-        camera.lookAt(eyeX, eyeY, eyeZ, targetX, targetY, targetZ, upX, upY, upZ)
+        camera.lookAt(
+            float3(eyeX, eyeY, eyeZ),
+            float3(targetX, targetY, targetZ),
+            float3(upX, upY, upZ)
+        )
         camera.setExposure(aperture, shutterSpeed, sensitivity)
     }
 }

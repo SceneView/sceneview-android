@@ -70,3 +70,7 @@ branding/SPONSOR_TIERS.md
 .claude/handoff.md
 .claude/branding.md
 .mcpregistry_*
+
+# Build artifacts
+docs/site/
+website/.kobweb/

@@ -12,7 +12,7 @@ description: "The #1 open-source 3D & AR SDK. 9 platforms: Android, iOS, Web, De
 <p class="sv-platforms">Android · iOS · Web · Desktop · TV · Flutter · React Native</p>
 
 [Get Started](quickstart.md){ .md-button .md-button--primary }
-[GitHub](https://github.com/SceneView/sceneview){ .md-button }
+[GitHub](https://github.com/sceneview/sceneview){ .md-button }
 
 </div>
 
@@ -113,7 +113,7 @@ Android uses Filament. Apple platforms use RealityKit. Shared logic via Kotlin M
     ```swift
     // Package.swift
     dependencies: [
-        .package(url: "https://github.com/SceneView/SceneViewSwift.git", from: "3.3.0")
+        .package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.3.0")
     ]
     ```
 
@@ -234,6 +234,6 @@ See the [Migration guide](migration.md) for a step-by-step walkthrough of every 
 ## Community
 
 [Discord](https://discord.gg/UbNDDBTNqb){ .md-button }
-[GitHub](https://github.com/SceneView/sceneview){ .md-button .md-button--primary }
+[GitHub](https://github.com/sceneview/sceneview){ .md-button .md-button--primary }
 
 </div>

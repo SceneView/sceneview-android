@@ -271,6 +271,6 @@ get_node_reference, get_platform_roadmap, get_best_practices, get_ar_setup
 ## Links
 
 - Website: https://sceneview.github.io
-- GitHub: https://github.com/SceneView/sceneview
+- GitHub: https://github.com/sceneview/sceneview
 - Discord: https://discord.gg/UbNDDBTNqb
 - Maven: io.github.sceneview:sceneview:3.3.0

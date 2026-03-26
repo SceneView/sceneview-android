@@ -80,4 +80,4 @@ If any provision of these Terms is found unenforceable, the remaining provisions
 
 ## 14. Contact
 
-Thomas Gorisse — [https://github.com/SceneView/sceneview](https://github.com/SceneView/sceneview)
+Thomas Gorisse — [https://github.com/sceneview/sceneview](https://github.com/sceneview/sceneview)
