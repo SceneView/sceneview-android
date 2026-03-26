@@ -62,8 +62,8 @@ describe("getDebugGuide", () => {
 
   it("returns guide for lighting", () => {
     const result = getDebugGuide("lighting");
-    expect(result).toContain("intensity");
-    expect(result).toContain("shadow");
+    expect(result).toContain("Intensity");
+    expect(result).toContain("Shadows");
   });
 
   it("returns guide for gestures", () => {
