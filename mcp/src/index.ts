@@ -19,6 +19,10 @@ import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-refere
 import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
 import { buildPreviewUrl, validatePreviewInput, formatPreviewResponse } from "./preview.js";
 import { validateArtifactInput, generateArtifact, formatArtifactResponse, type ArtifactType } from "./artifact.js";
+import { getPlatformSetup, listPlatforms, PLATFORM_IDS, type Platform, type SetupType } from "./platform-setup.js";
+import { migrateCode, formatMigrationResult } from "./migrate-code.js";
+import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES, type DebugCategory } from "./debug-issue.js";
+import { generateScene, formatGeneratedScene } from "./generate-scene.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -45,7 +49,7 @@ try {
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
 
 const server = new Server(
-  { name: "@sceneview/mcp", version: "3.4.11" },
+  { name: "@sceneview/mcp", version: "3.4.13" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
@@ -386,6 +390,77 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
         },
         required: ["type"],
+      },
+    },
+    {
+      name: "get_platform_setup",
+      description:
+        "Returns the complete setup guide for any SceneView-supported platform: Android, iOS, Web, Flutter, React Native, Desktop, or Android TV. Includes dependencies, manifest/permissions, minimum SDK, and a working starter template. Replaces `get_setup`, `get_ios_setup`, and `get_web_setup` with a single unified tool. Use this when a user wants to set up SceneView on any platform.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          platform: {
+            type: "string",
+            enum: PLATFORM_IDS,
+            description: `Target platform:\n${PLATFORM_IDS.map((p) => `- "${p}"`).join("\n")}`,
+          },
+          type: {
+            type: "string",
+            enum: ["3d", "ar"],
+            description: '"3d" for 3D-only scenes. "ar" for augmented reality. Some platforms only support 3D.',
+          },
+        },
+        required: ["platform", "type"],
+      },
+    },
+    {
+      name: "migrate_code",
+      description:
+        "Automatically migrates SceneView 2.x Kotlin code to 3.x. Applies known renames (SceneView→Scene, ArSceneView→ARScene), replaces deprecated APIs (loadModelAsync→rememberModelInstance, Engine.create→rememberEngine), fixes LightNode trailing-lambda bug, removes Sceneform imports, and more. Returns the migrated code with a detailed changelog. Use this when a user has 2.x code that needs updating, or when you detect 2.x patterns in their code.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          code: {
+            type: "string",
+            description: "The SceneView 2.x Kotlin code to migrate. Can be a snippet, a function, or a full file.",
+          },
+        },
+        required: ["code"],
+      },
+    },
+    {
+      name: "debug_issue",
+      description:
+        'Returns a targeted debugging guide for a specific SceneView issue. Categories: "model-not-showing" (invisible models), "ar-not-working" (AR camera/planes), "crash" (SIGABRT/native), "performance" (low FPS/memory), "build-error" (Gradle/dependency), "black-screen" (no rendering), "lighting" (dark/bright/shadows), "gestures" (touch/drag), "ios" (Swift/RealityKit). You can provide a category directly, or describe the problem and it will be auto-detected. Use this when a user reports something not working.',
+      inputSchema: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: DEBUG_CATEGORIES,
+            description: `The issue category. If omitted, provide \`description\` for auto-detection.\n${DEBUG_CATEGORIES.map((c) => `- "${c}"`).join("\n")}`,
+          },
+          description: {
+            type: "string",
+            description: 'Free-text description of the issue (e.g., "my model is not showing", "app crashes on destroy"). Used for auto-detection when category is omitted.',
+          },
+        },
+        required: [],
+      },
+    },
+    {
+      name: "generate_scene",
+      description:
+        'Generates a complete, compilable Scene{} or ARScene{} Kotlin composable from a natural language description. Parses objects (table, chair, sphere, car, etc.), quantities ("two chairs", "3 spheres"), environment (indoor/outdoor/dark), and mode (3D or AR). Returns working Kotlin code with proper engine setup, model loading, lighting, and ground plane. Use this when a user says "build me a scene with..." or describes a 3D scene they want to create.',
+      inputSchema: {
+        type: "object",
+        properties: {
+          description: {
+            type: "string",
+            description: 'Natural language description of the desired 3D scene. Examples: "a room with a table and two chairs", "AR scene with a robot on the floor", "outdoor scene with three trees and a car", "dark room with a sphere and a cube".',
+          },
+        },
+        required: ["description"],
       },
     },
   ],
@@ -949,6 +1024,73 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const result = generateArtifact(artifactInput);
       const text = formatArtifactResponse(result);
       return { content: withDisclaimer([{ type: "text", text }]) };
+    }
+
+    // ── get_platform_setup ─────────────────────────────────────────────────
+    case "get_platform_setup": {
+      const platform = request.params.arguments?.platform as Platform;
+      const setupType = request.params.arguments?.type as SetupType;
+      if (!platform || !setupType) {
+        return {
+          content: [{ type: "text", text: "Missing required parameters: `platform` and `type`." }],
+          isError: true,
+        };
+      }
+      const guide = getPlatformSetup(platform, setupType);
+      return { content: withDisclaimer([{ type: "text", text: guide }]) };
+    }
+
+    // ── migrate_code ─────────────────────────────────────────────────────────
+    case "migrate_code": {
+      const code = request.params.arguments?.code as string;
+      if (!code || typeof code !== "string") {
+        return {
+          content: [{ type: "text", text: "Missing required parameter: `code`." }],
+          isError: true,
+        };
+      }
+      const migrationResult = migrateCode(code);
+      const migrationReport = formatMigrationResult(migrationResult);
+      return { content: withDisclaimer([{ type: "text", text: migrationReport }]) };
+    }
+
+    // ── debug_issue ──────────────────────────────────────────────────────────
+    case "debug_issue": {
+      let category = request.params.arguments?.category as DebugCategory | undefined;
+      const desc = request.params.arguments?.description as string | undefined;
+
+      if (!category && desc) {
+        category = autoDetectIssue(desc) ?? undefined;
+      }
+      if (!category) {
+        return {
+          content: [{
+            type: "text",
+            text: `Please provide a \`category\` or \`description\`.\n\nAvailable categories: ${DEBUG_CATEGORIES.join(", ")}`,
+          }],
+          isError: true,
+        };
+      }
+
+      const debugGuide = getDebugGuide(category);
+      const prefix = desc && autoDetectIssue(desc) === category
+        ? `> Auto-detected category: **${category}** from your description.\n\n`
+        : "";
+      return { content: withDisclaimer([{ type: "text", text: prefix + debugGuide }]) };
+    }
+
+    // ── generate_scene ───────────────────────────────────────────────────────
+    case "generate_scene": {
+      const sceneDesc = request.params.arguments?.description as string;
+      if (!sceneDesc || typeof sceneDesc !== "string") {
+        return {
+          content: [{ type: "text", text: "Missing required parameter: `description`." }],
+          isError: true,
+        };
+      }
+      const sceneResult = generateScene(sceneDesc);
+      const sceneReport = formatGeneratedScene(sceneResult);
+      return { content: withDisclaimer([{ type: "text", text: sceneReport }]) };
     }
 
     default:

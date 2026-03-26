@@ -144,8 +144,15 @@ class Box : CollisionShape {
             return false
         }
 
-        result.setDistance(tMin)
-        result.setPoint(ray.getPoint(result.getDistance()))
+        // If tMax < 0, the box is entirely behind the ray origin
+        if (tMax < 0f) {
+            return false
+        }
+
+        // Use tMin if it's non-negative (ray starts outside box), else tMax (ray starts inside box)
+        val distance = if (tMin >= 0f) tMin else tMax
+        result.setDistance(distance)
+        result.setPoint(ray.getPoint(distance))
         return true
     }
 
