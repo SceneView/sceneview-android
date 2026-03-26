@@ -206,7 +206,7 @@ A scene with no environment and no explicit light is completely dark. Always set
 
 ## Still stuck?
 
-- Search existing [GitHub Issues](https://github.com/SceneView/sceneview/issues) —
+- Search existing [GitHub Issues](https://github.com/sceneview/sceneview/issues) —
   many questions have already been answered.
 - Open a new issue with your SceneView version, device model, Android version, and a minimal
   reproducible snippet.

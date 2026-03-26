@@ -1,6 +1,6 @@
 # SceneViewSwift
 
-3D and AR scenes in SwiftUI, powered by RealityKit. The Apple companion to [SceneView for Android](https://github.com/SceneView/sceneview).
+3D and AR scenes in SwiftUI, powered by RealityKit. The Apple companion to [SceneView for Android](https://github.com/sceneview/sceneview).
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
@@ -13,7 +13,7 @@ Add SceneViewSwift via Swift Package Manager:
 1. In Xcode, go to **File > Add Package Dependencies...**
 2. Enter the repository URL:
    ```
-   https://github.com/SceneView/sceneview-swift
+   https://github.com/sceneview/sceneview-swift
    ```
 3. Select the version rule and add the package to your target.
 
@@ -21,7 +21,7 @@ Or add it to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/SceneView/sceneview-swift", from: "3.3.0")
+    .package(url: "https://github.com/sceneview/sceneview-swift", from: "3.3.0")
 ]
 ```
 

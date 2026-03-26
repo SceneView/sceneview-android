@@ -76,7 +76,7 @@ so it can generate correct, compilable Kotlin code for your app without
 hallucinating APIs or missing dependencies.
 
 → npm: npmjs.com/package/sceneview-mcp
-→ SDK: github.com/SceneView/sceneview
+→ SDK: github.com/sceneview/sceneview
 
 Setup (30 seconds):
 Add to ~/Library/Application Support/Claude/claude_desktop_config.json:

@@ -15,8 +15,8 @@ Thanks for your interest in contributing! This guide covers everything you need 
 ### Clone and open
 
 ```bash
-git clone https://github.com/SceneView/sceneview-android.git
-cd sceneview-android
+git clone https://github.com/sceneview/sceneview.git
+cd sceneview
 ```
 
 Open the project in Android Studio. Gradle sync will pull all dependencies automatically.
@@ -103,13 +103,13 @@ After your changes are merged, the Discord bot will award you the **Contributor*
 
 ### Changes in Filament materials
 
-Recompile Filament materials using the [current Filament version](https://github.com/google/filament/releases) if you modify them. Enable the [Filament plugin](https://github.com/SceneView/sceneview/blob/main/gradle.properties) and build.
+Recompile Filament materials using the [current Filament version](https://github.com/google/filament/releases) if you modify them. Enable the [Filament plugin](https://github.com/sceneview/sceneview/blob/main/gradle.properties) and build.
 
 ---
 
 ## Issues and discussions
 
-- **Bug reports**: use the issue templates on [GitHub Issues](https://github.com/SceneView/sceneview-android/issues). Include platform, SceneView version, minimal reproduction steps, and relevant logs.
-- **Questions**: open a [Discussion](https://github.com/SceneView/sceneview/discussions) instead of an issue.
+- **Bug reports**: use the issue templates on [GitHub Issues](https://github.com/sceneview/sceneview/issues). Include platform, SceneView version, minimal reproduction steps, and relevant logs.
+- **Questions**: open a [Discussion](https://github.com/sceneview/sceneview/discussions) instead of an issue.
 - **Feature requests**: welcomed as issues or discussions.
 - **Chat**: join the [Discord](https://discord.gg/UbNDDBTNqb) to talk with the community and maintainers.

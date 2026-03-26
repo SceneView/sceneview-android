@@ -48,5 +48,5 @@ SceneView.create(
 
 SceneView is a declarative 3D/AR SDK for Android, iOS, macOS, visionOS, Web, and Desktop.
 
-- [GitHub](https://github.com/SceneView/sceneview)
+- [GitHub](https://github.com/sceneview/sceneview)
 - [Documentation](https://sceneview.github.io)

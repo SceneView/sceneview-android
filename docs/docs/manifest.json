@@ -54,7 +54,7 @@
     },
     {
       "platform": "swift",
-      "url": "https://github.com/SceneView/SceneViewSwift",
+      "url": "https://github.com/sceneview/sceneview-swift",
       "id": "SceneViewSwift"
     }
   ],

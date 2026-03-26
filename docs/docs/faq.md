@@ -13,7 +13,7 @@ SceneView is a declarative 3D and AR SDK for Android and Apple platforms. On And
 
 ### Is it free?
 
-Yes. SceneView is open source under the [Apache 2.0 license](https://github.com/SceneView/sceneview/blob/main/LICENSE). Free for personal and commercial use.
+Yes. SceneView is open source under the [Apache 2.0 license](https://github.com/sceneview/sceneview/blob/main/LICENSE). Free for personal and commercial use.
 
 ### What's the relationship to Sceneform?
 

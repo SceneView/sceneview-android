@@ -1,6 +1,7 @@
 package io.github.sceneview.web
 
 import io.github.sceneview.web.bindings.Camera
+import io.github.sceneview.web.bindings.float3
 import kotlinx.browser.window
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.MouseEvent
@@ -77,6 +78,9 @@ class OrbitCameraController(
     /**
      * Update camera position from spherical coordinates.
      * Call this every frame in the render loop.
+     *
+     * Converts spherical coordinates (theta, phi, distance) to Cartesian
+     * and calls camera.lookAt() with float3 arrays as required by Filament.js.
      */
     fun update() {
         // Apply auto-rotation
@@ -101,10 +105,11 @@ class OrbitCameraController(
         val eyeY = targetY + distance * cos(phi)
         val eyeZ = targetZ + distance * sin(phi) * cos(theta)
 
+        // Filament.js Camera.lookAt takes float3 arrays, not 9 separate doubles
         camera.lookAt(
-            eyeX, eyeY, eyeZ,      // eye
-            targetX, targetY, targetZ,  // center
-            0.0, 1.0, 0.0           // up
+            float3(eyeX, eyeY, eyeZ),          // eye
+            float3(targetX, targetY, targetZ),  // center
+            float3(0.0, 1.0, 0.0)              // up
         )
     }
 

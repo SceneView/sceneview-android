@@ -72,7 +72,7 @@ convert -size 1280x640 \
 ### Checklist
 
 - [ ] Export at exactly 1280x640px
-- [ ] Upload at: github.com/SceneView/sceneview-android > Settings > Social preview
+- [ ] Upload at: github.com/sceneview/sceneview > Settings > Social preview
 - [ ] Verify preview on: https://www.opengraph.xyz/
 - [ ] Looks good on Twitter/X card preview
 - [ ] Looks good on Slack/Discord link preview

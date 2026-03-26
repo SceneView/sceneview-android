@@ -1,12 +1,10 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
+      "Bash(grep -l \"sceneview\\\\|filament\" samples/web-demo/src/jsMain/kotlin/**/*.kt)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)"
     ]
-  },
-  "skipDangerousModePermissionPrompt": true,
-  "skipAutoPermissionPrompt": true
+  }
 }
