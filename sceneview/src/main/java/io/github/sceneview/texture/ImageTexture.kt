@@ -20,6 +20,10 @@ class ImageTexture {
             sampler(Texture.Sampler.SAMPLER_2D)
             // This tells Filament to figure out the number of mip levels
             levels(0xff)
+            // Include GEN_MIPMAPPABLE so generateMipmaps() works in build().
+            // DEFAULT (UPLOADABLE | SAMPLEABLE) alone causes a fatal assertion
+            // in Filament 1.70+ when generateMipmaps is called.
+            usage(Texture.Usage.DEFAULT or Texture.Usage.GEN_MIPMAPPABLE)
         }
 
         fun type(type: TextureType) = apply {
