@@ -261,4 +261,4 @@ Scene(modifier = Modifier.fillMaxSize()) {
 - **Contribute**: Check [CONTRIBUTING.md](contributing.md) for guidelines
 - **Sponsor**: Help fund multi-platform development on [Open Collective](https://opencollective.com/sceneview)
 
-[:octicons-arrow-right-24: Full roadmap on GitHub](https://github.com/SceneView/sceneview/blob/main/ROADMAP.md)
+[:octicons-arrow-right-24: Full roadmap on GitHub](https://github.com/sceneview/sceneview/blob/main/ROADMAP.md)

@@ -1,8 +1,8 @@
 site_name: SceneView — 3D & AR SDK
 site_description: "The #1 open-source 3D & AR SDK for Android and iOS. Compose-native scenes powered by Google Filament and ARCore on Android, SwiftUI and RealityKit on iOS. Drop-in Scene{} and ARScene{} composables for model viewing, AR placement, physics, and immersive experiences."
 site_url: https://sceneview.github.io/
-repo_url: https://github.com/SceneView/sceneview
-repo_name: SceneView/sceneview
+repo_url: https://github.com/sceneview/sceneview
+repo_name: sceneview/sceneview
 edit_uri: edit/main/docs/docs/
 copyright: Copyright &copy; 2021-2026 Thomas Gorisse — Apache 2.0 License
 
@@ -128,7 +128,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/SceneView/sceneview
+      link: https://github.com/sceneview/sceneview
       name: SceneView on GitHub
     - icon: fontawesome/brands/discord
       link: https://discord.gg/UbNDDBTNqb

@@ -36,6 +36,6 @@ Built with the latest Material 3 Expressive components:
 Built-in update support ensures you're always running the latest version.
 
 SceneView Demo is open source and part of the SceneView project:
-https://github.com/SceneView/sceneview
+https://github.com/sceneview/sceneview
 
 Whether you're evaluating SceneView for a new project, debugging rendering issues, or looking for code examples — this app has you covered.

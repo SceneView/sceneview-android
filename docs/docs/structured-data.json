@@ -22,12 +22,12 @@
       "jobTitle": "Lead Developer"
     },
     "sameAs": [
-      "https://github.com/SceneView",
-      "https://github.com/SceneView/sceneview",
+      "https://github.com/sceneview",
+      "https://github.com/sceneview/sceneview",
       "https://discord.gg/UbNDDBTNqb",
       "https://opencollective.com/sceneview",
       "https://central.sonatype.com/artifact/io.github.sceneview/sceneview",
-      "https://github.com/SceneView/SceneViewSwift",
+      "https://github.com/sceneview/sceneview-swift",
       "https://www.npmjs.com/package/@sceneview/mcp"
     ],
     "contactPoint": [
@@ -40,7 +40,7 @@
       {
         "@type": "ContactPoint",
         "contactType": "bug reports",
-        "url": "https://github.com/SceneView/sceneview/issues"
+        "url": "https://github.com/sceneview/sceneview/issues"
       }
     ],
     "knowsAbout": [
@@ -100,7 +100,7 @@
     "dateModified": "2026-03-23",
     "downloadUrl": "https://central.sonatype.com/artifact/io.github.sceneview/sceneview",
     "installUrl": "https://sceneview.github.io/quickstart/",
-    "releaseNotes": "https://github.com/SceneView/sceneview/releases/tag/v3.3.0",
+    "releaseNotes": "https://github.com/sceneview/sceneview/releases/tag/v3.3.0",
     "softwareHelp": {
       "@type": "CreativeWork",
       "url": "https://sceneview.github.io/cheatsheet/"
@@ -203,7 +203,7 @@
       "Sceneform replacement", "Android XR", "spatial computing",
       "Compose 3D", "3D SDK", "AR SDK", "cross-platform 3D", "mobile AR"
     ],
-    "codeRepository": "https://github.com/SceneView/sceneview"
+    "codeRepository": "https://github.com/sceneview/sceneview"
   },
   {
     "@context": "https://schema.org",
@@ -211,8 +211,8 @@
     "@id": "https://sceneview.github.io/#sourcecode",
     "name": "SceneView",
     "description": "Open-source 3D & AR SDK for Android and iOS — Compose-native on Android, SwiftUI-native on iOS, shared core via Kotlin Multiplatform.",
-    "url": "https://github.com/SceneView/sceneview",
-    "codeRepository": "https://github.com/SceneView/sceneview",
+    "url": "https://github.com/sceneview/sceneview",
+    "codeRepository": "https://github.com/sceneview/sceneview",
     "codeSampleType": "full solution",
     "programmingLanguage": ["Kotlin", "Swift", "Java"],
     "runtimePlatform": ["Android", "iOS", "macOS", "visionOS"],

@@ -184,7 +184,10 @@ class ARSceneView private constructor(
         }
 
         // Render with Filament
-        if (sceneView.renderer.beginFrame(sceneView.swapChain, timestamp)) {
+        // Process pending Filament async operations (texture uploads, etc.)
+        sceneView.engine.execute()
+
+        if (sceneView.renderer.beginFrame(sceneView.swapChain)) {
             sceneView.renderer.renderView(sceneView.view)
             sceneView.renderer.endFrame()
         }
@@ -367,7 +370,10 @@ class VRSceneView private constructor(
         onFrame?.invoke(frame, pose)
 
         // Render with Filament
-        if (sceneView.renderer.beginFrame(sceneView.swapChain, timestamp)) {
+        // Process pending Filament async operations
+        sceneView.engine.execute()
+
+        if (sceneView.renderer.beginFrame(sceneView.swapChain)) {
             sceneView.renderer.renderView(sceneView.view)
             sceneView.renderer.endFrame()
         }

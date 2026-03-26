@@ -27,7 +27,7 @@ For longer-form questions, feature proposals, and architecture discussions, use
 GitHub Discussions. Threads are searchable and indexed by search engines, so your
 question may help someone else in the future.
 
-[:fontawesome-brands-github: Open a Discussion](https://github.com/SceneView/sceneview/discussions){ .md-button }
+[:fontawesome-brands-github: Open a Discussion](https://github.com/sceneview/sceneview/discussions){ .md-button }
 
 ---
 
@@ -45,7 +45,7 @@ you want a question-and-answer format that benefits the broader developer commun
 Found a bug or have an idea? Open an issue on GitHub. Please search existing issues
 first to avoid duplicates.
 
-[:octicons-issue-opened-16: Open an Issue](https://github.com/SceneView/sceneview/issues/new){ .md-button }
+[:octicons-issue-opened-16: Open an Issue](https://github.com/sceneview/sceneview/issues/new){ .md-button }
 
 ---
 
@@ -64,8 +64,8 @@ supporting the project:
 
 | Platform | Link |
 |---|---|
-| GitHub Sponsors | [github.com/sponsors/ThomasGorworisse](https://github.com/sponsors/ThomasGorisse) |
-| Polar.sh | [polar.sh/AcmeCorp/sceneview](https://polar.sh/SceneView/sceneview) |
+| GitHub Sponsors | [github.com/sponsors/ThomasGorisse](https://github.com/sponsors/ThomasGorisse) |
+| Polar.sh | [polar.sh/sceneview](https://polar.sh/sceneview) |
 
 Your sponsorship helps maintain the SDK, review PRs, write documentation, and keep
 the project alive.
@@ -74,6 +74,6 @@ the project alive.
 
 ## Stay Updated
 
-- **GitHub releases** — Watch the [sceneview repo](https://github.com/SceneView/sceneview)
+- **GitHub releases** — Watch the [sceneview repo](https://github.com/sceneview/sceneview)
   and enable release notifications
 - **Discord announcements** — Major releases are posted in the Discord server

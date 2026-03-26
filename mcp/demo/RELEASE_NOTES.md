@@ -42,5 +42,5 @@ Add to `.claude/mcp.json` (project), `~/.claude/mcp.json` (global), or `claude_d
 ## Links
 
 - npm: https://www.npmjs.com/package/sceneview-mcp
-- SDK: https://github.com/SceneView/sceneview
+- SDK: https://github.com/sceneview/sceneview
 - MCP spec: https://modelcontextprotocol.io
