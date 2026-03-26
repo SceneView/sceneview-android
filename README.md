@@ -244,7 +244,7 @@ sceneview-core (Kotlin Multiplatform)
 
 SceneView is **AI-first** — designed so AI assistants generate correct, compilable 3D/AR code on the first try.
 
-The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **14 specialized tools**, **33 compilable samples**, a full API reference, and a code validator — all verified by 612 tests.
+The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **18 specialized tools**, **33 compilable samples**, a full API reference, and a code validator — all verified by 612 tests.
 
 ```bash
 # One command — works with any MCP client

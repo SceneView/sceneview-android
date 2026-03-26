@@ -72,7 +72,7 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 
 ## What you get
 
-### 14 tools
+### 18 tools
 
 | Tool | What it does |
 |---|---|
@@ -91,6 +91,10 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 | `get_platform_roadmap` | Multi-platform status and timeline (Android, iOS, KMP, Web, Desktop) |
 | `render_3d_preview` | Generates an interactive 3D preview link the user can open in their browser |
 | `create_3d_artifact` | Generates self-contained HTML artifacts (model viewer, 3D charts, product 360) |
+| `get_platform_setup` | Unified setup guide for any platform (Android, iOS, Web, Flutter, React Native, Desktop, TV) |
+| `migrate_code` | Automatically migrates SceneView 2.x code to 3.x with detailed changelog |
+| `debug_issue` | Targeted debugging guide by category or auto-detected from problem description |
+| `generate_scene` | Generates a complete composable from natural language (e.g., "a room with a table and two chairs") |
 
 ### 2 resources
 
@@ -218,7 +222,7 @@ npm run dev      # Start with tsx (hot reload)
 ```
 mcp/
   src/
-    index.ts          # MCP server entry point (14 tools, 2 resources)
+    index.ts          # MCP server entry point (18 tools, 2 resources)
     samples.ts         # 33 compilable code samples (Kotlin + Swift)
     validator.ts       # Code validator (15+ rules, Kotlin + Swift)
     node-reference.ts  # Node type parser (extracts from llms.txt)
