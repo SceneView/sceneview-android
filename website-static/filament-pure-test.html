@@ -6,17 +6,17 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #0d1117; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Inter', system-ui, sans-serif; color: #fff; }
-canvas { width: 90vw; height: 70vh; max-width: 1200px; border-radius: 12px; }
-#status { margin: 16px; font-size: 14px; color: #8ab4f8; text-align: center; }
-h1 { font-size: 1.5rem; margin-bottom: 4px; background: linear-gradient(135deg, #fff, #8ab4f8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.sub { font-size: 0.8rem; color: #9aa0a6; margin-bottom: 16px; }
-.badge { position: fixed; bottom: 16px; right: 16px; font-size: 0.7rem; color: #9aa0a6; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 6px; }
+canvas { width: 90vw; height: 75vh; max-width: 1200px; border-radius: 12px; }
+#status { margin: 12px; font-size: 13px; color: #8ab4f8; text-align: center; }
+h1 { font-size: 1.4rem; margin-bottom: 2px; background: linear-gradient(135deg, #fff, #8ab4f8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.sub { font-size: 0.75rem; color: #9aa0a6; margin-bottom: 12px; }
+.badge { position: fixed; bottom: 12px; right: 12px; font-size: 0.65rem; color: #9aa0a6; background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 6px; }
 </style>
 </head>
 <body>
 <h1>SceneView Web</h1>
-<div class="sub">Real-time 3D rendering with Filament.js WASM — 25KB SDK</div>
-<div id="status">Loading Filament.js WASM (3.4MB)...</div>
+<div class="sub">Real-time 3D — Filament.js WASM — 25KB SDK</div>
+<div id="status">Loading Filament.js WASM...</div>
 <canvas id="canvas"></canvas>
 <div class="badge">Powered by SceneView + Filament.js</div>
 
@@ -24,36 +24,26 @@ h1 { font-size: 1.5rem; margin-bottom: 4px; background: linear-gradient(135deg, 
 <script>
 const status = document.getElementById('status');
 const canvas = document.getElementById('canvas');
-
-// Set canvas size to device pixels
 canvas.width = canvas.clientWidth * devicePixelRatio;
 canvas.height = canvas.clientHeight * devicePixelRatio;
 
 const MODEL_URL = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
 
 Filament.init([MODEL_URL], () => {
-  status.textContent = 'Filament WASM ready! Creating scene...';
-
+  status.textContent = 'Creating scene...';
   try {
     const engine = Filament.Engine.create(canvas);
     const scene = engine.createScene();
     const renderer = engine.createRenderer();
-    const cameraEntity = Filament.EntityManager.get().create();
-    const camera = engine.createCamera(cameraEntity);
+    const cam = engine.createCamera(Filament.EntityManager.get().create());
     const view = engine.createView();
-    const swapChain = engine.createSwapChain();
+    const sc = engine.createSwapChain();
 
-    view.setCamera(camera);
+    view.setCamera(cam);
     view.setScene(scene);
     view.setViewport([0, 0, canvas.width, canvas.height]);
-
-    // Clear color
     renderer.setClearOptions({ clearColor: [0.05, 0.06, 0.1, 1.0], clear: true });
-
-    // Camera
-    const aspect = canvas.width / canvas.height;
-    camera.setProjectionFov(45, aspect, 0.1, 1000, Filament.Camera$Fov.VERTICAL);
-    camera.lookAt([0, 0, 4], [0, 0, 0], [0, 1, 0]);
+    cam.setProjectionFov(45, canvas.width / canvas.height, 0.1, 100, Filament.Camera$Fov.VERTICAL);
 
     // Sunlight
     const sun = Filament.EntityManager.get().create();
@@ -67,71 +57,60 @@ Filament.init([MODEL_URL], () => {
       .build(engine, sun);
     scene.addEntity(sun);
 
-    // IBL (indirect light) — simple white ambient
-    const ibl = Filament.EntityManager.get().create();
+    // Fill light
+    const fill = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
-      .color([0.6, 0.65, 0.75])
+      .color([0.6, 0.65, 0.8])
       .intensity(30000)
       .direction([-0.5, 0.5, 1.0])
-      .build(engine, ibl);
-    scene.addEntity(ibl);
+      .build(engine, fill);
+    scene.addEntity(fill);
 
     // Load glTF model
     status.textContent = 'Loading 3D model...';
-
     const loader = engine.createAssetLoader();
-    const modelData = Filament.assets[MODEL_URL];
+    const asset = loader.createAsset(Filament.assets[MODEL_URL]);
 
-    if (modelData) {
-      const asset = loader.createAsset(modelData);
+    if (asset) {
+      // Load textures and materials from the GLB
+      asset.loadResources();
 
-      if (asset) {
-        // Load resources (textures, materials)
-        const resourceLoader = asset.getResourceLoader ? asset.getResourceLoader() : null;
-        if (resourceLoader) {
-          resourceLoader.loadResources();
-        }
+      // Add to scene
+      scene.addEntity(asset.getRoot());
+      const renderables = asset.getRenderableEntities();
+      scene.addEntities(renderables);
 
-        // Add all entities to the scene
-        const entities = asset.getEntities();
-        scene.addEntities(entities);
-
-        status.textContent = 'SceneView Web — Filament.js rendering!';
-        status.style.color = '#34a853';
-      } else {
-        status.textContent = 'Model loaded but asset creation failed. Rendering empty scene.';
-        status.style.color = '#fbbc04';
-      }
+      status.textContent = 'SceneView Web — Filament.js rendering! (' + renderables.length + ' meshes)';
+      status.style.color = '#34a853';
     } else {
-      status.textContent = 'Model preload failed. Rendering empty scene with lights.';
+      status.textContent = 'Rendering empty scene (model loading failed)';
       status.style.color = '#fbbc04';
     }
 
-    // Auto-rotation
+    // Render loop with rotating camera
     let angle = 0;
-    const radius = 4;
-
     function render() {
-      // Rotate camera
-      angle += 0.005;
-      const x = Math.sin(angle) * radius;
-      const z = Math.cos(angle) * radius;
-      camera.lookAt([x, 1, z], [0, 0, 0], [0, 1, 0]);
+      angle += 0.006;
+      const r = 3.5;
+      cam.lookAt(
+        [Math.sin(angle) * r, 0.8, Math.cos(angle) * r],
+        [0, 0, 0],
+        [0, 1, 0]
+      );
 
-      if (renderer.beginFrame(swapChain)) {
-        renderer.render(swapChain, view);
+      if (renderer.beginFrame(sc)) {
+        renderer.render(sc, view);
         renderer.endFrame();
       }
       engine.execute();
       requestAnimationFrame(render);
     }
-
     render();
 
-  } catch(e) {
+  } catch (e) {
     status.textContent = 'Error: ' + e.message;
     status.style.color = '#ea4335';
-    console.error('Filament error:', e);
+    console.error(e);
   }
 });
 </script>
