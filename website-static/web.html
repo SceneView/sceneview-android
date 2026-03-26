@@ -22,6 +22,10 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="SceneView Web — One Line 3D for the Web">
   <meta name="twitter:description" content="The lightest way to add 3D to any website. One script tag, one function call. 25KB library powered by Filament.js WASM.">
+  <meta name="twitter:image" content="https://sceneview.github.io/favicon.svg">
+
+  <meta property="og:image" content="https://sceneview.github.io/favicon.svg">
+  <meta property="og:image:alt" content="SceneView Web — 3D for the Web">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -294,6 +298,7 @@
       <div class="nav__links" id="navLinks">
         <a href="/" class="nav__link">Home</a>
         <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
+        <a href="/web.html" class="nav__link" style="color:var(--color-primary);font-weight:600">Web</a>
         <a href="/playground.html" class="nav__link">Playground</a>
         <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
         <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
@@ -597,7 +602,7 @@
     // Theme toggle
     (function() {
       const html = document.documentElement;
-      const saved = localStorage.getItem('theme');
+      const saved = localStorage.getItem('sceneview-theme');
       if (saved) html.setAttribute('data-theme', saved);
       else if (window.matchMedia('(prefers-color-scheme: dark)').matches) html.setAttribute('data-theme', 'dark');
 
@@ -605,7 +610,7 @@
       if (toggle) toggle.addEventListener('click', () => {
         const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         html.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
+        localStorage.setItem('sceneview-theme', next);
       });
     })();
 
