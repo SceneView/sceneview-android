@@ -29,15 +29,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * SceneView Desktop — Compose Desktop application with software 3D renderer.
+ * Desktop Demo — Compose Desktop wireframe renderer (NOT SceneView).
  *
- * Architecture:
- * - Compose Desktop provides the UI framework (window, layout, Material 3)
- * - Software renderer using Compose Canvas + sceneview-core math
- * - Wireframe 3D rendering with orbit camera
- * - Filament JNI integration planned for hardware-accelerated rendering
+ * IMPORTANT: This app does NOT use SceneView or Filament.
+ * It is a standalone Compose Canvas wireframe renderer that serves as a
+ * UI placeholder for a future Filament JNI desktop integration.
  *
- * To run: ./gradlew :sceneview-desktop:run
+ * What this IS:  Compose Canvas 2D drawing with manual perspective projection.
+ * What this is NOT: GPU-accelerated 3D rendering, glTF model loading, PBR materials.
+ *
+ * To run: ./gradlew :samples:desktop-demo:run
  */
 
 // SceneView brand colors
@@ -62,7 +63,7 @@ fun main() = application {
 
     Window(
         onCloseRequest = ::exitApplication,
-        title = "SceneView Desktop — 3D Viewer",
+        title = "SceneView Desktop Demo — Software Renderer (Preview)",
         state = windowState,
     ) {
         MaterialTheme(colorScheme = SceneViewColorScheme) {
@@ -105,7 +106,7 @@ fun DesktopApp() {
                         }
                     }
                     Text(
-                        "v3.3.0 • Desktop",
+                        "Software Renderer (Preview) • Not SceneView",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -151,12 +152,12 @@ fun SoftwareRenderer3D() {
             modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
         ) {
             Text(
-                "Software Renderer",
+                "Software Renderer (Not SceneView)",
                 style = MaterialTheme.typography.labelMedium,
                 color = SceneViewBlue
             )
             Text(
-                "Compose Canvas • sceneview-core math",
+                "Compose Canvas 2D • No Filament • No GPU acceleration",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.4f)
             )
@@ -208,26 +209,39 @@ fun AboutScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "SceneView Desktop",
+                "Desktop Demo",
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = SceneViewBlue
             )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF332200)
+            ) {
+                Text(
+                    "Software Renderer Preview — This app does NOT use SceneView or Filament",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFFB74D)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
-                "3D & AR for every platform, powered by AI",
-                style = MaterialTheme.typography.titleMedium,
+                "Compose Canvas wireframe renderer with manual perspective projection.\n" +
+                    "A UI placeholder for future Filament JNI desktop integration.",
+                style = MaterialTheme.typography.titleSmall,
                 color = Color.White.copy(alpha = 0.7f)
             )
             Spacer(Modifier.height(16.dp))
 
             val platforms = listOf(
-                "Android" to "Filament • Jetpack Compose",
-                "iOS / macOS / visionOS" to "RealityKit • SwiftUI",
-                "Web" to "Filament.js • Kotlin/JS",
-                "Desktop" to "Software renderer (Filament JNI planned)",
-                "Android TV" to "Compose TV • D-pad controls",
-                "Flutter" to "PlatformView bridge",
-                "React Native" to "Fabric bridge"
+                "Android" to "Filament • Jetpack Compose (production)",
+                "iOS / macOS / visionOS" to "RealityKit • SwiftUI (alpha)",
+                "Web" to "Filament.js • Kotlin/JS (alpha)",
+                "Desktop" to "Software wireframe only (Filament JNI not yet available)",
+                "Android TV" to "Filament • Compose TV (alpha)",
+                "Flutter" to "PlatformView bridge (alpha)",
+                "React Native" to "Fabric bridge (alpha)"
             )
 
             platforms.forEach { (platform, tech) ->

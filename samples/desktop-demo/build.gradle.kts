@@ -12,7 +12,8 @@ kotlin {
     sourceSets {
         val desktopMain by getting {
             dependencies {
-                // SceneView KMP core (collision, math, geometry, animation, physics)
+                // SceneView KMP core — declared as dependency but NOT used for rendering.
+                // This demo is a Compose Canvas wireframe renderer, not a SceneView integration.
                 api(project(":sceneview-core"))
 
                 // Compose Desktop
@@ -21,8 +22,8 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.foundation)
 
-                // LWJGL for OpenGL context and native window management
-                // Filament renders via OpenGL/Vulkan — LWJGL provides the JVM bridge
+                // LWJGL — declared for future Filament JNI integration but currently UNUSED.
+                // The current demo renders wireframes via Compose Canvas, not OpenGL.
                 val lwjglVersion = "3.3.6"
                 implementation("org.lwjgl:lwjgl:$lwjglVersion")
                 implementation("org.lwjgl:lwjgl-opengl:$lwjglVersion")

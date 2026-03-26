@@ -8,9 +8,9 @@ Same concepts, same simplicity — Android, iOS, Web, Desktop, TV, Flutter, Reac
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Android&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![AR](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=AR&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
 [![npm](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&color=1a73e8)](https://www.npmjs.com/package/sceneview-mcp)
-[![CI](https://img.shields.io/github/actions/workflow/status/SceneView/sceneview/ci.yml?branch=main&label=CI)](https://github.com/SceneView/sceneview/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/SceneView/sceneview?color=blue)](https://github.com/SceneView/sceneview/blob/main/LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/SceneView/sceneview?style=flat&color=yellow)](https://github.com/SceneView/sceneview/stargazers)
+[![CI](https://img.shields.io/github/actions/workflow/status/sceneview/sceneview/ci.yml?branch=main&label=CI)](https://github.com/sceneview/sceneview/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/sceneview/sceneview?color=blue)](https://github.com/sceneview/sceneview/blob/main/LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/sceneview/sceneview?style=flat&color=yellow)](https://github.com/sceneview/sceneview/stargazers)
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff)](https://discord.gg/UbNDDBTNqb)
 [![Sponsors](https://img.shields.io/github/sponsors/ThomasGorisse?label=Sponsors&color=ea4aaa)](https://github.com/sponsors/ThomasGorisse)
 
@@ -65,7 +65,7 @@ dependencies {
 
 **iOS / macOS / visionOS** (Swift Package Manager):
 ```
-https://github.com/SceneView/SceneViewSwift.git  (from: 3.3.0)
+https://github.com/sceneview/sceneview-swift.git  (from: 3.3.0)
 ```
 
 **Web** (Kotlin/JS + Filament.js):
@@ -184,7 +184,7 @@ ARSceneView(planeDetection: .horizontal) { position, arView in
 }
 ```
 
-**Install:** `https://github.com/SceneView/SceneViewSwift.git` (SPM, from 3.3.0)
+**Install:** `https://github.com/sceneview/sceneview-swift.git` (SPM, from 3.3.0)
 
 ---
 
@@ -200,7 +200,7 @@ sceneview-core (Kotlin Multiplatform)
 ├── arsceneview (Android)    → ARCore
 ├── SceneViewSwift (Apple)   → RealityKit + SwiftUI
 ├── sceneview-web (Web)      → Filament.js + WebXR
-└── sceneview-desktop (JVM)  → Compose Desktop
+└── desktop-demo (JVM)      → Compose Desktop (software wireframe placeholder)
 ```
 
 ---
@@ -213,7 +213,7 @@ sceneview-core (Kotlin Multiplatform)
 | `samples/android-tv-demo` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` |
 | `samples/ios-demo` | iOS | Open in Xcode |
 | `samples/web-demo` | Web | `./gradlew :samples:web-demo:jsBrowserRun` |
-| `samples/desktop-demo` | Desktop | `./gradlew :samples:desktop-demo:run` |
+| `samples/desktop-demo` | Desktop | `./gradlew :samples:desktop-demo:run` (wireframe placeholder, not SceneView) |
 | `samples/flutter-demo` | Flutter | `cd samples/flutter-demo && flutter run` |
 | `samples/react-native-demo` | React Native | See README |
 
@@ -234,7 +234,7 @@ The MCP server provides API reference, code samples, setup guides, validation, a
 ## Links
 
 - [Website](https://sceneview.github.io/)
-- [Documentation](https://sceneview.github.io/quickstart/)
+- [Documentation](https://github.com/sceneview/sceneview#readme)
 - [Discord](https://discord.gg/UbNDDBTNqb)
 - [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
