@@ -8,7 +8,7 @@ import SceneViewSwift
 /// Tabs: 3D Viewer, AR Viewer, Samples, About
 @main
 struct SceneViewDemoApp: App {
-    var body: some Scene {
+    var body: some SwiftUI.Scene {
         WindowGroup {
             TabView {
                 ExploreTab()
