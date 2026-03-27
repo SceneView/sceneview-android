@@ -18,6 +18,7 @@ import { migrateCode, formatMigrationResult } from "./migrate-code.js";
 import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES } from "./debug-issue.js";
 import { generateScene, formatGeneratedScene } from "./generate-scene.js";
 import { ANIMATION_GUIDE, GESTURE_GUIDE, PERFORMANCE_TIPS } from "./advanced-guides.js";
+import { MATERIAL_GUIDE, COLLISION_GUIDE, MODEL_OPTIMIZATION_GUIDE, WEB_RENDERING_GUIDE } from "./extra-guides.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ─── Legal disclaimer ─────────────────────────────────────────────────────────
 const DISCLAIMER = '\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/sceneview/sceneview/blob/main/mcp/TERMS.md).*';
@@ -38,7 +39,7 @@ catch {
     API_DOCS = "SceneView API docs not found. Run `npm run prepare` to bundle llms.txt.";
 }
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
-const server = new Server({ name: "sceneview-mcp", version: "3.4.14" }, { capabilities: { resources: {}, tools: {} } });
+const server = new Server({ name: "sceneview-mcp", version: "3.5.1" }, { capabilities: { resources: {}, tools: {} } });
 // ─── Resources ───────────────────────────────────────────────────────────────
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
@@ -446,6 +447,42 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         {
             name: "get_performance_tips",
             description: "Returns a comprehensive performance optimization guide for SceneView — polygon budgets per device tier, LOD, texture compression (KTX2/Basis Universal), mesh compression (Draco/Meshopt), engine reuse, per-frame allocation avoidance, frustum culling, instancing, lighting optimization, post-processing costs, and profiling with Systrace and Android GPU Inspector. Includes code samples and CLI commands. Use this when a user asks about performance, optimization, FPS, memory, profiling, or slow rendering.",
+            inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+            },
+        },
+        {
+            name: "get_material_guide",
+            description: "Returns a comprehensive guide for PBR materials in SceneView — baseColor, metallic, roughness, reflectance, emissive, clearCoat, normal maps. Includes recipes for common materials (glass, chrome, gold, rubber, car paint), code samples for modifying materials on ModelNode, texture setup, and environment lighting requirements. Use this when a user asks about materials, textures, colors, shaders, appearance, or why their model looks wrong (flat, dark, too shiny).",
+            inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+            },
+        },
+        {
+            name: "get_collision_guide",
+            description: "Returns a comprehensive guide for collision detection, hit testing, and physics in SceneView — node tapping (onTouchEvent), AR surface hit testing (frame.hitTest), ray-box/ray-sphere intersection (KMP core), bounding boxes, and basic rigid body physics. Use this when a user asks about tapping 3D objects, collision detection, physics simulation, ray casting, or hit testing.",
+            inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+            },
+        },
+        {
+            name: "get_model_optimization_guide",
+            description: "Returns a complete guide for optimizing 3D models for SceneView — polygon budgets per device tier, file size targets, Draco/Meshopt mesh compression, KTX2 texture compression, the recommended optimization pipeline (gltf-transform CLI), texture sizing rules, LOD strategies, and quick wins. Use this when a user asks about model optimization, file size, load times, polygon count, texture compression, or preparing models for mobile.",
+            inputSchema: {
+                type: "object",
+                properties: {},
+                required: [],
+            },
+        },
+        {
+            name: "get_web_rendering_guide",
+            description: "Returns a comprehensive guide for SceneView Web (Filament.js WASM) — architecture, quick start (sceneview.js npm or Kotlin/JS), IBL environment lighting (critical for PBR quality), rendering quality settings (SSAO, bloom, TAA), camera exposure tuning, Filament.js vs model-viewer comparison, and web performance tips. Use this when a user asks about web 3D rendering, Filament.js, browser viewing, WebGL, or wants to display 3D models in a web page.",
             inputSchema: {
                 type: "object",
                 properties: {},
@@ -1089,6 +1126,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // ── get_performance_tips ─────────────────────────────────────────────────
         case "get_performance_tips": {
             return { content: withDisclaimer([{ type: "text", text: PERFORMANCE_TIPS }]) };
+        }
+        // ── get_material_guide ───────────────────────────────────────────────────
+        case "get_material_guide": {
+            return { content: withDisclaimer([{ type: "text", text: MATERIAL_GUIDE }]) };
+        }
+        // ── get_collision_guide ──────────────────────────────────────────────────
+        case "get_collision_guide": {
+            return { content: withDisclaimer([{ type: "text", text: COLLISION_GUIDE }]) };
+        }
+        // ── get_model_optimization_guide ─────────────────────────────────────────
+        case "get_model_optimization_guide": {
+            return { content: withDisclaimer([{ type: "text", text: MODEL_OPTIMIZATION_GUIDE }]) };
+        }
+        // ── get_web_rendering_guide ──────────────────────────────────────────────
+        case "get_web_rendering_guide": {
+            return { content: withDisclaimer([{ type: "text", text: WEB_RENDERING_GUIDE }]) };
         }
         default:
             return {

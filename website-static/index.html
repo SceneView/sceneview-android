@@ -42,10 +42,10 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Filament.js WASM engine (required by SceneView Web) -->
-  <script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
+  <!-- Filament.js v1.70.1 WASM engine (required by SceneView Web) -->
+  <script src="js/filament/filament.js"></script>
   <!-- SceneView Web — our 3D library built on Filament.js -->
-  <script src="js/sceneview.js"></script>
+  <script src="js/sceneview.js?v=1.3.3"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
@@ -146,8 +146,13 @@
           </a>
         </div>
       </div>
-      <div class="hero__model">
+      <div class="hero__model" style="position:relative">
         <canvas id="hero-canvas" style="width:100%;height:100%;cursor:grab;display:block" aria-label="3D damaged helmet rendered by SceneView Web (Filament.js)"></canvas>
+        <div id="hero-loader" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;pointer-events:none;transition:opacity 0.5s ease">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1.2s linear infinite;opacity:0.5"><circle cx="12" cy="12" r="10" stroke-dasharray="50 20"/></svg>
+          <span style="font-size:0.85rem;opacity:0.45;font-weight:500">Loading 3D engine&hellip;</span>
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
       </div>
     </div>
   </section>
@@ -808,21 +813,35 @@
     var canvas = document.getElementById('hero-canvas');
     if (!canvas) return;
 
-    // Match background to theme
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var bg = isDark ? [0.07, 0.07, 0.11, 1.0] : [0.96, 0.97, 0.98, 1.0];
+    var loader = document.getElementById('hero-loader');
+
+    function getThemeBg() {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      return isDark ? [0.07, 0.07, 0.11, 1.0] : [0.96, 0.97, 0.98, 1.0];
+    }
+
+    var bg = getThemeBg();
 
     SceneView.modelViewer('hero-canvas', 'models/DamagedHelmet.glb', {
-      backgroundColor: bg
+      backgroundColor: bg,
+      lightIntensity: 150000,
+      fov: 35
     }).then(function(viewer) {
-      // Listen for theme changes
+      // Hide loading indicator once the 3D scene is ready
+      if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(function() { loader.style.display = 'none'; }, 500);
+      }
+
+      // Listen for theme changes and update background color
       new MutationObserver(function() {
-        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        // SceneView Web handles the rest via its internal renderer
+        var colors = getThemeBg();
+        viewer.setBackgroundColor(colors[0], colors[1], colors[2], colors[3]);
       }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     }).catch(function(e) {
-        console.error('SceneView Web hero renderer error:', e);
-      }
+      console.error('SceneView Web hero renderer error:', e);
+      // Hide loader on error too
+      if (loader) loader.style.display = 'none';
     });
   })();
   </script>

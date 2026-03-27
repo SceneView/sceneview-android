@@ -34,7 +34,11 @@
   <link rel="preconnect" href="https://ajax.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- model-viewer -->
+  <!-- Filament.js v1.70.1 WASM engine (local) -->
+  <script src="js/filament/filament.js"></script>
+  <!-- SceneView Web — our 3D library built on Filament.js -->
+  <script src="js/sceneview.js?v=1.3.3"></script>
+  <!-- model-viewer (fallback renderer option) -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -287,10 +291,36 @@
         var(--color-surface-dim) 80%);
     }
 
-    .playground__model-wrap model-viewer {
+    .playground__model-wrap model-viewer,
+    .playground__model-wrap canvas {
       width: 100%;
       height: 100%;
       --poster-color: transparent;
+      display: block;
+    }
+
+    .playground__model-wrap canvas {
+      cursor: grab;
+    }
+
+    .playground__renderer-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--radius-xs);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      margin-left: 8px;
+    }
+
+    .playground__renderer-badge--sceneview {
+      background: rgba(26,115,232,0.12);
+      color: var(--color-primary);
+    }
+
+    .playground__renderer-badge--modelviewer {
+      background: rgba(108,92,231,0.12);
+      color: #6c5ce7;
     }
 
     /* Description panel */
@@ -413,6 +443,11 @@
           <option value="custom-geometry">Custom Geometry</option>
           <option value="animation">Animation</option>
         </select>
+        <span class="playground__label" style="margin-left:16px">Renderer</span>
+        <select class="playground__select" id="rendererSelect">
+          <option value="sceneview">SceneView (Filament.js)</option>
+          <option value="model-viewer">model-viewer</option>
+        </select>
         <span class="playground__label" style="margin-left:16px">Model</span>
         <select class="playground__select" id="modelSelect">
           <option value="DamagedHelmet">Damaged Helmet</option>
@@ -464,10 +499,11 @@
       <!-- Right: 3D Preview -->
       <div class="playground__preview">
         <div class="playground__preview-header">
-          <span class="playground__preview-label">3D Preview</span>
+          <span class="playground__preview-label">3D Preview<span id="rendererBadge" class="playground__renderer-badge playground__renderer-badge--sceneview">SceneView</span></span>
           <span class="playground__preview-hint">Drag to rotate, scroll to zoom</span>
         </div>
         <div class="playground__model-wrap">
+          <canvas id="previewCanvas" aria-label="3D model preview (SceneView Web / Filament.js)"></canvas>
           <model-viewer
             id="previewModel"
             src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
@@ -484,6 +520,7 @@
             environment-image="neutral"
             camera-orbit="45deg 70deg 2.5m"
             loading="eager"
+            style="display:none"
           ></model-viewer>
         </div>
         <div class="playground__description" id="description">
@@ -881,16 +918,91 @@ fun AnimationScreen() {\n\
       loadExample(this.value);
     });
 
-    // Model preset switcher — loads Khronos glTF-Sample-Assets models from CDN
+    // ===== RENDERER SWITCHING =====
     var MODEL_BASE = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
     var modelSelect = document.getElementById('modelSelect');
+    var rendererSelect = document.getElementById('rendererSelect');
     var previewModel = document.getElementById('previewModel');
+    var previewCanvas = document.getElementById('previewCanvas');
+    var rendererBadge = document.getElementById('rendererBadge');
+    var currentRenderer = 'sceneview'; // default to SceneView
+    var sceneViewInstance = null;
 
+    function getModelUrl(name) {
+      return MODEL_BASE + '/' + name + '/glTF-Binary/' + name + '.glb';
+    }
+
+    function getThemeBg() {
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      return dark ? [0.07, 0.07, 0.11, 1.0] : [0.96, 0.97, 0.98, 1.0];
+    }
+
+    function initSceneView(modelUrl) {
+      if (typeof SceneView === 'undefined') {
+        console.warn('SceneView not loaded, falling back to model-viewer');
+        switchToModelViewer();
+        return;
+      }
+      // Dispose previous instance
+      if (sceneViewInstance) {
+        try { sceneViewInstance.dispose(); } catch(e) {}
+        sceneViewInstance = null;
+      }
+      SceneView.modelViewer('previewCanvas', modelUrl, {
+        backgroundColor: getThemeBg()
+      }).then(function(instance) {
+        sceneViewInstance = instance;
+      }).catch(function(e) {
+        console.warn('SceneView init error:', e);
+      });
+    }
+
+    function switchToSceneView() {
+      currentRenderer = 'sceneview';
+      previewCanvas.style.display = 'block';
+      previewModel.style.display = 'none';
+      rendererBadge.textContent = 'SceneView';
+      rendererBadge.className = 'playground__renderer-badge playground__renderer-badge--sceneview';
+      var name = modelSelect.value;
+      initSceneView(getModelUrl(name));
+    }
+
+    function switchToModelViewer() {
+      currentRenderer = 'model-viewer';
+      previewCanvas.style.display = 'none';
+      previewModel.style.display = 'block';
+      rendererBadge.textContent = 'model-viewer';
+      rendererBadge.className = 'playground__renderer-badge playground__renderer-badge--modelviewer';
+      // Dispose SceneView instance
+      if (sceneViewInstance) {
+        try { sceneViewInstance.dispose(); } catch(e) {}
+        sceneViewInstance = null;
+      }
+      var name = modelSelect.value;
+      previewModel.setAttribute('src', getModelUrl(name));
+    }
+
+    rendererSelect.addEventListener('change', function() {
+      if (this.value === 'sceneview') {
+        switchToSceneView();
+      } else {
+        switchToModelViewer();
+      }
+    });
+
+    // Model preset switcher
     modelSelect.addEventListener('change', function () {
       var name = this.value;
-      var url = MODEL_BASE + '/' + name + '/glTF-Binary/' + name + '.glb';
-      previewModel.setAttribute('src', url);
+      var url = getModelUrl(name);
+      if (currentRenderer === 'sceneview') {
+        initSceneView(url);
+      } else {
+        previewModel.setAttribute('src', url);
+      }
     });
+
+    // Initialize default renderer (SceneView)
+    switchToSceneView();
 
     // Copy button
     copyBtn.addEventListener('click', function () {

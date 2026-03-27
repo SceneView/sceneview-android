@@ -13,7 +13,11 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- model-viewer web component -->
+  <!-- Filament.js v1.70.1 WASM engine (local) -->
+  <script src="js/filament/filament.js"></script>
+  <!-- SceneView Web — our 3D library built on Filament.js -->
+  <script src="js/sceneview.js?v=1.3.3"></script>
+  <!-- model-viewer web component (kept for platform grid thumbnails) -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 
   <style>
@@ -239,9 +243,11 @@
       position: relative;
     }
 
-    .ecom-app__viewer model-viewer {
+    .ecom-app__viewer model-viewer,
+    .ecom-app__viewer canvas {
       width: 100%;
       height: 100%;
+      display: block;
     }
 
     .ecom-app__bottom {
@@ -311,9 +317,11 @@
       height: 100%;
     }
 
-    .ar-scene model-viewer {
+    .ar-scene model-viewer,
+    .ar-scene canvas {
       width: 100%;
       height: 100%;
+      display: block;
     }
 
     .ar-scene__grid {
@@ -383,9 +391,11 @@
       background: radial-gradient(ellipse at 50% 60%, #1a1a2e 0%, #0a0a0f 100%);
     }
 
-    .auto-studio model-viewer {
+    .auto-studio model-viewer,
+    .auto-studio canvas {
       width: 100%;
       height: 100%;
+      display: block;
     }
 
     .auto-studio__floor {
@@ -444,9 +454,11 @@
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     }
 
-    .edu-viewer model-viewer {
+    .edu-viewer model-viewer,
+    .edu-viewer canvas {
       width: 100%;
       height: 100%;
+      display: block;
     }
 
     .edu-viewer__labels {
@@ -525,9 +537,11 @@
       background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     }
 
-    .luxury-viewer model-viewer {
+    .luxury-viewer model-viewer,
+    .luxury-viewer canvas {
       width: 100%;
       height: 100%;
+      display: block;
     }
 
     .luxury-viewer__brand {
@@ -910,21 +924,7 @@
                 </div>
               </div>
               <div class="ecom-app__viewer">
-                <model-viewer
-                  src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
-                  alt="3D Sneaker product viewer"
-                  auto-rotate
-                  camera-controls
-                  shadow-intensity="1.2"
-                  shadow-softness="0.8"
-                  exposure="0.9"
-                  camera-orbit="30deg 75deg 0.35m"
-                  min-camera-orbit="auto auto 0.2m"
-                  max-camera-orbit="auto auto 1m"
-                  style="background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);"
-                  interaction-prompt="none"
-                  loading="eager"
-                ></model-viewer>
+                <canvas id="showcase-shoe" style="cursor:grab;" aria-label="3D Sneaker rendered by SceneView Web (Filament.js)"></canvas>
               </div>
               <div class="ecom-app__bottom">
                 <div class="ecom-app__name">Air Max Pulse</div>
@@ -996,21 +996,7 @@
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>
                 AR LIVE
               </div>
-              <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
-                alt="3D Chair in AR preview"
-                auto-rotate
-                camera-controls
-                shadow-intensity="1.5"
-                shadow-softness="1"
-                exposure="1"
-                camera-orbit="150deg 70deg 2.5m"
-                min-camera-orbit="auto auto 1m"
-                max-camera-orbit="auto auto 5m"
-                style="background: linear-gradient(180deg, #e8eaed 0%, #d5d8dc 100%);"
-                interaction-prompt="none"
-                loading="eager"
-              ></model-viewer>
+              <canvas id="showcase-chair" style="cursor:grab;" aria-label="3D Chair rendered by SceneView Web (Filament.js)"></canvas>
               <div class="ar-scene__grid"></div>
               <div class="ar-scene__controls">
                 <button class="ar-btn">
@@ -1077,22 +1063,7 @@
           <div class="device-frame__screen">
             <div class="auto-studio">
               <div class="auto-studio__label">Studio Mode</div>
-              <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb"
-                alt="3D car configurator"
-                auto-rotate
-                camera-controls
-                shadow-intensity="2"
-                shadow-softness="1"
-                exposure="0.7"
-                camera-orbit="-30deg 65deg 0.2m"
-                min-camera-orbit="auto auto 0.1m"
-                max-camera-orbit="auto auto 0.5m"
-                environment-image="neutral"
-                style="background: radial-gradient(ellipse at 50% 60%, #1a1a2e 0%, #0a0a0f 100%);"
-                interaction-prompt="none"
-                loading="eager"
-              ></model-viewer>
+              <canvas id="showcase-car" style="cursor:grab;" aria-label="3D car rendered by SceneView Web (Filament.js)"></canvas>
               <div class="auto-studio__floor"></div>
               <div class="auto-studio__controls">
                 <span class="auto-chip auto-chip--active">Exterior</span>
@@ -1151,21 +1122,7 @@
           <div class="device-frame__screen">
             <div class="device-frame__notch"></div>
             <div class="edu-viewer">
-              <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
-                alt="3D anatomy viewer"
-                auto-rotate
-                rotation-per-second="12deg"
-                camera-controls
-                shadow-intensity="0.5"
-                exposure="0.8"
-                camera-orbit="30deg 80deg 2.5m"
-                min-camera-orbit="auto auto 1.5m"
-                max-camera-orbit="auto auto 5m"
-                style="background: transparent;"
-                interaction-prompt="none"
-                loading="eager"
-              ></model-viewer>
+              <canvas id="showcase-helmet" style="cursor:grab;" aria-label="3D anatomy viewer rendered by SceneView Web (Filament.js)"></canvas>
               <div class="edu-viewer__labels">
                 <div class="edu-label edu-label--1">Frontal Cortex</div>
                 <div class="edu-label edu-label--2">Visor Assembly</div>
@@ -1237,23 +1194,7 @@
             <div class="device-frame__notch"></div>
             <div class="luxury-viewer">
               <div class="luxury-viewer__brand">Maison SceneView</div>
-              <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/IridescenceLamp/glTF-Binary/IridescenceLamp.glb"
-                alt="Luxury product viewer"
-                auto-rotate
-                rotation-per-second="8deg"
-                camera-controls
-                shadow-intensity="1"
-                shadow-softness="0.5"
-                exposure="1.2"
-                camera-orbit="40deg 70deg 0.6m"
-                min-camera-orbit="auto auto 0.3m"
-                max-camera-orbit="auto auto 1.5m"
-                environment-image="neutral"
-                style="background: transparent;"
-                interaction-prompt="none"
-                loading="eager"
-              ></model-viewer>
+              <canvas id="showcase-lamp" style="cursor:grab;" aria-label="Luxury product rendered by SceneView Web (Filament.js)"></canvas>
               <div class="luxury-viewer__price-tag">
                 <span class="luxury-viewer__product-name">Iridescence Lamp</span>
                 <span class="luxury-viewer__product-price">Limited Edition</span>
@@ -1500,5 +1441,31 @@
   </footer>
 
   <script src="script.js"></script>
+
+  <!-- SceneView Web — initialize showcase 3D viewers (Filament.js v1.70.1 + KTX IBL) -->
+  <script>
+  (function() {
+    var MODEL_BASE = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+    var models = [
+      { id: 'showcase-shoe',   model: MODEL_BASE + '/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb', bg: [0.97, 0.97, 0.98, 1] },
+      { id: 'showcase-chair',  model: MODEL_BASE + '/SheenChair/glTF-Binary/SheenChair.glb',                       bg: [0.91, 0.92, 0.93, 1] },
+      { id: 'showcase-car',    model: MODEL_BASE + '/ToyCar/glTF-Binary/ToyCar.glb',                               bg: [0.10, 0.10, 0.12, 1] },
+      { id: 'showcase-helmet', model: MODEL_BASE + '/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',                 bg: [0.06, 0.09, 0.17, 1] },
+      { id: 'showcase-lamp',   model: MODEL_BASE + '/IridescenceLamp/glTF-Binary/IridescenceLamp.glb',             bg: [0.10, 0.10, 0.18, 1] }
+    ];
+
+    if (typeof SceneView === 'undefined') return;
+
+    models.forEach(function(cfg) {
+      var canvas = document.getElementById(cfg.id);
+      if (!canvas) return;
+      SceneView.modelViewer(cfg.id, cfg.model, {
+        backgroundColor: cfg.bg
+      }).catch(function(e) {
+        console.warn('SceneView showcase [' + cfg.id + ']:', e.message || e);
+      });
+    });
+  })();
+  </script>
 </body>
 </html>
