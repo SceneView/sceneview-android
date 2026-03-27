@@ -190,14 +190,11 @@ extension ReflectionProbeNode {
     /// let probe = ReflectionProbeNode.box(size: [4, 3, 4])
     ///     .environmentTexture(env)
     /// ```
+    @MainActor
     public static func loadEnvironment(_ name: String) async throws -> EnvironmentResource {
         try await EnvironmentResource(named: name)
     }
 
-    /// Loads an environment resource from a URL.
-    public static func loadEnvironment(contentsOf url: URL) async throws -> EnvironmentResource {
-        try await EnvironmentResource(contentsOf: url)
-    }
 }
 
 #endif // os(iOS) || os(macOS) || os(visionOS)

@@ -130,9 +130,12 @@ public struct PhysicsNode: Sendable {
         _ entity: Entity,
         velocity: SIMD3<Float>
     ) {
-        guard var motion = entity.components[PhysicsMotionComponent.self] else { return }
-        motion.linearVelocity = velocity
-        entity.components.set(motion)
+        #if os(iOS) || os(visionOS)
+        if var motion: PhysicsMotionComponent = entity.components[PhysicsMotionComponent.self] {
+            motion.linearVelocity = velocity
+            entity.components.set(motion)
+        }
+        #endif
     }
 
     /// Sets the angular velocity of a dynamic or kinematic entity.
@@ -144,9 +147,12 @@ public struct PhysicsNode: Sendable {
         _ entity: Entity,
         angularVelocity: SIMD3<Float>
     ) {
-        guard var motion = entity.components[PhysicsMotionComponent.self] else { return }
-        motion.angularVelocity = angularVelocity
-        entity.components.set(motion)
+        #if os(iOS) || os(visionOS)
+        if var motion: PhysicsMotionComponent = entity.components[PhysicsMotionComponent.self] {
+            motion.angularVelocity = angularVelocity
+            entity.components.set(motion)
+        }
+        #endif
     }
 
     // MARK: - Internal

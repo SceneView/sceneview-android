@@ -106,40 +106,58 @@ private struct SceneViewRepresentation: View {
     @State private var isSetUp = false
 
     var body: some View {
+        realityViewContent
+            .gesture(dragGesture)
+            .gesture(pinchGesture)
+            .simultaneousGesture(tapGesture)
+            .task {
+                // Auto-rotation loop
+                guard enableAutoRotate else { return }
+                camera.isAutoRotating = true
+                camera.autoRotateSpeed = autoRotateSpeed
+                var lastTime = CFAbsoluteTimeGetCurrent()
+                while !Task.isCancelled {
+                    try? await Task.sleep(nanoseconds: 16_666_667) // ~60 fps
+                    let now = CFAbsoluteTimeGetCurrent()
+                    let dt = Float(now - lastTime)
+                    lastTime = now
+                    if !isDragging {
+                        camera.applyAutoRotation(dt: dt)
+                    }
+                }
+            }
+            .task(id: sceneEnvironment?.name) {
+                // Load and apply IBL environment when it changes
+                guard let env = sceneEnvironment else { return }
+                await loadEnvironment(env)
+            }
+    }
+
+    @ViewBuilder
+    private var realityViewContent: some View {
+        #if os(macOS)
+        if #available(macOS 15.0, *) {
+            RealityView { realityContent in
+                setupScene(realityContent)
+            } update: { _ in
+                applyCamera()
+            }
+        } else {
+            Text("3D view requires macOS 15.0 or later")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        #else
         RealityView { realityContent in
             setupScene(realityContent)
         } update: { _ in
             applyCamera()
         }
-        .gesture(dragGesture)
-        .gesture(pinchGesture)
-        .simultaneousGesture(tapGesture)
-        .task {
-            // Auto-rotation loop
-            guard enableAutoRotate else { return }
-            camera.isAutoRotating = true
-            camera.autoRotateSpeed = autoRotateSpeed
-            var lastTime = CFAbsoluteTimeGetCurrent()
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 16_666_667) // ~60 fps
-                let now = CFAbsoluteTimeGetCurrent()
-                let dt = Float(now - lastTime)
-                lastTime = now
-                if !isDragging {
-                    camera.applyAutoRotation(dt: dt)
-                }
-            }
-        }
-        .task(id: sceneEnvironment?.name) {
-            // Load and apply IBL environment when it changes
-            guard let env = sceneEnvironment else { return }
-            await loadEnvironment(env)
-        }
+        #endif
     }
 
     // MARK: - Scene Setup
 
-    private func setupScene(_ realityContent: RealityViewContent) {
+    private func setupScene(_ realityContent: RealityViewCameraContent) {
         guard !isSetUp else { return }
         isSetUp = true
 
