@@ -36,6 +36,8 @@ jobs:
           java-version: 17
           cache: gradle
 
+      - run: chmod +x ./gradlew
+
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
@@ -56,7 +58,7 @@ jobs:
           path: samples/android-demo/build/outputs/bundle/release/*.aab
 
       - name: Publish to Play Store
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: io.github.sceneview.demo

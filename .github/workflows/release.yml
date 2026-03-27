@@ -52,7 +52,6 @@ jobs:
         continue-on-error: true
 
       - name: Upload Dokka artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: dokka-api-docs
