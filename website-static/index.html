@@ -108,6 +108,7 @@
 
       <div class="nav__links" id="navLinks">
         <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
+        <a href="/claude-3d.html" class="nav__link" style="color:#d97757;font-weight:600">AI + 3D</a>
         <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
         <a href="#demos" class="nav__link">Demos</a>
         <a href="/playground.html" class="nav__link">Playground</a>
@@ -615,9 +616,9 @@
             <pre class="code-block"><code><span class="cm">// build.gradle.kts</span>
 <span class="kw">dependencies</span> {
     <span class="cm">// 3D only</span>
-    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview:3.3.0"</span>)
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview:3.4.7"</span>)
     <span class="cm">// 3D + AR</span>
-    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:arsceneview:3.3.0"</span>)
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:arsceneview:3.4.7"</span>)
 }</code></pre>
           </div>
           <div class="tabs__panel" data-panel="ios">
@@ -625,14 +626,14 @@
 <span class="cm">// Add in Xcode: File &rarr; Add Package Dependencies</span>
 
 <span class="str">"https://github.com/sceneview/sceneview-swift"</span>
-<span class="cm">// Version: 3.3.0</span>
+<span class="cm">// Version: 3.4.7</span>
 
 <span class="kw">import</span> SceneViewSwift</code></pre>
           </div>
           <div class="tabs__panel" data-panel="web">
             <pre class="code-block"><code><span class="cm">// build.gradle.kts (Kotlin/JS)</span>
 <span class="kw">dependencies</span> {
-    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-web:3.3.0"</span>)
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-web:3.4.7"</span>)
 }
 
 <span class="cm">// Or use Filament.js directly in HTML</span>
@@ -718,6 +719,10 @@
           <p class="section__subtitle">SceneView is the first 3D SDK designed so AI assistants can generate correct, working code on the first try. MCP integration gives Claude, Cursor, and Windsurf full access to the API reference, samples, and best practices.</p>
           <pre class="code-block code-block--compact"><code><span class="kw">npx</span> <span class="str">sceneview-mcp</span></code></pre>
           <p class="ai-section__hint">Add to your MCP config for instant AI-powered 3D & AR development.</p>
+          <a href="/claude-3d.html" class="btn btn--primary" style="margin-top:var(--space-lg);gap:8px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            See AI + 3D in action
+          </a>
         </div>
         <div class="ai-section__graphic">
           <div class="ai-section__terminal">
