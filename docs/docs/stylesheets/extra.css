@@ -1,100 +1,250 @@
-/* SceneView — Clean, minimal developer docs styling */
-/* Only adds what MkDocs Material doesn't provide out of the box */
+/* SceneView — Polished developer docs styling */
+/* Extends MkDocs Material with branded hero, stats, feature cards */
 
 :root {
   --md-primary-fg-color: #1a73e8;
   --md-primary-fg-color--light: #4285f4;
   --md-primary-fg-color--dark: #1557b0;
   --md-accent-fg-color: #1a73e8;
+  --sv-gradient-start: #1a73e8;
+  --sv-gradient-end: #6c4fe8;
+  --sv-card-bg: rgba(26, 115, 232, 0.04);
+  --sv-card-border: rgba(26, 115, 232, 0.12);
+}
+
+[data-md-color-scheme="slate"] {
+  --sv-card-bg: rgba(66, 133, 244, 0.08);
+  --sv-card-border: rgba(66, 133, 244, 0.2);
 }
 
 /* ─── Hero Section ─── */
 
 .sv-hero {
   text-align: center;
-  padding: 4rem 1.5rem 3rem;
-  margin: -0.5rem 0 2rem;
+  padding: 5rem 1.5rem 3rem;
+  margin: -0.5rem -0.6rem 2rem;
+  background: linear-gradient(135deg, var(--sv-gradient-start) 0%, var(--sv-gradient-end) 100%);
+  border-radius: 0 0 24px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sv-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.sv-hero-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.35rem 1rem;
+  border-radius: 100px;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .sv-hero h1 {
-  font-size: 3rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  margin-bottom: 0.75rem;
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 1rem;
+  color: white !important;
+  line-height: 1.1;
 }
 
 .sv-hero .sv-tagline {
-  font-size: 1.2rem;
-  color: var(--md-default-fg-color--light);
-  margin: 0 auto 1rem;
+  font-size: 1.15rem;
+  color: rgba(255, 255, 255, 0.85) !important;
+  margin: 0 auto 1.5rem;
   max-width: 640px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .sv-hero .sv-platforms {
-  font-size: 0.95rem;
-  color: var(--md-default-fg-color--lighter);
-  margin-bottom: 1.5rem;
-  letter-spacing: 0.02em;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.sv-platform-chip {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.3rem 0.75rem;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(4px);
+}
+
+.sv-hero .md-button {
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.sv-hero .md-button--primary {
+  background: white !important;
+  color: var(--sv-gradient-start) !important;
+  border-color: white !important;
+  font-weight: 600;
+}
+
+.sv-hero .md-button--primary:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.sv-hero .md-button:not(.md-button--primary):hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.sv-btn-lg {
+  padding: 0.7rem 1.8rem !important;
+  font-size: 0.95rem !important;
+  border-radius: 100px !important;
+}
+
+/* ─── Stats Bar ─── */
+
+.sv-stats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  padding: 2rem 1rem;
+  margin: -1rem auto 2rem;
+  max-width: 700px;
+}
+
+.sv-stat {
+  text-align: center;
+}
+
+.sv-stat-number {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--md-primary-fg-color);
+}
+
+.sv-stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--md-default-fg-color--light);
+  font-weight: 500;
+  margin-top: 0.2rem;
 }
 
 /* ─── Feature Cards ─── */
 
 .sv-features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
   margin: 2rem 0;
 }
 
 .sv-feature-card {
-  border: 1px solid var(--md-default-fg-color--lightest);
-  border-radius: 8px;
+  background: var(--sv-card-bg);
+  border: 1px solid var(--sv-card-border);
+  border-radius: 12px;
   padding: 1.5rem;
-  transition: box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sv-feature-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(26, 115, 232, 0.08);
 }
 
 .sv-feature-card h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .sv-feature-card p {
   margin: 0;
   color: var(--md-default-fg-color--light);
-  font-size: 0.9rem;
-  line-height: 1.6;
+  font-size: 0.88rem;
+  line-height: 1.65;
 }
 
 .sv-feature-card .sv-card-icon {
   font-size: 1.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
   display: block;
+  color: var(--md-primary-fg-color);
 }
 
-/* ─── Section heading helper ─── */
+/* ─── Concepts ─── */
 
-.sv-section-header {
-  text-align: center;
-  margin-bottom: 1.5rem;
+.sv-concepts h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.sv-section-header p {
+.sv-concepts p {
   color: var(--md-default-fg-color--light);
-  max-width: 600px;
-  margin: 0.5rem auto 0;
+  line-height: 1.7;
 }
 
-/* ─── Community links row ─── */
+/* ─── Testimonials ─── */
+
+.sv-testimonials {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.sv-testimonial {
+  background: var(--sv-card-bg);
+  border-left: 3px solid var(--md-primary-fg-color);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin: 0;
+}
+
+.sv-testimonial p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--md-default-fg-color--light);
+  font-style: italic;
+}
+
+/* ─── Community links ─── */
 
 .sv-community {
   text-align: center;
-  padding: 2rem 0;
+  padding: 3rem 0 1rem;
+}
+
+.sv-community h2 {
+  margin-bottom: 0.5rem;
+}
+
+.sv-community p {
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 1.5rem;
 }
 
 /* ─── Codelab Step Numbers ─── */
@@ -125,13 +275,48 @@
   flex-shrink: 0;
 }
 
-/* ─── Responsive hero ─── */
+/* ─── Code blocks — slightly more padding ─── */
 
-@media (max-width: 600px) {
+.highlight code {
+  font-size: 0.84rem;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 768px) {
+  .sv-hero {
+    padding: 3rem 1rem 2rem;
+  }
   .sv-hero h1 {
-    font-size: 2rem;
+    font-size: 2.2rem;
   }
   .sv-hero .sv-tagline {
     font-size: 1rem;
+  }
+  .sv-stats {
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .sv-stat-number {
+    font-size: 1.4rem;
+  }
+  .sv-testimonials {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .sv-hero h1 {
+    font-size: 1.8rem;
+  }
+  .sv-stats {
+    gap: 1rem;
+  }
+  .sv-stat-number {
+    font-size: 1.2rem;
+  }
+  .sv-btn-lg {
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.85rem !important;
   }
 }

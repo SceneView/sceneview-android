@@ -13,7 +13,7 @@ description: "What's coming in SceneView 4.0: Kotlin Multiplatform core, Android
 
 !!! info "v3.3.0 is production-ready today"
     You don't need to wait for 4.0. Everything below adds capabilities on top — it doesn't
-    replace anything. [Get started now](index.md#install).
+    replace anything. [Get started now](index.md#install-in-30-seconds).
 
 ---
 

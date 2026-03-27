@@ -101,7 +101,24 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.StrokeCap
 import com.google.android.filament.LightManager
+import com.google.android.filament.View.AntiAliasing
+import com.google.android.filament.View.Dithering
+import com.google.android.filament.View.QualityLevel
+import com.google.ar.core.AugmentedImage
+import com.google.ar.core.AugmentedImageDatabase
+import com.google.ar.core.Config
+import com.google.ar.core.TrackingState
+import io.github.sceneview.ar.ARScene
+import io.github.sceneview.ar.rememberARCameraNode
 import io.github.sceneview.math.Position
+import io.github.sceneview.rememberCollisionSystem
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.runtime.key
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 
 /**
  * Represents a feature demo in the Samples grid.
@@ -170,7 +187,8 @@ private val sampleDemos = listOf(
         subtitle = "Bloom, SSAO, FXAA, tone mapping, vignette",
         icon = Icons.Default.AutoAwesome,
         category = "Effects",
-        accentColor = Color(0xFFE91E63)
+        accentColor = Color(0xFFE91E63),
+        content = { PostProcessingDemo() }
     ),
     SampleDemo(
         title = "Fog",
@@ -209,21 +227,24 @@ private val sampleDemos = listOf(
         subtitle = "Real-world image recognition with AR overlay",
         icon = Icons.Default.Image,
         category = "AR",
-        accentColor = Color(0xFF3F51B5)
+        accentColor = Color(0xFF3F51B5),
+        content = { ImageDetectionDemo() }
     ),
     SampleDemo(
         title = "Reflection Probes",
         subtitle = "Local cubemap reflections for realistic materials",
         icon = Icons.Default.Tune,
         category = "Advanced",
-        accentColor = Color(0xFF795548)
+        accentColor = Color(0xFF795548),
+        content = { ReflectionProbesDemo() }
     ),
     SampleDemo(
         title = "glTF Cameras",
         subtitle = "Import and switch between cameras from glTF files",
         icon = Icons.Default.CameraAlt,
         category = "3D",
-        accentColor = Color(0xFF009688)
+        accentColor = Color(0xFF009688),
+        content = { GltfCamerasDemo() }
     ),
 )
 
@@ -282,7 +303,7 @@ private fun SamplesGrid(
                     }
                 },
                 scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
@@ -1202,6 +1223,498 @@ private fun PhysicsDemo() {
             shape = RoundedCornerShape(16.dp)
         ) {
             Text("Drop Again", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun PostProcessingDemo() {
+    val engine = rememberEngine()
+    val view = rememberView(engine)
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 3.5f, y = 0.5f)
+        lookAt(Float3(0f, 0f, 0f))
+    }
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+    val modelInstance = rememberModelInstance(modelLoader, "models/sheen_chair.glb")
+
+    var ssaoEnabled by remember { mutableStateOf(true) }
+    var fxaaEnabled by remember { mutableStateOf(true) }
+    var ditheringEnabled by remember { mutableStateOf(true) }
+
+    // Apply post-processing settings reactively
+    LaunchedEffect(ssaoEnabled) {
+        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+            enabled = ssaoEnabled
+            quality = if (ssaoEnabled) QualityLevel.HIGH else QualityLevel.LOW
+        }
+    }
+    LaunchedEffect(fxaaEnabled) {
+        view.antiAliasing = if (fxaaEnabled) AntiAliasing.FXAA else AntiAliasing.NONE
+    }
+    LaunchedEffect(ditheringEnabled) {
+        view.dithering = if (ditheringEnabled) Dithering.TEMPORAL else Dithering.NONE
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            view = view,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = rememberCameraManipulator(
+                orbitHomePosition = Position(z = 3.5f, y = 0.5f),
+                targetPosition = Position(0f, 0f, 0f)
+            ),
+            environment = environment
+        ) {
+            LightNode(
+                type = LightManager.Type.SUN,
+                apply = {
+                    intensity(100000f)
+                    direction(0f, -1f, -0.5f)
+                    castShadows(true)
+                }
+            )
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.8f,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
+            )
+        }
+        // Toggle controls
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = ssaoEnabled,
+                    onClick = { ssaoEnabled = !ssaoEnabled },
+                    label = { Text("SSAO", fontWeight = if (ssaoEnabled) FontWeight.Bold else FontWeight.Normal) },
+                    shape = RoundedCornerShape(50),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFFE91E63),
+                        selectedLabelColor = Color.White,
+                        containerColor = Color.Black.copy(alpha = 0.5f),
+                        labelColor = Color.White
+                    )
+                )
+                FilterChip(
+                    selected = fxaaEnabled,
+                    onClick = { fxaaEnabled = !fxaaEnabled },
+                    label = { Text("FXAA", fontWeight = if (fxaaEnabled) FontWeight.Bold else FontWeight.Normal) },
+                    shape = RoundedCornerShape(50),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFFE91E63),
+                        selectedLabelColor = Color.White,
+                        containerColor = Color.Black.copy(alpha = 0.5f),
+                        labelColor = Color.White
+                    )
+                )
+                FilterChip(
+                    selected = ditheringEnabled,
+                    onClick = { ditheringEnabled = !ditheringEnabled },
+                    label = { Text("Dithering", fontWeight = if (ditheringEnabled) FontWeight.Bold else FontWeight.Normal) },
+                    shape = RoundedCornerShape(50),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFFE91E63),
+                        selectedLabelColor = Color.White,
+                        containerColor = Color.Black.copy(alpha = 0.5f),
+                        labelColor = Color.White
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageDetectionDemo() {
+    val context = LocalContext.current
+    val arAvailability = remember {
+        try {
+            com.google.ar.core.ArCoreApk.getInstance().checkAvailability(context)
+        } catch (e: Exception) {
+            com.google.ar.core.ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE
+        }
+    }
+
+    if (!arAvailability.isSupported) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "AR not available on this device.\nImage Detection requires ARCore.",
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+        return
+    }
+
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val cameraNode = rememberARCameraNode(engine)
+    val view = rememberView(engine)
+    val collisionSystem = rememberCollisionSystem(view)
+
+    var detectedImages by remember { mutableStateOf<List<AugmentedImage>>(emptyList()) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        ARScene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            view = view,
+            modelLoader = modelLoader,
+            materialLoader = materialLoader,
+            collisionSystem = collisionSystem,
+            cameraNode = cameraNode,
+            sessionConfiguration = { session, config ->
+                config.planeFindingMode = Config.PlaneFindingMode.DISABLED
+                // Create an image database with a programmatic reference image.
+                // In production, use a real reference image from assets.
+                val bitmap = android.graphics.Bitmap.createBitmap(
+                    200, 200, android.graphics.Bitmap.Config.ARGB_8888
+                ).apply {
+                    val canvas = android.graphics.Canvas(this)
+                    val paint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.parseColor("#1A73E8")
+                        style = android.graphics.Paint.Style.FILL
+                    }
+                    canvas.drawRect(0f, 0f, 200f, 200f, paint)
+                    paint.color = android.graphics.Color.WHITE
+                    paint.textSize = 48f
+                    paint.textAlign = android.graphics.Paint.Align.CENTER
+                    canvas.drawText("SV", 100f, 115f, paint)
+                }
+                config.augmentedImageDatabase = AugmentedImageDatabase(session).also { db ->
+                    db.addImage("sceneview_logo", bitmap, 0.15f)
+                }
+            },
+            onSessionUpdated = { _, frame ->
+                detectedImages = frame.getUpdatedTrackables(AugmentedImage::class.java)
+                    .filter { it.trackingState == TrackingState.TRACKING }
+                    .toList()
+            }
+        ) {
+            detectedImages.forEach { image ->
+                AnchorNode(anchor = image.createAnchor(image.centerPose)) {
+                    val mat = remember(materialLoader) {
+                        materialLoader.createColorInstance(Color(0xFF3F51B5))
+                    }
+                    CubeNode(
+                        size = Float3(
+                            image.extentX,
+                            0.02f,
+                            image.extentZ
+                        ),
+                        materialInstance = mat
+                    )
+                }
+            }
+        }
+
+        // Status overlay
+        Surface(
+            modifier = Modifier
+                .statusBarsPadding()
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp),
+            color = Color.Black.copy(alpha = 0.55f),
+            shape = RoundedCornerShape(50)
+        ) {
+            Text(
+                text = if (detectedImages.isEmpty())
+                    "Point camera at the SceneView logo"
+                else
+                    "${detectedImages.size} image(s) detected",
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+            )
+        }
+
+        // Info banner at bottom
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding(),
+            color = Color.Black.copy(alpha = 0.55f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "Image Detection Demo",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    "Uses AugmentedImageDatabase to detect\nprinted images and overlay 3D content.",
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReflectionProbesDemo() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    val environments = remember {
+        listOf(
+            "Night" to "environments/rooftop_night_2k.hdr",
+            "Studio" to "environments/studio_2k.hdr",
+            "Warm" to "environments/studio_warm_2k.hdr",
+            "Sunset" to "environments/sunset_2k.hdr",
+            "Outdoor" to "environments/outdoor_cloudy_2k.hdr",
+            "Autumn" to "environments/autumn_field_2k.hdr",
+        )
+    }
+    var selectedEnvIndex by remember { mutableIntStateOf(0) }
+    val selectedEnv = environments[selectedEnvIndex]
+
+    val cameraNode = rememberCameraNode(engine) {
+        position = Float3(z = 2.5f, y = 0.3f)
+        lookAt(Float3(0f, 0f, 0f))
+    }
+    val environment = key(selectedEnv.second) {
+        rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment(selectedEnv.second)
+                ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+        }
+    }
+
+    // Use a highly reflective model
+    val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = rememberCameraManipulator(
+                orbitHomePosition = Position(z = 2.5f, y = 0.3f),
+                targetPosition = Position(0f, 0f, 0f)
+            ),
+            environment = environment
+        ) {
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 0.8f,
+                    autoAnimate = false
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
+            )
+        }
+        // Environment picker
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                "Environment Reflections",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                "Switch environments to see how reflections change on the model surface.",
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                environments.forEachIndexed { index, (label, _) ->
+                    FilterChip(
+                        selected = index == selectedEnvIndex,
+                        onClick = { selectedEnvIndex = index },
+                        label = {
+                            Text(
+                                label,
+                                fontWeight = if (index == selectedEnvIndex) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        shape = RoundedCornerShape(50),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF795548),
+                            selectedLabelColor = Color.White,
+                            containerColor = Color.Black.copy(alpha = 0.5f),
+                            labelColor = Color.White
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GltfCamerasDemo() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    data class CameraPreset(val name: String, val position: Float3, val target: Float3)
+
+    val presets = remember {
+        listOf(
+            CameraPreset("Front", Float3(z = 3.0f, y = 0.3f), Float3(0f, 0f, 0f)),
+            CameraPreset("Top", Float3(y = 3.5f, z = 0.5f), Float3(0f, 0f, 0f)),
+            CameraPreset("Side", Float3(x = 3.0f, y = 0.5f), Float3(0f, 0f, 0f)),
+            CameraPreset("Low Angle", Float3(z = 2.5f, y = -0.3f), Float3(0f, 0.5f, 0f)),
+            CameraPreset("3/4 View", Float3(x = 2f, y = 1.5f, z = 2f), Float3(0f, 0f, 0f)),
+        )
+    }
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    val selected = presets[selectedIndex]
+
+    val cameraNode = rememberCameraNode(engine) {
+        position = selected.position
+        lookAt(selected.target)
+    }
+
+    // Update camera on preset change
+    LaunchedEffect(selected) {
+        cameraNode.position = selected.position
+        cameraNode.lookAt(selected.target)
+    }
+
+    val environment = rememberEnvironment(environmentLoader) {
+        environmentLoader.createHDREnvironment("environments/studio_2k.hdr")
+            ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+    }
+    val modelInstance = rememberModelInstance(modelLoader, "models/animated_bunny_detective.glb")
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraNode = cameraNode,
+            cameraManipulator = null,
+            environment = environment
+        ) {
+            modelInstance?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 1.0f,
+                    autoAnimate = true,
+                    animationLoop = true
+                )
+            }
+        }
+        if (modelInstance == null) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = Color.White.copy(alpha = 0.7f),
+                strokeWidth = 3.dp,
+                strokeCap = StrokeCap.Round
+            )
+        }
+        // Camera preset picker
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                "Camera: ${selected.name}",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                presets.forEachIndexed { index, preset ->
+                    FilterChip(
+                        selected = index == selectedIndex,
+                        onClick = { selectedIndex = index },
+                        label = {
+                            Text(
+                                preset.name,
+                                fontWeight = if (index == selectedIndex) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        shape = RoundedCornerShape(50),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF009688),
+                            selectedLabelColor = Color.White,
+                            containerColor = Color.Black.copy(alpha = 0.5f),
+                            labelColor = Color.White
+                        )
+                    )
+                }
+            }
         }
     }
 }
