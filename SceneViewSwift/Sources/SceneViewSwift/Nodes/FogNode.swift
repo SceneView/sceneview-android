@@ -34,7 +34,7 @@ public struct FogNode: Sendable {
     /// Fog density in [0.0, 1.0]. Higher values produce thicker fog.
     public var density: Float {
         get { _density }
-        nonmutating set {
+        set {
             _density = newValue.clamped(to: 0.0...1.0)
             rebuildMaterial()
         }
@@ -43,7 +43,7 @@ public struct FogNode: Sendable {
     /// Near distance where fog begins (meters).
     public var startDistance: Float {
         get { _startDistance }
-        nonmutating set {
+        set {
             _startDistance = max(0, newValue)
             updateScale()
         }
@@ -52,7 +52,7 @@ public struct FogNode: Sendable {
     /// Far distance where fog reaches full density (meters).
     public var endDistance: Float {
         get { _endDistance }
-        nonmutating set {
+        set {
             _endDistance = max(0, newValue)
             updateScale()
         }
@@ -61,7 +61,7 @@ public struct FogNode: Sendable {
     /// Height falloff in world-space meters. Fog is denser below this height.
     public var heightFalloff: Float {
         get { _heightFalloff }
-        nonmutating set {
+        set {
             _heightFalloff = newValue
         }
     }
@@ -208,8 +208,6 @@ public struct FogNode: Sendable {
         var material = UnlitMaterial()
         material.color = .init(tint: color.withAlpha(alpha))
         material.blending = .transparent(opacity: .init(floatLiteral: alpha))
-        // Render on the inside of the sphere so it's visible from within
-        material.faceCulling = .front
 
         let entity = ModelEntity(mesh: mesh, materials: [material])
         entity.name = "FogNode"
@@ -229,7 +227,6 @@ public struct FogNode: Sendable {
         var material = UnlitMaterial()
         material.color = .init(tint: _color.withAlpha(alpha))
         material.blending = .transparent(opacity: .init(floatLiteral: alpha))
-        material.faceCulling = .front
         entity.model?.materials = [material]
     }
 

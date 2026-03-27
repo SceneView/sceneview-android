@@ -185,7 +185,9 @@ public struct ImageNode: Sendable {
     @discardableResult
     public func withGroundingShadow() -> ImageNode {
         #if os(iOS) || os(visionOS)
-        entity.components.set(GroundingShadowComponent(castsShadow: true))
+        if #available(iOS 18.0, visionOS 2.0, *) {
+            entity.components.set(GroundingShadowComponent(castsShadow: true))
+        }
         #endif
         return self
     }

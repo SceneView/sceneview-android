@@ -1,6 +1,7 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
+import CoreText
 
 /// A 3D text label that can be placed in the scene.
 ///

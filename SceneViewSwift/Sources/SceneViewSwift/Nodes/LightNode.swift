@@ -151,9 +151,12 @@ public struct LightNode: Sendable {
         return self
     }
 
-    /// Sets the shadow color for directional lights.
+    /// Configures a shadow for directional lights.
     ///
-    /// - Parameter color: The shadow tint color.
+    /// Note: RealityKit's `DirectionalLightComponent.Shadow` does not expose a `color`
+    /// property. This method ensures a shadow is configured if not already present.
+    ///
+    /// - Parameter color: Reserved for future use. Currently ignored.
     @discardableResult
     public func shadowColor(_ color: LightNode.Color) -> LightNode {
         if let directional = entity as? DirectionalLight {
@@ -163,7 +166,7 @@ public struct LightNode: Sendable {
                     depthBias: 5.0
                 )
             }
-            directional.shadow?.color = color.platformColor
+            // Note: DirectionalLightComponent.Shadow does not have a color property
         }
         return self
     }
