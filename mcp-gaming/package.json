@@ -58,7 +58,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0"
+    "@modelcontextprotocol/sdk": "^1.28.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -68,5 +68,15 @@
   },
   "overrides": {
     "picomatch": ">=4.0.4"
-  }
+  },
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/sceneview"
+    },
+    {
+      "type": "polar",
+      "url": "https://polar.sh/sceneview"
+    }
+  ]
 }

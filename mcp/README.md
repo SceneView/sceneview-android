@@ -18,6 +18,18 @@ Connect it to Claude, Cursor, Windsurf, or any MCP client. The assistant gets 22
 
 ---
 
+## 🚀 Pro Products
+
+| Product | Price | Description |
+|---------|-------|-------------|
+| [MCP Creator Kit](https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF) | €29 | Everything to create your own MCP server — template, CLI, docs, examples |
+| [SceneView Pro Starter Kit](https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF) | €49 | Complete Android 3D + AR app template — 4 screens, ready to customize |
+| [SceneView MCP Pro](https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF) | €9.99/mo | Premium MCP tools and priority support |
+
+⭐ [Sponsor on GitHub](https://github.com/sponsors/sceneview) — Help us build the future of 3D/AR development
+
+---
+
 ## Quick start
 
 **One command -- no install required:**
