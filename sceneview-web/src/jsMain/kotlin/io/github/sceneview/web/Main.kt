@@ -83,7 +83,7 @@ internal fun createViewerImpl(
     cameraY: Double = 1.5,
     cameraZ: Double = 5.0,
     fov: Double = 45.0,
-    lightIntensity: Double = 120_000.0
+    lightIntensity: Double = 50_000.0
 ): Promise<SceneViewJS> {
     val canvas = document.getElementById(canvasId) as? HTMLCanvasElement
         ?: return Promise.reject(Throwable("Canvas element '$canvasId' not found"))

@@ -124,11 +124,11 @@
   This must load BEFORE sceneview-web.js because our Kotlin/JS bundle
   references the global `Filament` object as an external dependency.
 
-  Filament.js v1.52.3 from npm via jsdelivr CDN.
+  Filament.js v1.70.1 from npm via jsdelivr CDN.
   The WASM binary (~3.4MB) is fetched automatically by the Emscripten
   loader from the same CDN path.
 -->
-<script src="https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js"></script>
+<script src="js/filament/filament.js"></script>
 
 <!--
   Step 2: Load SceneView Web (Kotlin/JS bundle, ~25KB).
