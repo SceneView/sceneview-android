@@ -1,16 +1,18 @@
-// ===== DARK MODE =====
+// ===== DARK MODE — follows system theme =====
 (function initTheme() {
-  const saved = localStorage.getItem('sceneview-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = saved || (prefersDark ? 'dark' : 'light');
-  document.documentElement.setAttribute('data-theme', theme);
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  function applySystemTheme() {
+    document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+  }
+  applySystemTheme();
+  // Auto-follow system theme changes (e.g. macOS auto dark mode)
+  mq.addEventListener('change', applySystemTheme);
 })();
 
 document.getElementById('themeToggle').addEventListener('click', function () {
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
+  var current = document.documentElement.getAttribute('data-theme');
+  var next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('sceneview-theme', next);
 });
 
 // ===== TAB SWITCHING =====
