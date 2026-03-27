@@ -104,7 +104,7 @@
 - `ar-model-viewer`: persistent plane mesh; gesture docs (`isEditable = true` handles pinch-scale + two-finger rotate)
 
 ### Ecosystem
-- **MCP `get_node_reference` tool** — `@sceneview/mcp` server parses `llms.txt`; exposes `get_node_reference { nodeType }` and `list_node_types` for AI assistant integration
+- **MCP `get_node_reference` tool** — `sceneview-mcp` server parses `llms.txt`; exposes `get_node_reference { nodeType }` and `list_node_types` for AI assistant integration
 
 ### Dependencies
 - Filament 1.56.0 → **1.70.0**

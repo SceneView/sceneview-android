@@ -154,7 +154,7 @@ The assistant calls `render_3d_preview` and returns an interactive link to a bro
 
 ## Quality
 
-The MCP server is tested with **834 unit tests** across 22 test suites covering:
+The MCP server is tested with **858 unit tests** across 22 test suites covering:
 
 - Every tool response (correct output, error handling, edge cases)
 - All 33 code samples (compilable structure, correct imports, no deprecated APIs)
@@ -164,7 +164,7 @@ The MCP server is tested with **834 unit tests** across 22 test suites covering:
 
 ```
  Test Files  22 passed (22)
-      Tests  834 passed (834)
+      Tests  858 passed (858)
    Duration  624ms
 ```
 
@@ -216,7 +216,7 @@ The only network call is to the GitHub API (for known issues). All other tools w
 cd mcp
 npm install
 npm run prepare  # Copy llms.txt + build TypeScript
-npm test         # 834 tests
+npm test         # 858 tests
 npm run dev      # Start with tsx (hot reload)
 ```
 
@@ -242,7 +242,7 @@ mcp/
 1. Fork the repository
 2. Create a feature branch
 3. Add tests for new tools or rules
-4. Run `npm test` -- all 834+ tests must pass
+4. Run `npm test` -- all 858+ tests must pass
 5. Submit a pull request
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full guide.

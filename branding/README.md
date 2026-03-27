@@ -38,7 +38,7 @@ The vector source is in `samples/android-demo/src/main/res/drawable/ic_launcher_
 - [ ] Description matching Play Store
 
 ### npm
-- [ ] Package icon for @sceneview/mcp and @sceneview/sceneview-web
+- [ ] Package icon for sceneview-mcp and sceneview.js
 
 ### Website
 - [ ] Favicon (blue cube) — 32x32, 16x16

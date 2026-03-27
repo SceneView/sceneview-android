@@ -33,8 +33,8 @@ import io.github.sceneview.node.Node
  *
  * @return The world position of the point
  */
-fun View.screenToWorld(xPx: Float, yPx: Float, z: Float = 1.0f): Position =
-    camera!!.viewToWorld(
+fun View.screenToWorld(xPx: Float, yPx: Float, z: Float = 1.0f): Position? =
+    camera?.viewToWorld(
         viewPosition = Float2(
             x = xPx / viewport.width,
             // Invert Y because screen Y points down and ViewPort Y points up.
@@ -52,7 +52,7 @@ fun View.screenToWorld(xPx: Float, yPx: Float, z: Float = 1.0f): Position =
  *
  * @return The world position of the point
  */
-fun View.motionEventToWorld(motionEvent: MotionEvent): Position = screenToWorld(
+fun View.motionEventToWorld(motionEvent: MotionEvent): Position? = screenToWorld(
     xPx = motionEvent.getX(motionEvent.actionIndex),
     yPx = motionEvent.getY(motionEvent.actionIndex)
 )
@@ -69,8 +69,8 @@ fun View.motionEventToWorld(motionEvent: MotionEvent): Position = screenToWorld(
  * (0 = top, View Height = bottom)
  * Screen space is in Android device screen coordinates
  */
-fun View.worldToScreen(worldPosition: Position): Float2 =
-    camera!!.worldToView(worldPosition).apply {
+fun View.worldToScreen(worldPosition: Position): Float2? =
+    camera?.worldToView(worldPosition)?.apply {
         x *= viewport.width
         // Invert Y because screen Y points down and ViewPort Y points up.
         y = (1.0f - y) * viewport.height
@@ -97,7 +97,7 @@ fun View.worldToScreen(worldPosition: Position): Float2 =
  *
  * @return A Ray from the camera near to far / infinity
  */
-fun View.screenToRay(xPx: Float, yPx: Float): Ray = camera!!.viewToRay(
+fun View.screenToRay(xPx: Float, yPx: Float): Ray? = camera?.viewToRay(
     Float2(
         x = xPx / viewport.width,
         // Invert Y because screen Y points down and ViewPort Y points up.
@@ -117,7 +117,7 @@ fun View.screenToRay(xPx: Float, yPx: Float): Ray = camera!!.viewToRay(
  *
  * @return A Ray from the camera to far / infinity
  */
-fun View.motionEventToRay(motionEvent: MotionEvent): Ray =
+fun View.motionEventToRay(motionEvent: MotionEvent): Ray? =
     screenToRay(xPx = motionEvent.x, yPx = motionEvent.y)
 
 /**

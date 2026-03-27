@@ -38,7 +38,7 @@ class ModelLoader(
     val assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
     var resourceLoader = ResourceLoader(engine, true)
 
-    private val models = mutableListOf<Model>()
+    private val models = java.util.Collections.synchronizedList(mutableListOf<Model>())
 //    private val modelInstances = mutableListOf<ModelInstance>()
 
     /**
@@ -60,7 +60,8 @@ class ModelLoader(
     fun createModel(
         buffer: Buffer,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): Model = assetLoader.createAsset(buffer)!!.also { model ->
+    ): Model = (assetLoader.createAsset(buffer)
+        ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")).also { model ->
         models += model
         loadResources(model, resourceResolver)
     }
@@ -114,12 +115,14 @@ class ModelLoader(
         fileLocation: String,
         resourceResolver: (resourceFileName: String) -> String = { getFolderPath(fileLocation, it) }
     ): Model? = context.loadFileBuffer(fileLocation)?.let { buffer ->
-        assetLoader.createAsset(buffer)?.also { model ->
-            models += model
-            loadResourcesSuspended(model) { resourceFileName: String ->
-                context.loadFileBuffer(resourceResolver(resourceFileName))
-            }
+        val model = withContext(Dispatchers.Main) {
+            assetLoader.createAsset(buffer)
+        } ?: return@let null
+        models += model
+        loadResourcesSuspended(model) { resourceFileName: String ->
+            context.loadFileBuffer(resourceResolver(resourceFileName))
         }
+        model
     }
 
     /**
@@ -140,7 +143,8 @@ class ModelLoader(
         },
         onResult: (Model?) -> Unit
     ): Job = coroutineScope.launch {
-        loadModel(fileLocation, resourceResolver).also(onResult)
+        val result = loadModel(fileLocation, resourceResolver)
+        withContext(Dispatchers.Main) { onResult(result) }
     }
 
     /**
@@ -259,7 +263,8 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
     ): List<ModelInstance> =
         arrayOfNulls<ModelInstance>(count).apply {
-            assetLoader.createInstancedAsset(buffer, this)!!.also { model ->
+            (assetLoader.createInstancedAsset(buffer, this)
+                ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")).also { model ->
                 models += model
                 loadResources(model, resourceResolver)
                 // Release model since it will not be re-instantiated
@@ -344,16 +349,15 @@ class ModelLoader(
         count: Int,
         resourceResolver: (resourceFileName: String) -> String = { getFolderPath(fileLocation, it) }
     ): List<ModelInstance> = context.loadFileBuffer(fileLocation)?.let { buffer ->
-        arrayOfNulls<ModelInstance>(count).apply {
-            assetLoader.createInstancedAsset(buffer, this)!!.also { model ->
-                models += model
-                loadResourcesSuspended(model) { resourceFileName: String ->
-                    context.loadFileBuffer(resourceResolver(resourceFileName))
-                }
-                // Release model since it will not be re-instantiated
-//                model.releaseSourceData()
-            }
-        }.filterNotNull()
+        val instances = arrayOfNulls<ModelInstance>(count)
+        val model = withContext(Dispatchers.Main) {
+            assetLoader.createInstancedAsset(buffer, instances)
+        } ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")
+        models += model
+        loadResourcesSuspended(model) { resourceFileName: String ->
+            context.loadFileBuffer(resourceResolver(resourceFileName))
+        }
+        instances.filterNotNull()
     } ?: listOf()
 
     /**

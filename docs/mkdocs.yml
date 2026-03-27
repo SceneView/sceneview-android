@@ -134,7 +134,7 @@ extra:
       link: https://discord.gg/UbNDDBTNqb
       name: SceneView Discord
     - icon: fontawesome/brands/npm
-      link: https://www.npmjs.com/package/@sceneview/mcp
+      link: https://www.npmjs.com/package/sceneview-mcp
       name: SceneView MCP on npm
   generator: false
   version:

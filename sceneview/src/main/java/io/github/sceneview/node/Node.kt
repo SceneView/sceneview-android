@@ -589,7 +589,7 @@ open class Node(
      * - increase size: scale > 1.0f
      */
     fun setScale(scale: Float) {
-        this.scale.xyz = Scale(scale)
+        this.scale = Scale(scale)
     }
 
     /**

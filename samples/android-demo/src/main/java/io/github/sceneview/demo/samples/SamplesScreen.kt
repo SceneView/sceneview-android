@@ -67,7 +67,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -331,7 +330,7 @@ private fun SamplesGrid(
 @Composable
 private fun SampleCard(
     demo: SampleDemo,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val scale by animateFloatAsState(
         targetValue = 1f,
@@ -342,17 +341,23 @@ private fun SampleCard(
         label = "cardScale"
     )
 
+    val isLive = demo.content != null
+
     Card(
+        onClick = onClick,
+        enabled = isLive,
         modifier = Modifier
             .fillMaxWidth()
-            .scale(scale)
-            .clip(RoundedCornerShape(24.dp))
-            .clickable(onClick = onClick),
+            .scale(scale),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isLive) 2.dp else 0.dp,
+            pressedElevation = 6.dp
+        )
     ) {
         Column {
             // Icon area with gradient accent
@@ -385,23 +390,22 @@ private fun SampleCard(
                     )
                 }
 
-                // "Interactive" badge for demos with content
-                if (demo.content != null) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = demo.accentColor.copy(alpha = 0.9f)
-                    ) {
-                        Text(
-                            text = "LIVE",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
+                // Badge: LIVE for interactive demos, SOON for upcoming
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isLive) demo.accentColor.copy(alpha = 0.9f)
+                    else Color.Gray.copy(alpha = 0.6f)
+                ) {
+                    Text(
+                        text = if (isLive) "LIVE" else "SOON",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
             }
 

@@ -853,7 +853,7 @@ fun ARImageTracking(coverBitmap: Bitmap) {
 
 ## AI Integration
 
-MCP server: `@sceneview/mcp`. Add to `.claude/mcp.json`:
+MCP server: `sceneview-mcp`. Add to `.claude/mcp.json`:
 ```json
 { "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
 ```

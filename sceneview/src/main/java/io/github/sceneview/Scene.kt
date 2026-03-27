@@ -342,7 +342,7 @@ fun Scene(
     LaunchedEffect(engine, renderer, view, scene) {
         while (true) {
             if (!isResumed.get()) {
-                delay(16)
+                delay(100)
                 continue
             }
             withFrameNanos { frameTimeNanos ->
