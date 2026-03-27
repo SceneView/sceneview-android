@@ -1256,7 +1256,7 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">Android</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/DamagedHelmet.glb"
               alt="Android 3D viewer"
               auto-rotate camera-controls
               camera-orbit="45deg 75deg 2.5m"
@@ -1276,10 +1276,10 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">iOS</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/MaterialsVariantsShoe.glb"
               alt="iOS 3D viewer"
               auto-rotate camera-controls
-              camera-orbit="-30deg 80deg 2.5m"
+              camera-orbit="150deg 75deg auto"
               shadow-intensity="0.8" exposure="0.8"
               style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);"
               interaction-prompt="none" loading="lazy"
@@ -1296,11 +1296,11 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">iPadOS</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/SheenChair.glb"
               alt="iPad 3D viewer"
               auto-rotate camera-controls
-              camera-orbit="60deg 70deg 2.5m"
-              shadow-intensity="0.8" exposure="0.8"
+              camera-orbit="30deg 75deg auto"
+              shadow-intensity="1.2" exposure="0.8"
               style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);"
               interaction-prompt="none" loading="lazy"
             ></model-viewer>
@@ -1316,11 +1316,11 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">visionOS</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/MosquitoInAmber.glb"
               alt="Vision Pro 3D viewer"
               auto-rotate camera-controls
-              camera-orbit="0deg 85deg 2.5m"
-              shadow-intensity="0.8" exposure="0.8"
+              camera-orbit="30deg 70deg auto"
+              shadow-intensity="0.8" exposure="1.0"
               style="background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);"
               interaction-prompt="none" loading="lazy"
             ></model-viewer>
@@ -1336,10 +1336,10 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">TV</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/CarConcept.glb"
               alt="Android TV 3D viewer"
               auto-rotate camera-controls
-              camera-orbit="120deg 75deg 2.5m"
+              camera-orbit="30deg 70deg auto"
               shadow-intensity="0.8" exposure="0.8"
               style="background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%);"
               interaction-prompt="none" loading="lazy"
@@ -1356,10 +1356,10 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">Web</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/BoomBox.glb"
               alt="Web 3D viewer"
               auto-rotate camera-controls
-              camera-orbit="-60deg 80deg 2.5m"
+              camera-orbit="-60deg 80deg auto"
               shadow-intensity="0.8" exposure="0.8"
               style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);"
               interaction-prompt="none" loading="lazy"
@@ -1376,10 +1376,10 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">Flutter</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/ChronographWatch.glb"
               alt="Flutter 3D viewer"
               auto-rotate camera-controls
-              camera-orbit="90deg 65deg 2.5m"
+              camera-orbit="30deg 75deg auto"
               shadow-intensity="0.8" exposure="0.8"
               style="background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);"
               interaction-prompt="none" loading="lazy"
@@ -1396,10 +1396,10 @@
           <div class="platform-card__viewer">
             <div class="platform-card__device-badge">React Native</div>
             <model-viewer
-              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+              src="models/platforms/AntiqueCamera.glb"
               alt="React Native 3D viewer"
               auto-rotate camera-controls
-              camera-orbit="-90deg 70deg 2.5m"
+              camera-orbit="30deg 75deg auto"
               shadow-intensity="0.8" exposure="0.8"
               style="background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);"
               interaction-prompt="none" loading="lazy"
@@ -1445,13 +1445,12 @@
   <!-- SceneView Web — initialize showcase 3D viewers (Filament.js v1.70.1 + KTX IBL) -->
   <script>
   (function() {
-    var MODEL_BASE = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
     var models = [
-      { id: 'showcase-shoe',   model: MODEL_BASE + '/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb', bg: [0.97, 0.97, 0.98, 1] },
-      { id: 'showcase-chair',  model: MODEL_BASE + '/SheenChair/glTF-Binary/SheenChair.glb',                       bg: [0.91, 0.92, 0.93, 1] },
-      { id: 'showcase-car',    model: MODEL_BASE + '/ToyCar/glTF-Binary/ToyCar.glb',                               bg: [0.10, 0.10, 0.12, 1] },
-      { id: 'showcase-helmet', model: MODEL_BASE + '/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',                 bg: [0.06, 0.09, 0.17, 1] },
-      { id: 'showcase-lamp',   model: MODEL_BASE + '/IridescenceLamp/glTF-Binary/IridescenceLamp.glb',             bg: [0.10, 0.10, 0.18, 1] }
+      { id: 'showcase-shoe',   model: 'models/platforms/MaterialsVariantsShoe.glb', bg: [0.97, 0.97, 0.98, 1] },
+      { id: 'showcase-chair',  model: 'models/platforms/SheenChair.glb',            bg: [0.91, 0.92, 0.93, 1] },
+      { id: 'showcase-car',    model: 'models/platforms/ToyCar.glb',                bg: [0.10, 0.10, 0.12, 1] },
+      { id: 'showcase-helmet', model: 'models/platforms/DamagedHelmet.glb',         bg: [0.06, 0.09, 0.17, 1] },
+      { id: 'showcase-lamp',   model: 'models/platforms/IridescenceLamp.glb',       bg: [0.10, 0.10, 0.18, 1] }
     ];
 
     if (typeof SceneView === 'undefined') return;
