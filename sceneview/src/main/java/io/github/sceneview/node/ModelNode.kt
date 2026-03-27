@@ -449,7 +449,7 @@ open class ModelNode(
             applyAnimations(frameTimeNanos)
             animator.updateBoneMatrices()
         } catch (e: Exception) {
-            // Prevent render thread crashes on destroyed or invalid models
+            android.util.Log.e("SceneView", "ModelNode.onFrame error", e)
         }
     }
 
