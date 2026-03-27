@@ -130,7 +130,15 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_UUID"
 
       - name: Export IPA
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: |
+          # Create App Store Connect API key file for xcodebuild authentication
+          mkdir -p ~/.private_keys
+          echo "$APP_STORE_CONNECT_API_KEY" > ~/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
+
           cat > $RUNNER_TEMP/ExportOptions.plist << 'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -159,7 +167,11 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/SceneViewDemo.xcarchive \
             -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
-            -exportPath $RUNNER_TEMP/export
+            -exportPath $RUNNER_TEMP/export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8 \
+            -authenticationKeyID $APP_STORE_CONNECT_API_KEY_ID \
+            -authenticationKeyIssuerID $APP_STORE_CONNECT_API_ISSUER_ID
 
       - name: Upload to TestFlight
         env:
