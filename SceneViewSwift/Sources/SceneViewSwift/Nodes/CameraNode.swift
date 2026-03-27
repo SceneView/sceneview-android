@@ -153,7 +153,8 @@ public struct CameraNode: Sendable {
     /// Configures depth-of-field blur.
     ///
     /// When applied, objects outside the focus distance will appear blurred based on aperture size.
-    /// Requires iOS 18+ / visionOS 2+; no-op on earlier versions.
+    /// Currently a no-op — RealityKit's `PerspectiveCameraComponent` does not expose
+    /// focus/depth-of-field settings as of Xcode 16.x. Reserved for future API availability.
     ///
     /// - Parameters:
     ///   - focusDistance: Distance in meters to the in-focus plane.
@@ -161,13 +162,8 @@ public struct CameraNode: Sendable {
     /// - Returns: Self for chaining.
     @discardableResult
     public func depthOfField(focusDistance: Float, aperture: Float) -> CameraNode {
-        #if !os(macOS)
-        if #available(iOS 18.0, visionOS 2.0, *) {
-            var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
-            camera.focus = .init(focusDistance: focusDistance, aperture: aperture)
-            entity.components.set(camera)
-        }
-        #endif
+        // PerspectiveCameraComponent does not have a `focus` property in current RealityKit.
+        // This method is reserved for future use when the API becomes available.
         return self
     }
 
@@ -177,19 +173,15 @@ public struct CameraNode: Sendable {
     ///
     /// Positive values brighten the image, negative values darken it. One stop equals a
     /// doubling/halving of brightness.
-    /// Requires iOS 18+ / visionOS 2+; no-op on earlier versions.
+    /// Currently a no-op — RealityKit's `PerspectiveCameraComponent` does not expose
+    /// exposure settings as of Xcode 16.x. Reserved for future API availability.
     ///
     /// - Parameter value: Exposure compensation in EV (exposure value) stops.
     /// - Returns: Self for chaining.
     @discardableResult
     public func exposure(_ value: Float) -> CameraNode {
-        #if !os(macOS)
-        if #available(iOS 18.0, visionOS 2.0, *) {
-            var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
-            camera.exposure = .init(compensation: value)
-            entity.components.set(camera)
-        }
-        #endif
+        // PerspectiveCameraComponent does not have an `exposure` property in current RealityKit.
+        // This method is reserved for future use when the API becomes available.
         return self
     }
 }

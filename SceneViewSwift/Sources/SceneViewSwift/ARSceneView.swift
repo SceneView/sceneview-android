@@ -265,12 +265,13 @@ public struct AnchorNode: Sendable {
         alignment: PlaneAlignment = .horizontal,
         minimumBounds: SIMD2<Float> = .init(0.1, 0.1)
     ) -> AnchorNode {
-        let arAlignment: AnchorEntity.Alignment =
-            alignment == .horizontal ? .horizontal : .vertical
-        let anchor = AnchorEntity(
-            plane: arAlignment,
-            minimumBounds: minimumBounds
-        )
+        let anchor: AnchorEntity
+        switch alignment {
+        case .horizontal:
+            anchor = AnchorEntity(plane: .horizontal, minimumBounds: minimumBounds)
+        case .vertical:
+            anchor = AnchorEntity(plane: .vertical, minimumBounds: minimumBounds)
+        }
         return AnchorNode(entity: anchor)
     }
 

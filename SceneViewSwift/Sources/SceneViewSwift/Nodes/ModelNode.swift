@@ -69,7 +69,7 @@ public struct ModelNode: @unchecked Sendable {
         _ path: String,
         enableCollision: Bool = true
     ) async throws -> ModelNode {
-        let entity = try await ModelEntity(named: path)
+        let entity: ModelEntity = try await ModelEntity(named: path)
 
         // Generate collision shapes for tap interaction
         if enableCollision {
@@ -90,7 +90,7 @@ public struct ModelNode: @unchecked Sendable {
         contentsOf url: URL,
         enableCollision: Bool = true
     ) async throws -> ModelNode {
-        let entity = try await ModelEntity(contentsOf: url)
+        let entity: ModelEntity = try await ModelEntity(contentsOf: url)
 
         if enableCollision {
             entity.generateCollisionShapes(recursive: true)
@@ -175,12 +175,11 @@ public struct ModelNode: @unchecked Sendable {
     ///   - loop: Whether animations should repeat. Default `true`.
     ///   - speed: Playback speed multiplier. Default 1.0.
     public func playAllAnimations(loop: Bool = true, speed: Float = 1.0) {
-        for var animation in entity.availableAnimations {
-            animation.speed = speed
+        for animation in entity.availableAnimations {
             if loop {
-                entity.playAnimation(animation.repeat())
+                entity.playAnimation(animation.repeat(), transitionDuration: 0.0, startsPaused: false)
             } else {
-                entity.playAnimation(animation)
+                entity.playAnimation(animation, transitionDuration: 0.0, startsPaused: false)
             }
         }
     }
@@ -199,8 +198,7 @@ public struct ModelNode: @unchecked Sendable {
         transitionDuration: TimeInterval = 0.2
     ) {
         guard index < entity.availableAnimations.count else { return }
-        var animation = entity.availableAnimations[index]
-        animation.speed = speed
+        let animation = entity.availableAnimations[index]
         if loop {
             entity.playAnimation(
                 animation.repeat(),
@@ -238,10 +236,9 @@ public struct ModelNode: @unchecked Sendable {
         speed: Float = 1.0,
         transitionDuration: TimeInterval = 0.2
     ) {
-        guard var animation = entity.availableAnimations.first(where: {
+        guard let animation = entity.availableAnimations.first(where: {
             $0.name == name
         }) else { return }
-        animation.speed = speed
         if loop {
             entity.playAnimation(
                 animation.repeat(),
@@ -385,7 +382,9 @@ public struct ModelNode: @unchecked Sendable {
     @discardableResult
     public func withGroundingShadow() -> ModelNode {
         #if os(iOS) || os(visionOS)
-        entity.components.set(GroundingShadowComponent(castsShadow: true))
+        if #available(iOS 18.0, visionOS 2.0, *) {
+            entity.components.set(GroundingShadowComponent(castsShadow: true))
+        }
         #endif
         return self
     }

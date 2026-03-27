@@ -18,11 +18,13 @@ final class BillboardNodeTests: XCTestCase {
     }
 
     func testBillboardHasBillboardComponent() {
-        let child = Entity()
-        let billboard = BillboardNode(child: child)
+        if #available(iOS 18.0, macOS 15.0, visionOS 2.0, *) {
+            let child = Entity()
+            let billboard = BillboardNode(child: child)
 
-        let component = billboard.entity.components[BillboardComponent.self]
-        XCTAssertNotNil(component)
+            let component = billboard.entity.components[BillboardComponent.self]
+            XCTAssertNotNil(component)
+        }
     }
 
     // MARK: - Text factory
@@ -104,7 +106,9 @@ final class BillboardNodeTests: XCTestCase {
         let billboard = BillboardNode(child: cube.entity)
         XCTAssertNotNil(billboard.entity)
         XCTAssertEqual(billboard.entity.children.count, 1)
-        XCTAssertNotNil(billboard.entity.components[BillboardComponent.self])
+        if #available(iOS 18.0, macOS 15.0, visionOS 2.0, *) {
+            XCTAssertNotNil(billboard.entity.components[BillboardComponent.self])
+        }
     }
 }
 #endif
