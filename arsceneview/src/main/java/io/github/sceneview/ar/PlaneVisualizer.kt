@@ -217,6 +217,7 @@ class PlaneVisualizer(
                 .castShadows(false)
                 .receiveShadows(true)
                 .culling(false)
+                .boundingBox(com.google.android.filament.Box(0f, 0f, 0f, 10f, 0.01f, 10f))
                 .apply {
                     primitives.forEachIndexed { idx, mat ->
                         geometry(
