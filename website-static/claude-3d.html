@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Powered 3D — Claude + SceneView</title>
+  <meta name="description" content="See how Claude Desktop generates interactive 3D content with SceneView. Live demos of AI-powered 3D model generation, procedural geometry, and AR experiences.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Google model-viewer for 3D rendering -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <style>
+    /* ===== PAGE-SPECIFIC STYLES ===== */
+
+    .page-claude3d {
+      padding-top: var(--nav-height);
+    }
+
+    /* --- Hero: Claude Desktop Mockup --- */
+    .claude-hero {
+      padding: var(--space-3xl) 0 var(--space-4xl);
+      overflow: hidden;
+    }
+
+    .claude-hero__header {
+      text-align: center;
+      margin-bottom: var(--space-3xl);
+    }
+
+    .claude-hero__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 20px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, rgba(217, 119, 87, 0.15), rgba(26, 115, 232, 0.15));
+      color: #d97757;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: var(--space-lg);
+    }
+
+    [data-theme="light"] .claude-hero__badge {
+      color: #c25d3a;
+    }
+
+    .claude-hero__title {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #d97757 0%, var(--color-primary) 50%, #bb86fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--space-md);
+    }
+
+    .claude-hero__subtitle {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--color-on-surface-dim);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* --- Claude Desktop Window --- */
+    .claude-window {
+      max-width: 1100px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #1a1a2e;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 24px 80px rgba(0,0,0,0.5),
+        0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    [data-theme="light"] .claude-window {
+      background: #f8f8fa;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.08),
+        0 24px 80px rgba(0,0,0,0.12),
+        0 8px 32px rgba(0,0,0,0.08);
+    }
+
+    .claude-window__titlebar {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #14142a;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    [data-theme="light"] .claude-window__titlebar {
+      background: #ebebef;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .claude-window__dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .claude-window__dots span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .claude-window__dots span:nth-child(1) { background: #ff5f57; }
+    .claude-window__dots span:nth-child(2) { background: #febc2e; }
+    .claude-window__dots span:nth-child(3) { background: #28c840; }
+
+    .claude-window__title {
+      flex: 1;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.02em;
+    }
+
+    [data-theme="light"] .claude-window__title {
+      color: rgba(0,0,0,0.4);
+    }
+
+    .claude-window__body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 480px;
+    }
+
+    /* --- Chat Panel (Left) --- */
+    .chat-panel {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto;
+      max-height: 520px;
+    }
+
+    [data-theme="light"] .chat-panel {
+      border-right: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .chat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.25);
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    [data-theme="light"] .chat-label {
+      color: rgba(0,0,0,0.3);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+
+    .chat-msg {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .chat-msg--user {
+      flex-direction: row-reverse;
+    }
+
+    .chat-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .chat-avatar--claude {
+      background: linear-gradient(135deg, #d97757, #c25d3a);
+      color: white;
+    }
+
+    .chat-avatar--user {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .chat-bubble {
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      max-width: 85%;
+    }
+
+    .chat-bubble--user {
+      background: var(--color-primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-bubble--claude {
+      background: rgba(255,255,255,0.06);
+      color: var(--color-on-surface);
+      border-bottom-left-radius: 4px;
+    }
+
+    [data-theme="light"] .chat-bubble--claude {
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .chat-bubble code {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    [data-theme="light"] .chat-bubble code {
+      background: rgba(0,0,0,0.06);
+    }
+
+    .chat-typing {
+      display: flex;
+      gap: 4px;
+      padding: 4px 0;
+    }
+
+    .chat-typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-on-surface-faint);
+      animation: typing 1.4s infinite;
+    }
+
+    .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-4px); }
+    }
+
+    /* --- Preview Panel (Right) --- */
+    .preview-panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: #0f0f1a;
+    }
+
+    [data-theme="light"] .preview-panel {
+      background: #f0f0f4;
+    }
+
+    .preview-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.25);
+      padding: 16px 20px 8px;
+    }
+
+    [data-theme="light"] .preview-label {
+      color: rgba(0,0,0,0.3);
+    }
+
+    .preview-panel model-viewer {
+      flex: 1;
+      width: 100%;
+      min-height: 420px;
+      --poster-color: transparent;
+    }
+
+    .preview-badge {
+      position: absolute;
+      bottom: 12px;
+      right: 14px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.03em;
+      pointer-events: none;
+    }
+
+    [data-theme="light"] .preview-badge {
+      color: rgba(0,0,0,0.25);
+    }
+
+    /* --- Examples Section --- */
+    .examples-section {
+      padding: var(--space-4xl) 0;
+    }
+
+    .examples-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+      gap: var(--space-xl);
+      margin-top: var(--space-2xl);
+    }
+
+    .example-card {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--color-surface-container);
+      border: 1px solid var(--color-outline);
+      transition: transform var(--duration-medium) var(--ease-expressive),
+                  box-shadow var(--duration-medium) var(--ease-expressive);
+      cursor: pointer;
+    }
+
+    .example-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .example-card__3d {
+      position: relative;
+      aspect-ratio: 4/3;
+      background: #0f0f1a;
+    }
+
+    [data-theme="light"] .example-card__3d {
+      background: #f0f0f4;
+    }
+
+    .example-card__3d model-viewer {
+      width: 100%;
+      height: 100%;
+      --poster-color: transparent;
+    }
+
+    .example-card__body {
+      padding: var(--space-lg);
+    }
+
+    .example-card__prompt {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: var(--space-md);
+    }
+
+    .example-card__prompt-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #d97757, #c25d3a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .example-card__prompt-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-on-surface);
+    }
+
+    .example-card__desc {
+      font-size: 0.85rem;
+      color: var(--color-on-surface-dim);
+      line-height: 1.6;
+      margin-bottom: var(--space-md);
+    }
+
+    .example-card__code-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: var(--radius-xs);
+      background: var(--color-primary-light);
+      border: none;
+      transition: background var(--duration-short);
+    }
+
+    .example-card__code-toggle:hover {
+      background: var(--color-primary-subtle);
+    }
+
+    .example-card__code {
+      margin-top: var(--space-md);
+      display: none;
+    }
+
+    .example-card__code.open {
+      display: block;
+    }
+
+    .example-card__code pre {
+      background: var(--color-code-bg);
+      color: var(--color-code-text);
+      padding: 16px;
+      border-radius: var(--radius-xs);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* --- How It Works --- */
+    .how-section {
+      padding: var(--space-4xl) 0;
+      background: var(--color-surface-dim);
+    }
+
+    .how-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-xl);
+      margin-top: var(--space-2xl);
+    }
+
+    .how-step {
+      text-align: center;
+      padding: var(--space-xl);
+    }
+
+    .how-step__number {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d97757, var(--color-primary));
+      color: white;
+      font-weight: 800;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--space-md);
+    }
+
+    .how-step__title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: var(--space-sm);
+    }
+
+    .how-step__desc {
+      font-size: 0.9rem;
+      color: var(--color-on-surface-dim);
+      line-height: 1.6;
+    }
+
+    /* --- CTA --- */
+    .cta-section {
+      padding: var(--space-4xl) 0;
+      text-align: center;
+    }
+
+    .cta-section .btn {
+      margin: 0 8px;
+    }
+
+    .cta-actions {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-top: var(--space-xl);
+    }
+
+    .cta-code {
+      margin-top: var(--space-xl);
+    }
+
+    .cta-code pre {
+      display: inline-block;
+      background: var(--color-code-bg);
+      color: var(--color-code-text);
+      padding: 14px 28px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .claude-window__body {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-panel {
+        max-height: 360px;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+
+      [data-theme="light"] .chat-panel {
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+      }
+
+      .preview-panel model-viewer {
+        min-height: 320px;
+      }
+
+      .how-steps {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+      }
+
+      .examples-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="nav" id="nav">
+    <div class="nav__container">
+      <a href="/" class="nav__logo">
+        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <span class="nav__logo-text">SceneView</span>
+      </a>
+
+      <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="nav__links" id="navLinks">
+        <a href="/" class="nav__link">Home</a>
+        <a href="/showcase.html" class="nav__link">Showcase</a>
+        <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
+        <a href="/playground.html" class="nav__link">Playground</a>
+        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
+        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
+        <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page-claude3d">
+
+    <!-- ===== HERO: CLAUDE DESKTOP MOCKUP ===== -->
+    <section class="claude-hero">
+      <div class="container">
+        <div class="claude-hero__header">
+          <div class="claude-hero__badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            AI-Powered 3D
+          </div>
+          <h1 class="claude-hero__title">Ask Claude. Get 3D.</h1>
+          <p class="claude-hero__subtitle">Describe what you want in natural language. Claude generates the SceneView code. See the result instantly in 3D.</p>
+        </div>
+
+        <!-- Claude Desktop Window -->
+        <div class="claude-window">
+          <div class="claude-window__titlebar">
+            <div class="claude-window__dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="claude-window__title">Claude Desktop &mdash; SceneView MCP</div>
+            <div style="width:52px"></div>
+          </div>
+          <div class="claude-window__body">
+            <!-- Chat Side -->
+            <div class="chat-panel" id="heroChat">
+              <div class="chat-label">Conversation</div>
+
+              <div class="chat-msg chat-msg--user">
+                <div class="chat-avatar chat-avatar--user">T</div>
+                <div class="chat-bubble chat-bubble--user">Show me a 3D chair for my living room</div>
+              </div>
+
+              <div class="chat-msg">
+                <div class="chat-avatar chat-avatar--claude">C</div>
+                <div class="chat-bubble chat-bubble--claude">
+                  I'll load a chair model using SceneView. Here's a sheen fabric chair rendered in real-time with PBR materials and environment lighting.
+                </div>
+              </div>
+
+              <div class="chat-msg chat-msg--user">
+                <div class="chat-avatar chat-avatar--user">T</div>
+                <div class="chat-bubble chat-bubble--user">Can I rotate it and see the back?</div>
+              </div>
+
+              <div class="chat-msg">
+                <div class="chat-avatar chat-avatar--claude">C</div>
+                <div class="chat-bubble chat-bubble--claude">
+                  Of course! The 3D preview is fully interactive. Drag to orbit, scroll to zoom, and pinch on mobile. Try it in the preview panel.
+                </div>
+              </div>
+
+              <div class="chat-msg">
+                <div class="chat-avatar chat-avatar--claude">C</div>
+                <div class="chat-bubble chat-bubble--claude">
+                  <div class="chat-typing"><span></span><span></span><span></span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview Side -->
+            <div class="preview-panel">
+              <div class="preview-label">Preview</div>
+              <model-viewer
+                id="heroModel"
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
+                alt="3D Chair preview"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1.2"
+                shadow-softness="0.8"
+                environment-image="neutral"
+                exposure="1.0"
+                camera-orbit="30deg 75deg 2.5m"
+                style="background-color: transparent"
+                loading="eager"
+                reveal="auto"
+              ></model-viewer>
+              <div class="preview-badge">Rendered by model-viewer + SceneView</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INTERACTIVE EXAMPLES ===== -->
+    <section class="examples-section">
+      <div class="container">
+        <h2 class="section__title">Try it yourself</h2>
+        <p class="section__subtitle">Click any example to see what Claude generates. Every 3D scene below is interactive &mdash; drag to orbit, scroll to zoom.</p>
+
+        <div class="examples-grid">
+
+          <!-- Example 1: Flowers -->
+          <div class="example-card">
+            <div class="example-card__3d">
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlowerVase/glTF-Binary/FlowerVase.glb"
+                alt="3D flower vase"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1"
+                environment-image="neutral"
+                camera-orbit="25deg 70deg 1.8m"
+                style="background-color: transparent"
+                loading="lazy"
+              ></model-viewer>
+            </div>
+            <div class="example-card__body">
+              <div class="example-card__prompt">
+                <div class="example-card__prompt-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                </div>
+                <span class="example-card__prompt-text">"Draw me a flower arrangement in 3D"</span>
+              </div>
+              <p class="example-card__desc">Claude selects a flower vase model from glTF samples and renders it with PBR materials, soft shadows, and auto-rotation for a natural look.</p>
+              <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                View code
+              </button>
+              <div class="example-card__code">
+                <pre><code><span class="kw">Scene</span>(
+    modifier = Modifier.<span class="fn">fillMaxSize</span>(),
+    engine = <span class="fn">rememberEngine</span>(),
+    modelLoader = <span class="fn">rememberModelLoader</span>(engine),
+    environment = <span class="fn">rememberEnvironment</span>(
+        environmentLoader, <span class="str">"envs/neutral.hdr"</span>
+    ),
+    cameraNode = <span class="fn">rememberCameraNode</span>(engine) {
+        <span class="fn">position</span>(<span class="num">0f</span>, <span class="num">0.5f</span>, <span class="num">2f</span>)
+    },
+    cameraManipulator = <span class="fn">rememberCameraManipulator</span>()
+) {
+    <span class="kw">ModelNode</span>(
+        modelInstance = <span class="fn">rememberModelInstance</span>(
+            modelLoader,
+            <span class="str">"models/flower_vase.glb"</span>
+        )
+    )
+}</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Example 2: Sneakers / Product -->
+          <div class="example-card">
+            <div class="example-card__3d">
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
+                alt="3D sneaker"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1.2"
+                environment-image="neutral"
+                camera-orbit="45deg 65deg 0.4m"
+                style="background-color: transparent"
+                loading="lazy"
+              ></model-viewer>
+            </div>
+            <div class="example-card__body">
+              <div class="example-card__prompt">
+                <div class="example-card__prompt-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                </div>
+                <span class="example-card__prompt-text">"Show me these sneakers in 3D"</span>
+              </div>
+              <p class="example-card__desc">Perfect for e-commerce. Claude loads a product model with material variants, letting customers inspect every angle before purchase.</p>
+              <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                View code
+              </button>
+              <div class="example-card__code">
+                <pre><code><span class="kw">Scene</span>(
+    modifier = Modifier.<span class="fn">fillMaxSize</span>(),
+    engine = <span class="fn">rememberEngine</span>(),
+    modelLoader = <span class="fn">rememberModelLoader</span>(engine),
+    cameraNode = <span class="fn">rememberCameraNode</span>(engine) {
+        <span class="fn">position</span>(<span class="num">0f</span>, <span class="num">0f</span>, <span class="num">0.5f</span>)
+        <span class="fn">lookAt</span>(<span class="num">0f</span>, <span class="num">0f</span>, <span class="num">0f</span>)
+    },
+    cameraManipulator = <span class="fn">rememberCameraManipulator</span>()
+) {
+    <span class="kw">ModelNode</span>(
+        modelInstance = <span class="fn">rememberModelInstance</span>(
+            modelLoader,
+            <span class="str">"models/sneaker.glb"</span>
+        )
+    ) {
+        <span class="fn">scale</span>(<span class="num">3f</span>)
+        <span class="fn">centerOrigin</span>()
+    }
+}</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Example 3: Animated Character -->
+          <div class="example-card">
+            <div class="example-card__3d">
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Fox/glTF-Binary/Fox.glb"
+                alt="3D animated fox"
+                camera-controls
+                auto-rotate
+                autoplay
+                shadow-intensity="1"
+                environment-image="neutral"
+                camera-orbit="30deg 75deg 150"
+                style="background-color: transparent"
+                loading="lazy"
+              ></model-viewer>
+            </div>
+            <div class="example-card__body">
+              <div class="example-card__prompt">
+                <div class="example-card__prompt-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                </div>
+                <span class="example-card__prompt-text">"Show an animated 3D character"</span>
+              </div>
+              <p class="example-card__desc">Claude loads an animated glTF model with skeletal animations playing automatically. Great for games, education, and interactive storytelling.</p>
+              <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                View code
+              </button>
+              <div class="example-card__code">
+                <pre><code><span class="kw">Scene</span>(
+    modifier = Modifier.<span class="fn">fillMaxSize</span>(),
+    engine = <span class="fn">rememberEngine</span>(),
+    modelLoader = <span class="fn">rememberModelLoader</span>(engine),
+    cameraNode = <span class="fn">rememberCameraNode</span>(engine) {
+        <span class="fn">position</span>(<span class="num">0f</span>, <span class="num">50f</span>, <span class="num">150f</span>)
+    },
+    cameraManipulator = <span class="fn">rememberCameraManipulator</span>()
+) {
+    <span class="kw">ModelNode</span>(
+        modelInstance = <span class="fn">rememberModelInstance</span>(
+            modelLoader,
+            <span class="str">"models/fox.glb"</span>
+        ),
+        autoAnimate = <span class="kw">true</span>
+    )
+}</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Example 4: Furniture / AR -->
+          <div class="example-card">
+            <div class="example-card__3d">
+              <model-viewer
+                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
+                alt="3D furniture for AR placement"
+                camera-controls
+                auto-rotate
+                ar
+                shadow-intensity="1.5"
+                shadow-softness="1"
+                environment-image="neutral"
+                camera-orbit="210deg 70deg 2.5m"
+                style="background-color: transparent"
+                loading="lazy"
+              ></model-viewer>
+            </div>
+            <div class="example-card__body">
+              <div class="example-card__prompt">
+                <div class="example-card__prompt-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                </div>
+                <span class="example-card__prompt-text">"Place this chair in my room using AR"</span>
+              </div>
+              <p class="example-card__desc">Claude generates an ARScene with plane detection and tap-to-place. On supported devices, tap the AR icon above to try it.</p>
+              <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                View code
+              </button>
+              <div class="example-card__code">
+                <pre><code><span class="kw">ARScene</span>(
+    modifier = Modifier.<span class="fn">fillMaxSize</span>(),
+    engine = <span class="fn">rememberEngine</span>(),
+    modelLoader = <span class="fn">rememberModelLoader</span>(engine),
+    planeRenderer = <span class="kw">true</span>,
+    onSessionUpdated = { session, frame ->
+        <span class="cm">// Handle AR frame updates</span>
+    },
+    onTap = { hitResult ->
+        <span class="cm">// Place furniture at tap location</span>
+        <span class="fn">addAnchorNode</span>(hitResult)
+    }
+) {
+    <span class="kw">ModelNode</span>(
+        modelInstance = <span class="fn">rememberModelInstance</span>(
+            modelLoader,
+            <span class="str">"models/chair.glb"</span>
+        )
+    ) {
+        <span class="fn">scale</span>(<span class="num">0.5f</span>)
+    }
+}</code></pre>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== HOW IT WORKS ===== -->
+    <section class="how-section">
+      <div class="container">
+        <h2 class="section__title">How it works</h2>
+        <p class="section__subtitle">Three steps from idea to interactive 3D scene.</p>
+
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-step__number">1</div>
+            <h3 class="how-step__title">Describe your scene</h3>
+            <p class="how-step__desc">Tell Claude what you want in plain language. A product viewer, an AR experience, a data visualization &mdash; anything 3D.</p>
+          </div>
+          <div class="how-step">
+            <div class="how-step__number">2</div>
+            <h3 class="how-step__title">Claude generates code</h3>
+            <p class="how-step__desc">Using the SceneView MCP, Claude has full access to the API reference, samples, and best practices. It writes correct Compose code on the first try.</p>
+          </div>
+          <div class="how-step">
+            <div class="how-step__number">3</div>
+            <h3 class="how-step__title">See it live in 3D</h3>
+            <p class="how-step__desc">The generated scene renders instantly. Orbit, zoom, and interact. Deploy to Android, iOS, Web, or any supported platform.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CTA ===== -->
+    <section class="cta-section">
+      <div class="container">
+        <h2 class="section__title">Start building with AI + 3D</h2>
+        <p class="section__subtitle">Add the SceneView MCP to your AI assistant and start generating 3D scenes in seconds.</p>
+
+        <div class="cta-code">
+          <pre><code>npx sceneview-mcp</code></pre>
+        </div>
+
+        <div class="cta-actions">
+          <a href="https://github.com/sceneview/sceneview#install" class="btn btn--primary">Get Started</a>
+          <a href="https://github.com/sceneview/sceneview" class="btn btn--outline">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            View on GitHub
+          </a>
+          <a href="/" class="btn btn--outline">Back to Home</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <svg class="footer__logo" viewBox="0 0 32 32" width="24" height="24" fill="none">
+            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
+            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          <span>SceneView</span>
+        </div>
+        <div class="footer__links">
+          <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
+          <a href="https://github.com/sponsors/sceneview">Sponsor</a>
+          <a href="/#pro">Pro</a>
+          <a href="https://github.com/sceneview/sceneview">Source Code</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
