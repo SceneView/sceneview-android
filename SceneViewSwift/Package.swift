@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "SceneViewSwift",
     platforms: [
-        .iOS(.v18),
+        .iOS("18.0"),
         .macOS(.v14),
         .visionOS(.v1)
     ],
