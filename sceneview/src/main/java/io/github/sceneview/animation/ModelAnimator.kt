@@ -582,7 +582,7 @@ class ModelAnimator {
                     return model.getAnimation(i)
                 }
             }
-            return null!!
+            throw IllegalArgumentException("Animation '$name' not found in model")
         }
     }
 
@@ -826,10 +826,11 @@ class ModelAnimator {
             }
 
             private fun getAnimation(model: AnimatableModel): ModelAnimation {
-                if (animation == null || animation!!.get() == null) {
-                    animation = WeakReference(getAnimationByName(model, animationName!!))
-                }
-                return animation!!.get()!!
+                val anim = animation?.get()
+                if (anim != null) return anim
+                val resolved = getAnimationByName(model, animationName ?: throw IllegalArgumentException("Animation name is null"))
+                animation = WeakReference(resolved)
+                return resolved
             }
         }
     }

@@ -66,7 +66,7 @@ object FileLoader {
                     uri.pathSegments.drop(1).joinToString("/")
                 ).toByteArray()
             } else {
-                File(uri.path!!).inputStream().toByteArray()
+                File(uri.path ?: throw IllegalArgumentException("Invalid file URI: $uri")).inputStream().toByteArray()
             }
 
             ContentResolver.SCHEME_CONTENT -> {
@@ -75,7 +75,7 @@ object FileLoader {
 
             ContentResolver.SCHEME_ANDROID_RESOURCE -> {
                 // Expected format: android.resource://example.package.name/12345678
-                context.resources.openRawResource(uri.pathSegments.lastOrNull()?.toInt()!!)
+                context.resources.openRawResource(uri.pathSegments.lastOrNull()?.toIntOrNull() ?: throw IllegalArgumentException("Invalid resource URI: $uri"))
                     .toByteArray()
             }
 

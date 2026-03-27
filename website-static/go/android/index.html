@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SceneView for Android — Google Play Store</title>
   <meta name="description" content="Download SceneView Demo for Android from the Google Play Store.">
-  <meta http-equiv="refresh" content="2;url=https://play.google.com/store/apps/details?id=io.github.sceneview.demo">
+  <!-- App not yet published on Play Store — no auto-redirect -->
   <meta property="og:title" content="SceneView for Android">
   <meta property="og:description" content="3D & AR demo app — download from Google Play Store.">
   <meta property="og:url" content="https://sceneview.github.io/go/android">
@@ -19,9 +19,9 @@
     .icon { font-size: 3rem; margin-bottom: 1rem; }
     h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(135deg, #8ab4f8, #42a5f5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .desc { color: #7b8fa6; margin-bottom: 1.5rem; font-size: 0.95rem; }
-    .cta { display: inline-flex; align-items: center; gap: 10px; padding: 16px 36px; border-radius: 16px; font-size: 1rem; font-weight: 700; text-decoration: none; color: #fff; background: linear-gradient(135deg, #1a73e8, #1557b0); box-shadow: 0 4px 20px rgba(26,115,232,0.35); transition: transform 0.2s, box-shadow 0.2s; }
+    .badge { display: inline-block; padding: 10px 24px; border-radius: 16px; font-size: 0.95rem; font-weight: 600; color: #8ab4f8; background: rgba(26,115,232,0.12); border: 1px solid rgba(26,115,232,0.2); margin-bottom: 1rem; }
+    .cta { display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px; border-radius: 16px; font-size: 0.95rem; font-weight: 700; text-decoration: none; color: #fff; background: linear-gradient(135deg, #1a73e8, #1557b0); box-shadow: 0 4px 20px rgba(26,115,232,0.35); transition: transform 0.2s, box-shadow 0.2s; margin-top: 0.5rem; }
     .cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(26,115,232,0.45); }
-    .note { color: #4ade80; font-size: 0.8rem; margin-top: 1rem; }
     .fallback { margin-top: 2rem; color: #4a5e73; font-size: 0.8rem; }
     .fallback a { color: #5e7a94; text-decoration: underline; }
   </style>
@@ -30,18 +30,14 @@
   <div class="page">
     <div class="icon">&#9654;&#65039;</div>
     <h1>SceneView for Android</h1>
-    <p class="desc">3D & AR demo app on Google Play</p>
-    <a class="cta" href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      Open Play Store
+    <p class="desc">3D & AR demo app</p>
+    <div class="badge">Coming Soon to Google Play</div>
+    <br>
+    <a class="cta" href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 002 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/></svg>
+      View Demo Source on GitHub
     </a>
-    <p class="note">Redirecting to Google Play...</p>
-    <p class="fallback">Not working? <a href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo">Click here</a> or go <a href="/go/">back</a></p>
+    <p class="fallback"><a href="/go/">All platforms</a></p>
   </div>
-  <script>
-    setTimeout(function() {
-      window.location.href = 'https://play.google.com/store/apps/details?id=io.github.sceneview.demo';
-    }, 1500);
-  </script>
 </body>
 </html>

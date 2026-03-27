@@ -81,8 +81,8 @@ class MaterialLoader(
         createMaterial("$kMaterialsAssetFolder/view_texture_unlit.filamat")
     }
 
-    private val materials = mutableListOf<Material>()
-    private val materialInstances = mutableListOf<MaterialInstance>()
+    private val materials = java.util.Collections.synchronizedList(mutableListOf<Material>())
+    private val materialInstances = java.util.Collections.synchronizedList(mutableListOf<MaterialInstance>())
 
     /**
      * Creates and returns a [Material] object.

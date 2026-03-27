@@ -441,12 +441,16 @@ open class ModelNode(
     override fun onFrame(frameTimeNanos: Long) {
         super.onFrame(frameTimeNanos)
 
-        model.popRenderable()
-        // Re-sanitize after popRenderable() which may make new entities available
-        // for rendering that could have empty AABBs.
-        sanitizeEmptyBoundingBoxes()
-        applyAnimations(frameTimeNanos)
-        animator.updateBoneMatrices()
+        try {
+            model.popRenderable()
+            // Re-sanitize after popRenderable() which may make new entities available
+            // for rendering that could have empty AABBs.
+            sanitizeEmptyBoundingBoxes()
+            applyAnimations(frameTimeNanos)
+            animator.updateBoneMatrices()
+        } catch (e: Exception) {
+            // Prevent render thread crashes on destroyed or invalid models
+        }
     }
 
     /**

@@ -87,7 +87,7 @@ class CollisionSystem(var view: View) {
      * @return [HitResult] list containing nodes that were hit sorted by distance.
      * Empty if no nodes were hit.
      */
-    fun hitTest(motionEvent: MotionEvent) = hitTest(view.motionEventToRay(motionEvent))
+    fun hitTest(motionEvent: MotionEvent) = view.motionEventToRay(motionEvent)?.let { hitTest(it) } ?: emptyList()
 
     /**
      * Tests to see if a ray starting from the screen/camera position is hitting any nodes within
@@ -103,7 +103,7 @@ class CollisionSystem(var view: View) {
      * @return [HitResult] list containing nodes that were hit sorted by distance.
      * Empty if no nodes were hit.
      */
-    fun hitTest(xPx: Float, yPx: Float) = hitTest(view.screenToRay(xPx, yPx))
+    fun hitTest(xPx: Float, yPx: Float) = view.screenToRay(xPx, yPx)?.let { hitTest(it) } ?: emptyList()
 
     /**
      * Tests to see if a ray starting from the view position is hitting any nodes within the scene
@@ -116,7 +116,7 @@ class CollisionSystem(var view: View) {
      * @return [HitResult] list containing the nodes that were hit sorted by distance.
      * Empty if no nodes were hit.
      */
-    fun hitTest(viewPosition: Float2) = hitTest(view.camera!!.viewToRay(viewPosition))
+    fun hitTest(viewPosition: Float2) = view.camera?.let { hitTest(it.viewToRay(viewPosition)) } ?: emptyList()
 
     /**
      * Tests to see if a ray starting from the view position is hitting any nodes within the scene
