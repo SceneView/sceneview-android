@@ -7,7 +7,8 @@ Same concepts, same simplicity — Android, iOS, Web, Desktop, TV, Flutter, Reac
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview.svg?label=Android&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/sceneview)
 [![AR](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview.svg?label=AR&color=1a73e8)](https://search.maven.org/artifact/io.github.sceneview/arsceneview)
-[![npm](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&color=1a73e8)](https://www.npmjs.com/package/sceneview-mcp)
+[![sceneview.js](https://img.shields.io/npm/v/sceneview-web?label=sceneview.js&color=1a73e8)](https://www.npmjs.com/package/sceneview-web)
+[![MCP](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&color=1a73e8)](https://www.npmjs.com/package/sceneview-mcp)
 [![CI](https://img.shields.io/github/actions/workflow/status/sceneview/sceneview/ci.yml?branch=main&label=CI)](https://github.com/sceneview/sceneview/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/sceneview/sceneview?color=blue)](https://github.com/sceneview/sceneview/blob/main/LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/sceneview/sceneview?style=flat&color=yellow)](https://github.com/sceneview/sceneview/stargazers)
@@ -35,6 +36,18 @@ SceneView(environment: .studio) {
 }
 ```
 
+```html
+<!-- Web — one script tag -->
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.2.0/sceneview.js"></script>
+<script> SceneView.modelViewer("canvas", "model.glb") </script>
+```
+
+```bash
+# Claude — ask AI to build your 3D app
+claude mcp add sceneview -- npx sceneview-mcp
+# Then ask: "Build me an AR app with tap-to-place furniture"
+```
+
 No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 
 ---
@@ -46,10 +59,11 @@ No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 | **Android** | Filament | Jetpack Compose | Stable |
 | **Android TV** | Filament | Compose TV | Alpha |
 | **iOS / macOS / visionOS** | RealityKit | SwiftUI | Alpha |
-| **Web** | Filament.js (WASM) | Kotlin/JS + WebXR | Alpha |
+| **Web** | Filament.js (WASM) | Kotlin/JS + sceneview.js | Alpha |
 | **Desktop** | Software renderer | Compose Desktop | Alpha |
 | **Flutter** | Native per platform | PlatformView | Alpha |
 | **React Native** | Native per platform | Fabric | Alpha |
+| **Claude / AI** | — | MCP Server | Stable |
 
 ---
 
@@ -58,21 +72,34 @@ No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 **Android** (3D + AR):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.4.5")     // 3D
-    implementation("io.github.sceneview:arsceneview:3.4.5")   // AR (includes 3D)
+    implementation("io.github.sceneview:sceneview:3.4.7")     // 3D
+    implementation("io.github.sceneview:arsceneview:3.4.7")   // AR (includes 3D)
 }
 ```
 
 **iOS / macOS / visionOS** (Swift Package Manager):
 ```
-https://github.com/sceneview/sceneview-swift.git  (from: 3.4.5)
+https://github.com/sceneview/sceneview-swift.git  (from: 3.4.7)
 ```
 
-**Web** (Kotlin/JS + Filament.js):
+**Web** (sceneview.js — one line):
+```html
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.2.0/sceneview.js"></script>
+```
+
+**Web** (Kotlin/JS):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview-web:3.4.5")
+    implementation("io.github.sceneview:sceneview-web:3.4.7")
 }
+```
+
+**Claude Code / Claude Desktop:**
+```bash
+claude mcp add sceneview -- npx sceneview-mcp
+```
+```json
+{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
 ```
 
 **Desktop** / **Flutter** / **React Native**: see [samples/](samples/)
@@ -184,7 +211,7 @@ ARSceneView(planeDetection: .horizontal) { position, arView in
 }
 ```
 
-**Install:** `https://github.com/sceneview/sceneview-swift.git` (SPM, from 3.4.5)
+**Install:** `https://github.com/sceneview/sceneview-swift.git` (SPM, from 3.4.7)
 
 ---
 
@@ -205,7 +232,28 @@ The lightest way to add 3D to any website. One script tag, one function call.
 - `viewer.setAutoRotate(enabled)` — toggle rotation
 - `viewer.dispose()` — clean up resources
 
-**Install:** `npm install sceneview-web` or CDN — [Landing page](https://sceneview.github.io/web.html) — [npm](https://www.npmjs.com/package/sceneview-web)
+**Install:** `npm install sceneview-web` or CDN — [Landing page](https://sceneview.github.io/) — [npm](https://www.npmjs.com/package/sceneview-web)
+
+---
+
+## AI integration
+
+SceneView is **AI-first** — designed so AI assistants generate correct, compilable 3D/AR code on the first try.
+
+The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **22 specialized tools**, **33 compilable samples**, a full API reference, and a code validator.
+
+```bash
+# Claude Code — one command
+claude mcp add sceneview -- npx sceneview-mcp
+
+# Claude Desktop — add to config
+{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
+
+# Works with any MCP client (Cursor, Windsurf, etc.)
+npx sceneview-mcp
+```
+
+Listed on the [MCP Registry](https://registry.modelcontextprotocol.io). See the [MCP README](./mcp/README.md) for full setup and tool reference.
 
 ---
 
@@ -221,7 +269,7 @@ sceneview-core (Kotlin Multiplatform)
 ├── arsceneview (Android)    → ARCore
 ├── SceneViewSwift (Apple)   → RealityKit + SwiftUI
 ├── sceneview-web (Web)      → Filament.js + WebXR
-└── desktop-demo (JVM)      → Compose Desktop (software wireframe placeholder)
+└── desktop-demo (JVM)       → Compose Desktop (software wireframe placeholder)
 ```
 
 ---
@@ -234,36 +282,17 @@ sceneview-core (Kotlin Multiplatform)
 | `samples/android-tv-demo` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` |
 | `samples/ios-demo` | iOS | Open in Xcode |
 | `samples/web-demo` | Web | `./gradlew :samples:web-demo:jsBrowserRun` |
-| `samples/desktop-demo` | Desktop | `./gradlew :samples:desktop-demo:run` (wireframe placeholder, not SceneView) |
+| `samples/desktop-demo` | Desktop | `./gradlew :samples:desktop-demo:run` |
 | `samples/flutter-demo` | Flutter | `cd samples/flutter-demo && flutter run` |
 | `samples/react-native-demo` | React Native | See README |
-
----
-
-## AI integration
-
-SceneView is **AI-first** — designed so AI assistants generate correct, compilable 3D/AR code on the first try.
-
-The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **18 specialized tools**, **33 compilable samples**, a full API reference, and a code validator — all verified by 834 tests.
-
-```bash
-# One command — works with any MCP client
-npx sceneview-mcp
-```
-
-```json
-// Claude Desktop config
-{ "mcpServers": { "sceneview": { "command": "npx", "args": ["-y", "sceneview-mcp"] } } }
-```
-
-Listed on the [MCP Registry](https://registry.modelcontextprotocol.io). See the [MCP README](./mcp/README.md) for full setup and tool reference.
 
 ---
 
 ## Links
 
 - [Website](https://sceneview.github.io/)
-- [Documentation](https://github.com/sceneview/sceneview#readme)
+- [Playground](https://sceneview.github.io/playground.html)
+- [Documentation](https://sceneview.github.io/docs/)
 - [Discord](https://discord.gg/UbNDDBTNqb)
 - [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
@@ -272,4 +301,4 @@ Listed on the [MCP Registry](https://registry.modelcontextprotocol.io). See the 
 ## Support
 
 - [GitHub Sponsors](https://github.com/sponsors/ThomasGorisse) — [Sponsors](SPONSORS.md)
-- [Open Collective](https://opencollective.com/sceneview)
+- [SceneView Pro](https://sceneview.github.io/#pro) — Premium tools and templates
