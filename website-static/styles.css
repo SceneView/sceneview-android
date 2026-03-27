@@ -325,6 +325,40 @@ button {
   flex-wrap: wrap;
 }
 
+.hero__stores {
+  margin-top: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.hero__stores-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-on-surface-dim);
+  letter-spacing: 0.02em;
+}
+
+.hero__stores-badges {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.store-badge {
+  display: inline-flex;
+  transition: transform var(--duration-short) var(--ease-expressive),
+              opacity var(--duration-short) var(--ease-expressive);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.store-badge:hover {
+  transform: scale(1.04);
+  opacity: 0.9;
+}
+
 .hero__model {
   position: relative;
   width: 100%;
@@ -807,6 +841,14 @@ button {
   }
 
   .hero__actions {
+    justify-content: center;
+  }
+
+  .hero__stores {
+    align-items: center;
+  }
+
+  .hero__stores-badges {
     justify-content: center;
   }
 
