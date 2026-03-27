@@ -22,9 +22,9 @@ jobs:
           ARCORE_LATEST=$(curl -s https://api.github.com/repos/google-ar/arcore-android-sdk/releases/latest | jq -r .tag_name | tr -d 'v')
           KOTLIN_LATEST=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | jq -r .tag_name | tr -d 'v')
 
-          FILAMENT_CURRENT=$(grep "filament_version" buildSrc/src/main/groovy/FilamentPlugin.groovy 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
-          KOTLIN_CURRENT=$(grep "kotlin" gradle/libs.versions.toml 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
-          ARCORE_CURRENT=$(grep "arcore" gradle/libs.versions.toml 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")
+          FILAMENT_CURRENT=$(grep "filament_version" sceneview/build.gradle 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
+          KOTLIN_CURRENT=$(grep "^kotlin " gradle/libs.versions.toml 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
+          ARCORE_CURRENT=$(grep "^arCore " gradle/libs.versions.toml 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")
 
           echo "filament_latest=$FILAMENT_LATEST" >> $GITHUB_OUTPUT
           echo "filament_current=$FILAMENT_CURRENT" >> $GITHUB_OUTPUT
@@ -89,9 +89,9 @@ jobs:
           # true build failures count now. Threshold = 4 to avoid noise.
           if [ "$FAILURES" -gt 4 ]; then
             echo "CI is consistently failing — investigate"
-            gh issue list --label "ci-failure" --state open | grep -q "." || \
+            gh issue list --label "ci-health" --state open | grep -q "." || \
               gh issue create \
                 --title "CI health: $FAILURES failures in last 7 runs — $(date +%Y-%m-%d)" \
-                --label "bug" \
+                --label "bug,ci-health" \
                 --body "Automated maintenance detected $FAILURES CI failures in the last 7 runs. Please investigate."
           fi
