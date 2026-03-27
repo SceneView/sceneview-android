@@ -147,11 +147,8 @@ fun ARScreen() {
             collisionSystem = collisionSystem,
             cameraNode = cameraNode,
             planeRenderer = true,
-            sessionConfiguration = { session, config ->
-                config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                    true -> Config.DepthMode.AUTOMATIC
-                    else -> Config.DepthMode.DISABLED
-                }
+            sessionConfiguration = { _, config ->
+                config.depthMode = Config.DepthMode.DISABLED
                 config.instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
                 config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             },
