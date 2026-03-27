@@ -126,7 +126,7 @@ ARScene(
 
 ### Can I track real-world images?
 
-Yes — use `AugmentedImageNode` with an `AugmentedImageDatabase`. See the [ar-augmented-image sample](samples.md#ar-augmented-image).
+Yes — use `AugmentedImageNode` with an `AugmentedImageDatabase`. See the [Samples page](samples.md) for an example.
 
 ---
 
