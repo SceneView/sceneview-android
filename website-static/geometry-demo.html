@@ -218,13 +218,13 @@ out vec4 fragColor;
 
 const float PI = 3.14159265;
 
-// 3-point light setup
+// 3-point studio lighting (brighter, more contrast)
 const vec3 KEY_DIR   = normalize(vec3(0.5, 0.85, 0.3));
-const vec3 KEY_COLOR = vec3(3.5, 3.2, 2.8);
+const vec3 KEY_COLOR = vec3(4.2, 3.8, 3.2);
 const vec3 FILL_DIR  = normalize(vec3(-0.7, 0.3, -0.5));
-const vec3 FILL_COLOR = vec3(0.5, 0.6, 1.0);
+const vec3 FILL_COLOR = vec3(0.7, 0.8, 1.3);
 const vec3 RIM_DIR   = normalize(vec3(-0.2, -0.1, -0.9));
-const vec3 RIM_COLOR = vec3(0.4, 0.4, 0.6);
+const vec3 RIM_COLOR = vec3(0.5, 0.5, 0.8);
 
 float D_GGX(float NdotH, float roughness) {
   float a = roughness * roughness;
@@ -270,14 +270,14 @@ void main() {
   color += evalLight(N, V, RIM_DIR, RIM_COLOR, F0, NdotV);
 
   // Hemisphere ambient with ground bounce
-  vec3 skyColor = vec3(0.15, 0.18, 0.35);
+  vec3 skyColor = vec3(0.15, 0.2, 0.38);
   vec3 groundColor = vec3(0.06, 0.05, 0.04);
   float hemisphere = dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
-  vec3 ambient = mix(groundColor, skyColor, hemisphere) * uBaseColor * 0.45;
+  vec3 ambient = mix(groundColor, skyColor, hemisphere) * uBaseColor * 0.5;
 
-  // Fresnel rim
+  // Fresnel rim (more pronounced)
   float rim = pow(1.0 - NdotV, 4.0);
-  ambient += vec3(0.1, 0.14, 0.28) * rim * 0.7;
+  ambient += vec3(0.1, 0.15, 0.3) * rim * 0.9;
 
   // AO approximation
   float ao = smoothstep(-0.3, 0.5, dot(N, vec3(0, 1, 0))) * 0.3 + 0.7;
@@ -285,24 +285,24 @@ void main() {
 
   // Fake contact shadow: darken near ground
   float contactShadow = smoothstep(0.0, 0.3, vWorldPos.y);
-  ambient *= mix(0.5, 1.0, contactShadow);
+  ambient *= mix(0.4, 1.0, contactShadow);
 
   color += ambient;
 
-  // Environment reflection approximation for metallic surfaces
-  if (uMetallic > 0.3) {
-    vec3 R = reflect(-V, N);
-    float envUp = max(R.y, 0.0);
-    vec3 envColor = mix(vec3(0.08, 0.06, 0.12), vec3(0.3, 0.5, 0.9), envUp);
-    envColor += vec3(0.9, 0.8, 0.6) * pow(max(dot(R, KEY_DIR), 0.0), 16.0);
-    float envFresnel = pow(1.0 - NdotV, 3.0);
-    color += envColor * uMetallic * mix(0.15, 0.6, envFresnel) * (1.0 - uRoughness);
-  }
+  // Environment reflections for ALL surfaces (not just metallic > 0.3)
+  vec3 R = reflect(-V, N);
+  float envUp = max(R.y, 0.0);
+  vec3 envColor = mix(vec3(0.06, 0.04, 0.1), vec3(0.25, 0.45, 0.9), envUp);
+  envColor += vec3(0.85, 0.75, 0.55) * pow(max(dot(R, KEY_DIR), 0.0), 20.0); // sun highlight
+  envColor += vec3(0.3, 0.4, 0.65) * pow(max(dot(R, FILL_DIR), 0.0), 10.0); // fill highlight
+  float envFresnel = pow(1.0 - NdotV, 3.0);
+  float envIntensity = mix(uMetallic * 0.25, 0.7, envFresnel) * (1.0 - uRoughness * 0.85);
+  color += envColor * max(envIntensity, 0.02); // subtle env even on rough dielectrics
 
-  // Distance fog
+  // Distance fog (slightly blue-tinted)
   float fogDist = length(vWorldPos - uCamPos);
-  float fog = 1.0 - exp(-fogDist * 0.02);
-  vec3 fogColor = vec3(0.05, 0.065, 0.09);
+  float fog = 1.0 - exp(-fogDist * 0.018);
+  vec3 fogColor = vec3(0.04, 0.055, 0.085);
   color = mix(color, fogColor, fog * 0.5);
 
   // ACES tone mapping
@@ -330,11 +330,10 @@ in float vDist;
 in vec2 vXZ;
 out vec4 fragColor;
 void main() {
-  float fade = 1.0 - smoothstep(4.0, 12.0, vDist);
-  // Brighter at center
-  float center = 1.0 - smoothstep(0.0, 3.0, vDist);
-  float alpha = (0.06 + center * 0.04) * fade;
-  fragColor = vec4(0.3, 0.5, 1.0, alpha);
+  float fade = 1.0 - smoothstep(5.0, 14.0, vDist);
+  float center = 1.0 - smoothstep(0.0, 4.0, vDist);
+  float alpha = (0.05 + center * 0.05) * fade;
+  fragColor = vec4(0.25, 0.45, 0.9, alpha);
 }`;
 
 // ── Shader compilation ───────────────────────────────────────────────────────
@@ -991,7 +990,7 @@ function render(time) {
   const view = mat4LookAt(camPos, [0, 1.0, 0], [0, 1, 0]);
   const vp = mat4Multiply(proj, view);
 
-  gl.clearColor(0.051, 0.067, 0.09, 1.0);
+  gl.clearColor(0.04, 0.05, 0.08, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);

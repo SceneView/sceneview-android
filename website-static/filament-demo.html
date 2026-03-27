@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SceneView 3D — Lightweight WebGL Renderer</title>
-<meta name="description" content="SceneView's lightweight 3D renderer for Claude artifacts. PBR shading, orbit controls, zero dependencies.">
+<title>SceneView 3D — PBR Material Gallery</title>
+<meta name="description" content="SceneView's PBR material gallery. Metallic, roughness, clearcoat, transparency, emissive — zero-dependency WebGL2 renderer.">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1117; font-family: 'Inter', system-ui, sans-serif; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0d14; font-family: 'Inter', system-ui, sans-serif; }
   canvas { width: 100%; height: 100%; display: block; cursor: grab; }
   canvas:active { cursor: grabbing; }
   .badge {
@@ -26,41 +26,62 @@
     color: rgba(255,255,255,0.5); font-size: 11px; line-height: 1.6;
     pointer-events: none;
   }
-  .shape-selector {
+  .title {
     position: fixed; top: 16px; right: 16px; z-index: 10;
-    display: flex; gap: 6px;
+    text-align: right;
   }
-  .shape-btn {
-    padding: 6px 12px; border-radius: 8px;
+  .title h2 {
+    font-size: 16px; font-weight: 700; color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .title p {
+    font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px;
+  }
+  .scene-selector {
+    position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; z-index: 10;
+    padding: 6px 10px; border-radius: 12px;
+    background: rgba(10,13,20,0.85); border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .scene-btn {
+    padding: 6px 14px; border-radius: 8px;
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.6); font-size: 12px; font-family: inherit;
-    cursor: pointer; transition: all 0.15s;
+    cursor: pointer; transition: all 0.15s; font-weight: 500;
   }
-  .shape-btn:hover { background: rgba(26,115,232,0.2); border-color: #1a73e8; color: #fff; }
-  .shape-btn.active { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+  .scene-btn:hover { background: rgba(26,115,232,0.2); border-color: #1a73e8; color: #fff; }
+  .scene-btn.active { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+  .material-label {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.35); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase; z-index: 10;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="info">Drag to orbit | Scroll to zoom</div>
-<div class="shape-selector">
-  <button class="shape-btn active" data-shape="sphere">Sphere</button>
-  <button class="shape-btn" data-shape="cube">Cube</button>
-  <button class="shape-btn" data-shape="torus">Torus</button>
-  <button class="shape-btn" data-shape="cylinder">Cylinder</button>
+<div class="title">
+  <h2>PBR Material Gallery</h2>
+  <p>12 materials, 3-point lighting, environment reflections</p>
 </div>
-<div class="badge">Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> — WebGL PBR Renderer</div>
+<div class="material-label" id="matLabel">Material Gallery</div>
+<div class="scene-selector">
+  <button class="scene-btn active" data-scene="gallery">Gallery</button>
+  <button class="scene-btn" data-scene="metals">Metals</button>
+  <button class="scene-btn" data-scene="glass">Glass & Gem</button>
+  <button class="scene-btn" data-scene="hero">Hero Sphere</button>
+</div>
+<div class="badge">Powered by <a href="https://sceneview.github.io" target="_blank">SceneView</a> — WebGL2 PBR Renderer</div>
 
 <script>
-// SceneView Lightweight 3D Renderer — zero-dependency WebGL PBR
-// Designed for Claude artifacts: single file, no WASM, no CDN deps
-// ~15KB minified vs ~2MB for model-viewer/Three.js
-
 const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-if (!gl) { document.body.innerHTML = '<p style="color:#fff;padding:40px">WebGL not supported</p>'; }
+const gl = canvas.getContext('webgl2', { antialias: true, alpha: false });
+if (!gl) { document.body.innerHTML = '<p style="color:#fff;padding:40px">WebGL2 not supported</p>'; throw new Error('no webgl2'); }
 
-// --- Shader: PBR-lite with Fresnel, environment, and specular ---
+// ── Enhanced PBR shader with 3-point lighting, env reflections, clearcoat, emissive ──
 const VS = `#version 300 es
 precision highp float;
 in vec3 aPos;
@@ -82,107 +103,141 @@ precision highp float;
 in vec3 vNormal;
 in vec3 vWorldPos;
 uniform vec3 uCamPos;
-uniform vec3 uLightDir;
-uniform vec3 uLightColor;
 uniform vec3 uBaseColor;
 uniform float uMetallic;
 uniform float uRoughness;
+uniform float uClearcoat;
+uniform float uEmissive;
+uniform float uOpacity;
 uniform float uTime;
 out vec4 fragColor;
 
 const float PI = 3.14159265;
+const vec3 KEY_DIR   = normalize(vec3(0.5, 0.85, 0.3));
+const vec3 KEY_COLOR = vec3(4.0, 3.8, 3.2);
+const vec3 FILL_DIR  = normalize(vec3(-0.7, 0.3, -0.5));
+const vec3 FILL_COLOR = vec3(0.6, 0.7, 1.2);
+const vec3 RIM_DIR   = normalize(vec3(-0.2, -0.1, -0.9));
+const vec3 RIM_COLOR = vec3(0.5, 0.5, 0.7);
 
-// GGX/Trowbridge-Reitz NDF
-float D_GGX(float NdotH, float roughness) {
-  float a = roughness * roughness;
-  float a2 = a * a;
+float D_GGX(float NdotH, float r) {
+  float a = r * r; float a2 = a * a;
   float d = NdotH * NdotH * (a2 - 1.0) + 1.0;
   return a2 / (PI * d * d);
 }
-
-// Schlick Fresnel
-vec3 F_Schlick(float cosTheta, vec3 F0) {
-  return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+vec3 F_Schlick(float ct, vec3 F0) {
+  return F0 + (1.0 - F0) * pow(clamp(1.0 - ct, 0.0, 1.0), 5.0);
+}
+float G_Smith(float NdV, float NdL, float r) {
+  float k = ((r + 1.0) * (r + 1.0)) / 8.0;
+  return (NdV / (NdV * (1.0 - k) + k)) * (NdL / (NdL * (1.0 - k) + k));
 }
 
-// Smith GGX geometry
-float G_Smith(float NdotV, float NdotL, float roughness) {
-  float r = roughness + 1.0;
-  float k = (r * r) / 8.0;
-  float g1 = NdotV / (NdotV * (1.0 - k) + k);
-  float g2 = NdotL / (NdotL * (1.0 - k) + k);
-  return g1 * g2;
+vec3 evalLight(vec3 N, vec3 V, vec3 L, vec3 lc, vec3 F0, float NdV) {
+  vec3 H = normalize(V + L);
+  float NdL = max(dot(N, L), 0.0);
+  float NdH = max(dot(N, H), 0.0);
+  float HdV = max(dot(H, V), 0.0);
+  if (NdL <= 0.0) return vec3(0.0);
+  vec3 F = F_Schlick(HdV, F0);
+  float D = D_GGX(NdH, uRoughness);
+  float G = G_Smith(NdV, NdL, uRoughness);
+  vec3 spec = (D * F * G) / (4.0 * NdV * NdL + 0.001);
+  vec3 kD = (1.0 - F) * (1.0 - uMetallic);
+  return (kD * uBaseColor / PI + spec) * lc * NdL;
 }
 
 void main() {
   vec3 N = normalize(vNormal);
   vec3 V = normalize(uCamPos - vWorldPos);
-  vec3 L = normalize(uLightDir);
-  vec3 H = normalize(V + L);
-
-  float NdotL = max(dot(N, L), 0.0);
-  float NdotV = max(dot(N, V), 0.001);
-  float NdotH = max(dot(N, H), 0.0);
-  float HdotV = max(dot(H, V), 0.0);
-
-  // PBR material
+  float NdV = max(dot(N, V), 0.001);
   vec3 F0 = mix(vec3(0.04), uBaseColor, uMetallic);
-  vec3 F = F_Schlick(HdotV, F0);
-  float D = D_GGX(NdotH, uRoughness);
-  float G = G_Smith(NdotV, NdotL, uRoughness);
 
-  // Specular BRDF
-  vec3 spec = (D * F * G) / (4.0 * NdotV * NdotL + 0.001);
+  vec3 color = vec3(0.0);
+  color += evalLight(N, V, KEY_DIR, KEY_COLOR, F0, NdV);
+  color += evalLight(N, V, FILL_DIR, FILL_COLOR, F0, NdV);
+  color += evalLight(N, V, RIM_DIR, RIM_COLOR, F0, NdV);
 
-  // Diffuse (energy conservation)
-  vec3 kD = (1.0 - F) * (1.0 - uMetallic);
-  vec3 diffuse = kD * uBaseColor / PI;
+  // Hemisphere ambient + AO
+  float hem = dot(N, vec3(0,1,0)) * 0.5 + 0.5;
+  vec3 ambient = mix(vec3(0.04,0.03,0.02), vec3(0.12,0.15,0.3), hem) * uBaseColor * 0.5;
+  float ao = smoothstep(-0.3, 0.5, N.y) * 0.3 + 0.7;
+  ambient *= ao;
 
-  // Direct lighting
-  vec3 color = (diffuse + spec) * uLightColor * NdotL;
+  // Environment reflection
+  vec3 R = reflect(-V, N);
+  float envUp = max(R.y, 0.0);
+  vec3 envColor = mix(vec3(0.06,0.04,0.1), vec3(0.25,0.4,0.8), envUp);
+  envColor += vec3(0.8,0.7,0.5) * pow(max(dot(R, KEY_DIR), 0.0), 24.0); // sun reflection
+  envColor += vec3(0.3,0.4,0.7) * pow(max(dot(R, FILL_DIR), 0.0), 12.0); // fill reflection
+  float envFresnel = pow(1.0 - NdV, 3.0);
+  color += envColor * mix(uMetallic * 0.2, 0.7, envFresnel) * (1.0 - uRoughness * 0.8);
 
-  // Ambient/environment approximation (hemisphere)
-  vec3 skyColor = vec3(0.15, 0.2, 0.35);
-  vec3 groundColor = vec3(0.05, 0.04, 0.03);
-  float hemisphere = dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
-  vec3 ambient = mix(groundColor, skyColor, hemisphere) * uBaseColor * 0.4;
-
-  // Rim/fresnel glow
-  float rim = pow(1.0 - NdotV, 3.0);
-  ambient += vec3(0.1, 0.15, 0.3) * rim * 0.5;
-
+  // Fresnel rim
+  float rim = pow(1.0 - NdV, 4.0);
+  ambient += vec3(0.08, 0.12, 0.25) * rim * 0.8;
   color += ambient;
 
-  // Tone mapping (ACES approximation)
+  // Clearcoat layer
+  if (uClearcoat > 0.0) {
+    vec3 H = normalize(V + KEY_DIR);
+    float ccNdH = max(dot(N, H), 0.0);
+    float ccD = D_GGX(ccNdH, 0.04); // very smooth clearcoat
+    vec3 ccF = F_Schlick(max(dot(H, V), 0.0), vec3(0.04));
+    float ccNdL = max(dot(N, KEY_DIR), 0.0);
+    color += ccD * ccF * ccNdL * KEY_COLOR * uClearcoat * 0.3;
+    // Clearcoat env reflection
+    color += envColor * uClearcoat * envFresnel * 0.4;
+  }
+
+  // Emissive glow
+  if (uEmissive > 0.0) {
+    float pulse = 0.85 + 0.15 * sin(uTime * 2.0);
+    color += uBaseColor * uEmissive * pulse * 2.0;
+  }
+
+  // Distance fog
+  float fogDist = length(vWorldPos - uCamPos);
+  float fog = 1.0 - exp(-fogDist * 0.015);
+  color = mix(color, vec3(0.04, 0.05, 0.08), fog * 0.5);
+
+  // ACES tone mapping
   color = color * (2.51 * color + 0.03) / (color * (2.43 * color + 0.59) + 0.14);
-
-  // Gamma correction
   color = pow(color, vec3(1.0 / 2.2));
-
-  fragColor = vec4(color, 1.0);
+  fragColor = vec4(color, uOpacity);
 }`;
 
-// --- Compile shaders ---
+// Grid shader
+const GRID_VS = `#version 300 es
+precision highp float;
+in vec3 aPos;
+uniform mat4 uMVP;
+out float vDist;
+void main() {
+  gl_Position = uMVP * vec4(aPos, 1.0);
+  vDist = length(aPos.xz);
+}`;
+const GRID_FS = `#version 300 es
+precision highp float;
+in float vDist;
+out vec4 fragColor;
+void main() {
+  float fade = 1.0 - smoothstep(3.0, 10.0, vDist);
+  float center = 1.0 - smoothstep(0.0, 2.0, vDist);
+  float alpha = (0.04 + center * 0.03) * fade;
+  fragColor = vec4(0.3, 0.5, 1.0, alpha);
+}`;
+
 function createShader(type, src) {
   const s = gl.createShader(type);
-  gl.shaderSource(s, src);
-  gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-    console.error(gl.getShaderInfoLog(s));
-    return null;
-  }
+  gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s)); return null; }
   return s;
 }
-
 function createProgram(vs, fs) {
   const p = gl.createProgram();
-  gl.attachShader(p, vs);
-  gl.attachShader(p, fs);
-  gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-    console.error(gl.getProgramInfoLog(p));
-    return null;
-  }
+  gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(p)); return null; }
   return p;
 }
 
@@ -194,34 +249,48 @@ const loc = {
   uModel: gl.getUniformLocation(prog, 'uModel'),
   uNormalMatrix: gl.getUniformLocation(prog, 'uNormalMatrix'),
   uCamPos: gl.getUniformLocation(prog, 'uCamPos'),
-  uLightDir: gl.getUniformLocation(prog, 'uLightDir'),
-  uLightColor: gl.getUniformLocation(prog, 'uLightColor'),
   uBaseColor: gl.getUniformLocation(prog, 'uBaseColor'),
   uMetallic: gl.getUniformLocation(prog, 'uMetallic'),
   uRoughness: gl.getUniformLocation(prog, 'uRoughness'),
+  uClearcoat: gl.getUniformLocation(prog, 'uClearcoat'),
+  uEmissive: gl.getUniformLocation(prog, 'uEmissive'),
+  uOpacity: gl.getUniformLocation(prog, 'uOpacity'),
   uTime: gl.getUniformLocation(prog, 'uTime'),
 };
+const gridProg = createProgram(createShader(gl.VERTEX_SHADER, GRID_VS), createShader(gl.FRAGMENT_SHADER, GRID_FS));
+const gridLoc = { aPos: gl.getAttribLocation(gridProg, 'aPos'), uMVP: gl.getUniformLocation(gridProg, 'uMVP') };
 
-// --- Geometry generators ---
-function generateSphere(radius, widthSeg, heightSeg) {
+// ── Geometry ──
+function generateSphere(radius, wSeg, hSeg) {
   const pos = [], nrm = [], idx = [];
-  for (let y = 0; y <= heightSeg; y++) {
-    for (let x = 0; x <= widthSeg; x++) {
-      const u = x / widthSeg, v = y / heightSeg;
-      const theta = u * Math.PI * 2, phi = v * Math.PI;
-      const sp = Math.sin(phi), cp = Math.cos(phi);
-      const st = Math.sin(theta), ct = Math.cos(theta);
-      const nx = sp * ct, ny = cp, nz = sp * st;
-      pos.push(radius * nx, radius * ny, radius * nz);
-      nrm.push(nx, ny, nz);
+  for (let y = 0; y <= hSeg; y++) for (let x = 0; x <= wSeg; x++) {
+    const u = x / wSeg, v = y / hSeg;
+    const theta = u * Math.PI * 2, phi = v * Math.PI;
+    const sp = Math.sin(phi), cp = Math.cos(phi), st = Math.sin(theta), ct = Math.cos(theta);
+    const nx = sp * ct, ny = cp, nz = sp * st;
+    pos.push(radius * nx, radius * ny, radius * nz); nrm.push(nx, ny, nz);
+  }
+  for (let y = 0; y < hSeg; y++) for (let x = 0; x < wSeg; x++) {
+    const a = y * (wSeg + 1) + x, b = a + wSeg + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
+}
+
+function generateTorus(R, r, seg, tSeg) {
+  const pos = [], nrm = [], idx = [];
+  for (let i = 0; i <= seg; i++) { const u = i / seg * Math.PI * 2;
+    for (let j = 0; j <= tSeg; j++) { const v = j / tSeg * Math.PI * 2;
+      const x = (R + r * Math.cos(v)) * Math.cos(u), y = r * Math.sin(v), z = (R + r * Math.cos(v)) * Math.sin(u);
+      const cx = R * Math.cos(u), cz = R * Math.sin(u);
+      const nx = x - cx, ny = y, nz = z - cz;
+      const len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+      pos.push(x, y, z); nrm.push(nx/len, ny/len, nz/len);
     }
   }
-  for (let y = 0; y < heightSeg; y++) {
-    for (let x = 0; x < widthSeg; x++) {
-      const a = y * (widthSeg + 1) + x;
-      const b = a + widthSeg + 1;
-      idx.push(a, b, a + 1, b, b + 1, a + 1);
-    }
+  for (let i = 0; i < seg; i++) for (let j = 0; j < tSeg; j++) {
+    const a = i * (tSeg + 1) + j, b = a + tSeg + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
   }
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
@@ -229,339 +298,283 @@ function generateSphere(radius, widthSeg, heightSeg) {
 function generateCube(size) {
   const s = size / 2;
   const faces = [
-    { n: [0,0,1], verts: [[-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]] },
-    { n: [0,0,-1], verts: [[s,-s,-s],[-s,-s,-s],[-s,s,-s],[s,s,-s]] },
-    { n: [0,1,0], verts: [[-s,s,s],[s,s,s],[s,s,-s],[-s,s,-s]] },
-    { n: [0,-1,0], verts: [[-s,-s,-s],[s,-s,-s],[s,-s,s],[-s,-s,s]] },
-    { n: [1,0,0], verts: [[s,-s,s],[s,-s,-s],[s,s,-s],[s,s,s]] },
-    { n: [-1,0,0], verts: [[-s,-s,-s],[-s,-s,s],[-s,s,s],[-s,s,-s]] },
+    { n: [0,0,1], v: [[-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]] },
+    { n: [0,0,-1], v: [[s,-s,-s],[-s,-s,-s],[-s,s,-s],[s,s,-s]] },
+    { n: [0,1,0], v: [[-s,s,s],[s,s,s],[s,s,-s],[-s,s,-s]] },
+    { n: [0,-1,0], v: [[-s,-s,-s],[s,-s,-s],[s,-s,s],[-s,-s,s]] },
+    { n: [1,0,0], v: [[s,-s,s],[s,-s,-s],[s,s,-s],[s,s,s]] },
+    { n: [-1,0,0], v: [[-s,-s,-s],[-s,-s,s],[-s,s,s],[-s,s,-s]] },
   ];
   const pos = [], nrm = [], idx = [];
-  faces.forEach((f, i) => {
-    f.verts.forEach(v => { pos.push(...v); nrm.push(...f.n); });
-    const o = i * 4;
-    idx.push(o, o+1, o+2, o, o+2, o+3);
-  });
+  faces.forEach((f, i) => { f.v.forEach(vt => { pos.push(...vt); nrm.push(...f.n); }); const o = i*4; idx.push(o,o+1,o+2,o,o+2,o+3); });
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
 
-function generateTorus(R, r, seg, tubeSeg) {
-  const pos = [], nrm = [], idx = [];
+function generateCylinder(rT, rB, h, seg) {
+  const pos = [], nrm = [], idx = [], hH = h / 2;
   for (let i = 0; i <= seg; i++) {
-    const u = i / seg * Math.PI * 2;
-    for (let j = 0; j <= tubeSeg; j++) {
-      const v = j / tubeSeg * Math.PI * 2;
-      const x = (R + r * Math.cos(v)) * Math.cos(u);
-      const y = r * Math.sin(v);
-      const z = (R + r * Math.cos(v)) * Math.sin(u);
-      const cx = R * Math.cos(u), cz = R * Math.sin(u);
-      const nx = x - cx, ny = y, nz = z - cz;
-      const len = Math.sqrt(nx*nx + ny*ny + nz*nz);
-      pos.push(x, y, z);
-      nrm.push(nx/len, ny/len, nz/len);
-    }
+    const u = i / seg, a = u * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    const sl = (rB - rT) / h, nLen = Math.sqrt(1 + sl * sl);
+    pos.push(rT*c, hH, rT*s); nrm.push(c/nLen, sl/nLen, s/nLen);
+    pos.push(rB*c, -hH, rB*s); nrm.push(c/nLen, sl/nLen, s/nLen);
   }
-  for (let i = 0; i < seg; i++) {
-    for (let j = 0; j < tubeSeg; j++) {
-      const a = i * (tubeSeg + 1) + j;
-      const b = a + tubeSeg + 1;
-      idx.push(a, b, a + 1, b, b + 1, a + 1);
-    }
-  }
-  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
-}
-
-function generateCylinder(radiusTop, radiusBottom, height, segments) {
-  const pos = [], nrm = [], idx = [];
-  const halfH = height / 2;
-  // Side
-  for (let i = 0; i <= segments; i++) {
-    const u = i / segments, angle = u * Math.PI * 2;
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    const slope = (radiusBottom - radiusTop) / height;
-    const nLen = Math.sqrt(1 + slope * slope);
-    pos.push(radiusTop * cos, halfH, radiusTop * sin);
-    nrm.push(cos / nLen, slope / nLen, sin / nLen);
-    pos.push(radiusBottom * cos, -halfH, radiusBottom * sin);
-    nrm.push(cos / nLen, slope / nLen, sin / nLen);
-  }
-  for (let i = 0; i < segments; i++) {
-    const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
-    idx.push(a, b, c, b, d, c);
-  }
-  // Caps
-  const addCap = (y, radius, ny) => {
-    const center = pos.length / 3;
-    pos.push(0, y, 0); nrm.push(0, ny, 0);
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      pos.push(radius * Math.cos(angle), y, radius * Math.sin(angle));
-      nrm.push(0, ny, 0);
-    }
-    for (let i = 0; i < segments; i++) {
-      if (ny > 0) idx.push(center, center + i + 1, center + i + 2);
-      else idx.push(center, center + i + 2, center + i + 1);
-    }
+  for (let i = 0; i < seg; i++) { const a = i*2; idx.push(a,a+1,a+2,a+1,a+3,a+2); }
+  const addCap = (y, r, ny) => { const cn = pos.length/3; pos.push(0,y,0); nrm.push(0,ny,0);
+    for (let i = 0; i <= seg; i++) { const a = (i/seg)*Math.PI*2; pos.push(r*Math.cos(a),y,r*Math.sin(a)); nrm.push(0,ny,0); }
+    for (let i = 0; i < seg; i++) { ny > 0 ? idx.push(cn,cn+i+1,cn+i+2) : idx.push(cn,cn+i+2,cn+i+1); }
   };
-  addCap(halfH, radiusTop, 1);
-  addCap(-halfH, radiusBottom, -1);
+  addCap(hH, rT, 1); addCap(-hH, rB, -1);
   return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
 
-// --- Grid floor ---
-function generateGrid(size, divisions) {
-  const pos = [], nrm = [], idx = [];
-  const step = size / divisions, half = size / 2;
-  let vi = 0;
-  for (let i = 0; i <= divisions; i++) {
-    const t = i * step - half;
-    // X-aligned line
-    pos.push(-half, 0, t, half, 0, t);
-    nrm.push(0, 1, 0, 0, 1, 0);
-    idx.push(vi, vi + 1); vi += 2;
-    // Z-aligned line
-    pos.push(t, 0, -half, t, 0, half);
-    nrm.push(0, 1, 0, 0, 1, 0);
-    idx.push(vi, vi + 1); vi += 2;
+function generateGrid(size, div) {
+  const pos = [], nrm = [], idx = [], step = size/div, half = size/2; let vi = 0;
+  for (let i = 0; i <= div; i++) { const t = i*step-half;
+    pos.push(-half,0,t,half,0,t); nrm.push(0,1,0,0,1,0); idx.push(vi,vi+1); vi+=2;
+    pos.push(t,0,-half,t,0,half); nrm.push(0,1,0,0,1,0); idx.push(vi,vi+1); vi+=2;
   }
-  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx), mode: gl.LINES };
+  return { positions: new Float32Array(pos), normals: new Float32Array(nrm), indices: new Uint16Array(idx) };
 }
 
-// Grid shader (simple)
-const GRID_VS = `#version 300 es
-precision highp float;
-in vec3 aPos;
-uniform mat4 uMVP;
-void main() { gl_Position = uMVP * vec4(aPos, 1.0); }`;
-const GRID_FS = `#version 300 es
-precision highp float;
-out vec4 fragColor;
-void main() { fragColor = vec4(1.0, 1.0, 1.0, 0.08); }`;
-const gridProg = createProgram(createShader(gl.VERTEX_SHADER, GRID_VS), createShader(gl.FRAGMENT_SHADER, GRID_FS));
-const gridLoc = {
-  aPos: gl.getAttribLocation(gridProg, 'aPos'),
-  uMVP: gl.getUniformLocation(gridProg, 'uMVP'),
-};
-
-// --- Create mesh from geometry ---
 function createMesh(geom) {
-  const vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
-
-  const posBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, geom.positions, gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(loc.aPos);
-  gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 0, 0);
-
-  const nrmBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, nrmBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, geom.normals, gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(loc.aNormal);
-  gl.vertexAttribPointer(loc.aNormal, 3, gl.FLOAT, false, 0, 0);
-
-  const idxBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geom.indices, gl.STATIC_DRAW);
-
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, geom.positions, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc.aPos); gl.vertexAttribPointer(loc.aPos, 3, gl.FLOAT, false, 0, 0);
+  const nb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, nb); gl.bufferData(gl.ARRAY_BUFFER, geom.normals, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc.aNormal); gl.vertexAttribPointer(loc.aNormal, 3, gl.FLOAT, false, 0, 0);
+  const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geom.indices, gl.STATIC_DRAW);
   gl.bindVertexArray(null);
-  return { vao, count: geom.indices.length, mode: geom.mode || gl.TRIANGLES };
+  return { vao, count: geom.indices.length };
 }
-
 function createGridMesh(geom) {
-  const vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
-  const posBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-  gl.bufferData(gl.ARRAY_BUFFER, geom.positions, gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(gridLoc.aPos);
-  gl.vertexAttribPointer(gridLoc.aPos, 3, gl.FLOAT, false, 0, 0);
-  const idxBuf = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geom.indices, gl.STATIC_DRAW);
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, geom.positions, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(gridLoc.aPos); gl.vertexAttribPointer(gridLoc.aPos, 3, gl.FLOAT, false, 0, 0);
+  const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geom.indices, gl.STATIC_DRAW);
   gl.bindVertexArray(null);
   return { vao, count: geom.indices.length };
 }
 
-// --- Meshes ---
 const meshes = {
-  sphere: createMesh(generateSphere(1, 48, 32)),
-  cube: createMesh(generateCube(1.6)),
-  torus: createMesh(generateTorus(0.8, 0.35, 48, 24)),
-  cylinder: createMesh(generateCylinder(0.7, 0.7, 1.8, 36)),
+  sphere: createMesh(generateSphere(0.65, 64, 48)),
+  torus: createMesh(generateTorus(0.5, 0.2, 64, 32)),
+  cube: createMesh(generateCube(1.0)),
+  cylinder: createMesh(generateCylinder(0.5, 0.5, 1.2, 48)),
+  cone: createMesh(generateCylinder(0.0, 0.55, 1.2, 48)),
+  pedestal: createMesh(generateCylinder(0.8, 0.8, 0.08, 48)),
 };
-const gridMesh = createGridMesh(generateGrid(10, 20));
-let currentShape = 'sphere';
+const gridMesh = createGridMesh(generateGrid(14, 28));
 
-// --- Math utilities ---
-function mat4Perspective(fov, aspect, near, far) {
-  const f = 1 / Math.tan(fov / 2), nf = 1 / (near - far);
-  return new Float32Array([f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0]);
+// ── Math ──
+function mat4Perspective(fov, a, n, f) { const t=1/Math.tan(fov/2), nf=1/(n-f); return new Float32Array([t/a,0,0,0,0,t,0,0,0,0,(f+n)*nf,-1,0,0,2*f*n*nf,0]); }
+function mat4LookAt(e, c, u) {
+  const z=vn(vs(e,c)), x=vn(vc(u,z)), y=vc(z,x);
+  return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-vd(x,e),-vd(y,e),-vd(z,e),1]);
 }
+function mat4Mul(a, b) { const r=new Float32Array(16); for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];r[i*4+j]=s;}return r; }
+function mat4Id() { return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]); }
+function mat4T(x,y,z) { return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,x,y,z,1]); }
+function mat4S(x,y,z) { return new Float32Array([x,0,0,0,0,y,0,0,0,0,z,0,0,0,0,1]); }
+function mat4RY(a) { const c=Math.cos(a), s=Math.sin(a); return new Float32Array([c,0,s,0,0,1,0,0,-s,0,c,0,0,0,0,1]); }
+function mat3N(m) { return new Float32Array([m[0],m[1],m[2],m[4],m[5],m[6],m[8],m[9],m[10]]); }
+function vn(v){const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);return l>0?[v[0]/l,v[1]/l,v[2]/l]:[0,0,0];}
+function vs(a,b){return[a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function vc(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function vd(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
 
-function mat4LookAt(eye, center, up) {
-  const z = normalize(sub(eye, center));
-  const x = normalize(cross(up, z));
-  const y = cross(z, x);
-  return new Float32Array([
-    x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0,
-    -dot(x,eye),-dot(y,eye),-dot(z,eye),1
-  ]);
-}
+// ── Material definitions ──
+const MATERIALS = {
+  // Chrome
+  chrome: { mesh: 'sphere', color: [0.95, 0.93, 0.88], metallic: 1.0, roughness: 0.05, clearcoat: 0.8, emissive: 0, opacity: 1, label: 'Chrome' },
+  // Brushed Steel
+  steel: { mesh: 'sphere', color: [0.6, 0.6, 0.62], metallic: 1.0, roughness: 0.35, clearcoat: 0, emissive: 0, opacity: 1, label: 'Brushed Steel' },
+  // Gold
+  gold: { mesh: 'sphere', color: [1.0, 0.76, 0.33], metallic: 1.0, roughness: 0.12, clearcoat: 0, emissive: 0, opacity: 1, label: 'Gold' },
+  // Copper
+  copper: { mesh: 'sphere', color: [0.95, 0.64, 0.54], metallic: 1.0, roughness: 0.2, clearcoat: 0, emissive: 0, opacity: 1, label: 'Copper' },
+  // Ceramic
+  ceramic: { mesh: 'sphere', color: [0.95, 0.95, 0.92], metallic: 0.0, roughness: 0.15, clearcoat: 1.0, emissive: 0, opacity: 1, label: 'Ceramic' },
+  // Rubber
+  rubber: { mesh: 'sphere', color: [0.15, 0.15, 0.18], metallic: 0.0, roughness: 0.9, clearcoat: 0, emissive: 0, opacity: 1, label: 'Rubber' },
+  // Plastic (red)
+  plastic: { mesh: 'sphere', color: [0.85, 0.12, 0.12], metallic: 0.0, roughness: 0.3, clearcoat: 0.6, emissive: 0, opacity: 1, label: 'Glossy Plastic' },
+  // Jade
+  jade: { mesh: 'sphere', color: [0.15, 0.65, 0.3], metallic: 0.05, roughness: 0.25, clearcoat: 0.5, emissive: 0, opacity: 1, label: 'Jade' },
+  // Emissive neon
+  neon: { mesh: 'sphere', color: [0.1, 0.5, 1.0], metallic: 0.0, roughness: 0.3, clearcoat: 0, emissive: 1.2, opacity: 1, label: 'Neon Emissive' },
+  // Obsidian
+  obsidian: { mesh: 'sphere', color: [0.05, 0.05, 0.08], metallic: 0.6, roughness: 0.08, clearcoat: 0.9, emissive: 0, opacity: 1, label: 'Obsidian' },
+  // Rose gold
+  rosegold: { mesh: 'sphere', color: [0.88, 0.6, 0.55], metallic: 1.0, roughness: 0.15, clearcoat: 0, emissive: 0, opacity: 1, label: 'Rose Gold' },
+  // Pearl
+  pearl: { mesh: 'sphere', color: [0.9, 0.88, 0.85], metallic: 0.2, roughness: 0.2, clearcoat: 1.0, emissive: 0.05, opacity: 1, label: 'Pearl' },
+};
 
-function mat4Multiply(a, b) {
-  const r = new Float32Array(16);
-  for (let i = 0; i < 4; i++)
-    for (let j = 0; j < 4; j++) {
-      let s = 0;
-      for (let k = 0; k < 4; k++) s += a[k*4+j] * b[i*4+k];
-      r[i*4+j] = s;
+// ── Scene presets ──
+const SCENES = {
+  gallery: function() {
+    const items = [];
+    const keys = Object.keys(MATERIALS);
+    const cols = 4, rows = 3;
+    const spacing = 2.2;
+    for (let i = 0; i < keys.length; i++) {
+      const mat = MATERIALS[keys[i]];
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = (col - (cols - 1) / 2) * spacing;
+      const z = (row - (rows - 1) / 2) * spacing;
+      // Pedestal
+      items.push({ mesh: 'pedestal', pos: [x, 0.01, z], scale: [1, 1, 1], rot: 0, ...{ color: [0.12,0.12,0.13], metallic: 0.3, roughness: 0.5, clearcoat: 0, emissive: 0, opacity: 1 }});
+      // Material sphere
+      items.push({ mesh: mat.mesh, pos: [x, 0.7, z], scale: [1, 1, 1], rot: 0, ...mat });
     }
-  return r;
-}
+    return items;
+  },
+  metals: function() {
+    const items = [];
+    const metalMats = ['chrome', 'gold', 'copper', 'rosegold', 'steel', 'obsidian'];
+    const spacing = 2.5;
+    for (let i = 0; i < metalMats.length; i++) {
+      const mat = MATERIALS[metalMats[i]];
+      const col = i % 3, row = Math.floor(i / 3);
+      const x = (col - 1) * spacing, z = (row - 0.5) * spacing;
+      items.push({ mesh: 'pedestal', pos: [x, 0.01, z], scale: [1.1, 1, 1.1], rot: 0, color: [0.08,0.08,0.1], metallic: 0.5, roughness: 0.3, clearcoat: 0, emissive: 0, opacity: 1 });
+      items.push({ mesh: 'torus', pos: [x, 0.6, z], scale: [1.3, 1.3, 1.3], rot: 0, ...mat });
+    }
+    return items;
+  },
+  glass: function() {
+    const items = [];
+    const mats = ['jade', 'pearl', 'ceramic', 'neon', 'obsidian'];
+    for (let i = 0; i < mats.length; i++) {
+      const mat = MATERIALS[mats[i]];
+      const angle = (i / mats.length) * Math.PI * 2;
+      const r = 3;
+      const x = Math.cos(angle) * r, z = Math.sin(angle) * r;
+      items.push({ mesh: 'pedestal', pos: [x, 0.01, z], scale: [1, 1, 1], rot: 0, color: [0.1,0.1,0.12], metallic: 0.4, roughness: 0.4, clearcoat: 0, emissive: 0, opacity: 1 });
+      items.push({ mesh: 'cube', pos: [x, 0.65, z], scale: [0.7, 0.7, 0.7], rot: Math.PI / 4, ...mat });
+    }
+    // Center gem
+    items.push({ mesh: 'cone', pos: [0, 1.2, 0], scale: [1.2, 1.5, 1.2], rot: 0, color: [0.4, 0.15, 0.8], metallic: 0.95, roughness: 0.05, clearcoat: 1.0, emissive: 0.1, opacity: 1, label: 'Amethyst' });
+    items.push({ mesh: 'pedestal', pos: [0, 0.01, 0], scale: [1.3, 1, 1.3], rot: 0, color: [0.15,0.15,0.17], metallic: 0.5, roughness: 0.3, clearcoat: 0, emissive: 0, opacity: 1 });
+    return items;
+  },
+  hero: function() {
+    return [
+      // Large hero sphere with chrome
+      { mesh: 'sphere', pos: [0, 1.2, 0], scale: [2.2, 2.2, 2.2], rot: 0, color: [0.95, 0.93, 0.88], metallic: 1.0, roughness: 0.03, clearcoat: 1.0, emissive: 0, opacity: 1 },
+      // Ground ring
+      { mesh: 'pedestal', pos: [0, 0.01, 0], scale: [3, 1, 3], rot: 0, color: [0.06, 0.06, 0.08], metallic: 0.5, roughness: 0.3, clearcoat: 0, emissive: 0, opacity: 1 },
+      // Floating accent torus
+      { mesh: 'torus', pos: [0, 1.2, 0], scale: [2.8, 2.8, 2.8], rot: 0, color: [1.0, 0.76, 0.33], metallic: 1.0, roughness: 0.1, clearcoat: 0, emissive: 0, opacity: 1 },
+      // Small orbiting spheres
+      { mesh: 'sphere', pos: [2.5, 2.0, 0], scale: [0.3, 0.3, 0.3], rot: 0, color: [0.1, 0.5, 1.0], metallic: 0.0, roughness: 0.3, clearcoat: 0, emissive: 1.5, opacity: 1 },
+      { mesh: 'sphere', pos: [-2.5, 1.5, 1], scale: [0.25, 0.25, 0.25], rot: 0, color: [1.0, 0.3, 0.5], metallic: 0.0, roughness: 0.3, clearcoat: 0, emissive: 1.2, opacity: 1 },
+      { mesh: 'sphere', pos: [0, 3.0, -2], scale: [0.2, 0.2, 0.2], rot: 0, color: [0.3, 1.0, 0.5], metallic: 0.0, roughness: 0.3, clearcoat: 0, emissive: 1.0, opacity: 1 },
+    ];
+  },
+};
 
-function mat4RotateY(m, angle) {
-  const c = Math.cos(angle), s = Math.sin(angle);
-  const rot = new Float32Array([c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1]);
-  return mat4Multiply(m, rot);
-}
+let currentScene = 'gallery';
+let sceneItems = SCENES.gallery();
 
-function mat4Identity() {
-  return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
-}
+// Camera
+let orbitTheta = 0.4, orbitPhi = 0.65, orbitDist = 10;
+let targetTheta = orbitTheta, targetPhi = orbitPhi, targetDist = orbitDist;
+let autoRotate = true, isDragging = false, lastX = 0, lastY = 0;
 
-function mat3NormalFromMat4(m) {
-  // Upper-left 3x3 inverse transpose (simplified for orthogonal transforms)
-  return new Float32Array([m[0],m[1],m[2], m[4],m[5],m[6], m[8],m[9],m[10]]);
-}
-
-function normalize(v) { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return [v[0]/l,v[1]/l,v[2]/l]; }
-function sub(a,b) { return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
-function cross(a,b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
-function dot(a,b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
-
-// --- Camera orbit controls ---
-let orbitTheta = 0.4, orbitPhi = 0.6, orbitDist = 4.0;
-let autoRotate = true;
-let isDragging = false, lastX = 0, lastY = 0;
-
-canvas.addEventListener('pointerdown', e => {
-  isDragging = true; lastX = e.clientX; lastY = e.clientY;
-  autoRotate = false;
-  canvas.setPointerCapture(e.pointerId);
-});
-canvas.addEventListener('pointermove', e => {
-  if (!isDragging) return;
-  const dx = e.clientX - lastX, dy = e.clientY - lastY;
-  orbitTheta -= dx * 0.008;
-  orbitPhi = Math.max(0.1, Math.min(Math.PI - 0.1, orbitPhi - dy * 0.008));
-  lastX = e.clientX; lastY = e.clientY;
-});
+canvas.addEventListener('pointerdown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; autoRotate = false; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', e => { if (!isDragging) return; orbitTheta -= (e.clientX - lastX) * 0.006; orbitPhi = Math.max(0.15, Math.min(Math.PI - 0.15, orbitPhi - (e.clientY - lastY) * 0.006)); lastX = e.clientX; lastY = e.clientY; targetTheta = orbitTheta; targetPhi = orbitPhi; });
 canvas.addEventListener('pointerup', () => { isDragging = false; });
-canvas.addEventListener('wheel', e => {
-  orbitDist = Math.max(1.5, Math.min(15, orbitDist + e.deltaY * 0.005));
-  e.preventDefault();
-}, { passive: false });
+canvas.addEventListener('wheel', e => { targetDist = Math.max(3, Math.min(20, targetDist + e.deltaY * 0.008)); e.preventDefault(); }, { passive: false });
 
-// Touch pinch zoom
-let lastPinchDist = 0;
-canvas.addEventListener('touchstart', e => {
-  if (e.touches.length === 2) {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    lastPinchDist = Math.sqrt(dx*dx + dy*dy);
-  }
-}, { passive: true });
-canvas.addEventListener('touchmove', e => {
-  if (e.touches.length === 2) {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    orbitDist = Math.max(1.5, Math.min(15, orbitDist - (dist - lastPinchDist) * 0.02));
-    lastPinchDist = dist;
-  }
-}, { passive: true });
-
-// --- Shape selector ---
-document.querySelectorAll('.shape-btn').forEach(btn => {
+// Scene switching
+document.querySelectorAll('.scene-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    currentShape = btn.dataset.shape;
+    currentScene = btn.dataset.scene;
+    sceneItems = SCENES[currentScene]();
+    // Camera presets
+    if (currentScene === 'gallery') { targetDist = 10; targetPhi = 0.65; targetTheta = 0.4; }
+    else if (currentScene === 'metals') { targetDist = 8; targetPhi = 0.7; targetTheta = 0.3; }
+    else if (currentScene === 'glass') { targetDist = 9; targetPhi = 0.6; targetTheta = 0.5; }
+    else if (currentScene === 'hero') { targetDist = 7; targetPhi = 0.55; targetTheta = 0.3; }
+    autoRotate = true;
+    document.getElementById('matLabel').textContent = {gallery:'12 PBR Materials', metals:'Metal Collection', glass:'Glass & Gem Showcase', hero:'Hero Composition'}[currentScene];
   });
 });
 
-// --- Material properties (animated) ---
-const materials = {
-  sphere:   { baseColor: [0.9, 0.2, 0.15], metallic: 0.9, roughness: 0.2 },
-  cube:     { baseColor: [0.15, 0.6, 0.9], metallic: 0.0, roughness: 0.4 },
-  torus:    { baseColor: [0.95, 0.75, 0.1], metallic: 1.0, roughness: 0.1 },
-  cylinder: { baseColor: [0.2, 0.85, 0.4], metallic: 0.3, roughness: 0.6 },
-};
-
-// --- Render loop ---
+// ── Render ──
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = canvas.clientWidth * dpr;
-  canvas.height = canvas.clientHeight * dpr;
+  canvas.width = canvas.clientWidth * dpr; canvas.height = canvas.clientHeight * dpr;
   gl.viewport(0, 0, canvas.width, canvas.height);
 }
-resize();
-window.addEventListener('resize', resize);
+resize(); window.addEventListener('resize', resize);
+
+function lerp(a, b, t) { return a + (b - a) * t; }
 
 function render(time) {
   requestAnimationFrame(render);
   const t = time * 0.001;
 
-  if (autoRotate) orbitTheta += 0.005;
+  if (autoRotate) targetTheta += 0.003;
+  orbitTheta = lerp(orbitTheta, targetTheta, 0.08);
+  orbitPhi = lerp(orbitPhi, targetPhi, 0.08);
+  orbitDist = lerp(orbitDist, targetDist, 0.08);
 
-  // Camera position from orbit
   const camX = orbitDist * Math.sin(orbitPhi) * Math.cos(orbitTheta);
   const camY = orbitDist * Math.cos(orbitPhi);
   const camZ = orbitDist * Math.sin(orbitPhi) * Math.sin(orbitTheta);
   const camPos = [camX, camY, camZ];
 
   const aspect = canvas.width / canvas.height;
-  const proj = mat4Perspective(Math.PI / 4, aspect, 0.1, 100);
-  const view = mat4LookAt(camPos, [0, 0, 0], [0, 1, 0]);
-  const vp = mat4Multiply(proj, view);
+  const proj = mat4Perspective(Math.PI / 4.5, aspect, 0.1, 100);
+  const view = mat4LookAt(camPos, [0, 0.5, 0], [0, 1, 0]);
+  const vp = mat4Mul(proj, view);
 
-  // Slow rotation for the model
-  const model = mat4RotateY(mat4Identity(), t * 0.3);
-  const mvp = mat4Multiply(vp, model);
-  const normalMat = mat3NormalFromMat4(model);
-
-  // Clear
-  gl.clearColor(0.051, 0.067, 0.09, 1.0);
+  gl.clearColor(0.04, 0.05, 0.08, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-  // Draw grid
+  // Grid
   gl.useProgram(gridProg);
-  gl.uniformMatrix4fv(gridLoc.uMVP, false, mat4Multiply(vp, mat4Identity()));
+  gl.uniformMatrix4fv(gridLoc.uMVP, false, mat4Mul(vp, mat4Id()));
   gl.bindVertexArray(gridMesh.vao);
   gl.drawElements(gl.LINES, gridMesh.count, gl.UNSIGNED_SHORT, 0);
 
-  // Draw shape
+  // Scene items
   gl.useProgram(prog);
-  gl.uniformMatrix4fv(loc.uMVP, false, mvp);
-  gl.uniformMatrix4fv(loc.uModel, false, model);
-  gl.uniformMatrix3fv(loc.uNormalMatrix, false, normalMat);
   gl.uniform3fv(loc.uCamPos, camPos);
-  gl.uniform3f(loc.uLightDir, 0.5, 0.8, 0.3);
-  gl.uniform3f(loc.uLightColor, 3.0, 2.9, 2.7);
-
-  const mat = materials[currentShape];
-  gl.uniform3fv(loc.uBaseColor, mat.baseColor);
-  gl.uniform1f(loc.uMetallic, mat.metallic);
-  gl.uniform1f(loc.uRoughness, mat.roughness);
   gl.uniform1f(loc.uTime, t);
 
-  const mesh = meshes[currentShape];
-  gl.bindVertexArray(mesh.vao);
-  gl.drawElements(mesh.mode, mesh.count, gl.UNSIGNED_SHORT, 0);
+  for (const item of sceneItems) {
+    const mesh = meshes[item.mesh];
+    if (!mesh) continue;
+
+    let model = mat4T(item.pos[0], item.pos[1], item.pos[2]);
+    if (item.scale) model = mat4Mul(model, mat4S(item.scale[0], item.scale[1], item.scale[2]));
+    if (item.rot) model = mat4Mul(model, mat4RY(item.rot + t * 0.2));
+    else if (item.mesh !== 'pedestal') model = mat4Mul(model, mat4RY(t * 0.15));
+
+    const mvp = mat4Mul(vp, model);
+    const normalMat = mat3N(model);
+
+    gl.uniformMatrix4fv(loc.uMVP, false, mvp);
+    gl.uniformMatrix4fv(loc.uModel, false, model);
+    gl.uniformMatrix3fv(loc.uNormalMatrix, false, normalMat);
+    gl.uniform3fv(loc.uBaseColor, item.color);
+    gl.uniform1f(loc.uMetallic, item.metallic);
+    gl.uniform1f(loc.uRoughness, item.roughness);
+    gl.uniform1f(loc.uClearcoat, item.clearcoat || 0);
+    gl.uniform1f(loc.uEmissive, item.emissive || 0);
+    gl.uniform1f(loc.uOpacity, item.opacity != null ? item.opacity : 1);
+
+    gl.bindVertexArray(mesh.vao);
+    gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+  }
 }
 
 requestAnimationFrame(render);
