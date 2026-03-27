@@ -96,11 +96,6 @@
   <nav class="nav" id="nav">
     <div class="nav__container">
       <a href="/" class="nav__logo">
-        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
-          <rect width="32" height="32" rx="8" fill="currentColor"/>
-          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
         <span class="nav__logo-text">SceneView</span>
       </a>
 
@@ -264,6 +259,75 @@
 <span class="kw">git</span> clone <span class="str">https://github.com/sceneview/sceneview</span>
 <span class="kw">cd</span> sceneview/samples/desktop-demo
 <span class="kw">./gradlew</span> run</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AI / MCP ===== -->
+  <section class="section ai-section" id="ai">
+    <div class="container">
+      <div class="ai-section__inner">
+        <div class="ai-section__content">
+          <div class="ai-section__badge">AI-first SDK</div>
+          <h2 class="section__title">Built for AI assistants</h2>
+          <p class="section__subtitle">SceneView is the first 3D SDK designed so AI assistants can generate correct, working code on the first try. MCP integration gives Claude Desktop, Claude Code, Cursor, and Windsurf full access to the API reference, samples, and best practices.</p>
+          <pre class="code-block code-block--compact"><code><span class="cm">// Claude Code</span>
+<span class="kw">claude</span> mcp add sceneview -- <span class="fn">npx</span> <span class="str">sceneview-mcp</span></code></pre>
+          <pre class="code-block code-block--compact" style="margin-top:var(--space-sm)"><code><span class="cm">// Claude Desktop &mdash; claude_desktop_config.json</span>
+{ <span class="str">"mcpServers"</span>: { <span class="str">"sceneview"</span>: { <span class="str">"command"</span>: <span class="str">"npx"</span>, <span class="str">"args"</span>: [<span class="str">"sceneview-mcp"</span>] } } }</code></pre>
+          <p class="ai-section__hint">Works with Claude Desktop, Claude Code, Cursor, Windsurf, and any MCP-compatible client.</p>
+          <div style="display:flex;gap:var(--space-md);flex-wrap:wrap;margin-top:var(--space-lg)">
+            <a href="/claude-3d.html" class="btn btn--primary" style="gap:8px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              See AI + 3D in action
+            </a>
+            <a href="https://www.npmjs.com/package/sceneview-mcp" class="btn btn--outline" style="gap:8px" target="_blank" rel="noopener">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>
+              sceneview-mcp on npm
+            </a>
+          </div>
+        </div>
+        <div class="ai-section__graphic">
+          <!-- Claude Code Mac mockup -->
+          <div style="background:#1a1a2e;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);max-width:520px">
+            <!-- macOS title bar -->
+            <div style="display:flex;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06)">
+              <div style="display:flex;gap:7px">
+                <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span>
+                <span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span>
+                <span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span>
+              </div>
+              <span style="flex:1;text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.4);font-weight:500">Claude Code &mdash; SceneView Project</span>
+            </div>
+            <!-- Chat area -->
+            <div style="padding:16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:1.7">
+              <!-- User prompt -->
+              <div style="display:flex;gap:10px;margin-bottom:14px">
+                <span style="color:#d4a0ff;font-weight:700;flex-shrink:0">You</span>
+                <span style="color:#e2e8f0">Build me a 3D product viewer with AR try-on for shoes</span>
+              </div>
+              <!-- Claude response -->
+              <div style="display:flex;gap:10px">
+                <span style="color:#f0a050;font-weight:700;flex-shrink:0">Claude</span>
+                <div>
+                  <p style="color:rgba(255,255,255,0.5);margin:0 0 8px">Using SceneView MCP to generate your app...</p>
+                  <div style="background:#0d1117;border-radius:8px;padding:12px;border:1px solid rgba(255,255,255,0.06);margin-bottom:8px">
+                    <p style="color:#7ee787;margin:0 0 2px;font-size:0.7rem">// MainActivity.kt</p>
+                    <p style="color:#c9d1d9;margin:0"><span style="color:#ff7b72">ARScene</span>(</p>
+                    <p style="color:#c9d1d9;margin:0">&nbsp;&nbsp;planeRenderer = <span style="color:#79c0ff">true</span>,</p>
+                    <p style="color:#c9d1d9;margin:0">&nbsp;&nbsp;onTapAR = { hitResult <span style="color:#ff7b72">-&gt;</span></p>
+                    <p style="color:#c9d1d9;margin:0">&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#d2a8ff">AnchorNode</span>(hitResult) {</p>
+                    <p style="color:#c9d1d9;margin:0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#d2a8ff">ModelNode</span>(<span style="color:#a5d6ff">"shoe.glb"</span>)</p>
+                    <p style="color:#c9d1d9;margin:0">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+                    <p style="color:#c9d1d9;margin:0">&nbsp;&nbsp;}</p>
+                    <p style="color:#c9d1d9;margin:0">)</p>
+                  </div>
+                  <p style="color:#7ee787;margin:0;font-size:0.75rem">&#10003; App compiles and runs. Point camera at floor, tap to place shoe.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -850,48 +914,6 @@
     </div>
   </section>
 
-  <!-- ===== AI / MCP ===== -->
-  <section class="section ai-section" id="ai">
-    <div class="container">
-      <div class="ai-section__inner">
-        <div class="ai-section__content">
-          <div class="ai-section__badge">AI-first SDK</div>
-          <h2 class="section__title">Built for AI assistants</h2>
-          <p class="section__subtitle">SceneView is the first 3D SDK designed so AI assistants can generate correct, working code on the first try. MCP integration gives Claude Desktop, Claude Code, Cursor, and Windsurf full access to the API reference, samples, and best practices.</p>
-          <pre class="code-block code-block--compact"><code><span class="cm">// Claude Code</span>
-<span class="kw">claude</span> mcp add sceneview -- <span class="fn">npx</span> <span class="str">sceneview-mcp</span></code></pre>
-          <pre class="code-block code-block--compact" style="margin-top:var(--space-sm)"><code><span class="cm">// Claude Desktop &mdash; claude_desktop_config.json</span>
-{ <span class="str">"mcpServers"</span>: { <span class="str">"sceneview"</span>: { <span class="str">"command"</span>: <span class="str">"npx"</span>, <span class="str">"args"</span>: [<span class="str">"sceneview-mcp"</span>] } } }</code></pre>
-          <p class="ai-section__hint">Works with Claude Desktop, Claude Code, Cursor, Windsurf, and any MCP-compatible client.</p>
-          <div style="display:flex;gap:var(--space-md);flex-wrap:wrap;margin-top:var(--space-lg)">
-            <a href="/claude-3d.html" class="btn btn--primary" style="gap:8px">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              See AI + 3D in action
-            </a>
-            <a href="https://www.npmjs.com/package/sceneview-mcp" class="btn btn--outline" style="gap:8px" target="_blank" rel="noopener">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>
-              sceneview-mcp on npm
-            </a>
-          </div>
-        </div>
-        <div class="ai-section__graphic">
-          <div class="ai-section__terminal">
-            <div class="ai-section__terminal-dots">
-              <span></span><span></span><span></span>
-            </div>
-            <div class="ai-section__terminal-body">
-              <p><span class="kw">$</span> Ask Claude: "Build me an AR app"</p>
-              <p class="ai-section__terminal-dim">&gt; Searching SceneView API reference...</p>
-              <p class="ai-section__terminal-dim">&gt; Loading AR best practices...</p>
-              <p class="ai-section__terminal-dim">&gt; Generating composable code...</p>
-              <p><span class="fn">Done.</span> ARScene with tap-to-place ready.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- ===== PRO PRODUCTS ===== -->
   <section class="section pro-section" id="pro">
     <div class="container">
@@ -900,7 +922,7 @@
       <p class="section__subtitle">Premium tools, templates, and AI integrations to ship faster. One-time purchases and subscriptions available.</p>
 
       <div class="pro__grid">
-        <div class="pro-card">
+        <a href="https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF" class="pro-card" style="text-decoration:none;color:inherit;display:flex;cursor:pointer">
           <div class="pro-card__tag">One-time</div>
           <h3 class="pro-card__title">MCP Creator Kit</h3>
           <p class="pro-card__price"><span class="pro-card__amount">&euro;29</span></p>
@@ -911,10 +933,10 @@
             <li>Testing &amp; publishing guide</li>
             <li>Claude Desktop integration</li>
           </ul>
-          <a href="https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF" class="btn pro-card__btn">Buy Now</a>
-        </div>
+          <span class="btn pro-card__btn">Buy Now</span>
+        </a>
 
-        <div class="pro-card pro-card--featured">
+        <a href="https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF" class="pro-card pro-card--featured" style="text-decoration:none;color:inherit;display:flex;cursor:pointer">
           <div class="pro-card__tag pro-card__tag--popular">Most Popular</div>
           <h3 class="pro-card__title">SceneView Pro Starter Kit</h3>
           <p class="pro-card__price"><span class="pro-card__amount">&euro;49</span></p>
@@ -926,10 +948,10 @@
             <li>Exclusive code samples</li>
             <li>Future updates included</li>
           </ul>
-          <a href="https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF" class="btn pro-card__btn pro-card__btn--featured">Buy Now</a>
-        </div>
+          <span class="btn pro-card__btn pro-card__btn--featured">Buy Now</span>
+        </a>
 
-        <div class="pro-card">
+        <a href="https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF" class="pro-card" style="text-decoration:none;color:inherit;display:flex;cursor:pointer">
           <div class="pro-card__tag">Subscription</div>
           <h3 class="pro-card__title">SceneView MCP Pro</h3>
           <p class="pro-card__price"><span class="pro-card__amount">&euro;9.99</span><span class="pro-card__period">/month</span></p>
@@ -940,8 +962,8 @@
             <li>Early access to new tools</li>
             <li>Exclusive code recipes</li>
           </ul>
-          <a href="https://buy.polar.sh/polar_cl_tb87ROB9Xn0c5aohdn3NvkTINDF1xjW5zpkg70UwmcF" class="btn pro-card__btn">Subscribe</a>
-        </div>
+          <span class="btn pro-card__btn">Subscribe</span>
+        </a>
       </div>
 
       <div class="pro-section__sponsor">
