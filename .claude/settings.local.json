@@ -14,7 +14,13 @@
       "NotebookEdit(*)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "mcp__d4f303ec-2a2d-4d53-b698-4de44a599d0f__gmail_create_draft"
+      "mcp__d4f303ec-2a2d-4d53-b698-4de44a599d0f__gmail_create_draft",
+      "mcp__claude-code__Read",
+      "mcp__claude-code__Glob",
+      "mcp__claude-code__Grep",
+      "mcp__claude-code__Agent",
+      "mcp__scheduled-tasks__list_scheduled_tasks",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
