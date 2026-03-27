@@ -53,9 +53,6 @@ DerivedData/
 # Environment files
 .env
 .env.local
-website/build/
-website/node_modules/
-website/.gradle/
 
 # Module build artifacts
 sceneview-web/build/
@@ -73,4 +70,3 @@ branding/SPONSOR_TIERS.md
 
 # Build artifacts
 docs/site/
-website/.kobweb/
