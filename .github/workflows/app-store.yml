@@ -107,8 +107,7 @@ jobs:
           xcodebuild -resolvePackageDependencies \
             -scheme SceneViewDemo \
             -project SceneViewDemo.xcodeproj \
-            -clonedSourcePackagesDirPath SourcePackages \
-            -destination 'generic/platform=iOS'
+            -clonedSourcePackagesDirPath SourcePackages
 
       - name: Build archive
         run: |
@@ -117,7 +116,6 @@ jobs:
             -scheme SceneViewDemo \
             -sdk iphoneos \
             -archivePath $RUNNER_TEMP/SceneViewDemo.xcarchive \
-            -destination 'generic/platform=iOS' \
             -clonedSourcePackagesDirPath SourcePackages \
             -skipPackagePluginValidation \
             -skipMacroValidation \

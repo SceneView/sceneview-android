@@ -4,14 +4,60 @@
 
 ## Last Session Summary
 
-**Date:** 2026-03-27 (full QA audit + fixes + visual demos)
+**Date:** 2026-03-27 evening (store publication + website overhaul + 3D assets)
 **Branch:** `main`
 **Releases:** v3.4.0 through v3.4.7 (GitHub), sceneview-mcp 3.4.14 (npm), sceneview.js v1.2.0 (npm)
-**Total commits on main:** ~1300+
+**Total commits on main:** ~1320+
+**PRs merged this session:** #716-#724 (9 PRs)
 
 ---
 
-### Everything delivered — 2026-03-27 session (QA audit + visual demos)
+### Everything delivered — 2026-03-27 evening session (STORE PUBLICATION)
+
+#### Play Store — SUBMITTED FOR REVIEW 🟢
+- AAB v2.0.0 uploaded (version code 3, API 28+, SDK 36, 52.9 MB)
+- Store listing complete (name, descriptions, 4 screenshots, category: Tools)
+- Privacy policy live at sceneview.github.io/sceneview/privacy.html
+- 177 countries selected, closed testing alpha configured
+- **Sent to Google for review** — will auto-publish when approved
+
+#### iOS TestFlight — IN PROGRESS 🔄
+- New Apple Distribution certificate created (expires 2027/03/27)
+- Provisioning profile regenerated with new cert
+- **All saved to Google Drive**: `My Drive/Projects/Secrets/ios-distribution-2027/`
+- P12 password: SceneView2026Dist (legacy format for macOS CI)
+- SceneViewSwift compilation fixes in progress (15 files, Xcode 16 compat)
+
+#### Android Demo — 14/14 Demos LIVE
+- 4 new demos: PostProcessing, ImageDetection, ReflectionProbes, GltfCameras
+- Fix: deprecation warnings, unused imports, iOS cylinder API
+
+#### Website Overhaul
+- Landing page: gradient hero, stats bar, 8 features, testimonials grid
+- Versions updated 3.3.0 → 3.4.7 across 17 doc files
+- Privacy policy page created and deployed
+- Community buttons fixed
+
+#### New 3D Assets (PR #724)
+- 15 GLB models (KhronosGroup CC-BY): watch, sneaker, avocado, fox, chairs, sofas, flowers, lamp, sunglasses, lantern
+- 4 HDR environments (Poly Haven CC0): café, workshop, garden, studio
+
+#### Playground Refactored (PR #724)
+- Interactive sidebar, 16+ models, environment presets, code tabs, share URL, dark theme
+
+#### Agents running overnight (27→28 March)
+1. Swift compat fixes (15 files for Xcode 16)
+2. Claude 3D showcase page (mockup Claude Desktop + live 3D preview)
+3. Website comprehensive review
+4. Playground deep review
+
+#### Store links to update when apps are live
+- website-static/index.html lines 148, 162 (href="#" → real store URLs)
+- website-static/go/index.html (playStore URL already configured)
+
+---
+
+### Everything delivered — 2026-03-27 morning session (QA audit + visual demos)
 
 #### Full QA Audit (7 parallel audit agents)
 - **15+ fixes**: XSS embed, badge npm, noindex test pages, sitemap lastmod, MCP 8 test failures (org rename), MCP README (19 tools/834 tests), server.json 3.4.14, Flutter demo path, TV demo assets, iOS demo API rewrite, dead code cleanup (8 files), POM_SCM_URL lowercase, workflows (JSON injection, dispatch, Xcode, Kobweb), mouse inversion fix, hero → SceneView Web + IBL
