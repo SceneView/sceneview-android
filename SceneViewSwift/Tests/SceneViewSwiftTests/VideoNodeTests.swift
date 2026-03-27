@@ -141,10 +141,12 @@ final class VideoNodeTests: XCTestCase {
     // MARK: - Video player component
 
     func testEntityHasVideoPlayerComponent() {
-        let player = AVPlayer()
-        let node = VideoNode.create(player: player)
-        let component = node.entity.components[VideoPlayerComponent.self]
-        XCTAssertNotNil(component)
+        if #available(macOS 15.0, iOS 18.0, visionOS 1.0, *) {
+            let player = AVPlayer()
+            let node = VideoNode.create(player: player)
+            let component = node.entity.components[VideoPlayerComponent.self]
+            XCTAssertNotNil(component)
+        }
     }
 }
 #endif

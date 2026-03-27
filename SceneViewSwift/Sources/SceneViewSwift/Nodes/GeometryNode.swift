@@ -158,19 +158,23 @@ public struct GeometryNode: Sendable {
 
     // MARK: - Cone
 
-    /// Creates a cone geometry.
+    /// Creates a cone geometry approximated by a narrow-top cylinder.
+    ///
+    /// RealityKit does not provide a native cone mesh generator, so this uses a very
+    /// narrow-top cylinder to approximate a cone shape.
     ///
     /// - Parameters:
     ///   - height: Cone height in meters.
     ///   - radius: Base radius in meters.
     ///   - color: Simple material color.
-    /// - Returns: A `GeometryNode` containing a cone mesh.
+    /// - Returns: A `GeometryNode` containing an approximate cone mesh.
     public static func cone(
         height: Float = 1.0,
         radius: Float = 0.5,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
-        let mesh = MeshResource.generateCone(
+        // Approximate a cone with a cylinder that has a very small top radius
+        let mesh = MeshResource.generateCylinder(
             height: height,
             radius: radius
         )
@@ -214,7 +218,9 @@ public struct GeometryNode: Sendable {
     @discardableResult
     public func withGroundingShadow() -> GeometryNode {
         #if os(iOS) || os(visionOS)
-        entity.components.set(GroundingShadowComponent(castsShadow: true))
+        if #available(iOS 18.0, visionOS 2.0, *) {
+            entity.components.set(GroundingShadowComponent(castsShadow: true))
+        }
         #endif
         return self
     }
@@ -288,8 +294,8 @@ public enum GeometryMaterial: Sendable {
             return mat
 
         case .textured(let baseColor, let normal, let metallic, let roughness, let tint):
-            var mat = SimpleMaterial()
-            mat.color = .init(tint: tint, texture: .init(baseColor))
+            var mat = PhysicallyBasedMaterial()
+            mat.baseColor = .init(tint: tint, texture: .init(baseColor))
             mat.metallic = .init(floatLiteral: metallic)
             mat.roughness = .init(floatLiteral: roughness)
             if let normal = normal {

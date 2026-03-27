@@ -1,5 +1,6 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
+import Foundation
 
 /// A node that always faces the camera (billboard behavior).
 ///
@@ -40,7 +41,11 @@ public struct BillboardNode: Sendable {
     public init(child: Entity) {
         let container = Entity()
         container.addChild(child)
-        container.components.set(BillboardComponent())
+        #if os(iOS) || os(visionOS)
+        if #available(iOS 18.0, visionOS 2.0, *) {
+            container.components.set(BillboardComponent())
+        }
+        #endif
         self.entity = container
     }
 
@@ -56,7 +61,8 @@ public struct BillboardNode: Sendable {
         fontSize: Float = 0.05,
         color: SimpleMaterial.Color = .white
     ) -> BillboardNode {
-        let textNode = TextNode(text: text, fontSize: fontSize, color: color)
+        let font = MeshResource.Font.systemFont(ofSize: CGFloat(fontSize))
+        let textNode = TextNode(text: text, font: font, color: color)
             .centered()
         return BillboardNode(child: textNode.entity)
     }
