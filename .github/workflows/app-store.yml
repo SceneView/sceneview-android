@@ -15,8 +15,10 @@ name: Deploy iOS Demo to TestFlight
 
 on:
   push:
-    tags:
-      - 'ios-demo-v[0-9]+.[0-9]+.[0-9]+'
+    branches: [main]
+    paths:
+      - 'SceneViewSwift/**'
+      - 'samples/ios-demo/**'
   workflow_dispatch:
 
 jobs:
