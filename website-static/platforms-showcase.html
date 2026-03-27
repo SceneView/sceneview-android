@@ -48,7 +48,7 @@
         /* ── Hero ── */
         .hero {
             text-align: center;
-            padding: 80px 24px 40px;
+            padding: 120px 24px 40px;
             position: relative;
         }
         .hero::before {
@@ -622,26 +622,79 @@
             text-decoration: none;
         }
 
-        /* ── Back link ── */
-        .back {
+        /* ── Navigation ── */
+        .nav-bar {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            color: var(--text-dim);
-            text-decoration: none;
-            font-size: 0.85rem;
+            top: 0; left: 0; right: 0;
+            height: 64px;
             z-index: 100;
+            background: rgba(10, 14, 26, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .nav-bar__inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 100%;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: space-between;
+        }
+        .nav-bar__logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--blue-light);
+            font-weight: 700;
+            font-size: 1.125rem;
+            text-decoration: none;
+        }
+        .nav-bar__links {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+        .nav-bar__links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
             transition: color 0.2s;
         }
-        .back:hover { color: var(--blue-light); }
+        .nav-bar__links a:hover { color: #fff; }
+        .nav-bar__links a.active { color: var(--blue-light); font-weight: 600; }
+        .nav-bar__links a.pro { color: #34a853; font-weight: 600; }
+        @media (max-width: 768px) {
+            .nav-bar__links { display: none; }
+        }
     </style>
 </head>
 <body>
 
-<a href="index.html" class="back">&larr; Home</a>
+<nav class="nav-bar">
+    <div class="nav-bar__inner">
+        <a href="/" class="nav-bar__logo">
+            <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+                <rect width="32" height="32" rx="8" fill="currentColor"/>
+                <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            SceneView
+        </a>
+        <div class="nav-bar__links">
+            <a href="/showcase.html">Showcase</a>
+            <a href="/platforms-showcase.html" class="active">Platforms</a>
+            <a href="/#demos">Demos</a>
+            <a href="/playground.html">Playground</a>
+            <a href="https://github.com/sceneview/sceneview#readme">Docs</a>
+            <a href="https://github.com/sceneview/sceneview">GitHub</a>
+            <a href="https://discord.gg/sceneview">Discord</a>
+            <a href="/#pro" class="pro">Pro</a>
+        </div>
+    </div>
+</nav>
 
 <section class="hero">
     <h1>One SDK, Every Screen</h1>
@@ -852,7 +905,12 @@
 </div>
 
 <footer class="footer">
-    <p><a href="index.html">SceneView</a> &mdash; AI-first 3D &amp; AR SDK for every platform</p>
+    <p>
+        <a href="/">SceneView</a> &mdash; Open-source 3D &amp; AR SDK &middot;
+        <a href="https://github.com/sceneview/sceneview">GitHub</a> &middot;
+        <a href="https://discord.gg/sceneview">Discord</a> &middot;
+        <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0</a>
+    </p>
 </footer>
 
 </body>
