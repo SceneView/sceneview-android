@@ -7,6 +7,7 @@ import com.google.android.filament.gltfio.Animator
 import com.google.android.filament.gltfio.FilamentAsset
 import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.max
+import com.google.android.filament.Box
 import io.github.sceneview.Entity
 import io.github.sceneview.components.RenderableComponent
 import io.github.sceneview.loaders.MaterialLoader
@@ -162,6 +163,13 @@ open class ModelNode(
     var playingAnimations = mutableMapOf<Int, PlayingAnimation>()
 
     /**
+     * Tracks renderable entities whose AABB was empty and had culling/shadows disabled.
+     * Once the AABB becomes valid, culling and shadows are re-enabled and the entity is
+     * removed from this set.
+     */
+    private val sanitizedEntities = mutableSetOf<Entity>()
+
+    /**
      * Gets the skin count of this instance.
      */
     val skinCount: Int get() = modelInstance.skinCount
@@ -202,6 +210,11 @@ open class ModelNode(
                 else -> nodes.firstOrNull { it.entity == parentEntity } ?: this
             }
         }
+        // Sanitize renderable entities with empty AABBs to prevent Filament crash.
+        // Filament 1.70+ enforces: "AABB can't be empty, unless culling is disabled
+        // and the object is not a shadow caster/receiver".
+        sanitizeEmptyBoundingBoxes()
+
         if (autoAnimate && animator.animationCount > 0) {
             for (i in 0 until animator.animationCount) { playAnimation(i) }
         }
@@ -217,7 +230,12 @@ open class ModelNode(
      */
     fun scaleToUnitCube(units: Float = 1.0f) {
         val halfExtent = boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
-        scale = Scale(units / (max(halfExtent) * 2.0f))
+        val maxExtent = max(halfExtent) * 2.0f
+        // Guard against empty bounding boxes (all-zero extents) which would cause
+        // division by zero, producing Infinity/NaN scale values.
+        if (maxExtent > 0f) {
+            scale = Scale(units / maxExtent)
+        }
     }
 
     /**
@@ -424,8 +442,50 @@ open class ModelNode(
         super.onFrame(frameTimeNanos)
 
         model.popRenderable()
+        // Re-sanitize after popRenderable() which may make new entities available
+        // for rendering that could have empty AABBs.
+        sanitizeEmptyBoundingBoxes()
         applyAnimations(frameTimeNanos)
         animator.updateBoneMatrices()
+    }
+
+    /**
+     * Checks renderable entities for empty AABBs and disables culling + shadows on them.
+     *
+     * Filament 1.70+ crashes with "AABB can't be empty, unless culling is disabled and the
+     * object is not a shadow caster/receiver". This can happen when:
+     * - glTF sub-entities have no geometry yet (skinned meshes awaiting bone transforms)
+     * - Resources are still loading asynchronously (popRenderable makes them available gradually)
+     * - The model has auxiliary entities with no mesh data
+     *
+     * Once the AABB becomes valid (non-empty), culling and shadows are re-enabled.
+     */
+    private fun sanitizeEmptyBoundingBoxes() {
+        val renderableManager = modelInstance.engine.renderableManager
+        val box = Box()
+        for (renderableNode in renderableNodes) {
+            val entity = renderableNode.entity
+            val instance = renderableManager.getInstance(entity)
+            if (instance == 0) continue
+
+            renderableManager.getAxisAlignedBoundingBox(instance, box)
+            val halfExtent = box.halfExtent
+            val isEmpty = halfExtent[0] == 0f && halfExtent[1] == 0f && halfExtent[2] == 0f
+
+            if (isEmpty && entity !in sanitizedEntities) {
+                // Empty AABB: disable culling and shadows to prevent Filament crash
+                renderableManager.setCulling(instance, false)
+                renderableManager.setCastShadows(instance, false)
+                renderableManager.setReceiveShadows(instance, false)
+                sanitizedEntities += entity
+            } else if (!isEmpty && entity in sanitizedEntities) {
+                // AABB is now valid: re-enable culling and shadows
+                renderableManager.setCulling(instance, true)
+                renderableManager.setCastShadows(instance, true)
+                renderableManager.setReceiveShadows(instance, true)
+                sanitizedEntities -= entity
+            }
+        }
     }
 
     private fun applyAnimations(frameTimeNanos: Long) {

@@ -147,20 +147,17 @@ fun ARScreen() {
             collisionSystem = collisionSystem,
             cameraNode = cameraNode,
             planeRenderer = true,
-            sessionConfiguration = { _, config ->
-                config.depthMode = Config.DepthMode.DISABLED
-                config.instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
+            sessionConfiguration = { session, config ->
+                config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                    true -> Config.DepthMode.AUTOMATIC
+                    else -> Config.DepthMode.DISABLED
+                }
+                config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
                 config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             },
             onTrackingFailureChanged = { trackingFailureReason = it },
             onSessionUpdated = { _, updatedFrame ->
                 frame = updatedFrame
-                if (anchor == null) {
-                    updatedFrame.getUpdatedPlanes()
-                        .firstOrNull { it.type == Plane.Type.HORIZONTAL_UPWARD_FACING }
-                        ?.let { it.createAnchorOrNull(it.centerPose) }
-                        ?.let { anchor = it }
-                }
             },
             onGestureListener = rememberOnGestureListener(
                 onSingleTapConfirmed = { motionEvent, node ->

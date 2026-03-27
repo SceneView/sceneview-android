@@ -80,6 +80,7 @@ import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberScene
 import io.github.sceneview.rememberARView
 import io.github.sceneview.safeDestroyEnvironment
+import io.github.sceneview.safeDestroyIndirectLight
 import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -368,7 +369,7 @@ fun ARScene(
 
         onDispose {
             lifecycle.removeObserver(observer)
-            Thread { arCore.destroy() }.start()
+            arCore.destroy()
         }
     }
 
@@ -489,23 +490,31 @@ fun ARScene(
 
                 // AR frame update.
                 arCore.session?.let { session ->
-                    session.updateOrNull()?.let { frame ->
-                        onARFrame(
-                            engine = engine,
-                            scene = scene,
-                            view = view,
-                            cameraNode = cameraNode,
-                            cameraStream = cameraStreamRef.get(),
-                            lightEstimator = lightEstimator,
-                            mainLightNode = mainLightNode,
-                            environment = environment,
-                            arPlaneRenderer = arPlaneRenderer,
-                            childNodes = childNodes,
-                            prevTrackingFailureRef = prevTrackingFailureRef,
-                            onTrackingFailureChangedRef = onTrackingFailureChangedRef,
-                            onSessionUpdatedRef = onSessionUpdatedRef,
-                            session = session,
-                            frame = frame
+                    try {
+                        session.updateOrNull()?.let { frame ->
+                            onARFrame(
+                                engine = engine,
+                                scene = scene,
+                                view = view,
+                                cameraNode = cameraNode,
+                                cameraStream = cameraStreamRef.get(),
+                                lightEstimator = lightEstimator,
+                                mainLightNode = mainLightNode,
+                                environment = environment,
+                                arPlaneRenderer = arPlaneRenderer,
+                                childNodes = childNodes,
+                                prevTrackingFailureRef = prevTrackingFailureRef,
+                                onTrackingFailureChangedRef = onTrackingFailureChangedRef,
+                                onSessionUpdatedRef = onSessionUpdatedRef,
+                                session = session,
+                                frame = frame
+                            )
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e(
+                            "SceneView",
+                            "ARCore session update failed",
+                            e
                         )
                     }
                 }
@@ -675,6 +684,7 @@ private fun onARFrame(
             estimation.mainLightDirection?.let { light.lightDirection = it }
         }
         val indirectLight = environment.indirectLight
+        val previousIbl = scene.indirectLight
         IndirectLight.Builder().apply {
             estimation.irradiance?.let { irradiance(3, it) }
                 ?: indirectLight?.irradianceTexture?.let { irradiance(it) }
@@ -682,7 +692,14 @@ private fun onARFrame(
                 ?: indirectLight?.reflectionsTexture?.let { reflections(it) }
             indirectLight?.intensity?.let { intensity(it) }
             indirectLight?.getRotation(null)?.let { rotation(it) }
-        }.build(engine).also { scene.indirectLight = it }
+        }.build(engine).also { newIbl ->
+            scene.indirectLight = newIbl
+            // Destroy the previous per-frame IBL to avoid a native memory leak.
+            // Don't destroy the environment's own IBL — only the ones we built here.
+            if (previousIbl != null && previousIbl != indirectLight) {
+                engine.safeDestroyIndirectLight(previousIbl)
+            }
+        }
     }
 
     arPlaneRenderer.update(session, frame)
