@@ -457,7 +457,7 @@
           <option value="SunglassesKhronos">Sunglasses</option>
           <option value="ChronographWatch">Watch</option>
           <option value="MaterialsVariantsShoe">Shoe</option>
-          <option value="ABeautifulGame">Chess Set</option>
+          <option value="MosquitoInAmber">Mosquito in Amber</option>
           <option value="IridescenceLamp">Iridescent Lamp</option>
           <option value="MosquitoInAmber">Mosquito in Amber</option>
           <option value="CommercialRefrigerator">Refrigerator</option>
@@ -506,7 +506,7 @@
           <canvas id="previewCanvas" aria-label="3D model preview (SceneView Web / Filament.js)"></canvas>
           <model-viewer
             id="previewModel"
-            src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"
+            src="models/platforms/DamagedHelmet.glb"
             alt="3D model preview"
             auto-rotate
             auto-rotate-delay="0"
@@ -919,7 +919,7 @@ fun AnimationScreen() {\n\
     });
 
     // ===== RENDERER SWITCHING =====
-    var MODEL_BASE = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+    var MODEL_BASE = 'models/platforms';
     var modelSelect = document.getElementById('modelSelect');
     var rendererSelect = document.getElementById('rendererSelect');
     var previewModel = document.getElementById('previewModel');
@@ -929,7 +929,7 @@ fun AnimationScreen() {\n\
     var sceneViewInstance = null;
 
     function getModelUrl(name) {
-      return MODEL_BASE + '/' + name + '/glTF-Binary/' + name + '.glb';
+      return MODEL_BASE + '/' + name + '.glb';
     }
 
     function getThemeBg() {
