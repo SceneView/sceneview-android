@@ -8,6 +8,12 @@
       "port": 8080
     },
     {
+      "name": "website-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "9090", "--directory", "website-static"],
+      "port": 9090
+    },
+    {
       "name": "mkdocs",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "mkdocs", "serve", "--dev-addr", "127.0.0.1:8000"],

@@ -30,9 +30,12 @@ class CameraConfig {
     var fovDegrees = 45.0; private set
     var nearPlane = 0.1; private set
     var farPlane = 1000.0; private set
+    // Exposure defaults — matching model-viewer's exposure=1.1
     var aperture = 16.0; private set
     var shutterSpeed = 1.0 / 125.0; private set
     var sensitivity = 100.0; private set
+    var directExposure: Double? = 1.1; private set
+    var useDirectExposure = true; private set
 
     fun eye(x: Double, y: Double, z: Double) {
         eyeX = x; eyeY = y; eyeZ = z
@@ -54,6 +57,13 @@ class CameraConfig {
         this.aperture = aperture
         this.shutterSpeed = shutterSpeed
         this.sensitivity = sensitivity
+        this.useDirectExposure = false
+    }
+
+    /** Set exposure directly (model-viewer-style, default 1.1). Higher = brighter. */
+    fun exposure(value: Double) {
+        this.directExposure = value
+        this.useDirectExposure = true
     }
 
     /** Apply this config to a Filament.js Camera using float3 arrays for lookAt. */
@@ -63,6 +73,10 @@ class CameraConfig {
             float3(targetX, targetY, targetZ),
             float3(upX, upY, upZ)
         )
-        camera.setExposure(aperture, shutterSpeed, sensitivity)
+        if (useDirectExposure && directExposure != null) {
+            camera.setExposureDirect(directExposure!!)
+        } else {
+            camera.setExposure(aperture, shutterSpeed, sensitivity)
+        }
     }
 }

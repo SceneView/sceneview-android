@@ -30,10 +30,10 @@ class OrbitCameraController(
     private val canvas: HTMLCanvasElement,
     private val camera: Camera
 ) {
-    // Spherical coordinates
-    var theta = 0.5    // horizontal angle (radians)
-    var phi = 1.2      // vertical angle (radians), clamped to avoid gimbal lock
-    var distance = 5.0 // distance from target
+    // Spherical coordinates — defaults match model-viewer's "45deg 70deg 2.5m"
+    var theta = 45.0 * PI / 180.0   // horizontal angle (radians) — 45° like model-viewer
+    var phi = 70.0 * PI / 180.0     // vertical angle (radians) — 70° like model-viewer
+    var distance = 5.0              // distance from target
 
     // Target point (orbit center)
     var targetX = 0.0
@@ -51,13 +51,13 @@ class OrbitCameraController(
     var zoomSensitivity = 0.1
     var panSensitivity = 0.003
 
-    // Auto-rotation
+    // Auto-rotation — default speed matches model-viewer's 30deg/sec at 60fps
     var autoRotate = false
-    var autoRotateSpeed = 0.005  // radians per frame
+    var autoRotateSpeed = 30.0 * PI / 180.0 / 60.0  // 30°/sec ÷ 60fps ≈ 0.00873 rad/frame
 
-    // Damping (inertia)
+    // Damping (inertia) — higher factor = smoother, more model-viewer-like
     var enableDamping = true
-    var dampingFactor = 0.92
+    var dampingFactor = 0.95
     private var velocityTheta = 0.0
     private var velocityPhi = 0.0
 

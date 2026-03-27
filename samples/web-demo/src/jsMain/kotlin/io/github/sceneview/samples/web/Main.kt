@@ -72,9 +72,11 @@ private fun initSceneView(canvas: HTMLCanvasElement, modelUrl: String) {
                 target(0.0, 0.0, 0.0)
                 fov(45.0)
             }
+            // IBL environment is loaded automatically by default
+            // — just add a fill light for soft shadows
             light {
                 directional()
-                intensity(120_000.0)
+                intensity(50_000.0)
                 direction(0.6f, -1.0f, -0.8f)
             }
             model(modelUrl) {
@@ -157,9 +159,11 @@ private fun switchModel(name: String, url: String) {
                 target(0.0, 0.0, 0.0)
                 fov(45.0)
             }
+            // IBL environment is loaded automatically by default
+            // — just add a fill light for soft shadows
             light {
                 directional()
-                intensity(120_000.0)
+                intensity(50_000.0)
                 direction(0.6f, -1.0f, -0.8f)
             }
             model(url) {

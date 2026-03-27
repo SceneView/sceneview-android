@@ -79,6 +79,10 @@ class SceneView private constructor(
     }
 
     companion object {
+        /** Default IBL URL — same "neutral" environment as SceneView Android. */
+        const val DEFAULT_IBL_URL = "https://sceneview.github.io/assets/environments/neutral_ibl.ktx"
+        const val DEFAULT_SKYBOX_URL = "https://sceneview.github.io/assets/environments/neutral_skybox.ktx"
+
         /**
          * Initialize Filament WASM and create a SceneView instance.
          *
@@ -142,11 +146,35 @@ class SceneView private constructor(
                         float3(0.0, 1.0, 0.0)    // up
                     )
 
-                    // Default exposure for outdoor lighting
-                    camera.setExposure(16.0, 1.0 / 125.0, 100.0)
+                    // Default exposure matching model-viewer's exposure=1.1
+                    // This makes IBL-lit models look bright and vibrant
+                    camera.setExposureDirect(1.1)
 
-                    // Set clear color to dark gray (visible even without a skybox)
-                    renderer.setClearOptions(js("({clearColor: [0.1, 0.1, 0.1, 1.0], clear: true})"))
+                    // Set clear color to near-black (clean dark background)
+                    renderer.setClearOptions(js("({clearColor: [0.05, 0.05, 0.07, 1.0], clear: true})"))
+
+                    // --- Quality defaults for PBR rendering ---
+                    // Screen-space ambient occlusion (soft contact shadows)
+                    view.setAmbientOcclusionOptions(js("""({
+                        enabled: true,
+                        radius: 0.3,
+                        bias: 0.0005,
+                        intensity: 1.0,
+                        quality: 1
+                    })"""))
+
+                    // Subtle bloom for emissive/bright highlights
+                    view.setBloomOptions(js("""({
+                        enabled: true,
+                        strength: 0.1,
+                        threshold: true,
+                        levels: 4
+                    })"""))
+
+                    // Temporal anti-aliasing for smooth edges
+                    view.setTemporalAntiAliasingOptions(js("""({
+                        enabled: true
+                    })"""))
 
                     val sceneView = SceneView(
                         canvas, engine, renderer, scene, view, camera, swapChain, cameraEntity
@@ -257,6 +285,15 @@ class SceneView private constructor(
         }.catch { error ->
             console.error("SceneView: Error fetching model from $url", error)
         }
+    }
+
+    /**
+     * Load the default neutral IBL environment.
+     * Provides physically-correct PBR reflections without a visible skybox —
+     * models look like they're in a photography studio.
+     */
+    fun loadDefaultEnvironment() {
+        loadEnvironment(DEFAULT_IBL_URL)
     }
 
     /** Load an IBL (Image-Based Lighting) from a KTX file URL. */
@@ -470,6 +507,7 @@ class SceneViewBuilder(private val sceneView: SceneView) {
     private var skyboxUrl: String? = null
     private var cameraControlsEnabled = true
     private var autoRotateEnabled = false
+    private var useDefaultEnvironment = true
 
     /** Configure the camera. */
     fun camera(block: CameraConfig.() -> Unit) {
@@ -490,6 +528,12 @@ class SceneViewBuilder(private val sceneView: SceneView) {
     fun environment(iblUrl: String, skyboxUrl: String? = null) {
         this.iblUrl = iblUrl
         this.skyboxUrl = skyboxUrl
+        this.useDefaultEnvironment = false
+    }
+
+    /** Disable the default neutral IBL environment. */
+    fun noEnvironment() {
+        this.useDefaultEnvironment = false
     }
 
     /** Enable orbit camera controls (drag to orbit, scroll to zoom, touch). Enabled by default. */
@@ -504,8 +548,45 @@ class SceneViewBuilder(private val sceneView: SceneView) {
 
     internal fun apply() {
         cameraConfig?.applyTo(sceneView.camera)
-        lightConfig?.let { sceneView.addLight(it) }
-        iblUrl?.let { sceneView.loadEnvironment(it, skyboxUrl) }
+
+        // If no explicit light was configured, add model-viewer-like 3-point lighting
+        if (lightConfig != null) {
+            sceneView.addLight(lightConfig!!)
+        } else {
+            // Key light — main directional, slightly warm
+            val keyLight = LightConfig().apply {
+                directional()
+                intensity(50_000.0)
+                direction(0.6f, -1.0f, -0.8f)
+            }
+            sceneView.addLight(keyLight)
+
+            // Fill light — softer, from the opposite side
+            val fillLight = LightConfig().apply {
+                directional()
+                intensity(25_000.0)
+                direction(-0.6f, -0.5f, 0.8f)
+            }
+            sceneView.addLight(fillLight)
+
+            // Rim/back light — highlights edges, cool tint
+            val rimLight = LightConfig().apply {
+                directional()
+                intensity(30_000.0)
+                color(0.85f, 0.9f, 1.0f) // slight cool tint
+                direction(0.0f, -0.3f, 1.0f)
+            }
+            sceneView.addLight(rimLight)
+        }
+
+        // Load IBL environment for physically-correct PBR reflections
+        if (iblUrl != null) {
+            sceneView.loadEnvironment(iblUrl!!, skyboxUrl)
+        } else if (useDefaultEnvironment) {
+            // Load the bundled neutral IBL — same as Android SceneView default
+            sceneView.loadDefaultEnvironment()
+        }
+
         modelConfigs.forEach { config ->
             sceneView.loadModel(config.url, config.onLoaded)
         }

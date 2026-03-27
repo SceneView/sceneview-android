@@ -134,6 +134,29 @@ class SceneViewJS {
     }
 
     /**
+     * Set the background clear color (RGBA, 0-1 range).
+     * Use this to sync the 3D canvas background with your page theme.
+     */
+    @JsName("setBackgroundColor")
+    fun setBackgroundColor(r: Double, g: Double, b: Double, a: Double) {
+        val sv = _sceneView ?: return
+        val opts = js("{}")
+        val color = js("[]")
+        color.push(r, g, b, a)
+        opts["clearColor"] = color
+        opts["clear"] = true
+        sv.renderer.setClearOptions(opts)
+    }
+
+    /**
+     * Fit the camera to frame all loaded models.
+     */
+    @JsName("fitToModels")
+    fun fitToModels() {
+        _sceneView?.fitToModels()
+    }
+
+    /**
      * Clean up all GPU resources. Call when removing the viewer.
      */
     @JsName("dispose")
@@ -149,4 +172,4 @@ class SceneViewJS {
 /**
  * Library version.
  */
-const val SCENEVIEW_VERSION = "3.4.4"
+const val SCENEVIEW_VERSION = "1.3.0"

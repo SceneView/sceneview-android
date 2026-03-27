@@ -4,45 +4,30 @@
  * One line to render a 3D model:
  *   SceneView.modelViewer("canvas", "model.glb")
  *
- * No prerequisites — sceneview.js loads Filament.js CDN automatically.
- * Just include one script:
- *   <script src="js/sceneview.js"></script>
- *
- * Powered by Filament.js (Google's PBR renderer, WASM).
+ * Powered by Filament.js v1.70.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
- * @version 1.2.0
+ * @version 1.3.0
  * @license MIT
  */
 (function(global) {
   'use strict';
 
-  var FILAMENT_CDN = 'https://cdn.jsdelivr.net/npm/filament@1.52.3/filament.js';
+  // Filament.js is loaded via <script> tag in HTML (js/filament/filament.js)
+  // This avoids dynamic script injection issues with WASM resolution.
 
   /**
-   * Load Filament.js CDN dynamically if not already present.
-   * Returns a Promise that resolves when the Filament global is available.
+   * Wait for Filament to be available (loaded by the script tag).
    */
   function _ensureFilament() {
     return new Promise(function(resolve, reject) {
-      // Already loaded
-      if (typeof Filament !== 'undefined') {
-        resolve();
-        return;
-      }
-      // Check if script tag already exists but hasn't finished loading
-      var existing = document.querySelector('script[src*="filament"]');
-      if (existing) {
-        existing.addEventListener('load', function() { resolve(); });
-        existing.addEventListener('error', function() { reject(new Error('SceneView: Failed to load Filament.js from CDN')); });
-        return;
-      }
-      // Inject script tag
-      var script = document.createElement('script');
-      script.src = FILAMENT_CDN;
-      script.onload = function() { resolve(); };
-      script.onerror = function() { reject(new Error('SceneView: Failed to load Filament.js from CDN (' + FILAMENT_CDN + ')')); };
-      document.head.appendChild(script);
+      if (typeof Filament !== 'undefined') { resolve(); return; }
+      // Poll briefly in case the script tag hasn't finished loading
+      var attempts = 0;
+      var check = setInterval(function() {
+        if (typeof Filament !== 'undefined') { clearInterval(check); resolve(); }
+        if (++attempts > 100) { clearInterval(check); reject(new Error('SceneView: Filament.js not loaded')); }
+      }, 50);
     });
   }
 
@@ -61,7 +46,7 @@
       this._cameraEntity = cameraEntity;
       this._loader = loader;
       this._asset = null;
-      this._angle = 0;
+      this._angle = 0.785; // Start at ~45° like model-viewer
       this._autoRotate = true;
       this._orbitRadius = 3.5;
       this._orbitHeight = 0.8;
@@ -69,6 +54,10 @@
       this._running = true;
       this._isDragging = false;
       this._lastMouse = { x: 0, y: 0 };
+      // Inertia for smooth orbit deceleration
+      this._velocityAngle = 0;
+      this._velocityHeight = 0;
+      this._dampingFactor = 0.95;
       this._setupControls();
       this._setupResizeObserver();
       this._startRenderLoop();
@@ -78,17 +67,6 @@
     loadModel(url) {
       var self = this;
       return new Promise(function(resolve, reject) {
-        // If already fetched, show immediately
-        if (Filament.assets && Filament.assets[url]) {
-          try {
-            self._showModel(url);
-            resolve(self);
-          } catch (e) {
-            reject(e);
-          }
-          return;
-        }
-        // Fetch model via fetch() API to avoid Filament.init double-call bug
         fetch(url)
           .then(function(resp) { return resp.arrayBuffer(); })
           .then(function(buffer) {
@@ -108,8 +86,10 @@
     _showModel(url) {
       // Remove previous model
       if (this._asset) {
-        this._asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
-        this._scene.remove(this._asset.getRoot());
+        try {
+          this._asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
+          this._scene.remove(this._asset.getRoot());
+        } catch (e) { /* ignore cleanup errors */ }
         this._asset = null;
       }
 
@@ -124,7 +104,7 @@
       this._scene.addEntities(asset.getRenderableEntities());
       this._asset = asset;
 
-      // Auto-frame: try getBoundingBox, fall back to defaults
+      // Auto-frame the model
       try {
         var bbox = asset.getBoundingBox();
         var cx = (bbox.min[0] + bbox.max[0]) / 2;
@@ -136,82 +116,75 @@
         var maxDim = Math.max(sx, sy, sz);
         if (maxDim > 0) {
           this._orbitTarget = [cx, cy, cz];
-          this._orbitRadius = maxDim * 2.5;
+          // Tighter framing than before (1.8x instead of 2.5x)
+          this._orbitRadius = maxDim * 1.8;
           this._orbitHeight = cy;
         }
-      } catch (e) {
-        // getBoundingBox not available on all assets, use defaults
-      }
+      } catch (e) { /* use defaults */ }
     }
 
-    /** Enable/disable auto-rotation */
-    setAutoRotate(enabled) {
-      this._autoRotate = enabled;
-      return this;
-    }
+    setAutoRotate(enabled) { this._autoRotate = enabled; return this; }
+    setCameraDistance(d) { this._orbitRadius = d; return this; }
 
-    /** Set camera orbit distance */
-    setCameraDistance(distance) {
-      this._orbitRadius = distance;
-      return this;
-    }
-
-    /** Set background color [r, g, b, a] (0-1 range) */
     setBackgroundColor(r, g, b, a) {
       this._renderer.setClearOptions({ clearColor: [r, g, b, a !== undefined ? a : 1], clear: true });
       return this;
     }
 
-    /** Dispose all resources */
     dispose() {
       this._running = false;
-      if (this._resizeObserver) {
-        this._resizeObserver.disconnect();
-      }
-      Filament.Engine.destroy(this._engine);
+      if (this._resizeObserver) this._resizeObserver.disconnect();
+      try { Filament.Engine.destroy(this._engine); } catch (e) { /* already destroyed */ }
     }
-
-    // --- Private ---
 
     _setupControls() {
       var canvas = this._canvas;
       var self = this;
 
-      // Mouse orbit
       canvas.addEventListener('mousedown', function(e) {
         self._isDragging = true;
         self._lastMouse = { x: e.clientX, y: e.clientY };
         self._autoRotate = false;
+        self._velocityAngle = 0;
+        self._velocityHeight = 0;
       });
       canvas.addEventListener('mousemove', function(e) {
         if (!self._isDragging) return;
-        self._angle -= (e.clientX - self._lastMouse.x) * 0.005;
-        self._orbitHeight += (e.clientY - self._lastMouse.y) * 0.01;
+        var dx = (e.clientX - self._lastMouse.x) * 0.005;
+        var dy = (e.clientY - self._lastMouse.y) * 0.01;
+        self._velocityAngle = -dx;
+        self._velocityHeight = dy;
+        self._angle -= dx;
+        self._orbitHeight += dy;
         self._lastMouse = { x: e.clientX, y: e.clientY };
       });
       canvas.addEventListener('mouseup', function() { self._isDragging = false; });
       canvas.addEventListener('mouseleave', function() { self._isDragging = false; });
 
-      // Scroll zoom
       canvas.addEventListener('wheel', function(e) {
         e.preventDefault();
         self._orbitRadius *= (1 + e.deltaY * 0.001);
         self._orbitRadius = Math.max(0.5, Math.min(50, self._orbitRadius));
       }, { passive: false });
 
-      // Touch orbit
       canvas.addEventListener('touchstart', function(e) {
         if (e.touches.length === 1) {
           self._isDragging = true;
           self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
           self._autoRotate = false;
+          self._velocityAngle = 0;
+          self._velocityHeight = 0;
         }
       });
       canvas.addEventListener('touchmove', function(e) {
         if (!self._isDragging || e.touches.length !== 1) return;
         e.preventDefault();
-        self._angle -= (e.touches[0].clientX - self._lastMouse.x) * 0.005;
-        self._orbitHeight += (e.touches[0].clientY - self._lastMouse.y) * 0.01;
+        var dx = (e.touches[0].clientX - self._lastMouse.x) * 0.005;
+        var dy = (e.touches[0].clientY - self._lastMouse.y) * 0.01;
+        self._velocityAngle = -dx;
+        self._velocityHeight = dy;
+        self._angle -= dx;
+        self._orbitHeight += dy;
         self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }, { passive: false });
       canvas.addEventListener('touchend', function() { self._isDragging = false; });
@@ -221,10 +194,14 @@
       var self = this;
       this._resizeObserver = new ResizeObserver(function() {
         var canvas = self._canvas;
-        canvas.width = canvas.clientWidth * devicePixelRatio;
-        canvas.height = canvas.clientHeight * devicePixelRatio;
+        var dpr = Math.min(devicePixelRatio, 2); // Cap at 2x for performance
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
         self._view.setViewport([0, 0, canvas.width, canvas.height]);
-        self._camera.setProjectionFov(45, canvas.width / canvas.height, 0.1, 1000, Filament.Camera$Fov.VERTICAL);
+        self._camera.setProjectionFov(
+          self._fov || 45, canvas.width / canvas.height, 0.1, 1000,
+          Filament.Camera$Fov.VERTICAL
+        );
       });
       this._resizeObserver.observe(this._canvas);
     }
@@ -233,7 +210,19 @@
       var self = this;
       function render() {
         if (!self._running) return;
-        if (self._autoRotate) self._angle += 0.006;
+
+        // Auto-rotate: 30°/sec ÷ 60fps (matches model-viewer)
+        if (self._autoRotate) self._angle += 0.00873;
+
+        // Inertia damping after drag release
+        if (!self._isDragging) {
+          self._angle += self._velocityAngle;
+          self._orbitHeight += self._velocityHeight;
+          self._velocityAngle *= self._dampingFactor;
+          self._velocityHeight *= self._dampingFactor;
+          if (Math.abs(self._velocityAngle) < 0.00005) self._velocityAngle = 0;
+          if (Math.abs(self._velocityHeight) < 0.00005) self._velocityHeight = 0;
+        }
 
         var t = self._orbitTarget;
         var r = self._orbitRadius;
@@ -244,20 +233,28 @@
           [0, 1, 0]
         );
 
-        if (self._renderer.beginFrame(self._swapChain)) {
-          self._renderer.render(self._swapChain, self._view);
-          self._renderer.endFrame();
-        }
         self._engine.execute();
+        try {
+          if (self._renderer.beginFrame(self._swapChain)) {
+            self._renderer.renderView(self._view);
+            self._renderer.endFrame();
+          }
+        } catch (e) {
+          // Filament 1.70 may need different render call
+          console.error('SceneView render error:', e.message);
+          self._running = false;
+        }
         requestAnimationFrame(render);
       }
       render();
     }
   }
 
+  // Singleton guard — prevent multiple engine creations on same canvas
+  var _activeCanvases = new Set();
+
   /**
-   * Internal: set up Filament engine, scene, lights on a canvas.
-   * Called inside a Filament.init() callback where WASM is guaranteed ready.
+   * Set up Filament engine, scene, lights on a canvas.
    */
   function _createEngine(canvasOrId, options) {
     options = options || {};
@@ -265,11 +262,21 @@
     var canvas = typeof canvasOrId === 'string'
       ? document.getElementById(canvasOrId)
       : canvasOrId;
-
     if (!canvas) throw new Error('Canvas not found: ' + canvasOrId);
 
-    canvas.width = canvas.clientWidth * devicePixelRatio;
-    canvas.height = canvas.clientHeight * devicePixelRatio;
+    // Prevent double initialization on the same canvas
+    if (_activeCanvases.has(canvas)) {
+      console.warn('SceneView: Canvas already initialized, skipping');
+      return null;
+    }
+    _activeCanvases.add(canvas);
+
+    var dpr = Math.min(devicePixelRatio, 2);
+    // Ensure canvas has actual layout dimensions (not default 300x150)
+    var cssW = canvas.clientWidth || canvas.offsetWidth || 500;
+    var cssH = canvas.clientHeight || canvas.offsetHeight || 500;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
 
     var engine = Filament.Engine.create(canvas);
     var scene = engine.createScene();
@@ -286,11 +293,19 @@
     var bg = options.backgroundColor || [0.05, 0.06, 0.1, 1.0];
     renderer.setClearOptions({ clearColor: bg, clear: true });
 
-    var aspect = canvas.width / canvas.height;
-    camera.setProjectionFov(options.fov || 45, aspect, 0.1, 1000, Filament.Camera$Fov.VERTICAL);
+    var fov = options.fov || 45;
+    camera.setProjectionFov(fov, canvas.width / canvas.height, 0.1, 1000, Filament.Camera$Fov.VERTICAL);
     camera.lookAt([0, 1, 5], [0, 0, 0], [0, 1, 0]);
 
-    // Default sunlight
+    // --- Post-processing quality ---
+    try {
+      view.setAmbientOcclusionOptions({
+        enabled: true, radius: 0.3, bias: 0.0005, intensity: 1.0, quality: 1
+      });
+    } catch (e) { /* skip */ }
+
+    // --- 3-point studio lighting ---
+    // Sun/key light — warm, strong
     var sun = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.SUN)
       .color([0.98, 0.92, 0.89])
@@ -302,7 +317,7 @@
       .build(engine, sun);
     scene.addEntity(sun);
 
-    // Fill light
+    // Fill light — cool, softer
     var fill = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
       .color([0.7, 0.75, 0.9])
@@ -311,99 +326,98 @@
       .build(engine, fill);
     scene.addEntity(fill);
 
-    // Back/rim light for depth
+    // Back/rim light — edge highlight
     var back = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
-      .color([0.4, 0.5, 0.8])
-      .intensity(40000)
+      .color([0.5, 0.6, 0.9])
+      .intensity(50000)
       .direction([0, 0.3, 1.0])
       .build(engine, back);
     scene.addEntity(back);
 
-    // Synthetic IBL (image-based lighting) from spherical harmonics
-    // Studio-like neutral environment for PBR reflections
-    try {
-      var ibl = Filament.IndirectLight.Builder()
-        .irradiance(3, [
-           0.65,  0.65,  0.70,   // L00 — ambient base (warm gray)
-           0.10,  0.10,  0.12,   // L1-1
-           0.15,  0.15,  0.18,   // L10 — slight top light
-          -0.02, -0.02, -0.01,   // L11
-           0.04,  0.04,  0.05,   // L2-2
-           0.08,  0.08,  0.10,   // L2-1
-           0.01,  0.01,  0.01,   // L20
-          -0.02, -0.02, -0.02,   // L21
-           0.03,  0.03,  0.03    // L22
-        ])
-        .intensity(35000)
-        .build(engine);
-      scene.setIndirectLight(ibl);
-    } catch (e) {
-      // IndirectLight not available in this Filament build — skip
-    }
+    // --- IBL: load real KTX if available, fallback to synthetic SH ---
+    var iblUrl = options.iblUrl || 'environments/neutral_ibl.ktx';
+    fetch(iblUrl)
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.arrayBuffer().then(function(ab) { return new Uint8Array(ab); });
+      })
+      .then(function(buffer) {
+        try {
+          var ibl = engine.createIblFromKtx1(buffer);
+          ibl.setIntensity(options.iblIntensity || 40000);
+          scene.setIndirectLight(ibl);
+          console.log('SceneView: KTX IBL loaded (' + Math.round(buffer.length / 1024) + 'KB)');
+        } catch (e) {
+          console.warn('SceneView: createIblFromKtx1 failed, using SH fallback', e);
+          _applySyntheticIBL(engine, scene);
+        }
+      })
+      .catch(function() {
+        _applySyntheticIBL(engine, scene);
+      });
 
-    // Asset loader (reused across model loads)
     var loader = engine.createAssetLoader();
-
     var instance = new SceneViewInstance(canvas, engine, scene, renderer, view, swapChain, camera, cameraEntity, loader);
+    instance._fov = fov;
 
-    if (options.autoRotate === false) {
-      instance.setAutoRotate(false);
-    }
+    if (options.autoRotate === false) instance.setAutoRotate(false);
 
     return instance;
   }
 
-  /**
-   * Create an empty SceneView on a canvas.
-   * Filament.js is loaded automatically from CDN if not already present.
-   *
-   * @param {string|HTMLCanvasElement} canvasOrId - Canvas element or its ID
-   * @param {Object} [options] - Configuration options
-   * @returns {Promise<SceneViewInstance>}
-   */
+  /** Fallback IBL from spherical harmonics when KTX not available */
+  function _applySyntheticIBL(engine, scene) {
+    try {
+      var ibl = Filament.IndirectLight.Builder()
+        .irradiance(3, [
+           0.65,  0.65,  0.70,
+           0.10,  0.10,  0.12,
+           0.15,  0.15,  0.18,
+          -0.02, -0.02, -0.01,
+           0.04,  0.04,  0.05,
+           0.08,  0.08,  0.10,
+           0.01,  0.01,  0.01,
+          -0.02, -0.02, -0.02,
+           0.03,  0.03,  0.03
+        ])
+        .intensity(35000)
+        .build(engine);
+      scene.setIndirectLight(ibl);
+      console.log('SceneView: Using synthetic SH IBL');
+    } catch (e) { /* skip */ }
+  }
+
   function create(canvasOrId, options) {
     return _ensureFilament().then(function() {
       return new Promise(function(resolve, reject) {
-        // If WASM is already initialized (Engine exists), skip Filament.init
         if (typeof Filament.Engine !== 'undefined') {
           try {
-            resolve(_createEngine(canvasOrId, options));
-          } catch (e) {
-            reject(e);
-          }
+            var instance = _createEngine(canvasOrId, options);
+            if (instance) resolve(instance);
+            else reject(new Error('SceneView: Canvas already initialized'));
+          } catch (e) { reject(e); }
           return;
         }
-        // First time: initialize WASM
         Filament.init([], function() {
           try {
-            resolve(_createEngine(canvasOrId, options));
-          } catch (e) {
-            reject(e);
-          }
+            var instance = _createEngine(canvasOrId, options);
+            if (instance) resolve(instance);
+            else reject(new Error('SceneView: Canvas already initialized'));
+          } catch (e) { reject(e); }
         });
       });
     });
   }
 
-  /**
-   * One-liner: create viewer and load a model.
-   * Filament.js is loaded automatically from CDN if not already present.
-   *
-   * @param {string|HTMLCanvasElement} canvasOrId
-   * @param {string} modelUrl - URL to .glb/.gltf model
-   * @param {Object} [options]
-   * @returns {Promise<SceneViewInstance>}
-   */
   function modelViewer(canvasOrId, modelUrl, options) {
     return create(canvasOrId, options).then(function(instance) {
       return instance.loadModel(modelUrl);
     });
   }
 
-  // Public API
   global.SceneView = {
-    version: '1.2.0',
+    version: '1.3.0',
     create: create,
     modelViewer: modelViewer
   };
