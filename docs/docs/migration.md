@@ -19,8 +19,8 @@ implementation("io.github.sceneview:sceneview:2.3.0")
 implementation("io.github.sceneview:arsceneview:2.3.0")
 
 // After
-implementation("io.github.sceneview:sceneview:3.3.0")
-implementation("io.github.sceneview:arsceneview:3.3.0")
+implementation("io.github.sceneview:sceneview:3.4.7")
+implementation("io.github.sceneview:arsceneview:3.4.7")
 ```
 
 ---
