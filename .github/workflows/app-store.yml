@@ -119,8 +119,11 @@ jobs:
             -archivePath $RUNNER_TEMP/SceneViewDemo.xcarchive \
             -destination 'generic/platform=iOS' \
             -clonedSourcePackagesDirPath SourcePackages \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM=5G3DZ3TH45 \
             PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_UUID"
 
