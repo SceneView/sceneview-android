@@ -139,7 +139,7 @@
         <p class="hero__description">Open-source, AI-first SDK for building 3D and augmented reality apps with Jetpack Compose and SwiftUI.</p>
         <p class="hero__platforms">Android &middot; iOS &middot; macOS &middot; visionOS &middot; Web &middot; Desktop &middot; TV &middot; Flutter &middot; React Native &middot; Claude</p>
         <div class="hero__actions">
-          <a href="https://github.com/sceneview/sceneview#install" class="btn btn--primary">Get Started</a>
+          <a href="#install" class="btn btn--primary">Get Started</a>
           <a href="https://github.com/sceneview/sceneview" class="btn btn--outline">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
             View on GitHub
@@ -174,6 +174,98 @@
         </div>
         <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
         <div id="hero-badge" style="position:absolute;bottom:12px;right:14px;font-size:0.7rem;opacity:0;transition:opacity 0.5s ease;pointer-events:none;color:rgba(255,255,255,0.45);font-weight:500;letter-spacing:0.03em">Rendered by SceneView Web</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== INSTALL ===== -->
+  <section class="section install" id="install">
+    <div class="container">
+      <h2 class="section__title">Get started in seconds</h2>
+      <p class="section__subtitle">Pick your platform, paste one line, and you're running 3D.</p>
+
+      <div class="tabs" data-tabs="install">
+        <div class="tabs__nav">
+          <button class="tabs__btn tabs__btn--active" data-tab="android">Android</button>
+          <button class="tabs__btn" data-tab="ios">iOS</button>
+          <button class="tabs__btn" data-tab="web">Web</button>
+          <button class="tabs__btn" data-tab="flutter">Flutter</button>
+          <button class="tabs__btn" data-tab="reactnative">React Native</button>
+          <button class="tabs__btn" data-tab="claude-mcp">Claude / MCP</button>
+          <button class="tabs__btn" data-tab="desktop">Desktop</button>
+        </div>
+        <div class="tabs__panels">
+          <div class="tabs__panel tabs__panel--active" data-panel="android">
+            <pre class="code-block"><code><span class="cm">// build.gradle.kts</span>
+<span class="kw">dependencies</span> {
+    <span class="cm">// 3D only</span>
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview:3.4.7"</span>)
+    <span class="cm">// 3D + AR</span>
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:arsceneview:3.4.7"</span>)
+}</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="ios">
+            <pre class="code-block"><code><span class="cm">// Swift Package Manager</span>
+<span class="cm">// Add in Xcode: File &rarr; Add Package Dependencies</span>
+
+<span class="str">"https://github.com/sceneview/sceneview-swift"</span>
+<span class="cm">// Version: 3.4.7</span>
+
+<span class="kw">import</span> SceneViewSwift</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="web">
+            <pre class="code-block"><code><span class="cm">// build.gradle.kts (Kotlin/JS)</span>
+<span class="kw">dependencies</span> {
+    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-web:3.4.7"</span>)
+}
+
+<span class="cm">// Or use Filament.js directly in HTML</span>
+<span class="cm">// See samples/web-demo for a full example</span></code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="flutter">
+            <pre class="code-block"><code><span class="cm"># pubspec.yaml (coming soon on pub.dev)</span>
+<span class="kw">dependencies</span>:
+  <span class="fn">sceneview_flutter</span>:
+    <span class="kw">git</span>:
+      <span class="fn">url</span>: <span class="str">https://github.com/sceneview/sceneview</span>
+      <span class="fn">path</span>: <span class="str">flutter</span>
+
+<span class="cm"># Then run:</span>
+<span class="kw">flutter</span> pub get</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="reactnative">
+            <pre class="code-block"><code><span class="cm">// package.json</span>
+<span class="str">"dependencies"</span>: {
+  <span class="str">"react-native-sceneview"</span>: <span class="str">"github:sceneview/sceneview#react-native"</span>
+}
+
+<span class="cm">// Then run:</span>
+<span class="kw">npm</span> install
+<span class="kw">npx</span> pod-install <span class="cm">// iOS only</span></code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="claude-mcp">
+            <pre class="code-block"><code><span class="cm">// Claude Desktop &mdash; add to claude_desktop_config.json</span>
+{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"sceneview"</span>: {
+      <span class="str">"command"</span>: <span class="str">"npx"</span>,
+      <span class="str">"args"</span>: [<span class="str">"sceneview-mcp"</span>]
+    }
+  }
+}
+
+<span class="cm">// Claude Code &mdash; run from terminal</span>
+<span class="kw">claude</span> mcp add sceneview -- <span class="fn">npx</span> <span class="str">sceneview-mcp</span></code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="desktop">
+            <pre class="code-block"><code><span class="cm">// Compose Desktop (alpha &mdash; software renderer)</span>
+<span class="cm">// Clone the repo and run the desktop sample:</span>
+
+<span class="kw">git</span> clone <span class="str">https://github.com/sceneview/sceneview</span>
+<span class="kw">cd</span> sceneview/samples/desktop-demo
+<span class="kw">./gradlew</span> run</code></pre>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -706,98 +798,6 @@
               <div class="testimonial-card__name">R. Patel</div>
               <div class="testimonial-card__role">Startup CTO</div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== INSTALL ===== -->
-  <section class="section install" id="install">
-    <div class="container">
-      <h2 class="section__title">Quick install</h2>
-      <p class="section__subtitle">Add SceneView to your project in seconds.</p>
-
-      <div class="tabs" data-tabs="install">
-        <div class="tabs__nav">
-          <button class="tabs__btn tabs__btn--active" data-tab="android">Android</button>
-          <button class="tabs__btn" data-tab="ios">iOS</button>
-          <button class="tabs__btn" data-tab="web">Web</button>
-          <button class="tabs__btn" data-tab="flutter">Flutter</button>
-          <button class="tabs__btn" data-tab="reactnative">React Native</button>
-          <button class="tabs__btn" data-tab="claude-mcp">Claude / MCP</button>
-          <button class="tabs__btn" data-tab="desktop">Desktop</button>
-        </div>
-        <div class="tabs__panels">
-          <div class="tabs__panel tabs__panel--active" data-panel="android">
-            <pre class="code-block"><code><span class="cm">// build.gradle.kts</span>
-<span class="kw">dependencies</span> {
-    <span class="cm">// 3D only</span>
-    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview:3.4.7"</span>)
-    <span class="cm">// 3D + AR</span>
-    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:arsceneview:3.4.7"</span>)
-}</code></pre>
-          </div>
-          <div class="tabs__panel" data-panel="ios">
-            <pre class="code-block"><code><span class="cm">// Swift Package Manager</span>
-<span class="cm">// Add in Xcode: File &rarr; Add Package Dependencies</span>
-
-<span class="str">"https://github.com/sceneview/sceneview-swift"</span>
-<span class="cm">// Version: 3.4.7</span>
-
-<span class="kw">import</span> SceneViewSwift</code></pre>
-          </div>
-          <div class="tabs__panel" data-panel="web">
-            <pre class="code-block"><code><span class="cm">// build.gradle.kts (Kotlin/JS)</span>
-<span class="kw">dependencies</span> {
-    <span class="fn">implementation</span>(<span class="str">"io.github.sceneview:sceneview-web:3.4.7"</span>)
-}
-
-<span class="cm">// Or use Filament.js directly in HTML</span>
-<span class="cm">// See samples/web-demo for a full example</span></code></pre>
-          </div>
-          <div class="tabs__panel" data-panel="flutter">
-            <pre class="code-block"><code><span class="cm"># pubspec.yaml (coming soon on pub.dev)</span>
-<span class="kw">dependencies</span>:
-  <span class="fn">sceneview_flutter</span>:
-    <span class="kw">git</span>:
-      <span class="fn">url</span>: <span class="str">https://github.com/sceneview/sceneview</span>
-      <span class="fn">path</span>: <span class="str">flutter</span>
-
-<span class="cm"># Then run:</span>
-<span class="kw">flutter</span> pub get</code></pre>
-          </div>
-          <div class="tabs__panel" data-panel="reactnative">
-            <pre class="code-block"><code><span class="cm">// package.json</span>
-<span class="str">"dependencies"</span>: {
-  <span class="str">"react-native-sceneview"</span>: <span class="str">"github:sceneview/sceneview#react-native"</span>
-}
-
-<span class="cm">// Then run:</span>
-<span class="kw">npm</span> install
-<span class="kw">npx</span> pod-install <span class="cm">// iOS only</span></code></pre>
-          </div>
-          <div class="tabs__panel" data-panel="claude-mcp">
-            <pre class="code-block"><code><span class="cm">// Claude Desktop &mdash; add to claude_desktop_config.json</span>
-{
-  <span class="str">"mcpServers"</span>: {
-    <span class="str">"sceneview"</span>: {
-      <span class="str">"command"</span>: <span class="str">"npx"</span>,
-      <span class="str">"args"</span>: [<span class="str">"sceneview-mcp"</span>]
-    }
-  }
-}
-
-<span class="cm">// Claude Code &mdash; run from terminal</span>
-<span class="kw">claude</span> mcp add sceneview -- <span class="fn">npx</span> <span class="str">sceneview-mcp</span></code></pre>
-          </div>
-          <div class="tabs__panel" data-panel="desktop">
-            <pre class="code-block"><code><span class="cm">// Compose Desktop (alpha &mdash; software renderer)</span>
-<span class="cm">// Clone the repo and run the desktop sample:</span>
-
-<span class="kw">git</span> clone <span class="str">https://github.com/sceneview/sceneview</span>
-<span class="kw">cd</span> sceneview/samples/desktop-demo
-<span class="kw">./gradlew</span> run</code></pre>
           </div>
         </div>
       </div>
