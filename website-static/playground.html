@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playground — SceneView</title>
-  <meta name="description" content="Interactive SceneView playground — explore code examples for 3D and AR with live 3D preview.">
+  <meta name="description" content="Interactive SceneView playground — explore 3D models with orbit controls, switch environments, toggle wireframe, and copy the code.">
   <meta name="robots" content="index, follow">
 
   <!-- Canonical URL -->
@@ -16,7 +16,7 @@
 
   <!-- Open Graph -->
   <meta property="og:title" content="Playground — SceneView">
-  <meta property="og:description" content="Interactive code playground for SceneView — 3D & AR SDK for every platform.">
+  <meta property="og:description" content="Interactive 3D playground for SceneView — switch models, environments, tweak materials, and copy the code.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://sceneview.github.io/playground.html">
   <meta property="og:site_name" content="SceneView">
@@ -25,511 +25,807 @@
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Playground — SceneView">
-  <meta name="twitter:description" content="Interactive code playground for SceneView — 3D & AR SDK for every platform.">
+  <meta name="twitter:description" content="Interactive 3D playground for SceneView — switch models, environments, tweak materials, and copy the code.">
   <meta name="twitter:image" content="https://sceneview.github.io/favicon.svg">
 
   <!-- Preconnect hints -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://ajax.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <!-- Filament.js v1.70.1 WASM engine (local) -->
   <script src="js/filament/filament.js"></script>
-  <!-- SceneView Web — our 3D library built on Filament.js -->
+  <!-- SceneView Web -->
   <script src="js/sceneview.js?v=1.3.3"></script>
-  <!-- model-viewer (fallback renderer option) -->
+  <!-- model-viewer (fallback) -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
   <style>
     /* ===== PLAYGROUND LAYOUT ===== */
-    .playground {
-      padding-top: var(--nav-height);
-      min-height: 100vh;
+    html, body { height: 100%; overflow: hidden; }
+
+    .pg {
       display: flex;
       flex-direction: column;
+      height: 100vh;
       background: var(--color-surface);
     }
 
-    .playground__toolbar {
+    /* --- Top bar --- */
+    .pg-topbar {
       display: flex;
       align-items: center;
-      gap: var(--space-md);
-      padding: var(--space-md) var(--space-lg);
+      gap: 12px;
+      padding: 0 16px;
+      height: 48px;
+      min-height: 48px;
       background: var(--color-surface-dim);
       border-bottom: 1px solid var(--color-outline);
-      flex-wrap: wrap;
+      flex-shrink: 0;
+      z-index: 20;
     }
 
-    .playground__toolbar-left {
+    .pg-logo {
       display: flex;
       align-items: center;
-      gap: var(--space-md);
-      flex: 1;
-      min-width: 0;
-    }
-
-    .playground__toolbar-right {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
+      gap: 8px;
+      text-decoration: none;
+      color: var(--color-on-surface);
+      font-weight: 700;
+      font-size: 0.95rem;
       flex-shrink: 0;
     }
 
-    .playground__select {
-      appearance: none;
-      background: var(--color-surface-container);
-      color: var(--color-on-surface);
-      border: 1px solid var(--color-outline);
-      border-radius: var(--radius-xs);
-      padding: 8px 36px 8px 14px;
-      font-family: var(--font-body);
-      font-size: 0.875rem;
+    .pg-logo svg { flex-shrink: 0; color: var(--color-primary); }
+
+    .pg-topbar-sep {
+      width: 1px;
+      height: 24px;
+      background: var(--color-outline);
+      flex-shrink: 0;
+    }
+
+    .pg-topbar-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--color-on-surface-dim);
+      letter-spacing: 0.02em;
+    }
+
+    .pg-topbar-spacer { flex: 1; }
+
+    .pg-topbar-link {
+      font-size: 0.8rem;
       font-weight: 500;
-      cursor: pointer;
-      transition: border-color var(--duration-short) var(--ease-expressive);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-    }
-
-    .playground__select:focus {
-      outline: none;
-      border-color: var(--color-primary);
-    }
-
-    .playground__label {
-      font-size: 0.8rem;
-      font-weight: 600;
       color: var(--color-on-surface-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: all 150ms;
     }
-
-    .playground__btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border-radius: var(--radius-xs);
-      border: 1px solid var(--color-outline);
-      background: var(--color-surface-container);
-      color: var(--color-on-surface-dim);
-      cursor: pointer;
-      transition: all var(--duration-short) var(--ease-expressive);
-      white-space: nowrap;
-    }
-
-    .playground__btn:hover {
-      border-color: var(--color-primary);
+    .pg-topbar-link:hover {
       color: var(--color-primary);
       background: var(--color-primary-light);
     }
 
-    .playground__btn--primary {
-      background: var(--color-primary);
-      color: #fff;
-      border-color: var(--color-primary);
+    .pg-theme-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--color-on-surface-dim);
+      transition: all 150ms;
     }
-
-    [data-theme="dark"] .playground__btn--primary {
-      color: #111827;
+    .pg-theme-btn:hover {
+      color: var(--color-primary);
+      background: var(--color-primary-light);
     }
+    [data-theme="dark"] .icon-sun { display: block; }
+    [data-theme="dark"] .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun { display: none; }
+    [data-theme="light"] .icon-moon { display: block; }
 
-    .playground__btn--primary:hover {
-      background: var(--color-primary-hover);
-      border-color: var(--color-primary-hover);
-      color: #fff;
-    }
-
-    .playground__btn svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-    }
-
-    /* Split panes */
-    .playground__split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    /* --- Main content area --- */
+    .pg-main {
+      display: flex;
       flex: 1;
       min-height: 0;
       overflow: hidden;
     }
 
-    /* Code editor pane */
-    .playground__editor {
+    /* --- Sidebar --- */
+    .pg-sidebar {
+      width: 280px;
+      min-width: 280px;
       display: flex;
       flex-direction: column;
       border-right: 1px solid var(--color-outline);
-      min-height: 0;
-      overflow: hidden;
+      background: var(--color-surface-dim);
+      overflow-y: auto;
+      flex-shrink: 0;
     }
 
-    .playground__editor-header {
+    .pg-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--color-outline);
+    }
+
+    .pg-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-on-surface-faint);
+      margin-bottom: 10px;
+    }
+
+    .pg-field { margin-bottom: 12px; }
+    .pg-field:last-child { margin-bottom: 0; }
+
+    .pg-field-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--color-on-surface-dim);
+      margin-bottom: 4px;
+    }
+
+    .pg-select {
+      width: 100%;
+      appearance: none;
+      background: var(--color-surface-container);
+      color: var(--color-on-surface);
+      border: 1px solid var(--color-outline);
+      border-radius: 6px;
+      padding: 7px 30px 7px 10px;
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 150ms;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2 3l3 3 3-3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .pg-select:focus { outline: none; border-color: var(--color-primary); }
+
+    .pg-color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pg-color-input {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--color-outline);
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+      overflow: hidden;
+    }
+    .pg-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+    .pg-color-input::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+    .pg-color-hex {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--color-on-surface-dim);
+    }
+
+    .pg-toggle-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: var(--space-sm) var(--space-md);
-      background: #1a1b26;
+    }
+
+    .pg-toggle-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--color-on-surface);
+    }
+
+    .pg-toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .pg-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .pg-toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--color-outline);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 200ms;
+    }
+
+    .pg-toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 200ms;
+    }
+
+    .pg-toggle input:checked + .pg-toggle-track {
+      background: var(--color-primary);
+    }
+
+    .pg-toggle input:checked + .pg-toggle-track::after {
+      transform: translateX(18px);
+    }
+
+    .pg-slider {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--color-outline);
+      border-radius: 2px;
+      outline: none;
+      margin-top: 4px;
+    }
+    .pg-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      cursor: pointer;
+    }
+    .pg-slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      cursor: pointer;
+      border: none;
+    }
+
+    .pg-slider-value {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--color-on-surface-faint);
+      margin-top: 2px;
+    }
+
+    /* --- Viewer area --- */
+    .pg-viewer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .pg-viewer-canvas-wrap {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      background: #0d1117;
+    }
+
+    .pg-viewer-canvas-wrap canvas,
+    .pg-viewer-canvas-wrap model-viewer {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .pg-viewer-canvas-wrap canvas {
+      cursor: grab;
+    }
+    .pg-viewer-canvas-wrap canvas:active {
+      cursor: grabbing;
+    }
+
+    .pg-viewer-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.35);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .pg-viewer-renderer {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      background: rgba(26,115,232,0.15);
+      color: #8ab4f8;
+      pointer-events: none;
+    }
+
+    .pg-viewer-renderer .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+    }
+
+    /* --- Bottom code panel --- */
+    .pg-code-panel {
+      height: 260px;
+      min-height: 160px;
+      max-height: 50vh;
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--color-outline);
+      background: #0d1117;
+      flex-shrink: 0;
+    }
+
+    .pg-code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 16px;
+      background: #161b22;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       flex-shrink: 0;
     }
 
-    .playground__editor-tab {
+    .pg-code-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pg-code-tab {
       font-family: var(--font-mono);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #8ab4f8;
       font-weight: 500;
     }
 
-    .playground__editor-lang {
-      font-size: 0.7rem;
-      color: #6c7086;
-      font-weight: 500;
+    .pg-code-lang {
+      font-size: 0.68rem;
+      color: #484f58;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
-    .playground__code-wrap {
+    .pg-code-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pg-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: #8b949e;
+      cursor: pointer;
+      transition: all 150ms;
+      white-space: nowrap;
+    }
+    .pg-btn:hover {
+      border-color: var(--color-primary);
+      color: #c9d1d9;
+      background: rgba(26,115,232,0.1);
+    }
+    .pg-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .pg-btn--primary {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+    .pg-btn--primary:hover {
+      background: #1557b0;
+    }
+
+    .pg-btn--copied {
+      border-color: #34d399 !important;
+      color: #34d399 !important;
+      background: rgba(52,211,153,0.08) !important;
+    }
+
+    .pg-code-body {
       flex: 1;
       overflow: auto;
-      background: #0d1117;
       position: relative;
     }
 
-    .playground__code {
+    .pg-code-pre {
       display: block;
       width: 100%;
       min-height: 100%;
-      padding: var(--space-lg);
-      padding-left: 60px;
+      padding: 12px 16px 12px 52px;
       font-family: var(--font-mono);
-      font-size: 0.85rem;
-      line-height: 1.8;
+      font-size: 0.82rem;
+      line-height: 1.75;
       color: #c9d1d9;
       background: transparent;
-      border: none;
-      resize: none;
-      outline: none;
       white-space: pre;
-      overflow-x: auto;
       tab-size: 4;
       -moz-tab-size: 4;
     }
 
-    .playground__line-numbers {
+    .pg-line-numbers {
       position: absolute;
       top: 0;
       left: 0;
-      width: 44px;
-      padding: var(--space-lg) 0;
+      width: 38px;
+      padding: 12px 0;
       text-align: right;
       font-family: var(--font-mono);
-      font-size: 0.85rem;
-      line-height: 1.8;
-      color: #3d4452;
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: #30363d;
       user-select: none;
       pointer-events: none;
       border-right: 1px solid rgba(255,255,255,0.04);
-      padding-right: 8px;
+      padding-right: 6px;
     }
 
-    /* Preview pane */
-    .playground__preview {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      overflow: hidden;
-      background: var(--color-surface-dim);
-    }
+    /* Syntax highlighting */
+    .pg-code-pre .kw { color: #ff7b72; }
+    .pg-code-pre .fn { color: #d2a8ff; }
+    .pg-code-pre .str { color: #a5d6ff; }
+    .pg-code-pre .num { color: #79c0ff; }
+    .pg-code-pre .cm { color: #484f58; font-style: italic; }
+    .pg-code-pre .ann { color: #ffa657; }
 
-    .playground__preview-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: var(--space-sm) var(--space-md);
-      background: var(--color-surface-dim);
-      border-bottom: 1px solid var(--color-outline);
-      flex-shrink: 0;
-    }
-
-    .playground__preview-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--color-on-surface-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .playground__preview-hint {
-      font-size: 0.75rem;
-      color: var(--color-on-surface-faint);
-    }
-
-    .playground__model-wrap {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* --- Resize handle for code panel --- */
+    .pg-resize-handle {
+      height: 5px;
+      cursor: row-resize;
+      background: transparent;
       position: relative;
-      background: radial-gradient(ellipse at 50% 40%,
-        rgba(138, 180, 248, 0.08) 0%,
-        rgba(187, 134, 252, 0.04) 40%,
-        var(--color-surface-dim) 80%);
-    }
-
-    [data-theme="light"] .playground__model-wrap {
-      background: radial-gradient(ellipse at 50% 40%,
-        rgba(26, 115, 232, 0.06) 0%,
-        rgba(108, 92, 231, 0.03) 40%,
-        var(--color-surface-dim) 80%);
-    }
-
-    .playground__model-wrap model-viewer,
-    .playground__model-wrap canvas {
-      width: 100%;
-      height: 100%;
-      --poster-color: transparent;
-      display: block;
-    }
-
-    .playground__model-wrap canvas {
-      cursor: grab;
-    }
-
-    .playground__renderer-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: var(--radius-xs);
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      margin-left: 8px;
-    }
-
-    .playground__renderer-badge--sceneview {
-      background: rgba(26,115,232,0.12);
-      color: var(--color-primary);
-    }
-
-    .playground__renderer-badge--modelviewer {
-      background: rgba(108,92,231,0.12);
-      color: #6c5ce7;
-    }
-
-    /* Description panel */
-    .playground__description {
-      padding: var(--space-md) var(--space-lg);
-      background: var(--color-surface-container);
-      border-top: 1px solid var(--color-outline);
       flex-shrink: 0;
     }
-
-    .playground__description h3 {
-      font-size: 0.9rem;
-      font-weight: 700;
-      margin-bottom: 4px;
+    .pg-resize-handle::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 32px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+    }
+    .pg-resize-handle:hover::after {
+      background: var(--color-primary);
     }
 
-    .playground__description p {
-      font-size: 0.8rem;
-      color: var(--color-on-surface-dim);
-      line-height: 1.5;
+    /* --- Example tabs in code panel --- */
+    .pg-example-tabs {
+      display: flex;
+      gap: 2px;
+      margin-left: 12px;
     }
 
-    /* Copy feedback */
-    .playground__btn--copied {
-      border-color: #34d399 !important;
-      color: #34d399 !important;
-      background: rgba(52, 211, 153, 0.08) !important;
+    .pg-example-tab {
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 4px;
+      color: #484f58;
+      cursor: pointer;
+      transition: all 150ms;
+      border: none;
+      background: transparent;
     }
+    .pg-example-tab:hover { color: #8b949e; background: rgba(255,255,255,0.04); }
+    .pg-example-tab.active { color: #c9d1d9; background: rgba(255,255,255,0.08); }
 
     /* ===== RESPONSIVE ===== */
-    @media (max-width: 900px) {
-      .playground__split {
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr 1fr;
+    @media (max-width: 768px) {
+      .pg-sidebar {
+        position: fixed;
+        left: -300px;
+        top: 48px;
+        bottom: 0;
+        z-index: 30;
+        transition: left 200ms ease;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.3);
       }
+      .pg-sidebar.open { left: 0; }
 
-      .playground__editor {
-        border-right: none;
-        border-bottom: 1px solid var(--color-outline);
-      }
+      .pg-sidebar-toggle { display: flex !important; }
+
+      .pg-code-panel { height: 200px; }
+
+      .pg-topbar-link.desktop-only { display: none; }
     }
 
-    @media (max-width: 600px) {
-      .playground__toolbar {
-        padding: var(--space-sm) var(--space-md);
-        gap: var(--space-sm);
-      }
-
-      .playground__toolbar-left {
-        flex-wrap: wrap;
-      }
-
-      .playground__toolbar-right {
-        width: 100%;
-        justify-content: flex-end;
-      }
-
-      .playground__code {
-        font-size: 0.78rem;
-        padding: var(--space-md);
-        padding-left: 50px;
-      }
-
-      .playground__line-numbers {
-        width: 36px;
-        font-size: 0.78rem;
-        padding-right: 6px;
-      }
+    @media (min-width: 769px) {
+      .pg-sidebar-toggle { display: none !important; }
+      .pg-sidebar-overlay { display: none !important; }
     }
+
+    .pg-sidebar-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--color-on-surface-dim);
+      flex-shrink: 0;
+    }
+    .pg-sidebar-toggle:hover {
+      color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .pg-sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      top: 48px;
+      background: rgba(0,0,0,0.5);
+      z-index: 25;
+    }
+    .pg-sidebar-overlay.open { display: block; }
   </style>
 </head>
 <body>
 
-  <!-- ===== NAVIGATION ===== -->
-  <nav class="nav" id="nav">
-    <div class="nav__container">
-      <a href="/" class="nav__logo">
-        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
-          <rect width="32" height="32" rx="8" fill="currentColor"/>
-          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-        <span class="nav__logo-text">SceneView</span>
-      </a>
+  <!-- ===== TOP BAR ===== -->
+  <div class="pg-topbar">
+    <button class="pg-sidebar-toggle" id="sidebarToggle" aria-label="Toggle controls">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <a href="/" class="pg-logo">
+      <svg viewBox="0 0 32 32" width="24" height="24" fill="none">
+        <rect width="32" height="32" rx="8" fill="currentColor"/>
+        <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+      SceneView
+    </a>
+    <div class="pg-topbar-sep"></div>
+    <span class="pg-topbar-title">Playground</span>
+    <div class="pg-topbar-spacer"></div>
+    <a href="/" class="pg-topbar-link desktop-only">Home</a>
+    <a href="/showcase.html" class="pg-topbar-link desktop-only">Showcase</a>
+    <a href="https://github.com/sceneview/sceneview#readme" class="pg-topbar-link desktop-only" target="_blank" rel="noopener">Docs</a>
+    <a href="https://github.com/sceneview/sceneview" class="pg-topbar-link" target="_blank" rel="noopener">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.17c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.02 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.93.43.37.82 1.1.82 2.22v3.29c0 .32.19.69.8.58A12 12 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+    </a>
+    <button class="pg-theme-btn" id="themeToggle" aria-label="Toggle dark mode">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+  </div>
 
-      <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
+  <!-- ===== MAIN ===== -->
+  <div class="pg-main">
+    <!-- Sidebar overlay for mobile -->
+    <div class="pg-sidebar-overlay" id="sidebarOverlay"></div>
 
-      <div class="nav__links" id="navLinks">
-        <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
-        <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
-        <a href="/#demos" class="nav__link">Demos</a>
-        <a href="/playground.html" class="nav__link" style="color:var(--color-primary);font-weight:600">Playground</a>
-        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
-        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
-        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
-        <a href="/#pro" class="nav__link" style="color:#34a853;font-weight:600">Pro</a>
-        <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-          </svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
+    <!-- Sidebar controls -->
+    <aside class="pg-sidebar" id="sidebar">
+      <!-- Model -->
+      <div class="pg-section">
+        <div class="pg-section-title">Model</div>
+        <div class="pg-field">
+          <label class="pg-field-label" for="modelSelect">3D Model</label>
+          <select class="pg-select" id="modelSelect">
+            <option value="DamagedHelmet">Damaged Helmet</option>
+            <option value="SheenChair">Sheen Chair</option>
+            <option value="ToyCar">Toy Car</option>
+            <option value="CarConcept">Car Concept</option>
+            <option value="SunglassesKhronos">Sunglasses</option>
+            <option value="ChronographWatch">Watch</option>
+            <option value="MaterialsVariantsShoe">Shoe</option>
+            <option value="MosquitoInAmber">Mosquito in Amber</option>
+            <option value="IridescenceLamp">Iridescent Lamp</option>
+            <option value="GlassVaseFlowers">Glass Vase</option>
+            <option value="Fox">Fox</option>
+            <option value="Duck">Duck</option>
+            <option value="BoomBox">Boom Box</option>
+            <option value="AntiqueCamera">Antique Camera</option>
+            <option value="WaterBottle">Water Bottle</option>
+            <option value="BrainStem">Brain Stem</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Renderer -->
+      <div class="pg-section">
+        <div class="pg-section-title">Renderer</div>
+        <div class="pg-field">
+          <select class="pg-select" id="rendererSelect">
+            <option value="sceneview">SceneView (Filament.js)</option>
+            <option value="model-viewer">model-viewer (fallback)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Scene -->
+      <div class="pg-section">
+        <div class="pg-section-title">Scene</div>
+
+        <div class="pg-field">
+          <label class="pg-field-label">Background Color</label>
+          <div class="pg-color-row">
+            <input type="color" class="pg-color-input" id="bgColor" value="#0d1117">
+            <span class="pg-color-hex" id="bgColorHex">#0d1117</span>
+          </div>
+        </div>
+
+        <div class="pg-field">
+          <div class="pg-toggle-row">
+            <span class="pg-toggle-label">Auto-rotate</span>
+            <label class="pg-toggle">
+              <input type="checkbox" id="autoRotate" checked>
+              <span class="pg-toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="pg-field">
+          <div class="pg-toggle-row">
+            <span class="pg-toggle-label">Grid Floor</span>
+            <label class="pg-toggle">
+              <input type="checkbox" id="showGrid">
+              <span class="pg-toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Camera -->
+      <div class="pg-section">
+        <div class="pg-section-title">Camera</div>
+        <div class="pg-field">
+          <label class="pg-field-label" for="cameraDistance">Distance</label>
+          <input type="range" class="pg-slider" id="cameraDistance" min="1" max="20" step="0.1" value="4">
+          <div class="pg-slider-value" id="cameraDistanceVal">4.0</div>
+        </div>
+        <div class="pg-field">
+          <label class="pg-field-label" for="fov">Field of View</label>
+          <input type="range" class="pg-slider" id="fov" min="20" max="90" step="1" value="45">
+          <div class="pg-slider-value" id="fovVal">45</div>
+        </div>
+      </div>
+
+      <!-- Environment presets -->
+      <div class="pg-section">
+        <div class="pg-section-title">Environment Presets</div>
+        <div class="pg-field">
+          <select class="pg-select" id="envPreset">
+            <option value="studio">Studio (Default)</option>
+            <option value="dark">Dark Room</option>
+            <option value="bright">Bright White</option>
+            <option value="sunset">Sunset Warm</option>
+            <option value="cool">Cool Blue</option>
+            <option value="midnight">Midnight</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="pg-section" style="border-bottom:none;">
+        <div class="pg-section-title">Quick Actions</div>
+        <div class="pg-field">
+          <button class="pg-btn" id="resetBtn" style="width:100%; justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            Reset to defaults
+          </button>
+        </div>
+        <div class="pg-field">
+          <button class="pg-btn pg-btn--primary" id="shareBtn" style="width:100%; justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share configuration
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Viewer + Code -->
+    <div class="pg-viewer">
+      <!-- 3D Canvas -->
+      <div class="pg-viewer-canvas-wrap" id="viewerWrap">
+        <canvas id="previewCanvas" aria-label="3D model preview"></canvas>
+        <model-viewer
+          id="previewModel"
+          src="models/platforms/DamagedHelmet.glb"
+          alt="3D model preview"
+          auto-rotate
+          auto-rotate-delay="0"
+          rotation-per-second="30deg"
+          camera-controls
+          touch-action="pan-y"
+          interaction-prompt="none"
+          shadow-intensity="1.2"
+          shadow-softness="0.8"
+          exposure="1.1"
+          environment-image="neutral"
+          camera-orbit="45deg 70deg 2.5m"
+          loading="eager"
+          style="display:none"
+        ></model-viewer>
+        <div class="pg-viewer-renderer" id="rendererBadge"><span class="dot"></span>SceneView / Filament.js</div>
+        <div class="pg-viewer-hint">Drag to orbit &middot; Scroll to zoom</div>
+      </div>
+
+      <!-- Resize handle -->
+      <div class="pg-resize-handle" id="resizeHandle"></div>
+
+      <!-- Code panel -->
+      <div class="pg-code-panel" id="codePanel">
+        <div class="pg-code-header">
+          <div class="pg-code-header-left">
+            <span class="pg-code-tab" id="codeTab">ModelViewerScreen.kt</span>
+            <span class="pg-code-lang">Kotlin</span>
+            <div class="pg-example-tabs">
+              <button class="pg-example-tab active" data-example="model-viewer">Model Viewer</button>
+              <button class="pg-example-tab" data-example="ar-placement">AR Placement</button>
+              <button class="pg-example-tab" data-example="custom-geometry">Custom Geometry</button>
+              <button class="pg-example-tab" data-example="animation">Animation</button>
+            </div>
+          </div>
+          <div class="pg-code-actions">
+            <button class="pg-btn" id="copyBtn" title="Copy to clipboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+              <span id="copyLabel">Copy</span>
+            </button>
+            <a class="pg-btn pg-btn--primary" id="claudeLink" href="#" target="_blank" rel="noopener" title="Open in Claude">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+              Open in Claude
+            </a>
+          </div>
+        </div>
+        <div class="pg-code-body">
+          <div class="pg-line-numbers" id="lineNumbers"></div>
+          <pre class="pg-code-pre" id="codeDisplay"></pre>
+        </div>
       </div>
     </div>
-  </nav>
-
-  <!-- ===== PLAYGROUND ===== -->
-  <main class="playground">
-    <!-- Toolbar -->
-    <div class="playground__toolbar">
-      <div class="playground__toolbar-left">
-        <span class="playground__label">Example</span>
-        <select class="playground__select" id="exampleSelect">
-          <option value="model-viewer">Model Viewer</option>
-          <option value="ar-placement">AR Placement</option>
-          <option value="custom-geometry">Custom Geometry</option>
-          <option value="animation">Animation</option>
-        </select>
-        <span class="playground__label" style="margin-left:16px">Renderer</span>
-        <select class="playground__select" id="rendererSelect">
-          <option value="sceneview">SceneView (Filament.js)</option>
-          <option value="model-viewer">model-viewer</option>
-        </select>
-        <span class="playground__label" style="margin-left:16px">Model</span>
-        <select class="playground__select" id="modelSelect">
-          <option value="DamagedHelmet">Damaged Helmet</option>
-          <option value="SheenChair">Sheen Chair</option>
-          <option value="ToyCar">Toy Car</option>
-          <option value="CarConcept">Car Concept</option>
-          <option value="SunglassesKhronos">Sunglasses</option>
-          <option value="ChronographWatch">Watch</option>
-          <option value="MaterialsVariantsShoe">Shoe</option>
-          <option value="MosquitoInAmber">Mosquito in Amber</option>
-          <option value="IridescenceLamp">Iridescent Lamp</option>
-          <option value="MosquitoInAmber">Mosquito in Amber</option>
-          <option value="CommercialRefrigerator">Refrigerator</option>
-          <option value="GlassVaseFlowers">Glass Vase</option>
-          <option value="Fox">Fox</option>
-          <option value="Duck">Duck</option>
-        </select>
-      </div>
-      <div class="playground__toolbar-right">
-        <button class="playground__btn" id="copyBtn" title="Copy code to clipboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-          </svg>
-          <span id="copyLabel">Copy code</span>
-        </button>
-        <a class="playground__btn playground__btn--primary" id="claudeLink" href="#" target="_blank" rel="noopener" title="Open in Claude with this code as context">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-          </svg>
-          Open in Claude
-        </a>
-      </div>
-    </div>
-
-    <!-- Split panes -->
-    <div class="playground__split">
-      <!-- Left: Code editor -->
-      <div class="playground__editor">
-        <div class="playground__editor-header">
-          <span class="playground__editor-tab" id="editorTab">MainActivity.kt</span>
-          <span class="playground__editor-lang" id="editorLang">Kotlin</span>
-        </div>
-        <div class="playground__code-wrap">
-          <div class="playground__line-numbers" id="lineNumbers"></div>
-          <pre class="playground__code" id="codeDisplay"></pre>
-        </div>
-      </div>
-
-      <!-- Right: 3D Preview -->
-      <div class="playground__preview">
-        <div class="playground__preview-header">
-          <span class="playground__preview-label">3D Preview<span id="rendererBadge" class="playground__renderer-badge playground__renderer-badge--sceneview">SceneView</span></span>
-          <span class="playground__preview-hint">Drag to rotate, scroll to zoom</span>
-        </div>
-        <div class="playground__model-wrap">
-          <canvas id="previewCanvas" aria-label="3D model preview (SceneView Web / Filament.js)"></canvas>
-          <model-viewer
-            id="previewModel"
-            src="models/platforms/DamagedHelmet.glb"
-            alt="3D model preview"
-            auto-rotate
-            auto-rotate-delay="0"
-            rotation-per-second="30deg"
-            camera-controls
-            touch-action="pan-y"
-            interaction-prompt="none"
-            shadow-intensity="1.2"
-            shadow-softness="0.8"
-            exposure="1.1"
-            environment-image="neutral"
-            camera-orbit="45deg 70deg 2.5m"
-            loading="eager"
-            style="display:none"
-          ></model-viewer>
-        </div>
-        <div class="playground__description" id="description">
-          <h3 id="descTitle">Model Viewer</h3>
-          <p id="descText">A basic 3D scene with a glTF model, HDR environment lighting, orbit camera controls, and shadows. This is the simplest way to display a 3D model in your app.</p>
-        </div>
-      </div>
-    </div>
-  </main>
+  </div>
 
   <script>
     // ===== THEME =====
@@ -545,38 +841,28 @@
       var next = current === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('sceneview-theme', next);
+      // Update background color preset
+      applyEnvPreset(document.getElementById('envPreset').value);
     });
 
-    // ===== HAMBURGER =====
-    var hamburger = document.getElementById('hamburger');
-    var navLinks = document.getElementById('navLinks');
-    var overlay = document.createElement('div');
-    overlay.className = 'nav-overlay';
-    document.body.appendChild(overlay);
-
-    function toggleMenu() {
-      hamburger.classList.toggle('active');
-      navLinks.classList.toggle('open');
-      overlay.classList.toggle('active');
-      document.body.style.overflow = navLinks.classList.contains('open') ? 'hidden' : '';
-    }
-    hamburger.addEventListener('click', toggleMenu);
-    overlay.addEventListener('click', toggleMenu);
-    navLinks.querySelectorAll('.nav__link').forEach(function (link) {
-      link.addEventListener('click', function () {
-        if (navLinks.classList.contains('open')) toggleMenu();
-      });
+    // ===== MOBILE SIDEBAR =====
+    var sidebar = document.getElementById('sidebar');
+    var sidebarOverlay = document.getElementById('sidebarOverlay');
+    document.getElementById('sidebarToggle').addEventListener('click', function() {
+      sidebar.classList.toggle('open');
+      sidebarOverlay.classList.toggle('open');
+    });
+    sidebarOverlay.addEventListener('click', function() {
+      sidebar.classList.remove('open');
+      sidebarOverlay.classList.remove('open');
     });
 
     // ===== CODE EXAMPLES =====
     var examples = {
       'model-viewer': {
         file: 'ModelViewerScreen.kt',
-        lang: 'Kotlin',
-        title: 'Model Viewer',
-        description: 'A basic 3D scene with a glTF model, HDR environment lighting, orbit camera controls, and shadows. This is the simplest way to display a 3D model in your app.',
         code:
-'package com.example.sceneviewdemo\n\
+'package com.example.app\n\
 \n\
 import androidx.compose.foundation.layout.fillMaxSize\n\
 import androidx.compose.runtime.Composable\n\
@@ -585,25 +871,24 @@ import io.github.sceneview.Scene\n\
 import io.github.sceneview.node.ModelNode\n\
 import io.github.sceneview.rememberCameraNode\n\
 import io.github.sceneview.rememberEngine\n\
-import io.github.sceneview.rememberEnvironment\n\
 import io.github.sceneview.rememberEnvironmentLoader\n\
+import io.github.sceneview.rememberEnvironment\n\
 import io.github.sceneview.rememberModelLoader\n\
-import io.github.sceneview.rememberCameraManipulator\n\
 import io.github.sceneview.rememberModelInstance\n\
+import io.github.sceneview.rememberCameraManipulator\n\
 \n\
 @Composable\n\
 fun ModelViewerScreen() {\n\
     val engine = rememberEngine()\n\
     val modelLoader = rememberModelLoader(engine)\n\
-    val environmentLoader = rememberEnvironmentLoader(engine)\n\
+    val envLoader = rememberEnvironmentLoader(engine)\n\
 \n\
     Scene(\n\
         modifier = Modifier.fillMaxSize(),\n\
         engine = engine,\n\
         modelLoader = modelLoader,\n\
-        environmentLoader = environmentLoader,\n\
         environment = rememberEnvironment(\n\
-            environmentLoader, "envs/sky.hdr"\n\
+            envLoader, "envs/sky.hdr"\n\
         ),\n\
         cameraNode = rememberCameraNode(engine) {\n\
             position(0f, 0f, 4f)\n\
@@ -620,11 +905,8 @@ fun ModelViewerScreen() {\n\
       },
       'ar-placement': {
         file: 'ARPlacementScreen.kt',
-        lang: 'Kotlin',
-        title: 'AR Placement',
-        description: 'An AR scene with plane detection and tap-to-place. Users point their camera at a surface, then tap to place a 3D model. Supports ARCore on Android.',
         code:
-'package com.example.sceneviewdemo\n\
+'package com.example.app\n\
 \n\
 import androidx.compose.foundation.layout.fillMaxSize\n\
 import androidx.compose.runtime.*\n\
@@ -635,48 +917,45 @@ import io.github.sceneview.node.ModelNode\n\
 import io.github.sceneview.rememberEngine\n\
 import io.github.sceneview.rememberModelLoader\n\
 import io.github.sceneview.rememberModelInstance\n\
-import io.github.sceneview.ar.rememberARCameraNode\n\
-import com.google.ar.core.HitResult\n\
 import com.google.ar.core.Plane\n\
 \n\
 @Composable\n\
 fun ARPlacementScreen() {\n\
     val engine = rememberEngine()\n\
     val modelLoader = rememberModelLoader(engine)\n\
-    var placedModel by remember { mutableStateOf(false) }\n\
+    var placed by remember { mutableStateOf(false) }\n\
 \n\
     ARScene(\n\
         modifier = Modifier.fillMaxSize(),\n\
         engine = engine,\n\
         modelLoader = modelLoader,\n\
         planeRenderer = true,\n\
-        onSessionConfiguration = { session, config ->\n\
+        onSessionConfiguration = { _, config ->\n\
             config.planeFindingMode =\n\
                 com.google.ar.core.Config\n\
                     .PlaneFindingMode.HORIZONTAL\n\
         },\n\
-        onTapAR = { motionEvent, hitResult ->\n\
-            if (!placedModel) {\n\
+        onTapAR = { _, hitResult ->\n\
+            if (!placed) {\n\
                 hitResult\n\
-                    ?.takeIf {\n\
-                        it.trackable is Plane\n\
-                    }?.let { hit ->\n\
-                        val anchor = hit.createAnchor()\n\
-                        val anchorNode = AnchorNode(\n\
-                            engine = engine,\n\
-                            anchor = anchor\n\
+                    ?.takeIf { it.trackable is Plane }\n\
+                    ?.let { hit ->\n\
+                    val anchor = hit.createAnchor()\n\
+                    val node = AnchorNode(\n\
+                        engine = engine,\n\
+                        anchor = anchor\n\
+                    )\n\
+                    node.addChildNode(\n\
+                        ModelNode(\n\
+                            modelInstance =\n\
+                                modelLoader\n\
+                                    .createModelInstance(\n\
+                                        "models/chair.glb"\n\
+                                    )\n\
                         )\n\
-                        anchorNode.addChildNode(\n\
-                            ModelNode(\n\
-                                modelInstance =\n\
-                                    modelLoader\n\
-                                        .createModelInstance(\n\
-                                            "models/chair.glb"\n\
-                                        )\n\
-                            )\n\
-                        )\n\
-                        placedModel = true\n\
-                    }\n\
+                    )\n\
+                    placed = true\n\
+                }\n\
             }\n\
         }\n\
     )\n\
@@ -684,11 +963,8 @@ fun ARPlacementScreen() {\n\
       },
       'custom-geometry': {
         file: 'CustomGeometryScreen.kt',
-        lang: 'Kotlin',
-        title: 'Custom Geometry',
-        description: 'Procedurally generated 3D geometry using MeshNode. Create cubes, spheres, cylinders, and custom shapes at runtime with material properties.',
         code:
-'package com.example.sceneviewdemo\n\
+'package com.example.app\n\
 \n\
 import androidx.compose.foundation.layout.fillMaxSize\n\
 import androidx.compose.runtime.Composable\n\
@@ -707,7 +983,8 @@ import io.github.sceneview.math.Color\n\
 @Composable\n\
 fun CustomGeometryScreen() {\n\
     val engine = rememberEngine()\n\
-    val materialLoader = rememberMaterialLoader(engine)\n\
+    val materialLoader =\n\
+        rememberMaterialLoader(engine)\n\
 \n\
     Scene(\n\
         modifier = Modifier.fillMaxSize(),\n\
@@ -716,9 +993,9 @@ fun CustomGeometryScreen() {\n\
             position(0f, 2f, 6f)\n\
             lookAt(0f, 0f, 0f)\n\
         },\n\
-        cameraManipulator = rememberCameraManipulator()\n\
+        cameraManipulator =\n\
+            rememberCameraManipulator()\n\
     ) {\n\
-        // Red cube on the left\n\
         CubeNode(\n\
             engine = engine,\n\
             size = Position(1f, 1f, 1f),\n\
@@ -728,7 +1005,6 @@ fun CustomGeometryScreen() {\n\
             position(x = -2f, y = 0.5f, z = 0f)\n\
         }\n\
 \n\
-        // Green sphere in the center\n\
         SphereNode(\n\
             engine = engine,\n\
             radius = 0.6f,\n\
@@ -738,7 +1014,6 @@ fun CustomGeometryScreen() {\n\
             position(x = 0f, y = 0.6f, z = 0f)\n\
         }\n\
 \n\
-        // Blue cylinder on the right\n\
         CylinderNode(\n\
             engine = engine,\n\
             radius = 0.5f,\n\
@@ -753,11 +1028,8 @@ fun CustomGeometryScreen() {\n\
       },
       'animation': {
         file: 'AnimationScreen.kt',
-        lang: 'Kotlin',
-        title: 'Animation',
-        description: 'A model with animation playback controls. Load an animated glTF model and control playback with play, pause, and animation switching.',
         code:
-'package com.example.sceneviewdemo\n\
+'package com.example.app\n\
 \n\
 import androidx.compose.foundation.layout.*\n\
 import androidx.compose.material3.*\n\
@@ -770,8 +1042,6 @@ import io.github.sceneview.node.ModelNode\n\
 import io.github.sceneview.rememberCameraNode\n\
 import io.github.sceneview.rememberEngine\n\
 import io.github.sceneview.rememberModelLoader\n\
-import io.github.sceneview.rememberEnvironmentLoader\n\
-import io.github.sceneview.rememberEnvironment\n\
 import io.github.sceneview.rememberModelInstance\n\
 import io.github.sceneview.rememberCameraManipulator\n\
 \n\
@@ -779,10 +1049,13 @@ import io.github.sceneview.rememberCameraManipulator\n\
 fun AnimationScreen() {\n\
     val engine = rememberEngine()\n\
     val modelLoader = rememberModelLoader(engine)\n\
-    val envLoader = rememberEnvironmentLoader(engine)\n\
 \n\
-    var isPlaying by remember { mutableStateOf(true) }\n\
-    var animIndex by remember { mutableIntStateOf(0) }\n\
+    var isPlaying by remember {\n\
+        mutableStateOf(true)\n\
+    }\n\
+    var animIndex by remember {\n\
+        mutableIntStateOf(0)\n\
+    }\n\
 \n\
     val modelInstance = rememberModelInstance(\n\
         modelLoader, "models/character.glb"\n\
@@ -792,11 +1065,9 @@ fun AnimationScreen() {\n\
         Scene(\n\
             modifier = Modifier.fillMaxSize(),\n\
             engine = engine,\n\
-            modelLoader = modelLoader,\n\
-            environment = rememberEnvironment(\n\
-                envLoader, "envs/studio.hdr"\n\
-            ),\n\
-            cameraNode = rememberCameraNode(engine) {\n\
+            cameraNode = rememberCameraNode(\n\
+                engine\n\
+            ) {\n\
                 position(0f, 1f, 3f)\n\
             },\n\
             cameraManipulator =\n\
@@ -818,7 +1089,6 @@ fun AnimationScreen() {\n\
             }\n\
         }\n\
 \n\
-        // Playback controls\n\
         Row(\n\
             modifier = Modifier\n\
                 .align(Alignment.BottomCenter)\n\
@@ -827,7 +1097,9 @@ fun AnimationScreen() {\n\
                 Arrangement.spacedBy(12.dp)\n\
         ) {\n\
             FilledTonalButton(\n\
-                onClick = { isPlaying = !isPlaying }\n\
+                onClick = {\n\
+                    isPlaying = !isPlaying\n\
+                }\n\
             ) {\n\
                 Text(\n\
                     if (isPlaying) "Pause"\n\
@@ -845,96 +1117,87 @@ fun AnimationScreen() {\n\
       }
     };
 
-    // ===== STATE =====
-    var currentExample = 'model-viewer';
-    var codeDisplay = document.getElementById('codeDisplay');
-    var lineNumbers = document.getElementById('lineNumbers');
-    var exampleSelect = document.getElementById('exampleSelect');
-    var editorTab = document.getElementById('editorTab');
-    var editorLang = document.getElementById('editorLang');
-    var descTitle = document.getElementById('descTitle');
-    var descText = document.getElementById('descText');
-    var copyBtn = document.getElementById('copyBtn');
-    var copyLabel = document.getElementById('copyLabel');
-    var claudeLink = document.getElementById('claudeLink');
-
-    function syntaxHighlight(code) {
-      // Escape HTML first
-      var html = code
+    // ===== SYNTAX HIGHLIGHTING =====
+    function highlight(code) {
+      var h = code
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
-
-      // Apply syntax highlighting
       // Comments
-      html = html.replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
+      h = h.replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
+      // Annotations
+      h = h.replace(/(@\w+)/g, '<span class="ann">$1</span>');
       // Strings
-      html = html.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
+      h = h.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
       // Numbers
-      html = html.replace(/\b(\d+(?:\.\d+)?f?)\b/g, '<span class="num">$1</span>');
+      h = h.replace(/\b(\d+(?:\.\d+)?f?)\b/g, '<span class="num">$1</span>');
       // Keywords
-      html = html.replace(/\b(package|import|fun|val|var|if|else|let|by|remember|is|return)\b/g, '<span class="kw">$1</span>');
-      // Compose / SceneView types
-      html = html.replace(/\b(Scene|ARScene|ModelNode|AnchorNode|CubeNode|SphereNode|CylinderNode|Box|Row|Column|Text|Button|FilledTonalButton|Modifier|Composable|mutableStateOf|mutableIntStateOf)\b/g, '<span class="fn">$1</span>');
-      // Function calls (word followed by parenthesis)
-      html = html.replace(/\b(rememberEngine|rememberModelLoader|rememberModelInstance|rememberEnvironmentLoader|rememberEnvironment|rememberCameraNode|rememberCameraManipulator|rememberMaterialLoader|fillMaxSize|position|lookAt|playAnimation|stopAnimation|createAnchor|createModelInstance|addChildNode|padding|align|spacedBy|onClick|takeIf)\b/g, '<span class="fn">$1</span>');
-
-      return html;
+      h = h.replace(/\b(package|import|fun|val|var|if|else|let|by|remember|is|return)\b/g, '<span class="kw">$1</span>');
+      // Types
+      h = h.replace(/\b(Scene|ARScene|ModelNode|AnchorNode|CubeNode|SphereNode|CylinderNode|Box|Row|Column|Text|Button|FilledTonalButton|Modifier|Composable|mutableStateOf|mutableIntStateOf)\b/g, '<span class="fn">$1</span>');
+      // Function calls
+      h = h.replace(/\b(rememberEngine|rememberModelLoader|rememberModelInstance|rememberEnvironmentLoader|rememberEnvironment|rememberCameraNode|rememberCameraManipulator|rememberMaterialLoader|fillMaxSize|position|lookAt|playAnimation|stopAnimation|createAnchor|createModelInstance|addChildNode|padding|align|spacedBy|onClick|takeIf)\b/g, '<span class="fn">$1</span>');
+      return h;
     }
 
     function updateLineNumbers(code) {
-      var lines = code.split('\n').length;
-      var html = '';
-      for (var i = 1; i <= lines; i++) {
-        html += i + '\n';
-      }
-      lineNumbers.textContent = html;
+      var n = code.split('\n').length;
+      var s = '';
+      for (var i = 1; i <= n; i++) s += i + '\n';
+      document.getElementById('lineNumbers').textContent = s;
     }
+
+    // ===== STATE =====
+    var currentExample = 'model-viewer';
+    var currentRenderer = 'sceneview';
+    var sceneViewInstance = null;
+    var MODEL_BASE = 'models/platforms';
 
     function loadExample(key) {
       var ex = examples[key];
       if (!ex) return;
       currentExample = key;
-
-      codeDisplay.innerHTML = syntaxHighlight(ex.code);
+      document.getElementById('codeDisplay').innerHTML = highlight(ex.code);
       updateLineNumbers(ex.code);
-      editorTab.textContent = ex.file;
-      editorLang.textContent = ex.lang;
-      descTitle.textContent = ex.title;
-      descText.textContent = ex.description;
+      document.getElementById('codeTab').textContent = ex.file;
+
+      // Update example tabs
+      document.querySelectorAll('.pg-example-tab').forEach(function(tab) {
+        tab.classList.toggle('active', tab.dataset.example === key);
+      });
 
       // Update Claude link
       var prompt = encodeURIComponent(
-        'Help me build a SceneView Android app. Here is the code I want to use:\n\n' + ex.code
+        'Help me build a SceneView Android app. Here is the code:\n\n' + ex.code
       );
-      claudeLink.href = 'https://claude.ai/new?q=' + prompt;
+      document.getElementById('claudeLink').href = 'https://claude.ai/new?q=' + prompt;
     }
 
-    // Initial load
     loadExample('model-viewer');
 
-    // Example dropdown change
-    exampleSelect.addEventListener('change', function () {
-      loadExample(this.value);
+    // Example tab clicks
+    document.querySelectorAll('.pg-example-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        loadExample(this.dataset.example);
+      });
     });
 
-    // ===== RENDERER SWITCHING =====
-    var MODEL_BASE = 'models/platforms';
+    // ===== 3D RENDERER =====
+    var previewCanvas = document.getElementById('previewCanvas');
+    var previewModel = document.getElementById('previewModel');
     var modelSelect = document.getElementById('modelSelect');
     var rendererSelect = document.getElementById('rendererSelect');
-    var previewModel = document.getElementById('previewModel');
-    var previewCanvas = document.getElementById('previewCanvas');
     var rendererBadge = document.getElementById('rendererBadge');
-    var currentRenderer = 'sceneview'; // default to SceneView
-    var sceneViewInstance = null;
 
     function getModelUrl(name) {
       return MODEL_BASE + '/' + name + '.glb';
     }
 
-    function getThemeBg() {
-      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-      return dark ? [0.07, 0.07, 0.11, 1.0] : [0.96, 0.97, 0.98, 1.0];
+    function hexToRgb01(hex) {
+      var r = parseInt(hex.slice(1,3), 16) / 255;
+      var g = parseInt(hex.slice(3,5), 16) / 255;
+      var b = parseInt(hex.slice(5,7), 16) / 255;
+      return [r, g, b];
     }
 
     function initSceneView(modelUrl) {
@@ -943,17 +1206,21 @@ fun AnimationScreen() {\n\
         switchToModelViewer();
         return;
       }
-      // Dispose previous instance
       if (sceneViewInstance) {
         try { sceneViewInstance.dispose(); } catch(e) {}
         sceneViewInstance = null;
       }
+      var bg = hexToRgb01(document.getElementById('bgColor').value);
       SceneView.modelViewer('previewCanvas', modelUrl, {
-        backgroundColor: getThemeBg()
+        backgroundColor: [bg[0], bg[1], bg[2], 1.0],
+        autoRotate: document.getElementById('autoRotate').checked
       }).then(function(instance) {
         sceneViewInstance = instance;
+        // Apply current settings
+        applySettings();
       }).catch(function(e) {
         console.warn('SceneView init error:', e);
+        switchToModelViewer();
       });
     }
 
@@ -961,39 +1228,29 @@ fun AnimationScreen() {\n\
       currentRenderer = 'sceneview';
       previewCanvas.style.display = 'block';
       previewModel.style.display = 'none';
-      rendererBadge.textContent = 'SceneView';
-      rendererBadge.className = 'playground__renderer-badge playground__renderer-badge--sceneview';
-      var name = modelSelect.value;
-      initSceneView(getModelUrl(name));
+      rendererBadge.innerHTML = '<span class="dot"></span>SceneView / Filament.js';
+      initSceneView(getModelUrl(modelSelect.value));
     }
 
     function switchToModelViewer() {
       currentRenderer = 'model-viewer';
       previewCanvas.style.display = 'none';
       previewModel.style.display = 'block';
-      rendererBadge.textContent = 'model-viewer';
-      rendererBadge.className = 'playground__renderer-badge playground__renderer-badge--modelviewer';
-      // Dispose SceneView instance
+      rendererBadge.innerHTML = '<span class="dot" style="background:#a78bfa"></span>model-viewer (Three.js)';
       if (sceneViewInstance) {
         try { sceneViewInstance.dispose(); } catch(e) {}
         sceneViewInstance = null;
       }
-      var name = modelSelect.value;
-      previewModel.setAttribute('src', getModelUrl(name));
+      previewModel.setAttribute('src', getModelUrl(modelSelect.value));
     }
 
     rendererSelect.addEventListener('change', function() {
-      if (this.value === 'sceneview') {
-        switchToSceneView();
-      } else {
-        switchToModelViewer();
-      }
+      if (this.value === 'sceneview') switchToSceneView();
+      else switchToModelViewer();
     });
 
-    // Model preset switcher
-    modelSelect.addEventListener('change', function () {
-      var name = this.value;
-      var url = getModelUrl(name);
+    modelSelect.addEventListener('change', function() {
+      var url = getModelUrl(this.value);
       if (currentRenderer === 'sceneview') {
         initSceneView(url);
       } else {
@@ -1001,23 +1258,226 @@ fun AnimationScreen() {\n\
       }
     });
 
-    // Initialize default renderer (SceneView)
+    // Initial renderer
     switchToSceneView();
 
-    // Copy button
-    copyBtn.addEventListener('click', function () {
-      var ex = examples[currentExample];
-      if (!ex) return;
+    // ===== SETTINGS =====
+    function applySettings() {
+      if (!sceneViewInstance) return;
+      // Background color
+      var bg = hexToRgb01(document.getElementById('bgColor').value);
+      try { sceneViewInstance.setBackgroundColor(bg[0], bg[1], bg[2], 1.0); } catch(e) {}
+      // Auto-rotate
+      try { sceneViewInstance.setAutoRotate(document.getElementById('autoRotate').checked); } catch(e) {}
+      // Camera distance
+      try {
+        var dist = parseFloat(document.getElementById('cameraDistance').value);
+        sceneViewInstance._orbitRadius = dist;
+      } catch(e) {}
+    }
 
-      navigator.clipboard.writeText(ex.code).then(function () {
-        copyBtn.classList.add('playground__btn--copied');
-        copyLabel.textContent = 'Copied!';
-        setTimeout(function () {
-          copyBtn.classList.remove('playground__btn--copied');
-          copyLabel.textContent = 'Copy code';
+    // Background color
+    document.getElementById('bgColor').addEventListener('input', function() {
+      document.getElementById('bgColorHex').textContent = this.value;
+      if (sceneViewInstance) {
+        var bg = hexToRgb01(this.value);
+        try { sceneViewInstance.setBackgroundColor(bg[0], bg[1], bg[2], 1.0); } catch(e) {}
+      }
+      if (currentRenderer === 'model-viewer') {
+        document.getElementById('viewerWrap').style.background = this.value;
+      }
+    });
+
+    // Auto-rotate
+    document.getElementById('autoRotate').addEventListener('change', function() {
+      if (sceneViewInstance) {
+        try { sceneViewInstance.setAutoRotate(this.checked); } catch(e) {}
+      }
+      if (currentRenderer === 'model-viewer') {
+        if (this.checked) previewModel.setAttribute('auto-rotate', '');
+        else previewModel.removeAttribute('auto-rotate');
+      }
+    });
+
+    // Camera distance
+    document.getElementById('cameraDistance').addEventListener('input', function() {
+      document.getElementById('cameraDistanceVal').textContent = parseFloat(this.value).toFixed(1);
+      if (sceneViewInstance) {
+        try { sceneViewInstance._orbitRadius = parseFloat(this.value); } catch(e) {}
+      }
+    });
+
+    // FOV
+    document.getElementById('fov').addEventListener('input', function() {
+      document.getElementById('fovVal').textContent = this.value;
+      if (sceneViewInstance) {
+        try {
+          var canvas = previewCanvas;
+          sceneViewInstance._fov = parseInt(this.value);
+          sceneViewInstance._camera.setProjectionFov(
+            parseInt(this.value), canvas.width / canvas.height, 0.1, 1000,
+            Filament.Camera$Fov.VERTICAL
+          );
+        } catch(e) {}
+      }
+    });
+
+    // Grid (visual only for now)
+    document.getElementById('showGrid').addEventListener('change', function() {
+      // Grid is not available in the Filament.js wrapper.
+      // We show a CSS grid overlay instead.
+      var wrap = document.getElementById('viewerWrap');
+      if (this.checked) {
+        wrap.style.backgroundImage = 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)';
+        wrap.style.backgroundSize = '40px 40px';
+      } else {
+        wrap.style.backgroundImage = 'none';
+      }
+    });
+
+    // Environment presets
+    var envPresets = {
+      studio:   { bg: null, label: 'Studio' },     // null = use current
+      dark:     { bg: '#0a0a0f', label: 'Dark Room' },
+      bright:   { bg: '#f0f0f4', label: 'Bright White' },
+      sunset:   { bg: '#1a1008', label: 'Sunset Warm' },
+      cool:     { bg: '#0a0f1a', label: 'Cool Blue' },
+      midnight: { bg: '#050510', label: 'Midnight' }
+    };
+
+    function applyEnvPreset(key) {
+      var preset = envPresets[key];
+      if (!preset) return;
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var defaultBg = dark ? '#0d1117' : '#f3f4f6';
+      var bg = preset.bg || defaultBg;
+      document.getElementById('bgColor').value = bg;
+      document.getElementById('bgColorHex').textContent = bg;
+      if (sceneViewInstance) {
+        var rgb = hexToRgb01(bg);
+        try { sceneViewInstance.setBackgroundColor(rgb[0], rgb[1], rgb[2], 1.0); } catch(e) {}
+      }
+      if (currentRenderer === 'model-viewer') {
+        document.getElementById('viewerWrap').style.background = bg;
+      }
+    }
+
+    document.getElementById('envPreset').addEventListener('change', function() {
+      applyEnvPreset(this.value);
+    });
+
+    // Reset
+    document.getElementById('resetBtn').addEventListener('click', function() {
+      document.getElementById('modelSelect').value = 'DamagedHelmet';
+      document.getElementById('rendererSelect').value = 'sceneview';
+      document.getElementById('autoRotate').checked = true;
+      document.getElementById('showGrid').checked = false;
+      document.getElementById('cameraDistance').value = 4;
+      document.getElementById('cameraDistanceVal').textContent = '4.0';
+      document.getElementById('fov').value = 45;
+      document.getElementById('fovVal').textContent = '45';
+      document.getElementById('envPreset').value = 'studio';
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var defaultBg = dark ? '#0d1117' : '#f3f4f6';
+      document.getElementById('bgColor').value = defaultBg;
+      document.getElementById('bgColorHex').textContent = defaultBg;
+      document.getElementById('viewerWrap').style.backgroundImage = 'none';
+      switchToSceneView();
+    });
+
+    // Share (copy URL with state)
+    document.getElementById('shareBtn').addEventListener('click', function() {
+      var params = new URLSearchParams();
+      params.set('model', modelSelect.value);
+      params.set('bg', document.getElementById('bgColor').value.slice(1));
+      params.set('rotate', document.getElementById('autoRotate').checked ? '1' : '0');
+      params.set('dist', document.getElementById('cameraDistance').value);
+      params.set('fov', document.getElementById('fov').value);
+      params.set('env', document.getElementById('envPreset').value);
+      params.set('example', currentExample);
+      var url = window.location.origin + window.location.pathname + '?' + params.toString();
+      navigator.clipboard.writeText(url).then(function() {
+        var btn = document.getElementById('shareBtn');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Link copied!';
+        setTimeout(function() {
+          btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share configuration';
         }, 2000);
       });
     });
+
+    // Load state from URL params
+    (function loadFromUrl() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.has('model')) {
+        var m = params.get('model');
+        if (document.querySelector('#modelSelect option[value="' + m + '"]')) {
+          modelSelect.value = m;
+        }
+      }
+      if (params.has('bg')) {
+        var bg = '#' + params.get('bg');
+        document.getElementById('bgColor').value = bg;
+        document.getElementById('bgColorHex').textContent = bg;
+      }
+      if (params.has('rotate')) {
+        document.getElementById('autoRotate').checked = params.get('rotate') === '1';
+      }
+      if (params.has('dist')) {
+        document.getElementById('cameraDistance').value = params.get('dist');
+        document.getElementById('cameraDistanceVal').textContent = parseFloat(params.get('dist')).toFixed(1);
+      }
+      if (params.has('fov')) {
+        document.getElementById('fov').value = params.get('fov');
+        document.getElementById('fovVal').textContent = params.get('fov');
+      }
+      if (params.has('env')) {
+        document.getElementById('envPreset').value = params.get('env');
+      }
+      if (params.has('example')) {
+        loadExample(params.get('example'));
+      }
+    })();
+
+    // ===== COPY CODE =====
+    document.getElementById('copyBtn').addEventListener('click', function() {
+      var ex = examples[currentExample];
+      if (!ex) return;
+      navigator.clipboard.writeText(ex.code).then(function() {
+        var btn = document.getElementById('copyBtn');
+        btn.classList.add('pg-btn--copied');
+        document.getElementById('copyLabel').textContent = 'Copied!';
+        setTimeout(function() {
+          btn.classList.remove('pg-btn--copied');
+          document.getElementById('copyLabel').textContent = 'Copy';
+        }, 2000);
+      });
+    });
+
+    // ===== RESIZE HANDLE for code panel =====
+    (function() {
+      var handle = document.getElementById('resizeHandle');
+      var panel = document.getElementById('codePanel');
+      var startY = 0, startH = 0;
+
+      handle.addEventListener('mousedown', function(e) {
+        startY = e.clientY;
+        startH = panel.offsetHeight;
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        e.preventDefault();
+      });
+
+      function onMove(e) {
+        var newH = startH - (e.clientY - startY);
+        newH = Math.max(100, Math.min(window.innerHeight * 0.7, newH));
+        panel.style.height = newH + 'px';
+      }
+
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+    })();
   </script>
 </body>
 </html>
