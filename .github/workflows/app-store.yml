@@ -22,7 +22,7 @@ on:
 jobs:
   deploy:
     name: Build & Upload to TestFlight
-    runs-on: macos-14
+    runs-on: macos-15
     defaults:
       run:
         working-directory: samples/ios-demo
