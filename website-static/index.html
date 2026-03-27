@@ -153,6 +153,7 @@
           <span style="font-size:0.85rem;opacity:0.45;font-weight:500">Loading 3D engine&hellip;</span>
         </div>
         <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+        <div id="hero-badge" style="position:absolute;bottom:12px;right:14px;font-size:0.7rem;opacity:0;transition:opacity 0.5s ease;pointer-events:none;color:rgba(255,255,255,0.45);font-weight:500;letter-spacing:0.03em">Rendered by SceneView Web</div>
       </div>
     </div>
   </section>
@@ -827,11 +828,13 @@
       lightIntensity: 150000,
       fov: 35
     }).then(function(viewer) {
-      // Hide loading indicator once the 3D scene is ready
+      // Hide loading indicator, show badge
       if (loader) {
         loader.style.opacity = '0';
         setTimeout(function() { loader.style.display = 'none'; }, 500);
       }
+      var badge = document.getElementById('hero-badge');
+      if (badge) setTimeout(function() { badge.style.opacity = '1'; }, 800);
 
       // Listen for theme changes and update background color
       new MutationObserver(function() {
