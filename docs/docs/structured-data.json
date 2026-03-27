@@ -95,12 +95,12 @@
     "applicationCategory": "DeveloperApplication",
     "applicationSubCategory": "3D Rendering & Augmented Reality SDK",
     "operatingSystem": "Android 7.0+ (API 24), iOS 17+",
-    "softwareVersion": "3.3.0",
+    "softwareVersion": "3.4.7",
     "datePublished": "2021-06-01",
-    "dateModified": "2026-03-23",
+    "dateModified": "2026-03-27",
     "downloadUrl": "https://central.sonatype.com/artifact/io.github.sceneview/sceneview",
     "installUrl": "https://sceneview.github.io/quickstart/",
-    "releaseNotes": "https://github.com/sceneview/sceneview/releases/tag/v3.3.0",
+    "releaseNotes": "https://github.com/sceneview/sceneview/releases/tag/v3.4.7",
     "softwareHelp": {
       "@type": "CreativeWork",
       "url": "https://sceneview.github.io/cheatsheet/"
