@@ -190,6 +190,7 @@ class PlaneRenderer(
                     // Check for not tracking Plane-Trackables and remove them.
                     cleanupOldPlaneVisualizer()
                 } catch (e: Exception) {
+                    android.util.Log.e("SceneView", "PlaneRenderer update error", e)
                 }
             }
         }
