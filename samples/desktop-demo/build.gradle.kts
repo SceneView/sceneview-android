@@ -22,39 +22,10 @@ kotlin {
                 implementation(compose.ui)
                 implementation(compose.foundation)
 
-                // LWJGL — declared for future Filament JNI integration but currently UNUSED.
-                // The current demo renders wireframes via Compose Canvas, not OpenGL.
-                val lwjglVersion = "3.3.6"
-                implementation("org.lwjgl:lwjgl:$lwjglVersion")
-                implementation("org.lwjgl:lwjgl-opengl:$lwjglVersion")
-                implementation("org.lwjgl:lwjgl-glfw:$lwjglVersion")
-                implementation("org.lwjgl:lwjgl-stb:$lwjglVersion")
-
-                // LWJGL native classifiers (auto-detect platform)
-                runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:natives-macos-arm64")
-                runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:natives-macos")
-                runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:natives-windows")
-                runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:natives-linux")
-                runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-macos-arm64")
-                runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-macos")
-                runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-windows")
-                runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:natives-linux")
-                runtimeOnly("org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-macos-arm64")
-                runtimeOnly("org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-macos")
-                runtimeOnly("org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-windows")
-                runtimeOnly("org.lwjgl:lwjgl-glfw:$lwjglVersion:natives-linux")
-                runtimeOnly("org.lwjgl:lwjgl-stb:$lwjglVersion:natives-macos-arm64")
-                runtimeOnly("org.lwjgl:lwjgl-stb:$lwjglVersion:natives-macos")
-                runtimeOnly("org.lwjgl:lwjgl-stb:$lwjglVersion:natives-windows")
-                runtimeOnly("org.lwjgl:lwjgl-stb:$lwjglVersion:natives-linux")
-
                 // TODO: Filament JNI desktop libraries
                 // Filament provides native C++ libraries for Windows/Linux/macOS,
                 // but no published JVM/JNI bindings for desktop.
-                // Options:
-                // 1. Build Filament from source with JNI for desktop targets
-                // 2. Use the Android JNI bindings as a starting point
-                // 3. Create a thin JNI layer that loads Filament .so/.dylib/.dll
+                // When available, add LWJGL + Filament JNI dependencies here.
             }
         }
 

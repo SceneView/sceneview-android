@@ -1,5 +1,91 @@
 # Changelog
 
+## 3.4.7 — MCP 18 tools, orbit fix, geometry demo (2026-03-26)
+
+### MCP Server v3.4.13
+- 4 new tools: `get_platform_setup`, `migrate_code`, `debug_issue`, `generate_scene`
+- 834 tests across all tools
+
+### Bug fixes
+- Orbit controls: corrected inverted horizontal/vertical camera drag
+- 3 core math/collision bugs fixed
+- Removed stale CI job
+
+### Website
+- Geometry demo: mini-city with 4 presets (City, Park, Abstract, Minimal)
+- Meta tags, sitemap, favicon, canonical URLs polished
+
+---
+
+## 3.4.6 — Procedural 3D geometry in Claude Artifacts (2026-03-26)
+
+### Highlights
+- `create_3d_artifact` MCP tool with geometry type: procedural shapes with PBR materials
+- SceneView.js v1.1.0 published to npm: one-liner web 3D with auto Filament WASM loading
+- Filament.js PBR rendering on website (replaced model-viewer)
+- 9 MCP servers all at v2.0.0
+
+---
+
+## 3.4.5 — SceneView Web with Filament.js WASM (2026-03-26)
+
+### Features
+- Real 3D rendering in browser via Google Filament compiled to WebAssembly
+- 25 KB bundle (+ Filament.js from CDN)
+- Live demo at sceneview.github.io
+
+### Other
+- Website mobile polish, 50+ broken links fixed
+- GitHub Sponsors: 3 new tiers; Polar.sh approved with Stripe
+- MCP v3.4.9: `create_3d_artifact` tool (590 tests)
+
+---
+
+## 3.4.4 — Play Store readiness, MCP legal (2026-03-25)
+
+### Features
+- Android demo: Play Store readiness (crash prevention, dark mode, store listing)
+- MCP Server: Terms of Service, Privacy Policy, disclaimers added
+- GitHub Sponsors tier structure
+
+---
+
+## 3.4.3 — Embeddable 3D widget (2026-03-25)
+
+### Features
+- Embeddable 3D viewer via single `<iframe>` snippet
+- MCP `render_3d_preview` accepts code snippets and direct model URLs
+- Web demo: branded UI, model selector, loading indicator
+
+---
+
+## 3.4.2 — Critical AR fix, MeshNode improvement (2026-03-25)
+
+### Breaking fix
+- AR materials regenerated for Filament 1.70.0 — previous materials crashed all AR apps
+
+### Features
+- `MeshNode` now accepts optional `boundingBox` parameter
+
+### Security
+- 6 Dependabot vulnerabilities fixed, 15 audit issues resolved
+- 28 stale repository references updated
+
+---
+
+## 3.4.1 — Website, smart links, 3D preview (2026-03-25)
+
+### Features
+- Website rebuilt: Kobweb replaced with static HTML/CSS/JS + model-viewer 3D
+- Smart links: `/go` (platform redirect), `/preview` (3D preview), `/preview/embed` (iframe viewer)
+- MCP `render_3d_preview` tool for AI-generated 3D previews
+
+### Infrastructure
+- 21 secrets configured (Apple + Android + Maven + npm)
+- README rewritten (622 to 200 lines)
+
+---
+
 ## 3.4.0 — Multi-platform expansion (2026-03-25)
 
 ### New platforms

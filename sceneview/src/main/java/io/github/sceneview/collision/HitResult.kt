@@ -14,7 +14,7 @@ class HitResult(
 ) : RayHit() {
 
     var node
-        get() = _node!!
+        get() = _node ?: throw IllegalStateException("HitResult has been reset")
         internal set(value) {
             _node = value
         }

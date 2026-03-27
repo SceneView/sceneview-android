@@ -11,7 +11,7 @@ When you ask an AI to help you build a 3D scene, it needs to know the exact API 
 SceneView solves this with three layers:
 
 1. **`llms.txt`** — a machine-readable API reference at the repo root
-2. **`@sceneview/mcp`** — an MCP server that gives AI tools full API context
+2. **`sceneview-mcp`** — an MCP server that gives AI tools full API context
 3. **Claude Code skills** — guided workflows for contributing, reviewing, and documenting
 
 ---
@@ -95,7 +95,7 @@ The file is maintained alongside the source code and updated with every release.
 
 ## What's in the MCP server
 
-The `@sceneview/mcp` package provides tools that AI assistants can call:
+The `sceneview-mcp` package provides tools that AI assistants can call:
 
 - **`get_api_reference`** — returns the full `llms.txt` content
 - **`get_node_reference`** — look up a specific node type's API

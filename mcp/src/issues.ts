@@ -33,7 +33,7 @@ export async function fetchKnownIssues(): Promise<string> {
       {
         headers: {
           Accept: "application/vnd.github+json",
-          "User-Agent": "sceneview-mcp/3.3.0",
+          "User-Agent": "sceneview-mcp/3.4.14",
           "X-GitHub-Api-Version": "2022-11-28",
         },
       }
