@@ -2,41 +2,59 @@ name: Deploy Demo to Play Store
 
 on:
   push:
-    tags:
-      - 'demo-v[0-9]+.[0-9]+.[0-9]+'
+    branches: [main]
+    paths:
+      - 'sceneview/**'
+      - 'arsceneview/**'
+      - 'sceneview-core/**'
+      - 'samples/android-demo/**'
+      - 'samples/common/**'
   workflow_dispatch:
     inputs:
       track:
         description: 'Play Store track'
         required: true
-        default: 'internal'
+        default: 'production'
         type: choice
         options:
-          - internal
-          - alpha
-          - beta
           - production
+          - beta
+          - alpha
+          - internal
 
 jobs:
   deploy:
-    name: Build & Publish Demo APK
+    name: Build & Deploy to Play Store
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for version calculation
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
           cache: gradle
 
       - run: chmod +x ./gradlew
+
+      # Auto-versioning: versionCode = run_number (always increasing)
+      # versionName = git tag or YYYY.MM.DD-<short_sha>
+      - name: Calculate version
+        id: version
+        run: |
+          VERSION_CODE=${{ github.run_number }}
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$TAG" ]; then
+            VERSION_NAME="${TAG#v}-$(git rev-parse --short HEAD)"
+          else
+            VERSION_NAME="$(date +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+          fi
+          echo "code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION_NAME ($VERSION_CODE)"
 
       - name: Decode keystore
         env:
@@ -49,12 +67,15 @@ jobs:
           SCENEVIEW_DEMO_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
           SCENEVIEW_DEMO_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           SCENEVIEW_DEMO_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
-        run: ./gradlew :samples:android-demo:bundleRelease
+        run: |
+          ./gradlew :samples:android-demo:bundleRelease \
+            -PversionCode=${{ steps.version.outputs.code }} \
+            -PversionName=${{ steps.version.outputs.name }}
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sceneview-demo-release
+          name: sceneview-demo-${{ steps.version.outputs.name }}
           path: samples/android-demo/build/outputs/bundle/release/*.aab
 
       - name: Publish to Play Store
@@ -63,6 +84,6 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: io.github.sceneview.demo
           releaseFiles: samples/android-demo/build/outputs/bundle/release/*.aab
-          track: ${{ github.event.inputs.track || 'internal' }}
-          status: draft
-          whatsNewDirectory: samples/android-demo/play/release-notes
+          track: ${{ github.event.inputs.track || 'production' }}
+          status: completed
+          changesNotSentForReview: true
