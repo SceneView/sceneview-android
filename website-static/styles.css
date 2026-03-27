@@ -1035,75 +1035,152 @@ button {
   }
 }
 
-/* ===== USE CASES SECTION ===== */
-.use-cases__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-lg);
+/* ===== USE CASES SECTION — 3D SHOWCASE ===== */
+.showcase-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
   margin-top: var(--space-2xl);
 }
 
-.use-case-card {
+.showcase-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+  align-items: center;
   background: var(--color-surface-container);
   border: 1px solid var(--color-outline);
-  border-radius: var(--radius-md);
-  padding: var(--space-xl);
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
   transition: box-shadow var(--duration-medium) var(--ease-expressive),
               transform var(--duration-medium) var(--ease-expressive);
 }
 
-.use-case-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+.showcase-item:hover {
+  box-shadow: var(--shadow-lg, 0 8px 32px rgba(0,0,0,.12));
+  transform: translateY(-3px);
 }
 
-.use-case-card__icon {
-  margin-bottom: var(--space-md);
+.showcase-item--reverse {
+  direction: rtl;
 }
 
-.use-case-card__icon svg {
-  display: inline-block;
+.showcase-item--reverse > * {
+  direction: ltr;
 }
 
-.use-case-card__title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: var(--space-sm);
-  color: var(--color-on-surface);
+.showcase-item__viewer {
+  position: relative;
+  height: 380px;
+  background: var(--color-surface-dim);
+  overflow: hidden;
 }
 
-.use-case-card__text {
-  font-size: 0.9rem;
-  color: var(--color-on-surface-dim);
-  line-height: 1.6;
-  margin-bottom: var(--space-md);
-}
-
-.use-case-card__snippet {
+.showcase-item__viewer model-viewer {
   display: block;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  background: var(--color-code-bg);
-  color: var(--color-primary);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-xs);
-  overflow-x: auto;
-  white-space: nowrap;
 }
 
-[data-theme="dark"] .use-case-card__snippet {
+.showcase-item__badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.showcase-item__info {
+  padding: var(--space-xl) var(--space-xl) var(--space-xl) 0;
+}
+
+.showcase-item--reverse .showcase-item__info {
+  padding: var(--space-xl) 0 var(--space-xl) var(--space-xl);
+}
+
+.showcase-item__label {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: var(--space-md);
+}
+
+.showcase-item__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin-bottom: var(--space-sm);
+  line-height: 1.25;
+}
+
+.showcase-item__text {
+  font-size: 0.95rem;
+  color: var(--color-on-surface-dim);
+  line-height: 1.7;
+  margin-bottom: var(--space-lg);
+}
+
+.showcase-item__code {
+  margin: 0;
+  background: var(--color-code-bg);
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--space-md) var(--space-lg);
+  overflow-x: auto;
+}
+
+.showcase-item__code code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  line-height: 1.6;
+  white-space: pre;
+}
+
+[data-theme="dark"] .showcase-item__viewer {
+  background: var(--color-surface);
+}
+
+[data-theme="dark"] .showcase-item__badge {
+  background: rgba(255,255,255,.15);
 }
 
 @media (max-width: 900px) {
-  .use-cases__grid {
-    grid-template-columns: repeat(2, 1fr);
+  .showcase-item,
+  .showcase-item--reverse {
+    grid-template-columns: 1fr;
+    direction: ltr;
+  }
+
+  .showcase-item__viewer {
+    height: 300px;
+  }
+
+  .showcase-item__info,
+  .showcase-item--reverse .showcase-item__info {
+    padding: var(--space-lg);
   }
 }
 
 @media (max-width: 600px) {
-  .use-cases__grid {
-    grid-template-columns: 1fr;
+  .showcase-item__viewer {
+    height: 260px;
+  }
+
+  .showcase-item__title {
+    font-size: 1.25rem;
   }
 }
 
