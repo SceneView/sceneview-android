@@ -3,6 +3,15 @@ name: Build sample APKs
 on:
   push:
     branches: [main]
+    paths:
+      - 'sceneview/**'
+      - 'arsceneview/**'
+      - 'sceneview-core/**'
+      - 'samples/**'
+      - 'gradle/**'
+      - 'build.gradle*'
+      - 'settings.gradle*'
+      - 'gradle.properties'
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
@@ -10,8 +19,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-demo:
-    name: Build demo APK (quick — always available)
+  build:
+    name: Build sample APKs
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,52 +36,12 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Build SceneView Demo APK
-        run: ./gradlew :samples:android-demo:assembleDebug --console=plain
-
-      - name: Collect demo APK
-        run: |
-          mkdir -p dist
-          apk=$(find samples/android-demo/build/outputs/apk/debug -name "*.apk" | head -1)
-          cp "$apk" dist/android-demo.apk
-
-      - name: Upload demo APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-demo-apk
-          path: dist/android-demo.apk
-          retention-days: 90
-
-      - name: Attach demo APK to GitHub Release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/android-demo.apk
-
-  build-samples:
-    name: Build all sample APKs
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-          cache: gradle
-
-      - run: chmod +x ./gradlew
-
-      # Debug-signed APKs — sideloadable on any device without extra signing setup
       - name: Build all sample APKs
         run: |
           ./gradlew \
             :samples:android-demo:assembleDebug \
             :samples:android-tv-demo:assembleDebug \
-            --stacktrace
+            --console=plain
 
       - name: Collect APKs
         run: |
@@ -84,14 +53,14 @@ jobs:
             fi
           done
 
-      - name: Upload APKs as artifact
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
           name: sample-apks
           path: dist/*.apk
           retention-days: 90
 
-      - name: Attach APKs to GitHub Release
+      - name: Attach to GitHub Release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:

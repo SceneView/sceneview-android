@@ -3,6 +3,15 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'website-static/**'
+      - 'docs/**'
+      - 'marketing/**'
+      - 'mcp*/**'
+      - '*.md'
+      - 'llms*.txt'
+      - 'PRIVACY_POLICY.md'
+      - 'LICENSE'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -23,33 +32,13 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Build
-        run: ./gradlew assembleDebug --stacktrace 2>&1 | tee build-output.log || (tail -200 build-output.log > build-error.log && exit 1)
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-error-log
-          path: build-error.log
-          if-no-files-found: ignore
-
-      - name: Build samples
+      - name: Build libraries + samples
         run: |
           ./gradlew \
+            assembleDebug \
             :samples:android-demo:assembleDebug \
             :samples:android-tv-demo:assembleDebug \
-            --stacktrace 2>&1 | tee samples-build.log || (grep -E "error:|FAILURE|e:" samples-build.log > samples-error.log && exit 1)
-
-      - name: Upload sample build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: samples-build-error
-          path: |
-            samples-error.log
-            samples-build.log
-          if-no-files-found: ignore
+            --stacktrace
 
       - name: Unit tests
         run: ./gradlew :sceneview:testDebugUnitTest :arsceneview:testDebugUnitTest --stacktrace
@@ -58,7 +47,7 @@ jobs:
         run: ./gradlew :sceneview:lintDebug :arsceneview:lintDebug --stacktrace
 
       - name: Upload lint reports
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: lint-reports
@@ -69,7 +58,7 @@ jobs:
 
   # ── Web & Desktop modules (Kotlin/JS + Compose Desktop) ──────────────────
   web-desktop:
-    name: Build web & desktop modules
+    name: Build web & desktop
     runs-on: ubuntu-latest
 
     steps:
@@ -87,77 +76,15 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Build sceneview-core JS target
-        run: ./gradlew :sceneview-core:jsMainClasses --stacktrace
-
-      - name: Build sceneview-web
-        run: ./gradlew :sceneview-web:jsMainClasses --stacktrace
-
-      - name: Run JS tests (core only — web tests require Filament.js CDN)
-        continue-on-error: true
-        run: ./gradlew :sceneview-core:jsTest --stacktrace
-
-      - name: Build web sample
-        run: ./gradlew :samples:web-demo:compileKotlinJs --stacktrace
-
-      - name: Build TV sample
-        run: ./gradlew :samples:android-tv-demo:compileDebugKotlin --stacktrace
-
-      - name: Build desktop module
-        run: ./gradlew :samples:desktop-demo:compileKotlinDesktop --stacktrace
-
-  # AR emulator tests are inherently flaky due to virtualscene rendering
-  # limitations in headless CI. This job is informational — failures here
-  # do NOT block merges or releases.
-  ar-emulator:
-    name: AR emulator QA (informational)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-          cache: gradle
-
-      - run: chmod +x ./gradlew
-
-      - name: Build Android demo (includes AR)
+      - name: Build all web & desktop targets
         run: |
           ./gradlew \
-            :samples:android-demo:assembleDebug \
+            :sceneview-core:jsMainClasses \
+            :sceneview-web:jsMainClasses \
+            :samples:web-demo:compileKotlinJs \
+            :samples:desktop-demo:compileKotlinDesktop \
             --stacktrace
 
-      - name: Download ARCore emulator APK
-        run: |
-          curl -L -o arcore-emulator.apk \
-            "https://github.com/google-ar/arcore-android-sdk/releases/download/1.53.0/Google_Play_Services_for_AR_1.53.0_x86_for_emulator.apk"
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: AR emulator test
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          avd-name: Pixel_6_AR
-          emulator-options: -no-window -no-audio -gpu swiftshader_indirect -camera-back virtualscene -partition-size 4096
-          disable-animations: true
-          script: .github/scripts/ar-emulator-screenshots.sh
-
-      - name: Upload AR screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ar-emulator-screenshots
-          path: "*.png"
-          if-no-files-found: ignore
+      - name: JS tests (informational)
+        continue-on-error: true
+        run: ./gradlew :sceneview-core:jsTest --stacktrace
