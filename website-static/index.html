@@ -87,6 +87,8 @@
     "url": "https://sceneview.github.io/"
   }
   </script>
+  <!-- model-viewer for interactive 3D -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body>
 
@@ -422,62 +424,130 @@
   <section class="section use-cases" id="use-cases">
     <div class="container">
       <h2 class="section__title">Built for real products</h2>
-      <p class="section__subtitle">From e-commerce to healthcare, SceneView powers production 3D experiences.</p>
+      <p class="section__subtitle">Interact with these 3D models &mdash; orbit, zoom, rotate. This is what your users get.</p>
 
-      <div class="use-cases__grid">
-        <div class="use-case-card">
-          <div class="use-case-card__icon">
-            <svg viewBox="0 0 48 48" width="40" height="40" fill="none"><path d="M8 40V18l16-10 16 10v22H28V30h-8v10H8z" stroke="var(--color-primary)" stroke-width="2.5" fill="var(--color-primary)" fill-opacity=".08"/></svg>
+      <div class="showcase-grid">
+
+        <!-- E-commerce -->
+        <div class="showcase-item">
+          <div class="showcase-item__viewer">
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
+              alt="3D sneaker product viewer"
+              auto-rotate
+              camera-controls
+              touch-action="pan-y"
+              shadow-intensity="1"
+              exposure="0.8"
+              style="width:100%;height:100%;--poster-color:transparent;"
+              loading="lazy"
+              poster=""
+            >
+              <div class="showcase-item__badge">Drag to orbit</div>
+            </model-viewer>
           </div>
-          <h3 class="use-case-card__title">E-commerce & Retail</h3>
-          <p class="use-case-card__text">3D product viewers that boost conversion. Replace static images with interactive models. AR try-before-you-buy for furniture, fashion, and accessories.</p>
-          <code class="use-case-card__snippet">Scene { ModelNode("shoe.glb") }</code>
+          <div class="showcase-item__info">
+            <div class="showcase-item__label">E-commerce</div>
+            <h3 class="showcase-item__title">3D Product Viewer</h3>
+            <p class="showcase-item__text">Replace flat product photos with interactive 3D. Customers orbit, zoom, and inspect every angle. AR lets them place products in their space before buying &mdash; boosting conversion by up to 94%.</p>
+            <pre class="showcase-item__code"><code>Scene {
+  ModelNode("sneaker.glb")
+}</code></pre>
+          </div>
         </div>
 
-        <div class="use-case-card">
-          <div class="use-case-card__icon">
-            <svg viewBox="0 0 48 48" width="40" height="40" fill="none"><path d="M24 4L4 14v20l20 10 20-10V14L24 4z" stroke="var(--color-primary)" stroke-width="2.5" fill="var(--color-primary)" fill-opacity=".08"/><path d="M4 14l20 10 20-10M24 24v20" stroke="var(--color-primary)" stroke-width="2"/></svg>
+        <!-- Furniture AR -->
+        <div class="showcase-item showcase-item--reverse">
+          <div class="showcase-item__viewer">
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
+              alt="3D chair for AR furniture placement"
+              auto-rotate
+              camera-controls
+              touch-action="pan-y"
+              shadow-intensity="1.2"
+              exposure="0.9"
+              camera-orbit="30deg 75deg 2m"
+              style="width:100%;height:100%;--poster-color:transparent;"
+              loading="lazy"
+              poster=""
+            >
+              <div class="showcase-item__badge">Drag to orbit</div>
+            </model-viewer>
           </div>
-          <h3 class="use-case-card__title">Architecture & Real Estate</h3>
-          <p class="use-case-card__text">Walk through 3D floor plans. AR-stage empty rooms with furniture. Visualize buildings at scale before construction starts.</p>
-          <code class="use-case-card__snippet">ARScene { AnchorNode { ModelNode("building.glb") } }</code>
+          <div class="showcase-item__info">
+            <div class="showcase-item__label">Furniture &amp; AR</div>
+            <h3 class="showcase-item__title">AR Room Staging</h3>
+            <p class="showcase-item__text">Let customers place furniture in their real room using AR. Anchor 3D models to detected surfaces with a single tap. Accurate scale, real-time shadows, physics-aware placement.</p>
+            <pre class="showcase-item__code"><code>ARScene {
+  AnchorNode {
+    ModelNode("chair.glb")
+  }
+}</code></pre>
+          </div>
         </div>
 
-        <div class="use-case-card">
-          <div class="use-case-card__icon">
-            <svg viewBox="0 0 48 48" width="40" height="40" fill="none"><circle cx="24" cy="20" r="12" stroke="var(--color-primary)" stroke-width="2.5" fill="var(--color-primary)" fill-opacity=".08"/><path d="M24 8v12l8 4" stroke="var(--color-primary)" stroke-width="2"/><path d="M12 38h24" stroke="var(--color-primary)" stroke-width="2.5"/></svg>
+        <!-- Luxury product -->
+        <div class="showcase-item">
+          <div class="showcase-item__viewer">
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/IridescentDishWithOlives/glTF-Binary/IridescentDishWithOlives.glb"
+              alt="Iridescent luxury product detail"
+              auto-rotate
+              camera-controls
+              touch-action="pan-y"
+              shadow-intensity="1"
+              exposure="1"
+              environment-image="neutral"
+              style="width:100%;height:100%;--poster-color:transparent;"
+              loading="lazy"
+              poster=""
+            >
+              <div class="showcase-item__badge">Drag to orbit</div>
+            </model-viewer>
           </div>
-          <h3 class="use-case-card__title">Education & Training</h3>
-          <p class="use-case-card__text">Interactive 3D anatomy, molecular structures, mechanical assemblies. Students manipulate models controlled by standard Compose state.</p>
-          <code class="use-case-card__snippet">Scene { ModelNode("anatomy.glb", autoAnimate = true) }</code>
+          <div class="showcase-item__info">
+            <div class="showcase-item__label">Luxury &amp; Detail</div>
+            <h3 class="showcase-item__title">PBR Material Showcase</h3>
+            <p class="showcase-item__text">Physically-based rendering with iridescence, sheen, and clearcoat. Filament renders materials indistinguishable from photography &mdash; perfect for luxury goods, jewelry, and collectibles.</p>
+            <pre class="showcase-item__code"><code>Scene {
+  ModelNode("product.glb",
+    autoAnimate = true)
+}</code></pre>
+          </div>
         </div>
 
-        <div class="use-case-card">
-          <div class="use-case-card__icon">
-            <svg viewBox="0 0 48 48" width="40" height="40" fill="none"><rect x="8" y="8" width="32" height="32" rx="6" stroke="var(--color-primary)" stroke-width="2.5" fill="var(--color-primary)" fill-opacity=".08"/><path d="M18 28l4-12 4 8 4-4" stroke="var(--color-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <!-- Animated character -->
+        <div class="showcase-item showcase-item--reverse">
+          <div class="showcase-item__viewer">
+            <model-viewer
+              src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Fox/glTF-Binary/Fox.glb"
+              alt="Animated 3D fox character"
+              auto-rotate
+              camera-controls
+              touch-action="pan-y"
+              autoplay
+              shadow-intensity="1"
+              exposure="0.8"
+              camera-orbit="20deg 75deg 120"
+              style="width:100%;height:100%;--poster-color:transparent;"
+              loading="lazy"
+              poster=""
+            >
+              <div class="showcase-item__badge">Drag to orbit</div>
+            </model-viewer>
           </div>
-          <h3 class="use-case-card__title">Data Visualization</h3>
-          <p class="use-case-card__text">3D bar charts, globes, network graphs. Data is Compose State &mdash; update it and the visualization reacts instantly. No separate rendering loop.</p>
-          <code class="use-case-card__snippet">Scene { CubeNode(size = dataPoint) }</code>
+          <div class="showcase-item__info">
+            <div class="showcase-item__label">Gaming &amp; Entertainment</div>
+            <h3 class="showcase-item__title">Animated Characters</h3>
+            <p class="showcase-item__text">Skeletal animation, blend shapes, physics simulation. Build character-driven experiences with Compose state management. Spring animations, procedural geometry &mdash; no game engine required.</p>
+            <pre class="showcase-item__code"><code>Scene {
+  ModelNode("fox.glb",
+    autoAnimate = true)
+}</code></pre>
+          </div>
         </div>
 
-        <div class="use-case-card">
-          <div class="use-case-card__icon">
-            <svg viewBox="0 0 48 48" width="40" height="40" fill="none"><circle cx="24" cy="18" r="10" stroke="var(--color-primary)" stroke-width="2.5" fill="var(--color-primary)" fill-opacity=".08"/><path d="M14 42c0-5.52 4.48-10 10-10s10 4.48 10 10" stroke="var(--color-primary)" stroke-width="2.5"/></svg>
-          </div>
-          <h3 class="use-case-card__title">Social & Face Filters</h3>
-          <p class="use-case-card__text">AugmentedFaceNode for face filters and effects. Apply materials to the face mesh, attach 3D objects to landmarks. Front-camera AR.</p>
-          <code class="use-case-card__snippet">ARScene { AugmentedFaceNode(material = mask) }</code>
-        </div>
-
-        <div class="use-case-card">
-          <div class="use-case-card__icon">
-            <svg viewBox="0 0 48 48" width="40" height="40" fill="none"><path d="M10 38V10h28v28H10z" stroke="var(--color-primary)" stroke-width="2.5" fill="var(--color-primary)" fill-opacity=".08"/><circle cx="18" cy="20" r="3" fill="var(--color-primary)"/><circle cx="30" cy="20" r="3" fill="var(--color-primary)"/><path d="M16 30c2 3 6 5 8 5s6-2 8-5" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round"/></svg>
-          </div>
-          <h3 class="use-case-card__title">Gaming & Entertainment</h3>
-          <p class="use-case-card__text">Physics simulation, spring animations, procedural geometry. Build casual 3D games with Compose state management &mdash; no game engine needed.</p>
-          <code class="use-case-card__snippet">Scene { PhysicsNode { SphereNode(radius = 0.1f) } }</code>
-        </div>
       </div>
     </div>
   </section>
