@@ -58,6 +58,8 @@
       this._velocityAngle = 0;
       this._velocityHeight = 0;
       this._dampingFactor = 0.95;
+      this._wantsAutoRotate = true; // Remember initial preference for resume after drag
+      this._autoRotateTimer = null;
       this._setupControls();
       this._setupResizeObserver();
       this._startRenderLoop();
@@ -123,7 +125,7 @@
       } catch (e) { /* use defaults */ }
     }
 
-    setAutoRotate(enabled) { this._autoRotate = enabled; return this; }
+    setAutoRotate(enabled) { this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this; }
     setCameraDistance(d) { this._orbitRadius = d; return this; }
 
     setBackgroundColor(r, g, b, a) {
@@ -147,6 +149,7 @@
         self._autoRotate = false;
         self._velocityAngle = 0;
         self._velocityHeight = 0;
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
       });
       canvas.addEventListener('mousemove', function(e) {
         if (!self._isDragging) return;
@@ -158,8 +161,19 @@
         self._orbitHeight += dy;
         self._lastMouse = { x: e.clientX, y: e.clientY };
       });
-      canvas.addEventListener('mouseup', function() { self._isDragging = false; });
-      canvas.addEventListener('mouseleave', function() { self._isDragging = false; });
+      canvas.addEventListener('mouseup', function() {
+        self._isDragging = false;
+        // Resume auto-rotate after 3s idle (like model-viewer)
+        if (self._wantsAutoRotate) {
+          self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
+        }
+      });
+      canvas.addEventListener('mouseleave', function() {
+        self._isDragging = false;
+        if (self._wantsAutoRotate) {
+          self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
+        }
+      });
 
       canvas.addEventListener('wheel', function(e) {
         e.preventDefault();
@@ -174,6 +188,7 @@
           self._autoRotate = false;
           self._velocityAngle = 0;
           self._velocityHeight = 0;
+          if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
         }
       });
       canvas.addEventListener('touchmove', function(e) {
@@ -187,7 +202,12 @@
         self._orbitHeight += dy;
         self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }, { passive: false });
-      canvas.addEventListener('touchend', function() { self._isDragging = false; });
+      canvas.addEventListener('touchend', function() {
+        self._isDragging = false;
+        if (self._wantsAutoRotate) {
+          self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
+        }
+      });
     }
 
     _setupResizeObserver() {
