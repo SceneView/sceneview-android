@@ -33,9 +33,10 @@ jobs:
 
       - name: Select Xcode
         run: |
-          # Try Xcode 16 first (newer runners), then 15.4, then default
-          sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer 2>/dev/null \
-            || sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer 2>/dev/null \
+          # Use latest Xcode available (16.2+ needed for RealityKit iOS 18 APIs)
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer 2>/dev/null \
             || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
