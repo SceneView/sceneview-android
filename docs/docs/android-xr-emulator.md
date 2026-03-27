@@ -124,7 +124,7 @@ You can navigate the space using mouse and keyboard.
 // build.gradle.kts (app module)
 dependencies {
     // SceneView 3D
-    implementation("io.github.sceneview:sceneview:3.3.0")
+    implementation("io.github.sceneview:sceneview:3.4.7")
 
     // Jetpack XR Compose (spatial panels, layouts)
     implementation("androidx.xr.compose:compose:1.0.0-alpha12")
