@@ -136,8 +136,6 @@ export function generateScene(description) {
     const notes = [];
     const dependencies = [];
     let hasModel = false;
-    // Track geometry node counters for naming
-    let nodeCounter = 0;
     // Generate elements for each parsed object
     for (const obj of parsed.objects) {
         const positions = spreadPositions(obj.count, obj.mapping.defaultPosition, 1.5);
@@ -167,7 +165,7 @@ export function generateScene(description) {
                     comment: obj.mapping.comment,
                 });
             }
-            nodeCounter++;
+            // element added
         }
     }
     // Add light
@@ -211,7 +209,7 @@ export function generateScene(description) {
     }
     // Build the code
     const isAR = parsed.isAR;
-    dependencies.push(isAR ? "io.github.sceneview:arsceneview:3.3.0" : "io.github.sceneview:sceneview:3.3.0");
+    dependencies.push(isAR ? "io.github.sceneview:arsceneview:3.4.7" : "io.github.sceneview:sceneview:3.4.7");
     // Build model instance declarations
     const modelElements = elements.filter((e) => e.type === "model");
     const uniqueModels = new Map();

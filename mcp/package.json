@@ -51,6 +51,7 @@
     "dist/debug-issue.js",
     "dist/generate-scene.js",
     "dist/advanced-guides.js",
+    "dist/extra-guides.js",
     "llms.txt"
   ],
   "engines": {
