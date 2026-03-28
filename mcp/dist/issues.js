@@ -20,7 +20,16 @@ export async function fetchKnownIssues() {
             fetchError = `GitHub API returned ${response.status}: ${response.statusText}`;
         }
         else {
-            issues = (await response.json());
+            const json = await response.json();
+            if (!Array.isArray(json)) {
+                fetchError = "GitHub API returned unexpected response format (expected array).";
+            }
+            else {
+                issues = json.filter((item) => typeof item === "object" &&
+                    item !== null &&
+                    typeof item.number === "number" &&
+                    typeof item.title === "string");
+            }
         }
     }
     catch (err) {
