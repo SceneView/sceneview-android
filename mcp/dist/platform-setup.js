@@ -12,7 +12,7 @@ const ANDROID_3D = `## SceneView Android — 3D Setup
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.3.0")
+    implementation("io.github.sceneview:sceneview:3.4.7")
 }
 \`\`\`
 
@@ -88,7 +88,7 @@ const ANDROID_AR = `## SceneView Android — AR Setup
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.3.0")
+    implementation("io.github.sceneview:arsceneview:3.4.7")
     // arsceneview includes sceneview transitively
 }
 \`\`\`
@@ -178,7 +178,7 @@ In Xcode: **File > Add Package Dependencies** > paste:
 \`\`\`
 https://github.com/sceneview/sceneview
 \`\`\`
-Set version rule to **"from: 3.3.0"**.
+Set version rule to **"from: 3.4.7"**.
 
 Or in Package.swift:
 \`\`\`swift
@@ -187,9 +187,9 @@ import PackageDescription
 
 let package = Package(
     name: "MyApp",
-    platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],
+    platforms: [.iOS(.v18), .macOS(.v15), .visionOS(.v1)],
     dependencies: [
-        .package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")
+        .package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")
     ],
     targets: [
         .executableTarget(
@@ -206,8 +206,8 @@ let package = Package(
 
 | Platform | Minimum |
 |----------|---------|
-| iOS      | 17.0    |
-| macOS    | 14.0    |
+| iOS      | 18.0    |
+| macOS    | 15.0    |
 | visionOS | 1.0     |
 
 ### 3. Basic SwiftUI Integration
@@ -245,13 +245,36 @@ struct ContentView: View {
 |--------|---------|
 | USDZ   | Native — recommended for iOS |
 | .reality | Native — RealityKit format |
-| glTF/GLB | Not natively supported (use Android/Web) |`;
+| glTF/GLB | Not natively supported (use Android/Web) |
+
+### 5. Available Node Types
+
+SceneViewSwift provides 16 node types:
+
+| Node | Purpose |
+|------|---------|
+| \`ModelNode\` | Load and display 3D models (USDZ/.reality) |
+| \`GeometryNode\` | Procedural shapes (cube, sphere, cylinder, cone, plane) |
+| \`LightNode\` | Directional, point, and spot lights |
+| \`TextNode\` | Extruded 3D text labels |
+| \`BillboardNode\` | Camera-facing nodes (labels, health bars, icons) |
+| \`VideoNode\` | Video playback on a 3D plane |
+| \`ImageNode\` | Image display on a 3D plane |
+| \`LineNode\` | Line segments between 3D points |
+| \`PathNode\` | Connected line paths through multiple points |
+| \`MeshNode\` | Custom mesh geometry with vertex data |
+| \`PhysicsNode\` | Rigid-body physics (dynamic, static, kinematic) |
+| \`DynamicSkyNode\` | Time-of-day sun simulation |
+| \`FogNode\` | Atmospheric fog effects |
+| \`ReflectionProbeNode\` | Local environment reflection captures |
+| \`CameraNode\` | Programmatic camera control |
+| \`AugmentedImageNode\` | AR image detection and tracking (iOS only) |`;
 const IOS_AR = `## SceneViewSwift — iOS AR Setup
 
 ### 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")
 \`\`\`
 
 ### 2. Info.plist — Camera Permission (Required)
@@ -263,7 +286,7 @@ const IOS_AR = `## SceneViewSwift — iOS AR Setup
 
 ### 3. Minimum Platform
 
-AR requires **iOS 17.0+**. Not available on macOS or visionOS via \`ARSceneView\`.
+AR requires **iOS 18.0+**. Not available on macOS or visionOS via \`ARSceneView\`.
 
 ### 4. Basic AR Integration
 
@@ -302,7 +325,14 @@ struct ARContentView: View {
 |-----------|---------|---------|
 | \`planeDetection\` | \`.none\`, \`.horizontal\`, \`.vertical\`, \`.both\` | \`.horizontal\` |
 | \`showPlaneOverlay\` | \`true\` / \`false\` | \`true\` |
-| \`showCoachingOverlay\` | \`true\` / \`false\` | \`true\` |`;
+| \`showCoachingOverlay\` | \`true\` / \`false\` | \`true\` |
+| \`imageTrackingDatabase\` | \`Set<ARReferenceImage>?\` | \`nil\` |
+| \`onTapOnPlane\` | \`((SIMD3<Float>, ARView) -> Void)?\` | \`nil\` |
+| \`onImageDetected\` | \`((String, AnchorNode, ARView) -> Void)?\` | \`nil\` |
+
+### 6. View Modifiers
+
+- \`.onSessionStarted { arView in ... }\` — called once when the AR session starts`;
 const WEB_3D = `## SceneView Web — Browser 3D Setup
 
 SceneView Web uses **Filament.js** — the same rendering engine as Android, compiled to WebAssembly (WebGL2).
@@ -388,7 +418,7 @@ SceneView Flutter uses **PlatformView** to embed native SceneView (Android: Fila
 \`\`\`yaml
 # pubspec.yaml
 dependencies:
-  sceneview_flutter: ^3.3.0
+  sceneview_flutter: ^3.4.7
 \`\`\`
 
 ### 2. Android Setup
@@ -410,7 +440,7 @@ android {
 
 In \`ios/Podfile\`:
 \`\`\`ruby
-platform :ios, '17.0'
+platform :ios, '18.0'
 \`\`\`
 
 ### 4. Basic 3D Scene
@@ -447,7 +477,7 @@ const FLUTTER_AR = `## SceneView Flutter — AR Setup
 
 \`\`\`yaml
 dependencies:
-  sceneview_flutter: ^3.3.0
+  sceneview_flutter: ^3.4.7
 \`\`\`
 
 ### 2. Android Manifest
@@ -513,7 +543,7 @@ android {
 
 In \`ios/Podfile\`:
 \`\`\`ruby
-platform :ios, '17.0'
+platform :ios, '18.0'
 \`\`\`
 
 ### 4. Basic 3D Scene
@@ -603,7 +633,7 @@ plugins {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("io.github.sceneview:sceneview-desktop:3.3.0") // when published
+    implementation("io.github.sceneview:sceneview-desktop:3.4.7") // when published
 }
 \`\`\`
 
@@ -654,7 +684,7 @@ SceneView on Android TV uses the same Filament renderer as mobile Android, with 
 
 \`\`\`kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.3.0")
+    implementation("io.github.sceneview:sceneview:3.4.7")
     implementation("androidx.leanback:leanback:1.0.0")
     implementation("androidx.tv:tv-foundation:1.0.0-alpha10")
 }
@@ -719,14 +749,14 @@ const SETUPS = {
     android: {
         name: "Android (Jetpack Compose)",
         renderer: "Filament (OpenGL ES / Vulkan)",
-        status: "Stable (v3.3.0)",
+        status: "Stable (v3.4.7)",
         guide3d: ANDROID_3D,
         guideAr: ANDROID_AR,
     },
     ios: {
         name: "iOS / macOS / visionOS (SwiftUI)",
         renderer: "RealityKit (Metal)",
-        status: "Alpha (v3.3.0)",
+        status: "Alpha (v3.4.7)",
         guide3d: IOS_3D,
         guideAr: IOS_AR,
     },
