@@ -32,7 +32,7 @@ describe("SAMPLE_IDS", () => {
     expect(ANDROID_IDS).toHaveLength(23);
   });
 
-  it("contains all 8 iOS samples", () => {
+  it("contains all 10 iOS samples", () => {
     expect(IOS_IDS).toContain("ios-model-viewer");
     expect(IOS_IDS).toContain("ios-ar-model-viewer");
     expect(IOS_IDS).toContain("ios-ar-augmented-image");
@@ -41,11 +41,13 @@ describe("SAMPLE_IDS", () => {
     expect(IOS_IDS).toContain("ios-physics");
     expect(IOS_IDS).toContain("ios-text-labels");
     expect(IOS_IDS).toContain("ios-video-player");
-    expect(IOS_IDS).toHaveLength(8);
+    expect(IOS_IDS).toContain("ios-dynamic-sky");
+    expect(IOS_IDS).toContain("ios-line-path");
+    expect(IOS_IDS).toHaveLength(10);
   });
 
-  it("has 33 total samples (23 Android + 8 iOS + 2 Web)", () => {
-    expect(SAMPLE_IDS).toHaveLength(33);
+  it("has 35 total samples (23 Android + 10 iOS + 2 Web)", () => {
+    expect(SAMPLE_IDS).toHaveLength(35);
   });
 
   it("SAMPLE_IDS matches keys of SAMPLES", () => {
@@ -74,8 +76,8 @@ describe("every Android sample", () => {
 
     it(`${id}: dependency is a valid sceneview artifact`, () => {
       expect([
-        "io.github.sceneview:sceneview:3.3.0",
-        "io.github.sceneview:arsceneview:3.3.0",
+        "io.github.sceneview:sceneview:3.4.7",
+        "io.github.sceneview:arsceneview:3.4.7",
       ]).toContain(sample.dependency);
     });
   }
@@ -117,7 +119,7 @@ describe("AR samples", () => {
 
   it("all Android AR samples use arsceneview dependency", () => {
     for (const id of androidArIds) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.3.0");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.4.7");
     }
   });
 
@@ -148,7 +150,7 @@ describe("3D samples", () => {
 
   it("all Android 3D samples use sceneview dependency", () => {
     for (const id of android3dIds) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.3.0");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.4.7");
     }
   });
 
@@ -168,8 +170,8 @@ describe("3D samples", () => {
     expect(android3dIds).toHaveLength(18);
   });
 
-  it("has 6 iOS 3D samples", () => {
-    expect(ios3dIds).toHaveLength(6);
+  it("has 8 iOS 3D samples", () => {
+    expect(ios3dIds).toHaveLength(8);
   });
 });
 
@@ -211,7 +213,7 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag '3d' returns only 3D samples", () => {
     const results = filterByTag("3d");
-    expect(results.length).toBe(26); // 18 Android + 6 iOS + 2 Web
+    expect(results.length).toBe(28); // 18 Android + 8 iOS + 2 Web
     results.forEach((s) => expect(s.tags).toContain("3d"));
   });
 
@@ -240,13 +242,13 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'ios' returns only iOS samples", () => {
     const results = filterByTag("ios");
-    expect(results).toHaveLength(8);
+    expect(results).toHaveLength(10);
     results.forEach((s) => expect(s.language).toBe("swift"));
   });
 
   it("tag 'swift' returns only Swift samples", () => {
     const results = filterByTag("swift");
-    expect(results).toHaveLength(8);
+    expect(results).toHaveLength(10);
     results.forEach((s) => expect(s.language).toBe("swift"));
   });
 
@@ -258,9 +260,10 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'lighting' returns lighting samples", () => {
     const results = filterByTag("lighting");
-    expect(results).toHaveLength(3);
+    expect(results).toHaveLength(4);
     expect(results.map((s) => s.id)).toContain("environment-lighting");
     expect(results.map((s) => s.id)).toContain("ios-lighting");
+    expect(results.map((s) => s.id)).toContain("ios-dynamic-sky");
     expect(results.map((s) => s.id)).toContain("web-environment");
   });
 

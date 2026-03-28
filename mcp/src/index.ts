@@ -18,7 +18,7 @@ import { fetchKnownIssues } from "./issues.js";
 import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
 import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
 import { buildPreviewUrl, validatePreviewInput, formatPreviewResponse } from "./preview.js";
-import { validateArtifactInput, generateArtifact, formatArtifactResponse, type ArtifactType } from "./artifact.js";
+import { validateArtifactInput, generateArtifact, formatArtifactResponse, type ArtifactType, type ArtifactInput, type ArtifactOptions, type ChartDataPoint, type Hotspot, type GeometryShape } from "./artifact.js";
 import { getPlatformSetup, listPlatforms, PLATFORM_IDS, type Platform, type SetupType } from "./platform-setup.js";
 import { migrateCode, formatMigrationResult } from "./migrate-code.js";
 import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES, type DebugCategory } from "./debug-issue.js";
@@ -63,7 +63,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       uri: "sceneview://api",
       name: "SceneView API Reference",
       description:
-        "Complete SceneView 3.3.0 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
+        "Complete SceneView 3.4.7 API — Scene, ARScene, SceneScope DSL, ARSceneScope DSL, node types, resource loading, camera, gestures, math types, threading rules, and common patterns. Read this before writing any SceneView code.",
       mimeType: "text/markdown",
     },
     {
@@ -554,7 +554,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
     // ── get_sample ────────────────────────────────────────────────────────────
     case "get_sample": {
-      const scenario = request.params.arguments?.scenario as string;
+      const scenario = request.params.arguments?.scenario;
+      if (!scenario || typeof scenario !== "string") {
+        return {
+          content: [{ type: "text", text: "Missing required parameter: `scenario`. Call `list_samples` to see available options." }],
+          isError: true,
+        };
+      }
       const sample = getSample(scenario);
       if (!sample) {
         return {
@@ -572,7 +578,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ? [
             `**SPM dependency:**`,
             `\`\`\`swift`,
-            `.package(url: "${sample.spmDependency ?? sample.dependency}", from: "3.3.0")`,
+            `.package(url: "${sample.spmDependency ?? sample.dependency}", from: "3.4.7")`,
             `\`\`\``,
           ]
         : [
@@ -644,7 +650,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── get_setup ─────────────────────────────────────────────────────────────
     case "get_setup": {
-      const type = request.params.arguments?.type as "3d" | "ar";
+      const type = request.params.arguments?.type;
+      if (!type || (type !== "3d" && type !== "ar")) {
+        return {
+          content: [{ type: "text", text: `Missing or invalid \`type\` parameter. Use "3d" or "ar".` }],
+          isError: true,
+        };
+      }
       if (type === "3d") {
         return {
           content: withDisclaimer([
@@ -656,7 +668,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `### build.gradle.kts`,
                 `\`\`\`kotlin`,
                 `dependencies {`,
-                `    implementation("io.github.sceneview:sceneview:3.3.0")`,
+                `    implementation("io.github.sceneview:sceneview:3.4.7")`,
                 `}`,
                 `\`\`\``,
                 ``,
@@ -666,37 +678,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ]),
         };
       }
-      if (type === "ar") {
-        return {
-          content: withDisclaimer([
-            {
-              type: "text",
-              text: [
-                `## SceneView — AR setup`,
-                ``,
-                `### build.gradle.kts`,
-                `\`\`\`kotlin`,
-                `dependencies {`,
-                `    implementation("io.github.sceneview:arsceneview:3.3.0")`,
-                `}`,
-                `\`\`\``,
-                ``,
-                `### AndroidManifest.xml`,
-                `\`\`\`xml`,
-                `<uses-permission android:name="android.permission.CAMERA" />`,
-                `<uses-feature android:name="android.hardware.camera.ar" android:required="true" />`,
-                `<application>`,
-                `    <meta-data android:name="com.google.ar.core" android:value="required" />`,
-                `</application>`,
-                `\`\`\``,
-              ].join("\n"),
-            },
-          ]),
-        };
-      }
+      // type === "ar" (validated above)
       return {
-        content: [{ type: "text", text: `Unknown type "${type}". Use "3d" or "ar".` }],
-        isError: true,
+        content: withDisclaimer([
+          {
+            type: "text",
+            text: [
+              `## SceneView — AR setup`,
+              ``,
+              `### build.gradle.kts`,
+              `\`\`\`kotlin`,
+              `dependencies {`,
+              `    implementation("io.github.sceneview:arsceneview:3.4.7")`,
+              `}`,
+              `\`\`\``,
+              ``,
+              `### AndroidManifest.xml`,
+              `\`\`\`xml`,
+              `<uses-permission android:name="android.permission.CAMERA" />`,
+              `<uses-feature android:name="android.hardware.camera.ar" android:required="true" />`,
+              `<application>`,
+              `    <meta-data android:name="com.google.ar.core" android:value="required" />`,
+              `</application>`,
+              `\`\`\``,
+            ].join("\n"),
+          },
+        ]),
       };
     }
 
@@ -786,7 +793,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── get_ios_setup ─────────────────────────────────────────────────────────
     case "get_ios_setup": {
-      const iosType = request.params.arguments?.type as "3d" | "ar";
+      const iosType = request.params.arguments?.type;
+      if (!iosType || (iosType !== "3d" && iosType !== "ar")) {
+        return {
+          content: [{ type: "text", text: `Missing or invalid \`type\` parameter. Use "3d" or "ar".` }],
+          isError: true,
+        };
+      }
       if (iosType === "3d") {
         return {
           content: withDisclaimer([
@@ -801,7 +814,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `\`\`\``,
                 `https://github.com/sceneview/sceneview`,
                 `\`\`\``,
-                `Set version rule to **"from: 3.3.0"**.`,
+                `Set version rule to **"from: 3.4.7"**.`,
                 ``,
                 `Or in Package.swift:`,
                 `\`\`\`swift`,
@@ -812,7 +825,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 `    name: "MyApp",`,
                 `    platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],`,
                 `    dependencies: [`,
-                `        .package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")`,
+                `        .package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")`,
                 `    ],`,
                 `    targets: [`,
                 `        .executableTarget(`,
@@ -872,18 +885,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ]),
         };
       }
-      if (iosType === "ar") {
-        return {
-          content: withDisclaimer([
-            {
-              type: "text",
-              text: [
-                `## SceneViewSwift — iOS AR Setup`,
+      // iosType === "ar" (validated above)
+      return {
+        content: withDisclaimer([
+          {
+            type: "text",
+            text: [
+              `## SceneViewSwift — iOS AR Setup`,
                 ``,
                 `### 1. Add SPM Dependency`,
                 ``,
                 `\`\`\`swift`,
-                `.package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")`,
+                `.package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")`,
                 `\`\`\``,
                 ``,
                 `### 2. Minimum Platform`,
@@ -962,11 +975,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             },
           ]),
         };
-      }
-      return {
-        content: [{ type: "text", text: `Unknown type "${iosType}". Use "3d" or "ar".` }],
-        isError: true,
-      };
     }
 
     // ── get_web_setup ────────────────────────────────────────────────────────
@@ -1085,14 +1093,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── create_3d_artifact ───────────────────────────────────────────────────
     case "create_3d_artifact": {
-      const artifactInput = {
-        type: request.params.arguments?.type as ArtifactType,
-        modelUrl: request.params.arguments?.modelUrl as string | undefined,
-        title: request.params.arguments?.title as string | undefined,
-        data: request.params.arguments?.data as any[] | undefined,
-        options: request.params.arguments?.options as any | undefined,
-        hotspots: request.params.arguments?.hotspots as any[] | undefined,
-        shapes: request.params.arguments?.shapes as any[] | undefined,
+      const artifactType = request.params.arguments?.type;
+      if (!artifactType || typeof artifactType !== "string") {
+        return {
+          content: [{ type: "text", text: 'Missing required parameter: `type`. Must be one of: "model-viewer", "chart-3d", "scene", "product-360", "geometry".' }],
+          isError: true,
+        };
+      }
+      const artifactInput: ArtifactInput = {
+        type: artifactType as ArtifactType,
+        modelUrl: typeof request.params.arguments?.modelUrl === "string" ? request.params.arguments.modelUrl : undefined,
+        title: typeof request.params.arguments?.title === "string" ? request.params.arguments.title : undefined,
+        data: Array.isArray(request.params.arguments?.data) ? request.params.arguments.data as ChartDataPoint[] : undefined,
+        options: request.params.arguments?.options as ArtifactOptions | undefined,
+        hotspots: Array.isArray(request.params.arguments?.hotspots) ? request.params.arguments.hotspots as Hotspot[] : undefined,
+        shapes: Array.isArray(request.params.arguments?.shapes) ? request.params.arguments.shapes as GeometryShape[] : undefined,
       };
 
       const validationError = validateArtifactInput(artifactInput);
@@ -1110,15 +1125,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── get_platform_setup ─────────────────────────────────────────────────
     case "get_platform_setup": {
-      const platform = request.params.arguments?.platform as Platform;
-      const setupType = request.params.arguments?.type as SetupType;
-      if (!platform || !setupType) {
+      const platform = request.params.arguments?.platform;
+      const setupType = request.params.arguments?.type;
+      if (!platform || typeof platform !== "string" || !setupType || typeof setupType !== "string") {
         return {
-          content: [{ type: "text", text: "Missing required parameters: `platform` and `type`." }],
+          content: [{ type: "text", text: `Missing required parameters: \`platform\` (one of: ${PLATFORM_IDS.join(", ")}) and \`type\` ("3d" or "ar").` }],
           isError: true,
         };
       }
-      const guide = getPlatformSetup(platform, setupType);
+      if (!PLATFORM_IDS.includes(platform as Platform)) {
+        return {
+          content: [{ type: "text", text: `Unknown platform "${platform}". Available: ${PLATFORM_IDS.join(", ")}` }],
+          isError: true,
+        };
+      }
+      if (setupType !== "3d" && setupType !== "ar") {
+        return {
+          content: [{ type: "text", text: `Invalid type "${setupType}". Use "3d" or "ar".` }],
+          isError: true,
+        };
+      }
+      const guide = getPlatformSetup(platform as Platform, setupType as SetupType);
       return { content: withDisclaimer([{ type: "text", text: guide }]) };
     }
 
@@ -1138,8 +1165,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── debug_issue ──────────────────────────────────────────────────────────
     case "debug_issue": {
-      let category = request.params.arguments?.category as DebugCategory | undefined;
-      const desc = request.params.arguments?.description as string | undefined;
+      const rawCategory = request.params.arguments?.category;
+      const desc = typeof request.params.arguments?.description === "string" ? request.params.arguments.description : undefined;
+
+      let category: DebugCategory | undefined;
+      if (typeof rawCategory === "string") {
+        if (!DEBUG_CATEGORIES.includes(rawCategory as DebugCategory)) {
+          return {
+            content: [{ type: "text", text: `Unknown debug category "${rawCategory}". Available: ${DEBUG_CATEGORIES.join(", ")}` }],
+            isError: true,
+          };
+        }
+        category = rawCategory as DebugCategory;
+      }
 
       if (!category && desc) {
         category = autoDetectIssue(desc) ?? undefined;
@@ -1178,15 +1216,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // ── list_platforms ────────────────────────────────────────────────────────
     case "list_platforms": {
       const platforms = [
-        { platform: "Android", renderer: "Filament", framework: "Jetpack Compose", status: "Stable", version: "3.3.0", dependency: "io.github.sceneview:sceneview:3.3.0", features: ["3D", "AR (ARCore)", "Model loading (GLB/glTF)", "Geometry nodes", "Physics", "Gestures"] },
-        { platform: "Android TV", renderer: "Filament", framework: "Compose TV", status: "Alpha", version: "3.3.0", dependency: "io.github.sceneview:sceneview:3.3.0", features: ["3D", "D-pad controls", "Auto-rotation", "Model loading"] },
+        { platform: "Android", renderer: "Filament", framework: "Jetpack Compose", status: "Stable", version: "3.4.7", dependency: "io.github.sceneview:sceneview:3.4.7", features: ["3D", "AR (ARCore)", "Model loading (GLB/glTF)", "Geometry nodes", "Physics", "Gestures"] },
+        { platform: "Android TV", renderer: "Filament", framework: "Compose TV", status: "Alpha", version: "3.4.7", dependency: "io.github.sceneview:sceneview:3.4.7", features: ["3D", "D-pad controls", "Auto-rotation", "Model loading"] },
         { platform: "Android XR", renderer: "Jetpack XR SceneCore", framework: "Compose XR", status: "Planned", version: "-", dependency: "-", features: ["Spatial computing", "Hand tracking", "Passthrough"] },
-        { platform: "iOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "3.3.0", dependency: "SceneViewSwift (SPM)", features: ["3D", "AR (ARKit)", "16 node types", "USDZ models"] },
-        { platform: "macOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "3.3.0", dependency: "SceneViewSwift (SPM)", features: ["3D", "Orbit camera", "USDZ models"] },
-        { platform: "visionOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "3.3.0", dependency: "SceneViewSwift (SPM)", features: ["3D", "Immersive spaces", "Hand tracking (planned)"] },
-        { platform: "Web", renderer: "Filament.js (WASM)", framework: "Kotlin/JS", status: "Alpha", version: "3.3.0", dependency: "@sceneview/sceneview-web", features: ["3D", "WebXR AR/VR", "GLB models", "WebGL2"] },
-        { platform: "Desktop", renderer: "Software / Filament JNI", framework: "Compose Desktop", status: "Alpha", version: "3.3.0", dependency: "sceneview-desktop (local)", features: ["3D", "Software renderer", "Wireframe"] },
-        { platform: "Flutter", renderer: "Filament / RealityKit", framework: "PlatformView", status: "Alpha", version: "3.3.0", dependency: "flutter pub: sceneview", features: ["3D", "AR", "Android + iOS bridge"] },
+        { platform: "iOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "3.4.7", dependency: "SceneViewSwift (SPM)", features: ["3D", "AR (ARKit)", "16 node types", "USDZ models"] },
+        { platform: "macOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "3.4.7", dependency: "SceneViewSwift (SPM)", features: ["3D", "Orbit camera", "USDZ models"] },
+        { platform: "visionOS", renderer: "RealityKit", framework: "SwiftUI", status: "Alpha", version: "3.4.7", dependency: "SceneViewSwift (SPM)", features: ["3D", "Immersive spaces", "Hand tracking (planned)"] },
+        { platform: "Web", renderer: "Filament.js (WASM)", framework: "Kotlin/JS", status: "Alpha", version: "3.4.7", dependency: "@sceneview/sceneview-web", features: ["3D", "WebXR AR/VR", "GLB models", "WebGL2"] },
+        { platform: "Desktop", renderer: "Software / Filament JNI", framework: "Compose Desktop", status: "Alpha", version: "3.4.7", dependency: "sceneview-desktop (local)", features: ["3D", "Software renderer", "Wireframe"] },
+        { platform: "Flutter", renderer: "Filament / RealityKit", framework: "PlatformView", status: "Alpha", version: "3.4.7", dependency: "flutter pub: sceneview", features: ["3D", "AR", "Android + iOS bridge"] },
       ];
 
       const lines = [
