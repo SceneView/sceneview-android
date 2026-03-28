@@ -168,10 +168,15 @@ export function migrateCode(code: string): MigrationResult {
       // Compute line numbers from original positions
       for (const m of localMatches) {
         const lineNum = result.substring(0, m.index).split("\n").length;
-        const replaced = m.match.replace(
-          new RegExp(rule.pattern.source, rule.pattern.flags.replace("g", "")),
-          rule.replacement as string
-        );
+        const replaced = typeof rule.replacement === "string"
+          ? m.match.replace(
+              new RegExp(rule.pattern.source, rule.pattern.flags.replace("g", "")),
+              rule.replacement
+            )
+          : m.match.replace(
+              new RegExp(rule.pattern.source, rule.pattern.flags.replace("g", "")),
+              rule.replacement as (substring: string, ...args: string[]) => string
+            );
         changes.push({
           line: lineNum,
           before: m.match.trim(),
@@ -182,10 +187,17 @@ export function migrateCode(code: string): MigrationResult {
       }
 
       // Apply replacement
-      result = result.replace(
-        new RegExp(rule.pattern.source, rule.pattern.flags),
-        rule.replacement as string
-      );
+      if (typeof rule.replacement === "string") {
+        result = result.replace(
+          new RegExp(rule.pattern.source, rule.pattern.flags),
+          rule.replacement
+        );
+      } else {
+        result = result.replace(
+          new RegExp(rule.pattern.source, rule.pattern.flags),
+          rule.replacement as (substring: string, ...args: string[]) => string
+        );
+      }
     }
   }
 

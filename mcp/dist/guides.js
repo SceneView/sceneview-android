@@ -6,16 +6,16 @@
 // ─── Platform Roadmap ─────────────────────────────────────────────────────────
 export const PLATFORM_ROADMAP = `# SceneView Multi-Platform Roadmap
 
-## Current Status (v3.3.0)
+## Current Status (v3.4.7)
 
 | Platform | Status | Artifact | Renderer |
 |----------|--------|----------|----------|
-| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.3.0\` | Filament |
-| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.3.0\` | Filament + ARCore |
-| **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.3.0"\` | RealityKit + ARKit |
+| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.4.7\` | Filament |
+| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.4.7\` | Filament + ARCore |
+| **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.4.7"\` | RealityKit + ARKit |
 | **macOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
 | **visionOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
-| **KMP Core** | Stable | \`io.github.sceneview:sceneview-core:3.3.0\` | N/A (shared logic) |
+| **KMP Core** | Stable | \`io.github.sceneview:sceneview-core:3.4.7\` | N/A (shared logic) |
 
 ## Architecture: Native Renderers per Platform
 
@@ -230,7 +230,7 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 1. \`rememberModelInstance\` returns null while loading — are you null-checking it?
 2. Is the model path correct? Assets go in \`src/main/assets/models/\`
 3. Is \`scaleToUnits\` too small or too large? Try \`1.0f\`
-4. Is there a light in the scene? Add: \`LightNode(type = LightNode.Type.DIRECTIONAL)\`
+4. Is there a light in the scene? Add a directional light: \`LightNode(apply = { intensity(100_000.0f); direction(0f, -1f, 0f) })\`
 5. Is the camera pointing at the model? Default camera is at origin looking -Z
 
 ### AR Camera Feed Shows but No Planes Detected
@@ -255,7 +255,7 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 ### Gradle Sync Fails
 **Fix:**
 - Ensure Java 17 is set: \`compileOptions { sourceCompatibility = JavaVersion.VERSION_17 }\`
-- Use compatible AGP/Gradle versions (AGP 8.11.1 + Gradle 8.11.1)
+- Use compatible AGP/Gradle versions (AGP 8.7.3 + Gradle 8.11.1)
 - Clear Gradle cache: \`./gradlew clean && rm -rf ~/.gradle/caches\`
 
 ## Performance Issues
@@ -339,7 +339,7 @@ export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide (Android 
 ## 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.3.0")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")
 \`\`\`
 
 ## 2. Info.plist — Camera Permission
@@ -424,7 +424,7 @@ ARSceneView(
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.3.0")
+    implementation("io.github.sceneview:arsceneview:3.4.7")
     // arsceneview includes sceneview transitively — no need to add both
 }
 \`\`\`
