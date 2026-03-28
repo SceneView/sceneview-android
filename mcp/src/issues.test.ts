@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { COMMON_ISSUES, getCommonIssuesSummary, searchCommonIssues } from "./issues.js";
 
 // We test the private formatIssues logic by calling fetchKnownIssues with a
 // mocked global fetch so we never hit the real GitHub API in tests.
@@ -158,5 +159,80 @@ describe("fetchKnownIssues", () => {
 
     expect(result).toContain("No open issues");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("COMMON_ISSUES", () => {
+  it("has at least 10 common issues", () => {
+    expect(COMMON_ISSUES.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("each issue has all required fields", () => {
+    for (const issue of COMMON_ISSUES) {
+      expect(issue.id).toBeTruthy();
+      expect(issue.title).toBeTruthy();
+      expect(issue.symptom).toBeTruthy();
+      expect(issue.cause).toBeTruthy();
+      expect(issue.solution).toBeTruthy();
+      expect(issue.category).toBeTruthy();
+    }
+  });
+
+  it("includes threading SIGABRT issue", () => {
+    const threading = COMMON_ISSUES.find((i) => i.id === "threading-sigabrt");
+    expect(threading).toBeDefined();
+    expect(threading!.cause).toContain("main thread");
+  });
+
+  it("includes LightNode trailing lambda issue", () => {
+    const light = COMMON_ISSUES.find((i) => i.id === "lightnode-trailing-lambda");
+    expect(light).toBeDefined();
+    expect(light!.cause).toContain("named parameter");
+  });
+
+  it("includes null model instance issue", () => {
+    const nullModel = COMMON_ISSUES.find((i) => i.id === "null-model-instance");
+    expect(nullModel).toBeDefined();
+    expect(nullModel!.solution).toContain("src/main/assets");
+  });
+});
+
+describe("getCommonIssuesSummary", () => {
+  it("returns non-empty markdown", () => {
+    const summary = getCommonIssuesSummary();
+    expect(summary.length).toBeGreaterThan(500);
+    expect(summary).toContain("Common Issues");
+  });
+
+  it("includes all issue titles", () => {
+    const summary = getCommonIssuesSummary();
+    for (const issue of COMMON_ISSUES) {
+      expect(summary).toContain(issue.title);
+    }
+  });
+});
+
+describe("searchCommonIssues", () => {
+  it("finds threading issues by keyword", () => {
+    const results = searchCommonIssues("SIGABRT");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((r) => r.id === "threading-sigabrt")).toBe(true);
+  });
+
+  it("finds null model issues by keyword", () => {
+    const results = searchCommonIssues("null");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((r) => r.id === "null-model-instance")).toBe(true);
+  });
+
+  it("finds AR drift issue", () => {
+    const results = searchCommonIssues("drift");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((r) => r.id === "ar-worldposition-drift")).toBe(true);
+  });
+
+  it("returns empty for unrelated query", () => {
+    const results = searchCommonIssues("xyznonexistent123");
+    expect(results).toHaveLength(0);
   });
 });
