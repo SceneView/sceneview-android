@@ -245,4 +245,68 @@ Scene(
 - [ ] Fix \`LightNode { … }\` → \`LightNode(apply = { … })\`
 - [ ] Remove manual \`engine.destroy()\` calls
 - [ ] Replace manual \`worldPosition\` in AR → \`AnchorNode\`
+- [ ] Replace \`ArFragment\` → \`ARScene()\` composable
+- [ ] Replace \`onTapArPlane\` → \`onTouchEvent\`
+- [ ] Replace \`setRenderable\` → \`ModelNode(modelInstance = ...)\`
+- [ ] Replace \`setParent\` → nest composable nodes inside parent
+- [ ] Move all Filament calls to main thread (no Dispatchers.IO)
+
+---
+
+## 13. Material loading
+
+| 2.x | 3.0 |
+|-----|-----|
+| \`materialLoader.loadMaterial(path)\` | \`materialLoader.createMaterial(path)\` |
+
+---
+
+## 14. Node.setRenderable
+
+| 2.x | 3.0 |
+|-----|-----|
+| \`node.setRenderable(renderable)\` | \`ModelNode(modelInstance = instance)\` — pass model in constructor |
+
+---
+
+## 15. ArFragment (Android Views)
+
+| 2.x | 3.0 |
+|-----|-----|
+| \`ArFragment\` in XML layout | \`ARScene()\` composable |
+| \`arFragment.setOnTapArPlaneListener\` | \`ARScene(onTouchEvent = { … })\` |
+| \`arFragment.arSceneView\` | Direct access via composable params |
+
+---
+
+## 16. Node.setParent / addChild (imperative)
+
+| 2.x | 3.0 |
+|-----|-----|
+| \`node.setParent(parentNode)\` | Nest composable nodes inside parent's content block |
+| \`sceneView.scene.addChild(node)\` | Declare nodes inside \`Scene { }\` content block |
+
+---
+
+## Sceneform 1.x → SceneView 3.0
+
+If migrating from Google Sceneform 1.x (the original \`com.google.ar.sceneform\` package):
+
+| Sceneform 1.x | SceneView 3.0 |
+|---|---|
+| \`com.google.ar.sceneform.*\` imports | \`io.github.sceneview.*\` imports |
+| \`ArFragment\` + XML | \`ARScene()\` composable |
+| \`ModelRenderable.builder().setSource()\` | \`rememberModelInstance(modelLoader, "file.glb")\` |
+| \`ViewRenderable.builder().setView()\` | \`ViewNode { ComposeContent() }\` |
+| \`Node().setParent(scene)\` | Declare nodes inside \`Scene { }\` |
+| \`TransformableNode(transformSystem)\` | \`ModelNode(isEditable = true)\` |
+| \`node.localPosition = Vector3()\` | \`position = Position(x, y, z)\` on node composable |
+| \`ArSceneView\` (View) | \`ARScene()\` (Composable) |
+| Java callbacks | Kotlin coroutines + Compose state |
+
+**Key differences from Sceneform:**
+- No more \`.sfa\`/\`.sfb\` files — use standard \`.glb\` models
+- No more XML layouts — everything is Jetpack Compose
+- No more \`Renderable\` classes — models are loaded as \`ModelInstance\`
+- Threading is critical — all Filament calls must be on the main thread
 `;
