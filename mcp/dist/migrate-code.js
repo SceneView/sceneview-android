@@ -111,6 +111,55 @@ const MIGRATION_RULES = [
         replacement: "// setCameraManipulator removed — use cameraManipulator = rememberCameraManipulator() on Scene",
         explanation: "`setCameraManipulator` replaced by `cameraManipulator = rememberCameraManipulator()` parameter on `Scene`.",
     },
+    // ── Material loading ──────────────────────────────────────────────────
+    {
+        id: "replace-materialLoader-loadMaterial",
+        pattern: /materialLoader\.loadMaterial\s*\(\s*"([^"]+)"\s*\)/g,
+        replacement: 'materialLoader.createMaterial("$1")',
+        explanation: "`loadMaterial` renamed to `createMaterial` in 3.0.",
+    },
+    // ── Scene background ──────────────────────────────────────────────────
+    {
+        id: "replace-setBackground",
+        pattern: /\bsetBackground\s*\(\s*([^)]+)\s*\)/g,
+        replacement: "// setBackground($1) removed — use Scene(environment = ...) for background or skybox",
+        explanation: "`setBackground` removed. Use the `environment` parameter on `Scene` for backgrounds and skyboxes.",
+    },
+    // ── Node.setRenderable → ModelNode ──────────────────────────────────
+    {
+        id: "replace-setRenderable",
+        pattern: /(\w+)\.setRenderable\(([^)]*)\)/g,
+        replacement: "// $1.setRenderable($2) → in 3.0, pass modelInstance directly to ModelNode() constructor",
+        explanation: "`setRenderable()` removed. In 3.0, pass the model directly: `ModelNode(modelInstance = instance)`.",
+    },
+    // ── onUpdate → onFrame ──────────────────────────────────────────────
+    {
+        id: "replace-onUpdate",
+        pattern: /\.onUpdate\s*=\s*\{/g,
+        replacement: "// .onUpdate removed — use Scene(onFrame = {",
+        explanation: "`.onUpdate` removed. Use the `onFrame` callback parameter on `Scene(onFrame = { ... })`.",
+    },
+    // ── Node.setParent → composable DSL ──────────────────────────────────
+    {
+        id: "replace-setParent",
+        pattern: /(\w+)\.setParent\((\w+)\)/g,
+        replacement: "// $1.setParent($2) — in 3.0, nest nodes as composables inside parent's content block",
+        explanation: "`setParent()` removed. In 3.0, declare child nodes as composables inside the parent's trailing content block.",
+    },
+    // ── ArFragment → ARScene composable ─────────────────────────────────
+    {
+        id: "replace-arfragment",
+        pattern: /\bArFragment\b/g,
+        replacement: "/* ArFragment removed — use ARScene composable in Jetpack Compose */",
+        explanation: "`ArFragment` (Android View-based) removed. Use `ARScene(...)` composable in Jetpack Compose.",
+    },
+    // ── onTapArPlane → onTouchEvent ─────────────────────────────────────
+    {
+        id: "replace-onTapArPlane",
+        pattern: /\.onTapArPlane\s*\{/g,
+        replacement: "// .onTapArPlane removed — use ARScene(onTouchEvent = { hitResult, motionEvent ->",
+        explanation: "`.onTapArPlane` removed. Use `ARScene(onTouchEvent = { hitResult, motionEvent -> ... })` and call `hitResult.createAnchor()` yourself.",
+    },
 ];
 export function migrateCode(code) {
     const changes = [];
@@ -155,9 +204,6 @@ export function migrateCode(code) {
     if (code.includes("ModelRenderable.builder")) {
         warnings.push("`ModelRenderable.builder()` is completely removed in 3.0 — it has no direct equivalent. Use GLB/glTF assets with `rememberModelInstance(modelLoader, path)` instead.");
     }
-    if (code.includes("onTapArPlane")) {
-        warnings.push("`onTapArPlane` callback renamed/restructured. In 3.0, use `onTouchEvent` on `ARScene` and call `hitResult.createAnchor()` yourself.");
-    }
     if (code.includes("rememberEngine") && !result.includes("rememberEngine")) {
         // Already using 3.0 style
     }
@@ -166,6 +212,21 @@ export function migrateCode(code) {
     }
     if (/node\w*\.destroy\(\)/.test(code) && /Scene\s*[({]/.test(code)) {
         warnings.push("Manual `node.destroy()` calls inside composable Scenes should be removed — Compose manages node lifecycle automatically.");
+    }
+    if (code.includes("ArFragment")) {
+        warnings.push("`ArFragment` is the old Android View-based AR component. In 3.0, use the `ARScene` composable in Jetpack Compose instead.");
+    }
+    if (code.includes("Dispatchers.IO") && (code.includes("modelLoader") || code.includes("materialLoader"))) {
+        warnings.push("**CRITICAL**: Filament calls (modelLoader, materialLoader) on `Dispatchers.IO` will cause SIGABRT. Use `Dispatchers.Main` or `rememberModelInstance` in composables.");
+    }
+    if (code.includes("setRenderable")) {
+        warnings.push("`setRenderable()` removed in 3.0. Pass model instances directly to `ModelNode(modelInstance = instance)` constructor.");
+    }
+    if (code.includes(".setParent(")) {
+        warnings.push("`.setParent()` removed in 3.0. Declare child nodes as composables inside the parent's content block instead.");
+    }
+    if (code.includes("onTapArPlane")) {
+        warnings.push("`onTapArPlane` callback removed. In 3.0, use `onTouchEvent` on `ARScene` and call `hitResult.createAnchor()` yourself.");
     }
     return {
         originalCode: code,
