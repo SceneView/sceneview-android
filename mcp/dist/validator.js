@@ -322,6 +322,103 @@ const RULES = [
             return issues;
         },
     },
+    // ─── Multiple Engine instances ───────────────────────────────────────────
+    {
+        id: "performance/multiple-engines",
+        severity: "warning",
+        check(code, lines) {
+            const issues = [];
+            const engineCreations = findLines(lines, /rememberEngine\(\)|Engine\.create\(/);
+            if (engineCreations.length > 1) {
+                engineCreations.slice(1).forEach((line) => issues.push({
+                    severity: "warning",
+                    rule: "performance/multiple-engines",
+                    message: "Multiple Engine instances detected. Each Engine allocates significant GPU memory. Use a single `rememberEngine()` at the top level and pass it to all Scene composables.",
+                    line,
+                }));
+            }
+            return issues;
+        },
+    },
+    // ─── Model loaded in LaunchedEffect with wrong dispatcher ──────────────
+    {
+        id: "threading/model-in-launched-effect",
+        severity: "error",
+        check(code, lines) {
+            const issues = [];
+            // Detect modelLoader calls inside LaunchedEffect — should use rememberModelInstance instead
+            if (/LaunchedEffect/.test(code) && /modelLoader\.(createModel|loadModel)/.test(code)) {
+                findLines(lines, /modelLoader\.(createModel|loadModel)/).forEach((line) => issues.push({
+                    severity: "error",
+                    rule: "threading/model-in-launched-effect",
+                    message: "Model loading inside `LaunchedEffect` is risky — if the coroutine runs on a background dispatcher, Filament will crash. Use `rememberModelInstance(modelLoader, path)` instead, which handles threading and lifecycle automatically.",
+                    line,
+                }));
+            }
+            return issues;
+        },
+    },
+    // ─── rememberModelInstance without modelLoader ────────────────────────────
+    {
+        id: "api/remember-model-missing-loader",
+        severity: "error",
+        check(code, lines) {
+            const issues = [];
+            if (code.includes("rememberModelInstance") && !code.includes("modelLoader") && !code.includes("rememberModelLoader")) {
+                findLines(lines, /rememberModelInstance\(/).forEach((line) => issues.push({
+                    severity: "error",
+                    rule: "api/remember-model-missing-loader",
+                    message: "`rememberModelInstance` requires a `ModelLoader`. Add `val modelLoader = rememberModelLoader(engine)` and pass it as the first parameter.",
+                    line,
+                }));
+            }
+            return issues;
+        },
+    },
+    // ─── GLB path with leading slash ────────────────────────────────────────
+    {
+        id: "api/asset-path-leading-slash",
+        severity: "warning",
+        check(code, lines) {
+            const issues = [];
+            // Matches rememberModelInstance or loadModel with "/models/..." (leading slash)
+            const patterns = [
+                /rememberModelInstance\s*\([^,]+,\s*"\/[^"]+"/,
+                /loadModel\w*\s*\(\s*"\/[^"]+"/,
+                /createHDREnvironment\s*\(\s*"\/[^"]+"/,
+            ];
+            for (const pat of patterns) {
+                findLines(lines, pat).forEach((line) => issues.push({
+                    severity: "warning",
+                    rule: "api/asset-path-leading-slash",
+                    message: "Asset path starts with `/`. Android asset paths are relative to `src/main/assets/` — use `\"models/file.glb\"` without a leading slash.",
+                    line,
+                }));
+            }
+            return issues;
+        },
+    },
+    // ─── Scene missing Modifier.fillMaxSize ─────────────────────────────────
+    {
+        id: "api/scene-zero-size",
+        severity: "info",
+        check(code, lines) {
+            const issues = [];
+            const sceneLines = findLines(lines, /\b(AR)?Scene\s*\(/);
+            sceneLines.forEach((line) => {
+                const block = lines.slice(line - 1, line + 5).join("\n");
+                if (!block.includes("fillMaxSize") && !block.includes("size") && !block.includes("height") && !block.includes("width")) {
+                    issues.push({
+                        severity: "info",
+                        rule: "api/scene-zero-size",
+                        message: "`Scene` / `ARScene` may have zero size without a `Modifier`. Add `modifier = Modifier.fillMaxSize()` to ensure the 3D view is visible.",
+                        line,
+                    });
+                }
+            });
+            return issues;
+        },
+    },
     // ─── Scene missing engine param ───────────────────────────────────────────
     {
         id: "api/scene-missing-engine",
