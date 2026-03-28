@@ -82,6 +82,10 @@ jobs:
         working-directory: mcp
         run: |
           VERSION=${GITHUB_REF_NAME#v}
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::error::Not a semver tag — GITHUB_REF_NAME is '$GITHUB_REF_NAME'. Run from a version tag (e.g. v3.4.7)."
+            exit 1
+          fi
           CURRENT=$(node -p "require('./package.json').version")
           if [ "$CURRENT" != "$VERSION" ]; then
             npm version "$VERSION" --no-git-tag-version
@@ -130,6 +134,10 @@ jobs:
         working-directory: sceneview-web/build/dist/js/productionLibrary
         run: |
           VERSION=${GITHUB_REF_NAME#v}
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::error::Not a semver tag — GITHUB_REF_NAME is '$GITHUB_REF_NAME'."
+            exit 1
+          fi
           cat > package.json << EOF
           {
             "name": "@sceneview/sceneview-web",
