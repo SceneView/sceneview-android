@@ -67,6 +67,42 @@ describe("migrateCode", () => {
     expect(result.migratedCode).toContain("ViewNode");
   });
 
+  it("replaces loadMaterial with createMaterial", () => {
+    const result = migrateCode(`materialLoader.loadMaterial("materials/custom.filamat")`);
+    expect(result.migratedCode).toContain("createMaterial");
+    expect(result.changes.some((c) => c.rule === "replace-materialLoader-loadMaterial")).toBe(true);
+  });
+
+  it("marks ArFragment as removed", () => {
+    const result = migrateCode(`val fragment = ArFragment()`);
+    expect(result.migratedCode).toContain("ArFragment removed");
+    expect(result.migratedCode).toContain("ARScene");
+  });
+
+  it("replaces setRenderable with comment", () => {
+    const result = migrateCode(`node.setRenderable(renderable)`);
+    expect(result.migratedCode).toContain("ModelNode()");
+  });
+
+  it("replaces setParent with comment", () => {
+    const result = migrateCode(`child.setParent(parent)`);
+    expect(result.migratedCode).toContain("nest nodes as composables");
+  });
+
+  it("replaces onTapArPlane with comment", () => {
+    const result = migrateCode(`fragment.onTapArPlane {`);
+    expect(result.migratedCode).toContain("onTouchEvent");
+  });
+
+  it("adds warning for Dispatchers.IO with modelLoader", () => {
+    const code = `
+launch(Dispatchers.IO) {
+    modelLoader.loadModelAsync("models/chair.glb")
+}`;
+    const result = migrateCode(code);
+    expect(result.warnings.some((w) => w.includes("SIGABRT") || w.includes("Dispatchers.IO"))).toBe(true);
+  });
+
   it("returns no changes for 3.x code", () => {
     const code = `
 val engine = rememberEngine()

@@ -359,6 +359,99 @@ describe("api/dynamic-sky-outside-scene", () => {
   });
 });
 
+// ─── performance/multiple-engines ─────────────────────────────────────────────
+
+describe("performance/multiple-engines", () => {
+  const RULE = "performance/multiple-engines";
+
+  it("fires when multiple rememberEngine() calls exist", () => {
+    const code = `
+      val engine1 = rememberEngine()
+      val engine2 = rememberEngine()
+    `;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire for a single rememberEngine()", () => {
+    const code = `val engine = rememberEngine()`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+// ─── threading/model-in-launched-effect ─────────────────────────────────────
+
+describe("threading/model-in-launched-effect", () => {
+  const RULE = "threading/model-in-launched-effect";
+
+  it("fires when modelLoader is used inside LaunchedEffect", () => {
+    const code = `
+      LaunchedEffect(Unit) {
+        val model = modelLoader.createModelInstance("models/chair.glb")
+      }
+    `;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire when rememberModelInstance is used", () => {
+    const code = `
+      val instance = rememberModelInstance(modelLoader, "models/chair.glb")
+    `;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+// ─── api/asset-path-leading-slash ──────────────────────────────────────────
+
+describe("api/asset-path-leading-slash", () => {
+  const RULE = "api/asset-path-leading-slash";
+
+  it("fires when asset path starts with /", () => {
+    const code = `val m = rememberModelInstance(modelLoader, "/models/chair.glb")`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire for correct relative path", () => {
+    const code = `val m = rememberModelInstance(modelLoader, "models/chair.glb")`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+// ─── api/scene-zero-size ──────────────────────────────────────────────────
+
+describe("api/scene-zero-size", () => {
+  const RULE = "api/scene-zero-size";
+
+  it("fires info when Scene has no Modifier", () => {
+    const code = `Scene(engine = engine) { }`;
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire when fillMaxSize is used", () => {
+    const code = `Scene(modifier = Modifier.fillMaxSize(), engine = engine) { }`;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
+// ─── api/remember-model-missing-loader ──────────────────────────────────────
+
+describe("api/remember-model-missing-loader", () => {
+  const RULE = "api/remember-model-missing-loader";
+
+  it("fires when rememberModelInstance used without modelLoader", () => {
+    const code = `val m = rememberModelInstance(loader, "models/chair.glb")`;
+    // 'loader' not 'modelLoader' — but the rule checks for the string "modelLoader"
+    expect(hasRule(code, RULE)).toBe(true);
+  });
+
+  it("does NOT fire when modelLoader is present", () => {
+    const code = `
+      val modelLoader = rememberModelLoader(engine)
+      val m = rememberModelInstance(modelLoader, "models/chair.glb")
+    `;
+    expect(hasRule(code, RULE)).toBe(false);
+  });
+});
+
 // ─── formatValidationReport ───────────────────────────────────────────────────
 
 describe("formatValidationReport", () => {

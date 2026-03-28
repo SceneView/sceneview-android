@@ -57,4 +57,35 @@ describe("MIGRATION_GUIDE", () => {
     expect(MIGRATION_GUIDE).toContain("After");
     expect(MIGRATION_GUIDE).toContain("```kotlin");
   });
+
+  it("covers material loading migration", () => {
+    expect(MIGRATION_GUIDE).toContain("loadMaterial");
+    expect(MIGRATION_GUIDE).toContain("createMaterial");
+  });
+
+  it("covers ArFragment migration", () => {
+    expect(MIGRATION_GUIDE).toContain("ArFragment");
+    expect(MIGRATION_GUIDE).toContain("ARScene");
+  });
+
+  it("covers setRenderable migration", () => {
+    expect(MIGRATION_GUIDE).toContain("setRenderable");
+    expect(MIGRATION_GUIDE).toContain("ModelNode");
+  });
+
+  it("covers setParent / addChild migration", () => {
+    expect(MIGRATION_GUIDE).toContain("setParent");
+    expect(MIGRATION_GUIDE).toContain("addChild");
+  });
+
+  it("covers Sceneform 1.x migration", () => {
+    expect(MIGRATION_GUIDE).toContain("Sceneform 1.x");
+    expect(MIGRATION_GUIDE).toContain("ModelRenderable");
+    expect(MIGRATION_GUIDE).toContain(".sfa");
+    expect(MIGRATION_GUIDE).toContain(".sfb");
+  });
+
+  it("covers threading warning in checklist", () => {
+    expect(MIGRATION_GUIDE).toContain("Dispatchers.IO");
+  });
 });
