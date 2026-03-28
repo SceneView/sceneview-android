@@ -86,4 +86,3 @@ jobs:
           releaseFiles: samples/android-demo/build/outputs/bundle/release/*.aab
           track: ${{ github.event.inputs.track || 'production' }}
           status: completed
-          changesNotSentForReview: true

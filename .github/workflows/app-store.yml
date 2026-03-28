@@ -175,21 +175,8 @@ jobs:
             -authenticationKeyID $APP_STORE_CONNECT_API_KEY_ID \
             -authenticationKeyIssuerID $APP_STORE_CONNECT_API_ISSUER_ID
 
-      - name: Upload to TestFlight
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-        run: |
-          # Write API key to file (required by notarytool/altool)
-          mkdir -p ~/.private_keys
-          echo "$APP_STORE_CONNECT_API_KEY" > ~/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
-
-          xcrun altool --upload-app \
-            --type ios \
-            --file "$RUNNER_TEMP/export/SceneViewDemo.ipa" \
-            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
+      # Upload step removed — exportArchive with destination=upload already
+      # submits the build to TestFlight. xcrun altool was removed in Xcode 16.
 
       - name: Clean up keychain and keys
         if: always()
