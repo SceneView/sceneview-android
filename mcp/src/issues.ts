@@ -42,7 +42,18 @@ export async function fetchKnownIssues(): Promise<string> {
     if (!response.ok) {
       fetchError = `GitHub API returned ${response.status}: ${response.statusText}`;
     } else {
-      issues = (await response.json()) as GitHubIssue[];
+      const json = await response.json();
+      if (!Array.isArray(json)) {
+        fetchError = "GitHub API returned unexpected response format (expected array).";
+      } else {
+        issues = json.filter(
+          (item: unknown): item is GitHubIssue =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof (item as Record<string, unknown>).number === "number" &&
+            typeof (item as Record<string, unknown>).title === "string"
+        );
+      }
     }
   } catch (err) {
     fetchError = `Failed to fetch issues: ${err instanceof Error ? err.message : String(err)}`;
