@@ -152,8 +152,6 @@ export function generateScene(description) {
     const dependencies = [];
     let hasModel = false;
     let hasGeometry = false;
-    // Track geometry node counters for naming
-    let nodeCounter = 0;
     // Generate elements for each parsed object
     for (const obj of parsed.objects) {
         const positions = spreadPositions(obj.count, obj.mapping.defaultPosition, 1.5);
@@ -187,7 +185,7 @@ export function generateScene(description) {
                     comment: obj.mapping.comment,
                 });
             }
-            nodeCounter++;
+            // element added
         }
     }
     // Add text node if description mentions text/labels
