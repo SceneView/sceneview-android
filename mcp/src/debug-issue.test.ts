@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES, type DebugCategory } from "./debug-issue.js";
 
 describe("DEBUG_CATEGORIES", () => {
-  it("has 9 categories", () => {
-    expect(DEBUG_CATEGORIES).toHaveLength(9);
+  it("has 11 categories", () => {
+    expect(DEBUG_CATEGORIES).toHaveLength(11);
   });
 
   it("includes all expected categories", () => {
@@ -16,6 +16,8 @@ describe("DEBUG_CATEGORIES", () => {
     expect(DEBUG_CATEGORIES).toContain("lighting");
     expect(DEBUG_CATEGORIES).toContain("gestures");
     expect(DEBUG_CATEGORIES).toContain("ios");
+    expect(DEBUG_CATEGORIES).toContain("material");
+    expect(DEBUG_CATEGORIES).toContain("animation");
   });
 });
 
@@ -77,6 +79,20 @@ describe("getDebugGuide", () => {
     expect(result).toContain("USDZ");
     expect(result).toContain("try await");
     expect(result).toContain("SPM");
+  });
+
+  it("returns guide for material", () => {
+    const result = getDebugGuide("material");
+    expect(result).toContain("Material");
+    expect(result).toContain("texture");
+    expect(result).toContain("destroy order");
+  });
+
+  it("returns guide for animation", () => {
+    const result = getDebugGuide("animation");
+    expect(result).toContain("Animation");
+    expect(result).toContain("animator");
+    expect(result).toContain("applyAnimation");
   });
 
   it("returns error for unknown category", () => {
@@ -143,6 +159,40 @@ describe("autoDetectIssue", () => {
     expect(autoDetectIssue("iOS model not loading")).toBe("ios");
     expect(autoDetectIssue("SwiftUI SceneView issue")).toBe("ios");
     expect(autoDetectIssue("Xcode SPM error")).toBe("ios");
+  });
+
+  it("detects material from description", () => {
+    expect(autoDetectIssue("Model appears white and untextured")).toBe("material");
+    expect(autoDetectIssue("Material not rendering correctly")).toBe("material");
+    expect(autoDetectIssue("Transparent material not working")).toBe("material");
+    expect(autoDetectIssue("Texture missing on model")).toBe("material");
+  });
+
+  it("detects animation from description", () => {
+    expect(autoDetectIssue("Animation not playing on model")).toBe("animation");
+    expect(autoDetectIssue("Bone deformation looks wrong")).toBe("animation");
+    expect(autoDetectIssue("Animator returns null")).toBe("animation");
+  });
+
+  it("detects threading crash from description", () => {
+    expect(autoDetectIssue("Wrong thread error in Filament")).toBe("crash");
+    expect(autoDetectIssue("Crash when using Dispatchers.IO with model loading")).toBe("crash");
+  });
+
+  it("detects more model-not-showing variants", () => {
+    expect(autoDetectIssue("Model is null after loading")).toBe("model-not-showing");
+    expect(autoDetectIssue("Nothing shows up in the scene")).toBe("model-not-showing");
+    expect(autoDetectIssue("rememberModelInstance returns null")).toBe("model-not-showing");
+  });
+
+  it("detects more build-error variants", () => {
+    expect(autoDetectIssue("Duplicate class error in build")).toBe("build-error");
+    expect(autoDetectIssue("Unresolved reference to Scene")).toBe("build-error");
+  });
+
+  it("detects more gesture variants", () => {
+    expect(autoDetectIssue("Pinch to zoom not working")).toBe("gestures");
+    expect(autoDetectIssue("Can't select 3D object")).toBe("gestures");
   });
 
   it("returns null for unrecognized description", () => {
