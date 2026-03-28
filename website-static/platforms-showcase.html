@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <script type="module" src="js/model-viewer.min.js"></script>
     <style>
         /* ── Page layout ── */
         .page-platforms {
@@ -698,12 +698,14 @@
             SceneView
         </a>
         <div class="nav__links">
-            <a href="/showcase.html" class="nav__link">Showcase</a>
+            <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
+            <a href="/claude-3d.html" class="nav__link" style="color:#d97757;font-weight:600">AI + 3D</a>
             <a href="/platforms-showcase.html" class="nav__link" style="color: var(--color-primary); font-weight: 600;">Platforms</a>
             <a href="/#demos" class="nav__link">Demos</a>
             <a href="/playground.html" class="nav__link">Playground</a>
             <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
             <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
+            <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
             <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
                 <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>

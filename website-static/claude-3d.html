@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="styles.css">
 
   <!-- Google model-viewer for 3D rendering -->
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <script type="module" src="js/model-viewer.min.js"></script>
 
   <style>
     /* ===== PAGE-SPECIFIC STYLES ===== */
@@ -552,12 +552,14 @@
       </button>
 
       <div class="nav__links" id="navLinks">
-        <a href="/" class="nav__link">Home</a>
-        <a href="/showcase.html" class="nav__link">Showcase</a>
+        <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
+        <a href="/claude-3d.html" class="nav__link" style="color:#d97757;font-weight:600">AI + 3D</a>
         <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
+        <a href="/#demos" class="nav__link">Demos</a>
         <a href="/playground.html" class="nav__link">Playground</a>
         <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
         <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
+        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -635,7 +637,7 @@
               <div class="preview-label">Preview</div>
               <model-viewer
                 id="heroModel"
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
+                src="models/SheenChair.glb"
                 alt="3D Chair preview"
                 camera-controls
                 auto-rotate
@@ -663,12 +665,12 @@
 
         <div class="examples-grid">
 
-          <!-- Example 1: Flowers -->
+          <!-- Example 1: Product -->
           <div class="example-card">
             <div class="example-card__3d">
               <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlowerVase/glTF-Binary/FlowerVase.glb"
-                alt="3D flower vase"
+                src="models/WaterBottle.glb"
+                alt="3D water bottle product"
                 camera-controls
                 auto-rotate
                 shadow-intensity="1"
@@ -683,9 +685,9 @@
                 <div class="example-card__prompt-icon">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
                 </div>
-                <span class="example-card__prompt-text">"Draw me a flower arrangement in 3D"</span>
+                <span class="example-card__prompt-text">"Show me a 3D product viewer for a water bottle"</span>
               </div>
-              <p class="example-card__desc">Claude selects a flower vase model from glTF samples and renders it with PBR materials, soft shadows, and auto-rotation for a natural look.</p>
+              <p class="example-card__desc">Claude generates a product viewer with PBR materials, soft shadows, and auto-rotation. The model loads with camera orbit controls for a complete 360-degree view.</p>
               <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                 View code
@@ -706,7 +708,7 @@
     <span class="kw">ModelNode</span>(
         modelInstance = <span class="fn">rememberModelInstance</span>(
             modelLoader,
-            <span class="str">"models/flower_vase.glb"</span>
+            <span class="str">"models/water_bottle.glb"</span>
         )
     )
 }</code></pre>
@@ -718,7 +720,7 @@
           <div class="example-card">
             <div class="example-card__3d">
               <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
+                src="models/MaterialsVariantsShoe.glb"
                 alt="3D sneaker"
                 camera-controls
                 auto-rotate
@@ -770,7 +772,7 @@
           <div class="example-card">
             <div class="example-card__3d">
               <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Fox/glTF-Binary/Fox.glb"
+                src="models/Fox.glb"
                 alt="3D animated fox"
                 camera-controls
                 auto-rotate
@@ -820,7 +822,7 @@
           <div class="example-card">
             <div class="example-card__3d">
               <model-viewer
-                src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb"
+                src="models/SheenChair.glb"
                 alt="3D furniture for AR placement"
                 camera-controls
                 auto-rotate
@@ -940,7 +942,6 @@
         <div class="footer__links">
           <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
           <a href="https://github.com/sponsors/sceneview">Sponsor</a>
-          <a href="/#pro">Pro</a>
           <a href="https://github.com/sceneview/sceneview">Source Code</a>
         </div>
       </div>
