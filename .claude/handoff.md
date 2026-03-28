@@ -4,53 +4,48 @@
 
 ## Last Session Summary
 
-**Date:** 28 mars 2026 (nuit)
-**Branch:** main (tout mergé, 0 PR ouverte, 0 branche stale)
-**30+ PRs mergées cette session**
+**Date:** 28 mars 2026 (session 2 — après-midi)
+**Branch:** main (tout mergé, 0 PR ouverte)
+**Repo website:** sceneview.github.io (séparé, pushé directement)
 
-## DEMANDES NON RÉALISÉES — PRIORITÉ ABSOLUE PROCHAINE SESSION
+## CE QUI A ÉTÉ FAIT CETTE SESSION
 
-Thomas a demandé ces changements PLUSIEURS FOIS et ils ne sont PAS correctement en ligne :
+### Site web (sceneview.github.io) — 6 commits pushés
 
-### 1. Platforms Showcase (platforms-showcase.html)
-- Les wireframes/cards ne sont pas clairs — on ne comprend pas à quoi ils correspondent
-- Ajouter Claude Desktop/Mac comme plateforme avec un mockup réaliste
-- Retirer les fausses cards (Watch, Car)
-- Le thème dark s'applique bizarrement
+1. **Badge hero "Rendered by SceneView Web"** — fix visibilité light mode (noir en light, blanc en dark)
+2. **Platforms Showcase refonte complète** :
+   - Watch et Car Dashboard SUPPRIMÉS (fausses plateformes)
+   - Claude Desktop AJOUTÉ avec mockup macOS (fenêtre ambre, code AR dans le viewport)
+   - Support light/dark mode complet
+   - Dynamic Island sur iPhone
+   - Labels plus clairs avec icônes
+3. **Boutons branded** :
+   - "Build this with Claude" (ambre, gradient) dans le hero — lié au helmet avec prompt pré-rempli pour reproduire le DamagedHelmet
+   - Badges store (Google Play vert, App Store bleu, Claude ambre, GitHub) dans section samples
+4. **Comparatif tokens 3 colonnes** :
+   - Raw Engine (~100k tokens) vs SceneView (~500 tokens) vs SceneView+MCP (~300 tokens, "RECOMMENDED")
+   - Chiffres : lines of code, tokens to generate, AI iterations, total cost
+   - `npx sceneview-mcp` dans la card MCP
+5. **Showcase pill navbar** — fond bleu + bordure pour que "Showcase" soit impossible à rater
+6. **Section Sample Apps** — featured Showcase card avec mini-cards (E-Commerce, AR, Automotive, etc.)
+7. **Hint Pro subtil** — "This helmet is rendered live... Want more? Explore Pro tools →" sous le casque
+8. **Subtitle code section** — "Few lines of code means few tokens for AI"
 
-### 2. Boutons branded "Open in Claude/Play/Apple"
-- Couleurs/icônes officielles de chaque plateforme partout sur le site
-- Claude : couleur orange/ambre + logo Claude
-- Google Play / App Store : badges officiels
+### Demandes en cours de review
 
-### 3. Playground (playground.html) — refonte complète
-- Le playground actuel ne fonctionne pas bien
-- Besoin d'une review et fix complet
+- Thomas veut un comparatif plus orienté "avec/sans SceneView" et "avec/sans MCP" — fait avec les 3 colonnes
+- Thomas veut que le Showcase soit plus mis en avant — fait avec pill + featured card
+- Thomas veut que "Open in Claude" soit lié au helmet — fait, bouton renommé "Build this with Claude" avec prompt
 
-### 4. Section "Sample apps" sur la landing — pas impactant visuellement
+## CE QUI RESTE À FAIRE
 
-### 5. Vérifier que les 6 onglets langages sont LIVE sur la landing (Kotlin, Swift, JS, Dart, TS, Claude)
-
-## CE QUI EST FAIT
-
-### Stores
-- **Play Store** : AAB uploadé, en review, auto-deploy configuré
-- **iOS** : compile + archive OK, **BLOQUÉ** : créer l'app sur App Store Connect (bundle ID: io.github.sceneview.demo)
-- **Auto-versioning** : versionCode = github.run_number, auto-deploy sur push to main
-
-### Site web (sceneview.github.io)
-- Hero fade-in smooth, Install 7 onglets après hero, thème suit le système
-- AI section avec mockup Claude Code Mac, pro cards cliquables, logo nettoyé
-- Store badges → "Coming soon" + "Notify me"
-
-### CI/CD
-- Workflows nettoyés, paths-ignore, JS tests non-bloquants
-- Toutes branches supprimées (0 stale)
-
-### Code
-- Android demo 14/14 démos LIVE
-- iOS demo réécrit (4 tabs, 5 démos)
-- README refait (4 langages, Claude comme plateforme)
+### Prochaine session
+1. **Playground review** — vérifier que le playground fonctionne correctement (code + 3D preview)
+2. **Vérifier 6 onglets langages** — Kotlin, Swift, JS, Dart, TS, Claude dans la landing
+3. **Light mode review complète** — vérifier chaque section en light mode
+4. **Maven Central v3.4.5 publish** — priorité code
+5. **App Store** — Thomas doit créer l'app sur App Store Connect
+6. **Play Store** — vérifier si review Google passée
 
 ## ACTIONS THOMAS
 1. **App Store Connect** : créer app "SceneView Demo" bundle ID `io.github.sceneview.demo`
@@ -60,4 +55,5 @@ Thomas a demandé ces changements PLUSIEURS FOIS et ils ne sont PAS correctement
 - Merge direct sur main après review auto
 - Fast release : auto-deploy stores sur push to main
 - Alerter sur consommation tokens
-- Certificats sauvegardés sur Drive (Projects/Secrets/ios-distribution-2027/)
+- JAMAIS toucher Octopus Community
+- Assets toujours hébergés localement
