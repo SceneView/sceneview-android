@@ -261,7 +261,7 @@ export function generateScene(description: string): GeneratedScene {
       type: "light",
       nodeType: "LightNode",
       properties: {
-        type: parsed.isOutdoor ? "LightManager.Type.SUN" : "LightManager.Type.SUN",
+        type: parsed.isOutdoor ? "LightManager.Type.SUN" : "LightManager.Type.DIRECTIONAL",
         intensity: parsed.isOutdoor ? "110_000f" : "100_000f",
         castShadows: "true",
       },
