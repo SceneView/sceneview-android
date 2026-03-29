@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform")
-    id("com.vanniktech.maven.publish")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.publish)
 }
 
 kotlin {
@@ -32,7 +32,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation("org.jetbrains.kotlin:kotlin-stdlib")
-            api("dev.romainguy:kotlin-math:1.6.0")
+            api(libs.kotlin.math)
         }
 
         commonTest.dependencies {
@@ -40,4 +40,3 @@ kotlin {
         }
     }
 }
-
