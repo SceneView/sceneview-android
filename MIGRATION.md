@@ -14,8 +14,8 @@ implementation("io.github.sceneview:sceneview:2.3.0")
 implementation("io.github.sceneview:arsceneview:2.3.0")
 
 // After
-implementation("io.github.sceneview:sceneview:3.3.0")
-implementation("io.github.sceneview:arsceneview:3.3.0")
+implementation("io.github.sceneview:sceneview:3.4.7")
+implementation("io.github.sceneview:arsceneview:3.4.7")
 ```
 
 ---
@@ -229,7 +229,7 @@ the imports continue to work. No action required.
 
 | Change | Action |
 |---|---|
-| Bump dependency to `3.0.0` | Update `build.gradle` |
+| Bump dependency to `3.4.7` | Update `build.gradle` |
 | Remove `childNodes = rememberNodes { }` | Move node declarations into `Scene { }` |
 | Replace `add(ModelNode(...))` | Use `ModelNode(...)` composable directly |
 | Replace `addChildNode(...)` | Use nested `NodeScope` content lambda |
@@ -240,7 +240,7 @@ the imports continue to work. No action required.
 
 ---
 
-# v3.1.x → v3.2.x
+# v3.1.x → v3.3.x
 
 ## New node types (non-breaking)
 
@@ -287,3 +287,27 @@ override fun onCreate(savedInstanceState: Bundle?) {
     setContent { /* ... */ }
 }
 ```
+
+---
+
+# v3.3.x → v3.4.x
+
+## Dependency bump (non-breaking)
+
+```gradle
+// Before
+implementation("io.github.sceneview:sceneview:3.3.0")
+implementation("io.github.sceneview:arsceneview:3.3.0")
+
+// After
+implementation("io.github.sceneview:sceneview:3.4.7")
+implementation("io.github.sceneview:arsceneview:3.4.7")
+```
+
+No API changes — this is a maintenance release with Filament 1.70.0 compatibility fixes,
+ARCore crash fixes (`#713`), and `MeshNode.boundingBox` correction (`#711`).
+
+## Filament materials (if you have custom materials)
+
+Recompile any custom Filament materials against Filament 1.70.0 if you ship precompiled
+`.filamat` files. SceneView's built-in materials are already recompiled.

@@ -234,7 +234,7 @@ the imports continue to work. No action required.
 
 | Change | Action |
 |---|---|
-| Bump dependency to `3.0.0` | Update `build.gradle` |
+| Bump dependency to `3.4.7` | Update `build.gradle` |
 | Remove `childNodes = rememberNodes { }` | Move node declarations into `Scene { }` |
 | Replace `add(ModelNode(...))` | Use `ModelNode(...)` composable directly |
 | Replace `addChildNode(...)` | Use nested `NodeScope` content lambda |
