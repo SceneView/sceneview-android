@@ -507,23 +507,7 @@ SceneView.create("viewer", {
   svInstance = instance;
   console.log("SceneView 3D Charts v2 — v3.5.1 Feature Showcase");
 
-  // === v3.5.1: Quality preset ===
-  instance.setQuality('high');
-
-  // === v3.5.1: Bloom for metallic glow ===
-  instance.setBloom({ strength: 0.12, resolution: 512, levels: 7 });
-
-  // === v3.5.1: Cinematic vignette ===
-  instance.setVignette({ midPoint: 0.52, roundness: 0.6, feather: 0.65 });
-
-  // === v3.5.1: Slow cinematic orbit ===
-  instance.setOrbitSpeed(0.003);
-
-  // === v3.5.1: Orbit limits ===
-  instance.setOrbitLimits({ minDistance: 6, maxDistance: 30 });
-
-  // === v3.5.1: MSAA for crisp edges ===
-  instance.setMSAA({ sampleCount: 4 });
+  // === Camera setup ===
 
   // Initial camera — far away for dramatic intro
   instance._angle = 0;
@@ -537,20 +521,14 @@ SceneView.create("viewer", {
   loadSceneImmediate(instance, 0);
   currentSceneIdx = 0;
 
-  // === v3.5.1: Dramatic intro camera animation ===
+  // Set initial camera to first scene position
   var firstScene = scenes[0].camera;
   setTimeout(function() {
-    instance.animateCamera({
-      distance: firstScene.distance,
-      height: firstScene.height,
-      angle: firstScene.angle,
-      target: firstScene.target,
-      duration: 2800,
-      onComplete: function() {
-        instance.setAutoRotate(true);
-        instance.setOrbitSpeed(0.0025);
-      },
-    });
+    instance._orbitRadius = firstScene.distance;
+    instance._orbitHeight = firstScene.height;
+    instance._angle = firstScene.angle;
+    if (firstScene.target) instance._orbitTarget = firstScene.target;
+    instance.setAutoRotate(true);
   }, 300);
 
   // Scene cycling
@@ -580,9 +558,6 @@ function loadSceneImmediate(instance, idx) {
     } catch(e) {}
     currentAsset = null;
   }
-  // Clear previous point lights
-  instance.clearLights();
-
   var sd = scenes[idx];
   var barData = buildBarData(sd);
   var glb = createChartGLB(barData);
@@ -595,9 +570,6 @@ function loadSceneImmediate(instance, idx) {
       currentAsset = asset;
     }
   } catch(e) { console.error("Chart GLB error:", e); }
-
-  // Add colored point lights for each bar
-  addBarLights(instance, barData);
 
   updateHeader(sd);
   updateLegend(sd);
@@ -612,35 +584,15 @@ function loadScene(instance, idx) {
   var sd = scenes[idx];
   var cam = sd.camera;
 
-  // === v3.5.1: animateCamera for transitions ===
-  // First animate camera up and away
-  instance.animateCamera({
-    distance: instance._orbitRadius + 4,
-    height: instance._orbitHeight + 3,
-    angle: instance._angle + 0.5,
-    duration: TRANSITION_DURATION * 0.45,
-    onComplete: function() {
-      // Swap scene content at the peak of the transition
-      loadSceneImmediate(instance, idx);
-      currentSceneIdx = idx;
-
-      // Then animate to the new scene's camera position
-      setTimeout(function() {
-        instance.animateCamera({
-          distance: cam.distance,
-          height: cam.height,
-          angle: cam.angle,
-          target: cam.target,
-          duration: TRANSITION_DURATION * 0.55,
-          onComplete: function() {
-            isTransitioning = false;
-            instance.setAutoRotate(true);
-            instance.setOrbitSpeed(0.0025);
-          },
-        });
-      }, 100);
-    },
-  });
+  // Swap scene content and set camera position
+  loadSceneImmediate(instance, idx);
+  currentSceneIdx = idx;
+  instance._orbitRadius = cam.distance;
+  instance._orbitHeight = cam.height;
+  instance._angle = cam.angle;
+  if (cam.target) instance._orbitTarget = cam.target;
+  instance.setAutoRotate(true);
+  isTransitioning = false;
 }
 </script>
 </body>

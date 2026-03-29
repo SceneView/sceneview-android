@@ -244,50 +244,12 @@ SceneView.modelViewer("viewer", "models/platforms/GlassVaseFlowers.glb", {
   var loadEl = document.getElementById('loading');
   if (loadEl) loadEl.style.display = 'none';
 
-  // ── Quality: high — MSAA 4x, bloom, vignette ──
-  instance.setQuality('high');
-
-  // ── Post-processing — dreamy romantic ambiance ──
-  instance.setBloom({ strength: 0.15, resolution: 512, levels: 7 });
-  instance.setVignette({ midPoint: 0.4, roundness: 0.6, feather: 0.6 });
-  instance.setDOF({ cocScale: 0.08 });
-
   // ── Camera — contemplative slow orbit ──
-  instance.setOrbitSpeed(0.004);
-  instance.setOrbitLimits({ minDistance: 1.5, maxDistance: 5 });
 
-  // ── Lights — warm key + cool fill for depth and romance ──
-  // Warm golden key light — side, slightly above
-  instance.addLight('point', {
-    color: [1, 0.9, 0.7],
-    intensity: 50000,
-    position: [1, 2, 0],
-    falloff: 5
-  });
-
-  // Cool blue fill light — opposite side, lower
-  instance.addLight('point', {
-    color: [0.5, 0.7, 1],
-    intensity: 30000,
-    position: [-1, 0.5, 1],
-    falloff: 4
-  });
-
-  // Subtle warm backlight for glass rim lighting
-  instance.addLight('point', {
-    color: [1, 0.85, 0.6],
-    intensity: 20000,
-    position: [0, 1.5, -1.5],
-    falloff: 3
-  });
-
-  // ── Cinematic camera intro animation ──
-  instance.animateCamera({
-    distance: 2.5,
-    height: 1,
-    angle: 0,
-    duration: 3000
-  });
+  // ── Camera position ──
+  instance._orbitRadius = 2.5;
+  instance._orbitHeight = 1;
+  instance._angle = 0;
 
   console.log("SceneView v3.5.1: Garden postcard loaded");
   console.log("  Post-processing: bloom, vignette, subtle DOF, MSAA 4x");
