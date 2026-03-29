@@ -112,11 +112,7 @@ fun Context.getResourceUri(resId: Int): String {
     return "${ContentResolver.SCHEME_ANDROID_RESOURCE}://$packageName/$resId"
 }
 
-fun InputStream.toByteArray() = use {
-    ByteArray(this.available()).apply {
-        read(this)
-    }
-}
+fun InputStream.toByteArray() = use { readBytes() }
 
 fun ByteBuffer.clone() = ByteBuffer.allocate(this@clone.capacity()).apply {
     order(ByteOrder.nativeOrder())

@@ -29,10 +29,10 @@ import java.nio.Buffer
  * KTX is a simple container format that makes it easy to bundle miplevels and cubemap faces into a
  * single file.
  *
- * Consuming the content of an HDR file and produces a [Texture] object to enerates a prefiltered
- * indirect light cubemap with specular filter is a GPU based implementation of the specular
+ * Consuming the content of an HDR file produces a [Texture] object and generates a prefiltered
+ * indirect light cubemap. The specular filter is a GPU-based implementation of the specular
  * probe pre-integration filter.
- * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
+ * ** Launch the heavier computation. Expect 100-200ms on the GPU.**
  */
 class EnvironmentLoader(
     val engine: Engine,
@@ -64,7 +64,7 @@ class EnvironmentLoader(
      * @param buffer The content of the HDR File.
      * @param indirectLightSpecularFilter Generates a prefiltered indirect light cubemap.
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
+     * ** Launch the heavier computation. Expect 100-200ms on the GPU.**
      * @param textureOptions texture loader options
      * @param createSkybox Disable the skybox creation if you don't need it.
      *
@@ -119,7 +119,7 @@ class EnvironmentLoader(
      * @param assetFileLocation The HDR asset file location.
      * @param indirectLightSpecularFilter Generates a prefiltered indirect light cubemap.
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
+     * ** Launch the heavier computation. Expect 100-200ms on the GPU.**
      * @param textureOptions texture loader options
      * @param createSkybox Disable the skybox creation if you don't need it.
      *
@@ -147,7 +147,7 @@ class EnvironmentLoader(
      * @param rawResId The HDR File raw resource id.
      * @param indirectLightSpecularFilter Generates a prefiltered indirect light cubemap.
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
+     * ** Launch the heavier computation. Expect 100-200ms on the GPU.**
      * @param textureOptions texture loader options
      * @param createSkybox Disable the skybox creation if you don't need it.
      *
@@ -175,7 +175,7 @@ class EnvironmentLoader(
      * @param file The HDR File.
      * @param indirectLightSpecularFilter Generates a prefiltered indirect light cubemap.
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
+     * ** Launch the heavier computation. Expect 100-200ms on the GPU.**
      * @param textureOptions texture loader options
      * @param createSkybox Disable the skybox creation if you don't need it.
      *
@@ -203,7 +203,7 @@ class EnvironmentLoader(
      * @param url The HDR File url.
      * @param indirectLightSpecularFilter Generates a prefiltered indirect light cubemap.
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
+     * ** Launch the heavier computation. Expect 100-200ms on the GPU.**
      * @param textureOptions texture loader options
      * @param createSkybox Disable the skybox creation if you don't need it.
      *
@@ -359,7 +359,7 @@ class EnvironmentLoader(
      * @param url The HDR File url.
      * @param indirectLightSpecularFilter Generates a prefiltered indirect light cubemap.
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
-     * ** Launch the heaver computation. Expect 100-100ms on the GPU.**
+     * ** Launch the heavier computation. Expect 100-200ms on the GPU.**
      * @param textureOptions texture loader options
      * @param createSkybox Disable the skybox creation if you don't need it.
      *
