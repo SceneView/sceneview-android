@@ -20,7 +20,34 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'VERSION EDITED — Remember to update ALL version locations: gradle.properties (root + modules), mcp/package.json, llms.txt, README.md, CLAUDE.md, website'"
+            "command": "echo 'VERSION EDITED — Run: .claude/scripts/sync-versions.sh to check ALL 30+ version locations. Key files: gradle.properties (root+modules), mcp/package.json, llms.txt, README.md, CLAUDE.md, website-static/index.html, docs/docs/*.md, flutter pubspec+podspec, sceneview-web/package.json'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/package.json)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'NPM PACKAGE EDITED — Check version alignment: mcp/package.json, sceneview-web/package.json, react-native/*/package.json should align with gradle.properties VERSION_NAME'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/pubspec.yaml)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'FLUTTER PUBSPEC EDITED — Also check: flutter/.../android/build.gradle version, flutter/.../ios/*.podspec version'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/Package.swift)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'SWIFT PACKAGE EDITED — SPM version comes from git tags (vX.Y.Z), not Package.swift. Ensure platform requirements are still correct.'"
           }
         ]
       },
@@ -29,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'ANDROID API CHANGED — Check if corresponding change is needed in: SceneViewSwift/, sceneview-web/, llms.txt'"
+            "command": "echo 'ANDROID API CHANGED — Check if corresponding change is needed in: SceneViewSwift/, sceneview-web/, llms.txt, mcp/src/ tools'"
           }
         ]
       },
@@ -38,7 +65,34 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'SWIFT API CHANGED — Check if corresponding change is needed in: sceneview/ (Android), llms.txt (iOS section)'"
+            "command": "echo 'SWIFT API CHANGED — Check if corresponding change is needed in: sceneview/ (Android), llms.txt (iOS section), mcp/src/ tools'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/sceneview-web/src/*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'WEB API CHANGED — Check if corresponding change is needed in: sceneview/ (Android), llms.txt (Web section)'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/sceneview-core/src/*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'KMP CORE CHANGED — This affects ALL platforms: Android, iOS, Web. Run tests on all targets: :sceneview-core:jsTest, :sceneview-core:androidTest'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit(*/.github/workflows/*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'CI WORKFLOW CHANGED — Verify: trigger conditions, secrets used, timeout values, concurrency groups'"
           }
         ]
       },
@@ -47,7 +101,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'PUSHED — Remember: if this is a release, update CLAUDE.md session state and website version references'"
+            "command": "echo 'PUSHED — Remember: if this is a release, update CLAUDE.md session state and website version references. Run .claude/scripts/sync-versions.sh to verify.'"
           }
         ]
       }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sync-versions.sh — Scan all version declarations, report mismatches, optionally fix them
+# sync-versions.sh — Scan ALL version declarations across the entire project, report mismatches, optionally fix them
 #
 # Usage:
 #   ./sync-versions.sh          # Report only
@@ -15,6 +15,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 FIX_MODE="${1:-}"
 ERRORS=0
+WARNINGS=0
 
 # Colors
 RED='\033[0;31m'
@@ -35,101 +36,238 @@ fi
 echo -e "Source of truth (gradle.properties): ${GREEN}$SOURCE_VERSION${NC}"
 echo ""
 
-# ─── Version locations ─────────────────────────────────────────────────────
-declare -A VERSION_MAP
+# ─── Helper: check a version ─────────────────────────────────────────────
+declare -a LOCATIONS=()
+declare -a VERSIONS=()
+declare -a STATUSES=()
 
-# Gradle properties (Android)
+add_check() {
+    local location="$1"
+    local version="$2"
+    local critical="${3:-true}" # true = MISMATCH is error, false = WARN only
+
+    LOCATIONS+=("$location")
+    VERSIONS+=("$version")
+
+    if [ "$version" = "$SOURCE_VERSION" ]; then
+        STATUSES+=("OK")
+    elif [ "$version" = "MISSING" ] || [ "$version" = "NOT FOUND" ] || [ "$version" = "" ]; then
+        STATUSES+=("SKIP")
+        WARNINGS=$((WARNINGS + 1))
+    elif [ "$critical" = "true" ]; then
+        STATUSES+=("MISMATCH")
+        ERRORS=$((ERRORS + 1))
+    else
+        STATUSES+=("WARN")
+        WARNINGS=$((WARNINGS + 1))
+    fi
+}
+
+# ─── 1. Gradle properties (Android modules) ──────────────────────────────
+echo -e "${CYAN}--- Gradle Modules ---${NC}"
 for module in sceneview arsceneview sceneview-core; do
     PROPS="$REPO_ROOT/$module/gradle.properties"
     if [ -f "$PROPS" ]; then
         V=$(grep '^VERSION_NAME=' "$PROPS" 2>/dev/null | cut -d= -f2 || echo "MISSING")
-        VERSION_MAP["$module/gradle.properties"]="$V"
+        add_check "$module/gradle.properties" "$V"
     fi
 done
 
-# npm packages
+# ─── 2. npm packages ────────────────────────────────────────────────────
+echo -e "${CYAN}--- npm Packages ---${NC}"
 for pkg in mcp sceneview-web react-native/react-native-sceneview; do
     PKG_JSON="$REPO_ROOT/$pkg/package.json"
     if [ -f "$PKG_JSON" ]; then
         V=$(python3 -c "import json; print(json.load(open('$PKG_JSON'))['version'])" 2>/dev/null || echo "MISSING")
-        VERSION_MAP["$pkg/package.json"]="$V"
+        # MCP may have its own version cycle
+        if [ "$pkg" = "mcp" ]; then
+            add_check "$pkg/package.json" "$V" "false"
+        else
+            add_check "$pkg/package.json" "$V"
+        fi
     fi
 done
 
-# Flutter pubspec
+# ─── 3. Flutter ──────────────────────────────────────────────────────────
+echo -e "${CYAN}--- Flutter ---${NC}"
+# Main plugin
 PUBSPEC="$REPO_ROOT/flutter/sceneview_flutter/pubspec.yaml"
 if [ -f "$PUBSPEC" ]; then
     V=$(grep '^version:' "$PUBSPEC" | awk '{print $2}' || echo "MISSING")
-    VERSION_MAP["flutter/sceneview_flutter/pubspec.yaml"]="$V"
+    add_check "flutter/sceneview_flutter/pubspec.yaml" "$V"
 fi
 
-# llms.txt (check for version string near top)
+# Flutter Android build.gradle
+FLUTTER_ANDROID_GRADLE="$REPO_ROOT/flutter/sceneview_flutter/android/build.gradle"
+if [ -f "$FLUTTER_ANDROID_GRADLE" ]; then
+    V=$(grep "^version " "$FLUTTER_ANDROID_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    add_check "flutter/.../android/build.gradle" "$V"
+fi
+
+# Flutter iOS podspec
+PODSPEC="$REPO_ROOT/flutter/sceneview_flutter/ios/sceneview_flutter.podspec"
+if [ -f "$PODSPEC" ]; then
+    V=$(grep "s\.version" "$PODSPEC" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    add_check "flutter/.../ios/sceneview_flutter.podspec" "$V"
+fi
+
+# Flutter example pubspec
+FLUTTER_EXAMPLE="$REPO_ROOT/samples/flutter-demo/pubspec.yaml"
+if [ -f "$FLUTTER_EXAMPLE" ]; then
+    V=$(grep '^version:' "$FLUTTER_EXAMPLE" | awk '{print $2}' || echo "NOT FOUND")
+    add_check "samples/flutter-demo/pubspec.yaml" "$V" "false"
+fi
+
+# Flutter CHANGELOG
+FLUTTER_CL="$REPO_ROOT/flutter/sceneview_flutter/CHANGELOG.md"
+if [ -f "$FLUTTER_CL" ]; then
+    V=$(grep -m1 '^## ' "$FLUTTER_CL" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    add_check "flutter/.../CHANGELOG.md" "$V" "false"
+fi
+
+# ─── 4. Documentation ───────────────────────────────────────────────────
+echo -e "${CYAN}--- Documentation ---${NC}"
+
+# llms.txt (root)
 LLMS="$REPO_ROOT/llms.txt"
 if [ -f "$LLMS" ]; then
-    # Look for the Maven artifact version pattern
     V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$LLMS" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
-    VERSION_MAP["llms.txt"]="$V"
+    add_check "llms.txt" "$V"
 fi
 
-# CLAUDE.md (check the "When writing any SceneView code" section)
+# CLAUDE.md (code examples section)
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 if [ -f "$CLAUDE_MD" ]; then
     V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$CLAUDE_MD" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
-    VERSION_MAP["CLAUDE.md (code examples)"]="$V"
+    add_check "CLAUDE.md (code examples)" "$V"
 fi
 
 # README.md
 README="$REPO_ROOT/README.md"
 if [ -f "$README" ]; then
     V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$README" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
-    VERSION_MAP["README.md"]="$V"
+    add_check "README.md (install)" "$V"
 fi
 
 # CHANGELOG.md (top entry version)
 CHANGELOG="$REPO_ROOT/CHANGELOG.md"
 if [ -f "$CHANGELOG" ]; then
     V=$(grep -m1 '^## ' "$CHANGELOG" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
-    VERSION_MAP["CHANGELOG.md (latest entry)"]="$V"
+    add_check "CHANGELOG.md (latest entry)" "$V" "false"
+fi
+
+# Module.md files
+for modmd in sceneview/Module.md arsceneview/Module.md; do
+    F="$REPO_ROOT/$modmd"
+    if [ -f "$F" ]; then
+        V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$F" | head -1 || echo "NOT FOUND")
+        add_check "$modmd" "$V" "false"
+    fi
+done
+
+# ─── 5. Docs site (MkDocs) ──────────────────────────────────────────────
+echo -e "${CYAN}--- Docs Site ---${NC}"
+for docfile in docs/docs/index.md docs/docs/quickstart.md docs/docs/llms-full.txt docs/docs/cheatsheet.md docs/docs/platforms.md docs/docs/migration.md docs/docs/android-xr.md; do
+    F="$REPO_ROOT/$docfile"
+    if [ -f "$F" ]; then
+        V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$F" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+        if [ "$V" != "NOT FOUND" ]; then
+            add_check "$docfile" "$V"
+        fi
+    fi
+done
+
+# docs/docs/llms.txt (separate from root llms.txt)
+DOCS_LLMS="$REPO_ROOT/docs/docs/llms.txt"
+if [ -f "$DOCS_LLMS" ]; then
+    V=$(grep -m1 'io\.github\.sceneview:sceneview:' "$DOCS_LLMS" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    if [ "$V" != "NOT FOUND" ]; then
+        add_check "docs/docs/llms.txt" "$V"
+    fi
+fi
+
+# ─── 6. Android demo app ────────────────────────────────────────────────
+echo -e "${CYAN}--- Sample Apps ---${NC}"
+DEMO_GRADLE="$REPO_ROOT/samples/android-demo/build.gradle"
+if [ -f "$DEMO_GRADLE" ]; then
+    V=$(grep "versionName" "$DEMO_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    add_check "samples/android-demo versionName" "$V" "false"
+fi
+
+# ─── 7. MCP source/dist version ─────────────────────────────────────────
+echo -e "${CYAN}--- MCP Source/Dist ---${NC}"
+MCP_INDEX="$REPO_ROOT/mcp/src/index.ts"
+if [ -f "$MCP_INDEX" ]; then
+    V=$(grep -m1 'version:' "$MCP_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    add_check "mcp/src/index.ts" "$V" "false"
+fi
+MCP_DIST="$REPO_ROOT/mcp/dist/index.js"
+if [ -f "$MCP_DIST" ]; then
+    V=$(grep -m1 'version:' "$MCP_DIST" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    add_check "mcp/dist/index.js" "$V" "false"
+fi
+
+# ─── 8. iOS demo ────────────────────────────────────────────────────────
+IOS_ABOUT="$REPO_ROOT/SceneViewSwift/Examples/SceneViewDemo/SceneViewDemo/Views/AboutView.swift"
+if [ -f "$IOS_ABOUT" ]; then
+    V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$IOS_ABOUT" | head -1 || echo "NOT FOUND")
+    if [ "$V" != "NOT FOUND" ]; then
+        add_check "SceneViewSwift/.../AboutView.swift" "$V" "false"
+    fi
+fi
+
+# ─── 9. Website (static) ────────────────────────────────────────────────
+echo -e "${CYAN}--- Website Static ---${NC}"
+WEBSITE_INDEX="$REPO_ROOT/website-static/index.html"
+if [ -f "$WEBSITE_INDEX" ]; then
+    V=$(grep 'softwareVersion' "$WEBSITE_INDEX" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+    add_check "website-static/index.html (softwareVersion)" "$V"
+fi
+
+# ─── 10. Website (deployed — separate repo) ─────────────────────────────
+WEBSITE_DIR="$REPO_ROOT/../sceneview.github.io"
+if [ -d "$WEBSITE_DIR" ]; then
+    WEBSITE_DEPLOYED="$WEBSITE_DIR/index.html"
+    if [ -f "$WEBSITE_DEPLOYED" ]; then
+        V=$(grep 'softwareVersion' "$WEBSITE_DEPLOYED" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "NOT FOUND")
+        if [ "$V" != "NOT FOUND" ]; then
+            add_check "sceneview.github.io/index.html" "$V"
+        fi
+    fi
+fi
+
+# ─── 11. Bug report template ────────────────────────────────────────────
+BUG_TEMPLATE="$REPO_ROOT/.github/ISSUE_TEMPLATE/bug_report.yml"
+if [ -f "$BUG_TEMPLATE" ]; then
+    V=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$BUG_TEMPLATE" | head -1 || echo "NOT FOUND")
+    if [ "$V" != "NOT FOUND" ]; then
+        add_check ".github/ISSUE_TEMPLATE/bug_report.yml" "$V" "false"
+    fi
 fi
 
 # ─── Report ────────────────────────────────────────────────────────────────
-echo -e "${CYAN}Version Locations Report:${NC}"
 echo ""
-printf "  %-50s %-12s %-10s\n" "Location" "Version" "Status"
-printf "  %-50s %-12s %-10s\n" "--------" "-------" "------"
+echo -e "${CYAN}=== Version Alignment Report ===${NC}"
+echo ""
+printf "  %-55s %-12s %-10s\n" "Location" "Version" "Status"
+printf "  %-55s %-12s %-10s\n" "--------" "-------" "------"
 
-for location in $(echo "${!VERSION_MAP[@]}" | tr ' ' '\n' | sort); do
-    V="${VERSION_MAP[$location]}"
-    if [ "$V" = "$SOURCE_VERSION" ]; then
-        printf "  %-50s %-12s ${GREEN}%-10s${NC}\n" "$location" "$V" "OK"
-    elif [ "$V" = "MISSING" ] || [ "$V" = "NOT FOUND" ]; then
-        printf "  %-50s %-12s ${YELLOW}%-10s${NC}\n" "$location" "$V" "SKIP"
-    else
-        printf "  %-50s %-12s ${RED}%-10s${NC}\n" "$location" "$V" "MISMATCH"
-        ERRORS=$((ERRORS + 1))
-    fi
+for i in "${!LOCATIONS[@]}"; do
+    LOC="${LOCATIONS[$i]}"
+    V="${VERSIONS[$i]}"
+    S="${STATUSES[$i]}"
+
+    case "$S" in
+        OK)       printf "  %-55s %-12s ${GREEN}%-10s${NC}\n" "$LOC" "$V" "OK" ;;
+        MISMATCH) printf "  %-55s %-12s ${RED}%-10s${NC}\n" "$LOC" "$V" "MISMATCH" ;;
+        WARN)     printf "  %-55s %-12s ${YELLOW}%-10s${NC}\n" "$LOC" "$V" "WARN" ;;
+        SKIP)     printf "  %-55s %-12s ${YELLOW}%-10s${NC}\n" "$LOC" "$V" "SKIP" ;;
+    esac
 done
 
 echo ""
 
-# ─── Website check ─────────────────────────────────────────────────────────
-WEBSITE_DIR="$REPO_ROOT/../sceneview.github.io"
-if [ -d "$WEBSITE_DIR" ]; then
-    echo -e "${CYAN}Website Version Check:${NC}"
-    WEBSITE_INDEX="$WEBSITE_DIR/index.html"
-    if [ -f "$WEBSITE_INDEX" ]; then
-        WV=$(grep -oE 'sceneview:[0-9]+\.[0-9]+\.[0-9]+' "$WEBSITE_INDEX" | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "NOT FOUND")
-        if [ "$WV" = "$SOURCE_VERSION" ]; then
-            printf "  %-50s %-12s ${GREEN}%-10s${NC}\n" "website index.html" "$WV" "OK"
-        elif [ "$WV" != "NOT FOUND" ]; then
-            printf "  %-50s %-12s ${RED}%-10s${NC}\n" "website index.html" "$WV" "MISMATCH"
-            ERRORS=$((ERRORS + 1))
-        fi
-    fi
-    echo ""
-fi
-
-# ─── Fix mode ──────────────────────────────────────────────────────────────
+# ─── Fix mode ──────────────────────────────────────────────────────────
 if [ "$FIX_MODE" = "--fix" ] && [ "$ERRORS" -gt 0 ]; then
     echo -e "${YELLOW}Applying fixes...${NC}"
 
@@ -166,6 +304,7 @@ with open('$PKG_JSON', 'w') as f:
     done
 
     # Fix Flutter pubspec.yaml
+    PUBSPEC="$REPO_ROOT/flutter/sceneview_flutter/pubspec.yaml"
     if [ -f "$PUBSPEC" ]; then
         CURRENT=$(grep '^version:' "$PUBSPEC" | awk '{print $2}')
         if [ "$CURRENT" != "$SOURCE_VERSION" ]; then
@@ -174,13 +313,68 @@ with open('$PKG_JSON', 'w') as f:
         fi
     fi
 
+    # Fix Flutter Android build.gradle
+    if [ -f "$FLUTTER_ANDROID_GRADLE" ]; then
+        CURRENT=$(grep "^version " "$FLUTTER_ANDROID_GRADLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        if [ -n "$CURRENT" ] && [ "$CURRENT" != "$SOURCE_VERSION" ]; then
+            sed -i '' "s/^version '$CURRENT'/version '$SOURCE_VERSION'/" "$FLUTTER_ANDROID_GRADLE"
+            echo -e "  Fixed: flutter/.../android/build.gradle ($CURRENT -> $SOURCE_VERSION)"
+        fi
+    fi
+
+    # Fix Flutter iOS podspec
+    if [ -f "$PODSPEC" ]; then
+        CURRENT=$(grep "s\.version" "$PODSPEC" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        if [ -n "$CURRENT" ] && [ "$CURRENT" != "$SOURCE_VERSION" ]; then
+            sed -i '' "s/s\.version *= *'$CURRENT'/s.version          = '$SOURCE_VERSION'/" "$PODSPEC"
+            echo -e "  Fixed: flutter/.../ios/sceneview_flutter.podspec ($CURRENT -> $SOURCE_VERSION)"
+        fi
+    fi
+
+    # Fix docs files (replace old version pattern in Maven artifact refs)
+    OLD_VERSIONS=$(for i in "${!LOCATIONS[@]}"; do
+        [ "${STATUSES[$i]}" = "MISMATCH" ] && echo "${VERSIONS[$i]}"
+    done | sort -u)
+
+    for OLD_V in $OLD_VERSIONS; do
+        [ "$OLD_V" = "$SOURCE_VERSION" ] && continue
+        # Fix docs that contain Maven artifact version refs
+        for docfile in llms.txt README.md CLAUDE.md docs/docs/index.md docs/docs/quickstart.md docs/docs/llms-full.txt docs/docs/cheatsheet.md docs/docs/platforms.md docs/docs/migration.md docs/docs/android-xr.md; do
+            F="$REPO_ROOT/$docfile"
+            if [ -f "$F" ] && grep -q "io\.github\.sceneview:.*$OLD_V" "$F" 2>/dev/null; then
+                sed -i '' "s/io\.github\.sceneview:\([^:]*\):$OLD_V/io.github.sceneview:\1:$SOURCE_VERSION/g" "$F"
+                echo -e "  Fixed: $docfile (artifact refs $OLD_V -> $SOURCE_VERSION)"
+            fi
+        done
+    done
+
+    # Fix website-static/index.html version refs
+    if [ -f "$WEBSITE_INDEX" ]; then
+        for OLD_V in $OLD_VERSIONS; do
+            [ "$OLD_V" = "$SOURCE_VERSION" ] && continue
+            if grep -q "$OLD_V" "$WEBSITE_INDEX" 2>/dev/null; then
+                sed -i '' "s/$OLD_V/$SOURCE_VERSION/g" "$WEBSITE_INDEX"
+                echo -e "  Fixed: website-static/index.html ($OLD_V -> $SOURCE_VERSION)"
+            fi
+        done
+    fi
+
     echo ""
     echo -e "${GREEN}Fixes applied. Re-run without --fix to verify.${NC}"
 fi
 
-# ─── Summary ───────────────────────────────────────────────────────────────
-if [ "$ERRORS" -eq 0 ]; then
+# ─── Summary ───────────────────────────────────────────────────────────
+echo -e "${CYAN}=== Summary ===${NC}"
+echo "  Checks: ${#LOCATIONS[@]}"
+echo "  Errors (MISMATCH): $ERRORS"
+echo "  Warnings: $WARNINGS"
+echo ""
+
+if [ "$ERRORS" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
     echo -e "${GREEN}All versions are aligned to $SOURCE_VERSION${NC}"
+    exit 0
+elif [ "$ERRORS" -eq 0 ]; then
+    echo -e "${YELLOW}All critical versions aligned. $WARNINGS warning(s) — review above.${NC}"
     exit 0
 else
     echo -e "${RED}$ERRORS version mismatch(es) found.${NC}"

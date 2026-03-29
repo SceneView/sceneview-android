@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# release-checklist.sh — Pre-release validation
+# release-checklist.sh — Pre-release validation across ALL platforms
 #
 # Checks everything that must be true before tagging a release.
 # Exit code 0 = ready to release, non-zero = blockers found.
@@ -34,17 +34,17 @@ check() {
     local detail="$3"
 
     case "$status" in
-        PASS) printf "  ${GREEN}[PASS]${NC}  %-45s %s\n" "$name" "$detail" ;;
-        FAIL) printf "  ${RED}[FAIL]${NC}  %-45s %s\n" "$name" "$detail"; BLOCKERS=$((BLOCKERS + 1)) ;;
-        WARN) printf "  ${YELLOW}[WARN]${NC}  %-45s %s\n" "$name" "$detail"; WARNINGS=$((WARNINGS + 1)) ;;
+        PASS) printf "  ${GREEN}[PASS]${NC}  %-50s %s\n" "$name" "$detail" ;;
+        FAIL) printf "  ${RED}[FAIL]${NC}  %-50s %s\n" "$name" "$detail"; BLOCKERS=$((BLOCKERS + 1)) ;;
+        WARN) printf "  ${YELLOW}[WARN]${NC}  %-50s %s\n" "$name" "$detail"; WARNINGS=$((WARNINGS + 1)) ;;
     esac
 }
 
 # ─── 1. Version alignment ─────────────────────────────────────────────────
-echo -e "${CYAN}--- Version Alignment ---${NC}"
+echo -e "${CYAN}--- Version Alignment (Gradle) ---${NC}"
 
 ROOT_V=$(grep '^VERSION_NAME=' gradle.properties | cut -d= -f2)
-[ "$ROOT_V" = "$TARGET_VERSION" ] && check "gradle.properties" "PASS" "$ROOT_V" || check "gradle.properties" "FAIL" "Expected $TARGET_VERSION, got $ROOT_V"
+[ "$ROOT_V" = "$TARGET_VERSION" ] && check "gradle.properties (root)" "PASS" "$ROOT_V" || check "gradle.properties (root)" "FAIL" "Expected $TARGET_VERSION, got $ROOT_V"
 
 for module in sceneview arsceneview sceneview-core; do
     PROPS="$module/gradle.properties"
@@ -53,28 +53,88 @@ for module in sceneview arsceneview sceneview-core; do
         [ "$V" = "$TARGET_VERSION" ] && check "$PROPS" "PASS" "$V" || check "$PROPS" "FAIL" "Expected $TARGET_VERSION, got $V"
     fi
 done
+echo ""
+
+# ─── 2. npm packages ────────────────────────────────────────────────��───
+echo -e "${CYAN}--- npm Packages ---${NC}"
 
 MCP_V=$(python3 -c "import json; print(json.load(open('mcp/package.json'))['version'])" 2>/dev/null || echo "MISSING")
-[ "$MCP_V" = "$TARGET_VERSION" ] && check "mcp/package.json" "PASS" "$MCP_V" || check "mcp/package.json" "WARN" "Expected $TARGET_VERSION, got $MCP_V (MCP may have own version)"
+check "mcp/package.json" "WARN" "v$MCP_V (MCP may have own version cycle)"
+
+if [ -f "sceneview-web/package.json" ]; then
+    WEB_V=$(python3 -c "import json; print(json.load(open('sceneview-web/package.json'))['version'])" 2>/dev/null || echo "MISSING")
+    [ "$WEB_V" = "$TARGET_VERSION" ] && check "sceneview-web/package.json" "PASS" "$WEB_V" || check "sceneview-web/package.json" "WARN" "Expected $TARGET_VERSION, got $WEB_V"
+fi
+
+if [ -f "react-native/react-native-sceneview/package.json" ]; then
+    RN_V=$(python3 -c "import json; print(json.load(open('react-native/react-native-sceneview/package.json'))['version'])" 2>/dev/null || echo "MISSING")
+    [ "$RN_V" = "$TARGET_VERSION" ] && check "react-native package.json" "PASS" "$RN_V" || check "react-native package.json" "WARN" "Got $RN_V"
+fi
+echo ""
+
+# ─── 3. Flutter ──────────────────────────────────────────────────────────
+echo -e "${CYAN}--- Flutter ---${NC}"
+
+if [ -f "flutter/sceneview_flutter/pubspec.yaml" ]; then
+    FL_V=$(grep '^version:' flutter/sceneview_flutter/pubspec.yaml | awk '{print $2}')
+    [ "$FL_V" = "$TARGET_VERSION" ] && check "flutter pubspec.yaml" "PASS" "$FL_V" || check "flutter pubspec.yaml" "WARN" "Got $FL_V"
+fi
+
+if [ -f "flutter/sceneview_flutter/android/build.gradle" ]; then
+    FLA_V=$(grep "^version " flutter/sceneview_flutter/android/build.gradle | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "?")
+    [ "$FLA_V" = "$TARGET_VERSION" ] && check "flutter android build.gradle" "PASS" "$FLA_V" || check "flutter android build.gradle" "WARN" "Got $FLA_V"
+fi
+
+if [ -f "flutter/sceneview_flutter/ios/sceneview_flutter.podspec" ]; then
+    FLI_V=$(grep "s\.version" flutter/sceneview_flutter/ios/sceneview_flutter.podspec | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "?")
+    [ "$FLI_V" = "$TARGET_VERSION" ] && check "flutter podspec" "PASS" "$FLI_V" || check "flutter podspec" "WARN" "Got $FLI_V"
+fi
+echo ""
+
+# ─── 4. Documentation ───────────────────────────────────────────────────
+echo -e "${CYAN}--- Documentation ---${NC}"
 
 LLMS_V=$(grep -m1 'io\.github\.sceneview:sceneview:' llms.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
 [ "$LLMS_V" = "$TARGET_VERSION" ] && check "llms.txt" "PASS" "$LLMS_V" || check "llms.txt" "FAIL" "Expected $TARGET_VERSION, got $LLMS_V"
 
+README_V=$(grep -m1 'io\.github\.sceneview:sceneview:' README.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
+[ "$README_V" = "$TARGET_VERSION" ] && check "README.md" "PASS" "$README_V" || check "README.md" "FAIL" "Expected $TARGET_VERSION, got $README_V"
+
+CLAUDE_V=$(grep -m1 'io\.github\.sceneview:sceneview:' CLAUDE.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
+[ "$CLAUDE_V" = "$TARGET_VERSION" ] && check "CLAUDE.md" "PASS" "$CLAUDE_V" || check "CLAUDE.md" "FAIL" "Expected $TARGET_VERSION, got $CLAUDE_V"
+
+# Docs site files
+for docfile in docs/docs/index.md docs/docs/quickstart.md docs/docs/llms-full.txt docs/docs/cheatsheet.md docs/docs/platforms.md; do
+    if [ -f "$docfile" ]; then
+        DV=$(grep -m1 'io\.github\.sceneview:sceneview:' "$docfile" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "N/A")
+        if [ "$DV" != "N/A" ]; then
+            [ "$DV" = "$TARGET_VERSION" ] && check "$docfile" "PASS" "$DV" || check "$docfile" "WARN" "Got $DV"
+        fi
+    fi
+done
 echo ""
 
-# ─── 2. CHANGELOG ─────────────────────────────────────────────────────────
+# ─── 5. Website ─────────────────────────────────────────────────────────
+echo -e "${CYAN}--- Website ---${NC}"
+
+if [ -f "website-static/index.html" ]; then
+    WV=$(grep 'softwareVersion' website-static/index.html | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "N/A")
+    [ "$WV" = "$TARGET_VERSION" ] && check "website-static/index.html" "PASS" "$WV" || check "website-static/index.html" "WARN" "Got $WV"
+fi
+echo ""
+
+# ─── 6. CHANGELOG ───────────────────────────────────────────────────────
 echo -e "${CYAN}--- CHANGELOG ---${NC}"
 
 if [ -f "CHANGELOG.md" ]; then
     CL_V=$(grep -m1 '^## ' CHANGELOG.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
-    [ "$CL_V" = "$TARGET_VERSION" ] && check "CHANGELOG has $TARGET_VERSION entry" "PASS" "" || check "CHANGELOG has $TARGET_VERSION entry" "FAIL" "Latest entry is $CL_V"
+    [ "$CL_V" = "$TARGET_VERSION" ] && check "CHANGELOG entry" "PASS" "" || check "CHANGELOG entry" "FAIL" "Latest entry is $CL_V"
 else
     check "CHANGELOG.md exists" "FAIL" "File not found"
 fi
-
 echo ""
 
-# ─── 3. Git state ─────────────────────────────────────────────────────────
+# ─── 7. Git state ───────────────────────────────────────────────────────
 echo -e "${CYAN}--- Git State ---${NC}"
 
 DIRTY=$(git status --porcelain | grep -v '??' | wc -l | tr -d ' ')
@@ -84,11 +144,10 @@ BRANCH=$(git branch --show-current)
 check "Current branch" "PASS" "$BRANCH"
 
 TAG_EXISTS=$(git tag -l "v$TARGET_VERSION" | wc -l | tr -d ' ')
-[ "$TAG_EXISTS" -eq 0 ] && check "Tag v$TARGET_VERSION not yet created" "PASS" "" || check "Tag v$TARGET_VERSION already exists" "WARN" "Tag exists — re-tagging will require force"
-
+[ "$TAG_EXISTS" -eq 0 ] && check "Tag v$TARGET_VERSION not yet created" "PASS" "" || check "Tag already exists" "WARN" "v$TARGET_VERSION"
 echo ""
 
-# ─── 4. Build check ───────────────────────────────────────────────────────
+# ─── 8. Build check ────────────────────────────────────────────────────
 echo -e "${CYAN}--- Build Check ---${NC}"
 
 if [ -f "gradlew" ]; then
@@ -101,10 +160,9 @@ if [ -f "gradlew" ]; then
 else
     check "Gradle wrapper" "FAIL" "gradlew not found"
 fi
-
 echo ""
 
-# ─── 5. Tests ──────────────────────────────────────────────────────────────
+# ─── 9. Tests ──────────────────────────────────────────────────────────
 echo -e "${CYAN}--- Tests ---${NC}"
 
 if [ -d "mcp" ] && [ -f "mcp/package.json" ]; then
@@ -115,10 +173,9 @@ if [ -d "mcp" ] && [ -f "mcp/package.json" ]; then
         check "MCP tests" "FAIL" "Tests failed"
     fi
 fi
-
 echo ""
 
-# ─── 6. Security ──────────────────────────────────────────────────────────
+# ─── 10. Security ─────────────────────────────────────────────────────
 echo -e "${CYAN}--- Security ---${NC}"
 
 SECRETS_FOUND=0
@@ -133,35 +190,42 @@ done
 
 # Check for API keys in source
 API_KEY_HITS=$(grep -rn "AIza\|sk-\|AKIA\|ghp_\|npm_" --include="*.kt" --include="*.swift" --include="*.ts" --include="*.js" \
-    sceneview/ arsceneview/ SceneViewSwift/ mcp/src/ 2>/dev/null | grep -v "node_modules" | wc -l | tr -d ' ')
-[ "$API_KEY_HITS" -eq 0 ] && check "No hardcoded API keys in source" "PASS" "" || check "No hardcoded API keys in source" "FAIL" "$API_KEY_HITS potential key(s) found"
-
+    sceneview/ arsceneview/ SceneViewSwift/ mcp/src/ 2>/dev/null | grep -v "node_modules\|\.test\." | wc -l | tr -d ' ')
+[ "$API_KEY_HITS" -eq 0 ] && check "No hardcoded API keys" "PASS" "" || check "No hardcoded API keys" "FAIL" "$API_KEY_HITS hit(s)"
 echo ""
 
-# ─── 7. MCP dist freshness ────────────────────────────────────────────────
+# ─── 11. MCP dist freshness ────────────────────────────────────────────
 echo -e "${CYAN}--- MCP Dist Freshness ---${NC}"
 
 if [ -f "mcp/src/index.ts" ] && [ -f "mcp/dist/index.js" ]; then
     SRC_V=$(grep -m1 'version:' mcp/src/index.ts | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
     DIST_V=$(grep -m1 'version:' mcp/dist/index.js | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "MISSING")
-    [ "$SRC_V" = "$DIST_V" ] && check "MCP src/dist version match" "PASS" "$SRC_V" || check "MCP src/dist version match" "FAIL" "src=$SRC_V dist=$DIST_V — run 'npm run prepare'"
+    [ "$SRC_V" = "$DIST_V" ] && check "MCP src/dist version match" "PASS" "$SRC_V" || check "MCP src/dist version match" "FAIL" "src=$SRC_V dist=$DIST_V — run 'cd mcp && npm run prepare'"
 else
     check "MCP dist exists" "WARN" "src or dist not found"
 fi
-
 echo ""
 
-# ─── 8. Documentation ─────────────────────────────────────────────────────
-echo -e "${CYAN}--- Documentation ---${NC}"
+# ─── 12. CI Health ──────────────────────────────────────────────────────
+echo -e "${CYAN}--- CI Health ---${NC}"
 
-[ -f "llms.txt" ] && check "llms.txt exists" "PASS" "" || check "llms.txt exists" "FAIL" ""
-[ -f "README.md" ] && check "README.md exists" "PASS" "" || check "README.md exists" "FAIL" ""
-[ -f "CLAUDE.md" ] && check "CLAUDE.md exists" "PASS" "" || check "CLAUDE.md exists" "FAIL" ""
-[ -f "CHANGELOG.md" ] && check "CHANGELOG.md exists" "PASS" "" || check "CHANGELOG.md exists" "FAIL" ""
-
+if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+    LAST_CI=$(gh run list --workflow=ci.yml --limit 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null || echo "unknown")
+    [ "$LAST_CI" = "success" ] && check "Last CI run" "PASS" "$LAST_CI" || check "Last CI run" "WARN" "$LAST_CI"
+else
+    check "CI status" "WARN" "gh CLI not available or not authenticated"
+fi
 echo ""
 
-# ─── Summary ───────────────────────────────────────────────────────────────
+# ─── 13. Essential files exist ──────────────────────────────────────────
+echo -e "${CYAN}--- Essential Files ---${NC}"
+
+for f in llms.txt README.md CLAUDE.md CHANGELOG.md LICENSE CONTRIBUTING.md SECURITY.md; do
+    [ -f "$f" ] && check "$f exists" "PASS" "" || check "$f exists" "FAIL" "Missing"
+done
+echo ""
+
+# ─── Summary ───────────────────────────────────────────────────────────
 echo -e "${CYAN}=== Release Readiness Summary ===${NC}"
 echo ""
 

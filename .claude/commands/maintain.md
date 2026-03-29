@@ -1,35 +1,59 @@
 # /maintain — SceneView daily maintenance sweep
 
-You are the autonomous maintainer of the SceneView Android SDK. Run through every section below in order. For each section, take action — don't just report. When you produce a visual artifact (screenshot, release, PR, issue comment), attach an image where possible.
+You are the autonomous maintainer of the SceneView multi-platform SDK. Run through every section below in order. For each section, take action -- don't just report.
 
 ---
 
-## 1. CI & Build health
+## 1. CI & Build health (ALL platforms)
 
-- Check the last 5 CI runs: `gh run list --limit 5`
-- If any run failed, diagnose and fix the root cause. Open a PR with the fix.
-- Build all samples locally and capture a screenshot of each on the emulator.
-  - Start emulator: `~/Library/Android/sdk/emulator/emulator -avd Pixel_9 -no-window -no-audio -gpu swiftshader_indirect -partition-size 4096`
-  - For each sample: build → install → launch → `adb screencap` → attach screenshot to the relevant GitHub release or issue.
-  - **Non-AR samples** (model-viewer, gltf-camera, camera-manipulator, autopilot-demo): screenshot locally on Pixel_9 AVD.
-  - **AR samples** (ar-model-viewer, ar-augmented-image, ar-point-cloud): DO NOT attempt locally on Apple Silicon.
-    Apple Silicon Macs only have the `darwin-aarch64` QEMU binary. ARCore's emulator APK is x86-only.
-    The ARM64 system images also expose the back camera as IDs `"1"`/`"10"` instead of `"0"` — ARCore hardcodes `"0"`.
-    AR emulator screenshots are captured automatically by the `ar-emulator` CI job on x86_64 Ubuntu (KVM).
-    Check CI artifacts for AR screenshots: `gh run list --workflow=ci.yml --limit 1`
+### Android CI
+- Check the last 5 CI runs: `gh run list --workflow=ci.yml --limit 5`
+- If any run failed, diagnose and fix the root cause.
 
-## 2. Issue triage
+### iOS CI
+- Check iOS builds: `gh run list --workflow=ios.yml --limit 3`
+- If failed, check Xcode version or SPM dependency issues.
+
+### Web/Desktop CI
+- Check web-desktop job in CI (it's part of ci.yml, web-desktop job)
+- These are continue-on-error so check logs even if "passed"
+
+### Play Store / TestFlight
+- Check Play Store deploy: `gh run list --workflow=play-store.yml --limit 3`
+- Check App Store deploy: `gh run list --workflow=app-store.yml --limit 3`
+
+### Build samples
+- Build Android samples: `./gradlew :samples:android-demo:assembleDebug :samples:android-tv-demo:assembleDebug`
+- **Non-AR samples**: screenshot locally on Pixel_9 AVD.
+- **AR samples**: DO NOT attempt locally on Apple Silicon.
+  Apple Silicon Macs only have the `darwin-aarch64` QEMU binary. ARCore's emulator APK is x86-only.
+  Check CI artifacts for AR screenshots: `gh run list --workflow=ci.yml --limit 1`
+
+## 2. Version sync
+
+```bash
+bash .claude/scripts/sync-versions.sh
+```
+
+If mismatches found:
+```bash
+bash .claude/scripts/sync-versions.sh --fix
+```
+
+This covers ALL 30+ version locations across Android, npm, Flutter, docs, website, and samples.
+
+## 3. Issue triage
 
 - List open issues: `gh issue list --limit 30`
 - For each unlabelled issue: add the correct label (`bug`, `enhancement`, `question`, `good first issue`, `wontfix`).
-- For issues with a clear fix: implement the fix, open a PR, comment on the issue with the PR link.
+- For issues with a clear fix: implement the fix, commit to main.
 - For questions: answer directly in the issue comment.
-- For issues open > 30 days with no activity: add a `stale` label and comment asking for a status update.
-- Close issues that are duplicates or already fixed; reference the fixing commit/PR.
+- For issues open > 30 days with no activity: add a `stale` label.
+- Close issues that are duplicates or already fixed.
 
-## 3. Dependency updates
+## 4. Dependency updates
 
-Check for new versions of all key dependencies:
+Check for new versions of ALL key dependencies:
 
 ```bash
 # Filament
@@ -43,56 +67,103 @@ curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | jq -r .t
 
 # AGP (latest stable)
 curl -s "https://dl.google.com/android/maven2/com/android/tools/build/gradle/maven-metadata.xml" | grep -o '<latest>[^<]*</latest>'
+
+# Compose BOM
+curl -s "https://dl.google.com/android/maven2/androidx/compose/compose-bom/maven-metadata.xml" | grep -o '<latest>[^<]*</latest>'
 ```
 
-- If a newer stable version exists, open a PR to bump it. Include the changelog link in the PR body.
-- Do NOT bump if there is already an open PR for the same dependency.
+Also check:
+- MCP SDK: `npm view @modelcontextprotocol/sdk version`
+- Vitest: `npm view vitest version`
 
-## 4. Code quality
+Compare with `gradle/libs.versions.toml` and `mcp/package.json`.
+If a newer stable version exists, note it for a potential PR.
 
-- Run lint on both library modules: `./gradlew :sceneview:lintDebug :arsceneview:lintDebug`
-- Fix any lint errors. If warnings are numerous, open an issue tracking them.
-- Check for TODO/FIXME comments added since the last maintenance run: `git log --since="1 day ago" -p | grep "+.*TODO\|+.*FIXME"`
-- If new ones were added, ensure they have a corresponding GitHub issue.
+## 5. Code quality
 
-## 5. Sample improvements
+- Run lint: `./gradlew :sceneview:lintDebug :arsceneview:lintDebug`
+- Check for TODO/FIXME: `git log --since="1 day ago" -p | grep "+.*TODO\|+.*FIXME"`
+- Run detekt if configured: `./gradlew detekt`
 
-Research what Android developers are looking for in 3D/AR:
-- Check GitHub issues and discussions for feature requests.
-- Search recent developer community trends (new Filament features, popular AR use cases).
+## 6. Cross-platform API parity
 
-Then pick **one** improvement from this priority list (in order):
-1. Polish an existing sample (better models, environment, UI, animation).
-2. Add a missing feature to an existing sample (gestures, lighting, camera modes).
-3. Create a new sample for a commonly requested use case.
+```bash
+bash .claude/scripts/cross-platform-check.sh
+```
 
-When creating or improving a sample:
-- Use high-quality, freely licensed GLB models (prefer models from KhronosGroup glTF-Sample-Assets or Sketchfab CC0).
-- Use high-quality HDR environments (prefer Poly Haven CC0 HDRIs, converted to .ktx via cmgen).
-- Build and screenshot the result on the emulator. Attach the screenshot to the commit or PR description.
+Check:
+- Android node types vs iOS node types
+- Composable functions vs SwiftUI views
+- KMP core types shared across platforms
+- llms.txt coverage of all public APIs
 
-## 6. MCP & llms.txt sync
+## 7. MCP & llms.txt sync
 
-- Check if any public API changed since last release: `git diff v3.3.0..HEAD -- sceneview/src/ arsceneview/src/ | grep "^+.*fun \|^+.*@Composable"`
+- Check if any public API changed since last release:
+```bash
+LAST_TAG=$(git tag -l 'v*' | sort -V | tail -1)
+git diff $LAST_TAG..HEAD -- sceneview/src/ arsceneview/src/ | grep "^+.*fun \|^+.*@Composable"
+```
 - If new public APIs exist, update `llms.txt` and the relevant MCP tool descriptions.
 - Run MCP tests: `cd mcp && npm test`
-- If tests fail, fix them.
+- Check MCP dist freshness (src vs dist version match)
 
-## 7. Release decision
+## 8. Flutter / React Native bridges
+
+- Check if Flutter plugin builds: look at `flutter/sceneview_flutter/` for issues
+- Check if React Native module compiles: look at `react-native/react-native-sceneview/`
+- Verify version alignment with main SDK
+
+## 9. Website check
+
+- Is `website-static/index.html` version current?
+- Is `sceneview.github.io` deployed and accessible?
+  ```bash
+  curl -s -o /dev/null -w "%{http_code}" https://sceneview.github.io/
+  ```
+- Are sceneview.js references working?
+
+## 10. Release decision
 
 Evaluate whether a new release is warranted:
-- Count meaningful commits since last tag: `git log v3.3.0..HEAD --oneline | grep -v "chore\|docs\|ci\|style" | wc -l`
-- If ≥ 5 meaningful commits, or a critical bug was fixed: propose a release (bump version, update CHANGELOG, tag).
-- If releasing: capture emulator screenshots of all samples and attach them to the GitHub Release page.
+```bash
+LAST_TAG=$(git tag -l 'v*' | sort -V | tail -1)
+echo "Last tag: $LAST_TAG"
+git log $LAST_TAG..HEAD --oneline | wc -l
+git log $LAST_TAG..HEAD --oneline | grep -v "chore\|docs\|ci\|style" | wc -l
+```
+If >= 5 meaningful commits, or a critical bug was fixed: propose a release.
 
-## 8. End-of-run summary
+## 11. Stale branch cleanup
 
-Open or update a GitHub issue titled **"Maintenance log — YYYY-MM-DD"** with:
-- ✅ / ❌ status for each section above
-- Links to any PRs opened, issues closed, releases published
-- Screenshots embedded inline
-- Next suggested focus for tomorrow
+```bash
+# Stale worktrees
+ls .claude/worktrees/ 2>/dev/null | wc -l
+# Stale remote branches
+git branch -r --no-merged main | grep -v HEAD
+```
+
+If > 5 worktrees, suggest cleanup.
+
+## 12. End-of-run summary
+
+Print a status table:
+
+| Area | Status | Notes |
+|---|---|---|
+| Android CI | OK/FAIL | ... |
+| iOS CI | OK/FAIL | ... |
+| Web CI | OK/WARN | ... |
+| Version sync | OK/FAIL | ... |
+| Open issues | X issues | ... |
+| Dependencies | OK/OUTDATED | ... |
+| Code quality | OK/WARN | ... |
+| Cross-platform parity | X gaps | ... |
+| MCP tests | OK/FAIL | ... |
+| Flutter/RN bridges | OK/WARN | ... |
+| Website | OK/FAIL | ... |
+| Release needed? | YES/NO | ... |
 
 ---
 
-**Tone:** be direct, act autonomously, don't ask for confirmation on routine tasks. Only pause and ask the user when a decision has significant risk (e.g., breaking API change, major version bump).
+**Tone:** be direct, act autonomously, don't ask for confirmation on routine tasks. Only pause and ask when a decision has significant risk (e.g., breaking API change, major version bump).
