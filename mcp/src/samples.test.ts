@@ -5,7 +5,7 @@ const ANDROID_IDS = SAMPLE_IDS.filter((id) => !SAMPLES[id].language || SAMPLES[i
 const IOS_IDS = SAMPLE_IDS.filter((id) => SAMPLES[id].language === "swift");
 
 describe("SAMPLE_IDS", () => {
-  it("contains all 28 Android sample directories", () => {
+  it("contains all 23 Android sample directories", () => {
     expect(ANDROID_IDS).toContain("model-viewer");
     expect(ANDROID_IDS).toContain("ar-model-viewer");
     expect(ANDROID_IDS).toContain("ar-augmented-image");
@@ -29,15 +29,10 @@ describe("SAMPLE_IDS", () => {
     expect(ANDROID_IDS).toContain("procedural-geometry");
     expect(ANDROID_IDS).toContain("compose-ui-3d");
     expect(ANDROID_IDS).toContain("node-hierarchy");
-    expect(ANDROID_IDS).toContain("image-node");
-    expect(ANDROID_IDS).toContain("billboard-sprite");
-    expect(ANDROID_IDS).toContain("animation-state");
-    expect(ANDROID_IDS).toContain("spring-animation");
-    expect(ANDROID_IDS).toContain("ar-surface-cursor");
-    expect(ANDROID_IDS).toHaveLength(28);
+    expect(ANDROID_IDS).toHaveLength(23);
   });
 
-  it("contains all 8 iOS samples", () => {
+  it("contains all 10 iOS samples", () => {
     expect(IOS_IDS).toContain("ios-model-viewer");
     expect(IOS_IDS).toContain("ios-ar-model-viewer");
     expect(IOS_IDS).toContain("ios-ar-augmented-image");
@@ -46,11 +41,13 @@ describe("SAMPLE_IDS", () => {
     expect(IOS_IDS).toContain("ios-physics");
     expect(IOS_IDS).toContain("ios-text-labels");
     expect(IOS_IDS).toContain("ios-video-player");
-    expect(IOS_IDS).toHaveLength(8);
+    expect(IOS_IDS).toContain("ios-dynamic-sky");
+    expect(IOS_IDS).toContain("ios-line-path");
+    expect(IOS_IDS).toHaveLength(10);
   });
 
-  it("has 38 total samples (28 Android + 8 iOS + 2 Web)", () => {
-    expect(SAMPLE_IDS).toHaveLength(38);
+  it("has 35 total samples (23 Android + 10 iOS + 2 Web)", () => {
+    expect(SAMPLE_IDS).toHaveLength(35);
   });
 
   it("SAMPLE_IDS matches keys of SAMPLES", () => {
@@ -79,8 +76,8 @@ describe("every Android sample", () => {
 
     it(`${id}: dependency is a valid sceneview artifact`, () => {
       expect([
-        "io.github.sceneview:sceneview:3.5.0",
-        "io.github.sceneview:arsceneview:3.5.0",
+        "io.github.sceneview:sceneview:3.4.7",
+        "io.github.sceneview:arsceneview:3.4.7",
       ]).toContain(sample.dependency);
     });
   }
@@ -111,7 +108,7 @@ describe("every iOS sample", () => {
     });
 
     it(`${id}: has SPM dependency URL`, () => {
-      expect(sample.spmDependency).toBe("https://github.com/sceneview/sceneview-swift");
+      expect(sample.spmDependency).toBe("https://github.com/sceneview/sceneview");
     });
   }
 });
@@ -122,7 +119,7 @@ describe("AR samples", () => {
 
   it("all Android AR samples use arsceneview dependency", () => {
     for (const id of androidArIds) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.5.0");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.4.7");
     }
   });
 
@@ -138,8 +135,8 @@ describe("AR samples", () => {
     }
   });
 
-  it("has 6 Android AR samples", () => {
-    expect(androidArIds).toHaveLength(6);
+  it("has 5 Android AR samples", () => {
+    expect(androidArIds).toHaveLength(5);
   });
 
   it("has 2 iOS AR samples", () => {
@@ -153,7 +150,7 @@ describe("3D samples", () => {
 
   it("all Android 3D samples use sceneview dependency", () => {
     for (const id of android3dIds) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.5.0");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.4.7");
     }
   });
 
@@ -169,12 +166,12 @@ describe("3D samples", () => {
     }
   });
 
-  it("has 22 Android pure-3D samples", () => {
-    expect(android3dIds).toHaveLength(22);
+  it("has 18 Android pure-3D samples", () => {
+    expect(android3dIds).toHaveLength(18);
   });
 
-  it("has 6 iOS 3D samples", () => {
-    expect(ios3dIds).toHaveLength(6);
+  it("has 8 iOS 3D samples", () => {
+    expect(ios3dIds).toHaveLength(8);
   });
 });
 
@@ -210,13 +207,13 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'ar' returns only AR samples", () => {
     const results = filterByTag("ar");
-    expect(results.length).toBe(8); // 6 Android + 2 iOS
+    expect(results.length).toBe(7); // 5 Android + 2 iOS
     results.forEach((s) => expect(s.tags).toContain("ar"));
   });
 
   it("tag '3d' returns only 3D samples", () => {
     const results = filterByTag("3d");
-    expect(results.length).toBe(30); // 22 Android + 6 iOS + 2 Web
+    expect(results.length).toBe(28); // 18 Android + 8 iOS + 2 Web
     results.forEach((s) => expect(s.tags).toContain("3d"));
   });
 
@@ -245,13 +242,13 @@ describe("tag filtering (simulating list_samples tool)", () => {
 
   it("tag 'ios' returns only iOS samples", () => {
     const results = filterByTag("ios");
-    expect(results).toHaveLength(8);
+    expect(results).toHaveLength(10);
     results.forEach((s) => expect(s.language).toBe("swift"));
   });
 
   it("tag 'swift' returns only Swift samples", () => {
     const results = filterByTag("swift");
-    expect(results).toHaveLength(8);
+    expect(results).toHaveLength(10);
     results.forEach((s) => expect(s.language).toBe("swift"));
   });
 
@@ -266,8 +263,8 @@ describe("tag filtering (simulating list_samples tool)", () => {
     expect(results).toHaveLength(4);
     expect(results.map((s) => s.id)).toContain("environment-lighting");
     expect(results.map((s) => s.id)).toContain("ios-lighting");
+    expect(results.map((s) => s.id)).toContain("ios-dynamic-sky");
     expect(results.map((s) => s.id)).toContain("web-environment");
-    expect(results.map((s) => s.id)).toContain("dynamic-sky");
   });
 
   it("tag 'face-tracking' returns face mesh sample", () => {
