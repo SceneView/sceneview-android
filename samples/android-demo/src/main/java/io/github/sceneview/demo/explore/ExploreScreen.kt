@@ -117,6 +117,11 @@ private val exploreModels = listOf(
     ExploreModel("Porsche 911", "models/porsche_911.glb", 0.6f, 4.0f),
     ExploreModel("Black Dragon", "models/black_dragon.glb", 0.5f, 4.5f),
     ExploreModel("Fiat Punto", "models/fiat_punto.glb", 0.7f, 3.5f),
+    ExploreModel("Damaged Helmet", "models/khronos_damaged_helmet.glb", 0.8f, 2.5f),
+    ExploreModel("Water Bottle", "models/khronos_water_bottle.glb", 1.0f, 2.0f),
+    ExploreModel("Antique Camera", "models/khronos_antique_camera.glb", 0.7f, 2.5f),
+    ExploreModel("Corset", "models/khronos_corset.glb", 0.8f, 2.5f),
+    ExploreModel("Crystal Dragon", "models/khronos_dragon_attenuation.glb", 0.6f, 3.0f),
 )
 
 @Composable
