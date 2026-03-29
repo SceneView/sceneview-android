@@ -11,7 +11,7 @@ Clone the repo and run:
 ```bash
 git clone https://github.com/sceneview/sceneview.git
 cd sceneview
-./try-demo
+./tools/try-demo.sh
 ```
 
 That's it. The script builds the demo app and installs it on your connected Android device.
@@ -24,11 +24,11 @@ That's it. The script builds the demo app and installs it on your connected Andr
 ### Try a specific platform demo
 
 ```bash
-./try-demo --sample android-demo       # Full showcase (4 tabs, 14 demos)
-./try-demo --sample android-tv-demo    # D-pad controlled TV viewer
+./tools/try-demo.sh --sample android-demo       # Full showcase (4 tabs, 14 demos)
+./tools/try-demo.sh --sample android-tv-demo    # D-pad controlled TV viewer
 ```
 
-Run `./try-demo --help` for the full list.
+Run `./tools/try-demo.sh --help` for the full list.
 
 ---
 
@@ -67,7 +67,7 @@ curl -fSL -o /tmp/android-demo.apk \
 Or use the script's download mode (no build required):
 
 ```bash
-./try-demo --download
+./tools/try-demo.sh --download
 ```
 
 ---

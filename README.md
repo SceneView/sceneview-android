@@ -316,4 +316,4 @@ SceneView is free and open source. Sponsors help keep it maintained across 9 pla
 | :blue_heart: | **Open Collective** (transparent) | [opencollective.com/sceneview](https://opencollective.com/sceneview) |
 | :rocket: | **Polar** (fund features) | [polar.sh/sceneview](https://polar.sh/sceneview) |
 
-See [SPONSORS.md](SPONSORS.md) for tiers and current sponsors.
+See [SPONSORS.md](.github/SPONSORS.md) for tiers and current sponsors.
