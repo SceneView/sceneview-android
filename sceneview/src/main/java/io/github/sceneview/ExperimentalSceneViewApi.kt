@@ -10,9 +10,6 @@ package io.github.sceneview
  * @OptIn(ExperimentalSceneViewApi::class)
  * fun myFeature() { ... }
  * ```
- *
- * Once an experimental API has been validated by real-world usage it will be promoted to stable
- * and the annotation will be removed.
  */
 @RequiresOptIn(
     message = "This SceneView API is experimental. It may change or be removed in future releases.",
