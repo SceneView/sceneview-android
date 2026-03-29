@@ -27,13 +27,20 @@ import org.w3c.dom.HTMLElement
  * Uses Filament.js (WASM) — the same rendering engine as SceneView Android.
  */
 
-/** Available demo models — name to URL mapping. */
+/** Available demo models — name to local path mapping (self-hosted GLB files). */
 private val MODELS = linkedMapOf(
-    "Damaged Helmet" to "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
-    "Flight Helmet" to "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlightHelmet/glTF-Binary/FlightHelmet.glb",
-    "Avocado" to "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/glTF-Binary/Avocado.glb",
-    "Lantern" to "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Lantern/glTF-Binary/Lantern.glb",
-    "Suzanne" to "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Suzanne/glTF-Binary/Suzanne.glb"
+    "Damaged Helmet" to "models/khronos_damaged_helmet.glb",
+    "Toy Car" to "models/khronos_toy_car.glb",
+    "Game Boy" to "models/game_boy_classic.glb",
+    "Sheen Chair" to "models/khronos_sheen_chair.glb",
+    "Crystal Dragon" to "models/khronos_dragon_attenuation.glb",
+    "Iridescent Dish" to "models/khronos_iridescent_dish.glb",
+    "Butterfly" to "models/animated_butterfly.glb",
+    "Phoenix" to "models/phoenix_bird.glb",
+    "Cyberpunk Car" to "models/cyberpunk_car.glb",
+    "Fantasy Book" to "models/fantasy_book.glb",
+    "Retro Piano" to "models/retro_piano.glb",
+    "Mosquito Amber" to "models/mosquito_amber.glb"
 )
 
 private var currentSceneView: SceneView? = null
