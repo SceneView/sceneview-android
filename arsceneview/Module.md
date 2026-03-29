@@ -6,7 +6,7 @@ AR scene rendering for Jetpack Compose, powered by ARCore 1.53.0 and Google Fila
 
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.4.7")
+    implementation("io.github.sceneview:arsceneview:3.5.0")
 }
 ```
 
