@@ -39,7 +39,7 @@ catch {
     API_DOCS = "SceneView API docs not found. Run `npm run prepare` to bundle llms.txt.";
 }
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
-const server = new Server({ name: "sceneview-mcp", version: "3.5.2" }, { capabilities: { resources: {}, tools: {} } });
+const server = new Server({ name: "sceneview-mcp", version: "3.5.3" }, { capabilities: { resources: {}, tools: {} } });
 // ─── Resources ───────────────────────────────────────────────────────────────
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
