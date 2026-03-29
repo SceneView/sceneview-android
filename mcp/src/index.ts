@@ -18,7 +18,7 @@ import { fetchKnownIssues } from "./issues.js";
 import { parseNodeSections, findNodeSection, listNodeTypes } from "./node-reference.js";
 import { PLATFORM_ROADMAP, BEST_PRACTICES, AR_SETUP_GUIDE, TROUBLESHOOTING_GUIDE } from "./guides.js";
 import { buildPreviewUrl, validatePreviewInput, formatPreviewResponse } from "./preview.js";
-import { validateArtifactInput, generateArtifact, formatArtifactResponse, type ArtifactType, type ArtifactInput, type ArtifactOptions, type ChartDataPoint, type Hotspot, type GeometryShape } from "./artifact.js";
+import { validateArtifactInput, generateArtifact, formatArtifactResponse, type ArtifactType } from "./artifact.js";
 import { getPlatformSetup, listPlatforms, PLATFORM_IDS, type Platform, type SetupType } from "./platform-setup.js";
 import { migrateCode, formatMigrationResult } from "./migrate-code.js";
 import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES, type DebugCategory } from "./debug-issue.js";
@@ -554,13 +554,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
     // ── get_sample ────────────────────────────────────────────────────────────
     case "get_sample": {
-      const scenario = request.params.arguments?.scenario;
-      if (!scenario || typeof scenario !== "string") {
-        return {
-          content: [{ type: "text", text: "Missing required parameter: `scenario`. Call `list_samples` to see available options." }],
-          isError: true,
-        };
-      }
+      const scenario = request.params.arguments?.scenario as string;
       const sample = getSample(scenario);
       if (!sample) {
         return {
@@ -650,13 +644,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── get_setup ─────────────────────────────────────────────────────────────
     case "get_setup": {
-      const type = request.params.arguments?.type;
-      if (!type || (type !== "3d" && type !== "ar")) {
-        return {
-          content: [{ type: "text", text: `Missing or invalid \`type\` parameter. Use "3d" or "ar".` }],
-          isError: true,
-        };
-      }
+      const type = request.params.arguments?.type as "3d" | "ar";
       if (type === "3d") {
         return {
           content: withDisclaimer([
@@ -678,32 +666,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ]),
         };
       }
-      // type === "ar" (validated above)
+      if (type === "ar") {
+        return {
+          content: withDisclaimer([
+            {
+              type: "text",
+              text: [
+                `## SceneView — AR setup`,
+                ``,
+                `### build.gradle.kts`,
+                `\`\`\`kotlin`,
+                `dependencies {`,
+                `    implementation("io.github.sceneview:arsceneview:3.4.7")`,
+                `}`,
+                `\`\`\``,
+                ``,
+                `### AndroidManifest.xml`,
+                `\`\`\`xml`,
+                `<uses-permission android:name="android.permission.CAMERA" />`,
+                `<uses-feature android:name="android.hardware.camera.ar" android:required="true" />`,
+                `<application>`,
+                `    <meta-data android:name="com.google.ar.core" android:value="required" />`,
+                `</application>`,
+                `\`\`\``,
+              ].join("\n"),
+            },
+          ]),
+        };
+      }
       return {
-        content: withDisclaimer([
-          {
-            type: "text",
-            text: [
-              `## SceneView — AR setup`,
-              ``,
-              `### build.gradle.kts`,
-              `\`\`\`kotlin`,
-              `dependencies {`,
-              `    implementation("io.github.sceneview:arsceneview:3.4.7")`,
-              `}`,
-              `\`\`\``,
-              ``,
-              `### AndroidManifest.xml`,
-              `\`\`\`xml`,
-              `<uses-permission android:name="android.permission.CAMERA" />`,
-              `<uses-feature android:name="android.hardware.camera.ar" android:required="true" />`,
-              `<application>`,
-              `    <meta-data android:name="com.google.ar.core" android:value="required" />`,
-              `</application>`,
-              `\`\`\``,
-            ].join("\n"),
-          },
-        ]),
+        content: [{ type: "text", text: `Unknown type "${type}". Use "3d" or "ar".` }],
+        isError: true,
       };
     }
 
@@ -793,13 +786,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── get_ios_setup ─────────────────────────────────────────────────────────
     case "get_ios_setup": {
-      const iosType = request.params.arguments?.type;
-      if (!iosType || (iosType !== "3d" && iosType !== "ar")) {
-        return {
-          content: [{ type: "text", text: `Missing or invalid \`type\` parameter. Use "3d" or "ar".` }],
-          isError: true,
-        };
-      }
+      const iosType = request.params.arguments?.type as "3d" | "ar";
       if (iosType === "3d") {
         return {
           content: withDisclaimer([
@@ -885,13 +872,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ]),
         };
       }
-      // iosType === "ar" (validated above)
-      return {
-        content: withDisclaimer([
-          {
-            type: "text",
-            text: [
-              `## SceneViewSwift — iOS AR Setup`,
+      if (iosType === "ar") {
+        return {
+          content: withDisclaimer([
+            {
+              type: "text",
+              text: [
+                `## SceneViewSwift — iOS AR Setup`,
                 ``,
                 `### 1. Add SPM Dependency`,
                 ``,
@@ -975,6 +962,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             },
           ]),
         };
+      }
+      return {
+        content: [{ type: "text", text: `Unknown type "${iosType}". Use "3d" or "ar".` }],
+        isError: true,
+      };
     }
 
     // ── get_web_setup ────────────────────────────────────────────────────────
@@ -1093,21 +1085,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── create_3d_artifact ───────────────────────────────────────────────────
     case "create_3d_artifact": {
-      const artifactType = request.params.arguments?.type;
-      if (!artifactType || typeof artifactType !== "string") {
-        return {
-          content: [{ type: "text", text: 'Missing required parameter: `type`. Must be one of: "model-viewer", "chart-3d", "scene", "product-360", "geometry".' }],
-          isError: true,
-        };
-      }
-      const artifactInput: ArtifactInput = {
-        type: artifactType as ArtifactType,
-        modelUrl: typeof request.params.arguments?.modelUrl === "string" ? request.params.arguments.modelUrl : undefined,
-        title: typeof request.params.arguments?.title === "string" ? request.params.arguments.title : undefined,
-        data: Array.isArray(request.params.arguments?.data) ? request.params.arguments.data as ChartDataPoint[] : undefined,
-        options: request.params.arguments?.options as ArtifactOptions | undefined,
-        hotspots: Array.isArray(request.params.arguments?.hotspots) ? request.params.arguments.hotspots as Hotspot[] : undefined,
-        shapes: Array.isArray(request.params.arguments?.shapes) ? request.params.arguments.shapes as GeometryShape[] : undefined,
+      const artifactInput = {
+        type: request.params.arguments?.type as ArtifactType,
+        modelUrl: request.params.arguments?.modelUrl as string | undefined,
+        title: request.params.arguments?.title as string | undefined,
+        data: request.params.arguments?.data as any[] | undefined,
+        options: request.params.arguments?.options as any | undefined,
+        hotspots: request.params.arguments?.hotspots as any[] | undefined,
+        shapes: request.params.arguments?.shapes as any[] | undefined,
       };
 
       const validationError = validateArtifactInput(artifactInput);
@@ -1125,27 +1110,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── get_platform_setup ─────────────────────────────────────────────────
     case "get_platform_setup": {
-      const platform = request.params.arguments?.platform;
-      const setupType = request.params.arguments?.type;
-      if (!platform || typeof platform !== "string" || !setupType || typeof setupType !== "string") {
+      const platform = request.params.arguments?.platform as Platform;
+      const setupType = request.params.arguments?.type as SetupType;
+      if (!platform || !setupType) {
         return {
-          content: [{ type: "text", text: `Missing required parameters: \`platform\` (one of: ${PLATFORM_IDS.join(", ")}) and \`type\` ("3d" or "ar").` }],
+          content: [{ type: "text", text: "Missing required parameters: `platform` and `type`." }],
           isError: true,
         };
       }
-      if (!PLATFORM_IDS.includes(platform as Platform)) {
-        return {
-          content: [{ type: "text", text: `Unknown platform "${platform}". Available: ${PLATFORM_IDS.join(", ")}` }],
-          isError: true,
-        };
-      }
-      if (setupType !== "3d" && setupType !== "ar") {
-        return {
-          content: [{ type: "text", text: `Invalid type "${setupType}". Use "3d" or "ar".` }],
-          isError: true,
-        };
-      }
-      const guide = getPlatformSetup(platform as Platform, setupType as SetupType);
+      const guide = getPlatformSetup(platform, setupType);
       return { content: withDisclaimer([{ type: "text", text: guide }]) };
     }
 
@@ -1165,19 +1138,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // ── debug_issue ──────────────────────────────────────────────────────────
     case "debug_issue": {
-      const rawCategory = request.params.arguments?.category;
-      const desc = typeof request.params.arguments?.description === "string" ? request.params.arguments.description : undefined;
-
-      let category: DebugCategory | undefined;
-      if (typeof rawCategory === "string") {
-        if (!DEBUG_CATEGORIES.includes(rawCategory as DebugCategory)) {
-          return {
-            content: [{ type: "text", text: `Unknown debug category "${rawCategory}". Available: ${DEBUG_CATEGORIES.join(", ")}` }],
-            isError: true,
-          };
-        }
-        category = rawCategory as DebugCategory;
-      }
+      let category = request.params.arguments?.category as DebugCategory | undefined;
+      const desc = request.params.arguments?.description as string | undefined;
 
       if (!category && desc) {
         category = autoDetectIssue(desc) ?? undefined;

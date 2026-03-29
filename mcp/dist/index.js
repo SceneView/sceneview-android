@@ -497,12 +497,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // ── get_sample ────────────────────────────────────────────────────────────
         case "get_sample": {
             const scenario = request.params.arguments?.scenario;
-            if (!scenario || typeof scenario !== "string") {
-                return {
-                    content: [{ type: "text", text: "Missing required parameter: `scenario`. Call `list_samples` to see available options." }],
-                    isError: true,
-                };
-            }
             const sample = getSample(scenario);
             if (!sample) {
                 return {
@@ -582,12 +576,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // ── get_setup ─────────────────────────────────────────────────────────────
         case "get_setup": {
             const type = request.params.arguments?.type;
-            if (!type || (type !== "3d" && type !== "ar")) {
-                return {
-                    content: [{ type: "text", text: `Missing or invalid \`type\` parameter. Use "3d" or "ar".` }],
-                    isError: true,
-                };
-            }
             if (type === "3d") {
                 return {
                     content: withDisclaimer([
@@ -609,32 +597,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     ]),
                 };
             }
-            // type === "ar" (validated above)
+            if (type === "ar") {
+                return {
+                    content: withDisclaimer([
+                        {
+                            type: "text",
+                            text: [
+                                `## SceneView — AR setup`,
+                                ``,
+                                `### build.gradle.kts`,
+                                `\`\`\`kotlin`,
+                                `dependencies {`,
+                                `    implementation("io.github.sceneview:arsceneview:3.4.7")`,
+                                `}`,
+                                `\`\`\``,
+                                ``,
+                                `### AndroidManifest.xml`,
+                                `\`\`\`xml`,
+                                `<uses-permission android:name="android.permission.CAMERA" />`,
+                                `<uses-feature android:name="android.hardware.camera.ar" android:required="true" />`,
+                                `<application>`,
+                                `    <meta-data android:name="com.google.ar.core" android:value="required" />`,
+                                `</application>`,
+                                `\`\`\``,
+                            ].join("\n"),
+                        },
+                    ]),
+                };
+            }
             return {
-                content: withDisclaimer([
-                    {
-                        type: "text",
-                        text: [
-                            `## SceneView — AR setup`,
-                            ``,
-                            `### build.gradle.kts`,
-                            `\`\`\`kotlin`,
-                            `dependencies {`,
-                            `    implementation("io.github.sceneview:arsceneview:3.4.7")`,
-                            `}`,
-                            `\`\`\``,
-                            ``,
-                            `### AndroidManifest.xml`,
-                            `\`\`\`xml`,
-                            `<uses-permission android:name="android.permission.CAMERA" />`,
-                            `<uses-feature android:name="android.hardware.camera.ar" android:required="true" />`,
-                            `<application>`,
-                            `    <meta-data android:name="com.google.ar.core" android:value="required" />`,
-                            `</application>`,
-                            `\`\`\``,
-                        ].join("\n"),
-                    },
-                ]),
+                content: [{ type: "text", text: `Unknown type "${type}". Use "3d" or "ar".` }],
+                isError: true,
             };
         }
         // ── validate_code ─────────────────────────────────────────────────────────
@@ -714,12 +707,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // ── get_ios_setup ─────────────────────────────────────────────────────────
         case "get_ios_setup": {
             const iosType = request.params.arguments?.type;
-            if (!iosType || (iosType !== "3d" && iosType !== "ar")) {
-                return {
-                    content: [{ type: "text", text: `Missing or invalid \`type\` parameter. Use "3d" or "ar".` }],
-                    isError: true,
-                };
-            }
             if (iosType === "3d") {
                 return {
                     content: withDisclaimer([
@@ -805,95 +792,100 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     ]),
                 };
             }
-            // iosType === "ar" (validated above)
+            if (iosType === "ar") {
+                return {
+                    content: withDisclaimer([
+                        {
+                            type: "text",
+                            text: [
+                                `## SceneViewSwift — iOS AR Setup`,
+                                ``,
+                                `### 1. Add SPM Dependency`,
+                                ``,
+                                `\`\`\`swift`,
+                                `.package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")`,
+                                `\`\`\``,
+                                ``,
+                                `### 2. Minimum Platform`,
+                                ``,
+                                `AR requires **iOS 17.0+** (ARKit + RealityKit). macOS and visionOS use different AR APIs.`,
+                                ``,
+                                `### 3. Info.plist — Camera Permission`,
+                                ``,
+                                `Add to your Info.plist (required for AR camera access):`,
+                                `\`\`\`xml`,
+                                `<key>NSCameraUsageDescription</key>`,
+                                `<string>This app uses the camera for augmented reality.</string>`,
+                                `\`\`\``,
+                                ``,
+                                `### 4. Basic AR Integration`,
+                                ``,
+                                `\`\`\`swift`,
+                                `import SwiftUI`,
+                                `import SceneViewSwift`,
+                                `import RealityKit`,
+                                ``,
+                                `struct ARContentView: View {`,
+                                `    @State private var model: ModelNode?`,
+                                ``,
+                                `    var body: some View {`,
+                                `        ARSceneView(`,
+                                `            planeDetection: .horizontal,`,
+                                `            showCoachingOverlay: true,`,
+                                `            onTapOnPlane: { position, arView in`,
+                                `                guard let model else { return }`,
+                                `                let anchor = AnchorNode.world(position: position)`,
+                                `                let clone = model.entity.clone(recursive: true)`,
+                                `                clone.scale = .init(repeating: 0.3)`,
+                                `                anchor.add(clone)`,
+                                `                arView.scene.addAnchor(anchor.entity)`,
+                                `            }`,
+                                `        )`,
+                                `        .edgesIgnoringSafeArea(.all)`,
+                                `        .task {`,
+                                `            model = try? await ModelNode.load("models/robot.usdz")`,
+                                `        }`,
+                                `    }`,
+                                `}`,
+                                `\`\`\``,
+                                ``,
+                                `### 5. AR Configuration Options`,
+                                ``,
+                                `| Parameter | Options | Default |`,
+                                `|-----------|---------|---------|`,
+                                `| \`planeDetection\` | \`.none\`, \`.horizontal\`, \`.vertical\`, \`.both\` | \`.horizontal\` |`,
+                                `| \`showPlaneOverlay\` | \`true\` / \`false\` | \`true\` |`,
+                                `| \`showCoachingOverlay\` | \`true\` / \`false\` | \`true\` |`,
+                                `| \`imageTrackingDatabase\` | \`Set<ARReferenceImage>\` | \`nil\` |`,
+                                ``,
+                                `### 6. Image Tracking`,
+                                ``,
+                                `\`\`\`swift`,
+                                `let images = AugmentedImageNode.createImageDatabase([`,
+                                `    AugmentedImageNode.ReferenceImage(`,
+                                `        name: "poster",`,
+                                `        image: UIImage(named: "poster_ref")!,`,
+                                `        physicalWidth: 0.3  // meters`,
+                                `    )`,
+                                `])`,
+                                ``,
+                                `ARSceneView(`,
+                                `    imageTrackingDatabase: images,`,
+                                `    onImageDetected: { name, anchor, arView in`,
+                                `        let cube = GeometryNode.cube(size: 0.1, color: .blue)`,
+                                `        anchor.add(cube.entity)`,
+                                `        arView.scene.addAnchor(anchor.entity)`,
+                                `    }`,
+                                `)`,
+                                `\`\`\``,
+                            ].join("\n"),
+                        },
+                    ]),
+                };
+            }
             return {
-                content: withDisclaimer([
-                    {
-                        type: "text",
-                        text: [
-                            `## SceneViewSwift — iOS AR Setup`,
-                            ``,
-                            `### 1. Add SPM Dependency`,
-                            ``,
-                            `\`\`\`swift`,
-                            `.package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")`,
-                            `\`\`\``,
-                            ``,
-                            `### 2. Minimum Platform`,
-                            ``,
-                            `AR requires **iOS 17.0+** (ARKit + RealityKit). macOS and visionOS use different AR APIs.`,
-                            ``,
-                            `### 3. Info.plist — Camera Permission`,
-                            ``,
-                            `Add to your Info.plist (required for AR camera access):`,
-                            `\`\`\`xml`,
-                            `<key>NSCameraUsageDescription</key>`,
-                            `<string>This app uses the camera for augmented reality.</string>`,
-                            `\`\`\``,
-                            ``,
-                            `### 4. Basic AR Integration`,
-                            ``,
-                            `\`\`\`swift`,
-                            `import SwiftUI`,
-                            `import SceneViewSwift`,
-                            `import RealityKit`,
-                            ``,
-                            `struct ARContentView: View {`,
-                            `    @State private var model: ModelNode?`,
-                            ``,
-                            `    var body: some View {`,
-                            `        ARSceneView(`,
-                            `            planeDetection: .horizontal,`,
-                            `            showCoachingOverlay: true,`,
-                            `            onTapOnPlane: { position, arView in`,
-                            `                guard let model else { return }`,
-                            `                let anchor = AnchorNode.world(position: position)`,
-                            `                let clone = model.entity.clone(recursive: true)`,
-                            `                clone.scale = .init(repeating: 0.3)`,
-                            `                anchor.add(clone)`,
-                            `                arView.scene.addAnchor(anchor.entity)`,
-                            `            }`,
-                            `        )`,
-                            `        .edgesIgnoringSafeArea(.all)`,
-                            `        .task {`,
-                            `            model = try? await ModelNode.load("models/robot.usdz")`,
-                            `        }`,
-                            `    }`,
-                            `}`,
-                            `\`\`\``,
-                            ``,
-                            `### 5. AR Configuration Options`,
-                            ``,
-                            `| Parameter | Options | Default |`,
-                            `|-----------|---------|---------|`,
-                            `| \`planeDetection\` | \`.none\`, \`.horizontal\`, \`.vertical\`, \`.both\` | \`.horizontal\` |`,
-                            `| \`showPlaneOverlay\` | \`true\` / \`false\` | \`true\` |`,
-                            `| \`showCoachingOverlay\` | \`true\` / \`false\` | \`true\` |`,
-                            `| \`imageTrackingDatabase\` | \`Set<ARReferenceImage>\` | \`nil\` |`,
-                            ``,
-                            `### 6. Image Tracking`,
-                            ``,
-                            `\`\`\`swift`,
-                            `let images = AugmentedImageNode.createImageDatabase([`,
-                            `    AugmentedImageNode.ReferenceImage(`,
-                            `        name: "poster",`,
-                            `        image: UIImage(named: "poster_ref")!,`,
-                            `        physicalWidth: 0.3  // meters`,
-                            `    )`,
-                            `])`,
-                            ``,
-                            `ARSceneView(`,
-                            `    imageTrackingDatabase: images,`,
-                            `    onImageDetected: { name, anchor, arView in`,
-                            `        let cube = GeometryNode.cube(size: 0.1, color: .blue)`,
-                            `        anchor.add(cube.entity)`,
-                            `        arView.scene.addAnchor(anchor.entity)`,
-                            `    }`,
-                            `)`,
-                            `\`\`\``,
-                        ].join("\n"),
-                    },
-                ]),
+                content: [{ type: "text", text: `Unknown type "${iosType}". Use "3d" or "ar".` }],
+                isError: true,
             };
         }
         // ── get_web_setup ────────────────────────────────────────────────────────
@@ -1007,21 +999,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         // ── create_3d_artifact ───────────────────────────────────────────────────
         case "create_3d_artifact": {
-            const artifactType = request.params.arguments?.type;
-            if (!artifactType || typeof artifactType !== "string") {
-                return {
-                    content: [{ type: "text", text: 'Missing required parameter: `type`. Must be one of: "model-viewer", "chart-3d", "scene", "product-360", "geometry".' }],
-                    isError: true,
-                };
-            }
             const artifactInput = {
-                type: artifactType,
-                modelUrl: typeof request.params.arguments?.modelUrl === "string" ? request.params.arguments.modelUrl : undefined,
-                title: typeof request.params.arguments?.title === "string" ? request.params.arguments.title : undefined,
-                data: Array.isArray(request.params.arguments?.data) ? request.params.arguments.data : undefined,
+                type: request.params.arguments?.type,
+                modelUrl: request.params.arguments?.modelUrl,
+                title: request.params.arguments?.title,
+                data: request.params.arguments?.data,
                 options: request.params.arguments?.options,
-                hotspots: Array.isArray(request.params.arguments?.hotspots) ? request.params.arguments.hotspots : undefined,
-                shapes: Array.isArray(request.params.arguments?.shapes) ? request.params.arguments.shapes : undefined,
+                hotspots: request.params.arguments?.hotspots,
+                shapes: request.params.arguments?.shapes,
             };
             const validationError = validateArtifactInput(artifactInput);
             if (validationError) {
@@ -1038,21 +1023,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         case "get_platform_setup": {
             const platform = request.params.arguments?.platform;
             const setupType = request.params.arguments?.type;
-            if (!platform || typeof platform !== "string" || !setupType || typeof setupType !== "string") {
+            if (!platform || !setupType) {
                 return {
-                    content: [{ type: "text", text: `Missing required parameters: \`platform\` (one of: ${PLATFORM_IDS.join(", ")}) and \`type\` ("3d" or "ar").` }],
-                    isError: true,
-                };
-            }
-            if (!PLATFORM_IDS.includes(platform)) {
-                return {
-                    content: [{ type: "text", text: `Unknown platform "${platform}". Available: ${PLATFORM_IDS.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            if (setupType !== "3d" && setupType !== "ar") {
-                return {
-                    content: [{ type: "text", text: `Invalid type "${setupType}". Use "3d" or "ar".` }],
+                    content: [{ type: "text", text: "Missing required parameters: `platform` and `type`." }],
                     isError: true,
                 };
             }
@@ -1074,18 +1047,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         // ── debug_issue ──────────────────────────────────────────────────────────
         case "debug_issue": {
-            const rawCategory = request.params.arguments?.category;
-            const desc = typeof request.params.arguments?.description === "string" ? request.params.arguments.description : undefined;
-            let category;
-            if (typeof rawCategory === "string") {
-                if (!DEBUG_CATEGORIES.includes(rawCategory)) {
-                    return {
-                        content: [{ type: "text", text: `Unknown debug category "${rawCategory}". Available: ${DEBUG_CATEGORIES.join(", ")}` }],
-                        isError: true,
-                    };
-                }
-                category = rawCategory;
-            }
+            let category = request.params.arguments?.category;
+            const desc = request.params.arguments?.description;
             if (!category && desc) {
                 category = autoDetectIssue(desc) ?? undefined;
             }
