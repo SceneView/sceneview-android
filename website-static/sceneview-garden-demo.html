@@ -3,100 +3,181 @@
 <head>
 <meta charset="UTF-8">
 <title>Garden Postcard | SceneView Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     overflow: hidden; font-family: 'Georgia', 'Times New Roman', serif;
     height: 100vh; background: #000;
   }
-  /* Polyhaven suburban garden sky */
+
+  /* Polyhaven garden sky — dreamy twilight */
   #sky {
     position: fixed; inset: 0; z-index: 0;
     background: url('environments/sky/garden_2k.jpg') center/cover no-repeat;
-    filter: brightness(0.25) saturate(1.3) contrast(1.1);
+    filter: brightness(0.2) saturate(1.5) contrast(1.05) hue-rotate(-5deg);
+    animation: sky-breathe 20s ease-in-out infinite alternate;
   }
+  @keyframes sky-breathe {
+    0% { filter: brightness(0.18) saturate(1.5) contrast(1.05) hue-rotate(-5deg); }
+    100% { filter: brightness(0.24) saturate(1.7) contrast(1.1) hue-rotate(2deg); }
+  }
+
   canvas {
     position: relative; z-index: 1;
     width: 100%; height: 100%; display: block; cursor: grab;
   }
   canvas:active { cursor: grabbing; }
 
-  /* Postcard — top right, elegant */
+  /* Postcard — top right, elegant glassmorphism */
   #postcard {
     position: absolute; top: 36px; right: 36px; z-index: 10;
-    background: rgba(10,15,20,0.35); backdrop-filter: blur(24px) saturate(1.5);
-    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
-    padding: 28px 34px; max-width: 260px;
-    animation: postcard-in 1.5s ease-out;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+    background: rgba(8, 12, 20, 0.3); backdrop-filter: blur(28px) saturate(1.6);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 18px;
+    padding: 30px 36px; max-width: 270px;
+    animation: postcard-in 2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 12px 48px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
   }
   #postcard .line1 {
-    font-size: 1.15rem; font-style: italic; color: rgba(255,255,255,0.75);
-    line-height: 1.6; letter-spacing: 0.01em;
+    font-size: 1.2rem; font-style: italic; color: rgba(255,255,255,0.78);
+    line-height: 1.65; letter-spacing: 0.015em;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.4);
   }
   #postcard .line2 {
-    font-size: 0.8rem; color: rgba(255,255,255,0.35);
-    margin-top: 18px; text-align: right; font-style: italic;
+    font-size: 0.78rem; color: rgba(255,255,255,0.32);
+    margin-top: 20px; text-align: right; font-style: italic;
+    letter-spacing: 0.05em;
+  }
+  #postcard .divider {
+    width: 40px; height: 1px; margin: 16px 0;
+    background: linear-gradient(90deg, transparent, rgba(255,210,150,0.3), transparent);
   }
 
-  /* Badge */
+  /* Badge — Rendered by SceneView */
   #badge {
     position: absolute; bottom: 24px; right: 28px; z-index: 10;
     display: flex; align-items: center; gap: 8px;
-    background: rgba(10,15,25,0.4); backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 16px;
+    background: rgba(8, 12, 22, 0.35); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 16px;
+    animation: badge-in 2.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  #badge .rendered { color: rgba(255,255,255,0.4); font-size: 0.65rem; }
+  #badge .rendered { color: rgba(255,255,255,0.35); font-size: 0.65rem; letter-spacing: 0.03em; }
+  #badge .version { color: rgba(255,255,255,0.2); font-size: 0.55rem; margin-left: 4px; }
 
-  /* Fireflies */
+  /* Fireflies — CSS particle system */
   .firefly {
     position: absolute; border-radius: 50%; pointer-events: none; z-index: 5;
     animation: ff-float linear infinite, ff-glow ease-in-out infinite alternate;
   }
   @keyframes ff-float {
     0% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(30px, -50px) scale(1.3); }
-    50% { transform: translate(-25px, -80px) scale(0.7); }
-    75% { transform: translate(45px, -35px) scale(1.1); }
+    15% { transform: translate(20px, -40px) scale(1.2); }
+    30% { transform: translate(-30px, -70px) scale(0.6); }
+    45% { transform: translate(40px, -30px) scale(1.4); }
+    60% { transform: translate(-15px, -90px) scale(0.8); }
+    75% { transform: translate(35px, -50px) scale(1.1); }
     100% { transform: translate(0, 0) scale(1); }
   }
   @keyframes ff-glow {
-    0% { opacity: 0.15; box-shadow: 0 0 3px 1px currentColor; }
-    100% { opacity: 0.85; box-shadow: 0 0 14px 7px currentColor; }
-  }
-  @keyframes postcard-in {
-    0% { opacity: 0; transform: translateY(12px) scale(0.97); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% { opacity: 0.08; box-shadow: 0 0 2px 1px currentColor; }
+    50% { opacity: 0.6; box-shadow: 0 0 10px 5px currentColor; }
+    100% { opacity: 0.9; box-shadow: 0 0 18px 9px currentColor; }
   }
 
-  /* Butterfly */
+  /* Entrance animations */
+  @keyframes postcard-in {
+    0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes badge-in {
+    0% { opacity: 0; transform: translateY(10px); }
+    60% { opacity: 0; }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Butterfly — organic flight path */
   .butterfly {
     position: absolute; z-index: 5; pointer-events: none;
-    animation: bf-path 14s ease-in-out infinite;
+    animation: bf-path 18s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(180, 140, 255, 0.3));
   }
-  .butterfly svg { animation: bf-wings 0.25s ease-in-out infinite alternate; }
+  .butterfly svg { animation: bf-wings 0.22s ease-in-out infinite alternate; }
   @keyframes bf-path {
-    0% { top: 38%; left: 28%; }
-    12% { top: 22%; left: 48%; }
-    28% { top: 32%; left: 62%; }
-    42% { top: 18%; left: 42%; }
-    58% { top: 42%; left: 32%; }
-    74% { top: 28%; left: 56%; }
-    100% { top: 38%; left: 28%; }
+    0%   { top: 40%; left: 25%; opacity: 0.7; }
+    8%   { top: 28%; left: 38%; opacity: 0.9; }
+    18%  { top: 20%; left: 52%; opacity: 1; }
+    30%  { top: 30%; left: 65%; opacity: 0.8; }
+    42%  { top: 18%; left: 45%; opacity: 0.9; }
+    55%  { top: 35%; left: 30%; opacity: 0.7; }
+    68%  { top: 22%; left: 55%; opacity: 1; }
+    80%  { top: 32%; left: 40%; opacity: 0.8; }
+    100% { top: 40%; left: 25%; opacity: 0.7; }
   }
   @keyframes bf-wings {
     0% { transform: scaleX(1) rotateY(0deg); }
-    100% { transform: scaleX(0.25) rotateY(15deg); }
+    100% { transform: scaleX(0.2) rotateY(18deg); }
+  }
+
+  /* Second butterfly — smaller, faster, different path */
+  .butterfly-small {
+    position: absolute; z-index: 5; pointer-events: none;
+    animation: bf-path2 12s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(250, 200, 100, 0.25));
+  }
+  .butterfly-small svg { animation: bf-wings 0.18s ease-in-out infinite alternate; }
+  @keyframes bf-path2 {
+    0%   { top: 55%; left: 60%; opacity: 0.5; }
+    20%  { top: 42%; left: 72%; opacity: 0.8; }
+    40%  { top: 35%; left: 58%; opacity: 0.6; }
+    60%  { top: 48%; left: 45%; opacity: 0.9; }
+    80%  { top: 38%; left: 68%; opacity: 0.7; }
+    100% { top: 55%; left: 60%; opacity: 0.5; }
+  }
+
+  /* Ambient light rays overlay */
+  #light-rays {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(ellipse at 30% 20%, rgba(255,220,150,0.04) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(120,160,255,0.03) 0%, transparent 50%);
+    animation: rays-shift 25s ease-in-out infinite alternate;
+  }
+  @keyframes rays-shift {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+  }
+
+  /* Loading state */
+  #loading {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 20; color: rgba(255,255,255,0.4); font-size: 0.85rem;
+    font-style: italic; letter-spacing: 0.1em;
+    animation: loading-pulse 2s ease-in-out infinite;
+  }
+  @keyframes loading-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 600px) {
+    #postcard { top: 20px; right: 16px; left: 16px; max-width: none; padding: 22px 26px; }
+    #badge { bottom: 16px; right: 16px; }
   }
 </style>
 </head>
 <body>
 
 <div id="sky"></div>
+<div id="light-rays"></div>
+
+<!-- Loading indicator -->
+<div id="loading">gathering flowers...</div>
 
 <!-- Postcard — NO logo header (Thomas's decision) -->
 <div id="postcard">
   <div class="line1">"Sorry I work too much"</div>
+  <div class="divider"></div>
   <div class="line2">with love, C.M.R.</div>
 </div>
 
@@ -104,50 +185,119 @@
   <span class="rendered">Rendered by</span>
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#60a5fa" stroke-width="1.6" fill="rgba(96,165,250,0.1)"/><path d="M12 22V12M2 7l10 5 10-5" stroke="#60a5fa" stroke-width="1.6"/></svg>
   <span style="color:rgba(255,255,255,0.85);font-weight:600;font-size:0.75rem;">SceneView</span>
+  <span class="version">v1.5.0</span>
 </div>
 
-<!-- Butterfly -->
+<!-- Butterfly — lavender -->
 <div class="butterfly">
-  <svg width="26" height="22" viewBox="0 0 24 20" fill="none">
-    <path d="M12 10C8 4 2 2 2 8s4 8 10 2z" fill="rgba(200,160,255,0.5)"/>
-    <path d="M12 10C16 4 22 2 22 8s-4 8-10 2z" fill="rgba(180,140,255,0.5)"/>
-    <line x1="12" y1="10" x2="12" y2="2" stroke="rgba(255,255,255,0.25)" stroke-width="0.5"/>
+  <svg width="28" height="24" viewBox="0 0 24 20" fill="none">
+    <path d="M12 10C8 4 2 2 2 8s4 8 10 2z" fill="rgba(200,160,255,0.55)"/>
+    <path d="M12 10C16 4 22 2 22 8s-4 8-10 2z" fill="rgba(180,140,255,0.55)"/>
+    <line x1="12" y1="10" x2="11" y2="2" stroke="rgba(255,255,255,0.2)" stroke-width="0.4"/>
+    <line x1="12" y1="10" x2="13" y2="2" stroke="rgba(255,255,255,0.2)" stroke-width="0.4"/>
+  </svg>
+</div>
+
+<!-- Second butterfly — golden, smaller -->
+<div class="butterfly-small">
+  <svg width="18" height="16" viewBox="0 0 24 20" fill="none">
+    <path d="M12 10C8 4 2 2 2 8s4 8 10 2z" fill="rgba(250,200,100,0.45)"/>
+    <path d="M12 10C16 4 22 2 22 8s-4 8-10 2z" fill="rgba(240,180,80,0.45)"/>
+    <line x1="12" y1="10" x2="11.5" y2="3" stroke="rgba(255,255,255,0.15)" stroke-width="0.3"/>
+    <line x1="12" y1="10" x2="12.5" y2="3" stroke="rgba(255,255,255,0.15)" stroke-width="0.3"/>
   </svg>
 </div>
 
 <canvas id="viewer"></canvas>
 
 <script src="js/filament/filament.js"></script>
-<script src="js/sceneview.js?v=140"></script>
+<script src="js/sceneview.js?v=150"></script>
 <script>
-// Fireflies
+// ── Fireflies — 24 particles, warm-cool palette ──
 (function() {
-  var colors = ['#fbbf24', '#fde68a', '#a3e635', '#86efac', '#67e8f9', '#fcd34d'];
+  var colors = ['#fbbf24', '#fde68a', '#a3e635', '#86efac', '#67e8f9', '#fcd34d', '#f9a8d4', '#c4b5fd'];
   for (var i = 0; i < 24; i++) {
     var el = document.createElement('div');
     el.className = 'firefly';
     var size = 2 + Math.random() * 5;
     el.style.width = size + 'px';
     el.style.height = size + 'px';
-    el.style.left = (8 + Math.random() * 84) + '%';
-    el.style.top = (15 + Math.random() * 65) + '%';
+    el.style.left = (5 + Math.random() * 90) + '%';
+    el.style.top = (10 + Math.random() * 75) + '%';
     el.style.color = colors[Math.floor(Math.random() * colors.length)];
     el.style.background = 'currentColor';
-    el.style.animationDuration = (6 + Math.random() * 14) + 's, ' + (1.2 + Math.random() * 2.5) + 's';
-    el.style.animationDelay = (-Math.random() * 12) + 's, ' + (-Math.random() * 3) + 's';
+    el.style.animationDuration = (8 + Math.random() * 16) + 's, ' + (1.5 + Math.random() * 3) + 's';
+    el.style.animationDelay = (-Math.random() * 14) + 's, ' + (-Math.random() * 4) + 's';
     document.body.appendChild(el);
   }
 })();
 
-// Load 3D flower model — Filament WASM PBR rendering
+// ── SceneView v1.5.0 — Full post-processing pipeline ──
 SceneView.modelViewer("viewer", "models/platforms/GlassVaseFlowers.glb", {
-  backgroundColor: [0.025, 0.03, 0.05, 1.0],
-  fov: 32,
-  iblIntensity: 50000,
+  backgroundColor: [0.02, 0.025, 0.045, 1.0],
+  fov: 30,
+  iblIntensity: 55000,
+  skybox: false
 }).then(function(instance) {
-  console.log("SceneView: Garden postcard loaded (Filament WASM + Polyhaven sky)");
+
+  // Hide loading indicator
+  var loadEl = document.getElementById('loading');
+  if (loadEl) loadEl.style.display = 'none';
+
+  // ── Quality: high — MSAA 4x, bloom, vignette ──
+  instance.setQuality('high');
+
+  // ── Post-processing — dreamy romantic ambiance ──
+  instance.setBloom({ strength: 0.15, resolution: 512, levels: 7 });
+  instance.setVignette({ midPoint: 0.4, roundness: 0.6, feather: 0.6 });
+  instance.setDOF({ cocScale: 0.08 });
+
+  // ── Camera — contemplative slow orbit ──
+  instance.setOrbitSpeed(0.004);
+  instance.setOrbitLimits({ minDistance: 1.5, maxDistance: 5 });
+
+  // ── Lights — warm key + cool fill for depth and romance ──
+  // Warm golden key light — side, slightly above
+  instance.addLight('point', {
+    color: [1, 0.9, 0.7],
+    intensity: 50000,
+    position: [1, 2, 0],
+    falloff: 5
+  });
+
+  // Cool blue fill light — opposite side, lower
+  instance.addLight('point', {
+    color: [0.5, 0.7, 1],
+    intensity: 30000,
+    position: [-1, 0.5, 1],
+    falloff: 4
+  });
+
+  // Subtle warm backlight for glass rim lighting
+  instance.addLight('point', {
+    color: [1, 0.85, 0.6],
+    intensity: 20000,
+    position: [0, 1.5, -1.5],
+    falloff: 3
+  });
+
+  // ── Cinematic camera intro animation ──
+  instance.animateCamera({
+    distance: 2.5,
+    height: 1,
+    angle: 0,
+    duration: 3000
+  });
+
+  console.log("SceneView v1.5.0: Garden postcard loaded");
+  console.log("  Post-processing: bloom, vignette, subtle DOF, MSAA 4x");
+  console.log("  Lights: 3 point lights (warm key, cool fill, warm back)");
+  console.log("  Camera: slow orbit (0.004), cinematic intro, limits [1.5, 5]");
+
 }).catch(function(err) {
   console.error("SceneView garden failed:", err);
+  var loadEl = document.getElementById('loading');
+  if (loadEl) { loadEl.textContent = 'failed to bloom'; loadEl.style.color = 'rgba(255,100,100,0.5)'; }
 });
 </script>
 </body>
