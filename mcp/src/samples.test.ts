@@ -79,8 +79,8 @@ describe("every Android sample", () => {
 
     it(`${id}: dependency is a valid sceneview artifact`, () => {
       expect([
-        "io.github.sceneview:sceneview:3.4.7",
-        "io.github.sceneview:arsceneview:3.4.7",
+        "io.github.sceneview:sceneview:3.5.0",
+        "io.github.sceneview:arsceneview:3.5.0",
       ]).toContain(sample.dependency);
     });
   }
@@ -111,7 +111,7 @@ describe("every iOS sample", () => {
     });
 
     it(`${id}: has SPM dependency URL`, () => {
-      expect(sample.spmDependency).toBe("https://github.com/sceneview/sceneview");
+      expect(sample.spmDependency).toBe("https://github.com/sceneview/sceneview-swift");
     });
   }
 });
@@ -122,7 +122,7 @@ describe("AR samples", () => {
 
   it("all Android AR samples use arsceneview dependency", () => {
     for (const id of androidArIds) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.4.7");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:arsceneview:3.5.0");
     }
   });
 
@@ -153,7 +153,7 @@ describe("3D samples", () => {
 
   it("all Android 3D samples use sceneview dependency", () => {
     for (const id of android3dIds) {
-      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.4.7");
+      expect(SAMPLES[id].dependency).toBe("io.github.sceneview:sceneview:3.5.0");
     }
   });
 
