@@ -15,14 +15,18 @@
 local.properties
 /.idea
 
+# Windows
+Thumbs.db
+Desktop.ini
+
 # Marketing assets (large binaries, not source)
 /video/
 
 # Build-logic compiled artifacts (no sources — buildSrc is used)
 /build-logic/
 
-# MCP server
-mcp/node_modules/
+# MCP servers (all)
+**/node_modules/
 mcp/.DS_Store
 mcp/demo/*.mp4
 
