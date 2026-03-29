@@ -163,7 +163,6 @@ fun ExploreScreen() {
                 }
             )
         ) {
-            Node(apply = { centerNode.addChildNode(this) })
             modelInstance?.let { instance ->
                 ModelNode(
                     modelInstance = instance,
