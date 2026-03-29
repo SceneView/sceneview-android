@@ -81,6 +81,57 @@
       "usedIn": ["android-demo", "ios-demo"],
       "defaultScale": 1.0,
       "cameraDistance": 3.5
+    },
+    {
+      "id": "animated_dragon",
+      "name": "Animated Dragon Three Motion Loops",
+      "source": "sketchfab",
+      "sourceId": "eca98cf6cd084c1596cecf716e110c29",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-dragon-three-motion-loops-eca98cf6cd084c1596cecf716e110c29",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_dragon.glb", "size": "8.0MB" },
+        "usdz": { "file": "models/usdz/animated_dragon.usdz", "size": "8.6MB" }
+      },
+      "tags": ["dragon", "animated", "fantasy", "creature"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "animated_butterfly",
+      "name": "Animated Flying Fluttering Butterfly Loop",
+      "source": "sketchfab",
+      "sourceId": "80f8d9a6dadc411e89ca366cb0cfb0d9",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-flying-fluttering-butterfly-loop-80f8d9a6dadc411e89ca366cb0cfb0d9",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_butterfly.glb", "size": "3.9MB" },
+        "usdz": { "file": "models/usdz/animated_butterfly.usdz", "size": "3.1MB" }
+      },
+      "tags": ["butterfly", "animated", "nature", "insect"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "retro_piano",
+      "name": "Retro Piano",
+      "source": "sketchfab",
+      "sourceId": "fd4971cd71564319aa2132266d208185",
+      "sourceUrl": "https://sketchfab.com/3d-models/retro-piano-fd4971cd71564319aa2132266d208185",
+      "author": "DailyArt",
+      "license": "CC-BY-NC-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/retro_piano.glb", "size": "4.0MB" },
+        "usdz": { "file": "models/usdz/retro_piano.usdz", "size": "1.8MB" }
+      },
+      "tags": ["piano", "retro", "music", "instrument"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.7,
+      "cameraDistance": 3.0
     }
   ],
   "environments": [
