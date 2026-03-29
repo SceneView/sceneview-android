@@ -21,10 +21,19 @@ on:
       - 'samples/ios-demo/**'
   workflow_dispatch:
 
+# Only one TestFlight deploy at a time
+concurrency:
+  group: testflight-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Build & Upload to TestFlight
     runs-on: macos-15
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: samples/ios-demo
@@ -48,17 +57,20 @@ jobs:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: |
-          if [ -z "$BUILD_CERTIFICATE_BASE64" ]; then
-            echo "::error::IOS_BUILD_CERTIFICATE_BASE64 secret is empty. Export your .p12 certificate and base64-encode it."
-            exit 1
-          fi
-          if [ -z "$P12_PASSWORD" ]; then
-            echo "::error::IOS_BUILD_CERTIFICATE_PASSWORD secret is empty. Set the password used when exporting the .p12."
-            exit 1
-          fi
-          if [ -z "$BUILD_PROVISION_PROFILE_BASE64" ]; then
-            echo "::error::IOS_PROVISIONING_PROFILE_BASE64 secret is empty. Download the provisioning profile from Apple Developer and base64-encode it."
+          MISSING=()
+          [ -z "$BUILD_CERTIFICATE_BASE64" ]       && MISSING+=("IOS_BUILD_CERTIFICATE_BASE64")
+          [ -z "$P12_PASSWORD" ]                   && MISSING+=("IOS_BUILD_CERTIFICATE_PASSWORD")
+          [ -z "$BUILD_PROVISION_PROFILE_BASE64" ] && MISSING+=("IOS_PROVISIONING_PROFILE_BASE64")
+          [ -z "$APP_STORE_CONNECT_KEY_ID" ]       && MISSING+=("APP_STORE_CONNECT_KEY_ID")
+          [ -z "$APP_STORE_CONNECT_ISSUER_ID" ]    && MISSING+=("APP_STORE_CONNECT_ISSUER_ID")
+          [ -z "$APP_STORE_CONNECT_API_KEY" ]      && MISSING+=("APP_STORE_CONNECT_API_KEY")
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${MISSING[*]}"
+            echo "See the workflow comments for setup instructions."
             exit 1
           fi
           # Validate base64 decodes to a valid PKCS12 file
@@ -104,6 +116,14 @@ jobs:
           echo "Installed provisioning profile: $PROFILE_UUID"
           echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> $GITHUB_ENV
 
+      - name: Cache Swift Package dependencies
+        uses: actions/cache@v4
+        with:
+          path: samples/ios-demo/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('samples/ios-demo/SceneViewDemo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
       - name: Resolve Swift Package dependencies
         run: |
           xcodebuild -resolvePackageDependencies \
@@ -113,9 +133,6 @@ jobs:
 
       - name: Build archive
         run: |
-          # Install iOS 18.2 simulator runtime if needed
-          xcodebuild -downloadPlatform iOS || true
-
           xcodebuild archive \
             -project SceneViewDemo.xcodeproj \
             -scheme SceneViewDemo \
@@ -131,7 +148,7 @@ jobs:
             DEVELOPMENT_TEAM=5G3DZ3TH45 \
             PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_UUID"
 
-      - name: Export IPA
+      - name: Export IPA and upload to TestFlight
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -174,9 +191,6 @@ jobs:
             -authenticationKeyPath ~/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8 \
             -authenticationKeyID $APP_STORE_CONNECT_API_KEY_ID \
             -authenticationKeyIssuerID $APP_STORE_CONNECT_API_ISSUER_ID
-
-      # Upload step removed — exportArchive with destination=upload already
-      # submits the build to TestFlight. xcrun altool was removed in Xcode 16.
 
       - name: Clean up keychain and keys
         if: always()

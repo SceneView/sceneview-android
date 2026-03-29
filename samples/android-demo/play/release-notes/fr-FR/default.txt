@@ -1,7 +1,7 @@
-SceneView Demo v1.1.0 :
-• NOUVEAU : Mode Galerie — LazyColumn avec plusieurs scènes 3D live
-• NOUVEAU : 8 modèles Sketchfab (sedan, chat, phoenix, mantis, géant dansant + plus)
-• NOUVEAU : Environnement HDR studio Poly Haven pour un éclairage professionnel
-• Vérification automatique des mises à jour au lancement
-• Visuels Play Store et métadonnées bilingues (EN + FR)
-• Icône d'app affinée avec cube 3D et ombre
+SceneView Demo v3.4.7 :
+• Onglet 3D — orbite, zoom et rotation de 14 modèles premium
+• Onglet AR — placement de 6 modèles par tap avec déplacement/échelle/rotation
+• Onglet Samples — 14 démos interactives de fonctionnalités
+• Ciel dynamique, brouillard, physique, post-traitement, détection d'image
+• Design Material 3 Expressif avec couleurs dynamiques (Android 12+)
+• Mise à jour in-app intégrée

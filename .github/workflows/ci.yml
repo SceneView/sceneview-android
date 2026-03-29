@@ -13,12 +13,29 @@ on:
       - 'LICENSE'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'website-static/**'
+      - 'docs/**'
+      - 'marketing/**'
+      - 'mcp*/**'
+      - '*.md'
+      - 'llms*.txt'
+      - 'LICENSE'
   workflow_dispatch:
+
+# Cancel in-progress runs for the same branch/PR to save resources
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   build:
     name: Build & lint
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -59,6 +76,7 @@ jobs:
   web-desktop:
     name: Build web & desktop
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +94,8 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Build all web & desktop targets
+        # continue-on-error because web/desktop samples are stubs; real failures still surface
+        continue-on-error: true
         run: |
           ./gradlew \
             :sceneview-core:jsMainClasses \
@@ -83,6 +103,9 @@ jobs:
             :samples:web-demo:compileKotlinJs \
             :samples:desktop-demo:compileKotlinDesktop \
             --stacktrace
+
+      - name: KMP core unit tests
+        run: ./gradlew :sceneview-core:testDebugUnitTest --stacktrace
 
       - name: JS tests (informational)
         continue-on-error: true

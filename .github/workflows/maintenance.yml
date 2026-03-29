@@ -5,12 +5,17 @@ on:
     - cron: '0 7 * * *'   # 07:00 UTC every day
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   # ── 1. Dependency version check ───────────────────────────────────────────
   check-deps:
     name: Check dependency versions
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
+      contents: read
       issues: write
     steps:
       - uses: actions/checkout@v4
@@ -18,9 +23,9 @@ jobs:
       - name: Fetch latest versions
         id: versions
         run: |
-          FILAMENT_LATEST=$(curl -s https://api.github.com/repos/google/filament/releases/latest | jq -r .tag_name | tr -d 'v')
-          ARCORE_LATEST=$(curl -s https://api.github.com/repos/google-ar/arcore-android-sdk/releases/latest | jq -r .tag_name | tr -d 'v')
-          KOTLIN_LATEST=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | jq -r .tag_name | tr -d 'v')
+          FILAMENT_LATEST=$(curl -sf https://api.github.com/repos/google/filament/releases/latest | jq -r .tag_name | tr -d 'v' || echo "unknown")
+          ARCORE_LATEST=$(curl -sf https://api.github.com/repos/google-ar/arcore-android-sdk/releases/latest | jq -r .tag_name | tr -d 'v' || echo "unknown")
+          KOTLIN_LATEST=$(curl -sf https://api.github.com/repos/JetBrains/kotlin/releases/latest | jq -r .tag_name | tr -d 'v' || echo "unknown")
 
           FILAMENT_CURRENT=$(grep "filament_version" sceneview/build.gradle 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
           KOTLIN_CURRENT=$(grep "^kotlin " gradle/libs.versions.toml 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
@@ -33,22 +38,67 @@ jobs:
           echo "kotlin_latest=$KOTLIN_LATEST" >> $GITHUB_OUTPUT
           echo "kotlin_current=$KOTLIN_CURRENT" >> $GITHUB_OUTPUT
 
-      - name: Report outdated dependencies
+      - name: Report dependency status and open issue if outdated
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BODY="## Dependency status — $(date +%Y-%m-%d)\n\n"
-          BODY+="| Dependency | Current | Latest |\n|---|---|---|\n"
-          BODY+="| Filament | ${{ steps.versions.outputs.filament_current }} | ${{ steps.versions.outputs.filament_latest }} |\n"
-          BODY+="| ARCore | ${{ steps.versions.outputs.arcore_current }} | ${{ steps.versions.outputs.arcore_latest }} |\n"
-          BODY+="| Kotlin | ${{ steps.versions.outputs.kotlin_current }} | ${{ steps.versions.outputs.kotlin_latest }} |\n"
+          FILAMENT_CURRENT="${{ steps.versions.outputs.filament_current }}"
+          FILAMENT_LATEST="${{ steps.versions.outputs.filament_latest }}"
+          ARCORE_CURRENT="${{ steps.versions.outputs.arcore_current }}"
+          ARCORE_LATEST="${{ steps.versions.outputs.arcore_latest }}"
+          KOTLIN_CURRENT="${{ steps.versions.outputs.kotlin_current }}"
+          KOTLIN_LATEST="${{ steps.versions.outputs.kotlin_latest }}"
 
-          echo -e "$BODY"
+          echo "## Dependency status -- $(date +%Y-%m-%d)"
+          printf "| %-12s | %-10s | %-10s | %-8s |\n" "Dependency" "Current" "Latest" "Status"
+          printf "|%s|%s|%s|%s|\n" "$(printf '%0.s-' {1..14})" "$(printf '%0.s-' {1..12})" "$(printf '%0.s-' {1..12})" "$(printf '%0.s-' {1..10})"
+
+          OUTDATED=()
+
+          if [ "$FILAMENT_CURRENT" != "unknown" ] && [ "$FILAMENT_LATEST" != "unknown" ] && [ "$FILAMENT_CURRENT" != "$FILAMENT_LATEST" ]; then
+            printf "| %-12s | %-10s | %-10s | %-8s |\n" "Filament" "$FILAMENT_CURRENT" "$FILAMENT_LATEST" "OUTDATED"
+            OUTDATED+=("Filament $FILAMENT_CURRENT -> $FILAMENT_LATEST")
+          else
+            printf "| %-12s | %-10s | %-10s | %-8s |\n" "Filament" "$FILAMENT_CURRENT" "$FILAMENT_LATEST" "ok"
+          fi
+
+          if [ "$ARCORE_CURRENT" != "unknown" ] && [ "$ARCORE_LATEST" != "unknown" ] && [ "$ARCORE_CURRENT" != "$ARCORE_LATEST" ]; then
+            printf "| %-12s | %-10s | %-10s | %-8s |\n" "ARCore" "$ARCORE_CURRENT" "$ARCORE_LATEST" "OUTDATED"
+            OUTDATED+=("ARCore $ARCORE_CURRENT -> $ARCORE_LATEST")
+          else
+            printf "| %-12s | %-10s | %-10s | %-8s |\n" "ARCore" "$ARCORE_CURRENT" "$ARCORE_LATEST" "ok"
+          fi
+
+          if [ "$KOTLIN_CURRENT" != "unknown" ] && [ "$KOTLIN_LATEST" != "unknown" ] && [ "$KOTLIN_CURRENT" != "$KOTLIN_LATEST" ]; then
+            printf "| %-12s | %-10s | %-10s | %-8s |\n" "Kotlin" "$KOTLIN_CURRENT" "$KOTLIN_LATEST" "OUTDATED"
+            OUTDATED+=("Kotlin $KOTLIN_CURRENT -> $KOTLIN_LATEST")
+          else
+            printf "| %-12s | %-10s | %-10s | %-8s |\n" "Kotlin" "$KOTLIN_CURRENT" "$KOTLIN_LATEST" "ok"
+          fi
+
+          if [ ${#OUTDATED[@]} -gt 0 ]; then
+            OUTDATED_LIST=$(printf '%s\n' "${OUTDATED[@]}")
+            ISSUE_TITLE="Dependency updates available -- $(date +%Y-%m-%d)"
+            EXISTING=$(gh issue list --state open --search "$ISSUE_TITLE" --json number --jq '.[0].number' 2>/dev/null || echo "")
+            if [ -z "$EXISTING" ]; then
+              gh issue create \
+                --title "$ISSUE_TITLE" \
+                --label "dependencies" \
+                --body "Automated maintenance detected outdated dependencies on $(date +%Y-%m-%d):
+
+          $OUTDATED_LIST
+
+          Please evaluate each upgrade for compatibility with the current SceneView API surface."
+            else
+              echo "Dependency issue #$EXISTING already exists for today -- skipping."
+            fi
+          fi
 
   # ── 2. Stale issue detection ───────────────────────────────────────────────
   stale:
     name: Mark stale issues
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       issues: write
       pull-requests: write
@@ -72,7 +122,9 @@ jobs:
   ci-health:
     name: CI health check
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
+      contents: read
       issues: write
     steps:
       - uses: actions/checkout@v4
@@ -88,10 +140,17 @@ jobs:
           # Raised threshold: ar-emulator is continue-on-error so only
           # true build failures count now. Threshold = 4 to avoid noise.
           if [ "$FAILURES" -gt 4 ]; then
-            echo "CI is consistently failing — investigate"
-            gh issue list --label "ci-health" --state open | grep -q "." || \
+            echo "::warning::CI is consistently failing -- $FAILURES failures in last 7 runs"
+            EXISTING=$(gh issue list --state open --search "CI health:" --json number --jq '.[0].number' 2>/dev/null || echo "")
+            if [ -z "$EXISTING" ]; then
               gh issue create \
-                --title "CI health: $FAILURES failures in last 7 runs — $(date +%Y-%m-%d)" \
-                --label "bug,ci-health" \
-                --body "Automated maintenance detected $FAILURES CI failures in the last 7 runs. Please investigate."
+                --title "CI health: $FAILURES failures in last 7 runs -- $(date +%Y-%m-%d)" \
+                --label "bug" \
+                --label "ci-health" \
+                --body "Automated maintenance detected $FAILURES CI failures in the last 7 runs. Please investigate the ci.yml workflow."
+            else
+              echo "CI health issue #$EXISTING already open -- skipping duplicate."
+            fi
+          else
+            echo "CI health OK ($FAILURES/7 failures)"
           fi
