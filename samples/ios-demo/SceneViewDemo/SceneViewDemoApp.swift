@@ -293,7 +293,7 @@ struct AboutTab: View {
                             .accessibilityHidden(true)
                         Text("SceneView")
                             .font(.title).bold()
-                        Text("v3.4.7")
+                        Text("v3.5.0")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text("3D & AR as declarative UI\nfor iOS, macOS, visionOS & more")

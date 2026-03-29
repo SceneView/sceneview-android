@@ -73,7 +73,7 @@ When creating or improving a sample:
 
 ## 6. MCP & llms.txt sync
 
-- Check if any public API changed since last release: `git diff v3.3.0..HEAD -- sceneview/src/ arsceneview/src/ | grep "^+.*fun \|^+.*@Composable"`
+- Check if any public API changed since last release: `git diff v3.5.0..HEAD -- sceneview/src/ arsceneview/src/ | grep "^+.*fun \|^+.*@Composable"`
 - If new public APIs exist, update `llms.txt` and the relevant MCP tool descriptions.
 - Run MCP tests: `cd mcp && npm test`
 - If tests fail, fix them.
@@ -81,7 +81,7 @@ When creating or improving a sample:
 ## 7. Release decision
 
 Evaluate whether a new release is warranted:
-- Count meaningful commits since last tag: `git log v3.3.0..HEAD --oneline | grep -v "chore\|docs\|ci\|style" | wc -l`
+- Count meaningful commits since last tag: `git log v3.5.0..HEAD --oneline | grep -v "chore\|docs\|ci\|style" | wc -l`
 - If ≥ 5 meaningful commits, or a critical bug was fixed: propose a release (bump version, update CHANGELOG, tag).
 - If releasing: capture emulator screenshots of all samples and attach them to the GitHub Release page.
 

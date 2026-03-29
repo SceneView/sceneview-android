@@ -19,8 +19,8 @@ implementation("io.github.sceneview:sceneview:2.3.0")
 implementation("io.github.sceneview:arsceneview:2.3.0")
 
 // After
-implementation("io.github.sceneview:sceneview:3.4.7")
-implementation("io.github.sceneview:arsceneview:3.4.7")
+implementation("io.github.sceneview:sceneview:3.5.0")
+implementation("io.github.sceneview:arsceneview:3.5.0")
 ```
 
 ---
@@ -234,7 +234,7 @@ the imports continue to work. No action required.
 
 | Change | Action |
 |---|---|
-| Bump dependency to `3.4.7` | Update `build.gradle` |
+| Bump dependency to `3.5.0` | Update `build.gradle` |
 | Remove `childNodes = rememberNodes { }` | Move node declarations into `Scene { }` |
 | Replace `add(ModelNode(...))` | Use `ModelNode(...)` composable directly |
 | Replace `addChildNode(...)` | Use nested `NodeScope` content lambda |
