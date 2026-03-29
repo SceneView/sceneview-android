@@ -14,6 +14,8 @@ export const DEBUG_CATEGORIES = [
     "lighting",
     "gestures",
     "ios",
+    "material",
+    "animation",
 ];
 const DEBUG_GUIDES = {
     "model-not-showing": {
@@ -199,6 +201,15 @@ fun DebugModelViewer() {
 - Large models (>100K triangles) on old devices → reduce poly count.
 - Multiple 4K HDR environments → use 2K or smaller.
 
+### Threading Crashes (most common)
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| SIGABRT on model load | \`modelLoader.createModel*\` on IO thread | Use \`rememberModelInstance\` or wrap in \`Dispatchers.Main\` |
+| SIGABRT on texture create | \`Texture.Builder\` on background thread | Move to main thread |
+| SIGABRT on material load | \`materialLoader.*\` on coroutine | Use \`Dispatchers.Main\` |
+| Crash in LaunchedEffect | Filament call inside \`launch(Dispatchers.IO)\` | Remove the dispatcher or use \`Dispatchers.Main\` |
+
 ### Diagnostic Steps
 
 1. Enable Filament debug logging:
@@ -212,7 +223,17 @@ fun DebugModelViewer() {
    adb logcat -s Filament
    \`\`\`
 
-3. Run with Android Studio memory profiler to detect leaks.`,
+3. Check for threading violations:
+   \`\`\`
+   adb logcat | grep -i "wrong thread\\|filament\\|SIGABRT"
+   \`\`\`
+
+4. Run with Android Studio memory profiler to detect leaks.
+
+5. Common stack traces and what they mean:
+   - \`Filament::FEngine::assertThread\` → wrong thread (not main)
+   - \`Filament::FTexture::terminate\` → texture destroyed while material still using it
+   - \`Filament::FEngine::terminate\` → engine double-destroyed or destroyed before children`,
     },
     performance: {
         title: "Performance Problems",
@@ -510,6 +531,122 @@ Scene(
 - Always load models in \`.task { }\` (inherits @MainActor) or annotate functions with \`@MainActor\`.
 - SceneViewSwift nodes are \`@unchecked Sendable\` — the warning is expected.`,
     },
+    material: {
+        title: "Material / Texture Issues",
+        guide: `## Debugging: Material / Texture Issues
+
+### Model Appears White or Untextured
+
+1. **Missing textures in GLB** — the GLB file may reference external textures.
+   - Use \`.glb\` (binary) not \`.gltf\` (multi-file) to bundle textures.
+   - Validate in https://gltf-viewer.donmccurdy.com/
+
+2. **Material compatibility** — SceneView uses Filament 1.70.0+ materials.
+   - Filament only supports metallic-roughness PBR (not spec-gloss).
+   - Convert spec-gloss models in Blender before export.
+
+3. **Custom material files (.filamat)** — must match your Filament version.
+   - Recompile \`.mat\` files with matching \`matc\` version.
+   - Pre-compiled materials in \`src/main/assets/materials/\`.
+
+### Material Loading Crashes
+
+1. **Wrong thread** — \`materialLoader.createMaterial()\` must run on the main thread.
+   \`\`\`kotlin
+   // WRONG — crashes
+   launch(Dispatchers.IO) { materialLoader.createMaterial(...) }
+
+   // CORRECT
+   val material = rememberMaterial(materialLoader) { ... }
+   \`\`\`
+
+2. **Destroy order** — materials must be destroyed BEFORE textures.
+   \`\`\`kotlin
+   // CORRECT order
+   materialLoader.destroyMaterialInstance(instance)
+   engine.safeDestroyTexture(texture)
+   \`\`\`
+
+### Transparent Materials
+
+- Set \`transparencyMode = MaterialInstance.TransparencyMode.DEFAULT\` for alpha blending.
+- Double-sided rendering: set \`doubleSided = true\` in your material.
+- For cutout transparency (e.g., leaves), use alpha masking not blending.
+
+### Common Material Issues
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| White/grey model | Missing textures or wrong format | Use .glb, check textures embedded |
+| Pink model | Material compilation error | Recompile .filamat for current Filament version |
+| Crash on material load | Wrong thread | Use main thread or \`rememberMaterial\` |
+| SIGABRT on cleanup | Wrong destroy order | Destroy materials before textures |
+| Transparent parts solid | TransparencyMode not set | Set transparencyMode on MaterialInstance |`,
+    },
+    animation: {
+        title: "Animation Issues",
+        guide: `## Debugging: Animation Issues
+
+### Animation Not Playing
+
+1. **Model has no animations** — check in a 3D viewer (Blender, gltf-viewer).
+   \`\`\`kotlin
+   // Log available animations
+   modelInstance?.let { instance ->
+       instance.animator?.let { animator ->
+           Log.d("SV", "Animation count: \${animator.animationCount}")
+           for (i in 0 until animator.animationCount) {
+               Log.d("SV", "Animation \$i: \${animator.getAnimationName(i)}")
+           }
+       }
+   }
+   \`\`\`
+
+2. **Animator not being updated** — animations require frame-by-frame updates.
+   \`\`\`kotlin
+   Scene(
+       onFrame = { frameTimeNanos ->
+           modelInstance?.animator?.let { animator ->
+               if (animator.animationCount > 0) {
+                   animator.applyAnimation(0, elapsedTime)
+                   animator.updateBoneMatrices()
+               }
+           }
+       }
+   )
+   \`\`\`
+
+3. **Animation index out of bounds** — always check \`animationCount\` before \`applyAnimation\`.
+
+### Animation Looks Wrong
+
+- **Wrong scale** — if model was scaled with \`scaleToUnits\`, bone positions may look off on very small/large models.
+- **Missing morph targets** — blend shapes require morph target support in the model.
+- **Frame rate** — animations interpolate between keyframes. Low FPS = choppy animation.
+
+### Smooth Object Movement
+
+For smooth node transforms (not skeletal animation):
+\`\`\`kotlin
+// Use SmoothTransform from sceneview-core
+ModelNode(
+    modelInstance = instance,
+    // Position changes are smoothly interpolated
+    position = targetPosition,
+    smoothSpeed = 5.0f
+)
+\`\`\`
+
+### Common Animation Issues
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| No animation plays | Animator not updated in onFrame | Call \`applyAnimation\` + \`updateBoneMatrices\` each frame |
+| Animation freezes | \`elapsedTime\` not advancing | Track time with \`System.nanoTime()\` delta |
+| Wrong animation | Wrong index | Log animation names, use correct index |
+| Bones don't move | \`updateBoneMatrices()\` missing | Always call after \`applyAnimation\` |
+| Morph targets broken | Model export issue | Re-export from Blender with morph targets enabled |`,
+    },
 };
 export function getDebugGuide(category) {
     const entry = DEBUG_GUIDES[category];
@@ -520,31 +657,41 @@ export function getDebugGuide(category) {
 }
 export function autoDetectIssue(description) {
     const lower = description.toLowerCase();
-    if (lower.includes("not showing") || lower.includes("invisible") || lower.includes("can't see") || lower.includes("model doesn't appear")) {
-        return "model-not-showing";
-    }
-    if (lower.includes("ar not") || lower.includes("ar doesn't") || lower.includes("arcore") || lower.includes("plane") || lower.includes("anchor")) {
-        return "ar-not-working";
-    }
-    if (lower.includes("crash") || lower.includes("sigabrt") || lower.includes("native") || lower.includes("fatal") || lower.includes("exception")) {
+    // Threading issues → crash category (very common, check early)
+    if (lower.includes("wrong thread") || lower.includes("off main thread") || lower.includes("dispatchers.io") || lower.includes("background thread")) {
         return "crash";
     }
-    if (lower.includes("slow") || lower.includes("fps") || lower.includes("lag") || lower.includes("jank") || lower.includes("performance") || lower.includes("memory")) {
+    if (lower.includes("not showing") || lower.includes("invisible") || lower.includes("can't see") || lower.includes("model doesn't appear") || lower.includes("model not visible") || lower.includes("nothing shows up") || lower.includes("model is null") || lower.includes("remembermodelinstance returns null")) {
+        return "model-not-showing";
+    }
+    if (lower.includes("ar not") || lower.includes("ar doesn't") || lower.includes("arcore") || lower.includes("plane") || lower.includes("anchor") || lower.includes("camera permission") || lower.includes("augmented reality") || lower.includes("hit test") || lower.includes("hitresult")) {
+        return "ar-not-working";
+    }
+    if (lower.includes("crash") || lower.includes("sigabrt") || lower.includes("native crash") || lower.includes("fatal") || lower.includes("exception") || lower.includes("destroy") || lower.includes("double free") || lower.includes("segfault") || (lower.includes("oom") && !lower.includes("zoom")) || lower.includes("out of memory") || lower.includes("nullpointerexception") || lower.includes("npe")) {
+        return "crash";
+    }
+    if (lower.includes("slow") || lower.includes("fps") || lower.includes("lag") || lower.includes("jank") || lower.includes("performance") || lower.includes("memory") || lower.includes("stuttering") || lower.includes("frame drop") || lower.includes("choppy") || lower.includes("battery drain")) {
         return "performance";
     }
-    if (lower.includes("build") || lower.includes("gradle") || lower.includes("compile") || lower.includes("dependency") || lower.includes("cannot resolve")) {
+    if (lower.includes("build") || lower.includes("gradle") || lower.includes("compile") || lower.includes("dependency") || lower.includes("cannot resolve") || lower.includes("duplicate class") || lower.includes("java version") || lower.includes("agp") || lower.includes("version mismatch") || lower.includes("unresolved reference")) {
         return "build-error";
     }
-    if (lower.includes("black screen") || lower.includes("blank") || lower.includes("nothing renders")) {
+    if (lower.includes("black screen") || lower.includes("blank") || lower.includes("nothing renders") || lower.includes("no rendering") || lower.includes("screen is black") || lower.includes("empty screen")) {
         return "black-screen";
     }
-    if (lower.includes("dark") || lower.includes("bright") || lower.includes("light") || lower.includes("shadow") || lower.includes("overexposed")) {
+    if (lower.includes("material") || lower.includes("texture") || lower.includes("white model") || lower.includes("untextured") || lower.includes("pink model") || lower.includes("filamat") || lower.includes("transparent") || lower.includes("alpha")) {
+        return "material";
+    }
+    if (lower.includes("animation") || lower.includes("animate") || lower.includes("morph") || lower.includes("bone") || lower.includes("skeleton") || lower.includes("keyframe") || lower.includes("animator")) {
+        return "animation";
+    }
+    if (lower.includes("dark") || lower.includes("bright") || lower.includes("light") || lower.includes("shadow") || lower.includes("overexposed") || lower.includes("hdr") || lower.includes("environment") || lower.includes("ibl")) {
         return "lighting";
     }
-    if (lower.includes("touch") || lower.includes("gesture") || lower.includes("tap") || lower.includes("drag") || lower.includes("rotate") || lower.includes("interact")) {
+    if (lower.includes("touch") || lower.includes("gesture") || lower.includes("tap") || lower.includes("drag") || lower.includes("rotate") || lower.includes("interact") || lower.includes("click") || lower.includes("select") || lower.includes("pinch") || lower.includes("zoom")) {
         return "gestures";
     }
-    if (lower.includes("ios") || lower.includes("swift") || lower.includes("xcode") || lower.includes("spm") || lower.includes("realitykit") || lower.includes("usdz")) {
+    if (lower.includes("ios") || lower.includes("swift") || lower.includes("xcode") || lower.includes("spm") || lower.includes("realitykit") || lower.includes("usdz") || lower.includes("visionos") || lower.includes("macos") || lower.includes("apple")) {
         return "ios";
     }
     return null;
