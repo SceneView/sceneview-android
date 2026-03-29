@@ -158,26 +158,19 @@ public struct GeometryNode: Sendable {
 
     // MARK: - Cone
 
-    /// Creates a cone geometry approximated by a narrow-top cylinder.
-    ///
-    /// RealityKit does not provide a native cone mesh generator, so this uses a very
-    /// narrow-top cylinder to approximate a cone shape.
+    /// Creates a cone geometry using `MeshResource.generateCone(height:radius:)`.
     ///
     /// - Parameters:
     ///   - height: Cone height in meters.
     ///   - radius: Base radius in meters.
     ///   - color: Simple material color.
-    /// - Returns: A `GeometryNode` containing an approximate cone mesh.
+    /// - Returns: A `GeometryNode` containing a cone mesh.
     public static func cone(
         height: Float = 1.0,
         radius: Float = 0.5,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
-        // Approximate a cone with a cylinder that has a very small top radius
-        let mesh = MeshResource.generateCylinder(
-            height: height,
-            radius: radius
-        )
+        let mesh = MeshResource.generateCone(height: height, radius: radius)
         let material = SimpleMaterial(color: color, isMetallic: false)
         let entity = ModelEntity(mesh: mesh, materials: [material])
         entity.generateCollisionShapes(recursive: false)
