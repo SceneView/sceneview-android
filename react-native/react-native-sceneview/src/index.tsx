@@ -1,8 +1,12 @@
 import React from 'react';
 import {
   requireNativeComponent,
+  Platform,
   type ViewStyle,
   type NativeSyntheticEvent,
+  View,
+  Text,
+  StyleSheet,
 } from 'react-native';
 
 // ---------------------------------------------------------------------------
@@ -13,10 +17,16 @@ import {
 export interface ModelNode {
   /** Asset path or URL to the glTF/GLB model. */
   src: string;
+  /** World-space position [x, y, z]. Default: [0, 0, 0]. */
   position?: [number, number, number];
+  /** Euler rotation in degrees [x, y, z]. Default: [0, 0, 0]. */
   rotation?: [number, number, number];
-  scale?: [number, number, number];
-  /** Animation name to play automatically. */
+  /** Scale factor. Can be uniform (number) or per-axis [x, y, z]. */
+  scale?: number | [number, number, number];
+  /**
+   * Animation name to play automatically.
+   * If provided (non-null), auto-animate is enabled on the native side.
+   */
   animation?: string;
 }
 
@@ -26,7 +36,7 @@ export interface GeometryNode {
   size?: [number, number, number];
   position?: [number, number, number];
   rotation?: [number, number, number];
-  scale?: [number, number, number];
+  scale?: number | [number, number, number];
   /** Hex color string, e.g. "#FF5500". */
   color?: string;
 }
@@ -99,14 +109,41 @@ export interface ARSceneViewProps extends SceneViewProps {
 }
 
 // ---------------------------------------------------------------------------
-// Native components
+// Native components (only available on Android and iOS)
 // ---------------------------------------------------------------------------
 
-const NativeSceneView =
-  requireNativeComponent<SceneViewProps>('RNSceneView');
+const isNativeAvailable = Platform.OS === 'android' || Platform.OS === 'ios';
 
-const NativeARSceneView =
-  requireNativeComponent<ARSceneViewProps>('RNARSceneView');
+const NativeSceneView = isNativeAvailable
+  ? requireNativeComponent<SceneViewProps>('RNSceneView')
+  : null;
+
+const NativeARSceneView = isNativeAvailable
+  ? requireNativeComponent<ARSceneViewProps>('RNARSceneView')
+  : null;
+
+// ---------------------------------------------------------------------------
+// Fallback for unsupported platforms
+// ---------------------------------------------------------------------------
+
+const UnsupportedView: React.FC<{ name: string }> = ({ name }) => (
+  <View style={fallbackStyles.container}>
+    <Text style={fallbackStyles.text}>{name} is not supported on this platform</Text>
+  </View>
+);
+
+const fallbackStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1a1a2e',
+  },
+  text: {
+    color: '#aaa',
+    fontSize: 16,
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Public components
@@ -122,9 +159,12 @@ const NativeARSceneView =
  * />
  * ```
  */
-export const SceneView: React.FC<SceneViewProps> = (props) => (
-  <NativeSceneView {...props} />
-);
+export const SceneView: React.FC<SceneViewProps> = (props) => {
+  if (!NativeSceneView) {
+    return <UnsupportedView name="SceneView" />;
+  }
+  return <NativeSceneView {...props} />;
+};
 
 /**
  * An augmented-reality scene using ARCore (Android) or ARKit (iOS).
@@ -136,6 +176,9 @@ export const SceneView: React.FC<SceneViewProps> = (props) => (
  * />
  * ```
  */
-export const ARSceneView: React.FC<ARSceneViewProps> = (props) => (
-  <NativeARSceneView {...props} />
-);
+export const ARSceneView: React.FC<ARSceneViewProps> = (props) => {
+  if (!NativeARSceneView) {
+    return <UnsupportedView name="ARSceneView" />;
+  }
+  return <NativeARSceneView {...props} />;
+};

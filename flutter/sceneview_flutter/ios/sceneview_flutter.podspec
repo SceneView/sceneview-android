@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
   s.name             = 'sceneview_flutter'
-  s.version          = '0.1.0'
+  s.version          = '3.4.7'
   s.summary          = 'Flutter plugin for SceneView 3D and AR.'
   s.description      = <<-DESC
   Flutter plugin bridging to SceneViewSwift (RealityKit) for 3D and AR scenes on iOS.
                        DESC
-  s.homepage         = 'https://github.com/SceneView/sceneview'
+  s.homepage         = 'https://github.com/sceneview/sceneview'
   s.license          = { :type => 'Apache-2.0' }
   s.author           = { 'SceneView' => 'contact@sceneview.github.io' }
   s.source           = { :path => '.' }
