@@ -1,15 +1,136 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SceneView</string>
+
+    <!-- Navigation -->
     <string name="tab_3d">3D</string>
     <string name="tab_ar">AR</string>
     <string name="tab_samples">Samples</string>
     <string name="tab_about">About</string>
-    <string name="scan_surface">Point your camera at a flat surface</string>
-    <string name="model_placed">Model placed — tap to reposition</string>
+
+    <!-- Explore screen -->
+    <string name="explore_title">SceneView</string>
+    <string name="explore_subtitle">3D &amp; AR for Jetpack Compose</string>
+    <string name="explore_gesture_hint">Pinch to zoom \u00B7 Drag to orbit \u00B7 Double-tap to enlarge</string>
+    <string name="explore_pause">Pause animation</string>
+    <string name="explore_play">Play animation</string>
+    <string name="explore_animation_count">%d animations</string>
+    <string name="explore_loading">Loading 3D model</string>
+
+    <!-- AR screen -->
+    <string name="ar_scan_surface">Point your camera at a flat surface</string>
+    <string name="ar_model_placed">Model placed \u2014 tap to reposition</string>
+    <string name="ar_not_available_title">AR Not Available</string>
+    <string name="ar_not_available_description">This device does not support ARCore.\nAR features require a compatible Android device with Google Play Services for AR installed.</string>
+    <string name="ar_drag_to_move">Drag to move</string>
+    <string name="ar_pinch_to_scale">Pinch to scale</string>
+    <string name="ar_twist_to_rotate">Twist to rotate</string>
+    <string name="ar_remove">Remove</string>
+
+    <!-- Samples screen -->
+    <string name="samples_title">Samples</string>
+    <string name="samples_feature_count">%d feature demos</string>
+    <string name="samples_badge_live">LIVE</string>
+    <string name="samples_badge_soon">SOON</string>
+    <string name="samples_back">Back</string>
+
+    <!-- Sample categories -->
+    <string name="category_3d">3D</string>
+    <string name="category_effects">Effects</string>
+    <string name="category_content">Content</string>
+    <string name="category_advanced">Advanced</string>
+    <string name="category_ar">AR</string>
+    <string name="category_interactive">Interactive</string>
+
+    <!-- Sample demo titles -->
+    <string name="demo_model_viewer">Model Viewer</string>
+    <string name="demo_model_viewer_desc">Load and render glTF/GLB 3D models with orbit camera</string>
+    <string name="demo_geometry">Geometry Nodes</string>
+    <string name="demo_geometry_desc">Procedural cube, sphere, cylinder, and plane geometry</string>
+    <string name="demo_animations">Animations</string>
+    <string name="demo_animations_desc">Play, pause, and cycle through model animations</string>
+    <string name="demo_dynamic_sky">Dynamic Sky</string>
+    <string name="demo_dynamic_sky_desc">Time-of-day sun position with atmospheric scattering</string>
+    <string name="demo_lighting">Lighting</string>
+    <string name="demo_lighting_desc">Point, directional, and spot lights with shadows</string>
+    <string name="demo_camera_controls">Camera Controls</string>
+    <string name="demo_camera_controls_desc">Orbit, pan, zoom camera manipulator</string>
+    <string name="demo_post_processing">Post-Processing</string>
+    <string name="demo_post_processing_desc">Bloom, SSAO, FXAA, tone mapping, vignette</string>
+    <string name="demo_fog">Fog</string>
+    <string name="demo_fog_desc">Height-based atmospheric volumetric fog</string>
+    <string name="demo_text_labels">Text Labels</string>
+    <string name="demo_text_labels_desc">3D text rendering with billboard facing</string>
+    <string name="demo_line_paths">Line Paths</string>
+    <string name="demo_line_paths_desc">3D polylines and Lissajous curves</string>
+    <string name="demo_physics">Physics</string>
+    <string name="demo_physics_desc">Rigid body simulation with bouncing balls</string>
+    <string name="demo_image_detection">Image Detection</string>
+    <string name="demo_image_detection_desc">Real-world image recognition with AR overlay</string>
+    <string name="demo_reflection_probes">Reflection Probes</string>
+    <string name="demo_reflection_probes_desc">Local cubemap reflections for realistic materials</string>
+    <string name="demo_gltf_cameras">glTF Cameras</string>
+    <string name="demo_gltf_cameras_desc">Import and switch between cameras from glTF files</string>
+    <string name="demo_multi_model">Multi-Model Scene</string>
+    <string name="demo_multi_model_desc">Compose multiple models into a single styled scene</string>
+    <string name="demo_dynamic_lighting">Dynamic Lighting</string>
+    <string name="demo_dynamic_lighting_desc">Adjust light color, intensity, and type in real time</string>
+    <string name="demo_animation_control">Animation Control</string>
+    <string name="demo_animation_control_desc">Switch animations by name, control speed and looping</string>
+    <string name="demo_environment_gallery">Environment Gallery</string>
+    <string name="demo_environment_gallery_desc">Compare HDR environments on the same model side by side</string>
+    <string name="demo_gesture_editing">Gesture Editing</string>
+    <string name="demo_gesture_editing_desc">Drag, rotate, and scale models with touch gestures</string>
+
+    <!-- Demo UI controls -->
+    <string name="control_sun_intensity">Sun Intensity: %d lux</string>
+    <string name="control_fog_density">Fog Density: %s</string>
+    <string name="control_drop_again">Drop Again</string>
+    <string name="control_camera_label">Camera: %s</string>
+    <string name="control_orbit_instruction">1 finger \u2014 Orbit</string>
+    <string name="control_pan_instruction">2 fingers \u2014 Pan</string>
+    <string name="control_zoom_instruction">Pinch \u2014 Zoom</string>
+    <string name="control_double_tap_reset">Double tap \u2014 Reset</string>
+    <string name="control_environment_reflections">Environment Reflections</string>
+    <string name="control_environment_reflections_desc">Switch environments to see how reflections change on the model surface.</string>
+    <string name="control_light_color">Light Color</string>
+    <string name="control_light_intensity">Intensity: %d</string>
+    <string name="control_light_type">Light Type</string>
+    <string name="control_animation_speed">Speed: %.1fx</string>
+    <string name="control_animation_loop">Loop</string>
+    <string name="control_gesture_drag_hint">Drag model to move \u00B7 Pinch to resize \u00B7 Twist to rotate</string>
+    <string name="control_reset_position">Reset</string>
+
+    <!-- Image Detection demo -->
+    <string name="image_detection_title">Image Detection Demo</string>
+    <string name="image_detection_desc">Uses AugmentedImageDatabase to detect\nprinted images and overlay 3D content.</string>
+    <string name="image_detection_point_camera">Point camera at the SceneView logo</string>
+    <string name="image_detection_count">%d image(s) detected</string>
+    <string name="image_detection_ar_unavailable">AR not available on this device.\nImage Detection requires ARCore.</string>
+
+    <!-- About screen -->
+    <string name="about_title">About</string>
+    <string name="about_sceneview">SceneView</string>
+    <string name="about_version">v%s</string>
+    <string name="about_tagline">3D &amp; AR as declarative UI\nfor Android, iOS, Web &amp; more</string>
+    <string name="about_feature_3d_title">3D Scenes</string>
+    <string name="about_feature_3d_desc">Full Jetpack Compose integration with Filament rendering engine. Load glTF/GLB models, procedural geometry, dynamic skies, and more.</string>
+    <string name="about_feature_ar_title">Augmented Reality</string>
+    <string name="about_feature_ar_desc">ARCore-powered tap-to-place, plane detection, image tracking, depth occlusion, and light estimation.</string>
+    <string name="about_feature_ai_title">AI-First SDK</string>
+    <string name="about_feature_ai_desc">Designed so AI assistants can generate correct 3D/AR code on the first try. Declarative API, comprehensive docs, machine-readable references.</string>
+    <string name="about_platforms_title">9 Platforms</string>
+    <string name="about_github">GitHub</string>
+    <string name="about_docs">Docs</string>
+    <string name="about_credits_title">Credits</string>
+    <string name="about_credits_filament">Built with Google Filament, ARCore, Jetpack Compose, and Material 3 Expressive.</string>
+    <string name="about_credits_models">3D models from Sketchfab (CC-BY / CC0) and Khronos glTF Sample Models.</string>
+    <string name="about_credits_license">Open source under Apache License 2.0.</string>
+
+    <!-- Update banner -->
     <string name="update_available">Update available</string>
-    <string name="update_downloading">Downloading update…</string>
-    <string name="update_ready">Update ready — restart to apply</string>
+    <string name="update_downloading">Downloading update\u2026</string>
+    <string name="update_ready">Update ready!</string>
     <string name="update_restart">Restart</string>
     <string name="update_check">Check for updates</string>
 
@@ -17,7 +138,17 @@
     <string name="ar_not_available">AR is not available on this device</string>
     <string name="ar_not_installed">Google Play Services for AR is not installed</string>
     <string name="ar_camera_permission">Camera permission is required for AR</string>
-    <string name="model_loading">Loading 3D model…</string>
+    <string name="model_loading">Loading 3D model\u2026</string>
     <string name="model_loading_error">Failed to load model</string>
     <string name="scene_error">Something went wrong rendering the scene</string>
+
+    <!-- Accessibility -->
+    <string name="cd_3d_scene">3D scene viewport</string>
+    <string name="cd_ar_scene">Augmented reality viewport</string>
+    <string name="cd_loading_model">Loading 3D model, please wait</string>
+    <string name="cd_model_selector">Select a 3D model</string>
+    <string name="cd_environment_selector">Select lighting environment</string>
+    <string name="cd_back_button">Navigate back</string>
+    <string name="cd_remove_model">Remove placed model</string>
+    <string name="cd_scanning_surface">Scanning for flat surface</string>
 </resources>
