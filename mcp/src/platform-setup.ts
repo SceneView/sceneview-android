@@ -25,7 +25,7 @@ const ANDROID_3D = `## SceneView Android — 3D Setup
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.5.0")
+    implementation("io.github.sceneview:sceneview:3.5.1")
 }
 \`\`\`
 
@@ -102,7 +102,7 @@ const ANDROID_AR = `## SceneView Android — AR Setup
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.5.0")
+    implementation("io.github.sceneview:arsceneview:3.5.1")
     // arsceneview includes sceneview transitively
 }
 \`\`\`
@@ -707,7 +707,7 @@ SceneView on Android TV uses the same Filament renderer as mobile Android, with 
 
 \`\`\`kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.5.0")
+    implementation("io.github.sceneview:sceneview:3.5.1")
     implementation("androidx.leanback:leanback:1.0.0")
     implementation("androidx.tv:tv-foundation:1.0.0-alpha10")
 }

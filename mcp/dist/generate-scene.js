@@ -245,7 +245,7 @@ export function generateScene(description) {
     }
     // Build the code
     const isAR = parsed.isAR;
-    dependencies.push(isAR ? "io.github.sceneview:arsceneview:3.5.0" : "io.github.sceneview:sceneview:3.5.0");
+    dependencies.push(isAR ? "io.github.sceneview:arsceneview:3.5.1" : "io.github.sceneview:sceneview:3.5.1");
     // Build model instance declarations
     const modelElements = elements.filter((e) => e.type === "model");
     const uniqueModels = new Map();
