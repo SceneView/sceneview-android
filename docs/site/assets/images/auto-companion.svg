@@ -1,0 +1,344 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 400">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <!-- Car body metallic -->
+    <radialGradient id="carMetal" cx="0.5" cy="0.4" r="0.55">
+      <stop offset="0%" stop-color="#374151"/>
+      <stop offset="60%" stop-color="#2A3444"/>
+      <stop offset="100%" stop-color="#1F2937"/>
+    </radialGradient>
+
+    <!-- Car roof highlight -->
+    <radialGradient id="roofHighlight" cx="0.5" cy="0.35" r="0.5">
+      <stop offset="0%" stop-color="#4B5563" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#1F2937" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Glass -->
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#162D4A"/>
+    </linearGradient>
+
+    <!-- Range bar -->
+    <linearGradient id="rangeBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#065F46"/>
+    </linearGradient>
+
+    <!-- Ambient car glow -->
+    <filter id="carGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feFlood flood-color="#06B6D4" flood-opacity="0.08" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Headlight glow -->
+    <filter id="hlGlow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3"/>
+    </filter>
+
+    <!-- Taillight glow -->
+    <filter id="tlGlow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5"/>
+    </filter>
+
+    <!-- Subtle drop shadow for car -->
+    <filter id="carShadow" x="-30%" y="-20%" width="160%" height="150%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.5" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Button background -->
+    <linearGradient id="btnBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#172033"/>
+    </linearGradient>
+
+    <!-- Edge highlight for car body -->
+    <linearGradient id="bodyEdge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4B5563" stop-opacity="0.5"/>
+      <stop offset="20%" stop-color="#4B5563" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#4B5563" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#4B5563" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="220" height="400" rx="0" fill="url(#bg)"/>
+
+  <!-- ===== TOP BAR ===== -->
+  <text x="20" y="28" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#FFFFFF">My Vehicle</text>
+  <!-- Settings gear -->
+  <g transform="translate(194, 20)">
+    <circle cx="0" cy="0" r="5" fill="none" stroke="#64748B" stroke-width="1"/>
+    <circle cx="0" cy="0" r="1.5" fill="none" stroke="#64748B" stroke-width="0.8"/>
+    <!-- Gear teeth -->
+    <line x1="0" y1="-5.5" x2="0" y2="-7" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="0" y1="5.5" x2="0" y2="7" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="-5.5" y1="0" x2="-7" y2="0" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="5.5" y1="0" x2="7" y2="0" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="-3.9" y1="-3.9" x2="-5" y2="-5" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="3.9" y1="-3.9" x2="5" y2="-5" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="-3.9" y1="3.9" x2="-5" y2="5" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="3.9" y1="3.9" x2="5" y2="5" stroke="#64748B" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== LOCK STATUS ===== -->
+  <g transform="translate(110, 50)">
+    <!-- Lock icon -->
+    <rect x="-6" y="-1" width="12" height="9" rx="2" fill="none" stroke="#22C55E" stroke-width="1.2"/>
+    <path d="M -3.5,-1 L -3.5,-4 Q -3.5,-7.5 0,-7.5 Q 3.5,-7.5 3.5,-4 L 3.5,-1" fill="none" stroke="#22C55E" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="0" cy="4" r="1.2" fill="#22C55E"/>
+    <text x="0" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="600" fill="#22C55E" text-anchor="middle">Locked</text>
+    <text x="0" y="27" font-family="system-ui, -apple-system, sans-serif" font-size="7" fill="#64748B" text-anchor="middle">2 min ago</text>
+  </g>
+
+  <!-- ===== 3D CAR TOP-DOWN VIEW ===== -->
+  <g transform="translate(110, 155)" filter="url(#carShadow)">
+
+    <!-- Ambient ground glow -->
+    <ellipse cx="0" cy="8" rx="52" ry="82" fill="#06B6D4" opacity="0.04" filter="url(#carGlow)"/>
+
+    <!-- === Car body - streamlined teardrop/oval === -->
+    <path d="
+      M -28,-78
+      Q -34,-78 -38,-70
+      Q -42,-60 -42,-40
+      L -42,40
+      Q -42,65 -34,74
+      Q -28,80 -18,82
+      L 18,82
+      Q 28,80 34,74
+      Q 42,65 42,40
+      L 42,-40
+      Q 42,-60 38,-70
+      Q 34,-78 28,-78
+      Z
+    " fill="url(#carMetal)" stroke="#4B5563" stroke-width="0.4"/>
+
+    <!-- Body edge highlights (left/right reflections) -->
+    <path d="
+      M -28,-78
+      Q -34,-78 -38,-70
+      Q -42,-60 -42,-40
+      L -42,40
+      Q -42,65 -34,74
+      Q -28,80 -18,82
+      L 18,82
+      Q 28,80 34,74
+      Q 42,65 42,40
+      L 42,-40
+      Q 42,-60 38,-70
+      Q 34,-78 28,-78
+      Z
+    " fill="url(#bodyEdge)" opacity="0.3"/>
+
+    <!-- Roof highlight shimmer -->
+    <ellipse cx="0" cy="-10" rx="30" ry="55" fill="url(#roofHighlight)"/>
+
+    <!-- === Windshield (front - top of car) === -->
+    <path d="
+      M -24,-52
+      Q -24,-62 -16,-66
+      L -12,-68
+      L 12,-68
+      L 16,-66
+      Q 24,-62 24,-52
+      Z
+    " fill="url(#glass)" stroke="#3B5A80" stroke-width="0.4" opacity="0.9"/>
+    <!-- Windshield reflection line -->
+    <path d="M -14,-64 Q 0,-58 14,-64" fill="none" stroke="#4B7399" stroke-width="0.3" opacity="0.6"/>
+
+    <!-- === Rear window === -->
+    <path d="
+      M -20,48
+      Q -20,56 -12,60
+      L 12,60
+      Q 20,56 20,48
+      Z
+    " fill="url(#glass)" stroke="#3B5A80" stroke-width="0.4" opacity="0.85"/>
+    <!-- Rear window reflection -->
+    <path d="M -12,58 Q 0,53 12,58" fill="none" stroke="#4B7399" stroke-width="0.3" opacity="0.5"/>
+
+    <!-- === Roof center line === -->
+    <line x1="0" y1="-48" x2="0" y2="44" stroke="#4B5563" stroke-width="0.4" opacity="0.4"/>
+
+    <!-- Roof panel outline -->
+    <path d="
+      M -20,-44
+      Q -22,-44 -22,-38
+      L -22,38
+      Q -22,44 -20,44
+      L 20,44
+      Q 22,44 22,38
+      L 22,-38
+      Q 22,-44 20,-44
+      Z
+    " fill="none" stroke="#4B5563" stroke-width="0.3" opacity="0.25"/>
+
+    <!-- === Wheels (4, peeking from sides) === -->
+    <!-- Front-left -->
+    <rect x="-48" y="-48" width="10" height="22" rx="4" fill="#111827" stroke="#2A3444" stroke-width="0.6"/>
+    <rect x="-46" y="-44" width="6" height="14" rx="2.5" fill="#1A2030"/>
+    <line x1="-43" y1="-43" x2="-43" y2="-31" stroke="#2A3444" stroke-width="0.4"/>
+
+    <!-- Front-right -->
+    <rect x="38" y="-48" width="10" height="22" rx="4" fill="#111827" stroke="#2A3444" stroke-width="0.6"/>
+    <rect x="40" y="-44" width="6" height="14" rx="2.5" fill="#1A2030"/>
+    <line x1="43" y1="-43" x2="43" y2="-31" stroke="#2A3444" stroke-width="0.4"/>
+
+    <!-- Rear-left -->
+    <rect x="-48" y="30" width="10" height="22" rx="4" fill="#111827" stroke="#2A3444" stroke-width="0.6"/>
+    <rect x="-46" y="34" width="6" height="14" rx="2.5" fill="#1A2030"/>
+    <line x1="-43" y1="35" x2="-43" y2="47" stroke="#2A3444" stroke-width="0.4"/>
+
+    <!-- Rear-right -->
+    <rect x="38" y="30" width="10" height="22" rx="4" fill="#111827" stroke="#2A3444" stroke-width="0.6"/>
+    <rect x="40" y="34" width="6" height="14" rx="2.5" fill="#1A2030"/>
+    <line x1="43" y1="35" x2="43" y2="47" stroke="#2A3444" stroke-width="0.4"/>
+
+    <!-- === Headlights (warm white glow) === -->
+    <!-- Glow layers -->
+    <ellipse cx="-22" cy="-79" rx="8" ry="4" fill="#FEF3C7" opacity="0.15" filter="url(#hlGlow)"/>
+    <ellipse cx="22" cy="-79" rx="8" ry="4" fill="#FEF3C7" opacity="0.15" filter="url(#hlGlow)"/>
+    <!-- Headlight shapes -->
+    <path d="M -30,-78 Q -28,-82 -22,-82 Q -16,-82 -14,-78 Q -16,-76 -22,-76 Q -28,-76 -30,-78 Z" fill="#FEF3C7" opacity="0.9"/>
+    <path d="M 14,-78 Q 16,-82 22,-82 Q 28,-82 30,-78 Q 28,-76 22,-76 Q 16,-76 14,-78 Z" fill="#FEF3C7" opacity="0.9"/>
+
+    <!-- === Taillights (red glow) === -->
+    <!-- Glow layers -->
+    <ellipse cx="-22" cy="82" rx="7" ry="3.5" fill="#EF4444" opacity="0.2" filter="url(#tlGlow)"/>
+    <ellipse cx="22" cy="82" rx="7" ry="3.5" fill="#EF4444" opacity="0.2" filter="url(#tlGlow)"/>
+    <!-- Taillight shapes -->
+    <path d="M -30,82 Q -28,79 -22,79 Q -16,79 -14,82 Q -16,84 -22,84 Q -28,84 -30,82 Z" fill="#EF4444" opacity="0.85"/>
+    <path d="M 14,82 Q 16,79 22,79 Q 28,79 30,82 Q 28,84 22,84 Q 16,84 14,82 Z" fill="#EF4444" opacity="0.85"/>
+
+    <!-- Tail light connecting bar -->
+    <rect x="-14" y="81" width="28" height="1.5" rx="0.75" fill="#EF4444" opacity="0.3"/>
+
+    <!-- === Side mirrors === -->
+    <ellipse cx="-44" cy="-42" rx="5" ry="3.5" fill="#2A3444" stroke="#4B5563" stroke-width="0.3"/>
+    <ellipse cx="44" cy="-42" rx="5" ry="3.5" fill="#2A3444" stroke="#4B5563" stroke-width="0.3"/>
+
+    <!-- Front hood details -->
+    <path d="M -12,-72 L 0,-74 L 12,-72" fill="none" stroke="#4B5563" stroke-width="0.3" opacity="0.5"/>
+
+    <!-- Trunk detail -->
+    <path d="M -10,70 L 0,72 L 10,70" fill="none" stroke="#4B5563" stroke-width="0.3" opacity="0.4"/>
+  </g>
+
+  <!-- ===== TIRE PRESSURE INDICATORS ===== -->
+  <!-- Front-left: 2.3 bar -->
+  <g>
+    <line x1="52" y1="110" x2="40" y2="105" stroke="#22C55E" stroke-width="0.5" opacity="0.5"/>
+    <text x="36" y="108" font-family="system-ui, -apple-system, sans-serif" font-size="7" font-weight="600" fill="#22C55E" text-anchor="end">2.3</text>
+  </g>
+
+  <!-- Front-right: 2.3 bar -->
+  <g>
+    <line x1="168" y1="110" x2="180" y2="105" stroke="#22C55E" stroke-width="0.5" opacity="0.5"/>
+    <text x="184" y="108" font-family="system-ui, -apple-system, sans-serif" font-size="7" font-weight="600" fill="#22C55E">2.3</text>
+  </g>
+
+  <!-- Rear-left: 2.2 bar -->
+  <g>
+    <line x1="52" y1="188" x2="40" y2="193" stroke="#22C55E" stroke-width="0.5" opacity="0.5"/>
+    <text x="36" y="196" font-family="system-ui, -apple-system, sans-serif" font-size="7" font-weight="600" fill="#22C55E" text-anchor="end">2.2</text>
+  </g>
+
+  <!-- Rear-right: 2.1 bar (amber warning) -->
+  <g>
+    <line x1="168" y1="188" x2="180" y2="193" stroke="#F59E0B" stroke-width="0.5" opacity="0.5"/>
+    <text x="184" y="196" font-family="system-ui, -apple-system, sans-serif" font-size="7" font-weight="600" fill="#F59E0B">2.1</text>
+  </g>
+
+  <!-- ===== VEHICLE STATUS ===== -->
+  <g transform="translate(40, 268)">
+    <!-- Range bar background -->
+    <rect x="0" y="0" width="140" height="8" rx="4" fill="#1E293B"/>
+    <!-- Range bar fill (~72%) -->
+    <rect x="0" y="0" width="101" height="8" rx="4" fill="url(#rangeBar)"/>
+    <!-- Range text -->
+    <text x="70" y="20" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">286 km</text>
+    <text x="70" y="31" font-family="system-ui, -apple-system, sans-serif" font-size="8" fill="#22C55E" text-anchor="middle">Battery: 72%</text>
+  </g>
+
+  <!-- ===== CLIMATE ROW ===== -->
+  <g transform="translate(40, 308)">
+    <!-- Snowflake icon (6-pointed) -->
+    <g transform="translate(12, 8)">
+      <line x1="0" y1="-6" x2="0" y2="6" stroke="#06B6D4" stroke-width="1" stroke-linecap="round"/>
+      <line x1="-5.2" y1="-3" x2="5.2" y2="3" stroke="#06B6D4" stroke-width="1" stroke-linecap="round"/>
+      <line x1="-5.2" y1="3" x2="5.2" y2="-3" stroke="#06B6D4" stroke-width="1" stroke-linecap="round"/>
+      <!-- Branch tips -->
+      <line x1="-1.5" y1="-4.5" x2="0" y2="-6" stroke="#06B6D4" stroke-width="0.7" stroke-linecap="round"/>
+      <line x1="1.5" y1="-4.5" x2="0" y2="-6" stroke="#06B6D4" stroke-width="0.7" stroke-linecap="round"/>
+      <line x1="-1.5" y1="4.5" x2="0" y2="6" stroke="#06B6D4" stroke-width="0.7" stroke-linecap="round"/>
+      <line x1="1.5" y1="4.5" x2="0" y2="6" stroke="#06B6D4" stroke-width="0.7" stroke-linecap="round"/>
+    </g>
+
+    <!-- Temperature -->
+    <text x="60" y="13" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF" text-anchor="middle">21°C</text>
+
+    <!-- Fan speed indicator (3 arcs, 2nd highlighted) -->
+    <g transform="translate(120, 8)">
+      <path d="M -5,3 Q -5,-3 0,-5" fill="none" stroke="#334155" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M -8,5 Q -8,-5 0,-8" fill="none" stroke="#06B6D4" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M -11,7 Q -11,-7 0,-11" fill="none" stroke="#334155" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- ===== BOTTOM ACTION BUTTONS ===== -->
+  <g transform="translate(110, 358)">
+    <!-- Lock button -->
+    <g transform="translate(-66, 0)">
+      <circle cx="0" cy="0" r="16" fill="url(#btnBg)" stroke="#334155" stroke-width="0.5"/>
+      <!-- Lock icon -->
+      <rect x="-4" y="-1" width="8" height="6" rx="1.5" fill="none" stroke="#94A3B8" stroke-width="1"/>
+      <path d="M -2.5,-1 L -2.5,-3.5 Q -2.5,-6 0,-6 Q 2.5,-6 2.5,-3.5 L 2.5,-1" fill="none" stroke="#94A3B8" stroke-width="1" stroke-linecap="round"/>
+    </g>
+
+    <!-- Climate button -->
+    <g transform="translate(-22, 0)">
+      <circle cx="0" cy="0" r="16" fill="url(#btnBg)" stroke="#334155" stroke-width="0.5"/>
+      <!-- Snowflake -->
+      <line x1="0" y1="-5" x2="0" y2="5" stroke="#94A3B8" stroke-width="1" stroke-linecap="round"/>
+      <line x1="-4.3" y1="-2.5" x2="4.3" y2="2.5" stroke="#94A3B8" stroke-width="1" stroke-linecap="round"/>
+      <line x1="-4.3" y1="2.5" x2="4.3" y2="-2.5" stroke="#94A3B8" stroke-width="1" stroke-linecap="round"/>
+    </g>
+
+    <!-- Horn button -->
+    <g transform="translate(22, 0)">
+      <circle cx="0" cy="0" r="16" fill="url(#btnBg)" stroke="#334155" stroke-width="0.5"/>
+      <!-- Sound wave icon -->
+      <path d="M -3,-4 L -3,4 L 1,2 L 1,-2 Z" fill="#94A3B8"/>
+      <path d="M 3,-3 Q 6,0 3,3" fill="none" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+      <path d="M 5,-5 Q 9,0 5,5" fill="none" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+    </g>
+
+    <!-- Flash / headlights button -->
+    <g transform="translate(66, 0)">
+      <circle cx="0" cy="0" r="16" fill="url(#btnBg)" stroke="#334155" stroke-width="0.5"/>
+      <!-- Headlight beam icon -->
+      <rect x="-5" y="-3" width="5" height="6" rx="1" fill="none" stroke="#94A3B8" stroke-width="0.8"/>
+      <line x1="2" y1="-4" x2="6" y2="-5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+      <line x1="2" y1="0" x2="7" y2="0" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+      <line x1="2" y1="4" x2="6" y2="5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
