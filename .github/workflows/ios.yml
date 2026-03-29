@@ -15,10 +15,19 @@ on:
       - '.github/workflows/ios.yml'
   workflow_dispatch:
 
+# Cancel in-progress runs for the same branch/PR
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build & Test (iOS)
     runs-on: macos-15
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +40,14 @@ jobs:
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
 
+      - name: Cache Swift Package dependencies
+        uses: actions/cache@v4
+        with:
+          path: SceneViewSwift/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('SceneViewSwift/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
       - name: Build Swift Package (iOS)
         working-directory: SceneViewSwift
         run: |
@@ -38,14 +55,13 @@ jobs:
             -scheme SceneViewSwift \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
             -skipMacroValidation \
-            | tail -20
+            | xcpretty --color 2>/dev/null || cat
 
       - name: Run tests
         working-directory: SceneViewSwift
-        continue-on-error: true
         run: |
           xcodebuild test \
             -scheme SceneViewSwift \
             -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
             -skipMacroValidation \
-            | tail -30
+            | xcpretty --color 2>/dev/null || cat
