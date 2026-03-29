@@ -7,7 +7,7 @@
  * Powered by Filament.js v1.70.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
- * @version 1.4.0
+ * @version 1.5.0
  * @license MIT
  */
 (function(global) {
@@ -60,6 +60,13 @@
       this._dampingFactor = 0.95;
       this._wantsAutoRotate = true; // Remember initial preference for resume after drag
       this._autoRotateTimer = null;
+      // Animation system state
+      this._animator = null;
+      this._animationStates = [];  // Per-animation: { playing, paused, time, speed, loop, weight }
+      this._animationCallbacks = { onEnd: {}, onLoop: {} };  // Keyed by animation index
+      this._lastFrameTime = performance.now() / 1000;
+      this._crossFades = [];  // Active cross-fade transitions
+      this._morphAnimations = [];  // Active morph target animations
       this._setupControls();
       this._setupResizeObserver();
       this._startRenderLoop();
@@ -105,6 +112,9 @@
       this._scene.addEntity(asset.getRoot());
       this._scene.addEntities(asset.getRenderableEntities());
       this._asset = asset;
+
+      // Initialize animation system for this asset
+      this._initAnimations(asset);
 
       // Auto-frame the model
       try {
@@ -171,6 +181,577 @@
         asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
         this._scene.remove(asset.getRoot());
       } catch (e) { /* ignore cleanup errors */ }
+    }
+
+    // =========================================================================
+    // Animation System
+    // =========================================================================
+
+    /**
+     * Initialize animation state from the loaded glTF asset.
+     * Called automatically after loadModel / _showModel.
+     */
+    _initAnimations(asset) {
+      this._animator = null;
+      this._animationStates = [];
+      this._animationCallbacks = { onEnd: {}, onLoop: {} };
+      this._crossFades = [];
+      this._morphAnimations = [];
+
+      try {
+        // Filament.js: the animator lives on the asset instance
+        var animator = asset.getAnimator();
+        if (!animator) return;
+        this._animator = animator;
+
+        var count = animator.getAnimationCount();
+        for (var i = 0; i < count; i++) {
+          this._animationStates.push({
+            name: animator.getAnimationName(i) || ('Animation_' + i),
+            duration: animator.getAnimationDuration(i) || 0,
+            index: i,
+            playing: false,
+            paused: false,
+            time: 0,
+            speed: 1.0,
+            loop: false,
+            weight: 1.0
+          });
+        }
+      } catch (e) {
+        // Asset has no animations — that is fine
+        console.log('SceneView: No animations found in model');
+      }
+    }
+
+    /**
+     * Resolve a name-or-index argument to an animation index.
+     * Returns -1 if not found.
+     */
+    _resolveAnimationIndex(nameOrIndex) {
+      if (typeof nameOrIndex === 'number') {
+        return (nameOrIndex >= 0 && nameOrIndex < this._animationStates.length) ? nameOrIndex : -1;
+      }
+      for (var i = 0; i < this._animationStates.length; i++) {
+        if (this._animationStates[i].name === nameOrIndex) return i;
+      }
+      return -1;
+    }
+
+    // --- Animation Discovery ---
+
+    /** Get all animations as an array of { name, duration, index }. */
+    getAnimations() {
+      return this._animationStates.map(function(s) {
+        return { name: s.name, duration: s.duration, index: s.index };
+      });
+    }
+
+    /** Get the number of animations in the current model. */
+    getAnimationCount() {
+      return this._animationStates.length;
+    }
+
+    /** Get the name of animation at the given index. */
+    getAnimationName(index) {
+      var s = this._animationStates[index];
+      return s ? s.name : null;
+    }
+
+    /** Get the duration in seconds of animation at the given index. */
+    getAnimationDuration(index) {
+      var s = this._animationStates[index];
+      return s ? s.duration : 0;
+    }
+
+    // --- Animation Playback ---
+
+    /**
+     * Play an animation by name or index.
+     * @param {string|number} nameOrIndex - Animation name or index.
+     * @param {Object} [options] - Playback options.
+     * @param {boolean} [options.loop=false] - Loop the animation.
+     * @param {number} [options.speed=1.0] - Playback speed (negative = reverse).
+     * @param {number} [options.crossFadeDuration=0] - Cross-fade from current animation (seconds).
+     * @param {number} [options.startTime=0] - Start time in seconds.
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    playAnimation(nameOrIndex, options) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) {
+        console.warn('SceneView: Animation not found:', nameOrIndex);
+        return this;
+      }
+
+      options = options || {};
+      var state = this._animationStates[idx];
+      var crossFadeDuration = options.crossFadeDuration || 0;
+
+      // If cross-fading, set up a cross-fade from currently playing animations
+      if (crossFadeDuration > 0) {
+        for (var i = 0; i < this._animationStates.length; i++) {
+          if (i !== idx && this._animationStates[i].playing) {
+            this._crossFades.push({
+              fromIndex: i,
+              toIndex: idx,
+              duration: crossFadeDuration,
+              elapsed: 0,
+              fromStartWeight: this._animationStates[i].weight,
+              toStartWeight: 0
+            });
+          }
+        }
+        // New animation starts at weight 0, cross-fade will ramp it up
+        state.weight = crossFadeDuration > 0 ? 0 : 1.0;
+      } else {
+        state.weight = 1.0;
+      }
+
+      var wasPaused = state.paused;
+      state.playing = true;
+      state.paused = false;
+      state.loop = options.loop !== undefined ? options.loop : state.loop;
+      state.speed = options.speed !== undefined ? options.speed : state.speed;
+      if (options.startTime !== undefined) {
+        state.time = options.startTime;
+      } else if (!wasPaused) {
+        // Only reset time if not resuming from pause
+        state.time = state.speed >= 0 ? 0 : state.duration;
+      }
+
+      return this;
+    }
+
+    /**
+     * Play all animations simultaneously.
+     * @param {Object} [options] - Same options as playAnimation.
+     * @returns {SceneViewInstance} this
+     */
+    playAllAnimations(options) {
+      for (var i = 0; i < this._animationStates.length; i++) {
+        this.playAnimation(i, options);
+      }
+      return this;
+    }
+
+    /**
+     * Pause an animation. Can be resumed with playAnimation.
+     * @param {string|number} nameOrIndex
+     * @returns {SceneViewInstance} this
+     */
+    pauseAnimation(nameOrIndex) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return this;
+      var state = this._animationStates[idx];
+      if (state.playing) {
+        state.playing = false;
+        state.paused = true;
+      }
+      return this;
+    }
+
+    /** Pause all animations. */
+    pauseAllAnimations() {
+      for (var i = 0; i < this._animationStates.length; i++) {
+        this.pauseAnimation(i);
+      }
+      return this;
+    }
+
+    /**
+     * Stop an animation and reset its time to 0.
+     * @param {string|number} nameOrIndex
+     * @returns {SceneViewInstance} this
+     */
+    stopAnimation(nameOrIndex) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return this;
+      var state = this._animationStates[idx];
+      state.playing = false;
+      state.paused = false;
+      state.time = 0;
+      state.weight = 1.0;
+      // Remove any cross-fades involving this animation
+      this._crossFades = this._crossFades.filter(function(cf) {
+        return cf.fromIndex !== idx && cf.toIndex !== idx;
+      });
+      return this;
+    }
+
+    /** Stop all animations and reset to time 0. */
+    stopAllAnimations() {
+      for (var i = 0; i < this._animationStates.length; i++) {
+        this._animationStates[i].playing = false;
+        this._animationStates[i].paused = false;
+        this._animationStates[i].time = 0;
+        this._animationStates[i].weight = 1.0;
+      }
+      this._crossFades = [];
+      return this;
+    }
+
+    /**
+     * Set the playback speed for an animation.
+     * @param {string|number} nameOrIndex
+     * @param {number} speed - 1.0 = normal, 2.0 = double, -1.0 = reverse.
+     * @returns {SceneViewInstance} this
+     */
+    setAnimationSpeed(nameOrIndex, speed) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return this;
+      this._animationStates[idx].speed = speed;
+      return this;
+    }
+
+    /**
+     * Seek an animation to a specific time.
+     * @param {string|number} nameOrIndex
+     * @param {number} time - Time in seconds.
+     * @returns {SceneViewInstance} this
+     */
+    setAnimationTime(nameOrIndex, time) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return this;
+      var state = this._animationStates[idx];
+      state.time = Math.max(0, Math.min(time, state.duration));
+      return this;
+    }
+
+    // --- Animation State ---
+
+    /**
+     * Check if an animation is currently playing (not paused, not stopped).
+     * @param {string|number} nameOrIndex
+     * @returns {boolean}
+     */
+    isAnimationPlaying(nameOrIndex) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return false;
+      return this._animationStates[idx].playing;
+    }
+
+    /**
+     * Get the progress of an animation (0.0 to 1.0).
+     * @param {string|number} nameOrIndex
+     * @returns {number} Progress from 0.0 to 1.0.
+     */
+    getAnimationProgress(nameOrIndex) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return 0;
+      var state = this._animationStates[idx];
+      if (state.duration <= 0) return 0;
+      return Math.max(0, Math.min(1, state.time / state.duration));
+    }
+
+    // --- Morph Targets (Blend Shapes) ---
+
+    /**
+     * Get the morph target names for an entity in the current asset.
+     * If no entity is specified, uses the first renderable entity.
+     * @param {number} [entity] - Filament entity. Omit to use first renderable.
+     * @returns {string[]} Array of morph target names.
+     */
+    getMorphTargetNames(entity) {
+      if (!this._asset) return [];
+      try {
+        var targetEntity = entity;
+        if (targetEntity === undefined || targetEntity === null) {
+          var renderables = this._asset.getRenderableEntities();
+          if (!renderables || renderables.length === 0) return [];
+          targetEntity = renderables[0];
+        }
+        var rm = this._engine.getRenderableManager();
+        var inst = rm.getInstance(targetEntity);
+        var count = rm.getMorphTargetCountAt(inst, 0);
+        var names = [];
+        for (var i = 0; i < count; i++) {
+          names.push(rm.getMorphTargetNameAt(inst, 0, i) || ('morph_' + i));
+        }
+        return names;
+      } catch (e) {
+        return [];
+      }
+    }
+
+    /**
+     * Set a morph target weight on an entity.
+     * @param {number} [entity] - Filament entity. Omit to use first renderable.
+     * @param {string|number} name - Morph target name or index.
+     * @param {number} weight - Weight from 0.0 to 1.0.
+     * @returns {SceneViewInstance} this
+     */
+    setMorphTargetWeight(entity, name, weight) {
+      if (!this._asset) return this;
+      try {
+        var targetEntity = entity;
+        // If called with 2 args (name, weight), shift params
+        if (weight === undefined && typeof name === 'number') {
+          weight = name;
+          name = entity;
+          targetEntity = null;
+        }
+        if (targetEntity === undefined || targetEntity === null) {
+          var renderables = this._asset.getRenderableEntities();
+          if (!renderables || renderables.length === 0) return this;
+          targetEntity = renderables[0];
+        }
+
+        var rm = this._engine.getRenderableManager();
+        var inst = rm.getInstance(targetEntity);
+        var morphIndex = typeof name === 'number' ? name : -1;
+
+        // Resolve name to index
+        if (typeof name === 'string') {
+          var count = rm.getMorphTargetCountAt(inst, 0);
+          for (var i = 0; i < count; i++) {
+            if (rm.getMorphTargetNameAt(inst, 0, i) === name) {
+              morphIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (morphIndex < 0) {
+          console.warn('SceneView: Morph target not found:', name);
+          return this;
+        }
+
+        // Clamp weight
+        weight = Math.max(0, Math.min(1, weight));
+
+        // Filament uses setMorphWeights with a float array
+        // We need to get the current weights, modify one, and set them all
+        var totalCount = rm.getMorphTargetCountAt(inst, 0);
+        var weights = new Float32Array(totalCount);
+        // Get existing weights if possible
+        try {
+          var existing = rm.getMorphWeights(inst, 0);
+          if (existing) {
+            for (var j = 0; j < totalCount; j++) weights[j] = existing[j] || 0;
+          }
+        } catch (e) { /* start from zeros */ }
+        weights[morphIndex] = weight;
+        rm.setMorphWeights(inst, weights, 0);
+      } catch (e) {
+        console.warn('SceneView: Failed to set morph target weight:', e.message);
+      }
+      return this;
+    }
+
+    /**
+     * Animate a morph target weight over time.
+     * @param {number} [entity] - Filament entity. Omit to use first renderable.
+     * @param {string|number} name - Morph target name or index.
+     * @param {number} fromWeight - Start weight (0.0-1.0).
+     * @param {number} toWeight - End weight (0.0-1.0).
+     * @param {number} duration - Duration in seconds.
+     * @returns {Promise} Resolves when animation completes.
+     */
+    animateMorphTarget(entity, name, fromWeight, toWeight, duration) {
+      var self = this;
+      // Handle overloaded args: (name, from, to, duration) with no entity
+      if (typeof entity === 'string' || (typeof entity === 'number' && fromWeight !== undefined && toWeight !== undefined && duration !== undefined)) {
+        // All 5 args provided, entity is actually an entity
+      } else if (typeof entity === 'string' && typeof name === 'number') {
+        // (name, fromWeight, toWeight, duration) — shift args
+        duration = toWeight;
+        toWeight = fromWeight;
+        fromWeight = name;
+        name = entity;
+        entity = null;
+      }
+
+      return new Promise(function(resolve) {
+        self._morphAnimations.push({
+          entity: entity,
+          name: name,
+          fromWeight: fromWeight,
+          toWeight: toWeight,
+          duration: duration,
+          elapsed: 0,
+          resolve: resolve
+        });
+      });
+    }
+
+    // --- Animation Events ---
+
+    /**
+     * Register a callback for when an animation ends (non-looping only).
+     * @param {string|number} nameOrIndex
+     * @param {Function} callback - Called with { name, index, time }.
+     * @returns {SceneViewInstance} this
+     */
+    onAnimationEnd(nameOrIndex, callback) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return this;
+      if (!this._animationCallbacks.onEnd[idx]) {
+        this._animationCallbacks.onEnd[idx] = [];
+      }
+      this._animationCallbacks.onEnd[idx].push(callback);
+      return this;
+    }
+
+    /**
+     * Register a callback for when a looping animation completes one cycle.
+     * @param {string|number} nameOrIndex
+     * @param {Function} callback - Called with { name, index, loopCount }.
+     * @returns {SceneViewInstance} this
+     */
+    onAnimationLoop(nameOrIndex, callback) {
+      var idx = this._resolveAnimationIndex(nameOrIndex);
+      if (idx < 0) return this;
+      if (!this._animationCallbacks.onLoop[idx]) {
+        this._animationCallbacks.onLoop[idx] = [];
+      }
+      this._animationCallbacks.onLoop[idx].push(callback);
+      return this;
+    }
+
+    /**
+     * Update all active animations for the current frame.
+     * Called from the render loop.
+     * @param {number} deltaTime - Time elapsed since last frame in seconds.
+     */
+    _updateAnimations(deltaTime) {
+      // Always update morph animations, even without a glTF animator
+      this._updateMorphAnimations(deltaTime);
+
+      if (!this._animator || this._animationStates.length === 0) return;
+
+      var animator = this._animator;
+      var hasActiveAnimation = false;
+
+      // Update cross-fades
+      for (var cf = this._crossFades.length - 1; cf >= 0; cf--) {
+        var fade = this._crossFades[cf];
+        fade.elapsed += deltaTime;
+        var t = Math.min(1, fade.elapsed / fade.duration);
+        // Smooth interpolation (ease in-out)
+        t = t * t * (3 - 2 * t);
+
+        if (fade.fromIndex < this._animationStates.length) {
+          this._animationStates[fade.fromIndex].weight = fade.fromStartWeight * (1 - t);
+        }
+        if (fade.toIndex < this._animationStates.length) {
+          this._animationStates[fade.toIndex].weight = t;
+        }
+
+        if (fade.elapsed >= fade.duration) {
+          // Cross-fade complete: stop the "from" animation
+          if (fade.fromIndex < this._animationStates.length) {
+            this._animationStates[fade.fromIndex].playing = false;
+            this._animationStates[fade.fromIndex].weight = 0;
+          }
+          if (fade.toIndex < this._animationStates.length) {
+            this._animationStates[fade.toIndex].weight = 1.0;
+          }
+          this._crossFades.splice(cf, 1);
+        }
+      }
+
+      // Reset the animator bone transforms before applying weighted animations
+      try { animator.resetBoneMatrices(); } catch (e) { /* not all versions support this */ }
+
+      // Update each animation's time and apply
+      for (var i = 0; i < this._animationStates.length; i++) {
+        var state = this._animationStates[i];
+        if (!state.playing) continue;
+
+        hasActiveAnimation = true;
+
+        // Advance time
+        state.time += deltaTime * state.speed;
+
+        // Handle loop / end
+        if (state.speed >= 0 && state.time >= state.duration) {
+          if (state.loop) {
+            // Loop: wrap around
+            var loopCount = Math.floor(state.time / state.duration);
+            state.time = state.time % state.duration;
+            // Fire loop callbacks
+            this._fireCallbacks('onLoop', i, { name: state.name, index: i, loopCount: loopCount });
+          } else {
+            // End: clamp and stop
+            state.time = state.duration;
+            state.playing = false;
+            state.paused = false;
+            this._fireCallbacks('onEnd', i, { name: state.name, index: i, time: state.time });
+          }
+        } else if (state.speed < 0 && state.time <= 0) {
+          if (state.loop) {
+            var loopCountRev = Math.floor(Math.abs(state.time) / state.duration) + 1;
+            state.time = state.duration - (Math.abs(state.time) % state.duration);
+            this._fireCallbacks('onLoop', i, { name: state.name, index: i, loopCount: loopCountRev });
+          } else {
+            state.time = 0;
+            state.playing = false;
+            state.paused = false;
+            this._fireCallbacks('onEnd', i, { name: state.name, index: i, time: 0 });
+          }
+        }
+
+        // Apply the animation at the current time with weight
+        var clampedTime = Math.max(0, Math.min(state.time, state.duration));
+        try {
+          if (state.weight > 0) {
+            animator.applyAnimation(i, clampedTime);
+            // If we have weighted blending, apply cross-fade weight
+            if (state.weight < 1.0) {
+              try { animator.applyCrossFade(i, clampedTime, state.weight); } catch (e) {
+                // applyCrossFade may not exist in all Filament.js builds;
+                // fall back to basic applyAnimation (last-wins blending)
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('SceneView: Failed to apply animation ' + i + ':', e.message);
+          state.playing = false;
+        }
+      }
+
+      // Tell Filament to update the bone matrices
+      if (hasActiveAnimation) {
+        try { animator.updateBoneMatrices(); } catch (e) { /* ignore */ }
+      }
+    }
+
+    /**
+     * Fire registered callbacks for an event type.
+     * @param {string} type - 'onEnd' or 'onLoop'.
+     * @param {number} index - Animation index.
+     * @param {Object} data - Event data to pass to callbacks.
+     */
+    _fireCallbacks(type, index, data) {
+      var callbacks = this._animationCallbacks[type][index];
+      if (!callbacks) return;
+      for (var i = 0; i < callbacks.length; i++) {
+        try { callbacks[i](data); } catch (e) {
+          console.error('SceneView: Animation callback error:', e);
+        }
+      }
+    }
+
+    /**
+     * Update morph target animations independently of glTF skeleton animations.
+     * @param {number} deltaTime
+     */
+    _updateMorphAnimations(deltaTime) {
+      for (var m = this._morphAnimations.length - 1; m >= 0; m--) {
+        var morph = this._morphAnimations[m];
+        morph.elapsed += deltaTime;
+        var progress = Math.min(1, morph.elapsed / morph.duration);
+        // Smooth step interpolation
+        var smoothT = progress * progress * (3 - 2 * progress);
+        var currentWeight = morph.fromWeight + (morph.toWeight - morph.fromWeight) * smoothT;
+        this.setMorphTargetWeight(morph.entity, morph.name, currentWeight);
+
+        if (morph.elapsed >= morph.duration) {
+          this.setMorphTargetWeight(morph.entity, morph.name, morph.toWeight);
+          this._morphAnimations.splice(m, 1);
+          if (morph.resolve) morph.resolve();
+        }
+      }
     }
 
     /** Access engine for advanced Filament operations */
@@ -274,6 +855,14 @@
       var self = this;
       function render() {
         if (!self._running) return;
+
+        // Compute delta time for animations
+        var now = performance.now() / 1000;
+        var deltaTime = Math.min(now - self._lastFrameTime, 0.1); // Cap at 100ms to avoid jumps
+        self._lastFrameTime = now;
+
+        // Update animations before rendering
+        self._updateAnimations(deltaTime);
 
         // Auto-rotate: 30°/sec ÷ 60fps (matches model-viewer)
         if (self._autoRotate) self._angle += 0.00873;
@@ -497,7 +1086,7 @@
   }
 
   global.SceneView = {
-    version: '1.4.0',
+    version: '1.5.0',
     create: create,
     modelViewer: modelViewer
   };
