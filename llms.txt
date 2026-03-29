@@ -9,7 +9,7 @@ SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament,
 **Apple (iOS 17+ / macOS 14+ / visionOS 1+) — Swift Package:**
 - `https://github.com/sceneview/sceneview-swift.git` (from: "3.4.7")
 
-**Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.10 | **Compose BOM compatible**
+**Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.20 | **Compose BOM compatible**
 
 ---
 
@@ -847,7 +847,7 @@ fun ARImageTracking(coverBitmap: Bitmap) {
 
 | Sample | Demonstrates |
 |--------|-------------|
-| `sceneview-demo` | Play Store flagship — Explore, Showcase, Gallery, QA tabs |
+| `android-demo` | Play Store flagship — 3D, AR, Samples, About tabs (14 demos, Material 3) |
 
 ---
 
