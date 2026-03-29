@@ -352,105 +352,253 @@ fun CameraAnimationScreen() {
     "autopilot-demo": {
         id: "autopilot-demo",
         title: "Autopilot Demo",
-        description: "Full autonomous driving HUD with animated car, traffic lights, road, and real-time telemetry overlay.",
+        description: "Autonomous driving HUD with animated car, road geometry, and real-time telemetry overlay.",
         tags: ["3d", "model", "animation", "geometry"],
         dependency: "io.github.sceneview:sceneview:3.4.7",
-        prompt: "Create a Tesla FSD-style autopilot visualization with a 3D car on a road, traffic lights, and a HUD overlay showing speed, distance, and status. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        prompt: "Create an autopilot-style visualization with a 3D car on a road and a HUD overlay showing speed, distance, and status. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
         code: `@Composable
 fun AutopilotScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    var speed by remember { mutableFloatStateOf(60f) }
 
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        modelLoader = modelLoader
-    ) {
-        // Road surface
-        PlaneNode(engine, size = Size(6f, 0f, 50f),
-            position = Position(y = -0.01f))
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scene(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraNode = rememberCameraNode(engine) {
+                position = Position(x = 0f, y = 2f, z = 5f)
+                lookAt(Position(0f, 0f, -2f))
+            },
+            mainLightNode = rememberMainLightNode(engine) { intensity = 110_000f }
+        ) {
+            // Road surface
+            val roadMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.DarkGray, roughness = 0.95f)
+            }
+            PlaneNode(size = Size(6f, 50f), materialInstance = roadMat, position = Position(y = -0.01f))
 
-        // Ego car
-        rememberModelInstance(modelLoader, "models/car.glb")?.let { instance ->
-            ModelNode(modelInstance = instance, scaleToUnits = 2f)
+            // Lane markings (white lines)
+            val whiteMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.White)
+            }
+            for (z in -20..20 step 4) {
+                CubeNode(
+                    size = Size(0.1f, 0.01f, 2f),
+                    materialInstance = whiteMat,
+                    position = Position(x = 0f, y = 0f, z = z.toFloat())
+                )
+            }
+
+            // Ego car
+            rememberModelInstance(modelLoader, "models/car.glb")?.let { instance ->
+                ModelNode(modelInstance = instance, scaleToUnits = 2f)
+            }
+
+            // Traffic light post
+            val greenMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Green, metallic = 0f, roughness = 0.3f)
+            }
+            SphereNode(radius = 0.1f, materialInstance = greenMat, position = Position(x = 2f, y = 3f, z = -8f))
         }
 
-        // Traffic light with state machine
-        // See samples/autopilot-demo for the full implementation
+        // HUD overlay
+        Column(
+            modifier = Modifier.align(Alignment.TopStart).padding(24.dp)
+                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                .padding(16.dp)
+        ) {
+            Text("\${speed.toInt()} km/h", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text("AUTOPILOT ACTIVE", color = Color.Green, fontSize = 14.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("Next turn: 2.3 km", color = Color.LightGray, fontSize = 12.sp)
+        }
     }
 }`,
     },
     "physics-demo": {
         id: "physics-demo",
-        title: "Physics Demo",
-        description: "Interactive physics simulation with bouncing spheres, gravity, configurable restitution, and colour selection.",
+        title: "Physics Simulation",
+        description: "Animated physics simulation with spheres falling under gravity and bouncing off a floor, using onFrame for per-frame updates.",
         tags: ["3d", "physics", "geometry", "animation"],
         dependency: "io.github.sceneview:sceneview:3.4.7",
-        prompt: "Create a 3D scene where tapping spawns coloured spheres that fall under gravity and bounce off a floor. Add a bounciness slider. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        prompt: "Create a 3D scene with spheres that fall under gravity and bounce on a floor using per-frame animation. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
         code: `@Composable
 fun PhysicsDemoScreen() {
     val engine = rememberEngine()
     val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
     var restitution by remember { mutableFloatStateOf(0.7f) }
 
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        materialLoader = materialLoader
-    ) {
-        // Floor
-        PlaneNode(engine, size = Size(4f, 0f, 4f),
-            materialInstance = materialLoader.createColorInstance(Color.DarkGray))
+    // Simple physics state: y-positions and velocities for 5 spheres
+    data class Ball(var y: Float, var vy: Float, val x: Float, val color: Color)
+    val balls = remember {
+        mutableStateListOf(
+            Ball(3.0f, 0f, -1.0f, Color.Red),
+            Ball(4.0f, 0f, -0.5f, Color.Blue),
+            Ball(3.5f, 0f,  0.0f, Color.Green),
+            Ball(4.5f, 0f,  0.5f, Color.Yellow),
+            Ball(5.0f, 0f,  1.0f, Color.Cyan)
+        )
+    }
 
-        // Spawn spheres and attach PhysicsNode
-        val sphere = remember(engine) {
-            SphereNode(engine, radius = 0.15f).apply {
-                position = Position(y = 3f)
+    // Per-frame gravity + bounce
+    LaunchedEffect(restitution) {
+        while (true) {
+            withFrameNanos { _ ->
+                val dt = 0.016f
+                val gravity = -9.8f
+                val floorY = 0.15f
+                for (ball in balls) {
+                    ball.vy += gravity * dt
+                    ball.y += ball.vy * dt
+                    if (ball.y < floorY) {
+                        ball.y = floorY
+                        ball.vy = -ball.vy * restitution
+                    }
+                }
             }
         }
-        PhysicsNode(
-            node = sphere,
-            restitution = restitution,
-            radius = 0.15f
-        )
+    }
+
+    Column {
+        Scene(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            engine = engine,
+            cameraManipulator = rememberCameraManipulator(
+                orbitHomePosition = Position(x = 0f, y = 3f, z = 6f),
+                targetPosition = Position(0f, 1f, 0f)
+            ),
+            environment = rememberEnvironment(environmentLoader) {
+                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                    ?: createEnvironment(environmentLoader)
+            },
+            mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+        ) {
+            // Floor
+            val floorMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.DarkGray, roughness = 0.9f)
+            }
+            PlaneNode(size = Size(6f, 6f), materialInstance = floorMat)
+
+            // Bouncing spheres
+            for (ball in balls) {
+                val mat = remember(materialLoader, ball.color) {
+                    materialLoader.createColorInstance(ball.color, roughness = 0.4f)
+                }
+                SphereNode(
+                    radius = 0.15f,
+                    materialInstance = mat,
+                    position = Position(x = ball.x, y = ball.y, z = 0f)
+                )
+            }
+        }
+        // Bounciness slider
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Bounciness: \${String.format("%.1f", restitution)}")
+            Slider(
+                value = restitution,
+                onValueChange = { restitution = it },
+                valueRange = 0f..1f,
+                modifier = Modifier.weight(1f).padding(start = 8.dp)
+            )
+        }
     }
 }`,
     },
     "dynamic-sky": {
         id: "dynamic-sky",
-        title: "Dynamic Sky",
-        description: "Time-of-day sun cycle with DynamicSkyNode and atmospheric fog via FogNode.",
-        tags: ["3d", "sky", "fog", "environment"],
+        title: "Dynamic Sky & Lighting",
+        description: "Time-of-day sun cycle with animated LightNode direction, intensity, and color to simulate sunrise through sunset.",
+        tags: ["3d", "sky", "environment", "animation", "lighting"],
         dependency: "io.github.sceneview:sceneview:3.4.7",
-        prompt: "Create a 3D scene with a time-of-day sun that moves from sunrise through noon to sunset, with atmospheric fog. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        prompt: "Create a 3D scene with a time-of-day sun that moves from sunrise through noon to sunset, with animated light color and intensity. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
         code: `@Composable
 fun DynamicSkyScreen() {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
     var timeOfDay by remember { mutableFloatStateOf(12f) }
 
-    Scene(
-        modifier = Modifier.fillMaxSize(),
-        engine = engine,
-        modelLoader = modelLoader
-    ) {
-        DynamicSkyNode(
-            timeOfDay = timeOfDay,
-            turbidity = 2f,
-            sunIntensity = 110_000f
-        )
+    // Compute sun angle and color from time of day
+    val sunAngle = remember(timeOfDay) {
+        val normalized = (timeOfDay - 6f) / 12f  // 6am=0, 18pm=1
+        normalized.coerceIn(0f, 1f) * Math.PI.toFloat()
+    }
+    val sunIntensity = remember(timeOfDay) {
+        val noon = 1f - abs(timeOfDay - 12f) / 6f
+        (noon.coerceIn(0.1f, 1f) * 110_000f)
+    }
 
-        rememberModelInstance(modelLoader, "models/scene.glb")?.let { instance ->
-            ModelNode(modelInstance = instance)
+    Column {
+        Scene(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraManipulator = rememberCameraManipulator(
+                orbitHomePosition = Position(x = 0f, y = 2f, z = 6f),
+                targetPosition = Position(0f, 0f, 0f)
+            ),
+            environment = rememberEnvironment(environmentLoader) {
+                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                    ?: createEnvironment(environmentLoader)
+            }
+        ) {
+            // Animated sun light — position and color change with time
+            LightNode(
+                type = LightManager.Type.SUN,
+                apply = {
+                    // Warm at sunrise/sunset, neutral at noon
+                    val warmth = abs(timeOfDay - 12f) / 6f
+                    color(1.0f, 1.0f - warmth * 0.3f, 1.0f - warmth * 0.5f)
+                    intensity(sunIntensity)
+                    castShadows(true)
+                },
+                position = Position(
+                    x = cos(sunAngle) * 5f,
+                    y = sin(sunAngle) * 5f,
+                    z = 0f
+                )
+            )
+
+            // Ground
+            val floorMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color(0.3f, 0.5f, 0.2f), roughness = 0.9f)
+            }
+            PlaneNode(size = Size(20f, 20f), materialInstance = floorMat)
+
+            // Scene model
+            rememberModelInstance(modelLoader, "models/scene.glb")?.let { instance ->
+                ModelNode(modelInstance = instance, scaleToUnits = 2f)
+            }
+        }
+
+        // Time of day slider
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Time: \${String.format("%02d:%02d", timeOfDay.toInt(), ((timeOfDay % 1) * 60).toInt())}")
+            Slider(
+                value = timeOfDay,
+                onValueChange = { timeOfDay = it },
+                valueRange = 5f..19f,
+                modifier = Modifier.weight(1f).padding(start = 8.dp)
+            )
         }
     }
-    // Add a Slider to control timeOfDay from 0 to 24
 }`,
     },
     "line-path": {
         id: "line-path",
         title: "Line & Path",
-        description: "Animated 3D line art with sine waves, Lissajous curves, and parameter sliders.",
+        description: "Animated 3D line art with sine waves and Lissajous curves using PathNode and LineNode, with parameter sliders.",
         tags: ["3d", "lines", "geometry", "animation"],
         dependency: "io.github.sceneview:sceneview:3.4.7",
         prompt: "Create a 3D scene that draws animated parametric curves (sine wave, Lissajous) using PathNode with amplitude and frequency sliders. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
@@ -461,51 +609,124 @@ fun LinePathScreen() {
     var amplitude by remember { mutableFloatStateOf(1f) }
     var frequency by remember { mutableFloatStateOf(2f) }
 
-    val points = remember(amplitude, frequency) {
+    val sinePoints = remember(amplitude, frequency) {
         (0..200).map { i ->
             val t = i / 200f * Math.PI.toFloat() * 4
             Position(x = t * 0.5f - 3f, y = sin(t * frequency) * amplitude, z = 0f)
         }
     }
-
-    Scene(modifier = Modifier.fillMaxSize(), engine = engine, materialLoader = materialLoader) {
-        val path = remember(engine, points) {
-            PathNode(engine = engine, points = points)
+    val lissajousPoints = remember(amplitude, frequency) {
+        (0..300).map { i ->
+            val t = i / 300f * Math.PI.toFloat() * 2
+            Position(
+                x = sin(t * 3f) * amplitude,
+                y = sin(t * frequency) * amplitude,
+                z = cos(t * 2f) * 0.5f
+            )
         }
-        Node(node = path)
     }
-    // Add Sliders for amplitude and frequency
+
+    Column {
+        Scene(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            engine = engine,
+            cameraManipulator = rememberCameraManipulator(
+                orbitHomePosition = Position(x = 0f, y = 1f, z = 5f),
+                targetPosition = Position(0f, 0f, 0f)
+            )
+        ) {
+            // Sine wave path (cyan)
+            val cyanMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Cyan)
+            }
+            PathNode(
+                points = sinePoints,
+                materialInstance = cyanMat
+            )
+
+            // Lissajous curve (magenta)
+            val magentaMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Magenta)
+            }
+            PathNode(
+                points = lissajousPoints,
+                closed = true,
+                materialInstance = magentaMat
+            )
+
+            // Axis lines
+            val grayMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Gray)
+            }
+            LineNode(start = Position(-3f, 0f, 0f), end = Position(3f, 0f, 0f), materialInstance = grayMat)
+            LineNode(start = Position(0f, -2f, 0f), end = Position(0f, 2f, 0f), materialInstance = grayMat)
+        }
+
+        // Parameter sliders
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text("Amplitude: \${String.format("%.1f", amplitude)}")
+            Slider(value = amplitude, onValueChange = { amplitude = it }, valueRange = 0.1f..3f)
+            Text("Frequency: \${String.format("%.1f", frequency)}")
+            Slider(value = frequency, onValueChange = { frequency = it }, valueRange = 0.5f..5f)
+        }
+    }
 }`,
     },
     "text-labels": {
         id: "text-labels",
         title: "Text Labels",
-        description: "Camera-facing 3D text labels (TextNode + BillboardNode) with interactive label cycling.",
+        description: "Camera-facing 3D text labels using TextNode — floating labels above geometry spheres representing planets.",
         tags: ["3d", "text", "geometry"],
         dependency: "io.github.sceneview:sceneview:3.4.7",
-        prompt: "Create a 3D scene with floating text labels that always face the camera. Labels show planet names and can be tapped to cycle display modes. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        prompt: "Create a 3D scene with floating text labels above colored spheres representing planets. Use TextNode for the labels. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
         code: `@Composable
 fun TextLabelsScreen() {
     val engine = rememberEngine()
     val materialLoader = rememberMaterialLoader(engine)
-    var cameraPos by remember { mutableStateOf(Position()) }
+    val environmentLoader = rememberEnvironmentLoader(engine)
+
+    data class Planet(val name: String, val color: Color, val x: Float)
+    val planets = listOf(
+        Planet("Earth", Color.Blue, -1.5f),
+        Planet("Mars", Color.Red, 0f),
+        Planet("Venus", Color(1f, 0.8f, 0.3f), 1.5f)
+    )
 
     Scene(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
-        materialLoader = materialLoader,
-        onFrame = { cameraPos = cameraNode.worldPosition }
+        cameraManipulator = rememberCameraManipulator(
+            orbitHomePosition = Position(x = 0f, y = 1.5f, z = 5f),
+            targetPosition = Position(0f, 0.5f, 0f)
+        ),
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
+        },
+        mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
     ) {
-        TextNode(
-            materialLoader = materialLoader,
-            text = "Earth",
-            fontSize = 48f,
-            textColor = android.graphics.Color.WHITE,
-            backgroundColor = 0xCC000000.toInt(),
-            widthMeters = 0.6f,
-            heightMeters = 0.2f,
-            cameraPositionProvider = { cameraPos }
-        )
+        for (planet in planets) {
+            // Planet sphere
+            val mat = remember(materialLoader, planet.color) {
+                materialLoader.createColorInstance(planet.color, roughness = 0.6f)
+            }
+            SphereNode(
+                radius = 0.3f,
+                materialInstance = mat,
+                position = Position(x = planet.x, y = 0.3f, z = 0f)
+            )
+
+            // Text label above the planet
+            TextNode(
+                text = planet.name,
+                fontSize = 48f,
+                textColor = android.graphics.Color.WHITE,
+                backgroundColor = 0xCC000000.toInt(),
+                widthMeters = 0.6f,
+                heightMeters = 0.2f,
+                position = Position(x = planet.x, y = 0.9f, z = 0f)
+            )
+        }
     }
 }`,
     },
@@ -1450,129 +1671,341 @@ struct VideoPlayerScreen: View {
     }
 }`,
     },
-    "ios-dynamic-sky": {
-        id: "ios-dynamic-sky",
-        title: "iOS Dynamic Sky",
-        description: "Time-of-day sun simulation with DynamicSkyNode — sunrise, noon, sunset, and night presets with interactive slider.",
-        tags: ["3d", "lighting", "sky", "ios", "swift"],
-        dependency: "https://github.com/sceneview/sceneview — from: \"3.4.7\"",
-        spmDependency: "https://github.com/sceneview/sceneview",
-        prompt: "Create a SwiftUI 3D scene with a dynamic sky that changes lighting based on time of day using a slider. Use SceneViewSwift.",
-        language: "swift",
-        code: `import SwiftUI
-import SceneViewSwift
-import RealityKit
+    // ─── New Android Samples ──────────────────────────────────────────────
+    "image-node": {
+        id: "image-node",
+        title: "Image Node",
+        description: "Display images on 3D planes using ImageNode — from assets, resources, or Bitmaps.",
+        tags: ["3d", "image", "geometry"],
+        dependency: "io.github.sceneview:sceneview:3.4.7",
+        prompt: "Create a 3D scene with images displayed on floating planes using ImageNode. Show examples from file, resource, and Bitmap. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        code: `@Composable
+fun ImageNodeScreen() {
+    val engine = rememberEngine()
+    val environmentLoader = rememberEnvironmentLoader(engine)
 
-struct DynamicSkyScreen: View {
-    @State private var timeOfDay: Float = 12
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        cameraManipulator = rememberCameraManipulator(
+            orbitHomePosition = Position(x = 0f, y = 1f, z = 4f),
+            targetPosition = Position(0f, 0.5f, 0f)
+        ),
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
+        },
+        mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+    ) {
+        // Image from assets file
+        ImageNode(
+            imageFileLocation = "images/logo.png",
+            size = Size(1f, 1f),
+            position = Position(x = -1.2f, y = 0.5f, z = 0f)
+        )
 
-    var body: some View {
-        VStack {
-            SceneView { root in
-                // Ground plane
-                let floor = GeometryNode.plane(
-                    width: 5.0, depth: 5.0, color: .lightGray
-                )
-                root.addChild(floor.entity)
+        // Image from drawable resource
+        ImageNode(
+            imageResId = R.drawable.my_image,
+            position = Position(x = 0f, y = 0.5f, z = 0f)
+        )
 
-                // Sphere to observe lighting changes
-                let sphere = GeometryNode.sphere(
-                    radius: 0.4,
-                    material: .pbr(color: .white, metallic: 0.5, roughness: 0.3)
-                )
-                .position(.init(x: 0, y: 0.4, z: 0))
-                .withGroundingShadow()
-                root.addChild(sphere.entity)
-
-                // Dynamic sky light driven by timeOfDay
-                let sky = DynamicSkyNode(
-                    timeOfDay: timeOfDay,
-                    turbidity: 3,
-                    sunIntensity: 1200,
-                    castsShadow: true
-                )
-                root.addChild(sky.entity)
+        // Image from Bitmap (e.g., dynamically generated)
+        val bitmap = remember {
+            Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888).apply {
+                val canvas = android.graphics.Canvas(this)
+                canvas.drawColor(android.graphics.Color.WHITE)
+                val paint = Paint().apply {
+                    color = android.graphics.Color.BLUE
+                    textSize = 48f
+                    textAlign = Paint.Align.CENTER
+                }
+                canvas.drawText("SceneView", 128f, 140f, paint)
             }
-            .cameraControls(.orbit)
+        }
+        ImageNode(
+            bitmap = bitmap,
+            size = Size(1f, 1f),
+            position = Position(x = 1.2f, y = 0.5f, z = 0f)
+        )
+    }
+}`,
+    },
+    "billboard-sprite": {
+        id: "billboard-sprite",
+        title: "Billboard Sprite",
+        description: "Always-facing-camera sprites using BillboardNode — useful for markers, icons, and info overlays in 3D space.",
+        tags: ["3d", "billboard", "image"],
+        dependency: "io.github.sceneview:sceneview:3.4.7",
+        prompt: "Create a 3D scene with billboard sprites that always face the camera, useful for markers and info overlays. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        code: `@Composable
+fun BillboardSpriteScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    val context = LocalContext.current
 
-            // Time-of-day slider
-            VStack {
-                Text(skyLabel(for: timeOfDay))
-                    .font(.headline)
-                Slider(value: $timeOfDay, in: 0...24, step: 0.5)
-                    .padding(.horizontal)
-            }
-            .padding()
+    // Create marker bitmaps
+    val markerBitmap = remember {
+        Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+            val canvas = android.graphics.Canvas(this)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            paint.color = android.graphics.Color.RED
+            canvas.drawCircle(32f, 32f, 28f, paint)
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = 32f
+            paint.textAlign = Paint.Align.CENTER
+            canvas.drawText("!", 32f, 44f, paint)
         }
     }
 
-    func skyLabel(for hour: Float) -> String {
-        switch hour {
-        case 0..<6: return "Night (\\(Int(hour)):00)"
-        case 6..<8: return "Sunrise (\\(Int(hour)):00)"
-        case 8..<16: return "Day (\\(Int(hour)):00)"
-        case 16..<18: return "Sunset (\\(Int(hour)):00)"
-        default: return "Night (\\(Int(hour)):00)"
+    Scene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraManipulator = rememberCameraManipulator(
+            orbitHomePosition = Position(x = 0f, y = 2f, z = 5f),
+            targetPosition = Position(0f, 0.5f, 0f)
+        ),
+        environment = rememberEnvironment(environmentLoader) {
+            environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                ?: createEnvironment(environmentLoader)
+        },
+        mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+    ) {
+        // A model with billboard markers above it
+        rememberModelInstance(modelLoader, "models/damaged_helmet.glb")?.let { instance ->
+            ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
+        }
+
+        // Billboard markers that always face the camera
+        BillboardNode(
+            bitmap = markerBitmap,
+            widthMeters = 0.3f,
+            heightMeters = 0.3f,
+            position = Position(x = 0.5f, y = 1.2f, z = 0f)
+        )
+
+        BillboardNode(
+            bitmap = markerBitmap,
+            widthMeters = 0.3f,
+            heightMeters = 0.3f,
+            position = Position(x = -0.5f, y = 0.8f, z = 0.3f)
+        )
+    }
+}`,
+    },
+    "animation-state": {
+        id: "animation-state",
+        title: "Animation State Machine",
+        description: "Reactive animation driven by Compose state — switch between Idle, Walk, and Run animations on a character model.",
+        tags: ["3d", "model", "animation"],
+        dependency: "io.github.sceneview:sceneview:3.4.7",
+        prompt: "Create a 3D scene with a character model that switches between Idle, Walk, and Run animations based on button clicks. Use animationName for state-driven animation. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        code: `@Composable
+fun AnimationStateScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    var currentAnim by remember { mutableStateOf("Idle") }
+
+    Column {
+        Scene(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraManipulator = rememberCameraManipulator(
+                orbitHomePosition = Position(x = 0f, y = 1f, z = 3f),
+                targetPosition = Position(0f, 0.8f, 0f)
+            ),
+            environment = rememberEnvironment(environmentLoader) {
+                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                    ?: createEnvironment(environmentLoader)
+            },
+            mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+        ) {
+            rememberModelInstance(modelLoader, "models/character.glb")?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 1.5f,
+                    centerOrigin = Position(y = -1f),
+                    autoAnimate = false,
+                    animationName = currentAnim,
+                    animationLoop = true,
+                    animationSpeed = if (currentAnim == "Run") 1.5f else 1f
+                )
+            }
+        }
+
+        // Animation controls
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            listOf("Idle", "Walk", "Run").forEach { anim ->
+                Button(
+                    onClick = { currentAnim = anim },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (currentAnim == anim)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text(anim)
+                }
+            }
         }
     }
 }`,
     },
-    "ios-line-path": {
-        id: "ios-line-path",
-        title: "iOS Lines and Paths",
-        description: "Draw line segments and polyline paths in 3D space using LineNode and PathNode.",
-        tags: ["3d", "lines", "geometry", "ios", "swift"],
-        dependency: "https://github.com/sceneview/sceneview — from: \"3.4.7\"",
-        spmDependency: "https://github.com/sceneview/sceneview",
-        prompt: "Create a SwiftUI 3D scene with line segments and a closed polygon path in 3D space. Use SceneViewSwift.",
-        language: "swift",
-        code: `import SwiftUI
-import SceneViewSwift
-import RealityKit
+    "spring-animation": {
+        id: "spring-animation",
+        title: "Spring Animation",
+        description: "Smooth spring-based node animations using Compose animateFloatAsState with spring spec for natural motion.",
+        tags: ["3d", "animation", "spring", "geometry"],
+        dependency: "io.github.sceneview:sceneview:3.4.7",
+        prompt: "Create a 3D scene with geometry nodes that animate position using spring physics via Compose's animateFloatAsState. Tap to toggle positions with springy motion. Use SceneView `io.github.sceneview:sceneview:3.4.7`.",
+        code: `@Composable
+fun SpringAnimationScreen() {
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
+    val environmentLoader = rememberEnvironmentLoader(engine)
+    var expanded by remember { mutableStateOf(false) }
 
-struct LinePathScreen: View {
-    var body: some View {
-        SceneView { root in
-            // Single line segment
-            let line = LineNode(
-                from: .init(x: -1.0, y: 0, z: 0),
-                to: .init(x: 1.0, y: 0.5, z: -0.5),
-                thickness: 0.008,
-                color: .red
-            )
-            root.addChild(line.entity)
+    // Spring-animated positions
+    val cubeX by animateFloatAsState(
+        targetValue = if (expanded) -2f else -0.5f,
+        animationSpec = spring(dampingRatio = 0.4f, stiffness = 200f)
+    )
+    val sphereY by animateFloatAsState(
+        targetValue = if (expanded) 2f else 0.5f,
+        animationSpec = spring(dampingRatio = 0.3f, stiffness = 150f)
+    )
+    val cylinderX by animateFloatAsState(
+        targetValue = if (expanded) 2f else 0.5f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 300f)
+    )
+    val uniformScale by animateFloatAsState(
+        targetValue = if (expanded) 1.5f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 250f)
+    )
 
-            // Closed triangle path
-            let triangle = PathNode(
-                points: [
-                    .init(x: -0.5, y: 1.0, z: 0),
-                    .init(x: 0.5, y: 1.0, z: 0),
-                    .init(x: 0, y: 1.8, z: 0)
-                ],
-                closed: true,
-                thickness: 0.006,
-                color: .systemYellow
-            )
-            root.addChild(triangle.entity)
-
-            // Open helix path
-            var helixPoints: [SIMD3<Float>] = []
-            for i in 0..<60 {
-                let t = Float(i) * 0.1
-                let x = 0.3 * cos(t)
-                let y = t * 0.05
-                let z = 0.3 * sin(t) - 1.0
-                helixPoints.append(.init(x: x, y: y, z: z))
+    Column {
+        Scene(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            engine = engine,
+            cameraManipulator = rememberCameraManipulator(
+                orbitHomePosition = Position(x = 0f, y = 2f, z = 6f),
+                targetPosition = Position(0f, 0.5f, 0f)
+            ),
+            environment = rememberEnvironment(environmentLoader) {
+                environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
+                    ?: createEnvironment(environmentLoader)
+            },
+            mainLightNode = rememberMainLightNode(engine) { intensity = 100_000f }
+        ) {
+            // Floor
+            val floorMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.DarkGray, roughness = 0.9f)
             }
-            let helix = PathNode(
-                points: helixPoints,
-                closed: false,
-                thickness: 0.004,
-                color: .systemCyan
+            PlaneNode(size = Size(8f, 8f), materialInstance = floorMat)
+
+            // Spring-animated cube
+            val redMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Red, metallic = 0.2f, roughness = 0.4f)
+            }
+            CubeNode(
+                size = Size(0.4f * uniformScale),
+                materialInstance = redMat,
+                position = Position(x = cubeX, y = 0.3f * uniformScale, z = 0f)
             )
-            root.addChild(helix.entity)
+
+            // Spring-animated sphere
+            val blueMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Blue, metallic = 0.8f, roughness = 0.1f)
+            }
+            SphereNode(
+                radius = 0.3f * uniformScale,
+                materialInstance = blueMat,
+                position = Position(x = 0f, y = sphereY, z = 0f)
+            )
+
+            // Spring-animated cylinder
+            val greenMat = remember(materialLoader) {
+                materialLoader.createColorInstance(Color.Green, metallic = 0.3f, roughness = 0.5f)
+            }
+            CylinderNode(
+                radius = 0.2f * uniformScale,
+                height = 0.6f * uniformScale,
+                materialInstance = greenMat,
+                position = Position(x = cylinderX, y = 0.3f * uniformScale, z = 0f)
+            )
         }
-        .cameraControls(.orbit)
+
+        Button(
+            onClick = { expanded = !expanded },
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+        ) {
+            Text(if (expanded) "Contract" else "Expand")
+        }
+    }
+}`,
+    },
+    "ar-surface-cursor": {
+        id: "ar-surface-cursor",
+        title: "AR Surface Cursor",
+        description: "AR scene with a center-screen reticle using HitResultNode that follows the detected surface.",
+        tags: ["ar", "cursor", "plane-detection", "placement"],
+        dependency: "io.github.sceneview:arsceneview:3.4.7",
+        prompt: "Create an AR screen with a surface cursor (reticle) in the center of the screen that follows detected surfaces, using HitResultNode. Tap to place a model at the cursor position. Use SceneView `io.github.sceneview:arsceneview:3.4.7`.",
+        code: `@Composable
+fun ARSurfaceCursorScreen() {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val view = LocalView.current
+    val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
+    var placedAnchors by remember { mutableStateOf(listOf<Anchor>()) }
+
+    ARScene(
+        modifier = Modifier.fillMaxSize(),
+        engine = engine,
+        modelLoader = modelLoader,
+        planeRenderer = true,
+        sessionConfiguration = { session, config ->
+            config.depthMode = if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC))
+                Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
+            config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+        },
+        onTouchEvent = { event, hitResult ->
+            if (event.action == MotionEvent.ACTION_UP && hitResult != null) {
+                placedAnchors = placedAnchors + hitResult.createAnchor()
+            }
+            true
+        }
+    ) {
+        // Surface cursor — follows the center of the screen
+        val cursorMat = remember(materialLoader) {
+            materialLoader.createColorInstance(Color.White.copy(alpha = 0.6f))
+        }
+        HitResultNode(xPx = view.width / 2f, yPx = view.height / 2f) {
+            CylinderNode(radius = 0.03f, height = 0.005f, materialInstance = cursorMat)
+        }
+
+        // Placed models
+        for (anchor in placedAnchors) {
+            AnchorNode(anchor = anchor) {
+                modelInstance?.let { instance ->
+                    ModelNode(
+                        modelInstance = instance,
+                        scaleToUnits = 0.5f,
+                        isEditable = true
+                    )
+                }
+            }
+        }
     }
 }`,
     },
