@@ -65,8 +65,8 @@ Every tool returns complete, compilable Kotlin code using SceneView 3.5.2 with p
 
 ## Dependencies
 
-- [SceneView](https://github.com/sceneview/sceneview) 3.5.1 — 3D/AR rendering
-- [ARSceneView](https://github.com/sceneview/sceneview) 3.5.1 — AR features
+- [SceneView](https://github.com/sceneview/sceneview) 3.5.2 — 3D/AR rendering
+- [ARSceneView](https://github.com/sceneview/sceneview) 3.5.2 — AR features
 - [MCP SDK](https://github.com/modelcontextprotocol/sdk) — Model Context Protocol
 
 ## License

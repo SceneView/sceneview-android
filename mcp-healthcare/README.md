@@ -68,8 +68,8 @@ This software generates code for 3D visualization. It is **not** a medical devic
 
 ## Dependencies
 
-- [SceneView](https://github.com/sceneview/sceneview) 3.5.1 — 3D/AR rendering
-- [ARSceneView](https://github.com/sceneview/sceneview) 3.5.1 — AR features
+- [SceneView](https://github.com/sceneview/sceneview) 3.5.2 — 3D/AR rendering
+- [ARSceneView](https://github.com/sceneview/sceneview) 3.5.2 — AR features
 - [MCP SDK](https://github.com/modelcontextprotocol/sdk) — Model Context Protocol
 
 ## License
