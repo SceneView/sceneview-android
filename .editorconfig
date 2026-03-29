@@ -28,3 +28,7 @@ trim_trailing_whitespace = false
 [*.json]
 indent_style = space
 indent_size = 2
+
+# Windows batch files require CRLF line endings
+[*.{bat,cmd}]
+end_of_line = crlf
