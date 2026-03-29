@@ -6,12 +6,22 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
+# Only one release at a time
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   # ── 1. Publish Android library to Maven Central ────────────────────────────
   publish-library:
     name: Publish to Maven Central
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +46,9 @@ jobs:
   publish-api-docs:
     name: Publish API docs
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -64,8 +77,10 @@ jobs:
   # ── 3. Publish MCP to npm ──────────────────────────────────────────────────
   publish-mcp:
     name: Publish MCP to npm
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -81,9 +96,15 @@ jobs:
       - name: Sync version from tag
         working-directory: mcp
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
+          # For workflow_dispatch without a tag, use the current package.json version
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+            echo "workflow_dispatch: using existing version $VERSION"
+          else
+            VERSION=${GITHUB_REF_NAME#v}
+          fi
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "::error::Not a semver tag — GITHUB_REF_NAME is '$GITHUB_REF_NAME'. Run from a version tag (e.g. v3.4.7)."
+            echo "::error::Not a semver version — got '$VERSION'. Run from a version tag (e.g. v3.4.7)."
             exit 1
           fi
           CURRENT=$(node -p "require('./package.json').version")
@@ -109,8 +130,10 @@ jobs:
   # ── 4. Publish sceneview-web to npm ────────────────────────────────────────
   publish-web:
     name: Publish sceneview-web to npm
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -130,12 +153,24 @@ jobs:
       - name: Build sceneview-web JS library
         run: ./gradlew :sceneview-web:jsBrowserProductionLibraryDistribution
 
-      - name: Prepare npm package
+      - name: Prepare and publish npm package
         working-directory: sceneview-web/build/dist/js/productionLibrary
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
+          # For workflow_dispatch without a tag, read version from existing package.json
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
+            if [ -z "$VERSION" ]; then
+              echo "::error::workflow_dispatch: no package.json in build output — build may have failed."
+              exit 1
+            fi
+            echo "workflow_dispatch: using existing version $VERSION"
+          else
+            VERSION=${GITHUB_REF_NAME#v}
+          fi
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "::error::Not a semver tag — GITHUB_REF_NAME is '$GITHUB_REF_NAME'."
+            echo "::error::Not a semver version — got '$VERSION'."
             exit 1
           fi
           cat > package.json << EOF
@@ -155,18 +190,13 @@ jobs:
             "license": "Apache-2.0"
           }
           EOF
-
-      - name: Publish
-        working-directory: sceneview-web/build/dist/js/productionLibrary
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --access public
 
   # ── 5. Create GitHub Release with auto-generated notes ────────────────────
   create-release:
     name: Create GitHub Release
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [publish-library, publish-mcp, publish-web]
     permissions:
       contents: write
