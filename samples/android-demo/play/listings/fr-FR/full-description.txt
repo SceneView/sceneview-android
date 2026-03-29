@@ -1,30 +1,27 @@
 SceneView Demo est l'application compagnon officielle du SDK SceneView Android — le moyen le plus simple d'ajouter la 3D et la Réalité Augmentée à vos apps Android avec Jetpack Compose.
 
-🌐 MODE EXPLORATION
+🌐 EXPLORATEUR 3D
 Plongez dans un rendu 3D temps réel époustouflant avec des modèles interactifs :
 • Orbite, pincement pour zoomer, double-tap pour interagir
-• Éclairage HDR pour des matériaux PBR photoréalistes
+• Éclairage HDR (6 environnements) pour des matériaux PBR photoréalistes
 • Modèles animés avec rendu physique
-• Basculez entre plusieurs modèles de démonstration
+• Basculez entre 14 modèles : voiture, casque, lampe, masque, robot animé, et plus
 
-🎯 MODE VITRINE
-Parcourez tous les types de nodes disponibles dans SceneView : CubeNode, SphereNode, ModelNode, LightNode, TextNode, BillboardNode, et bien d'autres. Chaque entrée comprend :
-• Aperçus 3D en temps réel
-• Des extraits de code Jetpack Compose prêts à l'emploi
-• Filtrage par catégorie (Géométrie, Modèle, Lumière, Caméra, Contenu, AR)
+🎯 AR — RÉALITÉ AUGMENTÉE
+Placez des modèles 3D dans votre monde réel :
+• Tapez sur une surface plate pour ancrer un modèle
+• Glissez pour déplacer, pincez pour redimensionner, pivotez pour tourner
+• Occlusion de profondeur et estimation de l'éclairage ambiant
+• Choisissez parmi 6 modèles AR
 
-🖼️ MODE GALERIE
-Stress-test du rendu 3D temps réel dans une liste scrollable — chaque carte rend sa propre scène 3D :
-• Multiples modèles 3D et géométrie procédurale dans un LazyColumn
-• Démontre la gestion efficace des ressources de SceneView
-• Rendu live avec éclairage HDR dans chaque carte
-
-🧪 MODE QA
-Exécutez des tests de régression visuelle pour valider le rendu de chaque node :
-• Bouton « Tout exécuter » pour lancer la suite complète
-• Exécution individuelle pour une validation ciblée
-• Animations physiques de type ressort pour les résultats
-• Couvre géométrie, chargement de modèles, éclairage, caméra, contenu et tests système
+🧪 SAMPLES — 14 DÉMOS DE FONCTIONNALITÉS
+Explorez chaque fonctionnalité SceneView avec des démos interactives :
+• Visionneuse de modèles, nœuds géométriques, animations
+• Ciel dynamique, éclairage, contrôles caméra
+• Post-traitement (SSAO, FXAA, tone mapping)
+• Brouillard volumétrique, textes 3D, chemins en ligne
+• Simulation physique, détection d'images, probes de réflexion
+• Préréglages de caméras glTF
 
 ✨ DESIGN MATERIAL 3 EXPRESSIF
 Construit avec les derniers composants Material 3 Expressif :

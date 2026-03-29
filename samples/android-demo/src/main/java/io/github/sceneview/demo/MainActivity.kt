@@ -68,6 +68,11 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         updateManager.checkForStalledUpdate()
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        updateManager.destroy()
+    }
 }
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
@@ -133,7 +138,9 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
             }
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
             // Global update banner — visible across all tabs
             UpdateBanner(updateManager)
 

@@ -43,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -128,6 +129,11 @@ fun ARScreen() {
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetFile)
 
         val clearAnchor = { anchor?.detach(); anchor = null }
+
+        // Detach anchor when composable leaves composition
+        DisposableEffect(Unit) {
+            onDispose { anchor?.detach() }
+        }
 
         // Show gesture hints briefly after the model is placed
         LaunchedEffect(anchor) {
