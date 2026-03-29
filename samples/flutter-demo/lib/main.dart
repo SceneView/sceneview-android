@@ -27,6 +27,56 @@ const _models = [
     path: 'models/water_bottle.glb',
     icon: Icons.water_drop,
   ),
+  _ModelInfo(
+    name: 'Shelby Cobra',
+    path: 'models/shelby_cobra.glb',
+    icon: Icons.directions_car,
+  ),
+  _ModelInfo(
+    name: 'Audi TT',
+    path: 'models/audi_tt.glb',
+    icon: Icons.directions_car_filled,
+  ),
+  _ModelInfo(
+    name: 'Earthquake',
+    path: 'models/earthquake_california.glb',
+    icon: Icons.public,
+  ),
+  _ModelInfo(
+    name: 'Lamborghini',
+    path: 'models/lamborghini_countach.glb',
+    icon: Icons.directions_car,
+  ),
+  _ModelInfo(
+    name: 'Nike Jordan',
+    path: 'models/nike_air_jordan.glb',
+    icon: Icons.sports_basketball,
+  ),
+  _ModelInfo(
+    name: 'Ferrari F40',
+    path: 'models/ferrari_f40.glb',
+    icon: Icons.directions_car,
+  ),
+  _ModelInfo(
+    name: 'PS5 Controller',
+    path: 'models/ps5_dualsense.glb',
+    icon: Icons.gamepad,
+  ),
+  _ModelInfo(
+    name: 'Cybertruck',
+    path: 'models/tesla_cybertruck.glb',
+    icon: Icons.electric_car,
+  ),
+  _ModelInfo(
+    name: 'Nintendo Switch',
+    path: 'models/nintendo_switch.glb',
+    icon: Icons.videogame_asset,
+  ),
+  _ModelInfo(
+    name: 'BMW M3 E30',
+    path: 'models/bmw_m3_e30.glb',
+    icon: Icons.directions_car_filled,
+  ),
 ];
 
 class _ModelInfo {

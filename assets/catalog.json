@@ -304,6 +304,210 @@
       "cameraDistance": 3.5
     },
     {
+      "id": "shelby_cobra",
+      "name": "1965 AC Shelby Cobra 427",
+      "source": "sketchfab",
+      "sourceId": "3e9c994c428b44f087d64e738428886c",
+      "sourceUrl": "https://sketchfab.com/3d-models/1965-ac-shelby-cobra-427-wwwvecarzcom-3e9c994c428b44f087d64e738428886c",
+      "author": "vecarz",
+      "license": "CC-BY-NC-SA-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/shelby_cobra.glb", "size": "15MB" },
+        "usdz": { "file": "models/usdz/shelby_cobra.usdz", "size": "4.9MB" }
+      },
+      "tags": ["cobra", "shelby", "car", "vehicle", "classic", "vintage", "sports"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "audi_tt",
+      "name": "2007 Audi TT Coupe",
+      "source": "sketchfab",
+      "sourceId": "b548ef872a8b4164a700e5b8cdb85a14",
+      "sourceUrl": "https://sketchfab.com/3d-models/2007-audi-tt-coupe-b548ef872a8b4164a700e5b8cdb85a14",
+      "author": "Ddiaz Design",
+      "license": "CC-BY-NC-SA-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/audi_tt.glb", "size": "4.4MB" },
+        "usdz": { "file": "models/usdz/audi_tt.usdz", "size": "6.5MB" }
+      },
+      "tags": ["audi", "tt", "car", "vehicle", "coupe", "modern", "german"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.7,
+      "cameraDistance": 3.5
+    },
+    {
+      "id": "earthquake_california",
+      "name": "August 7, 2024 M5.2 Earthquake in California",
+      "source": "sketchfab",
+      "sourceId": "9c38a08933154e128bb550246285f9e4",
+      "sourceUrl": "https://sketchfab.com/3d-models/august-7-2024-m52-earthquake-in-california-9c38a08933154e128bb550246285f9e4",
+      "author": "Kyle",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/earthquake_california.glb", "size": "39MB" },
+        "usdz": { "file": "models/usdz/earthquake_california.usdz", "size": "24MB" }
+      },
+      "tags": ["earthquake", "california", "geology", "terrain", "scientific", "seismology"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.4,
+      "cameraDistance": 5.0
+    },
+    {
+      "id": "lamborghini_countach",
+      "name": "2021 Lamborghini Countach LPI 800-4",
+      "source": "sketchfab",
+      "sourceId": "d76b94884432422b966d1a7f8815afb5",
+      "sourceUrl": "https://sketchfab.com/3d-models/2021-lamborghini-countach-lpi-800-4-d76b94884432422b966d1a7f8815afb5",
+      "author": "Lexyc16",
+      "license": "CC-BY-NC-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/lamborghini_countach.glb", "size": "12MB" },
+        "usdz": { "file": "models/usdz/lamborghini_countach.usdz", "size": "8.5MB" }
+      },
+      "tags": ["lamborghini", "countach", "supercar", "vehicle", "italian", "hype"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.5,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "nike_air_jordan",
+      "name": "Nike Air Jordan",
+      "source": "sketchfab",
+      "sourceId": "fd462c530d974f33a523d88a7562f1cf",
+      "sourceUrl": "https://sketchfab.com/3d-models/nike-air-jordan-fd462c530d974f33a523d88a7562f1cf",
+      "author": "Ar41k",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/nike_air_jordan.glb", "size": "30MB" },
+        "usdz": { "file": "models/usdz/nike_air_jordan.usdz", "size": "10MB" }
+      },
+      "tags": ["nike", "jordan", "sneaker", "shoe", "fashion", "hype", "streetwear"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "ferrari_f40",
+      "name": "Ferrari F40",
+      "source": "sketchfab",
+      "sourceId": "52a66c41cfcd4f999fb1b1c49bf24d70",
+      "sourceUrl": "https://sketchfab.com/3d-models/ferrari-f40-52a66c41cfcd4f999fb1b1c49bf24d70",
+      "author": "Black Snow",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/ferrari_f40.glb", "size": "7.7MB" },
+        "usdz": { "file": "models/usdz/ferrari_f40.usdz", "size": "4.1MB" }
+      },
+      "tags": ["ferrari", "f40", "supercar", "vehicle", "italian", "classic", "hype"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "porsche_911_turbo",
+      "name": "1975 Porsche 911 (930) Turbo",
+      "source": "sketchfab",
+      "sourceId": "8568d9d14a994b9cae59499f0dbed21e",
+      "sourceUrl": "https://sketchfab.com/3d-models/free-1975-porsche-911-930-turbo-8568d9d14a994b9cae59499f0dbed21e",
+      "author": "Lionsharp Studios",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/porsche_911_turbo.glb", "size": "21MB" },
+        "usdz": { "file": "models/usdz/porsche_911_turbo.usdz", "size": "12MB" }
+      },
+      "tags": ["porsche", "911", "turbo", "classic", "vehicle", "german", "hype"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.5,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "ps5_dualsense",
+      "name": "PlayStation 5 DualSense",
+      "source": "sketchfab",
+      "sourceId": "878c1f882808477ab81c2fe86d5a3936",
+      "sourceUrl": "https://sketchfab.com/3d-models/playstation-5-dualsense-878c1f882808477ab81c2fe86d5a3936",
+      "author": "AHarmlessPotato",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/ps5_dualsense.glb", "size": "5.6MB" },
+        "usdz": { "file": "models/usdz/ps5_dualsense.usdz", "size": "3.1MB" }
+      },
+      "tags": ["playstation", "ps5", "controller", "gaming", "sony", "hype", "tech"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "tesla_cybertruck",
+      "name": "Tesla Cybertruck",
+      "source": "sketchfab",
+      "sourceId": "657e71b3e2ad468196668e9c9df708fb",
+      "sourceUrl": "https://sketchfab.com/3d-models/tesla-cybertruck-657e71b3e2ad468196668e9c9df708fb",
+      "author": "hashikemu",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/tesla_cybertruck.glb", "size": "1.8MB" },
+        "usdz": { "file": "models/usdz/tesla_cybertruck.usdz", "size": "4.1MB" }
+      },
+      "tags": ["tesla", "cybertruck", "electric", "vehicle", "futuristic", "hype", "tech"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "mercedes_a45_amg",
+      "name": "Mercedes-Benz A45 AMG 2018",
+      "source": "sketchfab",
+      "sourceId": "9482f251f9c34a6e91d7777db5934cfc",
+      "sourceUrl": "https://sketchfab.com/3d-models/mercedes-benz-a45-amg-2018-9482f251f9c34a6e91d7777db5934cfc",
+      "author": "Lexyc16",
+      "license": "CC-BY-NC-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/mercedes_a45_amg.glb", "size": "15MB" },
+        "usdz": { "file": "models/usdz/mercedes_a45_amg.usdz", "size": "8.6MB" }
+      },
+      "tags": ["mercedes", "amg", "a45", "car", "vehicle", "german", "hype"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.5,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "nintendo_switch",
+      "name": "Nintendo Switch Diorama",
+      "source": "sketchfab",
+      "sourceId": "7bafb356e4f34695954da8fa6cd640b4",
+      "sourceUrl": "https://sketchfab.com/3d-models/nintendo-switch-diorama-7bafb356e4f34695954da8fa6cd640b4",
+      "author": "Mikkel Garde Blaase",
+      "license": "CC-BY-NC-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/nintendo_switch.glb", "size": "0.7MB" },
+        "usdz": { "file": "models/usdz/nintendo_switch.usdz", "size": "0.8MB" }
+      },
+      "tags": ["nintendo", "switch", "gaming", "console", "diorama", "hype", "tech"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "bmw_m3_e30",
+      "name": "BMW M3 Coupe (E30) 1986",
+      "source": "sketchfab",
+      "sourceId": "8fa21fe97a6042a2a09e0b09fd546b91",
+      "sourceUrl": "https://sketchfab.com/3d-models/bmw-m3-coupe-e30-1986-8fa21fe97a6042a2a09e0b09fd546b91",
+      "author": "Lexyc16",
+      "license": "CC-BY-NC-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/bmw_m3_e30.glb", "size": "9.8MB" },
+        "usdz": { "file": "models/usdz/bmw_m3_e30.usdz", "size": "9.2MB" }
+      },
+      "tags": ["bmw", "m3", "e30", "classic", "vehicle", "german", "motorsport", "hype"],
+      "usedIn": ["android-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
       "id": "khronos_damaged_helmet",
       "name": "Damaged Helmet",
       "source": "khronos",

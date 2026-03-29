@@ -25,6 +25,18 @@
 		D1000000000000000000000E /* porsche_911.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000E /* porsche_911.usdz */; };
 		D1000000000000000000000F /* black_dragon.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000F /* black_dragon.usdz */; };
 		D10000000000000000000010 /* fiat_punto.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000010 /* fiat_punto.usdz */; };
+		D10000000000000000000011 /* shelby_cobra.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000011 /* shelby_cobra.usdz */; };
+		D10000000000000000000012 /* audi_tt.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000012 /* audi_tt.usdz */; };
+		D10000000000000000000013 /* earthquake_california.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000013 /* earthquake_california.usdz */; };
+		D10000000000000000000014 /* lamborghini_countach.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000014 /* lamborghini_countach.usdz */; };
+		D10000000000000000000015 /* nike_air_jordan.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000015 /* nike_air_jordan.usdz */; };
+		D10000000000000000000016 /* ferrari_f40.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000016 /* ferrari_f40.usdz */; };
+		D10000000000000000000017 /* porsche_911_turbo.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000017 /* porsche_911_turbo.usdz */; };
+		D10000000000000000000018 /* ps5_dualsense.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000018 /* ps5_dualsense.usdz */; };
+		D10000000000000000000019 /* tesla_cybertruck.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000019 /* tesla_cybertruck.usdz */; };
+		D1000000000000000000001A /* mercedes_a45_amg.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000001A /* mercedes_a45_amg.usdz */; };
+		D1000000000000000000001B /* nintendo_switch.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000001B /* nintendo_switch.usdz */; };
+		D1000000000000000000001C /* bmw_m3_e30.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000001C /* bmw_m3_e30.usdz */; };
 		C10000000000000000000001 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000001 /* HapticManager.swift */; };
 		C10000000000000000000002 /* DemoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000002 /* DemoItem.swift */; };
 		C10000000000000000000003 /* ExploreTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000003 /* ExploreTab.swift */; };
@@ -88,6 +100,18 @@
 		D2000000000000000000000E /* porsche_911.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = porsche_911.usdz; sourceTree = "<group>"; };
 		D2000000000000000000000F /* black_dragon.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = black_dragon.usdz; sourceTree = "<group>"; };
 		D20000000000000000000010 /* fiat_punto.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = fiat_punto.usdz; sourceTree = "<group>"; };
+		D20000000000000000000011 /* shelby_cobra.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = shelby_cobra.usdz; sourceTree = "<group>"; };
+		D20000000000000000000012 /* audi_tt.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = audi_tt.usdz; sourceTree = "<group>"; };
+		D20000000000000000000013 /* earthquake_california.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = earthquake_california.usdz; sourceTree = "<group>"; };
+		D20000000000000000000014 /* lamborghini_countach.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = lamborghini_countach.usdz; sourceTree = "<group>"; };
+		D20000000000000000000015 /* nike_air_jordan.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = nike_air_jordan.usdz; sourceTree = "<group>"; };
+		D20000000000000000000016 /* ferrari_f40.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = ferrari_f40.usdz; sourceTree = "<group>"; };
+		D20000000000000000000017 /* porsche_911_turbo.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = porsche_911_turbo.usdz; sourceTree = "<group>"; };
+		D20000000000000000000018 /* ps5_dualsense.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = ps5_dualsense.usdz; sourceTree = "<group>"; };
+		D20000000000000000000019 /* tesla_cybertruck.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = tesla_cybertruck.usdz; sourceTree = "<group>"; };
+		D2000000000000000000001A /* mercedes_a45_amg.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = mercedes_a45_amg.usdz; sourceTree = "<group>"; };
+		D2000000000000000000001B /* nintendo_switch.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = nintendo_switch.usdz; sourceTree = "<group>"; };
+		D2000000000000000000001C /* bmw_m3_e30.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = bmw_m3_e30.usdz; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +165,18 @@
 				D2000000000000000000000E /* porsche_911.usdz */,
 				D2000000000000000000000F /* black_dragon.usdz */,
 				D20000000000000000000010 /* fiat_punto.usdz */,
+				D20000000000000000000011 /* shelby_cobra.usdz */,
+				D20000000000000000000012 /* audi_tt.usdz */,
+				D20000000000000000000013 /* earthquake_california.usdz */,
+				D20000000000000000000014 /* lamborghini_countach.usdz */,
+				D20000000000000000000015 /* nike_air_jordan.usdz */,
+				D20000000000000000000016 /* ferrari_f40.usdz */,
+				D20000000000000000000017 /* porsche_911_turbo.usdz */,
+				D20000000000000000000018 /* ps5_dualsense.usdz */,
+				D20000000000000000000019 /* tesla_cybertruck.usdz */,
+				D2000000000000000000001A /* mercedes_a45_amg.usdz */,
+				D2000000000000000000001B /* nintendo_switch.usdz */,
+				D2000000000000000000001C /* bmw_m3_e30.usdz */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -284,6 +320,18 @@
 				D1000000000000000000000E /* porsche_911.usdz in Resources */,
 				D1000000000000000000000F /* black_dragon.usdz in Resources */,
 				D10000000000000000000010 /* fiat_punto.usdz in Resources */,
+				D10000000000000000000011 /* shelby_cobra.usdz in Resources */,
+				D10000000000000000000012 /* audi_tt.usdz in Resources */,
+				D10000000000000000000013 /* earthquake_california.usdz in Resources */,
+				D10000000000000000000014 /* lamborghini_countach.usdz in Resources */,
+				D10000000000000000000015 /* nike_air_jordan.usdz in Resources */,
+				D10000000000000000000016 /* ferrari_f40.usdz in Resources */,
+				D10000000000000000000017 /* porsche_911_turbo.usdz in Resources */,
+				D10000000000000000000018 /* ps5_dualsense.usdz in Resources */,
+				D10000000000000000000019 /* tesla_cybertruck.usdz in Resources */,
+				D1000000000000000000001A /* mercedes_a45_amg.usdz in Resources */,
+				D1000000000000000000001B /* nintendo_switch.usdz in Resources */,
+				D1000000000000000000001C /* bmw_m3_e30.usdz in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
