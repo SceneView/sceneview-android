@@ -283,8 +283,8 @@ if [ "$FIX_MODE" = "--fix" ] && [ "$ERRORS" -gt 0 ]; then
         fi
     done
 
-    # Fix npm package.json files
-    for pkg in mcp sceneview-web react-native/react-native-sceneview; do
+    # Fix npm package.json files (skip mcp — it has its own version cycle)
+    for pkg in sceneview-web react-native/react-native-sceneview; do
         PKG_JSON="$REPO_ROOT/$pkg/package.json"
         if [ -f "$PKG_JSON" ]; then
             CURRENT=$(python3 -c "import json; print(json.load(open('$PKG_JSON'))['version'])" 2>/dev/null)
