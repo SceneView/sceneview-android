@@ -302,6 +302,81 @@
       "usedIn": ["android-demo", "ios-demo"],
       "defaultScale": 0.7,
       "cameraDistance": 3.5
+    },
+    {
+      "id": "khronos_damaged_helmet",
+      "name": "Damaged Helmet",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DamagedHelmet",
+      "author": "KhronosGroup (theblueturtle_)",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_damaged_helmet.glb", "size": "3.6MB" }
+      },
+      "tags": ["helmet", "pbr", "reference", "khronos", "battle-damaged"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "khronos_water_bottle",
+      "name": "Water Bottle",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/WaterBottle",
+      "author": "KhronosGroup",
+      "license": "CC0-1.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_water_bottle.glb", "size": "8.6MB" }
+      },
+      "tags": ["bottle", "water", "pbr", "reference", "khronos", "transmission"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 1.0,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "khronos_antique_camera",
+      "name": "Antique Camera",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/AntiqueCamera",
+      "author": "KhronosGroup (UX3D)",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_antique_camera.glb", "size": "17MB" }
+      },
+      "tags": ["camera", "antique", "pbr", "reference", "khronos", "detailed"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 0.7,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "khronos_corset",
+      "name": "Corset",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Corset",
+      "author": "KhronosGroup (UX3D)",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_corset.glb", "size": "13MB" }
+      },
+      "tags": ["corset", "fashion", "pbr", "reference", "khronos", "detailed"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "khronos_dragon_attenuation",
+      "name": "Dragon (Attenuation)",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DragonAttenuation",
+      "author": "KhronosGroup",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_dragon_attenuation.glb", "size": "6.1MB" }
+      },
+      "tags": ["dragon", "crystal", "transmission", "attenuation", "reference", "khronos"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 0.6,
+      "cameraDistance": 3.0
     }
   ],
   "environments": [
