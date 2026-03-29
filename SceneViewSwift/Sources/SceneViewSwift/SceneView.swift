@@ -103,7 +103,6 @@ private struct SceneViewRepresentation: View {
     @State private var lastDragTranslation: CGSize = .zero
     @State private var initialPinchRadius: Float? = nil
     @State private var isDragging = false
-    @State private var isSetUp = false
 
     var body: some View {
         realityViewContent
@@ -158,9 +157,6 @@ private struct SceneViewRepresentation: View {
     // MARK: - Scene Setup
 
     private func setupScene(_ realityContent: RealityViewCameraContent) {
-        guard !isSetUp else { return }
-        isSetUp = true
-
         // Root entity holds all user content
         realityContent.add(rootEntity)
 
