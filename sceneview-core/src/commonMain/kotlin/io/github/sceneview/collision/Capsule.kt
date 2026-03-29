@@ -1,0 +1,289 @@
+package io.github.sceneview.collision
+
+import io.github.sceneview.logging.logWarning
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
+
+/**
+ * Mathematical representation of a capsule (a swept sphere / cylinder with hemispherical caps).
+ *
+ * The capsule is defined by two endpoints (defining the axis) and a radius.
+ * The axis runs along local Y by default, centered at [center].
+ *
+ * @see CollisionShape
+ */
+class Capsule : CollisionShape {
+
+    private val center = Vector3.zero()
+    private var height = 2.0f
+    internal var radius = 0.5f
+    private val rotationMatrix = Matrix()
+
+    companion object {
+        private const val TAG = "Capsule"
+    }
+
+    /** Create a capsule with height 2, radius 0.5, centered at origin. */
+    constructor()
+
+    /**
+     * Create a capsule with the given dimensions.
+     *
+     * @param radius Capsule radius.
+     * @param height Full height including hemispherical caps.
+     * @param center Center position.
+     */
+    constructor(radius: Float, height: Float, center: Vector3 = Vector3.zero()) {
+        this.radius = radius
+        this.height = height
+        this.center.set(center)
+    }
+
+    fun setCenter(center: Vector3) {
+        this.center.set(center)
+        onChanged()
+    }
+
+    fun getCenter(): Vector3 = Vector3(center)
+
+    fun setRadius(radius: Float) {
+        this.radius = radius
+        onChanged()
+    }
+
+    fun getRadius(): Float = radius
+
+    fun setHeight(height: Float) {
+        this.height = height
+        onChanged()
+    }
+
+    fun getHeight(): Float = height
+
+    fun setRotation(rotation: Quaternion) {
+        rotationMatrix.makeRotation(rotation)
+        onChanged()
+    }
+
+    /**
+     * Returns the two endpoints of the capsule's internal line segment (sphere centers).
+     * The segment runs from bottom to top along the capsule axis.
+     */
+    fun getSegmentEndpoints(): Pair<Vector3, Vector3> {
+        val halfSegment = max(0f, height / 2f - radius)
+        val localUp = Vector3(
+            rotationMatrix.data[1],
+            rotationMatrix.data[5],
+            rotationMatrix.data[9]
+        )
+        val bottom = Vector3.subtract(center, localUp.scaled(halfSegment))
+        val top = Vector3.add(center, localUp.scaled(halfSegment))
+        return Pair(bottom, top)
+    }
+
+    override fun makeCopy(): Capsule {
+        val copy = Capsule(radius, height, getCenter())
+        copy.rotationMatrix.set(rotationMatrix)
+        return copy
+    }
+
+    override fun rayIntersection(ray: Ray, result: RayHit): Boolean {
+        // Ray-capsule intersection: test ray against the infinite cylinder,
+        // then against the two hemispherical caps
+        val (a, b) = getSegmentEndpoints()
+
+        val ab = Vector3.subtract(b, a)
+        val ao = Vector3.subtract(ray.getOrigin(), a)
+        val abDir = ray.getDirection()
+
+        val abDotAb = Vector3.dot(ab, ab)
+        val abDotD = Vector3.dot(ab, abDir)
+        val abDotAo = Vector3.dot(ab, ao)
+
+        // Quadratic equation for cylinder intersection
+        val m = abDotD / abDotAb
+        val n = abDotAo / abDotAb
+
+        val q = Vector3.subtract(abDir, ab.scaled(m))
+        val r = Vector3.subtract(ao, ab.scaled(n))
+
+        val qA = Vector3.dot(q, q)
+        val qB = 2f * Vector3.dot(q, r)
+        val qC = Vector3.dot(r, r) - radius * radius
+
+        val discriminant = qB * qB - 4f * qA * qC
+
+        var bestT = Float.MAX_VALUE
+
+        if (discriminant >= 0f && qA > 1e-10f) {
+            val sqrtD = sqrt(discriminant)
+            val t1 = (-qB - sqrtD) / (2f * qA)
+            val t2 = (-qB + sqrtD) / (2f * qA)
+
+            for (t in listOf(t1, t2)) {
+                if (t < 0f) continue
+                val hitPoint = ray.getPoint(t)
+                val projection = Vector3.dot(Vector3.subtract(hitPoint, a), ab) / abDotAb
+                if (projection in 0f..1f && t < bestT) {
+                    bestT = t
+                }
+            }
+        }
+
+        // Test hemispherical caps (as sphere intersections)
+        for (capCenter in listOf(a, b)) {
+            val oc = Vector3.subtract(ray.getOrigin(), capCenter)
+            val bCoeff = 2f * Vector3.dot(oc, ray.getDirection())
+            val cCoeff = Vector3.dot(oc, oc) - radius * radius
+            val disc = bCoeff * bCoeff - 4f * cCoeff
+
+            if (disc >= 0f) {
+                val sqrtDisc = sqrt(disc)
+                val t1 = (-bCoeff - sqrtDisc) / 2f
+                val t2 = (-bCoeff + sqrtDisc) / 2f
+
+                for (t in listOf(t1, t2)) {
+                    if (t >= 0f && t < bestT) {
+                        bestT = t
+                    }
+                }
+            }
+        }
+
+        if (bestT < Float.MAX_VALUE) {
+            result.setDistance(bestT)
+            result.setPoint(ray.getPoint(bestT))
+            return true
+        }
+        return false
+    }
+
+    override fun shapeIntersection(shape: CollisionShape): Boolean {
+        return when (shape) {
+            is Sphere -> capsuleSphereIntersection(this, shape)
+            is Box -> capsuleBoxIntersection(this, shape)
+            is Capsule -> capsuleCapsuleIntersection(this, shape)
+            else -> false
+        }
+    }
+
+    override fun sphereIntersection(sphere: Sphere): Boolean =
+        capsuleSphereIntersection(this, sphere)
+
+    override fun boxIntersection(box: Box): Boolean =
+        capsuleBoxIntersection(this, box)
+
+    /** Test whether this capsule intersects another [Capsule]. */
+    fun capsuleIntersection(other: Capsule): Boolean =
+        capsuleCapsuleIntersection(this, other)
+
+    override fun transform(transformProvider: TransformProvider): CollisionShape {
+        val result = Capsule()
+        transform(transformProvider, result)
+        return result
+    }
+
+    override fun transform(transformProvider: TransformProvider, result: CollisionShape) {
+        if (result !is Capsule) {
+            logWarning(TAG, "Cannot pass CollisionShape of a type other than Capsule into Capsule.transform.")
+            return
+        }
+        if (result === this) throw IllegalArgumentException("Capsule cannot transform itself.")
+
+        val modelMatrix = transformProvider.getTransformationMatrix()
+        result.center.set(modelMatrix.transformPoint(center))
+
+        val worldScale = Vector3()
+        modelMatrix.decomposeScale(worldScale)
+        val maxRadialScale = max(abs(worldScale.x), abs(worldScale.z))
+        result.radius = radius * maxRadialScale
+        result.height = height * abs(worldScale.y)
+
+        modelMatrix.decomposeRotation(worldScale, result.rotationMatrix)
+        Matrix.multiply(rotationMatrix, result.rotationMatrix, result.rotationMatrix)
+    }
+}
+
+// --- Capsule intersection helpers ---
+
+/**
+ * Closest point on a line segment AB to point P.
+ * Returns the parameter t in [0,1] and the closest point.
+ */
+internal fun closestPointOnSegment(
+    a: Vector3, b: Vector3, p: Vector3
+): Pair<Float, Vector3> {
+    val ab = Vector3.subtract(b, a)
+    val ap = Vector3.subtract(p, a)
+    val abLenSq = Vector3.dot(ab, ab)
+    if (abLenSq < 1e-10f) return Pair(0f, Vector3(a))
+    val t = (Vector3.dot(ap, ab) / abLenSq).coerceIn(0f, 1f)
+    return Pair(t, Vector3.add(a, ab.scaled(t)))
+}
+
+/**
+ * Closest points between two line segments AB and CD.
+ * Returns (closest on AB, closest on CD).
+ */
+internal fun closestPointsBetweenSegments(
+    a: Vector3, b: Vector3, c: Vector3, d: Vector3
+): Pair<Vector3, Vector3> {
+    val ab = Vector3.subtract(b, a)
+    val cd = Vector3.subtract(d, c)
+    val ac = Vector3.subtract(c, a)
+
+    val d1 = Vector3.dot(ab, ab)
+    val d2 = Vector3.dot(ab, cd)
+    val d3 = Vector3.dot(cd, cd)
+    val d4 = Vector3.dot(ab, ac)
+    val d5 = Vector3.dot(cd, ac)
+
+    val denom = d1 * d3 - d2 * d2
+
+    var s = if (denom > 1e-10f) ((d2 * d5 - d3 * d4) / denom).coerceIn(0f, 1f) else 0f
+    var t = (d2 * s + d5) / d3.coerceAtLeast(1e-10f)
+
+    if (t < 0f) {
+        t = 0f
+        s = (-d4 / d1.coerceAtLeast(1e-10f)).coerceIn(0f, 1f)
+    } else if (t > 1f) {
+        t = 1f
+        s = ((d2 - d4) / d1.coerceAtLeast(1e-10f)).coerceIn(0f, 1f)
+    }
+
+    val pointOnAb = Vector3.add(a, ab.scaled(s))
+    val pointOnCd = Vector3.add(c, cd.scaled(t))
+    return Pair(pointOnAb, pointOnCd)
+}
+
+internal fun capsuleSphereIntersection(capsule: Capsule, sphere: Sphere): Boolean {
+    val (a, b) = capsule.getSegmentEndpoints()
+    val (_, closest) = closestPointOnSegment(a, b, sphere.getCenter())
+    val diff = Vector3.subtract(closest, sphere.getCenter())
+    val distSq = Vector3.dot(diff, diff)
+    val combinedRadius = capsule.radius + sphere.getRadius()
+    return distSq <= combinedRadius * combinedRadius
+}
+
+internal fun capsuleCapsuleIntersection(c1: Capsule, c2: Capsule): Boolean {
+    val (a1, b1) = c1.getSegmentEndpoints()
+    val (a2, b2) = c2.getSegmentEndpoints()
+    val (p1, p2) = closestPointsBetweenSegments(a1, b1, a2, b2)
+    val diff = Vector3.subtract(p1, p2)
+    val distSq = Vector3.dot(diff, diff)
+    val combinedRadius = c1.radius + c2.radius
+    return distSq <= combinedRadius * combinedRadius
+}
+
+internal fun capsuleBoxIntersection(capsule: Capsule, box: Box): Boolean {
+    // Approximate: test the capsule segment endpoints + center as spheres
+    val (a, b) = capsule.getSegmentEndpoints()
+    val mid = capsule.getCenter()
+    for (point in listOf(a, b, mid)) {
+        val testSphere = Sphere(capsule.radius, point)
+        if (Intersections.sphereBoxIntersection(testSphere, box)) return true
+    }
+    return false
+}
