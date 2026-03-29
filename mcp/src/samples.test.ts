@@ -111,7 +111,7 @@ describe("every iOS sample", () => {
     });
 
     it(`${id}: has SPM dependency URL`, () => {
-      expect(sample.spmDependency).toBe("https://github.com/sceneview/sceneview");
+      expect(sample.spmDependency).toBe("https://github.com/sceneview/sceneview-swift");
     });
   }
 });

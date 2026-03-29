@@ -18,7 +18,7 @@
 
 ### C1. Version 3.3.0 in static website install section [FIXED]
 **File:** website-static/index.html (lines 618-635)
-The Quick install section showed sceneview:3.3.0, arsceneview:3.3.0, sceneview-web:3.3.0, and iOS Version: 3.3.0. Should be 3.4.7.
+The Quick install section showed sceneview:3.3.0, arsceneview:3.3.0, sceneview-web:3.3.0, and iOS Version: 3.3.0. Should be 3.5.0.
 **Status:** Fixed all 5 occurrences.
 
 ### C2. Version 3.3.0 across 12+ docs pages [FIXED]
@@ -35,7 +35,7 @@ Multiple docs pages had stale 3.3.0 version numbers:
 - docs/docs/quickstart-ios.md (line 46) - SPM version
 - docs/docs/codelabs/codelab-3d-swiftui.md (line 43) - SPM version
 - docs/docs/codelabs/codelab-ar-swiftui.md (line 32) - SPM version
-**Status:** All 19 occurrences fixed to 3.4.7.
+**Status:** All 19 occurrences fixed to 3.5.0.
 
 ### C3. Version 3.3.0 in geometry-demo.html [FIXED]
 **File:** website-static/geometry-demo.html (line 916)
@@ -48,7 +48,7 @@ Both "Get it on Google Play" and "Download on the App Store" badges link to # --
 **Action needed:** Replace with real store URLs when apps are published, or hide these badges until then.
 
 ### C5. structured-data.json dateModified was stale [FIXED]
-Was 2026-03-23, updated to 2026-03-27. Also fixed releaseNotes URL to point to v3.4.7 tag.
+Was 2026-03-23, updated to 2026-03-27. Also fixed releaseNotes URL to point to v3.5.0 tag.
 
 ---
 
@@ -89,7 +89,7 @@ References assets/images/v4-architecture.svg which likely does not exist.
 
 ### M7. Changelog only goes to 3.3.0 [NOT FIXED]
 **File:** docs/docs/changelog.md
-The changelog has no entries for versions 3.4.0 through 3.4.7. The latest entry is 3.3.0.
+The changelog has no entries for versions 3.4.0 through 3.5.0. The latest entry is 3.3.0.
 **Action needed:** Add changelog entries for v3.4.x releases.
 
 ### M8. MCP tools count inconsistency [NOT FIXED]
@@ -146,11 +146,11 @@ Code like Scene { ModelNode("shoe.glb") } is not the actual current API but mark
 
 | File | Changes |
 |---|---|
-| website-static/index.html | 3.3.0 -> 3.4.7 in install section (4 occurrences) |
-| website-static/geometry-demo.html | 3.3.0 -> 3.4.7 in Claude prompt |
-| docs/docs/llms.txt | 3.3.0 -> 3.4.7 in version header |
-| docs/docs/llms-full.txt | 3.3.0 -> 3.4.7 |
-| docs/docs/structured-data.json | version 3.3.0 -> 3.4.7, date, releaseNotes URL |
+| website-static/index.html | 3.3.0 -> 3.5.0 in install section (4 occurrences) |
+| website-static/geometry-demo.html | 3.3.0 -> 3.5.0 in Claude prompt |
+| docs/docs/llms.txt | 3.3.0 -> 3.5.0 in version header |
+| docs/docs/llms-full.txt | 3.3.0 -> 3.5.0 |
+| docs/docs/structured-data.json | version 3.3.0 -> 3.5.0, date, releaseNotes URL |
 | docs/docs/platforms.md | 4 version references updated |
 | docs/docs/comparison.md | version in comparison table |
 | docs/docs/recipes.md | target version |
@@ -161,7 +161,7 @@ Code like Scene { ModelNode("shoe.glb") } is not the actual current API but mark
 | docs/docs/codelabs/codelab-3d-swiftui.md | SPM version |
 | docs/docs/codelabs/codelab-ar-swiftui.md | SPM version |
 
-**Total: 14 files modified, 22 version references updated from 3.3.0 to 3.4.7**
+**Total: 14 files modified, 22 version references updated from 3.3.0 to 3.5.0**
 
 ---
 
@@ -172,5 +172,5 @@ Code like Scene { ModelNode("shoe.glb") } is not the actual current API but mark
 3. **Social preview image (M2):** Create 1200x630px PNG social card image
 4. **Footer copyright (M3):** Add "Copyright 2021-2026 Thomas Gorisse" to static site footer
 5. **Missing SVG images (M5, M6):** Create or remove references to comparison-chart.svg and v4-architecture.svg
-6. **Changelog (M7):** Add entries for v3.4.0 through v3.4.7
+6. **Changelog (M7):** Add entries for v3.4.0 through v3.5.0
 7. **MCP tool count (M8):** Verify and make consistent (18 vs 22)
