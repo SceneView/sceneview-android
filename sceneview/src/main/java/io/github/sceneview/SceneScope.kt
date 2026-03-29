@@ -647,6 +647,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         fontSize: Float = 48f,
         textColor: Int = android.graphics.Color.WHITE,
         backgroundColor: Int = 0xCC000000.toInt(),
+        typeface: android.graphics.Typeface = android.graphics.Typeface.DEFAULT_BOLD,
         widthMeters: Float = 0.6f,
         heightMeters: Float = 0.2f,
         position: Position = Position(x = 0f),
@@ -661,6 +662,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 fontSize = fontSize,
                 textColor = textColor,
                 backgroundColor = backgroundColor,
+                typeface = typeface,
                 widthMeters = widthMeters,
                 heightMeters = heightMeters,
                 cameraPositionProvider = cameraPositionProvider
@@ -671,6 +673,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             node.fontSize = fontSize
             node.textColor = textColor
             node.backgroundColor = backgroundColor
+            node.typeface = typeface
             node.position = position
         }
         NodeLifecycle(node, content)
