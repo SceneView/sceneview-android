@@ -19,13 +19,6 @@ import { getDebugGuide, autoDetectIssue, DEBUG_CATEGORIES } from "./debug-issue.
 import { generateScene, formatGeneratedScene } from "./generate-scene.js";
 import { ANIMATION_GUIDE, GESTURE_GUIDE, PERFORMANCE_TIPS } from "./advanced-guides.js";
 import { MATERIAL_GUIDE, COLLISION_GUIDE, MODEL_OPTIMIZATION_GUIDE, WEB_RENDERING_GUIDE } from "./extra-guides.js";
-import { generateAnimationCode, formatAnimationCode, ANIMATION_TYPES } from "./generate-animation.js";
-import { generateEnvironmentCode, formatEnvironmentCode, ENVIRONMENT_TYPES } from "./generate-environment.js";
-import { convertAndroidToIos, convertIosToAndroid, generateMultiplatformCode, formatConversionResult, formatMultiplatformResult } from "./convert-platform.js";
-import { explainAPI, listExplainableAPIs, formatAPIExplanation } from "./explain-api.js";
-import { optimizeScene, formatOptimizationReport } from "./optimize-scene.js";
-import { generateGestureCode, formatGestureCode, GESTURE_TYPES } from "./generate-gesture.js";
-import { generatePhysicsCode, formatPhysicsCode, PHYSICS_TYPES } from "./generate-physics.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ─── Legal disclaimer ─────────────────────────────────────────────────────────
 const DISCLAIMER = '\n\n---\n*Generated code suggestion. Review before use in production. See [TERMS.md](https://github.com/sceneview/sceneview/blob/main/mcp/TERMS.md).*';
@@ -46,7 +39,7 @@ catch {
     API_DOCS = "SceneView API docs not found. Run `npm run prepare` to bundle llms.txt.";
 }
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
-const server = new Server({ name: "sceneview-mcp", version: "3.6.0" }, { capabilities: { resources: {}, tools: {} } });
+const server = new Server({ name: "sceneview-mcp", version: "3.5.1" }, { capabilities: { resources: {}, tools: {} } });
 // ─── Resources ───────────────────────────────────────────────────────────────
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
@@ -496,174 +489,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
                 required: [],
             },
         },
-        {
-            name: "generate_animation_code",
-            description: "Generates compilable code for animation in SceneView — model animation playback, morph targets, spring physics, Compose property animations, smooth following, and state transitions. Supports both Android (Kotlin) and iOS (Swift). Use this when a user asks about animation, motion, springs, smooth movement, bouncing, rotating models, or playing model animations.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    animationType: {
-                        type: "string",
-                        enum: ANIMATION_TYPES,
-                        description: `The animation type:\n${ANIMATION_TYPES.map((t) => `- "${t}"`).join("\n")}`,
-                    },
-                    platform: {
-                        type: "string",
-                        enum: ["android", "ios"],
-                        description: 'Target platform. Default: "android".',
-                    },
-                },
-                required: ["animationType"],
-            },
-        },
-        {
-            name: "generate_environment_code",
-            description: "Generates compilable code for environment and lighting setup in SceneView — HDR environments, dynamic sky, studio lighting (3-point), outdoor lighting, night/mood scenes, and AR lighting estimation. Supports both Android (Kotlin) and iOS (Swift). Use this when a user asks about lighting, environment, HDR, sky, shadows, mood lighting, or making their scene look realistic.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    environmentType: {
-                        type: "string",
-                        enum: ENVIRONMENT_TYPES,
-                        description: `The environment/lighting type:\n${ENVIRONMENT_TYPES.map((t) => `- "${t}"`).join("\n")}`,
-                    },
-                    platform: {
-                        type: "string",
-                        enum: ["android", "ios"],
-                        description: 'Target platform. Default: "android".',
-                    },
-                },
-                required: ["environmentType"],
-            },
-        },
-        {
-            name: "generate_multiplatform_code",
-            description: "Given a scene description, generates BOTH Android (Kotlin/Compose) AND iOS (Swift/SwiftUI) code for the same scene. Use this when a user wants to build a cross-platform 3D or AR experience and needs code for both platforms simultaneously.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    description: {
-                        type: "string",
-                        description: 'Description of the scene to generate for both platforms. E.g., "AR tap-to-place furniture viewer" or "3D product showcase with orbit camera".',
-                    },
-                },
-                required: ["description"],
-            },
-        },
-        {
-            name: "convert_android_to_ios",
-            description: "Converts SceneView Android (Kotlin/Compose) code to SceneViewSwift (SwiftUI/RealityKit) equivalent. Handles API renames (Scene→SceneView, ARScene→ARSceneView), model format changes (GLB→USDZ), lifecycle differences (explicit→implicit engine), and framework-specific patterns. Returns converted code with a changelog of what was changed and what needs manual attention.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    code: {
-                        type: "string",
-                        description: "The Android/Kotlin SceneView code to convert to iOS/Swift.",
-                    },
-                },
-                required: ["code"],
-            },
-        },
-        {
-            name: "convert_ios_to_android",
-            description: "Converts SceneViewSwift (SwiftUI/RealityKit) code to SceneView Android (Kotlin/Compose) equivalent. Handles API renames, model format changes (USDZ→GLB), lifecycle additions (engine, loaders), and framework-specific patterns. Returns converted code with a changelog.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    code: {
-                        type: "string",
-                        description: "The iOS/Swift SceneViewSwift code to convert to Android/Kotlin.",
-                    },
-                },
-                required: ["code"],
-            },
-        },
-        {
-            name: "explain_api",
-            description: "Explains a specific SceneView API with its signature, a working example, common mistakes, tips, and related APIs. Covers: rememberEngine, rememberModelInstance, ModelNode, LightNode, Scene, ARScene, AnchorNode, and more. Use this when a user asks 'how does X work?' or 'what does Y do?' about a specific SceneView API.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    apiName: {
-                        type: "string",
-                        description: 'The API name to explain. E.g., "rememberEngine", "ModelNode", "LightNode", "ARScene", "AnchorNode". Case-insensitive.',
-                    },
-                },
-                required: ["apiName"],
-            },
-        },
-        {
-            name: "optimize_scene",
-            description: "Analyzes SceneView code and suggests performance optimizations. Checks for: multiple engine instances, per-frame allocations, large textures, excessive model loads, shadow-casting lights, missing post-processing flag, threading issues, and missing IBL. Returns a score (0-100) and prioritized suggestions with code examples. Use this when a user reports slow FPS, high memory, jank, or asks to optimize their scene.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    code: {
-                        type: "string",
-                        description: "The SceneView code to analyze for performance optimizations.",
-                    },
-                },
-                required: ["code"],
-            },
-        },
-        {
-            name: "generate_gesture_code",
-            description: "Generates compilable code for gesture/interaction handling in SceneView — tap-to-select, drag-to-rotate, pinch-to-scale, AR tap-to-place, editable models (one-line gestures), multi-select, surface cursor, and custom touch handlers. Supports both Android (Kotlin) and iOS (Swift). Use this when a user asks about touch, gestures, interaction, drag, pinch, tap, or editing 3D objects.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    gestureType: {
-                        type: "string",
-                        enum: GESTURE_TYPES,
-                        description: `The gesture type:\n${GESTURE_TYPES.map((t) => `- "${t}"`).join("\n")}`,
-                    },
-                    platform: {
-                        type: "string",
-                        enum: ["android", "ios"],
-                        description: 'Target platform. Default: "android".',
-                    },
-                },
-                required: ["gestureType"],
-            },
-        },
-        {
-            name: "generate_physics_code",
-            description: "Generates compilable code for physics simulation in SceneView — gravity drops with bouncing, collision detection (AABB), spring physics (KMP core), projectile motion, basic ragdoll joints, and rigid body simulation with inter-body collisions. Supports both Android (Kotlin) and iOS (Swift). Use this when a user asks about physics, gravity, collisions, bouncing, springs, projectiles, or rigid bodies.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    physicsType: {
-                        type: "string",
-                        enum: PHYSICS_TYPES,
-                        description: `The physics simulation type:\n${PHYSICS_TYPES.map((t) => `- "${t}"`).join("\n")}`,
-                    },
-                    platform: {
-                        type: "string",
-                        enum: ["android", "ios"],
-                        description: 'Target platform. Default: "android".',
-                    },
-                },
-                required: ["physicsType"],
-            },
-        },
-        {
-            name: "debug_scene",
-            description: "Analyzes a SceneView code snippet to detect common bugs and issues — missing engine, null model handling, LightNode trailing-lambda bug, missing light (black model), threading violations, AR permission issues, and more. Returns a list of detected issues with fixes. Use this when a user says 'my scene doesn\\'t work' or 'my model is black/invisible'. Combines code analysis with debug_issue knowledge base.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                    code: {
-                        type: "string",
-                        description: "The SceneView code to debug.",
-                    },
-                    description: {
-                        type: "string",
-                        description: "Optional description of the problem (e.g., 'model is invisible', 'app crashes on launch').",
-                    },
-                },
-                required: ["code"],
-            },
-        },
     ],
 }));
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -905,9 +730,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 ``,
                                 `let package = Package(`,
                                 `    name: "MyApp",`,
-                                `    platforms: [.iOS(.v18), .macOS(.v15), .visionOS(.v1)],`,
+                                `    platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],`,
                                 `    dependencies: [`,
-                                `        .package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")`,
+                                `        .package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.0")`,
                                 `    ],`,
                                 `    targets: [`,
                                 `        .executableTarget(`,
@@ -924,8 +749,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 ``,
                                 `| Platform | Minimum Version |`,
                                 `|----------|-----------------|`,
-                                `| iOS      | 18.0            |`,
-                                `| macOS    | 15.0            |`,
+                                `| iOS      | 17.0            |`,
+                                `| macOS    | 14.0            |`,
                                 `| visionOS | 1.0             |`,
                                 ``,
                                 `### 3. Basic SwiftUI Integration`,
@@ -978,7 +803,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 `### 1. Add SPM Dependency`,
                                 ``,
                                 `\`\`\`swift`,
-                                `.package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")`,
+                                `.package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.0")`,
                                 `\`\`\``,
                                 ``,
                                 `### 2. Minimum Platform`,
@@ -1317,212 +1142,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // ── get_web_rendering_guide ──────────────────────────────────────────────
         case "get_web_rendering_guide": {
             return { content: withDisclaimer([{ type: "text", text: WEB_RENDERING_GUIDE }]) };
-        }
-        // ── generate_animation_code ──────────────────────────────────────────────
-        case "generate_animation_code": {
-            const animationType = request.params.arguments?.animationType;
-            const platform = request.params.arguments?.platform ?? "android";
-            if (!animationType) {
-                return {
-                    content: [{ type: "text", text: `Missing required parameter: \`animationType\`.\n\nAvailable types: ${ANIMATION_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const result = generateAnimationCode(animationType, platform);
-            if (!result) {
-                return {
-                    content: [{ type: "text", text: `Unknown animation type: "${animationType}".\n\nAvailable types: ${ANIMATION_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const text = formatAnimationCode(result);
-            return { content: withDisclaimer([{ type: "text", text }]) };
-        }
-        // ── generate_environment_code ────────────────────────────────────────────
-        case "generate_environment_code": {
-            const envType = request.params.arguments?.environmentType;
-            const envPlatform = request.params.arguments?.platform ?? "android";
-            if (!envType) {
-                return {
-                    content: [{ type: "text", text: `Missing required parameter: \`environmentType\`.\n\nAvailable types: ${ENVIRONMENT_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const envResult = generateEnvironmentCode(envType, envPlatform);
-            if (!envResult) {
-                return {
-                    content: [{ type: "text", text: `Unknown environment type: "${envType}".\n\nAvailable types: ${ENVIRONMENT_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const envText = formatEnvironmentCode(envResult);
-            return { content: withDisclaimer([{ type: "text", text: envText }]) };
-        }
-        // ── generate_multiplatform_code ──────────────────────────────────────────
-        case "generate_multiplatform_code": {
-            const mpDesc = request.params.arguments?.description;
-            if (!mpDesc || typeof mpDesc !== "string") {
-                return {
-                    content: [{ type: "text", text: "Missing required parameter: `description`." }],
-                    isError: true,
-                };
-            }
-            const mpResult = generateMultiplatformCode(mpDesc);
-            const mpText = formatMultiplatformResult(mpResult);
-            return { content: withDisclaimer([{ type: "text", text: mpText }]) };
-        }
-        // ── convert_android_to_ios ───────────────────────────────────────────────
-        case "convert_android_to_ios": {
-            const androidCode = request.params.arguments?.code;
-            if (!androidCode || typeof androidCode !== "string") {
-                return {
-                    content: [{ type: "text", text: "Missing required parameter: `code`." }],
-                    isError: true,
-                };
-            }
-            const convResult = convertAndroidToIos(androidCode);
-            const convText = formatConversionResult(convResult);
-            return { content: withDisclaimer([{ type: "text", text: convText }]) };
-        }
-        // ── convert_ios_to_android ───────────────────────────────────────────────
-        case "convert_ios_to_android": {
-            const iosCode = request.params.arguments?.code;
-            if (!iosCode || typeof iosCode !== "string") {
-                return {
-                    content: [{ type: "text", text: "Missing required parameter: `code`." }],
-                    isError: true,
-                };
-            }
-            const iosConvResult = convertIosToAndroid(iosCode);
-            const iosConvText = formatConversionResult(iosConvResult);
-            return { content: withDisclaimer([{ type: "text", text: iosConvText }]) };
-        }
-        // ── explain_api ──────────────────────────────────────────────────────────
-        case "explain_api": {
-            const apiName = request.params.arguments?.apiName;
-            if (!apiName || typeof apiName !== "string") {
-                return {
-                    content: [{ type: "text", text: `Missing required parameter: \`apiName\`.\n\nExplainable APIs: ${listExplainableAPIs().join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const explanation = explainAPI(apiName);
-            if (!explanation) {
-                return {
-                    content: [{ type: "text", text: `No explanation found for "${apiName}".\n\nExplainable APIs: ${listExplainableAPIs().join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const explainText = formatAPIExplanation(explanation);
-            return { content: withDisclaimer([{ type: "text", text: explainText }]) };
-        }
-        // ── optimize_scene ───────────────────────────────────────────────────────
-        case "optimize_scene": {
-            const optCode = request.params.arguments?.code;
-            if (!optCode || typeof optCode !== "string") {
-                return {
-                    content: [{ type: "text", text: "Missing required parameter: `code`." }],
-                    isError: true,
-                };
-            }
-            const optReport = optimizeScene(optCode);
-            const optText = formatOptimizationReport(optReport);
-            return { content: withDisclaimer([{ type: "text", text: optText }]) };
-        }
-        // ── generate_gesture_code ────────────────────────────────────────────────
-        case "generate_gesture_code": {
-            const gestureType = request.params.arguments?.gestureType;
-            const gesturePlatform = request.params.arguments?.platform ?? "android";
-            if (!gestureType) {
-                return {
-                    content: [{ type: "text", text: `Missing required parameter: \`gestureType\`.\n\nAvailable types: ${GESTURE_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const gestureResult = generateGestureCode(gestureType, gesturePlatform);
-            if (!gestureResult) {
-                return {
-                    content: [{ type: "text", text: `Unknown gesture type: "${gestureType}".\n\nAvailable types: ${GESTURE_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const gestureText = formatGestureCode(gestureResult, gesturePlatform);
-            return { content: withDisclaimer([{ type: "text", text: gestureText }]) };
-        }
-        // ── generate_physics_code ────────────────────────────────────────────────
-        case "generate_physics_code": {
-            const physicsType = request.params.arguments?.physicsType;
-            const physicsPlatform = request.params.arguments?.platform ?? "android";
-            if (!physicsType) {
-                return {
-                    content: [{ type: "text", text: `Missing required parameter: \`physicsType\`.\n\nAvailable types: ${PHYSICS_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const physicsResult = generatePhysicsCode(physicsType, physicsPlatform);
-            if (!physicsResult) {
-                return {
-                    content: [{ type: "text", text: `Unknown physics type: "${physicsType}".\n\nAvailable types: ${PHYSICS_TYPES.join(", ")}` }],
-                    isError: true,
-                };
-            }
-            const physicsText = formatPhysicsCode(physicsResult, physicsPlatform);
-            return { content: withDisclaimer([{ type: "text", text: physicsText }]) };
-        }
-        // ── debug_scene ──────────────────────────────────────────────────────────
-        case "debug_scene": {
-            const debugCode = request.params.arguments?.code;
-            const debugDesc = request.params.arguments?.description;
-            if (!debugCode || typeof debugCode !== "string") {
-                return {
-                    content: [{ type: "text", text: "Missing required parameter: `code`." }],
-                    isError: true,
-                };
-            }
-            const issues = [];
-            // Code analysis checks
-            if (/Scene\s*\(/.test(debugCode) && !/engine/.test(debugCode)) {
-                issues.push("**Missing engine parameter** — `Scene()` requires an `engine` parameter in SceneView 3.x. Add `engine = rememberEngine()`.");
-            }
-            if (/rememberModelInstance/.test(debugCode) && !/\?\.(let|also)|!= null|!= nil/.test(debugCode)) {
-                issues.push("**Missing null check on model** — `rememberModelInstance()` returns `null` while loading. Always use `?.let { }` or `if (model != null)`.");
-            }
-            if (/LightNode\s*\([^)]*\)\s*\{/.test(debugCode) && !/apply\s*=/.test(debugCode)) {
-                issues.push("**LightNode trailing-lambda bug** — The trailing lambda `LightNode(...) { intensity(...) }` is SILENTLY IGNORED. Use `apply = { intensity(...) }` instead.");
-            }
-            if (/ModelNode/.test(debugCode) && !/LightNode|light|Light/.test(debugCode)) {
-                issues.push("**No light in scene** — Models appear completely black without a light source. Add a `LightNode` with `type = LightManager.Type.DIRECTIONAL`.");
-            }
-            if (/Dispatchers\.(IO|Default)/.test(debugCode) && /(modelLoader|materialLoader|engine\.)/.test(debugCode)) {
-                issues.push("**Threading violation** — Filament JNI calls must run on the main thread. Move `modelLoader`/`engine` calls to `Dispatchers.Main` or use `rememberModelInstance` in composables.");
-            }
-            if (/ARScene/.test(debugCode) && !/CAMERA/.test(debugCode) && !/camera/.test(debugCode)) {
-                issues.push("**AR permission not checked** — `ARScene` requires CAMERA permission at runtime. Add `android.permission.CAMERA` to AndroidManifest.xml and request it before showing ARScene.");
-            }
-            if (/Scene\s*\(/.test(debugCode) && !/fillMaxSize|Modifier/.test(debugCode)) {
-                issues.push("**Missing Modifier.fillMaxSize()** — Scene may have zero size without explicit sizing. Add `modifier = Modifier.fillMaxSize()`.");
-            }
-            if (/rememberEngine\(\)/.test(debugCode) && (debugCode.match(/rememberEngine\(\)/g) || []).length > 1) {
-                issues.push("**Multiple engine instances** — Only ONE engine should exist per app. Create it once at the top level and pass it down.");
-            }
-            if (/\\.glb/.test(debugCode) && /ios|swift|RealityKit/i.test(debugCode)) {
-                issues.push("**Wrong model format for iOS** — iOS/RealityKit uses `.usdz` models, not `.glb`. Convert using Reality Converter or Blender.");
-            }
-            if (/scaleToUnits/.test(debugCode) && /scaleToUnits\s*=\s*0\.0*[1-9]f?/.test(debugCode)) {
-                issues.push("**Very small scaleToUnits** — A scaleToUnits value less than 0.1 will make the model tiny and possibly invisible. Try `scaleToUnits = 1.0f`.");
-            }
-            // Auto-detect category from description for additional context
-            let debugGuideText = "";
-            if (debugDesc) {
-                const category = autoDetectIssue(debugDesc);
-                if (category) {
-                    debugGuideText = `\n\n---\n\n## Related Debug Guide: ${category}\n\n${getDebugGuide(category)}`;
-                }
-            }
-            const report = issues.length > 0
-                ? [`## Scene Debug Report\n`, `**${issues.length} issue(s) detected:**\n`, ...issues.map((issue, i) => `${i + 1}. ${issue}\n`)].join("\n") + debugGuideText
-                : `## Scene Debug Report\n\nNo common issues detected in your code. It looks structurally correct.\n\nIf you're still having problems, try:\n1. Check the Logcat for Filament errors\n2. Ensure your .glb model file exists in src/main/assets/\n3. Add a breakpoint in \`onFrame\` to verify the scene is rendering\n4. Use \`debug_issue\` with a specific category for detailed troubleshooting` + debugGuideText;
-            return { content: withDisclaimer([{ type: "text", text: report }]) };
         }
         default:
             return {

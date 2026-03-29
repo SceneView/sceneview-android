@@ -290,7 +290,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 ---
 
-# v3.3.x → v3.4.x
+# v3.3.x → v3.5.0
 
 ## Dependency bump (non-breaking)
 

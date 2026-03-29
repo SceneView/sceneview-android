@@ -104,7 +104,7 @@ jobs:
             VERSION=${GITHUB_REF_NAME#v}
           fi
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "::error::Not a semver version — got '$VERSION'. Run from a version tag (e.g. v3.4.7)."
+            echo "::error::Not a semver version — got '$VERSION'. Run from a version tag (e.g. v3.5.0)."
             exit 1
           fi
           CURRENT=$(node -p "require('./package.json').version")

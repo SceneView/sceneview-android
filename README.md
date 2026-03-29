@@ -45,7 +45,7 @@ SceneView(environment: .studio) {
 
 ```html
 <!-- Web — one script tag -->
-<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.4.0/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.2.0/sceneview.js"></script>
 <script> SceneView.modelViewer("canvas", "model.glb") </script>
 ```
 
@@ -91,7 +91,7 @@ https://github.com/sceneview/sceneview-swift.git  (from: 3.5.0)
 
 **Web** (sceneview.js — one line):
 ```html
-<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.4.0/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.2.0/sceneview.js"></script>
 ```
 
 **Web** (Kotlin/JS):
@@ -228,7 +228,7 @@ The lightest way to add 3D to any website. One script tag, one function call.
 ~25 KB library powered by Filament.js WASM — the same engine behind Android SceneView.
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.4.0/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@1.2.0/sceneview.js"></script>
 <script> SceneView.modelViewer("canvas", "model.glb") </script>
 ```
 
