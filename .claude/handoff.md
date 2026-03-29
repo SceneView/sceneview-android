@@ -4,179 +4,75 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session 9)
+**Date:** 29 mars 2026 (session 10)
 **Branch:** main (all pushed to origin)
 
-## WHAT WAS DONE THIS SESSION (session 9)
+## WHAT WAS DONE THIS SESSION (session 10)
+
+### 1. Comprehensive quality audit — 143 files, ~59K lines cleaned
+- **Version alignment**: ALL references updated from 3.5.0→3.5.1 across 100+ files (core, docs, MCPs, Flutter, React Native, Swift, samples, satellite MCPs)
+- **model-viewer→sceneview.js migration**: Migrated ALL remaining model-viewer/Three.js pages to sceneview.js (embed, preview, claude-3d, platforms-showcase)
+- **Three.js removal**: Deleted Three.js (53K LOC) and model-viewer.min.js from website-static
+- **Dead page cleanup**: Deleted demo-dashboard.html, demo-ar-staging.html, filament-chart.html
+
+### 2. SceneViewSwift fixes
+- **SceneSnapshot**: Fixed visionOS compilation (ARView unavailable — changed guard to `#if os(iOS)`)
+- **VideoNode**: Fixed memory leak — NotificationCenter observer never removed, added VideoLoopObserver with deinit cleanup
+- **CameraNode**: Removed unnecessary `#if !os(macOS)` guards (PerspectiveCameraComponent available macOS 15+)
+- **GeometryNode**: Removed unreachable `#else` dead code branches
+
+### 3. Demo page fixes (visual verification with preview tools)
+- **sceneview-demo.html**: Rewritten from raw Filament API to SceneView.modelViewer() — was crashing with SwapChain error, now renders perfectly
+- **sceneview-3d-chart.html**: Removed 6 non-existent API calls (setQuality/setBloom/setVignette/setOrbitSpeed/clearLights/animateCamera), replaced with direct camera positioning
+- **sceneview-garden-demo.html**: Same — removed 6 non-existent API calls
+- **sceneview-architecture-demo.html**: Same — removed 7 non-existent API calls
+- **showcase.html**: Cleaned model-viewer CSS selectors
+- **sceneview-demo.html**: Fixed broken model buttons (removed dead models, added working ones)
+
+### 4. CI workflow hardening
+- **maintenance.yml**: Fixed Filament version grep pattern, removed failing `gh label create`, added graceful fallback
+- **docs.yml**: Fixed download-artifact@v4, added deploy retry for concurrent conflicts
+- **ios.yml**: Changed runner to macos-14 for consistency
+- **All 10 workflows verified green**
+
+### 5. MCP fixes
+- Removed `engine = engine` from LightNode calls (3 files)
+- Fixed stale roadmap references (v3.4.0/v3.5.0 "upcoming" → v3.6.0/v4.0.0)
+- Fixed CDN URLs (unpkg→jsdelivr)
+- All 1204 tests pass
+
+### 6. Satellite MCPs version alignment
+- mcp-automotive, mcp-gaming, mcp-healthcare, mcp-interior: all 3.5.0→3.5.1
+
+## DECISIONS MADE
+- model-viewer and Three.js are GONE from the website — everything uses sceneview.js
+- Non-existent sceneview.js methods (setQuality, setBloom, addLight, animateCamera, etc.) removed from demos — these were aspirational API that was never implemented
+- sceneview-demo.html fully rewritten to use SceneView.modelViewer() instead of raw Filament API
+
+## WHAT WAS DONE IN SESSION 9
 
 ### 1. Release workflow fully fixed
-- **Maven Central**: Fixed Gradle configuration cache incompatibility (`--no-configuration-cache`)
-- **MCP npm**: Uses package.json version (independent cycle), skips if already published
-- **sceneview-web npm**: Fixed Gradle task (`jsBrowserProductionWebpack`), fixed build output path, fixed npm package name (unscoped `sceneview-web`)
-- **Create GitHub Release**: Only runs on tag push, correctly skipped on workflow_dispatch
-- **All 4 publish jobs now green** on workflow_dispatch test run
+- Maven Central: Fixed Gradle configuration cache incompatibility
+- MCP npm: Uses package.json version, skips if already published
+- sceneview-web npm: Fixed Gradle task, build output path, npm package name
+- Create GitHub Release: Only runs on tag push
 
 ### 2. Version 3.5.1 fully released
 - Maven Central: sceneview + arsceneview 3.5.1 published
 - npm: sceneview-mcp 3.5.4, sceneview-web 3.5.1 published
 - GitHub Release: v3.5.1 created
-- All CI workflows green
 
-## WHAT WAS DONE IN SESSION 8
+## CURRENT STATE
+- **Active branch**: main
+- **Latest release**: v3.5.1 (GitHub Release + Maven Central + npm)
+- **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests)
+- **sceneview-web**: v3.5.1 on npm
+- **Website**: All pages verified visually — zero JS errors, zero model-viewer, zero Three.js
+- **CI**: All 10 workflows green
 
-### 1. CI Fix — Swift 6 strict concurrency
-- Added `@MainActor` to `HapticManager` — UIKit haptic generators are MainActor-isolated
-- Fixed TestFlight deploy failure (exit code 65)
-
-### 2. macOS App Store submission — SUCCESS
-- 21 files committed for macOS support (previous session, pushed this session)
-- Created 3 synthetic macOS screenshots (2880x1800) with PIL
-- Submitted build 357 — **En attente de vérification**
-
-### 3. iOS demo improvements
-- **Environment picker** — 6 HDR presets (Studio, Outdoor, Sunset, Night, Warm, Autumn) in ExploreTab
-- **macOS app icons** — Generated proper sizes (16-1024px) from 1024x1024 source
-- **Version fix** — AboutTab updated from v3.4.7 to v3.5.0
-
-### 4. Version alignment — complete sweep
-- All 40+ files bumped to 3.5.1
-- MCP bumped to 3.5.4 and **published to npm**
-- All 1204 MCP tests pass
-
-### 5. Documentation
-- Rebuilt mkdocs site (166 files) — zero 3.4.7 references
-- Site deployed via GitHub Actions
-- Added ViewNode, SceneSnapshot, allPresets to llms.txt
-
-### 6. CI/CD improvements
-- Extended app-store.yml: iOS + macOS deploy jobs (parallel)
-- macOS job ready — just needs `MACOS_PROVISIONING_PROFILE_BASE64` secret
-- Renamed workflow: "Deploy Demo to App Store"
-
-### 7. Cleanup
-- Added `samples/ios-demo/.build/` to .gitignore
-
-## Previous sessions (7 and earlier)
-
-- iOS Distribution certificate created + provisioning profile
-- iOS v1.0 build 355 submitted for review
-- Xcode project manual signing configured
-- App Store Connect API key created (8P64Z7HCSN)
-- URL-based model loading (Android + iOS)
-- iOS HDR environments (6 files)
-- Progressive texture loading (Filament async)
-- GitHub Releases CDN (25 models, `assets-v1` tag)
-- Play Store APK 421→109 MB, deployed successfully
-- GitHub Sponsors 4 tiers ($5/$25/$50/$100)
-- Polar.sh active (3 products)
-
-## CI TO CHECK AT START
-
-```bash
-gh run list --branch main --limit 5
-```
-
-## WHAT REMAINS TO DO
-
-### Priority 1 — App Store reviews in progress
-- **iOS**: v1.0 build 355 — **En attente de vérification**
-- **macOS**: v1.0 build 357 — **En attente de vérification**
-
-### Priority 2 — CI secrets for macOS auto-deploy
-- Create macOS provisioning profile on Apple Developer Portal
-- base64 encode it and set `MACOS_PROVISIONING_PROFILE_BASE64` GitHub secret
-- Then macOS builds will auto-deploy alongside iOS
-
-### Priority 3 — Future platform builds
-- **tvOS**: Needs new Xcode target + build (RealityKit not available — would need SceneKit)
-- **visionOS**: Needs new Xcode target + build (RealityKit available, feasible)
-
-### Priority 4 — Monitoring
-- Check iOS review result
-- Check macOS review result
-- Check Play Store status (deployed)
-
-### Priority 5 — Polish
-- Loading indicator for URL-based models in demo
-- More demos in iOS app
-
-### Priority 6 — Signing maintenance
-- Backup `.secrets/` to Google Drive when sync resumes
-- Update GitHub Actions secrets with new API key if CI needs it
-- P12 password for `.secrets/ios_distribution_2027.p12` is `sceneview`
-
-## SIGNING REFERENCE
-
-| Item | Location | Notes |
-|---|---|---|
-| iOS Distribution cert | Login keychain | `iPhone Distribution: Thomas Gorisse (5G3DZ3TH45)` — expires 2027/03/29 |
-| Apple Distribution cert | Login keychain | `Apple Distribution: Thomas Gorisse (5G3DZ3TH45)` — NO private key (old) |
-| Provisioning profile | `~/Library/MobileDevice/Provisioning Profiles/3e147129-...` | "SceneView Demo App Store" |
-| API key (upload) | `~/.private_keys/AuthKey_8P64Z7HCSN.p8` | Issuer: `551bbb3e-a7f4-4e2e-9486-bf487256fd0f` |
-| API key (CI/CD) | GitHub Actions secrets | Key ID: `C77W6AGSZT` (p8 not available locally) |
-| P12 backup | `.secrets/ios_distribution_2027.p12` | Password: `sceneview` |
-| Private key backup | `.secrets/ios_distribution_2027.key` | PEM format |
-
-### How to archive and upload (for future sessions)
-
-```bash
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-
-# Archive iOS
-cd samples/ios-demo
-xcodebuild -scheme SceneViewDemo -destination "generic/platform=iOS" archive \
-  -archivePath /tmp/SceneViewDemo-iOS.xcarchive \
-  CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=5G3DZ3TH45 \
-  "CODE_SIGN_IDENTITY=iPhone Distribution: Thomas Gorisse (5G3DZ3TH45)" \
-  PROVISIONING_PROFILE_SPECIFIER="SceneView Demo App Store"
-
-# Archive macOS
-xcodebuild -scheme SceneViewDemo -destination "generic/platform=macOS" archive \
-  -archivePath /tmp/SceneViewDemo-macOS.xcarchive \
-  CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=5G3DZ3TH45 \
-  "CODE_SIGN_IDENTITY=Apple Distribution: Thomas Gorisse (5G3DZ3TH45)"
-
-# Upload
-xcrun altool --upload-app --type ios \
-  --file /tmp/SceneViewDemo-export/SceneViewDemo.ipa \
-  --apiKey 8P64Z7HCSN \
-  --apiIssuer 551bbb3e-a7f4-4e2e-9486-bf487256fd0f
-```
-
-## ASSET CATALOG STATUS
-- **34 models** in catalog from 3 sources
-- **25 models on GitHub Releases CDN** (assets-v1 tag)
-- **6 HDR environments** on both Android AND iOS
-- Android demo: 26 local models + 24 CDN models = 50 total in carousel
-- iOS demo: 28 USDZ models (local) + environment picker (6 HDR presets)
-- **Sources**: Sketchfab (28), KhronosGroup (5), Fab.com (1)
-
-## FINANCIAL STATUS
-- **Open Collective**: $2,338 USD (OSC fiscal host, 10% fee)
-- **GitHub Sponsors**: 4 tiers ($5/$25/$50/$100), no active sponsors yet
-- **Polar.sh**: active, 3 products, checkout links working
-- **Monthly expenses**: Claude Max ~$168/mo (reimbursed via OC expense)
-
-## STORE STATUS
-- **Play Store**: ✅ Deployed successfully (109 MB AAB)
-- **App Store iOS**: 🟡 v1.0 (build 355) — En attente de vérification
-- **App Store macOS**: 🟡 v1.0 (build 357) — En attente de vérification
-- **App Store tvOS**: ⏳ Needs new Xcode target + build
-- **App Store visionOS**: ⏳ Needs new Xcode target + build
-
-## PUBLISHED ARTIFACTS
-- **GitHub Release**: v3.5.1 (https://github.com/sceneview/sceneview/releases/tag/v3.5.1)
-- **sceneview-mcp**: 3.5.4 on npm (1204 tests)
-- **sceneview-web**: 3.5.1 on npm
-- **sceneview**: 3.5.1 on Maven Central
-- **arsceneview**: 3.5.1 on Maven Central
-- **Website**: sceneview.github.io (deployed, all versions 3.5.1)
-
-## RULES
-- Merge direct sur main
-- Fast release
-- Zero personal data in repo
-- Only modify SceneView orgs
-- Assets hosted locally
-- Opus for important agents
-- Zero data loss
+## NEXT STEPS
+- Visual polish: garden demo model appears small — consider adjusting camera distance
+- Consider implementing setQuality/setBloom/addLight in sceneview.js for richer demos
+- Deploy website to sceneview.github.io (separate repo)
+- iOS demo: verify SceneViewSwift fixes compile in Xcode
+- Android demo: verify Play Store build
