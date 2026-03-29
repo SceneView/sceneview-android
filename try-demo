@@ -70,7 +70,7 @@ download_and_install() {
     url="https://github.com/$GITHUB_REPO/releases/latest/download/sceneview-demo.apk"
   fi
 
-  local tmp_apk="/tmp/sceneview-demo.apk"
+  local tmp_apk="${TMPDIR:-/tmp}/sceneview-demo.apk"
   curl -fSL --progress-bar -o "$tmp_apk" "$url"
   echo -e "${GREEN}✓${RESET} Downloaded"
 
