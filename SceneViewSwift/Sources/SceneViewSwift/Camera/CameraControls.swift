@@ -64,8 +64,54 @@ public struct CameraControls: Sendable {
     /// Inertia damping factor (0 = instant stop, 0.99 = very slow deceleration).
     public var inertiaDamping: Float = 0.92
 
+    /// Minimum azimuth angle in radians. Nil means unconstrained.
+    public var minAzimuth: Float? = nil
+
+    /// Maximum azimuth angle in radians. Nil means unconstrained.
+    public var maxAzimuth: Float? = nil
+
+    /// Minimum elevation angle in radians. Default ~-85 degrees.
+    public var minElevation: Float = -(Float.pi / 2 - 0.087)
+
+    /// Maximum elevation angle in radians. Default ~85 degrees.
+    public var maxElevation: Float = Float.pi / 2 - 0.087
+
+    /// Pan speed multiplier (pan mode only).
+    public var panSpeed: Float = 0.01
+
+    /// First-person move speed (first-person mode only).
+    public var moveSpeed: Float = 0.1
+
+    /// Whether touch/drag interaction is enabled.
+    public var isEnabled: Bool = true
+
     public init(mode: CameraControlMode = .orbit) {
         self.mode = mode
+    }
+
+    /// Creates camera controls with customized orbit limits.
+    ///
+    /// - Parameters:
+    ///   - mode: Camera control mode.
+    ///   - minRadius: Minimum zoom distance.
+    ///   - maxRadius: Maximum zoom distance.
+    ///   - minElevation: Minimum vertical angle in radians.
+    ///   - maxElevation: Maximum vertical angle in radians.
+    ///   - sensitivity: Drag sensitivity.
+    public init(
+        mode: CameraControlMode = .orbit,
+        minRadius: Float = 0.5,
+        maxRadius: Float = 50.0,
+        minElevation: Float = -(Float.pi / 2 - 0.087),
+        maxElevation: Float = Float.pi / 2 - 0.087,
+        sensitivity: Float = 0.005
+    ) {
+        self.mode = mode
+        self.minRadius = minRadius
+        self.maxRadius = maxRadius
+        self.minElevation = minElevation
+        self.maxElevation = maxElevation
+        self.sensitivity = sensitivity
     }
 
     // MARK: - Computed Camera Position
@@ -116,11 +162,32 @@ public struct CameraControls: Sendable {
 
     /// Updates orbit angles from a drag gesture delta.
     ///
+    /// In orbit mode, rotates around the target. In pan mode, translates the target.
+    /// In first-person mode, adjusts look direction.
+    ///
     /// - Parameter delta: The drag delta in screen points (incremental, not total).
     public mutating func handleDrag(_ delta: CGSize) {
-        azimuth -= Float(delta.width) * sensitivity
-        elevation += Float(delta.height) * sensitivity
-        clampElevation()
+        guard isEnabled else { return }
+
+        switch mode {
+        case .orbit:
+            azimuth -= Float(delta.width) * sensitivity
+            elevation += Float(delta.height) * sensitivity
+            clampElevation()
+            clampAzimuth()
+
+        case .pan:
+            let right = SIMD3<Float>(cos(azimuth), 0, -sin(azimuth))
+            let up = SIMD3<Float>(0, 1, 0)
+            target += right * Float(delta.width) * panSpeed
+            target += up * Float(-delta.height) * panSpeed
+
+        case .firstPerson:
+            azimuth -= Float(delta.width) * sensitivity
+            elevation += Float(delta.height) * sensitivity
+            clampElevation()
+        }
+
         // Store velocity for inertia
         inertiaVelocity = delta
     }
@@ -162,11 +229,52 @@ public struct CameraControls: Sendable {
         azimuth += autoRotateSpeed * dt
     }
 
+    // MARK: - Convenience builders
+
+    /// Returns a copy with the orbit target changed.
+    @discardableResult
+    public func withTarget(_ target: SIMD3<Float>) -> CameraControls {
+        var copy = self
+        copy.target = target
+        return copy
+    }
+
+    /// Returns a copy with the initial orbit radius changed.
+    @discardableResult
+    public func withRadius(_ radius: Float) -> CameraControls {
+        var copy = self
+        copy.orbitRadius = radius
+        return copy
+    }
+
+    /// Returns a copy with azimuth limits set.
+    @discardableResult
+    public func withAzimuthLimits(min: Float, max: Float) -> CameraControls {
+        var copy = self
+        copy.minAzimuth = min
+        copy.maxAzimuth = max
+        return copy
+    }
+
+    /// Returns a copy with elevation limits set.
+    @discardableResult
+    public func withElevationLimits(min: Float, max: Float) -> CameraControls {
+        var copy = self
+        copy.minElevation = min
+        copy.maxElevation = max
+        return copy
+    }
+
     // MARK: - Private
 
     private mutating func clampElevation() {
-        let maxElev = Float.pi / 2 - 0.087  // ~85 degrees
-        elevation = min(max(elevation, -maxElev), maxElev)
+        elevation = Swift.min(Swift.max(elevation, minElevation), maxElevation)
+    }
+
+    private mutating func clampAzimuth() {
+        if let minAz = minAzimuth, let maxAz = maxAzimuth {
+            azimuth = Swift.min(Swift.max(azimuth, minAz), maxAz)
+        }
     }
 }
 
