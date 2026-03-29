@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # GitHub Actions — keep action versions up to date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(ci)"
+
+  # Gradle — Android library and sample apps
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+    # Ignore major version bumps that may break API compat — review manually
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # npm — MCP server
+  - package-ecosystem: "npm"
+    directory: "/mcp"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(mcp)"
+
+  # npm — website JS
+  - package-ecosystem: "npm"
+    directory: "/website-static/js"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(web)"
