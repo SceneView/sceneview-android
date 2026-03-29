@@ -25,8 +25,8 @@ composable signatures, node types, resource loading, threading rules, and common
 
 ## When writing any SceneView code
 
-- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.3.0`)
-- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.3.0`)
+- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.0`)
+- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.5.0`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case
@@ -68,6 +68,50 @@ One unified showcase app per platform — all features integrated into tabs.
 | `mcp/` | `sceneview-mcp` — MCP server for AI assistant integration |
 | `flutter/` | Flutter plugin — PlatformView bridge to SceneView (Android + iOS), with native rendering |
 | `react-native/` | React Native module — Fabric/Turbo bridge to SceneView (Android + iOS), with native rendering |
+
+## Version Location Map
+
+**Source of truth:** `gradle.properties` -> `VERSION_NAME=X.Y.Z`
+
+Every file below MUST be updated when bumping the version. Use `/version-bump` or `bash .claude/scripts/sync-versions.sh --fix`.
+
+| Category | File | Pattern |
+|---|---|---|
+| **Android** | `gradle.properties` (root) | `VERSION_NAME=X.Y.Z` |
+| | `sceneview/gradle.properties` | `VERSION_NAME=X.Y.Z` |
+| | `arsceneview/gradle.properties` | `VERSION_NAME=X.Y.Z` |
+| | `sceneview-core/gradle.properties` | `VERSION_NAME=X.Y.Z` |
+| **npm** | `mcp/package.json` | `"version": "X.Y.Z"` |
+| | `mcp/src/index.ts` | version in server info |
+| | `sceneview-web/package.json` | `"version": "X.Y.Z"` |
+| | `react-native/react-native-sceneview/package.json` | `"version": "X.Y.Z"` |
+| **Flutter** | `flutter/sceneview_flutter/pubspec.yaml` | `version: X.Y.Z` |
+| | `flutter/.../android/build.gradle` | `version 'X.Y.Z'` |
+| | `flutter/.../ios/sceneview_flutter.podspec` | `s.version = 'X.Y.Z'` |
+| **Docs** | `llms.txt` | `io.github.sceneview:sceneview:X.Y.Z` |
+| | `README.md` | install snippets |
+| | `CLAUDE.md` | code examples section |
+| | `docs/docs/index.md` | install snippets |
+| | `docs/docs/quickstart.md` | dependency snippets |
+| | `docs/docs/llms-full.txt` | artifact versions |
+| | `docs/docs/cheatsheet.md` | install snippets |
+| | `docs/docs/platforms.md` | install line |
+| | `docs/docs/android-xr.md` | install snippets |
+| | `docs/docs/migration.md` | "upgrade to" version |
+| **Website** | `website-static/index.html` | softwareVersion, badge, code |
+| | `sceneview.github.io/index.html` | deployed version (separate repo) |
+| **Samples** | `samples/android-demo/build.gradle` | versionName default |
+| | `sceneview/Module.md` | version ref |
+| **Swift** | `SceneViewSwift/` uses git tag `vX.Y.Z` | not a file version |
+
+**Automation:**
+- `bash .claude/scripts/sync-versions.sh` — checks all 30+ locations
+- `bash .claude/scripts/sync-versions.sh --fix` — auto-fixes mismatches
+- `bash .claude/scripts/quality-gate.sh` — full pre-push quality gate
+- `bash .claude/scripts/cross-platform-check.sh` — API parity across platforms
+- `bash .claude/scripts/release-checklist.sh` — pre-release validation
+
+---
 
 ## Session continuity
 
