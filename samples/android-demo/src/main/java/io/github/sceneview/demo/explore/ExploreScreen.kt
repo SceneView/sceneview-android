@@ -104,6 +104,9 @@ private val exploreModels = listOf(
     ExploreModel("Robot Mantis", "models/animated_robot_mantis.glb", 0.7f, 3.5f),
     ExploreModel("Kawaii Meka", "models/animated_kawaii_meka.glb", 0.8f, 3.0f),
     ExploreModel("Carnotaurus", "models/animated_carnotaurus.glb", 0.7f, 3.5f),
+    ExploreModel("Dragon", "models/animated_dragon.glb", 0.6f, 4.0f),
+    ExploreModel("Butterfly", "models/animated_butterfly.glb", 0.8f, 2.5f),
+    ExploreModel("Piano", "models/retro_piano.glb", 0.7f, 3.0f),
 )
 
 @Composable

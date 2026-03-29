@@ -11,9 +11,9 @@ struct ExploreTab: View {
         ("Game Boy", "gamecontroller.fill", "game_boy_classic", 0.8),
         ("Red Car", "car.fill", "red_car", 1.0),
         ("Tree Scene", "tree.fill", "tree_scene", 0.6),
-        ("Cube", "cube.fill", nil, 0.8),
-        ("Sphere", "globe", nil, 0.5),
-        ("Cylinder", "cylinder.fill", nil, 0.8),
+        ("Dragon", "flame.fill", "animated_dragon", 0.6),
+        ("Butterfly", "leaf.fill", "animated_butterfly", 0.8),
+        ("Piano", "pianokeys", "retro_piano", 0.7),
     ]
 
     @State private var selectedIndex = 0
