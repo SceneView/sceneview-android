@@ -34,7 +34,7 @@ jobs:
       - run: chmod +x ./gradlew
 
       - name: Publish
-        run: ./gradlew publishAndReleaseToMavenCentral --no-daemon --no-parallel
+        run: ./gradlew publishAndReleaseToMavenCentral --no-daemon --no-parallel --no-configuration-cache
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
