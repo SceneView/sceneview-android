@@ -501,6 +501,46 @@ fun rememberModelInstance(
     }.value
 }
 
+/**
+ * Creates and remembers a [ModelInstance] loaded from any file location including remote URLs.
+ *
+ * Supports:
+ * - Asset paths: `"models/helmet.glb"`
+ * - File URIs: `"file:///sdcard/model.glb"`
+ * - HTTP/HTTPS URLs: `"https://example.com/model.glb"`
+ *
+ * For asset paths (no scheme), delegates to the faster asset-based overload.
+ * For URLs, downloads the file on IO and creates the model on Main.
+ *
+ * @param modelLoader  The [ModelLoader] to use.
+ * @param fileLocation Path, URI, or URL to the GLB/glTF file.
+ * @return             `null` while loading; the loaded [ModelInstance] once ready.
+ */
+@Composable
+fun rememberModelInstance(
+    modelLoader: ModelLoader,
+    fileLocation: String,
+    resourceResolver: (resourceFileName: String) -> String = {
+        ModelLoader.getFolderPath(fileLocation, it)
+    }
+): ModelInstance? {
+    val uri = android.net.Uri.parse(fileLocation)
+    // Fast path: plain asset file name (no scheme) → use synchronous asset reader
+    if (uri.scheme == null) {
+        return rememberModelInstance(modelLoader, assetFileLocation = fileLocation)
+    }
+    // URL / file URI / content URI → use suspend loadModelInstance which handles http(s)
+    return produceState<ModelInstance?>(
+        initialValue = null,
+        key1 = modelLoader,
+        key2 = fileLocation
+    ) {
+        value = runCatching {
+            modelLoader.loadModelInstance(fileLocation, resourceResolver)
+        }.getOrNull()
+    }.value
+}
+
 // ── Video helper ──────────────────────────────────────────────────────────────────────────────────
 
 /**
