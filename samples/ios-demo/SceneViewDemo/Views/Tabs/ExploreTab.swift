@@ -3,6 +3,9 @@ import RealityKit
 import SceneViewSwift
 
 /// The main 3D explore tab -- showcases a rotating shape with controls.
+///
+/// Mirrors the Android ExploreScreen style: full-screen 3D scene with
+/// gradient overlays, shape/environment selectors, and auto-rotation.
 struct ExploreTab: View {
     private let shapes: [(name: String, icon: String)] = [
         ("Cube", "cube.fill"),
@@ -18,6 +21,18 @@ struct ExploreTab: View {
 
     var body: some View {
         ZStack {
+            // Dark gradient background (visible through RealityKit transparent bg)
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 0.08, green: 0.08, blue: 0.12),
+                    Color(red: 0.15, green: 0.15, blue: 0.22),
+                    Color(red: 0.10, green: 0.10, blue: 0.18)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
             sceneView
                 .ignoresSafeArea()
 
@@ -43,7 +58,6 @@ struct ExploreTab: View {
         if autoRotate {
             SceneView { root in
                 buildShape(into: root)
-                addGridFloor(to: root)
             }
             .cameraControls(.orbit)
             .autoRotate(speed: 0.4)
@@ -51,7 +65,6 @@ struct ExploreTab: View {
         } else {
             SceneView { root in
                 buildShape(into: root)
-                addGridFloor(to: root)
             }
             .cameraControls(.orbit)
             .id("shape-\(selectedIndex)-manual")
@@ -63,36 +76,27 @@ struct ExploreTab: View {
         switch selectedIndex {
         case 0:
             node = GeometryNode.cube(
-                size: 0.4,
-                material: .pbr(color: .systemBlue, metallic: 0.6, roughness: 0.3),
-                cornerRadius: 0.02
+                size: 0.8,
+                material: .pbr(color: .systemBlue, metallic: 0.7, roughness: 0.2),
+                cornerRadius: 0.04
             )
         case 1:
             node = GeometryNode.sphere(
-                radius: 0.25,
-                material: .pbr(color: .systemRed, metallic: 0.8, roughness: 0.15)
+                radius: 0.5,
+                material: .pbr(color: .systemRed, metallic: 0.85, roughness: 0.1)
             )
         case 2:
-            node = GeometryNode.cylinder(radius: 0.2, height: 0.5, color: .systemGreen)
+            node = GeometryNode.cylinder(radius: 0.35, height: 0.8, color: .systemGreen)
         case 3:
-            node = GeometryNode.cone(height: 0.5, radius: 0.25, color: .systemOrange)
+            node = GeometryNode.cone(height: 0.9, radius: 0.45, color: .systemOrange)
         case 4:
-            node = GeometryNode.plane(width: 0.6, depth: 0.6, color: .systemPurple)
+            node = GeometryNode.plane(width: 1.0, depth: 1.0, color: .systemPurple)
         default:
-            node = GeometryNode.cube(size: 0.4, color: .systemBlue)
+            node = GeometryNode.cube(size: 0.8, color: .systemBlue)
         }
+        // Position shape at scene center (orbit camera handles distance)
         node.entity.position = .init(x: 0, y: 0, z: -1.5)
         root.addChild(node.entity)
-    }
-
-    private func addGridFloor(to root: Entity) {
-        for x in stride(from: Float(-1.0), through: 1.0, by: 0.25) {
-            for z in stride(from: Float(-2.5), through: -0.5, by: 0.25) {
-                let dot = GeometryNode.cube(size: 0.015, color: .darkGray, cornerRadius: 0)
-                dot.entity.position = .init(x: x, y: -0.35, z: z)
-                root.addChild(dot.entity)
-            }
-        }
     }
 
     // MARK: - Overlays
@@ -104,7 +108,7 @@ struct ExploreTab: View {
                     .font(.largeTitle).bold()
                     .foregroundStyle(.white)
                     .accessibilityAddTraits(.isHeader)
-                Text("3D & AR for SwiftUI")
+                Text("✨ 3D & AR for Jetpack Compose")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.7))
             }
