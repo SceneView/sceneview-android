@@ -134,28 +134,22 @@ private struct SceneViewRepresentation: View {
 
     @ViewBuilder
     private var realityViewContent: some View {
-        #if os(macOS)
-        if #available(macOS 15.0, *) {
-            RealityView { realityContent in
-                setupScene(realityContent)
-            } update: { _ in
-                applyCamera()
-            }
-        } else {
-            Text("3D view requires macOS 15.0 or later")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        #else
+        #if os(iOS) || os(visionOS)
         RealityView { realityContent in
             setupScene(realityContent)
         } update: { _ in
             applyCamera()
         }
+        #else
+        // RealityView requires macOS 15.0+; fall back to a placeholder on older SDKs
+        Text("3D view requires macOS 15.0 or later")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         #endif
     }
 
     // MARK: - Scene Setup
 
+    #if os(iOS) || os(visionOS)
     private func setupScene(_ realityContent: RealityViewCameraContent) {
         // Root entity holds all user content
         realityContent.add(rootEntity)
@@ -190,6 +184,7 @@ private struct SceneViewRepresentation: View {
         // Populate user content
         content(rootEntity)
     }
+    #endif
 
     // MARK: - Environment IBL
 
@@ -197,6 +192,7 @@ private struct SceneViewRepresentation: View {
     private func loadEnvironment(_ env: SceneEnvironment) async {
         do {
             let resource = try await env.load()
+            #if os(iOS) || os(visionOS)
             // Apply IBL to the scene via ImageBasedLightComponent
             iblEntity.components.set(
                 ImageBasedLightComponent(
@@ -208,6 +204,7 @@ private struct SceneViewRepresentation: View {
             rootEntity.components.set(
                 ImageBasedLightReceiverComponent(imageBasedLight: iblEntity)
             )
+            #endif
         } catch {
             // Environment loading failed — scene continues with default lighting
             print("[SceneViewSwift] Failed to load environment '\(env.name)': \(error)")

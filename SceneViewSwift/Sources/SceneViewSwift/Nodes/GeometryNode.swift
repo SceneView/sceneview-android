@@ -125,10 +125,19 @@ public struct GeometryNode: Sendable {
         height: Float = 1.0,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
+        #if os(iOS) || os(visionOS)
         let mesh = MeshResource.generateCylinder(
             height: height,
             radius: radius
         )
+        #else
+        // generateCylinder is not available on macOS; approximate with a box
+        let mesh = MeshResource.generateBox(
+            width: radius * 2,
+            height: height,
+            depth: radius * 2
+        )
+        #endif
         let material = SimpleMaterial(color: color, isMetallic: false)
         let entity = ModelEntity(mesh: mesh, materials: [material])
         entity.generateCollisionShapes(recursive: false)
@@ -170,7 +179,16 @@ public struct GeometryNode: Sendable {
         radius: Float = 0.5,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
+        #if os(iOS) || os(visionOS)
         let mesh = MeshResource.generateCone(height: height, radius: radius)
+        #else
+        // generateCone is not available on macOS; approximate with a box
+        let mesh = MeshResource.generateBox(
+            width: radius * 2,
+            height: height,
+            depth: radius * 2
+        )
+        #endif
         let material = SimpleMaterial(color: color, isMetallic: false)
         let entity = ModelEntity(mesh: mesh, materials: [material])
         entity.generateCollisionShapes(recursive: false)
@@ -317,12 +335,12 @@ extension GeometryMaterial {
     /// let material = GeometryMaterial.textured(baseColor: texture, roughness: 0.8)
     /// ```
     public static func loadTexture(_ name: String) async throws -> TextureResource {
-        try await TextureResource(named: name)
+        try await TextureResource.load(named: name)
     }
 
     /// Loads a texture from a URL.
     public static func loadTexture(contentsOf url: URL) async throws -> TextureResource {
-        try await TextureResource(contentsOf: url)
+        try await TextureResource.load(contentsOf: url)
     }
 }
 

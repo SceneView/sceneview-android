@@ -39,10 +39,19 @@ public struct LineNode: Sendable {
         let length = simd_length(direction)
 
         // Create a thin cylinder as the line segment
+        #if os(iOS) || os(visionOS)
         let mesh = MeshResource.generateCylinder(
             height: length,
             radius: thickness / 2
         )
+        #else
+        // generateCylinder is not available on macOS; approximate with a thin box
+        let mesh = MeshResource.generateBox(
+            width: thickness,
+            height: length,
+            depth: thickness
+        )
+        #endif
         let material = SimpleMaterial(color: color, isMetallic: false)
         let entity = ModelEntity(mesh: mesh, materials: [material])
 

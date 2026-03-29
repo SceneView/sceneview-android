@@ -54,7 +54,7 @@ public struct SceneEnvironment: Sendable {
         if let cached = EnvironmentCache.shared.get(hdrResource) {
             return cached
         }
-        let resource = try await EnvironmentResource(named: hdrResource)
+        let resource = try await EnvironmentResource.load(named: hdrResource)
         EnvironmentCache.shared.set(hdrResource, resource: resource)
         return resource
     }

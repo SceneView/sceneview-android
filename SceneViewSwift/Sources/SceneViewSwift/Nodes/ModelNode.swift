@@ -65,18 +65,24 @@ public struct ModelNode: @unchecked Sendable {
     ///   - enableCollision: Whether to generate a collision shape for hit testing.
     /// - Returns: A `ModelNode` wrapping the loaded entity.
     /// - Throws: If the file cannot be found or loaded.
+    @MainActor
     public static func load(
         _ path: String,
         enableCollision: Bool = true
     ) async throws -> ModelNode {
-        let entity: ModelEntity = try await ModelEntity(named: path)
+        let loadedEntity = try await Entity.load(named: path)
+        let modelEntity = loadedEntity as? ModelEntity ?? {
+            let me = ModelEntity()
+            me.addChild(loadedEntity)
+            return me
+        }()
 
         // Generate collision shapes for tap interaction
         if enableCollision {
-            entity.generateCollisionShapes(recursive: true)
+            modelEntity.generateCollisionShapes(recursive: true)
         }
 
-        return ModelNode(entity)
+        return ModelNode(modelEntity)
     }
 
     /// Loads a 3D model from a URL.
@@ -86,17 +92,23 @@ public struct ModelNode: @unchecked Sendable {
     ///   - enableCollision: Whether to generate collision shapes.
     /// - Returns: A `ModelNode` wrapping the loaded entity.
     /// - Throws: If the file cannot be loaded.
+    @MainActor
     public static func load(
         contentsOf url: URL,
         enableCollision: Bool = true
     ) async throws -> ModelNode {
-        let entity: ModelEntity = try await ModelEntity(contentsOf: url)
+        let loadedEntity = try await Entity.load(contentsOf: url)
+        let modelEntity = loadedEntity as? ModelEntity ?? {
+            let me = ModelEntity()
+            me.addChild(loadedEntity)
+            return me
+        }()
 
         if enableCollision {
-            entity.generateCollisionShapes(recursive: true)
+            modelEntity.generateCollisionShapes(recursive: true)
         }
 
-        return ModelNode(entity)
+        return ModelNode(modelEntity)
     }
 
     // MARK: - Transform helpers (mirrors Android's Node API)
@@ -163,15 +175,11 @@ public struct ModelNode: @unchecked Sendable {
 
     /// Whether any animation is currently playing.
     ///
-    /// - Note: RealityKit does not expose a direct API to query active playback
-    ///   controllers. This returns `true` if an `AnimationComponent` is present
-    ///   and animations are available, which is a reliable heuristic after
-    ///   calling `playAllAnimations()` or `playAnimation(at:)`.
+    /// - Note: Returns `true` if the entity has available animations.
     ///   For precise tracking, retain the `AnimationPlaybackController` returned
     ///   by `entity.playAnimation(_:)` and check its `.isComplete` property.
     public var isAnimating: Bool {
-        entity.components[AnimationComponent.self] != nil
-            && !entity.availableAnimations.isEmpty
+        !entity.availableAnimations.isEmpty
     }
 
     /// Plays all animations on the model.
