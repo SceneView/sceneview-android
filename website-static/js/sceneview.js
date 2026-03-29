@@ -7,7 +7,7 @@
  * Powered by Filament.js v1.70.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
- * @version 1.3.3
+ * @version 1.4.0
  * @license MIT
  */
 (function(global) {
@@ -132,6 +132,50 @@
       this._renderer.setClearOptions({ clearColor: [r, g, b, a !== undefined ? a : 1], clear: true });
       return this;
     }
+
+    /** Add a model to the scene (without removing existing ones) */
+    addModel(url) {
+      var self = this;
+      return new Promise(function(resolve, reject) {
+        fetch(url)
+          .then(function(resp) { return resp.arrayBuffer(); })
+          .then(function(buffer) {
+            var data = new Uint8Array(buffer);
+            try {
+              var asset = self._loader.createAsset(data);
+              if (!asset) { reject(new Error('Failed to parse: ' + url)); return; }
+              asset.loadResources();
+              self._scene.addEntity(asset.getRoot());
+              self._scene.addEntities(asset.getRenderableEntities());
+              resolve(asset);
+            } catch (e) { reject(e); }
+          })
+          .catch(reject);
+      });
+    }
+
+    /** Load a GLB from a Uint8Array buffer directly */
+    loadGLBBuffer(buffer, key) {
+      var asset = this._loader.createAsset(buffer);
+      if (!asset) return null;
+      asset.loadResources();
+      this._scene.addEntity(asset.getRoot());
+      this._scene.addEntities(asset.getRenderableEntities());
+      return asset;
+    }
+
+    /** Remove an asset from the scene */
+    removeAsset(asset) {
+      if (!asset) return;
+      try {
+        asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
+        this._scene.remove(asset.getRoot());
+      } catch (e) { /* ignore cleanup errors */ }
+    }
+
+    /** Access engine for advanced Filament operations */
+    get engine() { return this._engine; }
+    get scene() { return this._scene; }
 
     dispose() {
       this._running = false;
@@ -367,6 +411,22 @@
           var ibl = engine.createIblFromKtx1(buffer);
           ibl.setIntensity(options.iblIntensity || 40000);
           scene.setIndirectLight(ibl);
+          // Create skybox from IBL reflection cubemap if skybox enabled
+          if (options.skybox !== false) {
+            try {
+              var reflections = ibl.getReflectionsTexture();
+              if (reflections) {
+                var skybox = Filament.Skybox.Builder()
+                  .environment(reflections)
+                  .build(engine);
+                scene.setSkybox(skybox);
+                console.log('SceneView: Skybox created from IBL cubemap');
+              }
+            } catch (skyErr) {
+              // Skybox not supported in this build — that's OK
+              console.log('SceneView: Skybox not available (IBL-only mode)');
+            }
+          }
           console.log('SceneView: KTX IBL loaded (' + Math.round(buffer.length / 1024) + 'KB)');
         } catch (e) {
           console.warn('SceneView: createIblFromKtx1 failed, using SH fallback', e);
@@ -437,7 +497,7 @@
   }
 
   global.SceneView = {
-    version: '1.3.3',
+    version: '1.4.0',
     create: create,
     modelViewer: modelViewer
   };

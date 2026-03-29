@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Garden Postcard | SceneView Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    overflow: hidden; font-family: 'Georgia', 'Times New Roman', serif;
+    height: 100vh; background: #000;
+  }
+  /* Polyhaven suburban garden sky */
+  #sky {
+    position: fixed; inset: 0; z-index: 0;
+    background: url('environments/sky/garden_2k.jpg') center/cover no-repeat;
+    filter: brightness(0.25) saturate(1.3) contrast(1.1);
+  }
+  canvas {
+    position: relative; z-index: 1;
+    width: 100%; height: 100%; display: block; cursor: grab;
+  }
+  canvas:active { cursor: grabbing; }
+
+  /* Postcard — top right, elegant */
+  #postcard {
+    position: absolute; top: 36px; right: 36px; z-index: 10;
+    background: rgba(10,15,20,0.35); backdrop-filter: blur(24px) saturate(1.5);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
+    padding: 28px 34px; max-width: 260px;
+    animation: postcard-in 1.5s ease-out;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  }
+  #postcard .line1 {
+    font-size: 1.15rem; font-style: italic; color: rgba(255,255,255,0.75);
+    line-height: 1.6; letter-spacing: 0.01em;
+  }
+  #postcard .line2 {
+    font-size: 0.8rem; color: rgba(255,255,255,0.35);
+    margin-top: 18px; text-align: right; font-style: italic;
+  }
+
+  /* Badge */
+  #badge {
+    position: absolute; bottom: 24px; right: 28px; z-index: 10;
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(10,15,25,0.4); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 16px;
+  }
+  #badge .rendered { color: rgba(255,255,255,0.4); font-size: 0.65rem; }
+
+  /* Fireflies */
+  .firefly {
+    position: absolute; border-radius: 50%; pointer-events: none; z-index: 5;
+    animation: ff-float linear infinite, ff-glow ease-in-out infinite alternate;
+  }
+  @keyframes ff-float {
+    0% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(30px, -50px) scale(1.3); }
+    50% { transform: translate(-25px, -80px) scale(0.7); }
+    75% { transform: translate(45px, -35px) scale(1.1); }
+    100% { transform: translate(0, 0) scale(1); }
+  }
+  @keyframes ff-glow {
+    0% { opacity: 0.15; box-shadow: 0 0 3px 1px currentColor; }
+    100% { opacity: 0.85; box-shadow: 0 0 14px 7px currentColor; }
+  }
+  @keyframes postcard-in {
+    0% { opacity: 0; transform: translateY(12px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Butterfly */
+  .butterfly {
+    position: absolute; z-index: 5; pointer-events: none;
+    animation: bf-path 14s ease-in-out infinite;
+  }
+  .butterfly svg { animation: bf-wings 0.25s ease-in-out infinite alternate; }
+  @keyframes bf-path {
+    0% { top: 38%; left: 28%; }
+    12% { top: 22%; left: 48%; }
+    28% { top: 32%; left: 62%; }
+    42% { top: 18%; left: 42%; }
+    58% { top: 42%; left: 32%; }
+    74% { top: 28%; left: 56%; }
+    100% { top: 38%; left: 28%; }
+  }
+  @keyframes bf-wings {
+    0% { transform: scaleX(1) rotateY(0deg); }
+    100% { transform: scaleX(0.25) rotateY(15deg); }
+  }
+</style>
+</head>
+<body>
+
+<div id="sky"></div>
+
+<!-- Postcard — NO logo header (Thomas's decision) -->
+<div id="postcard">
+  <div class="line1">"Sorry I work too much"</div>
+  <div class="line2">with love, C.M.R.</div>
+</div>
+
+<div id="badge">
+  <span class="rendered">Rendered by</span>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#60a5fa" stroke-width="1.6" fill="rgba(96,165,250,0.1)"/><path d="M12 22V12M2 7l10 5 10-5" stroke="#60a5fa" stroke-width="1.6"/></svg>
+  <span style="color:rgba(255,255,255,0.85);font-weight:600;font-size:0.75rem;">SceneView</span>
+</div>
+
+<!-- Butterfly -->
+<div class="butterfly">
+  <svg width="26" height="22" viewBox="0 0 24 20" fill="none">
+    <path d="M12 10C8 4 2 2 2 8s4 8 10 2z" fill="rgba(200,160,255,0.5)"/>
+    <path d="M12 10C16 4 22 2 22 8s-4 8-10 2z" fill="rgba(180,140,255,0.5)"/>
+    <line x1="12" y1="10" x2="12" y2="2" stroke="rgba(255,255,255,0.25)" stroke-width="0.5"/>
+  </svg>
+</div>
+
+<canvas id="viewer"></canvas>
+
+<script src="js/filament/filament.js"></script>
+<script src="js/sceneview.js?v=140"></script>
+<script>
+// Fireflies
+(function() {
+  var colors = ['#fbbf24', '#fde68a', '#a3e635', '#86efac', '#67e8f9', '#fcd34d'];
+  for (var i = 0; i < 24; i++) {
+    var el = document.createElement('div');
+    el.className = 'firefly';
+    var size = 2 + Math.random() * 5;
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.left = (8 + Math.random() * 84) + '%';
+    el.style.top = (15 + Math.random() * 65) + '%';
+    el.style.color = colors[Math.floor(Math.random() * colors.length)];
+    el.style.background = 'currentColor';
+    el.style.animationDuration = (6 + Math.random() * 14) + 's, ' + (1.2 + Math.random() * 2.5) + 's';
+    el.style.animationDelay = (-Math.random() * 12) + 's, ' + (-Math.random() * 3) + 's';
+    document.body.appendChild(el);
+  }
+})();
+
+// Load 3D flower model — Filament WASM PBR rendering
+SceneView.modelViewer("viewer", "models/platforms/GlassVaseFlowers.glb", {
+  backgroundColor: [0.025, 0.03, 0.05, 1.0],
+  fov: 32,
+  iblIntensity: 50000,
+}).then(function(instance) {
+  console.log("SceneView: Garden postcard loaded (Filament WASM + Polyhaven sky)");
+}).catch(function(err) {
+  console.error("SceneView garden failed:", err);
+});
+</script>
+</body>
+</html>
