@@ -124,125 +124,17 @@ Never say "everything is good" without verifying published packages.
 
 - **Active branch**: `main`
 - **Latest release**: v3.5.0 (GitHub Release + Maven Central PUBLISHED)
-- **MCP servers**: sceneview-mcp 3.5.0 on npm (32 tools, 1204 tests), 9 MCPs total on npm
-- **sceneview.js**: v2.0.0 local (full feature parity), v1.2.0 on npm
-- **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
-- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
+- **MCP servers**: sceneview-mcp 3.5.0 on npm (32 tools, 1204 tests), 9 MCPs total
+- **sceneview.js**: v2.0.0 local, v1.2.0 on npm
+- **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
+- **Website**: sceneview.github.io
 
-- **What was done (2026-03-26 session — FINAL)**:
+For full session history, see memory file `project_session_history.md`.
+For current priorities and next steps, see `.claude/handoff.md`.
 
-  Filament.js WASM proven, sceneview.js v1.2.0 npm, 9 MCPs on npm, 19 tools, 834 tests, 0 open issues:
-  - **Filament.js Web PROVEN AND LIVE**: DamagedHelmet PBR renders in browser via Filament.js WASM
-  - **sceneview.js v1.2.0 published on npm** — one-liner 3D for the web, double-init bug fixed
-  - **Procedural geometry in MCP artifacts** — 834 tests across all MCP servers
-  - **9 MCPs on npm** (versions vary): Education MCP + Finance MCP new; Social Media MCP retired ([REDACTED])
-  - **PR #472 on Anthropic Claude Cookbooks** — SceneView MCP featured
-  - **2 PRs on awesome-mcp-servers** — SceneView MCPs listed
-  - **Orgs reorganized**: sceneview-tools (commercial) + mcp-tools-lab (MCP ecosystem)
-  - **v3.4.7 released** on GitHub
-  - **Polar.sh**: account approved, Stripe connected (production ready)
-  - **Pro link on website** now points to Polar.sh
-  - **GitHub Sponsors**: 5 tiers configured ($5/$15/$50/$99/$200)
-  - **npm profile cleaned**, credentials saved
-  - **Quality check scheduled** every 3 hours (automated monitoring)
-  - **Communication wave 1**: drafts ready (LinkedIn, etc.)
-  - **0 open issues** on main repo
+### How to update
 
-- **What was done (2026-03-25 marathon — 100+ commits, 5 releases)**:
-
-  Full-day marathon covering releases, MCP ecosystem, website, bugs, branding, docs, legal, and monetization:
-  - **Releases**: v3.4.0 through v3.4.4 on GitHub; sceneview-mcp on npm + official registry
-  - **MCP ecosystem**: 7+ MCP servers published (sceneview, realestate, ecommerce, architecture, french-admin, social-media, legal-docs)
-  - **AI tools** (in external repos, not in this codebase): Chrome extension, prompt store, n8n templates, Telegram bot, AI invoice tool
-  - **Bug fixes**: AR crash #713 (materials for Filament 1.70.0), MeshNode boundingBox #711
-  - **15 audit issues fixed**, 6 Dependabot vulns resolved, 28 stale refs cleaned
-  - **Website**: static HTML (replaced Kobweb), playground page, 3D embed widget, smart links (/go/), comprehensive SEO (meta tags, JSON-LD, sitemap)
-  - **iOS**: Xcode project, signing config, App Store workflow (macos-14 runner) — needs real Apple cert
-  - **Android demo**: Play Store readiness (crash prevention, dark mode, store listing)
-  - **Branding**: SVG logos, adaptive icons, favicon, social preview
-  - **Legal**: all projects have LICENSE, TERMS, PRIVACY, disclaimers
-  - **Docs**: platforms page, Android XR, visionOS, community, issue templates, SPONSORS.md, CONTRIBUTING.md
-  - **Pro/Revenue**: strategy doc, MCP Pro API scaffold, GPT Store prep, market opportunities doc
-  - **Revenue active**: GitHub Sponsors (Stripe verified, 4 tiers documented), Polar.sh (test mode), W-8BEN filed
-  - **DevOps**: Discord webhook, render_3d_preview MCP tool, secrets inventory
-  - **GitHub org renamed** to lowercase `sceneview`
-  - **LinkedIn**: 3 posts drafted (DO NOT POST without Thomas approval)
-
-- **What was done previously (2026-03-25 night, autonomous session)**:
-  - WASM target enabled in sceneview-core (wasmJs(), 14 tests)
-  - WebXR AR/VR in sceneview-web (6 declaration files, Filament integration, tests)
-  - CI fix: material-icons pinned to 1.7.8 (1.10.5 doesn't exist)
-  - Desktop software 3D renderer (Compose Canvas, wireframe cube/octahedron/diamond)
-  - Android demo app Material 3 (4 tabs, 14 samples, blue branding)
-  - Website Kobweb deployed to GitHub Pages (live)
-  - SceneView Pro revenue structure (3 passive layers)
-  - Platform roadmap: Android XR added, Wear OS / Android Auto excluded
-
-- **What was done previously (2026-03-24)**:
-
-  Multi-platform expansion (merged to main):
-  - sceneview-web module (Kotlin/JS + Filament.js WASM)
-  - Android TV sample (`samples/android-tv-demo`)
-  - iOS demo app (`samples/ios-demo`)
-  - Flutter bridge (`flutter/`), React Native bridge (`react-native/`)
-  - SceneViewSwift: 16 node types, full test suite, docs, MCP iOS support
-  - KMP sceneview-core: 4 critical math bugs fixed
-  - Android: KDoc audit, Frame.hitTest bug fix, Material 3 migration
-
-- **Pending for Thomas (manual actions)**:
-  - Login to Apple Developer to create real iOS distribution certificate
-  - Publish LinkedIn post (3 drafts ready, DO NOT POST without approval)
-  - Polar.sh Go Live (switch from test mode to production)
-  - Delete old Play Store apps (AR Wall Paint, AR for TikTok, Info Trafic Nantes)
-  - Re-enable Mac sleep (Battery settings)
-  - Play Store key reset completion (~27 March)
-  - Configure GitHub Sponsors tiers on github.com/sponsors/sceneview
-
-- **What's next (for future sessions)**:
-  - ~~PRIORITY 1 — Maven Central publish~~ **DONE — v3.5.0 published**
-  - **PRIORITY 1 — MCP v3.6.0 npm publish**: 10 new tools, 1204 tests, ready to publish
-  - **PRIORITY 2 — App Store first TestFlight build**: needs real Apple cert (Thomas action first)
-  - **PRIORITY 3 — Play Store deploy**: verify review status
-  - **PRIORITY 4 — Fix sceneview-web npm publish**: Gradle task name incorrect in release.yml
-  - **PRIORITY 5 — LinkedIn post**: publish when approved (3 drafts ready)
-  - Filament JNI Desktop (18-29 day effort, high complexity)
-  - Android XR module
-  - KMP core XCFramework: build and integrate into SceneViewSwift
-  - visionOS spatial features (immersive spaces, hand tracking)
-  - Publish Flutter plugin to pub.dev
-  - Publish React Native module to npm
-
-- **Known constraints**:
-  - Cannot push directly to `main` (proxy restriction, only claude/* branches)
-  - No GitHub API token available — PRs must be created manually on GitHub, or use `gh auth login` first
-  - Container is ephemeral — tokens/env don't persist between sessions
-
-- **Project philosophy**: SceneView is an AI-first SDK — everything optimized
-  so AI assistants can generate correct 3D/AR Compose code on the first try
-- **Cross-platform strategy**: native renderer per platform — Filament (Android),
-  RealityKit (Apple: iOS, macOS, visionOS). KMP shares logic, not rendering.
-- **KMP core** (`sceneview-core/`): collision, math, triangulation, animation, geometry,
-  physics shared across Android and Apple via Kotlin Multiplatform
-- **SceneViewSwift** (`SceneViewSwift/`): now 16 node types — Apple library — Swift Package,
-  iOS 17+ / macOS 14+ / visionOS 1+, RealityKit + ARKit, 3D + AR, consumable by Swift
-  native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
-- **Demo app** (`samples/android-demo/`): Play Store ready, 4-tab architecture (3D, AR,
-  Samples, About), Material 3 Expressive
-- **MCP server** (`mcp/`): `sceneview-mcp` v3.5.0 on npm (v3.6.0 ready locally with 32 tools, 1204 tests)
-- **MCP ecosystem**: 9 MCPs on npm (sceneview-mcp 3.5.0, french-admin 2.1.0, realestate 2.1.0, education 1.0.0, finance 1.0.0, others 2.0.0)
-- **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
-- **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
-- **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web (Filament.js WASM, double-init fixed)
-- **Open source PRs**: PR #472 Claude Cookbooks, 2 PRs awesome-mcp-servers
-- **Pending**: Maven Central v3.5.0 PUBLISHED, App Store TestFlight (needs Apple cert), Play Store deploy (in review)
-
-### How to update this section
-
-After completing significant work, update the "Current state" block above with:
-1. The active branch name
-2. A brief summary of what changed
-3. Any new decisions or design choices made
-4. Update the date
+After significant work, update this block and `.claude/handoff.md`.
 
 ---
 
