@@ -30,6 +30,7 @@ jobs:
   build:
     name: Build website + docs
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +52,8 @@ jobs:
       - name: Install MkDocs
         run: |
           pip install mkdocs-material
-          pip install mkdocs-social-plugin || true
+          # mkdocs-material[imaging] enables social card previews (optional, needs Cairo)
+          pip install "mkdocs-material[imaging]" 2>/dev/null || true
 
       - name: Sync content into docs
         run: |
@@ -116,6 +118,7 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
