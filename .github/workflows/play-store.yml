@@ -22,10 +22,19 @@ on:
           - alpha
           - internal
 
+# Only one Play Store deploy at a time
+concurrency:
+  group: play-store-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Build & Deploy to Play Store
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +65,15 @@ jobs:
           echo "name=$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "Version: $VERSION_NAME ($VERSION_CODE)"
 
+      - name: Validate keystore secret
+        env:
+          KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::UPLOAD_KEYSTORE_BASE64 secret is not set. Cannot build release AAB."
+            exit 1
+          fi
+
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
@@ -77,6 +95,12 @@ jobs:
         with:
           name: sceneview-demo-${{ steps.version.outputs.name }}
           path: samples/android-demo/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f samples/android-demo/release.keystore
 
       - name: Publish to Play Store
         uses: r0adkll/upload-google-play@v1.1.3
