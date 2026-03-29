@@ -430,7 +430,7 @@ class ModelLoader(
 
     fun updateLoad() {
         // Allow the resource loader to finalize textures that have become ready.
-//        resourceLoader.asyncUpdateLoad()
+        resourceLoader.asyncUpdateLoad()
     }
 
     /**
@@ -440,9 +440,8 @@ class ModelLoader(
         for (uri in model.resourceUris) {
             resourceResolver(uri)?.let { resourceLoader.addResourceData(uri, it) }
         }
-        resourceLoader.loadResources(model)
-//        resourceLoader.asyncBeginLoad(model)
-//        resourceLoader.evictResourceData()
+        resourceLoader.asyncBeginLoad(model)
+        resourceLoader.evictResourceData()
     }
 
     /**
@@ -460,9 +459,8 @@ class ModelLoader(
             }
         }
         withContext(Dispatchers.Main) {
-            resourceLoader.loadResources(model)
+            resourceLoader.asyncBeginLoad(model)
         }
-//        resourceLoader.asyncBeginLoad(model)
     }
 
     companion object {
