@@ -56,9 +56,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.sceneview.demo.R
 import com.google.ar.core.Anchor
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
@@ -112,7 +116,11 @@ fun ARScreen() {
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val arSceneDescription = stringResource(R.string.cd_ar_scene)
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .semantics { contentDescription = arSceneDescription }
+    ) {
         val engine = rememberEngine()
         val modelLoader = rememberModelLoader(engine)
         val materialLoader = rememberMaterialLoader(engine)
@@ -207,8 +215,8 @@ fun ARScreen() {
                 .align(Alignment.TopCenter)
                 .padding(top = 16.dp),
             targetState = trackingFailureReason?.getDescription(LocalContext.current)
-                ?: if (anchor == null) "Point your camera at a flat surface"
-                else "Model placed — tap to reposition",
+                ?: if (anchor == null) stringResource(R.string.ar_scan_surface)
+                else stringResource(R.string.ar_model_placed),
             transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
             label = "StatusText"
         ) { text ->
@@ -246,9 +254,9 @@ fun ARScreen() {
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Drag to move", color = Color.White, fontSize = 13.sp)
-                    Text("Pinch to scale", color = Color.White, fontSize = 13.sp)
-                    Text("Twist to rotate", color = Color.White, fontSize = 13.sp)
+                    Text(stringResource(R.string.ar_drag_to_move), color = Color.White, fontSize = 13.sp)
+                    Text(stringResource(R.string.ar_pinch_to_scale), color = Color.White, fontSize = 13.sp)
+                    Text(stringResource(R.string.ar_twist_to_rotate), color = Color.White, fontSize = 13.sp)
                 }
             }
         }
@@ -274,11 +282,11 @@ fun ARScreen() {
                 ) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_remove_model),
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        "  Remove",
+                        "  " + stringResource(R.string.ar_remove),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -397,13 +405,13 @@ private fun ARNotAvailableScreen() {
                 }
             }
             Text(
-                text = "AR Not Available",
+                text = stringResource(R.string.ar_not_available_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "This device does not support ARCore.\nAR features require a compatible Android device with Google Play Services for AR installed.",
+                text = stringResource(R.string.ar_not_available_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
