@@ -1,11 +1,11 @@
 # sceneview_flutter
 
-Flutter plugin for [SceneView](https://github.com/sceneview/sceneview) — 3D and AR scenes using native renderers.
+Flutter plugin for [SceneView](https://github.com/sceneview/sceneview) -- 3D and AR scenes using native renderers.
 
 | Platform | Renderer | Status |
 |----------|----------|--------|
-| Android  | Filament (via Jetpack Compose) | Scaffold |
-| iOS      | RealityKit (via SceneViewSwift) | Scaffold |
+| Android  | Filament (via Jetpack Compose) | Alpha -- 3D model loading works |
+| iOS      | RealityKit (via SceneViewSwift) | Alpha -- 3D model loading works |
 
 ## Setup
 
@@ -13,7 +13,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  sceneview_flutter: ^0.1.0
+  sceneview_flutter: ^3.4.7
 ```
 
 ### Android
@@ -36,6 +36,8 @@ Minimum iOS 17. Set in `ios/Podfile`:
 platform :ios, '17.0'
 ```
 
+The host app must also add `SceneViewSwift` via Swift Package Manager in Xcode.
+
 ## Usage
 
 ### 3D Scene
@@ -49,6 +51,7 @@ SceneView(
   controller: controller,
   onViewCreated: () {
     controller.loadModel(ModelNode(modelPath: 'models/helmet.glb'));
+    controller.setEnvironment('environments/studio_small.hdr');
   },
 )
 ```
@@ -65,20 +68,36 @@ ARSceneView(
 )
 ```
 
+### Controller API
+
+| Method | Description |
+|--------|-------------|
+| `loadModel(ModelNode)` | Load a glTF/GLB model |
+| `clearScene()` | Remove all models |
+| `setEnvironment(path)` | Set HDR environment for lighting |
+| `addGeometry(GeometryNode)` | Placeholder -- acknowledged, not yet rendered |
+| `addLight(LightNode)` | Placeholder -- scene uses defaults |
+
 ## Architecture
 
 ```
 Flutter (Dart)
   |
-  +-- PlatformView -----> Android: ComposeView + SceneView { }
+  +-- PlatformView -----> Android: ComposeView + Scene { }
   |                        (Filament renderer)
   |
-  +-- PlatformView -----> iOS: UIView + SceneViewSwift
+  +-- PlatformView -----> iOS: UIHostingController + SceneViewSwift
                            (RealityKit renderer)
 ```
 
-Method channels handle commands (loadModel, addGeometry, addLight, clearScene, setEnvironment) between Dart and native code.
+Method channels handle commands (loadModel, clearScene, setEnvironment) between Dart and native code.
 
-## Status
+## Limitations
 
-This is a scaffold — the directory structure and API surface are defined, but native rendering is not yet wired up. See TODO comments in the platform code.
+- Geometry and light nodes are not yet rendered natively (API exists for forward compatibility)
+- AR tap-to-place is not yet implemented
+- No event callbacks from native to Dart yet (onTap, onModelLoaded)
+
+## License
+
+Apache-2.0

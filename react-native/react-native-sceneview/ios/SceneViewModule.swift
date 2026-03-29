@@ -3,6 +3,18 @@ import React
 import SceneViewSwift
 import SwiftUI
 
+// MARK: - Shared model data
+
+struct RNModelData: Identifiable, Equatable {
+    let id = UUID()
+    let path: String
+    let scale: Float
+
+    static func == (lhs: RNModelData, rhs: RNModelData) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 // MARK: - SceneView (3D)
 
 /// RCTViewManager subclass that bridges React Native's `<RNSceneView>`
@@ -22,7 +34,7 @@ class RNSceneViewManager: RCTViewManager {
 /// Observable state model shared between React props and SwiftUI view.
 @MainActor
 class RNSceneState: ObservableObject {
-    @Published var modelPaths: [String] = []
+    @Published var models: [RNModelData] = []
     @Published var environmentPath: String?
     @Published var cameraOrbit: Bool = true
 }
@@ -32,6 +44,9 @@ class RNSceneViewWrapper: UIView {
 
     private var hostingController: UIHostingController<RNSceneViewContent>?
     private let sceneState = RNSceneState()
+
+    /// Event callback for tap events.
+    @objc var onTap: RCTDirectEventBlock?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -65,7 +80,11 @@ class RNSceneViewWrapper: UIView {
     @objc var modelNodes: [[String: Any]]? {
         didSet {
             Task { @MainActor in
-                sceneState.modelPaths = modelNodes?.compactMap { $0["src"] as? String } ?? []
+                sceneState.models = modelNodes?.compactMap { dict -> RNModelData? in
+                    guard let src = dict["src"] as? String else { return nil }
+                    let scale = (dict["scale"] as? NSNumber)?.floatValue ?? 1.0
+                    return RNModelData(path: src, scale: scale)
+                } ?? []
             }
         }
     }
@@ -85,8 +104,9 @@ struct RNSceneViewContent: View {
 
     var body: some View {
         SceneView {
-            ForEach(state.modelPaths, id: \.self) { path in
-                ModelNode(path)
+            ForEach(state.models) { model in
+                ModelNode(model.path)
+                    .scale(model.scale)
             }
         }
     }
@@ -108,11 +128,26 @@ class RNARSceneViewManager: RCTViewManager {
     }
 }
 
+/// Observable state for AR scene configuration.
+@MainActor
+class RNARSceneState: ObservableObject {
+    @Published var models: [RNModelData] = []
+    @Published var planeDetection: Bool = true
+    @Published var depthOcclusion: Bool = false
+    @Published var instantPlacement: Bool = false
+}
+
 /// UIView wrapper that hosts a SwiftUI `ARSceneView` via UIHostingController.
 class RNARSceneViewWrapper: UIView {
 
     private var hostingController: UIHostingController<RNARSceneViewContent>?
-    private let sceneState = RNSceneState()
+    private let sceneState = RNARSceneState()
+
+    /// Event callback for tap events.
+    @objc var onTap: RCTDirectEventBlock?
+
+    /// Event callback for plane detection events.
+    @objc var onPlaneDetected: RCTDirectEventBlock?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -137,40 +172,56 @@ class RNARSceneViewWrapper: UIView {
 
     @objc var planeDetection: Bool = true {
         didSet {
-            // ARSceneView handles plane detection via its configuration
+            Task { @MainActor in
+                sceneState.planeDetection = planeDetection
+            }
         }
     }
 
     @objc var depthOcclusion: Bool = false {
         didSet {
-            // LiDAR depth occlusion configuration
+            Task { @MainActor in
+                sceneState.depthOcclusion = depthOcclusion
+            }
         }
     }
 
     @objc var instantPlacement: Bool = false {
         didSet {
-            // Instant placement configuration
+            Task { @MainActor in
+                sceneState.instantPlacement = instantPlacement
+            }
         }
     }
 
     @objc var modelNodes: [[String: Any]]? {
         didSet {
             Task { @MainActor in
-                sceneState.modelPaths = modelNodes?.compactMap { $0["src"] as? String } ?? []
+                sceneState.models = modelNodes?.compactMap { dict -> RNModelData? in
+                    guard let src = dict["src"] as? String else { return nil }
+                    let scale = (dict["scale"] as? NSNumber)?.floatValue ?? 1.0
+                    return RNModelData(path: src, scale: scale)
+                } ?? []
             }
+        }
+    }
+
+    @objc var environment: String? {
+        didSet {
+            // AR scenes use camera feed; environment affects lighting only.
         }
     }
 }
 
 /// SwiftUI content view rendering SceneViewSwift.ARSceneView.
 struct RNARSceneViewContent: View {
-    @ObservedObject var state: RNSceneState
+    @ObservedObject var state: RNARSceneState
 
     var body: some View {
         ARSceneView { anchor in
-            ForEach(state.modelPaths, id: \.self) { path in
-                ModelNode(path)
-                    .scale(0.3)
+            ForEach(state.models) { model in
+                ModelNode(model.path)
+                    .scale(model.scale)
             }
         }
     }
