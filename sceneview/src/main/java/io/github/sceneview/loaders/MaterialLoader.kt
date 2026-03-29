@@ -322,5 +322,8 @@ class MaterialLoader(
         materialInstances.clear()
         materials.toList().forEach { destroyMaterial(it) }
         materials.clear()
+
+        runCatching { ubershaderProvider.destroyMaterials() }
+        runCatching { ubershaderProvider.destroy() }
     }
 }
