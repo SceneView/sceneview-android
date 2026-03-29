@@ -27,9 +27,9 @@ jobs:
           ARCORE_LATEST=$(curl -sf https://api.github.com/repos/google-ar/arcore-android-sdk/releases/latest | jq -r .tag_name | tr -d 'v' || echo "unknown")
           KOTLIN_LATEST=$(curl -sf https://api.github.com/repos/JetBrains/kotlin/releases/latest | jq -r .tag_name | tr -d 'v' || echo "unknown")
 
-          FILAMENT_CURRENT=$(grep "filament_version" sceneview/build.gradle 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
-          KOTLIN_CURRENT=$(grep "^kotlin " gradle/libs.versions.toml 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
-          ARCORE_CURRENT=$(grep "^arCore " gradle/libs.versions.toml 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")
+          FILAMENT_CURRENT=$(grep '^filament ' gradle/libs.versions.toml 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
+          KOTLIN_CURRENT=$(grep '^kotlin ' gradle/libs.versions.toml 2>/dev/null | head -1 | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "unknown")
+          ARCORE_CURRENT=$(grep '^arCore ' gradle/libs.versions.toml 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")
 
           echo "filament_latest=$FILAMENT_LATEST" >> $GITHUB_OUTPUT
           echo "filament_current=$FILAMENT_CURRENT" >> $GITHUB_OUTPUT
@@ -79,19 +79,18 @@ jobs:
           if [ ${#OUTDATED[@]} -gt 0 ]; then
             OUTDATED_LIST=$(printf '%s\n' "${OUTDATED[@]}")
             ISSUE_TITLE="Dependency updates available -- $(date +%Y-%m-%d)"
-            EXISTING=$(gh issue list --state open --search "$ISSUE_TITLE" --json number --jq '.[0].number' 2>/dev/null || echo "")
+            EXISTING=$(gh issue list --state open --search "Dependency updates available" --json number --jq '.[0].number' 2>/dev/null || echo "")
             if [ -z "$EXISTING" ]; then
-              gh label create "dependencies" --description "Dependency updates" --color "0075ca" 2>/dev/null || true
               gh issue create \
                 --title "$ISSUE_TITLE" \
-                --label "dependencies" \
                 --body "Automated maintenance detected outdated dependencies on $(date +%Y-%m-%d):
 
           $OUTDATED_LIST
 
-          Please evaluate each upgrade for compatibility with the current SceneView API surface."
+          Please evaluate each upgrade for compatibility with the current SceneView API surface." \
+                || echo "::warning::Could not create dependency issue"
             else
-              echo "Dependency issue #$EXISTING already exists for today -- skipping."
+              echo "Dependency issue #$EXISTING already exists -- skipping."
             fi
           fi
 
@@ -144,12 +143,10 @@ jobs:
             echo "::warning::CI is consistently failing -- $FAILURES failures in last 7 runs"
             EXISTING=$(gh issue list --state open --search "CI health:" --json number --jq '.[0].number' 2>/dev/null || echo "")
             if [ -z "$EXISTING" ]; then
-              gh label create "ci-health" --description "CI infrastructure issues" --color "d73a4a" 2>/dev/null || true
               gh issue create \
                 --title "CI health: $FAILURES failures in last 7 runs -- $(date +%Y-%m-%d)" \
-                --label "bug" \
-                --label "ci-health" \
-                --body "Automated maintenance detected $FAILURES CI failures in the last 7 runs. Please investigate the ci.yml workflow."
+                --body "Automated maintenance detected $FAILURES CI failures in the last 7 runs. Please investigate the ci.yml workflow." \
+                || echo "::warning::Could not create CI health issue"
             else
               echo "CI health issue #$EXISTING already open -- skipping duplicate."
             fi

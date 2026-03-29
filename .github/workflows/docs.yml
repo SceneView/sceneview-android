@@ -83,7 +83,7 @@ jobs:
 
       # ── 4. Include Dokka API docs if available ──────────────────────────
       - name: Download Dokka API docs (if available)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: dokka-api-docs
           path: site/api/sceneview
@@ -118,11 +118,15 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
+        uses: actions/deploy-pages@v5
+        # Retry once if a concurrent deployment caused a conflict
+      - name: Retry deploy (if first attempt failed)
+        if: failure()
         uses: actions/deploy-pages@v5
