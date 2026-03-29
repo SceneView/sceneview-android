@@ -65,7 +65,7 @@ export const COMMON_ISSUES: CommonIssue[] = [
     title: "AR crash with Filament 1.70.0 materials (issue #713)",
     symptom: "ARScene crashes on startup or when placing an object, with a native Filament error.",
     cause: "Filament 1.70.0 changed internal material format. Pre-compiled `.filamat` files from older versions are incompatible.",
-    solution: "Upgrade to SceneView 3.3.0+ which includes compatible materials. If using custom `.filamat` files, recompile them with the `matc` tool from the matching Filament version.",
+    solution: "Upgrade to SceneView 3.4.7+ which includes compatible materials. If using custom `.filamat` files, recompile them with the `matc` tool from the matching Filament version.",
     category: "crash",
   },
   {
@@ -73,7 +73,7 @@ export const COMMON_ISSUES: CommonIssue[] = [
     title: "MeshNode bounding box incorrect (issue #711)",
     symptom: "Hit testing on MeshNode doesn't work, or the bounding box visual doesn't match the mesh.",
     cause: "MeshNode's bounding box was not recalculated after mesh creation in earlier versions.",
-    solution: "Update to SceneView 3.3.0+ where MeshNode correctly computes its bounding box from vertex data.",
+    solution: "Update to SceneView 3.4.7+ where MeshNode correctly computes its bounding box from vertex data.",
     category: "api-misuse",
   },
   {
@@ -172,7 +172,7 @@ export async function fetchKnownIssues(): Promise<string> {
       {
         headers: {
           Accept: "application/vnd.github+json",
-          "User-Agent": "sceneview-mcp/3.4.14",
+          "User-Agent": "sceneview-mcp/3.5.2",
           "X-GitHub-Api-Version": "2022-11-28",
         },
       }
