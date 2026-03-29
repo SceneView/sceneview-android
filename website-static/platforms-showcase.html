@@ -22,7 +22,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script type="module" src="js/model-viewer.min.js"></script>
+    <script src="js/filament/filament.js"></script>
+    <script src="js/sceneview.js?v=3.5.1"></script>
     <style>
         /* ── Page layout ── */
         .page-platforms {
@@ -135,11 +136,11 @@
             color: var(--color-primary);
         }
 
-        model-viewer {
+        .sv-canvas {
             width: 100%;
             height: 100%;
-            --poster-color: transparent;
             background: transparent;
+            display: block;
         }
 
         /* ── Shared screen background ── */
@@ -637,7 +638,7 @@
         [data-theme="light"] .claude-desktop .preview-side {
             background: #f0f0f4;
         }
-        .claude-desktop .preview-side model-viewer {
+        .claude-desktop .preview-side canvas {
             width: 100%;
             height: 100%;
         }
@@ -749,14 +750,7 @@
                     SceneView Demo
                 </div>
                 <div class="mv-wrap">
-                    <model-viewer
-                        src="models/platforms/DamagedHelmet.glb"
-                        camera-controls touch-action="pan-y"
-                        auto-rotate shadow-intensity="1"
-                        environment-image="neutral"
-                        camera-orbit="30deg 75deg auto"
-                        style="background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);"
-                    ></model-viewer>
+                    <canvas id="sv-viewer-1" class="sv-canvas" style="background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);"></canvas>
                 </div>
                 <div class="bottom-nav">
                     <div class="nav-pill"></div>
@@ -781,14 +775,7 @@
                     <span></span>
                 </div>
                 <div class="mv-wrap">
-                    <model-viewer
-                        src="models/platforms/SunglassesKhronos.glb"
-                        camera-controls touch-action="pan-y"
-                        auto-rotate shadow-intensity="1"
-                        environment-image="neutral"
-                        camera-orbit="20deg 80deg auto"
-                        style="background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);"
-                    ></model-viewer>
+                    <canvas id="sv-viewer-2" class="sv-canvas" style="background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);"></canvas>
                 </div>
                 <div class="home-indicator">
                     <div class="pill"></div>
@@ -808,14 +795,7 @@
         <div class="vision-pro">
             <div class="screen">
                 <div class="visionos-label">visionOS</div>
-                <model-viewer
-                    src="models/platforms/MosquitoInAmber.glb"
-                    camera-controls touch-action="pan-y"
-                    auto-rotate shadow-intensity="1"
-                    environment-image="neutral"
-                    camera-orbit="30deg 70deg auto"
-                    style="background: linear-gradient(135deg, rgba(30,30,60,0.8) 0%, rgba(10,10,30,0.9) 100%);"
-                ></model-viewer>
+                <canvas id="sv-viewer-3" class="sv-canvas" style="background: linear-gradient(135deg, rgba(30,30,60,0.8) 0%, rgba(10,10,30,0.9) 100%);"></canvas>
                 <div class="window-controls">
                     <div class="ctl"></div>
                     <div class="ctl"></div>
@@ -837,14 +817,7 @@
             <div class="frame">
                 <div class="screen">
                     <div class="tv-overlay">Google TV</div>
-                    <model-viewer
-                        src="models/platforms/CarConcept.glb"
-                        camera-controls touch-action="pan-y"
-                        auto-rotate shadow-intensity="1"
-                        environment-image="neutral"
-                        camera-orbit="30deg 70deg auto"
-                        style="background: linear-gradient(180deg, #0d1a2a 0%, #060d1a 100%);"
-                    ></model-viewer>
+                    <canvas id="sv-viewer-4" class="sv-canvas" style="background: linear-gradient(180deg, #0d1a2a 0%, #060d1a 100%);"></canvas>
                 </div>
                 <div class="logo-dot"></div>
             </div>
@@ -875,14 +848,7 @@
                 </div>
             </div>
             <div class="viewport">
-                <model-viewer
-                    src="models/platforms/BoomBox.glb"
-                    camera-controls touch-action="pan-y"
-                    auto-rotate shadow-intensity="1"
-                    environment-image="neutral"
-                    camera-orbit="-30deg 80deg auto"
-                    style="background: linear-gradient(180deg, #12172a 0%, #0a0e1a 100%);"
-                ></model-viewer>
+                <canvas id="sv-viewer-5" class="sv-canvas" style="background: linear-gradient(180deg, #12172a 0%, #0a0e1a 100%);"></canvas>
             </div>
         </div>
         <div class="device-sublabel">Kotlin/JS + Filament.js &mdash; <code>WebGL2 + WASM</code></div>
@@ -925,14 +891,7 @@
                     </div>
                 </div>
                 <div class="preview-side">
-                    <model-viewer
-                        src="models/platforms/SheenChair.glb"
-                        camera-controls touch-action="pan-y"
-                        auto-rotate shadow-intensity="1.5"
-                        environment-image="neutral"
-                        camera-orbit="40deg 65deg auto"
-                        style="background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);"
-                    ></model-viewer>
+                    <canvas id="sv-viewer-6" class="sv-canvas" style="background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);"></canvas>
                     <div class="preview-badge">3D Preview</div>
                 </div>
             </div>
@@ -953,6 +912,14 @@
 
 </div>
 
+<script>
+    SceneView.modelViewer('sv-viewer-1', 'models/platforms/DamagedHelmet.glb');
+    SceneView.modelViewer('sv-viewer-2', 'models/platforms/SunglassesKhronos.glb');
+    SceneView.modelViewer('sv-viewer-3', 'models/platforms/MosquitoInAmber.glb');
+    SceneView.modelViewer('sv-viewer-4', 'models/platforms/CarConcept.glb');
+    SceneView.modelViewer('sv-viewer-5', 'models/platforms/BoomBox.glb');
+    SceneView.modelViewer('sv-viewer-6', 'models/platforms/SheenChair.glb');
+</script>
 <script src="script.js"></script>
 </body>
 </html>

@@ -41,7 +41,7 @@ export const COMMON_ISSUES: CommonIssue[] = [
     title: "LightNode configuration silently ignored",
     symptom: "Light has no effect. Model is completely dark despite having a LightNode in the scene.",
     cause: "`LightNode`'s `apply` is a **named parameter**, not a trailing lambda. Writing `LightNode(...) { intensity(100_000f) }` silently ignores the block — Kotlin treats it as a trailing lambda to a different parameter.",
-    solution: "Change `LightNode(engine, type) { intensity(...) }` to `LightNode(engine = engine, type = ..., apply = { intensity(100_000f) })`.",
+    solution: "Change `LightNode(type) { intensity(...) }` to `LightNode(type = ..., apply = { intensity(100_000f) })`.",
     category: "api-misuse",
   },
   {
@@ -172,7 +172,7 @@ export async function fetchKnownIssues(): Promise<string> {
       {
         headers: {
           Accept: "application/vnd.github+json",
-          "User-Agent": "sceneview-mcp/3.4.14",
+          "User-Agent": "sceneview-mcp/3.5.4",
           "X-GitHub-Api-Version": "2022-11-28",
         },
       }

@@ -23,12 +23,28 @@ import AVFoundation
 ///     videoNode?.play()
 /// }
 /// ```
+/// Prevents memory leaks by removing the notification observer on deallocation.
+private final class VideoLoopObserver: @unchecked Sendable {
+    let token: NSObjectProtocol
+
+    init(token: NSObjectProtocol) {
+        self.token = token
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(token)
+    }
+}
+
 public struct VideoNode: @unchecked Sendable {
     /// The underlying RealityKit entity.
     public let entity: Entity
 
     /// The AVPlayer driving video playback.
     public let player: AVPlayer
+
+    /// Retains the loop observer so the notification is removed when the node is released.
+    private let loopObserver: VideoLoopObserver?
 
     /// World-space position.
     public var position: SIMD3<Float> {
@@ -123,19 +139,23 @@ public struct VideoNode: @unchecked Sendable {
         // Set scale to approximate the desired display size
         videoEntity.scale = SIMD3<Float>(width, height, 1.0)
 
-        // Set up looping if requested
+        // Set up looping if requested, storing the observer token to avoid leaks
+        let loopObserver: VideoLoopObserver?
         if loop {
-            NotificationCenter.default.addObserver(
+            let token = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: player.currentItem,
                 queue: .main
-            ) { _ in
-                player.seek(to: .zero)
-                player.play()
+            ) { [weak player] _ in
+                player?.seek(to: .zero)
+                player?.play()
             }
+            loopObserver = VideoLoopObserver(token: token)
+        } else {
+            loopObserver = nil
         }
 
-        return VideoNode(entity: videoEntity, player: player)
+        return VideoNode(entity: videoEntity, player: player, loopObserver: loopObserver)
     }
 
     // MARK: - Playback controls

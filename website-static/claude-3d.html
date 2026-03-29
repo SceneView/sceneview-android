@@ -30,8 +30,9 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Google model-viewer for 3D rendering -->
-  <script type="module" src="js/model-viewer.min.js"></script>
+  <!-- SceneView 3D rendering (Filament WASM) -->
+  <script src="js/filament/filament.js"></script>
+  <script src="js/sceneview.js?v=3.5.1"></script>
 
   <style>
     /* ===== PAGE-SPECIFIC STYLES ===== */
@@ -303,11 +304,10 @@
       color: rgba(0,0,0,0.3);
     }
 
-    .preview-panel model-viewer {
+    .preview-panel canvas {
       flex: 1;
       width: 100%;
       min-height: 420px;
-      --poster-color: transparent;
     }
 
     .preview-badge {
@@ -362,10 +362,9 @@
       background: #f0f0f4;
     }
 
-    .example-card__3d model-viewer {
+    .example-card__3d canvas {
       width: 100%;
       height: 100%;
-      --poster-color: transparent;
     }
 
     .example-card__body {
@@ -535,7 +534,7 @@
         border-bottom: 1px solid rgba(0,0,0,0.08);
       }
 
-      .preview-panel model-viewer {
+      .preview-panel canvas {
         min-height: 320px;
       }
 
@@ -652,22 +651,8 @@
             <!-- Preview Side -->
             <div class="preview-panel">
               <div class="preview-label">Preview</div>
-              <model-viewer
-                id="heroModel"
-                src="models/SheenChair.glb"
-                alt="3D Chair preview"
-                camera-controls
-                auto-rotate
-                shadow-intensity="1.2"
-                shadow-softness="0.8"
-                environment-image="neutral"
-                exposure="1.0"
-                camera-orbit="30deg 75deg 2.5m"
-                style="background-color: transparent"
-                loading="eager"
-                reveal="auto"
-              ></model-viewer>
-              <div class="preview-badge">Rendered by model-viewer + SceneView</div>
+              <canvas id="viewer-1"></canvas>
+              <div class="preview-badge">Rendered by SceneView</div>
             </div>
           </div>
         </div>
@@ -685,17 +670,7 @@
           <!-- Example 1: Product -->
           <div class="example-card">
             <div class="example-card__3d">
-              <model-viewer
-                src="models/WaterBottle.glb"
-                alt="3D water bottle product"
-                camera-controls
-                auto-rotate
-                shadow-intensity="1"
-                environment-image="neutral"
-                camera-orbit="25deg 70deg 1.8m"
-                style="background-color: transparent"
-                loading="lazy"
-              ></model-viewer>
+              <canvas id="viewer-2"></canvas>
             </div>
             <div class="example-card__body">
               <div class="example-card__prompt">
@@ -736,17 +711,7 @@
           <!-- Example 2: Sneakers / Product -->
           <div class="example-card">
             <div class="example-card__3d">
-              <model-viewer
-                src="models/MaterialsVariantsShoe.glb"
-                alt="3D sneaker"
-                camera-controls
-                auto-rotate
-                shadow-intensity="1.2"
-                environment-image="neutral"
-                camera-orbit="45deg 65deg 0.4m"
-                style="background-color: transparent"
-                loading="lazy"
-              ></model-viewer>
+              <canvas id="viewer-3"></canvas>
             </div>
             <div class="example-card__body">
               <div class="example-card__prompt">
@@ -788,18 +753,7 @@
           <!-- Example 3: Animated Character -->
           <div class="example-card">
             <div class="example-card__3d">
-              <model-viewer
-                src="models/Fox.glb"
-                alt="3D animated fox"
-                camera-controls
-                auto-rotate
-                autoplay
-                shadow-intensity="1"
-                environment-image="neutral"
-                camera-orbit="30deg 75deg 150"
-                style="background-color: transparent"
-                loading="lazy"
-              ></model-viewer>
+              <canvas id="viewer-4"></canvas>
             </div>
             <div class="example-card__body">
               <div class="example-card__prompt">
@@ -838,19 +792,7 @@
           <!-- Example 4: Furniture / AR -->
           <div class="example-card">
             <div class="example-card__3d">
-              <model-viewer
-                src="models/SheenChair.glb"
-                alt="3D furniture for AR placement"
-                camera-controls
-                auto-rotate
-                ar
-                shadow-intensity="1.5"
-                shadow-softness="1"
-                environment-image="neutral"
-                camera-orbit="210deg 70deg 2.5m"
-                style="background-color: transparent"
-                loading="lazy"
-              ></model-viewer>
+              <canvas id="viewer-5"></canvas>
             </div>
             <div class="example-card__body">
               <div class="example-card__prompt">
@@ -966,5 +908,12 @@
   </footer>
 
   <script src="script.js"></script>
+  <script>
+    SceneView.modelViewer('viewer-1', 'models/SheenChair.glb');
+    SceneView.modelViewer('viewer-2', 'models/WaterBottle.glb');
+    SceneView.modelViewer('viewer-3', 'models/MaterialsVariantsShoe.glb');
+    SceneView.modelViewer('viewer-4', 'models/Fox.glb');
+    SceneView.modelViewer('viewer-5', 'models/SheenChair.glb');
+  </script>
 </body>
 </html>

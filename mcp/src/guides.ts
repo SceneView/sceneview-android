@@ -8,16 +8,16 @@
 
 export const PLATFORM_ROADMAP = `# SceneView Multi-Platform Roadmap
 
-## Current Status (v3.5.0)
+## Current Status (v3.5.1)
 
 | Platform | Status | Artifact | Renderer |
 |----------|--------|----------|----------|
 | **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.5.1\` | Filament |
 | **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.5.1\` | Filament + ARCore |
-| **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.5.0"\` | RealityKit + ARKit |
+| **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.5.1"\` | RealityKit + ARKit |
 | **macOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
 | **visionOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
-| **KMP Core** | Stable | \`io.github.sceneview:sceneview-core:3.5.0\` | N/A (shared logic) |
+| **KMP Core** | Stable | \`io.github.sceneview:sceneview-core:3.5.1\` | N/A (shared logic) |
 
 ## Architecture: Native Renderers per Platform
 
@@ -56,8 +56,7 @@ Shared Kotlin Multiplatform module providing:
 
 ## Upcoming
 
-- **v3.4.0**: SceneViewSwift stabilization, API parity with Android core nodes
-- **v3.5.0**: KMP core XCFramework consumption in SceneViewSwift
+- **v3.6.0**: SceneViewSwift stabilization, API parity with Android core nodes, KMP core XCFramework consumption
 - **v4.0.0**: Android XR, visionOS spatial computing, cross-framework bridges (Flutter, React Native)
 
 ## How to Stay Updated
@@ -351,7 +350,7 @@ export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide (Android 
 ## 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.5.1")
 \`\`\`
 
 ## 2. Info.plist — Camera Permission

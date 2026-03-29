@@ -1,4 +1,4 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS)
 import RealityKit
 import UIKit
 
@@ -52,7 +52,7 @@ public enum SceneSnapshot {
     /// - Returns: The rendered UIImage.
     public static func captureView(
         _ view: UIView,
-        scale: CGFloat = UIScreen.main.scale
+        scale: CGFloat = UITraitCollection.current.displayScale
     ) -> UIImage? {
         let renderer = UIGraphicsImageRenderer(
             size: view.bounds.size,
@@ -95,4 +95,4 @@ public enum SceneSnapshot {
     }
 }
 
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS)

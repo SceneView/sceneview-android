@@ -15,6 +15,6 @@ Open `SceneViewDemo.xcodeproj` in Xcode and run on a device or simulator.
 
 ## Requirements
 
-- Xcode 15+
-- iOS 17+ device or simulator
+- Xcode 16+
+- iOS 18+ device or simulator
 - For AR features: physical iOS device with ARKit support

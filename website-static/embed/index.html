@@ -7,8 +7,9 @@
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
-  <!-- model-viewer web component -->
-  <script type="module" src="../js/model-viewer.min.js"></script>
+  <!-- SceneView.js — Filament PBR renderer -->
+  <script src="../js/filament/filament.js"></script>
+  <script src="../js/sceneview.js?v=3.5.1"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,20 +27,18 @@
       flex-direction: column;
     }
 
-    /* Viewer fills available space */
     #viewer-container {
       flex: 1;
       position: relative;
       min-height: 0;
     }
 
-    model-viewer {
-      width: 100%;
-      height: 100%;
-      --poster-color: transparent;
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
     }
 
-    /* Loading state */
     .loading-overlay {
       position: absolute;
       inset: 0;
@@ -69,7 +68,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Error state */
     .error-message {
       position: absolute;
       inset: 0;
@@ -99,7 +97,6 @@
       color: #ccc;
     }
 
-    /* SceneView watermark — bottom-right */
     .watermark {
       position: absolute;
       bottom: 8px;
@@ -123,7 +120,6 @@
       opacity: 0.5;
     }
 
-    /* Powered-by footer */
     .footer {
       flex-shrink: 0;
       text-align: center;
@@ -142,18 +138,15 @@
 
     .footer a:hover { color: rgba(255, 255, 255, 0.7); }
 
-    /* Hide footer when nofooter param is set */
     .footer.hidden { display: none; }
   </style>
 </head>
 <body>
   <div id="viewer-container">
-    <!-- Loading spinner -->
     <div class="loading-overlay" id="loading">
       <div class="spinner"></div>
     </div>
 
-    <!-- Error state -->
     <div class="error-message" id="error">
       <div>
         <strong>No model specified</strong><br>
@@ -161,94 +154,51 @@
       </div>
     </div>
 
-    <!-- 3D viewer — attributes set by JS -->
-    <model-viewer
-      id="viewer"
-      camera-controls
-      touch-action="pan-y"
-      interaction-prompt="none"
-      shadow-intensity="0.6"
-      environment-image="neutral"
-      loading="eager"
-      style="display:none;"
-    ></model-viewer>
+    <canvas id="viewer"></canvas>
 
-    <!-- Watermark -->
     <a class="watermark" href="https://sceneview.github.io" target="_blank" rel="noopener" title="SceneView — 3D & AR SDK">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
       SceneView
     </a>
   </div>
 
-  <!-- Footer -->
   <div class="footer" id="footer">
     <a href="https://sceneview.github.io" target="_blank" rel="noopener">Powered by SceneView</a>
   </div>
 
   <script>
     (function () {
-      const params = new URLSearchParams(window.location.search);
-      const modelUrl = params.get('model');
-      const autorotate = params.get('autorotate') !== 'false'; // default true
-      const ar = params.get('ar') === 'true';
-      const bg = params.get('bg');
-      const nofooter = params.has('nofooter');
-      const poster = params.get('poster');
+      var params = new URLSearchParams(window.location.search);
+      var modelUrl = params.get('model');
+      var autorotate = params.get('autorotate') !== 'false';
+      var bg = params.get('bg');
+      var nofooter = params.has('nofooter');
 
-      const viewer = document.getElementById('viewer');
-      const loading = document.getElementById('loading');
-      const error = document.getElementById('error');
-      const footer = document.getElementById('footer');
+      var loading = document.getElementById('loading');
+      var error = document.getElementById('error');
+      var footer = document.getElementById('footer');
+      var canvas = document.getElementById('viewer');
 
-      // Background color
       if (bg) {
-        const color = bg.startsWith('#') ? bg : '#' + bg;
+        var color = bg.startsWith('#') ? bg : '#' + bg;
         document.body.style.setProperty('--bg-color', color);
         document.body.style.background = color;
       }
 
-      // Footer visibility
       if (nofooter) footer.classList.add('hidden');
 
-      // No model URL — show error
       if (!modelUrl) {
         loading.classList.add('hidden');
+        canvas.style.display = 'none';
         error.classList.add('visible');
         return;
       }
 
-      // Configure viewer
-      viewer.setAttribute('src', modelUrl);
-      viewer.style.display = 'block';
+      SceneView.modelViewer('viewer', modelUrl, { autoRotate: autorotate })
+        .then(function () { loading.classList.add('hidden'); })
+        .catch(function () { loading.classList.add('hidden'); });
 
-      if (autorotate) {
-        viewer.setAttribute('auto-rotate', '');
-        viewer.setAttribute('auto-rotate-delay', '0');
-      }
-
-      if (ar) {
-        viewer.setAttribute('ar', '');
-        viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-      }
-
-      if (poster) {
-        viewer.setAttribute('poster', poster);
-      }
-
-      // Hide loading when model is ready
-      viewer.addEventListener('load', function () {
-        loading.classList.add('hidden');
-      });
-
-      // Also hide on error (show the model-viewer default error)
-      viewer.addEventListener('error', function () {
-        loading.classList.add('hidden');
-      });
-
-      // Safety timeout — hide loader after 15s regardless
-      setTimeout(function () {
-        loading.classList.add('hidden');
-      }, 15000);
+      setTimeout(function () { loading.classList.add('hidden'); }, 15000);
     })();
   </script>
 </body>

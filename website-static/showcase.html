@@ -28,7 +28,7 @@
   <!-- Filament.js v1.70.1 WASM engine (local) -->
   <script src="js/filament/filament.js"></script>
   <!-- SceneView Web — our 3D library built on Filament.js -->
-  <script src="js/sceneview.js?v=1.3.3"></script>
+  <script src="js/sceneview.js?v=3.5.1"></script>
   <!-- All 3D powered by SceneView (Filament.js WASM) -->
 
   <style>
@@ -178,11 +178,10 @@
       z-index: 10;
     }
 
-    .device-frame model-viewer {
+    .device-frame canvas {
       width: 100%;
       height: 100%;
       display: block;
-      --poster-color: transparent;
     }
 
     /* ===== DEMO LAYOUTS ===== */
@@ -254,7 +253,6 @@
       position: relative;
     }
 
-    .ecom-app__viewer model-viewer,
     .ecom-app__viewer canvas {
       width: 100%;
       height: 100%;
@@ -328,7 +326,6 @@
       height: 100%;
     }
 
-    .ar-scene model-viewer,
     .ar-scene canvas {
       width: 100%;
       height: 100%;
@@ -402,7 +399,6 @@
       background: radial-gradient(ellipse at 50% 60%, #1a1a2e 0%, #0a0a0f 100%);
     }
 
-    .auto-studio model-viewer,
     .auto-studio canvas {
       width: 100%;
       height: 100%;
@@ -465,7 +461,6 @@
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     }
 
-    .edu-viewer model-viewer,
     .edu-viewer canvas {
       width: 100%;
       height: 100%;
@@ -548,7 +543,6 @@
       background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     }
 
-    .luxury-viewer model-viewer,
     .luxury-viewer canvas {
       width: 100%;
       height: 100%;
@@ -645,7 +639,7 @@
       background: var(--color-surface-dim);
     }
 
-    .platform-card__viewer model-viewer {
+    .platform-card__viewer canvas {
       width: 100%;
       height: 100%;
     }
@@ -901,7 +895,7 @@
           <div class="stat__label">Downloads</div>
         </div>
         <div class="stat">
-          <div class="stat__number">3.5.0</div>
+          <div class="stat__number">3.5.1</div>
           <div class="stat__label">Latest Release</div>
         </div>
         <div class="stat">
