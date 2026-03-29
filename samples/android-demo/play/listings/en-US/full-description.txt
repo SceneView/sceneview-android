@@ -1,30 +1,35 @@
 SceneView Demo is the official companion app for the SceneView Android SDK — the easiest way to add 3D and Augmented Reality to your Android apps using Jetpack Compose.
 
-🌐 EXPLORE MODE
+🌐 3D EXPLORER
 Dive into stunning real-time 3D rendering with interactive models:
 • Orbit, pinch-to-zoom, and double-tap to interact
-• HDR environment lighting for photorealistic PBR materials
+• HDR environment lighting (6 environments) for photorealistic PBR materials
 • Animated models with physics-based rendering
-• Switch between multiple showcase models
+• Switch between 14 showcase models: toy car, helmet, lamp, mask, animated robot, and more
 
-🎯 SHOWCASE MODE
-Browse every node type available in SceneView: CubeNode, SphereNode, ModelNode, LightNode, TextNode, BillboardNode, and many more. Each entry includes:
-• Live 3D previews rendered in real-time
-• Ready-to-use Jetpack Compose code snippets
-• Category filtering (Geometry, Model, Light, Camera, Content, AR)
+🎯 AR — AUGMENTED REALITY
+Place 3D models in your real world:
+• Tap any flat surface to anchor a model
+• Drag to move, pinch to scale, twist to rotate
+• Depth occlusion and environmental light estimation
+• Choose from 6 AR models
 
-🖼️ GALLERY MODE
-Stress-test real-time 3D in a scrollable list — each card renders its own live Scene:
-• Multiple 3D models and procedural geometry in a LazyColumn
-• Demonstrates SceneView's efficient resource management
-• Live rendering with HDR lighting in every card
-
-🧪 QA MODE
-Run visual regression tests to validate that every node renders correctly:
-• One-tap "Run All" to execute the full test suite
-• Individual test execution for targeted validation
-• Animated pass/fail status with spring-based physics animations
-• Covers geometry, model loading, lighting, camera, content, and system tests
+🧪 SAMPLES — 14 FEATURE DEMOS
+Browse every feature in SceneView with live interactive demos:
+• Model Viewer — load and render glTF/GLB models
+• Geometry Nodes — procedural cube, sphere, cylinder
+• Animations — play, pause, and cycle through model animations
+• Dynamic Sky — time-of-day atmospheric scattering
+• Lighting — point, directional, spot lights with shadows
+• Camera Controls — orbit, pan, zoom
+• Post-Processing — bloom, SSAO, FXAA, tone mapping
+• Fog — height-based volumetric atmospheric fog
+• Text Labels — 3D text with billboard facing
+• Line Paths — 3D polylines and Lissajous curves
+• Physics — rigid body simulation with bouncing balls
+• Image Detection — ARCore image recognition with 3D overlay
+• Reflection Probes — local cubemap reflections
+• glTF Cameras — switch between multiple camera presets
 
 ✨ MATERIAL 3 EXPRESSIVE DESIGN
 Built with the latest Material 3 Expressive components:

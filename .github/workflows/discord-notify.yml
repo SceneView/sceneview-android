@@ -15,10 +15,14 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  contents: read
+
 jobs:
   notify-release:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Post release to Discord
         env:
@@ -46,13 +50,20 @@ jobs:
             --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             '{embeds: [{title: $title, description: ("**" + $name + "**\n\n[View release notes](" + $url + ")"), color: 3447003, footer: {text: "SceneView — 3D & AR SDK"}, timestamp: $ts}]}')
 
-          curl -s -H "Content-Type: application/json" \
-               -d "$PAYLOAD" \
-               "$DISCORD_WEBHOOK_URL"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "$DISCORD_WEBHOOK_URL")
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::warning::Discord webhook returned HTTP $HTTP_STATUS"
+          else
+            echo "Discord notification sent (HTTP $HTTP_STATUS)"
+          fi
 
   notify-issue:
     if: github.event_name == 'issues'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Post new issue to Discord
         env:
@@ -71,6 +82,12 @@ jobs:
             --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             '{embeds: [{title: $title, description: ("**" + $issue_title + "**\n\nOpened by [" + $author + "](https://github.com/" + $author + ")\n[View issue](" + $url + ")"), color: 15105570, footer: {text: "SceneView — 3D & AR SDK"}, timestamp: $ts}]}')
 
-          curl -s -H "Content-Type: application/json" \
-               -d "$PAYLOAD" \
-               "$DISCORD_WEBHOOK_URL"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "$DISCORD_WEBHOOK_URL")
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "::warning::Discord webhook returned HTTP $HTTP_STATUS"
+          else
+            echo "Discord notification sent (HTTP $HTTP_STATUS)"
+          fi

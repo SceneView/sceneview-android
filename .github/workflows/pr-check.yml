@@ -1,0 +1,107 @@
+name: PR Check
+
+# Fast feedback on every pull request — must pass before merge.
+# Full CI (ci.yml) also runs in parallel for deeper checks.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same PR to save resources
+concurrency:
+  group: pr-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Quick Android compile check ───────────────────────────────────────────
+  compile-android:
+    name: Compile Android (debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Compile sceneview + arsceneview
+        run: |
+          ./gradlew \
+            :sceneview:compileDebugKotlin \
+            :arsceneview:compileDebugKotlin \
+            --stacktrace
+
+      - name: Unit tests
+        run: |
+          ./gradlew \
+            :sceneview:testDebugUnitTest \
+            :arsceneview:testDebugUnitTest \
+            --stacktrace
+
+  # ── Lint check ────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Run lint
+        run: |
+          ./gradlew \
+            :sceneview:lintDebug \
+            :arsceneview:lintDebug \
+            --stacktrace
+
+      - name: Upload lint reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-lint-reports-${{ github.event.pull_request.number }}
+          path: |
+            sceneview/build/reports/lint-results-debug.html
+            arsceneview/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ── KMP core check ────────────────────────────────────────────────────────
+  compile-kmp:
+    name: Compile KMP core
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      - name: Compile KMP core (all targets)
+        run: ./gradlew :sceneview-core:assemble --stacktrace
+
+      - name: KMP unit tests
+        run: ./gradlew :sceneview-core:testDebugUnitTest --stacktrace
