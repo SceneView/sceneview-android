@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SceneView 3D Preview</title>
   <meta name="description" content="Interactive 3D preview — powered by SceneView">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
   <script type="module" src="../js/model-viewer.min.js"></script>
 
@@ -69,8 +71,8 @@
   <div class="header">
     <a href="/">SceneView</a>
     <div class="actions" id="actions" style="display:none">
-      <a class="btn btn-share" id="share-btn" href="#">Share</a>
-      <a class="btn btn-ar" id="ar-btn" href="#">View in AR</a>
+      <button class="btn btn-share" id="share-btn" type="button">Share</button>
+      <button class="btn btn-ar" id="ar-btn" type="button">View in AR</button>
     </div>
   </div>
 
@@ -112,7 +114,6 @@
 
       // Share button
       document.getElementById('share-btn').addEventListener('click', (e) => {
-        e.preventDefault();
         if (navigator.share) {
           navigator.share({ title: 'SceneView 3D Preview', url: window.location.href });
         } else {
@@ -123,8 +124,7 @@
       });
 
       // AR button — uses model-viewer's built-in AR
-      document.getElementById('ar-btn').addEventListener('click', (e) => {
-        e.preventDefault();
+      document.getElementById('ar-btn').addEventListener('click', () => {
         const mv = document.querySelector('model-viewer');
         if (mv && mv.canActivateAR) {
           mv.activateAR();
