@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{swift,m}"
 
   s.dependency "React-Core"
-  s.dependency "SceneViewSwift", "~> 3.3"
+  s.dependency "SceneViewSwift", "~> 3.4"
 
   s.swift_version = "5.9"
 end

@@ -1,17 +1,16 @@
 # SceneView React Native Demo
 
-> **Status: Scaffold**
+> **Status: Alpha**
 >
-> This demo demonstrates the React Native Fabric bridge to SceneView.
-> The directory structure and API surface are defined, but native rendering
-> integration is not yet complete.
+> This demo demonstrates the React Native bridge to SceneView.
+> 3D model loading works on both Android and iOS. AR scene is functional on Android.
 
 ## Architecture
 
 ```
 React Native (JS/TS)
-  +-- Fabric Component --> Android: SceneView (Filament)
-  +-- Fabric Component --> iOS: SceneViewSwift (RealityKit)
+  +-- Native Component --> Android: SceneView (Filament)
+  +-- Native Component --> iOS: SceneViewSwift (RealityKit)
 ```
 
 ## Run
