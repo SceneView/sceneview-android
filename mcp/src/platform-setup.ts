@@ -25,7 +25,7 @@ const ANDROID_3D = `## SceneView Android — 3D Setup
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.4.7")
+    implementation("io.github.sceneview:sceneview:3.5.0")
 }
 \`\`\`
 
@@ -102,7 +102,7 @@ const ANDROID_AR = `## SceneView Android — AR Setup
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.4.7")
+    implementation("io.github.sceneview:arsceneview:3.5.0")
     // arsceneview includes sceneview transitively
 }
 \`\`\`
@@ -193,7 +193,7 @@ In Xcode: **File > Add Package Dependencies** > paste:
 \`\`\`
 https://github.com/sceneview/sceneview
 \`\`\`
-Set version rule to **"from: 3.4.7"**.
+Set version rule to **"from: 3.5.0"**.
 
 Or in Package.swift:
 \`\`\`swift
@@ -204,7 +204,7 @@ let package = Package(
     name: "MyApp",
     platforms: [.iOS(.v18), .macOS(.v15), .visionOS(.v1)],
     dependencies: [
-        .package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")
+        .package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")
     ],
     targets: [
         .executableTarget(
@@ -290,7 +290,7 @@ const IOS_AR = `## SceneViewSwift — iOS AR Setup
 ### 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")
 \`\`\`
 
 ### 2. Info.plist — Camera Permission (Required)
@@ -436,7 +436,7 @@ SceneView Flutter uses **PlatformView** to embed native SceneView (Android: Fila
 \`\`\`yaml
 # pubspec.yaml
 dependencies:
-  sceneview_flutter: ^3.4.7
+  sceneview_flutter: ^3.5.0
 \`\`\`
 
 ### 2. Android Setup
@@ -496,7 +496,7 @@ const FLUTTER_AR = `## SceneView Flutter — AR Setup
 
 \`\`\`yaml
 dependencies:
-  sceneview_flutter: ^3.4.7
+  sceneview_flutter: ^3.5.0
 \`\`\`
 
 ### 2. Android Manifest
@@ -655,7 +655,7 @@ plugins {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("io.github.sceneview:sceneview-desktop:3.4.7") // when published
+    implementation("io.github.sceneview:sceneview-desktop:3.5.0") // when published
 }
 \`\`\`
 
@@ -707,7 +707,7 @@ SceneView on Android TV uses the same Filament renderer as mobile Android, with 
 
 \`\`\`kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.4.7")
+    implementation("io.github.sceneview:sceneview:3.5.0")
     implementation("androidx.leanback:leanback:1.0.0")
     implementation("androidx.tv:tv-foundation:1.0.0-alpha10")
 }
@@ -773,14 +773,14 @@ const SETUPS: Record<Platform, PlatformSetup> = {
   android: {
     name: "Android (Jetpack Compose)",
     renderer: "Filament (OpenGL ES / Vulkan)",
-    status: "Stable (v3.4.7)",
+    status: "Stable (v3.5.0)",
     guide3d: ANDROID_3D,
     guideAr: ANDROID_AR,
   },
   ios: {
     name: "iOS / macOS / visionOS (SwiftUI)",
     renderer: "RealityKit (Metal)",
-    status: "Alpha (v3.4.7)",
+    status: "Alpha (v3.5.0)",
     guide3d: IOS_3D,
     guideAr: IOS_AR,
   },
