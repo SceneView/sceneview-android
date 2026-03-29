@@ -4,74 +4,88 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session 3)
-**Branch:** main (tout pushé sur origin)
+**Date:** 29 mars 2026 (session 4)
+**Branch:** main (all pushed to origin)
 
-## CE QUI A ETE FAIT CETTE SESSION
+## WHAT WAS DONE THIS SESSION
 
-### 1. Screenshots stores — 14 screenshots capturés
-- **iPhone** (1284×2778): 3D viewer, Samples, About
-- **iPad Pro** (2048×2732): 3D viewer, Samples, About
-- **iPad Air** (1640×2360): 3D viewer, Samples, About
-- **Pixel 9** (1280×2856): Toy Car Night, Chair Studio, Lamp Sunset, Samples, About
-- Screenshots sauvés: `/tmp/store-screenshots/final/` (14 fichiers)
+### 1. Shared assets infrastructure
+- Created `assets/` directory as single source of truth for all 3D resources
+- `assets/catalog.json` tracks models, environments, licenses, sources
+- `.claude/scripts/sync-assets.sh` distributes assets to platforms (check/fix/discover modes)
+- Sources: Sketchfab (API), Fab.com (browser), Poly Haven (API)
 
-### 2. Play Store screenshots uploadés + review relancée
-- 4 nouveaux screenshots (toy car, chair, lamp, samples) remplacent les anciens blancs
-- Review relancée avec "Restart review" — en attente Google
+### 2. Fab.com asset exploration
+- Browsed all 11 Fab.com listings via Chrome browser
+- Cataloged every listing: name, price, formats, license
+- Downloaded "A Red Car" (342KB GLB + 236KB USDZ) — the only small free asset with GLB+USDZ
+- Others either too large (52-234MB), UE-only format, or paid
+- All findings recorded in catalog.json pendingReview section
 
-### 3. App Store screenshots — bloqué
-- Version iOS "En attente de vérification" → screenshots verrouillés
-- À uploader après la review
+### 3. Sketchfab model downloads
+- Downloaded 3 new models via Sketchfab API:
+  - **Animated Dragon** (8MB GLB, CC-BY, by LasquetiSpice) — 3 motion loops
+  - **Animated Butterfly** (3.9MB GLB, CC-BY, by LasquetiSpice) — fluttering loop
+  - **Retro Piano** (4MB GLB, CC-BY-NC, by DailyArt)
+- All synced to Android (GLB) and iOS (USDZ) demo apps
 
-### 4. Fix CI docs — Python 3.14 breaking change
-- `python-version: '3.x'` résolvait vers Python 3.14.3 qui cassait pygments
-- Fix: pin `python-version: '3.13'` dans `.github/workflows/docs.yml`
-- ✅ CI docs vert
+### 4. Demo apps updated
+- **Android ExploreScreen**: Added Red Car, Dragon, Butterfly, Piano to model carousel (now 12 models)
+- **iOS ExploreTab**: Replaced Cube/Sphere/Cylinder with Red Car, Dragon, Butterfly, Piano (now 6 real models)
+- Updated Xcode project.pbxproj with all new USDZ resources
 
-### 5. iOS ExploreTab amélioré
-- Fond gradient sombre (au lieu du blanc RealityKit par défaut)
-- Shapes 2x plus grandes pour meilleure visibilité
-- Grid floor supprimé (causait des artefacts visuels)
-- ✅ iOS CI vert, TestFlight build OK
+### 5. Scheduled asset discovery
+- Created weekly cron task `discover-3d-assets` — runs Mondays at 10 AM
+- Searches Sketchfab API and Poly Haven for new free models/environments
+- Auto-evaluates size, license, quality, downloads best finds, syncs to platforms
 
-## CI A VERIFIER AU DEMARRAGE
+## CI TO CHECK AT START
 
 ```bash
 gh run list --branch main --limit 5
 ```
 
-## CE QUI RESTE A FAIRE
+## WHAT REMAINS TO DO
 
-### Priorité 1 — App Store Connect (action Thomas)
-- Créer app "SceneView Demo" bundle ID `io.github.sceneview.demo`
-- Une fois créée, relancer le TestFlight workflow → upload automatique
+### Priority 1 — App Store Connect (Thomas's action)
+- Create app "SceneView Demo" bundle ID `io.github.sceneview.demo`
+- Once created, relaunch TestFlight workflow → automatic upload
 
-### Priorité 2 — App Store screenshots
-- Uploader les 9 screenshots iOS (iPhone + iPad Pro + iPad Air) quand la review sera terminée
-- Screenshots disponibles dans `/tmp/store-screenshots/final/`
+### Priority 2 — App Store screenshots
+- Upload the 9 iOS screenshots when review unlocks
+- Screenshots available in `/tmp/store-screenshots/final/`
 
-### Priorité 3 — Play Store review
-- Attendre que Google approuve la nouvelle review avec screenshots mis à jour
+### Priority 3 — Play Store review
+- Wait for Google to approve with updated screenshots
 
-### Priorité 4 — iOS demo enrichissement
-- Ajouter des HDR environments au bundle iOS (studio.hdr etc.)
-- Ajouter des modèles USDZ pour le viewer 3D (comme Android a des GLB)
-- L'ExploreTab pourrait avoir un model picker comme Android
+### Priority 4 — iOS HDR environments
+- Add HDR environment files to iOS bundle for environment switching
+- The Android demo already has 6 environments — iOS should match
 
-### Priorité 5 — Améliorer iOS CI
-- Le TestFlight tourne sur macos-14 (Xcode 16.x) car macos-15 ne pré-installe pas le iOS SDK
-- Quand GitHub fixera les runners macos-15, re-switcher
+### Priority 5 — Web demo asset sync
+- Sync GLB models to `samples/web-demo/public/models/`
+- Add model picker to web demo
+
+### Priority 6 — More asset curation
+- The scheduled task will handle ongoing discovery
+- Consider downloading more Sketchfab models from search results (Pine Forest, Sleeping Cat, etc.)
+- Keep looking for small, high-quality, realistic models
+
+## ASSET CATALOG STATUS
+- **Models**: 7 in catalog (game_boy_classic, tree_scene, toy_car, red_car, animated_dragon, animated_butterfly, retro_piano)
+- **Environments**: 6 HDR (rooftop_night, studio, studio_warm, sunset, outdoor_cloudy, autumn_field)
+- **Sources**: Sketchfab (API), Fab.com (browser), Poly Haven (API)
+- **Scheduled**: Weekly discovery every Monday 10 AM
 
 ## ACTIONS THOMAS
-1. **App Store Connect** : créer app "SceneView Demo" bundle ID `io.github.sceneview.demo`
-2. **Play Store** : checker si review Google passe
+1. **App Store Connect**: create app "SceneView Demo" bundle ID `io.github.sceneview.demo`
+2. **Play Store**: check if Google review passes
 
-## REGLES
+## RULES
 - Merge direct sur main
 - Fast release
-- Zero données personnelles dans le repo
-- Ne modifier que les orgs SceneView
-- Assets hébergés localement
-- Opus pour les agents importants
-- Zero perte de données
+- Zero personal data in repo
+- Only modify SceneView orgs
+- Assets hosted locally
+- Opus for important agents
+- Zero data loss
