@@ -37,8 +37,7 @@
   <script src="js/filament/filament.js"></script>
   <!-- SceneView Web — our 3D library built on Filament.js -->
   <script src="js/sceneview.js?v=1.3.3"></script>
-  <!-- model-viewer (fallback renderer option) -->
-  <script type="module" src="js/model-viewer.min.js"></script>
+  <!-- All 3D powered by SceneView (Filament.js WASM) -->
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
@@ -307,7 +306,6 @@
         var(--color-surface-dim) 80%);
     }
 
-    .playground__model-wrap model-viewer,
     .playground__model-wrap canvas {
       width: 100%;
       height: 100%;
@@ -427,15 +425,12 @@
       </button>
 
       <div class="nav__links" id="navLinks">
-        <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
-        <a href="/claude-3d.html" class="nav__link" style="color:#d97757;font-weight:600">AI + 3D</a>
-        <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
-        <a href="/#demos" class="nav__link">Demos</a>
+        <a href="/showcase.html" class="nav__link">Showcase</a>
         <a href="/playground.html" class="nav__link" style="color:var(--color-primary);font-weight:600">Playground</a>
-        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
-        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
-        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
-        <!-- Pro link hidden for now -->
+        <a href="/docs.html" class="nav__link">Docs</a>
+        <a href="/#features" class="nav__link">Features</a>
+        <a href="https://github.com/sceneview/sceneview" class="nav__link" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://discord.gg/sceneview" class="nav__link" target="_blank" rel="noopener">Discord</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -462,8 +457,7 @@
         </select>
         <span class="playground__label" style="margin-left:16px">Renderer</span>
         <select class="playground__select" id="rendererSelect">
-          <option value="sceneview">SceneView (Filament.js)</option>
-          <option value="model-viewer">model-viewer</option>
+          <option value="sceneview">SceneView (Filament.js WASM)</option>
         </select>
         <span class="playground__label" style="margin-left:16px">Model</span>
         <select class="playground__select" id="modelSelect">
@@ -508,6 +502,12 @@
         </select>
       </div>
       <div class="playground__toolbar-right">
+        <button class="playground__btn" id="shareBtn" title="Share this scene (copy URL)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          <span id="shareLabel">Share</span>
+        </button>
         <button class="playground__btn" id="copyBtn" title="Copy code to clipboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
@@ -545,24 +545,7 @@
         </div>
         <div class="playground__model-wrap">
           <canvas id="previewCanvas" aria-label="3D model preview (SceneView Web / Filament.js)"></canvas>
-          <model-viewer
-            id="previewModel"
-            src="models/platforms/DamagedHelmet.glb"
-            alt="3D model preview"
-            auto-rotate
-            auto-rotate-delay="0"
-            rotation-per-second="30deg"
-            camera-controls
-            touch-action="pan-y"
-            interaction-prompt="none"
-            shadow-intensity="1.2"
-            shadow-softness="0.8"
-            exposure="1.1"
-            environment-image="neutral"
-            camera-orbit="45deg 70deg 2.5m"
-            loading="eager"
-            style="display:none"
-          ></model-viewer>
+          <!-- All rendering handled by SceneView (Filament.js WASM) -->
         </div>
         <div class="playground__description" id="description">
           <h3 id="descTitle">Model Viewer</h3>
@@ -965,14 +948,11 @@ fun AnimationScreen() {\n\
       loadExample(this.value);
     });
 
-    // ===== RENDERER SWITCHING =====
+    // ===== RENDERER — SceneView (Filament.js WASM) =====
     var MODEL_BASE = 'models/platforms';
     var modelSelect = document.getElementById('modelSelect');
-    var rendererSelect = document.getElementById('rendererSelect');
-    var previewModel = document.getElementById('previewModel');
     var previewCanvas = document.getElementById('previewCanvas');
     var rendererBadge = document.getElementById('rendererBadge');
-    var currentRenderer = 'sceneview'; // default to SceneView
     var sceneViewInstance = null;
 
     function getModelUrl(name) {
@@ -986,11 +966,9 @@ fun AnimationScreen() {\n\
 
     function initSceneView(modelUrl) {
       if (typeof SceneView === 'undefined') {
-        console.warn('SceneView not loaded, falling back to model-viewer');
-        switchToModelViewer();
+        console.warn('SceneView not loaded');
         return;
       }
-      // Dispose previous instance
       if (sceneViewInstance) {
         try { sceneViewInstance.dispose(); } catch(e) {}
         sceneViewInstance = null;
@@ -1004,52 +982,16 @@ fun AnimationScreen() {\n\
       });
     }
 
-    function switchToSceneView() {
-      currentRenderer = 'sceneview';
-      previewCanvas.style.display = 'block';
-      previewModel.style.display = 'none';
-      rendererBadge.textContent = 'SceneView';
-      rendererBadge.className = 'playground__renderer-badge playground__renderer-badge--sceneview';
-      var name = modelSelect.value;
-      initSceneView(getModelUrl(name));
-    }
-
-    function switchToModelViewer() {
-      currentRenderer = 'model-viewer';
-      previewCanvas.style.display = 'none';
-      previewModel.style.display = 'block';
-      rendererBadge.textContent = 'model-viewer';
-      rendererBadge.className = 'playground__renderer-badge playground__renderer-badge--modelviewer';
-      // Dispose SceneView instance
-      if (sceneViewInstance) {
-        try { sceneViewInstance.dispose(); } catch(e) {}
-        sceneViewInstance = null;
-      }
-      var name = modelSelect.value;
-      previewModel.setAttribute('src', getModelUrl(name));
-    }
-
-    rendererSelect.addEventListener('change', function() {
-      if (this.value === 'sceneview') {
-        switchToSceneView();
-      } else {
-        switchToModelViewer();
-      }
-    });
-
     // Model preset switcher
     modelSelect.addEventListener('change', function () {
-      var name = this.value;
-      var url = getModelUrl(name);
-      if (currentRenderer === 'sceneview') {
-        initSceneView(url);
-      } else {
-        previewModel.setAttribute('src', url);
-      }
+      initSceneView(getModelUrl(this.value));
     });
 
-    // Initialize default renderer (SceneView)
-    switchToSceneView();
+    // Initialize SceneView
+    previewCanvas.style.display = 'block';
+    rendererBadge.textContent = 'SceneView';
+    rendererBadge.className = 'playground__renderer-badge playground__renderer-badge--sceneview';
+    initSceneView(getModelUrl(modelSelect.value));
 
     // Copy button
     copyBtn.addEventListener('click', function () {
@@ -1065,6 +1007,41 @@ fun AnimationScreen() {\n\
         }, 2000);
       });
     });
+
+    // Share button — creates URL with scene config params
+    var shareBtn = document.getElementById('shareBtn');
+    var shareLabel = document.getElementById('shareLabel');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function() {
+        var params = new URLSearchParams();
+        params.set('example', currentExample);
+        params.set('model', modelSelect.value);
+        var url = window.location.origin + window.location.pathname + '?' + params.toString();
+        navigator.clipboard.writeText(url).then(function() {
+          shareBtn.classList.add('playground__btn--copied');
+          shareLabel.textContent = 'URL Copied!';
+          setTimeout(function() {
+            shareBtn.classList.remove('playground__btn--copied');
+            shareLabel.textContent = 'Share';
+          }, 2000);
+        });
+      });
+    }
+
+    // Restore from URL params
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var ex = params.get('example');
+      var model = params.get('model');
+      if (ex && examples[ex]) {
+        exampleSelect.value = ex;
+        loadExample(ex);
+      }
+      if (model) {
+        modelSelect.value = model;
+        initSceneView(getModelUrl(model));
+      }
+    })();
   </script>
 </body>
 </html>
