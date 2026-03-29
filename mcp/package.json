@@ -1,8 +1,8 @@
 {
   "name": "sceneview-mcp",
-  "version": "3.6.0",
+  "version": "3.5.1",
   "mcpName": "io.github.sceneview/mcp",
-  "description": "MCP server for SceneView \u2014 cross-platform 3D & AR SDK for Android and iOS. Give Claude the full SceneView SDK so it writes correct, compilable code.",
+  "description": "MCP server for SceneView — cross-platform 3D & AR SDK for Android and iOS. Give Claude the full SceneView SDK so it writes correct, compilable code.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -52,13 +52,6 @@
     "dist/generate-scene.js",
     "dist/advanced-guides.js",
     "dist/extra-guides.js",
-    "dist/generate-animation.js",
-    "dist/generate-environment.js",
-    "dist/convert-platform.js",
-    "dist/explain-api.js",
-    "dist/optimize-scene.js",
-    "dist/generate-gesture.js",
-    "dist/generate-physics.js",
     "llms.txt"
   ],
   "engines": {
@@ -66,7 +59,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepare": "node -e \"require('fs').copyFileSync('../llms.txt','./llms.txt')\" && tsc",
+    "prepare": "cp ../llms.txt ./llms.txt && tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "test": "vitest run"
