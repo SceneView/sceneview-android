@@ -45,10 +45,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.demo.BuildConfig
+import io.github.sceneview.demo.R
 import io.github.sceneview.demo.theme.SceneViewBlue
 
 @Composable
@@ -60,7 +62,7 @@ fun AboutScreen() {
         topBar = {
             LargeTopAppBar(
                 title = {
-                    Text("About", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.about_title), fontWeight = FontWeight.Bold)
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -120,19 +122,19 @@ fun AboutScreen() {
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "SceneView",
+                            text = stringResource(R.string.about_sceneview),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "v${BuildConfig.VERSION_NAME}",
+                            text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "3D & AR as declarative UI\nfor Android, iOS, Web & more",
+                            text = stringResource(R.string.about_tagline),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -146,8 +148,8 @@ fun AboutScreen() {
             // Feature highlights
             FeatureCard(
                 icon = Icons.Default.ViewInAr,
-                title = "3D Scenes",
-                description = "Full Jetpack Compose integration with Filament rendering engine. Load glTF/GLB models, procedural geometry, dynamic skies, and more.",
+                title = stringResource(R.string.about_feature_3d_title),
+                description = stringResource(R.string.about_feature_3d_desc),
                 accentColor = SceneViewBlue
             )
 
@@ -155,8 +157,8 @@ fun AboutScreen() {
 
             FeatureCard(
                 icon = Icons.Default.CameraAlt,
-                title = "Augmented Reality",
-                description = "ARCore-powered tap-to-place, plane detection, image tracking, depth occlusion, and light estimation.",
+                title = stringResource(R.string.about_feature_ar_title),
+                description = stringResource(R.string.about_feature_ar_desc),
                 accentColor = Color(0xFF34A853)
             )
 
@@ -164,8 +166,8 @@ fun AboutScreen() {
 
             FeatureCard(
                 icon = Icons.Default.AutoAwesome,
-                title = "AI-First SDK",
-                description = "Designed so AI assistants can generate correct 3D/AR code on the first try. Declarative API, comprehensive docs, machine-readable references.",
+                title = stringResource(R.string.about_feature_ai_title),
+                description = stringResource(R.string.about_feature_ai_desc),
                 accentColor = Color(0xFF9C27B0)
             )
 
@@ -181,7 +183,7 @@ fun AboutScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        "9 Platforms",
+                        stringResource(R.string.about_platforms_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -216,7 +218,7 @@ fun AboutScreen() {
                 ) {
                     Icon(Icons.Default.Code, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("GitHub")
+                    Text(stringResource(R.string.about_github))
                 }
                 FilledTonalButton(
                     onClick = {
@@ -229,7 +231,7 @@ fun AboutScreen() {
                 ) {
                     Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Docs")
+                    Text(stringResource(R.string.about_docs))
                 }
             }
 
@@ -245,25 +247,25 @@ fun AboutScreen() {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        "Credits",
+                        stringResource(R.string.about_credits_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Built with Google Filament, ARCore, Jetpack Compose, and Material 3 Expressive.",
+                        stringResource(R.string.about_credits_filament),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "3D models from Sketchfab (CC-BY / CC0) and Khronos glTF Sample Models.",
+                        stringResource(R.string.about_credits_models),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Open source under Apache License 2.0.",
+                        stringResource(R.string.about_credits_license),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

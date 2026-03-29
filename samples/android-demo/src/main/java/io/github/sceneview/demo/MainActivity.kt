@@ -32,7 +32,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -75,11 +77,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    data object ThreeD : Screen("3d", "3D", Icons.Default.ViewInAr)
-    data object AR : Screen("ar", "AR", Icons.Default.CameraAlt)
-    data object Samples : Screen("samples", "Samples", Icons.Default.GridView)
-    data object About : Screen("about", "About", Icons.Default.Info)
+sealed class Screen(val route: String, @StringRes val labelRes: Int, val icon: ImageVector) {
+    data object ThreeD : Screen("3d", R.string.tab_3d, Icons.Default.ViewInAr)
+    data object AR : Screen("ar", R.string.tab_ar, Icons.Default.CameraAlt)
+    data object Samples : Screen("samples", R.string.tab_samples, Icons.Default.GridView)
+    data object About : Screen("about", R.string.tab_about, Icons.Default.Info)
 }
 
 @Composable
@@ -107,15 +109,16 @@ fun SceneViewDemoApp(updateManager: InAppUpdateManager) {
                         label = "navScale"
                     )
 
+                    val label = stringResource(screen.labelRes)
                     NavigationBarItem(
                         icon = {
                             Icon(
                                 imageVector = screen.icon,
-                                contentDescription = screen.label,
+                                contentDescription = label,
                                 modifier = Modifier.scale(scale)
                             )
                         },
-                        label = { Text(screen.label, style = MaterialTheme.typography.labelMedium) },
+                        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
                         selected = selected,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,

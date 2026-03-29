@@ -54,9 +54,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.sceneview.Scene
+import io.github.sceneview.demo.R
 import io.github.sceneview.animation.Transition.animateRotation
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.rememberCameraManipulator
@@ -108,7 +112,11 @@ fun ExploreScreen() {
     val selectedModel = exploreModels[selectedIndex]
     val selectedEnv = exploreEnvironments[selectedEnvIndex]
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val sceneDescription = stringResource(R.string.cd_3d_scene)
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .semantics { contentDescription = sceneDescription }
+    ) {
         // ── Full-screen 3D Scene ───────────────────────────────────────────
         val engine = rememberEngine()
         val modelLoader = rememberModelLoader(engine)
@@ -175,8 +183,11 @@ fun ExploreScreen() {
 
         // ── Loading indicator — visible while model loads ─────────────────
         if (modelInstance == null) {
+            val loadingDescription = stringResource(R.string.cd_loading_model)
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .semantics { contentDescription = loadingDescription },
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
@@ -206,7 +217,7 @@ fun ExploreScreen() {
         ) {
             Column {
                 Text(
-                    text = "SceneView",
+                    text = stringResource(R.string.explore_title),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -223,7 +234,7 @@ fun ExploreScreen() {
                         tint = Color.White.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "3D & AR for Jetpack Compose",
+                        text = stringResource(R.string.explore_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -267,7 +278,7 @@ fun ExploreScreen() {
                     ) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            contentDescription = if (isPlaying) stringResource(R.string.explore_pause) else stringResource(R.string.explore_play),
                             tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
@@ -281,7 +292,7 @@ fun ExploreScreen() {
                     }
                     if (animationCount > 1) {
                         Text(
-                            text = "\u00B7 $animationCount animations",
+                            text = "\u00B7 " + stringResource(R.string.explore_animation_count, animationCount),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.5f)
                         )
@@ -304,7 +315,7 @@ fun ExploreScreen() {
                     tint = Color.White
                 )
                 Text(
-                    text = "Pinch to zoom \u00B7 Drag to orbit \u00B7 Double-tap to enlarge",
+                    text = stringResource(R.string.explore_gesture_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White
                 )
