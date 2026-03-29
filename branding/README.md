@@ -1,5 +1,8 @@
 # SceneView Branding Assets
 
+> **Design system source of truth:** [`DESIGN.md`](../DESIGN.md) (Google Stitch format)
+> All colors, typography, spacing, and component patterns are defined there.
+
 ## Logo
 The SceneView logo is a **3D isometric cube** in blue gradient.
 - Top face: White (#FFFFFF)
@@ -10,17 +13,23 @@ The SceneView logo is a **3D isometric cube** in blue gradient.
 The vector source is in `samples/android-demo/src/main/res/drawable/ic_launcher_foreground.xml`.
 
 ## Brand Colors
+
+See `DESIGN.md` for the full palette (light + dark mode). Key values:
+
 | Name | Hex | Usage |
 |---|---|---|
-| Primary Blue | #2196F3 | Main brand color, links, accents |
-| Dark Blue | #1565C0 | Backgrounds, gradients |
-| Light Blue | #64B5F6 | Highlights, hover states |
+| Primary | #1a73e8 | Website primary, links, accents |
+| Primary (dark) | #8ab4f8 | Dark mode primary |
+| Brand Dark Blue | #1565C0 | Logo, gradients |
+| Brand Light Blue | #64B5F6 | Logo, highlights |
 | Surface Dark | #0D1117 | Dark mode background |
 | Surface Variant | #161B22 | Cards, elevated surfaces |
 
 ## Typography
 - **Primary:** Inter (web), system default (mobile)
 - **Code:** JetBrains Mono
+
+See `DESIGN.md` for full font scale, weights, and letter spacing.
 
 ## Store Assets Needed
 

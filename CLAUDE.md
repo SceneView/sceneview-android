@@ -23,6 +23,20 @@ with shared logic in Kotlin Multiplatform.
 See [`llms.txt`](./llms.txt) at the repo root for the complete, machine-readable API reference:
 composable signatures, node types, resource loading, threading rules, and common patterns.
 
+## Design System (Google Stitch)
+
+See [`DESIGN.md`](./DESIGN.md) for the complete design system: colors, typography, spacing,
+radius, shadows, motion, breakpoints, and component patterns.
+
+**Rules:**
+- Always read `DESIGN.md` before generating any UI code (website, app, docs)
+- Use CSS custom properties — never hardcode color/spacing/radius values
+- Support both light and dark modes
+- Follow Material 3 Expressive patterns
+
+**Google Stitch MCP:** when configured, enables direct UI generation from Stitch projects.
+To set up: `npm install @google/stitch-sdk`, then add the Stitch MCP server in Claude Code settings.
+
 ## When writing any SceneView code
 
 - Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.2`)
