@@ -43,7 +43,6 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Science
-import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewInAr
@@ -1421,6 +1420,7 @@ private fun ImageDetectionDemo() {
                 }
                 config.augmentedImageDatabase = AugmentedImageDatabase(session).also { db ->
                     db.addImage("sceneview_logo", bitmap, 0.15f)
+                    bitmap.recycle()
                 }
             },
             onSessionUpdated = { _, frame ->

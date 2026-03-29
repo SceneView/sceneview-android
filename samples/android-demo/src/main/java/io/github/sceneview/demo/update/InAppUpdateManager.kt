@@ -54,6 +54,8 @@ class InAppUpdateManager(private val activity: Activity) {
     var downloadProgress by mutableStateOf(0f)
         private set
 
+    private var listenerRegistered = false
+
     private val installStateListener: InstallStateUpdatedListener = InstallStateUpdatedListener { state ->
         when (state.installStatus()) {
             InstallStatus.DOWNLOADING -> {
@@ -68,10 +70,15 @@ class InAppUpdateManager(private val activity: Activity) {
             }
             InstallStatus.FAILED -> {
                 updateState = UpdateState.IDLE
+                unregisterListener()
             }
             InstallStatus.INSTALLED -> {
                 updateState = UpdateState.IDLE
-                appUpdateManager.unregisterListener(installStateListener)
+                unregisterListener()
+            }
+            InstallStatus.CANCELED -> {
+                updateState = UpdateState.IDLE
+                unregisterListener()
             }
             else -> {}
         }
@@ -96,12 +103,22 @@ class InAppUpdateManager(private val activity: Activity) {
     }
 
     private fun startFlexibleUpdate(info: AppUpdateInfo) {
-        appUpdateManager.registerListener(installStateListener)
+        if (!listenerRegistered) {
+            appUpdateManager.registerListener(installStateListener)
+            listenerRegistered = true
+        }
         appUpdateManager.startUpdateFlow(
             info,
             activity,
             AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build()
         )
+    }
+
+    private fun unregisterListener() {
+        if (listenerRegistered) {
+            appUpdateManager.unregisterListener(installStateListener)
+            listenerRegistered = false
+        }
     }
 
     fun completeUpdate() {
@@ -114,6 +131,11 @@ class InAppUpdateManager(private val activity: Activity) {
                 updateState = UpdateState.READY_TO_INSTALL
             }
         }
+    }
+
+    /** Must be called from Activity.onDestroy() to prevent listener leaks. */
+    fun destroy() {
+        unregisterListener()
     }
 
     enum class UpdateState {
