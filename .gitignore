@@ -1,80 +1,71 @@
-# Claude Code settings and worktrees
+# ── IDE & OS ──────────────────────────────────────────────
+*.iml
+.DS_Store
+Thumbs.db
+Desktop.ini
+/.idea
+
+# ── Claude Code ───────────────────────────────────────────
 .claude/settings.json
 .claude/settings.local.json
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 
-*.iml
-.gradle
+# ── Gradle ────────────────────────────────────────────────
 /local.properties
-.DS_Store
+/.gradle
 /build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
-/.idea
+samples/*/build/
+sceneview-core/build/
+sceneview-web/build/
+sceneview-desktop/build/
 
-# Windows
-Thumbs.db
-Desktop.ini
+# ── Kotlin/JS ─────────────────────────────────────────────
+kotlin-js-store/
 
-# Marketing assets (large binaries, not source)
-/video/
-
-# Build-logic compiled artifacts (no sources — buildSrc is used)
-/build-logic/
-
-# MCP servers (all)
+# ── Node.js ───────────────────────────────────────────────
 **/node_modules/
+
+# ── MCP ───────────────────────────────────────────────────
 mcp/.DS_Store
 mcp/demo/*.mp4
-
-# Sample build outputs
-samples/*/build/
-
-# MCP compiled test artifacts
 mcp/dist/*.test.js
 mcp/llms.txt
-sceneview-core/build/
+mcp/.mcpregistry_*
+.mcpregistry_*
 
-# Swift build artifacts
+# ── Swift / Xcode ─────────────────────────────────────────
 SceneViewSwift/.build/
 SceneViewSwift/.swiftpm/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+samples/ios-demo/.build/
 
-# Android build artifacts
+# ── Android artifacts ─────────────────────────────────────
 *.apk
 *.aab
 
-# MkDocs build output
+# ── MkDocs ────────────────────────────────────────────────
 docs/.cache/
 docs/site/
 site/
 
-# Xcode
-DerivedData/
-*.xcodeproj/xcuserdata/
-*.xcworkspace/xcuserdata/
-
-# Environment files
+# ── Environment & secrets ─────────────────────────────────
 .env
 .env.local
+.secrets/
 
-# Module build artifacts
-sceneview-web/build/
-sceneview-desktop/build/
-mcp/.mcpregistry_*
-
-# Private strategy and business files
+# ── Private / strategy ────────────────────────────────────
 pro/
 marketing/
 branding/SECRETS.md
 branding/SPONSOR_TIERS.md
 .claude/handoff.md
 .claude/branding.md
-.mcpregistry_*
 
-# Build artifacts
-docs/site/
-.secrets/
-samples/ios-demo/.build/
+# ── Large media (binaries, not source) ────────────────────
+/video/

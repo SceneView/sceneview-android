@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" fill="none">
-  <text x="28" y="27" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="600" fill="currentColor">Android</text>
-  <path d="M8 14l-2-4m12 4l2-4M5 20c0-4.4 3.6-8 8-8s8 3.6 8 8v8H5v-8z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-  <circle cx="9" cy="20" r="1" fill="currentColor"/>
-  <circle cx="17" cy="20" r="1" fill="currentColor"/>
-</svg>

@@ -64,10 +64,17 @@ One unified showcase app per platform — all features integrated into tabs.
 | `arsceneview/` | Android AR layer — `ARScene`, `ARSceneScope`, ARCore integration |
 | `sceneview-web/` | Web 3D library — Kotlin/JS + Filament.js (same engine as Android, WebGL2/WASM) |
 | `SceneViewSwift/` | Apple 3D+AR library — `SceneView`, `ARSceneView` (RealityKit renderer, iOS/macOS/visionOS) |
-| `samples/common/` | Shared helpers across sample apps |
-| `mcp/` | `sceneview-mcp` — MCP server for AI assistant integration |
+| `samples/` | All demo apps — one per platform (`android-demo`, `ios-demo`, `web-demo`, etc.) |
+| `mcp/` | `sceneview-mcp` — MCP server + `packages/` (automotive, gaming, healthcare, interior) + `docs/` |
 | `flutter/` | Flutter plugin — PlatformView bridge to SceneView (Android + iOS), with native rendering |
 | `react-native/` | React Native module — Fabric/Turbo bridge to SceneView (Android + iOS), with native rendering |
+| `assets/` | Shared 3D models (GLB + USDZ) and environments for demos and website |
+| `tools/` | Build utilities — Filament material generation, asset download, try-demo script |
+| `website-static/` | Static HTML/CSS/JS website (sceneview.github.io) |
+| `docs/` | MkDocs documentation source (built by CI) |
+| `branding/` | Logo SVGs, brand guide, store asset specs |
+| `buildSrc/` | Gradle build logic + detekt config |
+| `.github/` | CI workflows + community docs (CoC, Security, Support, Governance, Sponsors, Privacy) |
 
 ## Version Location Map
 

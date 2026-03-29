@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 40" fill="none">
-  <path d="M14 12l8 4v8l-8 4-8-4v-8l8-4z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-  <path d="M14 12v8l8 4M14 20l-8 4" stroke="currentColor" stroke-width="1.5"/>
-  <text x="30" y="27" font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="600" fill="currentColor">RealityKit</text>
-</svg>

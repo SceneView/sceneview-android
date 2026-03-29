@@ -34,7 +34,7 @@ subprojects {
         apply plugin: "io.gitlab.arturbosch.detekt"
         detekt {
             buildUponDefaultConfig = true
-            config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+            config.setFrom(rootProject.files("buildSrc/config/detekt/detekt.yml"))
             parallel = true
         }
     }
@@ -42,7 +42,7 @@ subprojects {
         apply plugin: "io.gitlab.arturbosch.detekt"
         detekt {
             buildUponDefaultConfig = true
-            config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+            config.setFrom(rootProject.files("buildSrc/config/detekt/detekt.yml"))
             parallel = true
         }
     }
