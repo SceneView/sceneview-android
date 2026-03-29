@@ -93,35 +93,34 @@ jobs:
         working-directory: mcp
         run: npm ci
 
-      - name: Sync version from tag
+      - name: Check if version already published
+        id: check-mcp
         working-directory: mcp
         run: |
-          # For workflow_dispatch without a tag, use the current package.json version
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            VERSION=$(node -p "require('./package.json').version")
-            echo "workflow_dispatch: using existing version $VERSION"
+          # MCP has its own version cycle — always use package.json version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          PUBLISHED=$(npm view sceneview-mcp version 2>/dev/null || echo "")
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "::notice::sceneview-mcp@$VERSION already published — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            VERSION=${GITHUB_REF_NAME#v}
+            echo "Publishing sceneview-mcp@$VERSION (npm has $PUBLISHED)"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "::error::Not a semver version — got '$VERSION'. Run from a version tag (e.g. v3.5.0)."
-            exit 1
-          fi
-          CURRENT=$(node -p "require('./package.json').version")
-          if [ "$CURRENT" != "$VERSION" ]; then
-            npm version "$VERSION" --no-git-tag-version
-          fi
-          sed -i "s/version: \"[^\"]*\"/version: \"$VERSION\"/" src/index.ts
 
       - name: Build
+        if: steps.check-mcp.outputs.skip != 'true'
         working-directory: mcp
         run: npm run prepare
 
       - name: Test
+        if: steps.check-mcp.outputs.skip != 'true'
         working-directory: mcp
         run: npm test
 
       - name: Publish
+        if: steps.check-mcp.outputs.skip != 'true'
         working-directory: mcp
         run: npm publish --access public
         env:
@@ -150,36 +149,41 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Build sceneview-web JS library
-        run: ./gradlew :sceneview-web:jsBrowserProductionLibraryDistribution
-
-      - name: Prepare and publish npm package
-        working-directory: sceneview-web/build/dist/js/productionLibrary
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Check if version already published
+        id: check-web
         run: |
-          # For workflow_dispatch without a tag, read version from existing package.json
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
-            if [ -z "$VERSION" ]; then
-              echo "::error::workflow_dispatch: no package.json in build output — build may have failed."
-              exit 1
-            fi
-            echo "workflow_dispatch: using existing version $VERSION"
+            VERSION=$(node -p "require('./sceneview-web/package.json').version" 2>/dev/null || echo "0.0.0")
           else
             VERSION=${GITHUB_REF_NAME#v}
           fi
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "::error::Not a semver version — got '$VERSION'."
-            exit 1
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          PUBLISHED=$(npm view @sceneview/sceneview-web version 2>/dev/null || echo "")
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "::notice::@sceneview/sceneview-web@$VERSION already published — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Publishing @sceneview/sceneview-web@$VERSION (npm has $PUBLISHED)"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-          cat > package.json << EOF
+
+      - name: Build sceneview-web JS library
+        if: steps.check-web.outputs.skip != 'true'
+        run: ./gradlew :sceneview-web:jsBrowserProductionWebpack
+
+      - name: Prepare and publish npm package
+        if: steps.check-web.outputs.skip != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION="${{ steps.check-web.outputs.version }}"
+          BUILD_DIR="sceneview-web/build/kotlin-webpack/js/productionExecutable"
+          cat > "$BUILD_DIR/package.json" << EOF
           {
             "name": "@sceneview/sceneview-web",
             "version": "$VERSION",
             "description": "SceneView for Web — 3D rendering with Filament.js (WebGL2/WASM)",
             "main": "sceneview-web.js",
-            "types": "sceneview-web.d.ts",
             "keywords": ["3d", "webgl", "filament", "sceneview", "gltf", "wasm"],
             "homepage": "https://github.com/sceneview/sceneview",
             "repository": {
@@ -190,6 +194,7 @@ jobs:
             "license": "Apache-2.0"
           }
           EOF
+          cd "$BUILD_DIR"
           npm publish --access public
 
   # ── 5. Create GitHub Release with auto-generated notes ────────────────────
@@ -198,6 +203,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [publish-library, publish-mcp, publish-web]
+    if: always() && needs.publish-library.result == 'success'
     permissions:
       contents: write
     steps:
