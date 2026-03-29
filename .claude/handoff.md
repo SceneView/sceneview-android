@@ -4,15 +4,29 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session 8)
+**Date:** 29 mars 2026 (session 9)
 **Branch:** main (all pushed to origin)
 
-## WHAT WAS DONE THIS SESSION (session 8)
+## WHAT WAS DONE THIS SESSION (session 9)
+
+### 1. Release workflow fully fixed
+- **Maven Central**: Fixed Gradle configuration cache incompatibility (`--no-configuration-cache`)
+- **MCP npm**: Uses package.json version (independent cycle), skips if already published
+- **sceneview-web npm**: Fixed Gradle task (`jsBrowserProductionWebpack`), fixed build output path, fixed npm package name (unscoped `sceneview-web`)
+- **Create GitHub Release**: Only runs on tag push, correctly skipped on workflow_dispatch
+- **All 4 publish jobs now green** on workflow_dispatch test run
+
+### 2. Version 3.5.1 fully released
+- Maven Central: sceneview + arsceneview 3.5.1 published
+- npm: sceneview-mcp 3.5.4, sceneview-web 3.5.1 published
+- GitHub Release: v3.5.1 created
+- All CI workflows green
+
+## WHAT WAS DONE IN SESSION 8
 
 ### 1. CI Fix — Swift 6 strict concurrency
 - Added `@MainActor` to `HapticManager` — UIKit haptic generators are MainActor-isolated
 - Fixed TestFlight deploy failure (exit code 65)
-- All 4 CI workflows now green
 
 ### 2. macOS App Store submission — SUCCESS
 - 21 files committed for macOS support (previous session, pushed this session)
@@ -25,11 +39,8 @@
 - **Version fix** — AboutTab updated from v3.4.7 to v3.5.0
 
 ### 4. Version alignment — complete sweep
-- MCP source: 18 files updated 3.4.7 → 3.5.0
-- MCP bumped to 3.5.3 and **published to npm**
-- README CDN: 1.2.0 → 3.5.0 (3 occurrences)
-- website-static: 1.4.0 → 3.5.0 (index.html + web.html)
-- CLAUDE.md: MCP version updated to 3.5.3
+- All 40+ files bumped to 3.5.1
+- MCP bumped to 3.5.4 and **published to npm**
 - All 1204 MCP tests pass
 
 ### 5. Documentation
@@ -156,9 +167,9 @@ xcrun altool --upload-app --type ios \
 ## PUBLISHED ARTIFACTS
 - **GitHub Release**: v3.5.1 (https://github.com/sceneview/sceneview/releases/tag/v3.5.1)
 - **sceneview-mcp**: 3.5.4 on npm (1204 tests)
-- **sceneview-web**: 3.5.1 on npm (version bumped, not republished)
-- **sceneview**: 3.5.1 (version bumped, Maven Central publish pending)
-- **arsceneview**: 3.5.1 (version bumped, Maven Central publish pending)
+- **sceneview-web**: 3.5.1 on npm
+- **sceneview**: 3.5.1 on Maven Central
+- **arsceneview**: 3.5.1 on Maven Central
 - **Website**: sceneview.github.io (deployed, all versions 3.5.1)
 
 ## RULES
