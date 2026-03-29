@@ -1,45 +1,71 @@
 [versions]
+# Build tools
 agp = "8.11.1"
-kotlin = "2.3.20"
-composeCompiler = "2.3.20"
+kotlin = "2.1.21"
+composeMultiplatform = "1.7.3"
+
+# AndroidX Core
 coreKtx = "1.18.0"
 appcompat = "1.7.1"
 fragmentKtx = "1.8.9"
 
-composeUi = "1.10.5"
-composeFoundation = "1.10.5"
-composeMaterial = "1.10.5"
-composeMaterialIcons = "1.7.8"
-composeMaterial3 = "1.4.0"
+# Compose
+composeBom = "2025.06.00"
+composeMaterial3Expressive = "1.5.0-alpha15"
 activityCompose = "1.13.0"
 navigationCompose = "2.9.7"
 
+# Kotlin Libraries
 coroutines = "1.10.2"
 kotlinMath = "1.6.0"
 
+# 3D / AR
+filament = "1.70.0"
 arCore = "1.53.0"
+
+# Networking
 fuel = "2.3.1"
+
+# UI
 googleMaterial = "1.13.0"
 media3 = "1.9.2"
 
+# TV
+tvFoundation = "1.0.0-alpha11"
+tvMaterial = "1.0.0"
+
+# Play Services
+playAppUpdate = "2.1.0"
+
+# Publishing & Docs
 mavenPublish = "0.33.0"
 dokka = "2.0.0"
 
+# Testing
+androidxTestJunit = "1.2.1"
+androidxTestRunner = "1.6.2"
+androidxTestRules = "1.6.1"
+
+# Code Quality
+detekt = "1.23.8"
+
 [libraries]
-# AndroidX
+# AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 
-# Compose
-androidx-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "composeUi" }
-androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "composeUi" }
-androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "composeUi" }
-androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "composeFoundation" }
-androidx-compose-material = { group = "androidx.compose.material", name = "material", version.ref = "composeMaterial" }
-androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "composeMaterialIcons" }
-androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "composeMaterialIcons" }
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3" }
+# Compose BOM (manages all Compose versions)
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+androidx-compose-material = { group = "androidx.compose.material", name = "material" }
+androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material3-expressive = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3Expressive" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
@@ -47,6 +73,11 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 kotlin-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlin-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlin-math = { group = "dev.romainguy", name = "kotlin-math", version.ref = "kotlinMath" }
+
+# Filament
+filament-android = { group = "com.google.android.filament", name = "filament-android", version.ref = "filament" }
+filament-gltfio = { group = "com.google.android.filament", name = "gltfio-android", version.ref = "filament" }
+filament-utils = { group = "com.google.android.filament", name = "filament-utils-android", version.ref = "filament" }
 
 # AR
 arcore = { group = "com.google.ar", name = "core", version.ref = "arCore" }
@@ -63,15 +94,34 @@ google-material = { group = "com.google.android.material", name = "material", ve
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 
-# Gradle Plugins (for build-logic compileOnly)
+# TV
+androidx-tv-foundation = { group = "androidx.tv", name = "tv-foundation", version.ref = "tvFoundation" }
+androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvMaterial" }
+
+# Play Services
+play-app-update = { group = "com.google.android.play", name = "app-update", version.ref = "playAppUpdate" }
+play-app-update-ktx = { group = "com.google.android.play", name = "app-update-ktx", version.ref = "playAppUpdate" }
+
+# Testing
+androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "androidxTestRules" }
+
+# Gradle Plugins (for buildSrc / build-logic compileOnly)
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
-publish = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "mavenPublish" }
+publish-gradlePlugin = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "mavenPublish" }
+
+# Code Quality
+detekt-gradlePlugin = { group = "io.gitlab.arturbosch.detekt", name = "detekt-gradle-plugin", version.ref = "detekt" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "composeCompiler" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 publish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
