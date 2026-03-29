@@ -1,67 +1,207 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy — SceneView Demo</title>
+<title>Privacy Policy — SceneView</title>
+<meta name="description" content="Privacy Policy for the SceneView Demo app. No personal data collected, no tracking, no analytics.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://sceneview.github.io/privacy.html">
+<meta property="og:title" content="Privacy Policy — SceneView">
+<meta property="og:description" content="SceneView Demo does not collect, store, or transmit any personal data.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sceneview.github.io/privacy.html">
+<meta property="og:image" content="https://sceneview.github.io/favicon.svg">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1rem; color: #222; line-height: 1.7; }
-h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }
-h2 { font-size: 1.3rem; margin-top: 2rem; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; }
-h3 { font-size: 1.05rem; margin-top: 1.5rem; }
-p, li { font-size: 0.95rem; }
-table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-th, td { border: 1px solid #ddd; padding: 0.5rem 0.75rem; text-align: left; font-size: 0.9rem; }
-th { background: #f5f5f5; }
-a { color: #1a73e8; }
-.updated { color: #666; font-size: 0.9rem; }
+  .privacy-page {
+    padding-top: calc(var(--nav-height) + var(--space-3xl));
+    padding-bottom: var(--space-4xl);
+  }
+  .privacy-content {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+  }
+  .privacy-content h1 {
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--space-xs);
+    color: var(--color-on-surface);
+  }
+  .privacy-content .updated {
+    color: var(--color-on-surface-faint);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-2xl);
+    display: block;
+  }
+  .privacy-content h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-top: var(--space-2xl);
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--color-outline);
+    color: var(--color-on-surface);
+  }
+  .privacy-content h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: var(--space-lg);
+    margin-bottom: var(--space-xs);
+    color: var(--color-on-surface);
+  }
+  .privacy-content p,
+  .privacy-content li {
+    font-size: 0.95rem;
+    color: var(--color-on-surface-dim);
+    line-height: 1.7;
+    margin-bottom: var(--space-sm);
+  }
+  .privacy-content ul {
+    padding-left: var(--space-lg);
+  }
+  .privacy-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: var(--space-md) 0;
+    font-size: 0.9rem;
+  }
+  .privacy-content th,
+  .privacy-content td {
+    border: 1px solid var(--color-outline);
+    padding: 10px 14px;
+    text-align: left;
+    color: var(--color-on-surface-dim);
+  }
+  .privacy-content th {
+    background: var(--color-surface-dim);
+    font-weight: 600;
+    color: var(--color-on-surface);
+  }
+  .privacy-content a {
+    color: var(--color-primary);
+  }
+  .privacy-content a:hover {
+    text-decoration: underline;
+  }
 </style>
 </head>
 <body>
-<h1>Privacy Policy</h1>
-<p class="updated"><strong>SceneView Demo</strong> — Last updated: March 27, 2026</p>
 
-<h2>Summary</h2>
-<p><strong>SceneView Demo does not collect, store, or transmit any personal data.</strong></p>
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="nav" id="nav">
+    <div class="nav__container">
+      <a href="/" class="nav__logo">
+        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <span class="nav__logo-text">SceneView</span>
+      </a>
 
-<h2>Data Collection</h2>
-<ul>
-<li><strong>No personal data collected</strong> — The app does not collect names, email addresses, IP addresses, or any other personally identifiable information.</li>
-<li><strong>No analytics or tracking</strong> — No analytics SDKs, telemetry, fingerprinting, or behavioral tracking of any kind.</li>
-<li><strong>No network requests</strong> — The app operates entirely offline. All 3D models, textures, and environments are bundled locally.</li>
-<li><strong>No accounts</strong> — The app does not require or support user accounts.</li>
-</ul>
+      <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
 
-<h2>Camera Usage (AR Features)</h2>
-<ul>
-<li>The app uses the device camera <strong>exclusively</strong> for augmented reality features powered by Google ARCore.</li>
-<li>Camera data is processed <strong>locally on-device</strong> in real time for plane detection and object placement.</li>
-<li><strong>No camera images or video are stored, recorded, or transmitted</strong> to any server.</li>
-<li>Camera access is only requested when the user navigates to the AR tab.</li>
-</ul>
+      <div class="nav__links" id="navLinks">
+        <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
+        <a href="/claude-3d.html" class="nav__link" style="color:#d97757;font-weight:600">AI + 3D</a>
+        <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
+        <a href="/#demos" class="nav__link">Demos</a>
+        <a href="/playground.html" class="nav__link">Playground</a>
+        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
+        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
+        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
+        <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
 
-<h2>Third-Party SDKs</h2>
-<table>
-<tr><th>SDK</th><th>Purpose</th><th>Data collected</th></tr>
-<tr><td>Google Filament</td><td>3D rendering engine</td><td>None</td></tr>
-<tr><td>Google ARCore</td><td>Augmented reality</td><td>Camera processed locally, no data sent</td></tr>
-<tr><td>Jetpack Compose</td><td>UI framework</td><td>None</td></tr>
-</table>
+  <main class="privacy-page">
+    <div class="privacy-content">
+      <h1>Privacy Policy</h1>
+      <span class="updated"><strong>SceneView Demo</strong> &mdash; Last updated: March 27, 2026</span>
 
-<h2>Data Sharing</h2>
-<p>No data is shared with third parties. No data is sold or used for advertising.</p>
+      <h2>Summary</h2>
+      <p><strong>SceneView Demo does not collect, store, or transmit any personal data.</strong></p>
 
-<h2>Children's Privacy</h2>
-<p>The app does not knowingly collect any data from children under 13. The app is rated for ages 13 and older.</p>
+      <h2>Data Collection</h2>
+      <ul>
+        <li><strong>No personal data collected</strong> &mdash; The app does not collect names, email addresses, IP addresses, or any other personally identifiable information.</li>
+        <li><strong>No analytics or tracking</strong> &mdash; No analytics SDKs, telemetry, fingerprinting, or behavioral tracking of any kind.</li>
+        <li><strong>No network requests</strong> &mdash; The app operates entirely offline. All 3D models, textures, and environments are bundled locally.</li>
+        <li><strong>No accounts</strong> &mdash; The app does not require or support user accounts.</li>
+      </ul>
 
-<h2>Changes to This Policy</h2>
-<p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated date.</p>
+      <h2>Camera Usage (AR Features)</h2>
+      <ul>
+        <li>The app uses the device camera <strong>exclusively</strong> for augmented reality features powered by Google ARCore.</li>
+        <li>Camera data is processed <strong>locally on-device</strong> in real time for plane detection and object placement.</li>
+        <li><strong>No camera images or video are stored, recorded, or transmitted</strong> to any server.</li>
+        <li>Camera access is only requested when the user navigates to the AR tab.</li>
+      </ul>
 
-<h2>Contact</h2>
-<ul>
-<li><strong>Email:</strong> <a href="mailto:thomas.gorisse@gmail.com">thomas.gorisse@gmail.com</a></li>
-<li><strong>Website:</strong> <a href="https://sceneview.github.io">sceneview.github.io</a></li>
-<li><strong>GitHub:</strong> <a href="https://github.com/sceneview/sceneview">github.com/sceneview/sceneview</a></li>
-</ul>
+      <h2>Third-Party SDKs</h2>
+      <table>
+        <tr><th>SDK</th><th>Purpose</th><th>Data collected</th></tr>
+        <tr><td>Google Filament</td><td>3D rendering engine</td><td>None</td></tr>
+        <tr><td>Google ARCore</td><td>Augmented reality</td><td>Camera processed locally, no data sent</td></tr>
+        <tr><td>Jetpack Compose</td><td>UI framework</td><td>None</td></tr>
+      </table>
+
+      <h2>Data Sharing</h2>
+      <p>No data is shared with third parties. No data is sold or used for advertising.</p>
+
+      <h2>Children's Privacy</h2>
+      <p>The app does not knowingly collect any data from children under 13. The app is rated for ages 13 and older.</p>
+
+      <h2>Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated date.</p>
+
+      <h2>Contact</h2>
+      <ul>
+        <li><strong>Website:</strong> <a href="https://sceneview.github.io">sceneview.github.io</a></li>
+        <li><strong>GitHub:</strong> <a href="https://github.com/sceneview/sceneview">github.com/sceneview/sceneview</a></li>
+      </ul>
+    </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <svg class="footer__logo" viewBox="0 0 32 32" width="24" height="24" fill="none">
+            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
+            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          <span>SceneView</span>
+        </div>
+        <div class="footer__links">
+          <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
+          <a href="https://github.com/sponsors/sceneview">Sponsor</a>
+          <a href="https://github.com/sceneview/sceneview">Source Code</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
