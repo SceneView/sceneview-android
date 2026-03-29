@@ -4,45 +4,36 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session 2)
+**Date:** 29 mars 2026 (session 3)
 **Branch:** main (tout pushé sur origin)
 
 ## CE QUI A ETE FAIT CETTE SESSION
 
-### 1. CI — Tout vert
-- Android CI: ✅
-- iOS CI: ✅
-- TestFlight: ✅ archive build OK, upload bloqué par App Store Connect (app pas encore créée)
+### 1. Screenshots stores — 14 screenshots capturés
+- **iPhone** (1284×2778): 3D viewer, Samples, About
+- **iPad Pro** (2048×2732): 3D viewer, Samples, About
+- **iPad Air** (1640×2360): 3D viewer, Samples, About
+- **Pixel 9** (1280×2856): Toy Car Night, Chair Studio, Lamp Sunset, Samples, About
+- Screenshots sauvés: `/tmp/store-screenshots/final/` (14 fichiers)
 
-### 2. Fix TestFlight pipeline (5 itérations)
-- Asset catalog: `ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO`
-- iOS SDK: switch `macos-15` → `macos-14` (iOS SDK pré-installé)
-- Duplicate structs: nettoyé `SceneViewDemoApp.swift` (557 lignes supprimées — monolithe réduit à @main + ContentView)
-- **Résultat final**: build archive passe, export échoue car "Error Downloading App Information" = app pas créée sur App Store Connect
+### 2. Play Store screenshots uploadés + review relancée
+- 4 nouveaux screenshots (toy car, chair, lamp, samples) remplacent les anciens blancs
+- Review relancée avec "Restart review" — en attente Google
 
-### 3. Dependabot — 3 alertes résolues (0 restantes)
-- `path-to-regexp` 0.1.12 → 8.4.0 (ReDoS)
-- `brace-expansion` 1.1.12 → 5.0.5 (memory exhaustion)
-- Résolutions yarn dans `build.gradle`, lock file régénéré
+### 3. App Store screenshots — bloqué
+- Version iOS "En attente de vérification" → screenshots verrouillés
+- À uploader après la review
 
-### 4. Publications npm
-- `sceneview-web@3.5.0` publié sur npm (34 kB)
-- `sceneview-mcp` synced à 3.5.2 (match npm)
+### 4. Fix CI docs — Python 3.14 breaking change
+- `python-version: '3.x'` résolvait vers Python 3.14.3 qui cassait pygments
+- Fix: pin `python-version: '3.13'` dans `.github/workflows/docs.yml`
+- ✅ CI docs vert
 
-### 5. Dependency bumps
-- TypeScript 5.8 → 6.0.2 (breaking change tsconfig fixé, 1204 tests OK)
-- Compose 1.7.3 → 1.10.3 (Dependabot PR mergée)
-
-### 6. Fixes code
-- KMP core iOS: `CLOCK_MONOTONIC` UInt type mismatch dans TimeSource.kt
-- iOS demo: duplicate struct definitions supprimées
-
-### 7. Santé repo
-- 0 alertes Dependabot
-- 0 PR ouvertes
-- Versions sync: 32 checks, 0 erreurs (1 faux positif migration.md, MCP intentionnellement 3.5.2)
-- MCP: 1204 tests passent
-- KMP core: JS tests passent, iOS compile
+### 5. iOS ExploreTab amélioré
+- Fond gradient sombre (au lieu du blanc RealityKit par défaut)
+- Shapes 2x plus grandes pour meilleure visibilité
+- Grid floor supprimé (causait des artefacts visuels)
+- ✅ iOS CI vert, TestFlight build OK
 
 ## CI A VERIFIER AU DEMARRAGE
 
@@ -56,16 +47,25 @@ gh run list --branch main --limit 5
 - Créer app "SceneView Demo" bundle ID `io.github.sceneview.demo`
 - Une fois créée, relancer le TestFlight workflow → upload automatique
 
-### Priorité 2 — Play Store
-- Vérifier si review Google est passée
+### Priorité 2 — App Store screenshots
+- Uploader les 9 screenshots iOS (iPhone + iPad Pro + iPad Air) quand la review sera terminée
+- Screenshots disponibles dans `/tmp/store-screenshots/final/`
 
-### Priorité 3 — Améliorer iOS CI
+### Priorité 3 — Play Store review
+- Attendre que Google approuve la nouvelle review avec screenshots mis à jour
+
+### Priorité 4 — iOS demo enrichissement
+- Ajouter des HDR environments au bundle iOS (studio.hdr etc.)
+- Ajouter des modèles USDZ pour le viewer 3D (comme Android a des GLB)
+- L'ExploreTab pourrait avoir un model picker comme Android
+
+### Priorité 5 — Améliorer iOS CI
 - Le TestFlight tourne sur macos-14 (Xcode 16.x) car macos-15 ne pré-installe pas le iOS SDK
 - Quand GitHub fixera les runners macos-15, re-switcher
 
 ## ACTIONS THOMAS
 1. **App Store Connect** : créer app "SceneView Demo" bundle ID `io.github.sceneview.demo`
-2. **Play Store** : checker si review Google est passée
+2. **Play Store** : checker si review Google passe
 
 ## REGLES
 - Merge direct sur main
