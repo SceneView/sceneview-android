@@ -1,6 +1,6 @@
 {
   "name": "sceneview-web",
-  "version": "1.3.3",
+  "version": "1.5.0",
   "description": "One-liner 3D for the web — SceneView.modelViewer('canvas', 'model.glb'). Powered by Filament.js WASM.",
   "main": "sceneview.js",
   "author": "SceneView Tools",
