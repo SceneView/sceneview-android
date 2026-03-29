@@ -21,7 +21,6 @@
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>
-		<string>arkit</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -41,8 +40,10 @@
 	<key>NSMotionUsageDescription</key>
 	<string>SceneView uses motion sensors to track device orientation for augmented reality.</string>
 	<key>UIRequiresFullScreen</key>
-	<true/>
+	<false/>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>UISupportsDocumentBrowser</key>
+	<false/>
 </dict>
 </plist>
