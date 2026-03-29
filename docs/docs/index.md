@@ -45,7 +45,7 @@ description: "The #1 open-source 3D & AR SDK. Build immersive 3D and AR experien
 </div>
 
 <div class="sv-stat">
-<span class="sv-stat-number">v3.5.1</span>
+<span class="sv-stat-number">v3.5.2</span>
 <span class="sv-stat-label">Latest Release</span>
 </div>
 
@@ -83,7 +83,7 @@ No boilerplate. No manual cleanup. Just declare what you want.
 === "Swift (iOS / macOS / visionOS)"
 
     ```swift
-    // Package.swift: .package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.1")
+    // Package.swift: .package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.2")
 
     SceneView { root in
         let model = try? await ModelNode.load("helmet.usdz")
@@ -97,7 +97,7 @@ No boilerplate. No manual cleanup. Just declare what you want.
 
     ```html
     <!-- One-liner 3D for the web -->
-    <script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.1/sceneview-web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview-web.js"></script>
     <scene-view model="helmet.glb" auto-rotate camera-orbit></scene-view>
     ```
 
@@ -207,13 +207,13 @@ Rigid body physics with gravity, collisions, and restitution. Drop objects, boun
 
     ```swift
     // Package.swift or Xcode > Add Package Dependency
-    .package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.1")
+    .package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.2")
     ```
 
 === "Web"
 
     ```html
-    <script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.1/sceneview-web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview-web.js"></script>
     ```
 
 ---

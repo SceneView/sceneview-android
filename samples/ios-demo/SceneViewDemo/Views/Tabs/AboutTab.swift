@@ -35,7 +35,7 @@ struct AboutTab: View {
                 Text("SceneView")
                     .font(.title).bold()
 
-                Text("v3.5.1")
+                Text("v3.5.2")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
