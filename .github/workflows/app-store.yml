@@ -72,6 +72,9 @@ jobs:
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
 
+      - name: Install iOS platform
+        run: xcodebuild -downloadPlatform iOS
+
       - name: Install the Apple certificate and provisioning profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
