@@ -16,6 +16,8 @@ plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin) {
         resolution("serialize-javascript", ">=7.0.3")
         resolution("webpack", ">=5.104.1")
         resolution("webpack-dev-server", ">=5.2.1")
+        resolution("path-to-regexp", ">=0.2.2")
+        resolution("brace-expansion", ">=1.1.13")
     }
 }
 
