@@ -14,11 +14,13 @@ name: Deploy iOS Demo to TestFlight
 # See docs/ios-build-guide.md for details.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'SceneViewSwift/**'
-      - 'samples/ios-demo/**'
+  # Disabled automatic trigger — requires Apple Distribution certificate + App Store Connect setup
+  # Re-enable push trigger once all secrets are configured (see PREREQUISITES above)
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'SceneViewSwift/**'
+  #     - 'samples/ios-demo/**'
   workflow_dispatch:
 
 # Only one TestFlight deploy at a time
