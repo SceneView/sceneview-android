@@ -14,17 +14,23 @@ fun TextLabels() {
         engine = engine,
         cameraManipulator = rememberCameraManipulator()
     ) {
+        // Static text label — always faces camera
         TextNode(
             text = "Hello 3D!",
-            position = Position(y = 1f),
-            textHeight = 0.5f,
-            textColor = Color.White,
-            backgroundColor = Color(0x80000000)
+            fontSize = 48f,
+            textColor = android.graphics.Color.WHITE,
+            backgroundColor = 0xCC000000.toInt(),
+            widthMeters = 0.6f,
+            heightMeters = 0.2f,
+            position = Position(y = 1f)
         )
-        // Billboard: always faces camera
-        BillboardNode(position = Position(y = 2f)) {
-            TextNode(text = "I follow you")
-        }
+        // Second label at a different position
+        TextNode(
+            text = "SceneView",
+            fontSize = 36f,
+            textColor = android.graphics.Color.CYAN,
+            position = Position(y = 2f)
+        )
     }
 }
 ```
@@ -46,7 +52,7 @@ struct TextLabels: View {
 
             // Billboard text (always faces camera)
             let billboard = BillboardNode(
-                child: TextNode(text: "I follow you", fontSize: 0.08).entity
+                child: TextNode(text: "SceneView", fontSize: 0.08).entity
             )
             .position(.init(x: 0, y: 2, z: -2))
             content.add(billboard.entity)
@@ -60,7 +66,9 @@ struct TextLabels: View {
 
 | Concept | Android | iOS |
 |---|---|---|
-| Text node | `TextNode(text = "...")` | `TextNode(text: "...")` |
-| Billboard | `BillboardNode { }` | `BillboardNode(child:)` |
+| Text node | `TextNode(text = "...", fontSize = 48f)` | `TextNode(text: "...", fontSize: 0.1)` |
+| Text color | `textColor = android.graphics.Color.WHITE` | `color: .white` |
+| Background | `backgroundColor = 0xCC000000.toInt()` | N/A (transparent by default) |
+| Size (meters) | `widthMeters`, `heightMeters` | Derived from font size |
+| Always faces camera | Automatic (built-in billboard behavior) | `BillboardComponent` |
 | Text rendering | Canvas → texture quad | `MeshResource.generateText` |
-| Face camera | Automatic per-frame lookAt | `BillboardComponent` |
