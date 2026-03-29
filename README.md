@@ -72,14 +72,14 @@ No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 **Android** (3D + AR):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.4.7")     // 3D
-    implementation("io.github.sceneview:arsceneview:3.4.7")   // AR (includes 3D)
+    implementation("io.github.sceneview:sceneview:3.5.0")     // 3D
+    implementation("io.github.sceneview:arsceneview:3.5.0")   // AR (includes 3D)
 }
 ```
 
 **iOS / macOS / visionOS** (Swift Package Manager):
 ```
-https://github.com/sceneview/sceneview-swift.git  (from: 3.4.7)
+https://github.com/sceneview/sceneview-swift.git  (from: 3.5.0)
 ```
 
 **Web** (sceneview.js — one line):
@@ -90,7 +90,7 @@ https://github.com/sceneview/sceneview-swift.git  (from: 3.4.7)
 **Web** (Kotlin/JS):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview-web:3.4.7")
+    implementation("io.github.sceneview:sceneview-web:3.5.0")
 }
 ```
 
@@ -211,7 +211,7 @@ ARSceneView(planeDetection: .horizontal) { position, arView in
 }
 ```
 
-**Install:** `https://github.com/sceneview/sceneview-swift.git` (SPM, from 3.4.7)
+**Install:** `https://github.com/sceneview/sceneview-swift.git` (SPM, from 3.5.0)
 
 ---
 
