@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "lib/typescript"
+  },
+  "include": ["src"],
+  "exclude": ["**/__tests__", "**/*.test.ts", "**/*.test.tsx"]
+}
