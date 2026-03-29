@@ -1,1 +1,1 @@
-Vitrine interactive et outil QA pour les nodes du SDK 3D/AR SceneView Android.
+Explorateur 3D interactif, placement AR et démos de fonctionnalités pour le SDK SceneView Android.
