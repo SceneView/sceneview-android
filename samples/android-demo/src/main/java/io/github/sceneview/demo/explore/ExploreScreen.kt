@@ -107,6 +107,16 @@ private val exploreModels = listOf(
     ExploreModel("Dragon", "models/animated_dragon.glb", 0.6f, 4.0f),
     ExploreModel("Butterfly", "models/animated_butterfly.glb", 0.8f, 2.5f),
     ExploreModel("Piano", "models/retro_piano.glb", 0.7f, 3.0f),
+    ExploreModel("Phoenix", "models/phoenix_bird.glb", 0.8f, 2.5f),
+    ExploreModel("Cyberpunk Car", "models/cyberpunk_car.glb", 0.8f, 3.5f),
+    ExploreModel("Fantasy Book", "models/fantasy_book.glb", 0.7f, 2.5f),
+    ExploreModel("Mosquito", "models/mosquito_amber.glb", 1.0f, 2.0f),
+    ExploreModel("Ship in Clouds", "models/ship_in_clouds.glb", 0.5f, 4.0f),
+    ExploreModel("Hovercar", "models/cyberpunk_hovercar.glb", 0.6f, 4.0f),
+    ExploreModel("Cyber Guy", "models/cyberpunk_character.glb", 0.7f, 3.0f),
+    ExploreModel("Porsche 911", "models/porsche_911.glb", 0.6f, 4.0f),
+    ExploreModel("Black Dragon", "models/black_dragon.glb", 0.5f, 4.5f),
+    ExploreModel("Fiat Punto", "models/fiat_punto.glb", 0.7f, 3.5f),
 )
 
 @Composable

@@ -132,6 +132,176 @@
       "usedIn": ["android-demo", "ios-demo"],
       "defaultScale": 0.7,
       "cameraDistance": 3.0
+    },
+    {
+      "id": "phoenix_bird",
+      "name": "Phoenix Bird",
+      "source": "sketchfab",
+      "sourceId": "844ba0cf144a413ea92c779f18912042",
+      "sourceUrl": "https://sketchfab.com/3d-models/phoenix-bird-844ba0cf144a413ea92c779f18912042",
+      "author": "NORBERTO-3D",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/phoenix_bird.glb", "size": "1.6MB" },
+        "usdz": { "file": "models/usdz/phoenix_bird.usdz", "size": "1.1MB" }
+      },
+      "tags": ["phoenix", "bird", "animated", "fantasy", "fire"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "cyberpunk_car",
+      "name": "Cyberpunk Car",
+      "source": "sketchfab",
+      "sourceId": "b4301ff99d214d16a7a43708a5866bf0",
+      "sourceUrl": "https://sketchfab.com/3d-models/cyberpunk-car-b4301ff99d214d16a7a43708a5866bf0",
+      "author": "4d_Bob",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/cyberpunk_car.glb", "size": "2.4MB" },
+        "usdz": { "file": "models/usdz/cyberpunk_car.usdz", "size": "2.8MB" }
+      },
+      "tags": ["cyberpunk", "vehicle", "car", "futuristic"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.8,
+      "cameraDistance": 3.5
+    },
+    {
+      "id": "fantasy_book",
+      "name": "Medieval Fantasy Book",
+      "source": "sketchfab",
+      "sourceId": "06d5a80a04fc4c5ab552759e9a97d91a",
+      "sourceUrl": "https://sketchfab.com/3d-models/medieval-fantasy-book-06d5a80a04fc4c5ab552759e9a97d91a",
+      "author": "Pixel",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/fantasy_book.glb", "size": "3.7MB" },
+        "usdz": { "file": "models/usdz/fantasy_book.usdz", "size": "3.1MB" }
+      },
+      "tags": ["book", "fantasy", "medieval", "animated", "magic"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.7,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "mosquito_amber",
+      "name": "Mosquito in Amber",
+      "source": "sketchfab",
+      "sourceId": "53a61d58c09b4d2ab30e269aa3e22078",
+      "sourceUrl": "https://sketchfab.com/3d-models/mosquito-in-amber-53a61d58c09b4d2ab30e269aa3e22078",
+      "author": "Loïc Norgeot",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/mosquito_amber.glb", "size": "5.2MB" },
+        "usdz": { "file": "models/usdz/mosquito_amber.usdz", "size": "3.5MB" }
+      },
+      "tags": ["mosquito", "amber", "prehistoric", "photogrammetry", "realistic"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 1.0,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "ship_in_clouds",
+      "name": "Ship in Clouds",
+      "source": "sketchfab",
+      "sourceId": "c475323dc7f24e26ba2009c08c8e1941",
+      "sourceUrl": "https://sketchfab.com/3d-models/ship-in-clouds-c475323dc7f24e26ba2009c08c8e1941",
+      "author": "Bastien Genbrugge",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/ship_in_clouds.glb", "size": "7.6MB" },
+        "usdz": { "file": "models/usdz/ship_in_clouds.usdz", "size": "6.4MB" }
+      },
+      "tags": ["ship", "clouds", "fantasy", "flying", "scene"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.5,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "cyberpunk_hovercar",
+      "name": "Cyberpunk Hovercar",
+      "source": "sketchfab",
+      "sourceId": "3205b1075bb44ffc826bce0c2a04d74c",
+      "sourceUrl": "https://sketchfab.com/3d-models/free-cyberpunk-hovercar-3205b1075bb44ffc826bce0c2a04d74c",
+      "author": "Karol Miklas",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/cyberpunk_hovercar.glb", "size": "7.2MB" },
+        "usdz": { "file": "models/usdz/cyberpunk_hovercar.usdz", "size": "3.5MB" }
+      },
+      "tags": ["cyberpunk", "hovercar", "animated", "vehicle", "futuristic"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "cyberpunk_character",
+      "name": "Cyberpunk Character",
+      "source": "sketchfab",
+      "sourceId": "019f4b3fd3c74ed0bc6c8dbe9cd50d51",
+      "sourceUrl": "https://sketchfab.com/3d-models/cyberpunk-character-019f4b3fd3c74ed0bc6c8dbe9cd50d51",
+      "author": "Esk",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/cyberpunk_character.glb", "size": "7.3MB" },
+        "usdz": { "file": "models/usdz/cyberpunk_character.usdz", "size": "7.8MB" }
+      },
+      "tags": ["cyberpunk", "character", "humanoid", "sci-fi"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.7,
+      "cameraDistance": 3.0
+    },
+    {
+      "id": "porsche_911",
+      "name": "FREE 1975 Porsche 911 (930) Turbo",
+      "source": "sketchfab",
+      "sourceId": "8568d9d14a994b9cae59499f0dbed21e",
+      "sourceUrl": "https://sketchfab.com/3d-models/free-1975-porsche-911-930-turbo-8568d9d14a994b9cae59499f0dbed21e",
+      "author": "Karol Miklas",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/porsche_911.glb", "size": "21MB" },
+        "usdz": { "file": "models/usdz/porsche_911.usdz", "size": "12MB" }
+      },
+      "tags": ["porsche", "car", "vehicle", "classic", "realistic", "premium"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "black_dragon",
+      "name": "Black Dragon with Idle Animation",
+      "source": "sketchfab",
+      "sourceId": "fb0053a2e59b43868e934c239bf4eb36",
+      "sourceUrl": "https://sketchfab.com/3d-models/black-dragon-with-idle-animation-fb0053a2e59b43868e934c239bf4eb36",
+      "author": "Arturs J",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/black_dragon.glb", "size": "13MB" },
+        "usdz": { "file": "models/usdz/black_dragon.usdz", "size": "15MB" }
+      },
+      "tags": ["dragon", "black", "animated", "idle", "fantasy", "creature", "premium"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.5,
+      "cameraDistance": 4.5
+    },
+    {
+      "id": "fiat_punto",
+      "name": "1995 Fiat Punto GT",
+      "source": "sketchfab",
+      "sourceId": "48db6facb4b64e99b60f36b8c01185e1",
+      "sourceUrl": "https://sketchfab.com/3d-models/free-1995-fiat-punto-gt-48db6facb4b64e99b60f36b8c01185e1",
+      "author": "Karol Miklas",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/fiat_punto.glb", "size": "12MB" },
+        "usdz": { "file": "models/usdz/fiat_punto.usdz", "size": "2.9MB" }
+      },
+      "tags": ["fiat", "car", "vehicle", "retro", "realistic"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.7,
+      "cameraDistance": 3.5
     }
   ],
   "environments": [

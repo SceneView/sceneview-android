@@ -15,6 +15,16 @@
 		D10000000000000000000004 /* animated_dragon.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000004 /* animated_dragon.usdz */; };
 		D10000000000000000000005 /* animated_butterfly.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000005 /* animated_butterfly.usdz */; };
 		D10000000000000000000006 /* retro_piano.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000006 /* retro_piano.usdz */; };
+		D10000000000000000000007 /* phoenix_bird.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000007 /* phoenix_bird.usdz */; };
+		D10000000000000000000008 /* cyberpunk_car.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000008 /* cyberpunk_car.usdz */; };
+		D10000000000000000000009 /* fantasy_book.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000009 /* fantasy_book.usdz */; };
+		D1000000000000000000000A /* mosquito_amber.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000A /* mosquito_amber.usdz */; };
+		D1000000000000000000000B /* ship_in_clouds.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000B /* ship_in_clouds.usdz */; };
+		D1000000000000000000000C /* cyberpunk_hovercar.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000C /* cyberpunk_hovercar.usdz */; };
+		D1000000000000000000000D /* cyberpunk_character.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000D /* cyberpunk_character.usdz */; };
+		D1000000000000000000000E /* porsche_911.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000E /* porsche_911.usdz */; };
+		D1000000000000000000000F /* black_dragon.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000F /* black_dragon.usdz */; };
+		D10000000000000000000010 /* fiat_punto.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000010 /* fiat_punto.usdz */; };
 		C10000000000000000000001 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000001 /* HapticManager.swift */; };
 		C10000000000000000000002 /* DemoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000002 /* DemoItem.swift */; };
 		C10000000000000000000003 /* ExploreTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000003 /* ExploreTab.swift */; };
@@ -68,6 +78,16 @@
 		D20000000000000000000004 /* animated_dragon.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = animated_dragon.usdz; sourceTree = "<group>"; };
 		D20000000000000000000005 /* animated_butterfly.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = animated_butterfly.usdz; sourceTree = "<group>"; };
 		D20000000000000000000006 /* retro_piano.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = retro_piano.usdz; sourceTree = "<group>"; };
+		D20000000000000000000007 /* phoenix_bird.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = phoenix_bird.usdz; sourceTree = "<group>"; };
+		D20000000000000000000008 /* cyberpunk_car.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = cyberpunk_car.usdz; sourceTree = "<group>"; };
+		D20000000000000000000009 /* fantasy_book.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = fantasy_book.usdz; sourceTree = "<group>"; };
+		D2000000000000000000000A /* mosquito_amber.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = mosquito_amber.usdz; sourceTree = "<group>"; };
+		D2000000000000000000000B /* ship_in_clouds.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = ship_in_clouds.usdz; sourceTree = "<group>"; };
+		D2000000000000000000000C /* cyberpunk_hovercar.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = cyberpunk_hovercar.usdz; sourceTree = "<group>"; };
+		D2000000000000000000000D /* cyberpunk_character.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = cyberpunk_character.usdz; sourceTree = "<group>"; };
+		D2000000000000000000000E /* porsche_911.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = porsche_911.usdz; sourceTree = "<group>"; };
+		D2000000000000000000000F /* black_dragon.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = black_dragon.usdz; sourceTree = "<group>"; };
+		D20000000000000000000010 /* fiat_punto.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = fiat_punto.usdz; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,6 +131,16 @@
 				D20000000000000000000004 /* animated_dragon.usdz */,
 				D20000000000000000000005 /* animated_butterfly.usdz */,
 				D20000000000000000000006 /* retro_piano.usdz */,
+				D20000000000000000000007 /* phoenix_bird.usdz */,
+				D20000000000000000000008 /* cyberpunk_car.usdz */,
+				D20000000000000000000009 /* fantasy_book.usdz */,
+				D2000000000000000000000A /* mosquito_amber.usdz */,
+				D2000000000000000000000B /* ship_in_clouds.usdz */,
+				D2000000000000000000000C /* cyberpunk_hovercar.usdz */,
+				D2000000000000000000000D /* cyberpunk_character.usdz */,
+				D2000000000000000000000E /* porsche_911.usdz */,
+				D2000000000000000000000F /* black_dragon.usdz */,
+				D20000000000000000000010 /* fiat_punto.usdz */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -244,6 +274,16 @@
 				D10000000000000000000004 /* animated_dragon.usdz in Resources */,
 				D10000000000000000000005 /* animated_butterfly.usdz in Resources */,
 				D10000000000000000000006 /* retro_piano.usdz in Resources */,
+				D10000000000000000000007 /* phoenix_bird.usdz in Resources */,
+				D10000000000000000000008 /* cyberpunk_car.usdz in Resources */,
+				D10000000000000000000009 /* fantasy_book.usdz in Resources */,
+				D1000000000000000000000A /* mosquito_amber.usdz in Resources */,
+				D1000000000000000000000B /* ship_in_clouds.usdz in Resources */,
+				D1000000000000000000000C /* cyberpunk_hovercar.usdz in Resources */,
+				D1000000000000000000000D /* cyberpunk_character.usdz in Resources */,
+				D1000000000000000000000E /* porsche_911.usdz in Resources */,
+				D1000000000000000000000F /* black_dragon.usdz in Resources */,
+				D10000000000000000000010 /* fiat_punto.usdz in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
