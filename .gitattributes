@@ -1,0 +1,53 @@
+# Auto-detect text files and normalise line endings to LF on commit
+* text=auto eol=lf
+
+# Force LF for Unix shell scripts (even on Windows checkouts)
+*.sh text eol=lf
+gradlew text eol=lf
+try-demo text eol=lf
+
+# Force CRLF for Windows batch files (cmd.exe requires CRLF)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Keep Kotlin, Java, Groovy, XML, and build files normalised to LF
+*.kt text eol=lf
+*.kts text eol=lf
+*.java text eol=lf
+*.groovy text eol=lf
+*.gradle text eol=lf
+*.xml text eol=lf
+*.properties text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.swift text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary files — do not touch
+*.jar binary
+*.glb binary
+*.gltf binary
+*.hdr binary
+*.ktx binary
+*.ktx2 binary
+*.filamat binary
+*.filamesh binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.apk binary
+*.aab binary
+*.keystore binary
