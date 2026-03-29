@@ -81,6 +81,7 @@ jobs:
             ISSUE_TITLE="Dependency updates available -- $(date +%Y-%m-%d)"
             EXISTING=$(gh issue list --state open --search "$ISSUE_TITLE" --json number --jq '.[0].number' 2>/dev/null || echo "")
             if [ -z "$EXISTING" ]; then
+              gh label create "dependencies" --description "Dependency updates" --color "0075ca" 2>/dev/null || true
               gh issue create \
                 --title "$ISSUE_TITLE" \
                 --label "dependencies" \
@@ -143,6 +144,7 @@ jobs:
             echo "::warning::CI is consistently failing -- $FAILURES failures in last 7 runs"
             EXISTING=$(gh issue list --state open --search "CI health:" --json number --jq '.[0].number' 2>/dev/null || echo "")
             if [ -z "$EXISTING" ]; then
+              gh label create "ci-health" --description "CI infrastructure issues" --color "d73a4a" 2>/dev/null || true
               gh issue create \
                 --title "CI health: $FAILURES failures in last 7 runs -- $(date +%Y-%m-%d)" \
                 --label "bug" \
