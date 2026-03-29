@@ -51,7 +51,7 @@ try {
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
 
 const server = new Server(
-  { name: "sceneview-mcp", version: "3.5.1" },
+  { name: "sceneview-mcp", version: "3.5.2" },
   { capabilities: { resources: {}, tools: {} } }
 );
 
@@ -810,7 +810,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ``,
                 `let package = Package(`,
                 `    name: "MyApp",`,
-                `    platforms: [.iOS(.v17), .macOS(.v14), .visionOS(.v1)],`,
+                `    platforms: [.iOS(.v18), .macOS(.v15), .visionOS(.v1)],`,
                 `    dependencies: [`,
                 `        .package(url: "https://github.com/sceneview/sceneview", from: "3.4.7")`,
                 `    ],`,
@@ -829,8 +829,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 ``,
                 `| Platform | Minimum Version |`,
                 `|----------|-----------------|`,
-                `| iOS      | 17.0            |`,
-                `| macOS    | 14.0            |`,
+                `| iOS      | 18.0            |`,
+                `| macOS    | 15.0            |`,
                 `| visionOS | 1.0             |`,
                 ``,
                 `### 3. Basic SwiftUI Integration`,
