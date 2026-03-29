@@ -12,7 +12,11 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://sceneview.github.io/showcase.html">
   <meta property="og:image" content="https://sceneview.github.io/favicon.svg">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image:alt" content="SceneView 3D &amp; AR SDK showcase">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Showcase — SceneView 3D &amp; AR SDK">
+  <meta name="twitter:description" content="Interactive showcase: e-commerce, AR furniture, automotive configurators, medical visualization, multi-platform 3D.">
+  <meta name="twitter:image" content="https://sceneview.github.io/favicon.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1443,12 +1447,23 @@
   </section>
 
   <!-- ===== FOOTER ===== -->
-  <footer style="padding: var(--space-xl) 0; text-align: center; color: var(--color-on-surface-faint); font-size: 0.85rem; border-top: 1px solid var(--color-outline);">
+  <footer class="footer">
     <div class="container">
-      SceneView &mdash; Open-source 3D & AR SDK &middot;
-      <a href="https://github.com/sceneview/sceneview" style="color: var(--color-primary);">GitHub</a> &middot;
-      <a href="https://discord.gg/sceneview" style="color: var(--color-primary);">Discord</a> &middot;
-      <a href="/" style="color: var(--color-primary);">Home</a>
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <svg class="footer__logo" viewBox="0 0 32 32" width="24" height="24" fill="none">
+            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
+            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          <span>SceneView</span>
+        </div>
+        <div class="footer__links">
+          <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
+          <a href="https://github.com/sponsors/sceneview">Sponsor</a>
+          <a href="https://github.com/sceneview/sceneview">Source Code</a>
+        </div>
+      </div>
     </div>
   </footer>
 

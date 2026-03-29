@@ -1,5 +1,11 @@
-// ===== DARK MODE — follows system theme =====
+// ===== DARK MODE — follows localStorage, then system theme =====
 (function initTheme() {
+  var saved;
+  try { saved = localStorage.getItem('sceneview-theme'); } catch(e) {}
+  if (saved === 'dark' || saved === 'light') {
+    document.documentElement.setAttribute('data-theme', saved);
+    return;
+  }
   var mq = window.matchMedia('(prefers-color-scheme: dark)');
   function applySystemTheme() {
     document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
@@ -9,11 +15,15 @@
   mq.addEventListener('change', applySystemTheme);
 })();
 
-document.getElementById('themeToggle').addEventListener('click', function () {
-  var current = document.documentElement.getAttribute('data-theme');
-  var next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-});
+var _themeToggle = document.getElementById('themeToggle');
+if (_themeToggle) {
+  _themeToggle.addEventListener('click', function () {
+    var current = document.documentElement.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('sceneview-theme', next); } catch(e) {}
+  });
+}
 
 // ===== TAB SWITCHING =====
 document.querySelectorAll('.tabs').forEach(function (tabGroup) {
@@ -36,28 +46,31 @@ document.querySelectorAll('.tabs').forEach(function (tabGroup) {
 // ===== MOBILE HAMBURGER =====
 var hamburger = document.getElementById('hamburger');
 var navLinks = document.getElementById('navLinks');
-var overlay = document.createElement('div');
-overlay.className = 'nav-overlay';
-document.body.appendChild(overlay);
 
-function toggleMenu() {
-  hamburger.classList.toggle('active');
-  navLinks.classList.toggle('open');
-  overlay.classList.toggle('active');
-  document.body.style.overflow = navLinks.classList.contains('open') ? 'hidden' : '';
-}
+if (hamburger && navLinks) {
+  var overlay = document.createElement('div');
+  overlay.className = 'nav-overlay';
+  document.body.appendChild(overlay);
 
-hamburger.addEventListener('click', toggleMenu);
-overlay.addEventListener('click', toggleMenu);
+  function toggleMenu() {
+    hamburger.classList.toggle('active');
+    navLinks.classList.toggle('open');
+    overlay.classList.toggle('active');
+    document.body.style.overflow = navLinks.classList.contains('open') ? 'hidden' : '';
+  }
 
-// Close mobile menu on link click
-navLinks.querySelectorAll('.nav__link').forEach(function (link) {
-  link.addEventListener('click', function () {
-    if (navLinks.classList.contains('open')) {
-      toggleMenu();
-    }
+  hamburger.addEventListener('click', toggleMenu);
+  overlay.addEventListener('click', toggleMenu);
+
+  // Close mobile menu on link click
+  navLinks.querySelectorAll('.nav__link').forEach(function (link) {
+    link.addEventListener('click', function () {
+      if (navLinks.classList.contains('open')) {
+        toggleMenu();
+      }
+    });
   });
-});
+}
 
 // ===== SMOOTH SCROLL =====
 document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
