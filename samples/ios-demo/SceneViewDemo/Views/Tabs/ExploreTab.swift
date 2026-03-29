@@ -9,6 +9,7 @@ import SceneViewSwift
 struct ExploreTab: View {
     private let models: [(name: String, icon: String, asset: String?, scale: Float)] = [
         ("Game Boy", "gamecontroller.fill", "game_boy_classic", 0.8),
+        ("Red Car", "car.fill", "red_car", 1.0),
         ("Tree Scene", "tree.fill", "tree_scene", 0.6),
         ("Cube", "cube.fill", nil, 0.8),
         ("Sphere", "globe", nil, 0.5),

@@ -95,6 +95,7 @@ private val exploreEnvironments = listOf(
 
 private val exploreModels = listOf(
     ExploreModel("Toy Car", "models/toy_car.glb", 0.8f, 3.0f),
+    ExploreModel("Red Car", "models/red_car.glb", 1.0f, 3.5f),
     ExploreModel("Game Boy", "models/game_boy_classic.glb", 0.7f, 2.5f),
     ExploreModel("Chair", "models/sheen_chair.glb", 0.6f, 3.5f),
     ExploreModel("Lamp", "models/iridescence_lamp.glb", 0.5f, 3.0f),

@@ -65,6 +65,22 @@
       "usedIn": ["android-demo"],
       "defaultScale": 0.8,
       "cameraDistance": 3.0
+    },
+    {
+      "id": "red_car",
+      "name": "A Red Car",
+      "source": "fab",
+      "sourceUrl": "https://www.fab.com/listings/c86be43c-3923-4c98-b752-40bedb121239",
+      "author": "SerjogaSan",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/red_car.glb", "size": "342KB" },
+        "usdz": { "file": "models/usdz/red_car.usdz", "size": "236KB" }
+      },
+      "tags": ["vehicle", "car", "sportscar", "lowpoly"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 1.0,
+      "cameraDistance": 3.5
     }
   ],
   "environments": [
@@ -121,57 +137,79 @@
     {
       "sourceUrl": "https://www.fab.com/listings/fb1f7ef9-f58f-42e4-b76e-b3b98fbad469",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "New York Downtown",
+      "status": "too-expensive",
+      "reason": "Free tier limited, paid up to €11.42"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/11d20d01-b764-4936-8163-cb20d05c369e",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "Survival Character FREE",
+      "status": "ue-only",
+      "reason": "Free but UE/Blender/Maya/FBX only, no GLB/USDZ"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/668b943b-d857-44e3-a6be-8f9174909769",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "Survival Character James",
+      "status": "paid",
+      "reason": "€93-187"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/9e04c752-1979-4723-b78f-6d24afc532bc",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "MetaHuman Techwear Outfit",
+      "status": "ue-only",
+      "reason": "Free but UE only"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/287fcb79-1c1c-4a38-a760-1c7507c722a8",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "Mini Skirt & Sleeveless Blouse",
+      "status": "ue-only",
+      "reason": "Free but UE only"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/597d5fb2-35ac-4c1c-88f9-44f416b1547b",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "Clothes",
+      "status": "too-large",
+      "reason": "Free CC-BY but GLB=234MB, USDZ=87MB — too large for repo"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/11b48ab2-5ac6-4507-bb8a-ac0b898c90c5",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "3D Hoodie",
+      "status": "paid",
+      "reason": "€41-208"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/b98bbbbc-f231-41f8-a2fd-67164b01d8b6",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "Tent Props Package",
+      "status": "paid",
+      "reason": "€31-62, UE only"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/c7c90f53-50b8-4df2-8d29-9a45daf3be4e",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "Commercial Long-Range Aircraft",
+      "status": "ue-only",
+      "reason": "Free but UE only"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/427e19dd-ca86-47cd-b1b2-0b0fd01d8853",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "Generic Sedan Car",
+      "status": "too-large",
+      "reason": "Free CC-BY but GLB=52MB, USDZ=22MB — too large for repo"
     },
     {
       "sourceUrl": "https://www.fab.com/listings/c86be43c-3923-4c98-b752-40bedb121239",
       "source": "fab",
-      "status": "needs-browser-check"
+      "name": "A Red Car",
+      "status": "downloaded",
+      "catalogId": "red_car"
     },
     {
       "sourceUrl": "https://sketchfab.com/3d-models/realistic-eyeball-9c58222c560842938a787264f0af545c",
