@@ -129,7 +129,7 @@ The first release **must** be uploaded manually:
    export SCENEVIEW_DEMO_KEYSTORE_PASSWORD=YOUR_STORE_PASSWORD
    export SCENEVIEW_DEMO_KEY_ALIAS=sceneview-demo
    export SCENEVIEW_DEMO_KEY_PASSWORD=YOUR_KEY_PASSWORD
-   ./gradlew :samples:sceneview-demo:bundleRelease
+   ./gradlew :samples:android-demo:bundleRelease
    ```
 2. Find the AAB at `samples/android-demo/build/outputs/bundle/release/`
 3. In Play Console → **Production → Create new release**

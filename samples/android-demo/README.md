@@ -4,8 +4,8 @@ Play Store-ready showcase app demonstrating SceneView's full feature set.
 
 ## Features
 
-- **4-tab Material 3 Expressive UI** (Explore, Showcase, Gallery, QA)
-- **14 interactive demos** covering all node types
+- **4-tab Material 3 Expressive UI** (3D, AR, Samples, About)
+- **19 interactive demos** covering all node types
 - 3D model viewer with orbit camera and HDR environments
 - AR tap-to-place with plane detection
 - Geometry nodes, animations, physics, dynamic sky
@@ -25,5 +25,5 @@ adb install -r samples/android-demo/build/outputs/apk/debug/android-demo-debug.a
 
 ## Requirements
 
-- Android device or emulator (API 24+)
+- Android device or emulator (API 28+)
 - For AR features: ARCore-compatible device

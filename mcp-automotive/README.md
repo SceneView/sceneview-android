@@ -55,7 +55,7 @@ Ask your AI assistant:
 - "List free 3D car models I can use for a configurator demo"
 - "Validate my car viewer SceneView code for common mistakes"
 
-Every tool returns complete, compilable Kotlin code using SceneView 3.5.0 with proper:
+Every tool returns complete, compilable Kotlin code using SceneView 3.5.1 with proper:
 - Gradle dependencies
 - SceneView composable setup (engine, modelLoader, collisionSystem)
 - Null-safe model loading
@@ -65,8 +65,8 @@ Every tool returns complete, compilable Kotlin code using SceneView 3.5.0 with p
 
 ## Dependencies
 
-- [SceneView](https://github.com/sceneview/sceneview) 3.5.0 — 3D/AR rendering
-- [ARSceneView](https://github.com/sceneview/sceneview) 3.5.0 — AR features
+- [SceneView](https://github.com/sceneview/sceneview) 3.5.1 — 3D/AR rendering
+- [ARSceneView](https://github.com/sceneview/sceneview) 3.5.1 — AR features
 - [MCP SDK](https://github.com/modelcontextprotocol/sdk) — Model Context Protocol
 
 ## License

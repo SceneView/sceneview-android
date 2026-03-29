@@ -39,7 +39,6 @@ const DEBUG_GUIDES = {
    - Add a directional light:
    \`\`\`kotlin
    LightNode(
-       engine = engine,
        type = LightManager.Type.DIRECTIONAL,
        apply = {
            intensity(100_000f)
@@ -86,7 +85,6 @@ fun DebugModelViewer() {
     ) {
         // Light is essential!
         LightNode(
-            engine = engine,
             type = LightManager.Type.DIRECTIONAL,
             apply = { intensity(100_000f) }
         )
@@ -402,7 +400,7 @@ Scene(
 ) {
     // Minimal visible content
     CubeNode(engine = engine, size = 1.0f)
-    LightNode(engine = engine, type = LightManager.Type.DIRECTIONAL, apply = { intensity(100_000f) })
+    LightNode(type = LightManager.Type.DIRECTIONAL, apply = { intensity(100_000f) })
 }
 \`\`\``,
     },

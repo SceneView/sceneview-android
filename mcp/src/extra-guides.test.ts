@@ -144,7 +144,7 @@ describe("WEB_RENDERING_GUIDE", () => {
 
   it("contains sceneview.js quick start", () => {
     expect(WEB_RENDERING_GUIDE).toContain("sceneview.js");
-    expect(WEB_RENDERING_GUIDE).toContain("unpkg.com");
+    expect(WEB_RENDERING_GUIDE).toContain("cdn.jsdelivr.net");
     expect(WEB_RENDERING_GUIDE).toContain("modelViewer");
   });
 

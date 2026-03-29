@@ -70,7 +70,6 @@ fun My3DScreen() {
         }
 
         LightNode(
-            engine = engine,
             type = LightManager.Type.DIRECTIONAL,
             apply = {
                 intensity(100_000f)
@@ -193,7 +192,7 @@ In Xcode: **File > Add Package Dependencies** > paste:
 \`\`\`
 https://github.com/sceneview/sceneview
 \`\`\`
-Set version rule to **"from: 3.5.0"**.
+Set version rule to **"from: 3.5.1"**.
 
 Or in Package.swift:
 \`\`\`swift
@@ -204,7 +203,7 @@ let package = Package(
     name: "MyApp",
     platforms: [.iOS(.v18), .macOS(.v15), .visionOS(.v1)],
     dependencies: [
-        .package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")
+        .package(url: "https://github.com/sceneview/sceneview", from: "3.5.1")
     ],
     targets: [
         .executableTarget(
@@ -290,7 +289,7 @@ const IOS_AR = `## SceneViewSwift — iOS AR Setup
 ### 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.5.1")
 \`\`\`
 
 ### 2. Info.plist — Camera Permission (Required)
@@ -436,7 +435,7 @@ SceneView Flutter uses **PlatformView** to embed native SceneView (Android: Fila
 \`\`\`yaml
 # pubspec.yaml
 dependencies:
-  sceneview_flutter: ^3.5.0
+  sceneview_flutter: ^3.5.1
 \`\`\`
 
 ### 2. Android Setup
@@ -496,7 +495,7 @@ const FLUTTER_AR = `## SceneView Flutter — AR Setup
 
 \`\`\`yaml
 dependencies:
-  sceneview_flutter: ^3.5.0
+  sceneview_flutter: ^3.5.1
 \`\`\`
 
 ### 2. Android Manifest
@@ -655,7 +654,7 @@ plugins {
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation("io.github.sceneview:sceneview-desktop:3.5.0") // when published
+    implementation("io.github.sceneview:sceneview-desktop:3.5.1") // when published
 }
 \`\`\`
 
@@ -773,14 +772,14 @@ const SETUPS: Record<Platform, PlatformSetup> = {
   android: {
     name: "Android (Jetpack Compose)",
     renderer: "Filament (OpenGL ES / Vulkan)",
-    status: "Stable (v3.5.0)",
+    status: "Stable (v3.5.1)",
     guide3d: ANDROID_3D,
     guideAr: ANDROID_AR,
   },
   ios: {
     name: "iOS / macOS / visionOS (SwiftUI)",
     renderer: "RealityKit (Metal)",
-    status: "Alpha (v3.5.0)",
+    status: "Alpha (v3.5.1)",
     guide3d: IOS_3D,
     guideAr: IOS_AR,
   },

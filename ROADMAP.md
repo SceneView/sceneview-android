@@ -2,7 +2,7 @@
 
 > Ship fast, ship often. Every feature = a release.
 
-## Current: v3.5.0 (March 2026)
+## Current: v3.5.1 (March 2026)
 
 **Multi-platform expansion** — 9 platforms, MCP Registry, store-ready.
 
@@ -21,7 +21,7 @@
 
 ---
 
-## Next: v3.5.0
+## Next: v3.6.0
 
 ### API simplification
 - [ ] Merge sceneview + arsceneview into single dependency (one `implementation` line)

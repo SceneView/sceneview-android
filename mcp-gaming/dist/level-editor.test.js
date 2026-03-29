@@ -90,7 +90,7 @@ describe("generateLevelEditor", () => {
         const code = generateLevelEditor({ theme: "dungeon", ar: true });
         expect(code).toContain("ARScene(");
         expect(code).toContain("android.permission.CAMERA");
-        expect(code).toContain("arsceneview:3.5.0");
+        expect(code).toContain("arsceneview:3.5.1");
     });
     it("includes LightNode with named apply parameter", () => {
         const code = generateLevelEditor({ theme: "forest" });

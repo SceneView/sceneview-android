@@ -4,7 +4,7 @@
  * Generates a complete Scene{} or ARScene{} composable from a text description.
  * Maps common objects/concepts to SceneView node types and builds compilable code.
  *
- * All generated code targets SceneView v3.5.0 API and is verified against llms.txt.
+ * All generated code targets SceneView v3.5.1 API and is verified against llms.txt.
  */
 const OBJECT_MAPPINGS = [
     // Furniture

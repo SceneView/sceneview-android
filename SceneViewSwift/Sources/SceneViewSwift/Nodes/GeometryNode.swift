@@ -125,19 +125,10 @@ public struct GeometryNode: Sendable {
         height: Float = 1.0,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
-        #if os(iOS) || os(visionOS) || os(macOS)
         let mesh = MeshResource.generateCylinder(
             height: height,
             radius: radius
         )
-        #else
-        // generateCylinder is not available on macOS; approximate with a box
-        let mesh = MeshResource.generateBox(
-            width: radius * 2,
-            height: height,
-            depth: radius * 2
-        )
-        #endif
         let material = SimpleMaterial(color: color, isMetallic: false)
         let entity = ModelEntity(mesh: mesh, materials: [material])
         entity.generateCollisionShapes(recursive: false)
@@ -179,16 +170,7 @@ public struct GeometryNode: Sendable {
         radius: Float = 0.5,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
-        #if os(iOS) || os(visionOS) || os(macOS)
         let mesh = MeshResource.generateCone(height: height, radius: radius)
-        #else
-        // generateCone is not available on macOS; approximate with a box
-        let mesh = MeshResource.generateBox(
-            width: radius * 2,
-            height: height,
-            depth: radius * 2
-        )
-        #endif
         let material = SimpleMaterial(color: color, isMetallic: false)
         let entity = ModelEntity(mesh: mesh, materials: [material])
         entity.generateCollisionShapes(recursive: false)

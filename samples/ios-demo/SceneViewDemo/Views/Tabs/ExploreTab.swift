@@ -43,6 +43,7 @@ struct ExploreTab: View {
     @State private var showControls = true
     @State private var loadedModel: ModelNode?
     @State private var isLoading = false
+    @State private var errorMessage: String?
     @State private var selectedEnvironment: SceneEnvironment = .studio
 
     var body: some View {
@@ -68,6 +69,28 @@ struct ExploreTab: View {
                     .progressViewStyle(.circular)
                     .tint(.white)
                     .scaleEffect(1.5)
+            }
+
+            // Error overlay
+            if let errorMessage {
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title)
+                        .foregroundStyle(.yellow)
+                    Text("Failed to load model")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .padding()
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding()
+                .transition(.opacity)
             }
 
             VStack(spacing: 0) {
@@ -98,6 +121,7 @@ struct ExploreTab: View {
             return
         }
         isLoading = true
+        errorMessage = nil
         do {
             let node = try await ModelNode.load(assetName)
             _ = node.scaleToUnits(model.scale)
@@ -105,6 +129,7 @@ struct ExploreTab: View {
         } catch {
             print("[ExploreTab] Failed to load model '\(assetName)': \(error)")
             loadedModel = nil
+            errorMessage = error.localizedDescription
         }
         isLoading = false
     }

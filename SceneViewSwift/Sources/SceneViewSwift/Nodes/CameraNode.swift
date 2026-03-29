@@ -26,10 +26,8 @@ public struct CameraNode: Sendable {
     public init() {
         let cameraEntity = Entity()
         cameraEntity.name = "CameraNode"
-        // Add a PerspectiveCamera component if available, otherwise use as a transform reference
-        #if !os(macOS)
+        // Add a PerspectiveCamera component (available on iOS 15+, macOS 15+, visionOS 1+)
         cameraEntity.components.set(PerspectiveCameraComponent())
-        #endif
         self.entity = cameraEntity
     }
 
@@ -60,36 +58,24 @@ public struct CameraNode: Sendable {
     /// Near clipping plane distance in meters.
     public var nearClip: Float {
         get {
-            #if !os(macOS)
             return entity.components[PerspectiveCameraComponent.self]?.near ?? 0.01
-            #else
-            return 0.01
-            #endif
         }
         nonmutating set {
-            #if !os(macOS)
             var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
             camera.near = newValue
             entity.components.set(camera)
-            #endif
         }
     }
 
     /// Far clipping plane distance in meters.
     public var farClip: Float {
         get {
-            #if !os(macOS)
             return entity.components[PerspectiveCameraComponent.self]?.far ?? 1000.0
-            #else
-            return 1000.0
-            #endif
         }
         nonmutating set {
-            #if !os(macOS)
             var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
             camera.far = newValue
             entity.components.set(camera)
-            #endif
         }
     }
 
@@ -140,11 +126,9 @@ public struct CameraNode: Sendable {
     /// - Returns: Self for chaining.
     @discardableResult
     public func fieldOfView(_ degrees: Float) -> CameraNode {
-        #if !os(macOS)
         var camera = entity.components[PerspectiveCameraComponent.self] ?? PerspectiveCameraComponent()
         camera.fieldOfViewInDegrees = degrees
         entity.components.set(camera)
-        #endif
         return self
     }
 

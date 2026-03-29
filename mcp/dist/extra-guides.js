@@ -419,7 +419,7 @@ Browser → WebGL2 → Filament.js (WASM) → GPU
 ### Using sceneview.js (npm or local)
 \`\`\`html
 <!-- Option 1: npm CDN -->
-<script src="https://unpkg.com/sceneview.js@1.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.1/sceneview.js"></script>
 
 <!-- Option 2: local hosting (recommended for production) -->
 <!-- Copy js/filament/ directory to your server for faster WASM loading -->
