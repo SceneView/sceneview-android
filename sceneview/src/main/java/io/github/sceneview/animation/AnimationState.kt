@@ -16,10 +16,10 @@ import io.github.sceneview.node.ModelNode
  * Exposes the model's animation state as Compose [State] values so that UI elements can react
  * to animation progress, currently playing animation index, and completion status.
  *
- * Use [rememberAnimationState] to create and wire an instance to a [ModelNode].
+ * Use [rememberModelAnimationState] to create and wire an instance to a [ModelNode].
  *
  * ```kotlin
- * val animState = rememberAnimationState(modelNode)
+ * val animState = rememberModelAnimationState(modelNode)
  *
  * Text("Animation: ${animState.currentAnimationName ?: "None"}")
  * Text("Progress: ${(animState.progress * 100).toInt()}%")
@@ -33,7 +33,7 @@ import io.github.sceneview.node.ModelNode
  * @property isPlaying             Whether any animation is currently playing.
  */
 @ExperimentalSceneViewApi
-class AnimationState internal constructor(
+class ModelAnimationState internal constructor(
     private val modelNode: ModelNode
 ) {
     private val _playingCount = mutableIntStateOf(0)
@@ -60,7 +60,7 @@ class AnimationState internal constructor(
     /**
      * Polls the [ModelNode] for its current animation state.
      *
-     * Called automatically from a per-frame callback when using [rememberAnimationState].
+     * Called automatically from a per-frame callback when using [rememberModelAnimationState].
      */
     internal fun update(frameTimeNanos: Long) {
         val animations = modelNode.playingAnimations
@@ -95,23 +95,23 @@ class AnimationState internal constructor(
 }
 
 /**
- * Creates and remembers an [AnimationState] that tracks the given [modelNode]'s animations.
+ * Creates and remembers an [ModelAnimationState] that tracks the given [modelNode]'s animations.
  *
  * The state is updated every frame via the node's `onFrame` callback and exposes Compose-
  * observable properties (playing count, name, progress) that can drive UI elements.
  *
  * ```kotlin
- * val animState = rememberAnimationState(modelNode)
+ * val animState = rememberModelAnimationState(modelNode)
  * Text("Playing: ${animState.currentAnimationName}")
  * ```
  *
  * @param modelNode The [ModelNode] to observe.
- * @return An [AnimationState] whose properties are updated every frame.
+ * @return An [ModelAnimationState] whose properties are updated every frame.
  */
 @ExperimentalSceneViewApi
 @Composable
-fun rememberAnimationState(modelNode: ModelNode): AnimationState {
-    val state = remember(modelNode) { AnimationState(modelNode) }
+fun rememberModelAnimationState(modelNode: ModelNode): ModelAnimationState {
+    val state = remember(modelNode) { ModelAnimationState(modelNode) }
 
     DisposableEffect(modelNode) {
         val previousOnFrame = modelNode.onFrame
