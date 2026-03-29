@@ -144,7 +144,7 @@ extension ModelEntity {
     /// - Returns: Self for chaining.
     @discardableResult
     public func withShadow() -> Self {
-        #if os(iOS) || os(visionOS)
+        #if os(iOS) || os(visionOS) || os(macOS)
         if #available(iOS 18.0, visionOS 2.0, *) {
             self.components.set(GroundingShadowComponent(castsShadow: true))
         }

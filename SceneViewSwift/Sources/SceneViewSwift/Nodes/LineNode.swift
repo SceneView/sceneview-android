@@ -39,7 +39,7 @@ public struct LineNode: Sendable {
         let length = simd_length(direction)
 
         // Create a thin cylinder as the line segment
-        #if os(iOS) || os(visionOS)
+        #if os(iOS) || os(visionOS) || os(macOS)
         let mesh = MeshResource.generateCylinder(
             height: length,
             radius: thickness / 2

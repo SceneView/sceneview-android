@@ -115,7 +115,7 @@ public struct VideoNode: @unchecked Sendable {
         videoEntity.name = "VideoNode"
 
         // Add VideoPlayerComponent for RealityKit rendering (iOS/visionOS only)
-        #if os(iOS) || os(visionOS)
+        #if os(iOS) || os(visionOS) || os(macOS)
         let videoComponent = VideoPlayerComponent(avPlayer: player)
         videoEntity.components.set(videoComponent)
         #endif

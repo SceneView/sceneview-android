@@ -1,7 +1,9 @@
-#if os(iOS) || os(visionOS)
+#if os(iOS) || os(visionOS) || os(macOS)
 import SwiftUI
 import RealityKit
+#if canImport(UIKit)
 import UIKit
+#endif
 
 /// Embeds a SwiftUI view as a 3D entity in the scene.
 ///

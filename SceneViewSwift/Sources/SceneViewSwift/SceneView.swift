@@ -134,7 +134,7 @@ private struct SceneViewRepresentation: View {
 
     @ViewBuilder
     private var realityViewContent: some View {
-        #if os(iOS) || os(visionOS)
+        #if os(iOS) || os(visionOS) || os(macOS)
         RealityView { realityContent in
             setupScene(realityContent)
         } update: { _ in
@@ -149,7 +149,7 @@ private struct SceneViewRepresentation: View {
 
     // MARK: - Scene Setup
 
-    #if os(iOS) || os(visionOS)
+    #if os(iOS) || os(visionOS) || os(macOS)
     private func setupScene(_ realityContent: RealityViewCameraContent) {
         // Root entity holds all user content
         realityContent.add(rootEntity)
@@ -192,7 +192,7 @@ private struct SceneViewRepresentation: View {
     private func loadEnvironment(_ env: SceneEnvironment) async {
         do {
             let resource = try await env.load()
-            #if os(iOS) || os(visionOS)
+            #if os(iOS) || os(visionOS) || os(macOS)
             // Apply IBL to the scene via ImageBasedLightComponent
             iblEntity.components.set(
                 ImageBasedLightComponent(
