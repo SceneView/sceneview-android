@@ -3,11 +3,11 @@
 SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament, ARCore) and Apple platforms — iOS, macOS, visionOS (SwiftUI, RealityKit, ARKit) — with shared core logic via Kotlin Multiplatform. Each platform uses its native renderer: Filament on Android, RealityKit on Apple.
 
 **Android — Maven artifacts (version 3.5.0):**
-- 3D only: `io.github.sceneview:sceneview:3.5.0`
-- AR + 3D: `io.github.sceneview:arsceneview:3.5.0`
+- 3D only: `io.github.sceneview:sceneview:3.5.1`
+- AR + 3D: `io.github.sceneview:arsceneview:3.5.1`
 
 **Apple (iOS 17+ / macOS 14+ / visionOS 1+) — Swift Package:**
-- `https://github.com/sceneview/sceneview-swift.git` (from: "3.5.0")
+- `https://github.com/sceneview/sceneview-swift.git` (from: "3.5.1")
 
 **Min SDK:** 24 | **Target SDK:** 36 | **Kotlin:** 2.3.20 | **Compose BOM compatible**
 
@@ -18,8 +18,8 @@ SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament,
 ### build.gradle (app module)
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.5.0")   // 3D only
-    implementation("io.github.sceneview:arsceneview:3.5.0") // AR (includes sceneview)
+    implementation("io.github.sceneview:sceneview:3.5.1")   // 3D only
+    implementation("io.github.sceneview:arsceneview:3.5.1") // AR (includes sceneview)
 }
 ```
 
@@ -1422,7 +1422,7 @@ React Native (Turbo Module / Fabric), KMP Compose iOS (UIKitView).
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.5.0")
+    .package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.5.1")
 ]
 ```
 
@@ -1642,6 +1642,23 @@ AnchorNode.plane(alignment: .horizontal)
 ```swift
 .studio / .outdoor / .sunset / .night / .warm / .autumn
 .custom(name: "My Env", hdrFile: "custom.hdr", intensity: 1.0, showSkybox: true)
+SceneEnvironment.allPresets  // [SceneEnvironment] for UI pickers
+```
+
+**ViewNode** — embed SwiftUI in 3D:
+```swift
+let view = ViewNode(width: 0.5, height: 0.3) {
+    VStack { Text("Hello").padding().background(.regularMaterial) }
+}
+view.position = SIMD3<Float>(0, 1.5, -2)
+root.addChild(view.entity)
+```
+
+**SceneSnapshot** — capture scene as image (iOS):
+```swift
+let image = await SceneSnapshot.capture(from: arView)
+SceneSnapshot.saveToPhotoLibrary(image)
+let data = SceneSnapshot.pngData(image) // or jpegData(image, quality: 0.9)
 ```
 
 ### Platform Mapping
