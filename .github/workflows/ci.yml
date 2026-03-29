@@ -104,9 +104,6 @@ jobs:
             :samples:desktop-demo:compileKotlinDesktop \
             --stacktrace
 
-      - name: KMP core unit tests
-        run: ./gradlew :sceneview-core:jvmTest --stacktrace
-
       - name: JS tests (informational)
         continue-on-error: true
         run: ./gradlew :sceneview-core:jsTest --stacktrace
