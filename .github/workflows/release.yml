@@ -158,9 +158,9 @@ jobs:
             VERSION=${GITHUB_REF_NAME#v}
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          PUBLISHED=$(npm view @sceneview/sceneview-web version 2>/dev/null || echo "")
+          PUBLISHED=$(npm view sceneview-web version 2>/dev/null || echo "")
           if [ "$PUBLISHED" = "$VERSION" ]; then
-            echo "::notice::@sceneview/sceneview-web@$VERSION already published — skipping"
+            echo "::notice::sceneview-web@$VERSION already published — skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "Publishing @sceneview/sceneview-web@$VERSION (npm has $PUBLISHED)"
@@ -180,7 +180,7 @@ jobs:
           BUILD_DIR="sceneview-web/build/kotlin-webpack/js/productionExecutable"
           cat > "$BUILD_DIR/package.json" << EOF
           {
-            "name": "@sceneview/sceneview-web",
+            "name": "sceneview-web",
             "version": "$VERSION",
             "description": "SceneView for Web — 3D rendering with Filament.js (WebGL2/WASM)",
             "main": "sceneview-web.js",
@@ -203,7 +203,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [publish-library, publish-mcp, publish-web]
-    if: always() && needs.publish-library.result == 'success'
+    if: always() && needs.publish-library.result == 'success' && startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
