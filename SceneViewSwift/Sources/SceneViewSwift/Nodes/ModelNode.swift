@@ -111,6 +111,53 @@ public struct ModelNode: @unchecked Sendable {
         return ModelNode(modelEntity)
     }
 
+    /// Loads a 3D model from a remote HTTP/HTTPS URL.
+    ///
+    /// Downloads the file to a temporary directory, then loads it with RealityKit.
+    /// Supports USDZ and Reality files. The temporary file is cleaned up after loading.
+    ///
+    /// ```swift
+    /// let model = try await ModelNode.load(
+    ///     from: URL(string: "https://example.com/model.usdz")!
+    /// )
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - remoteURL: An HTTP or HTTPS URL pointing to a USDZ or Reality file.
+    ///   - enableCollision: Whether to generate collision shapes for hit testing.
+    ///   - timeout: Download timeout in seconds (default: 60).
+    @MainActor
+    public static func load(
+        from remoteURL: URL,
+        enableCollision: Bool = true,
+        timeout: TimeInterval = 60.0
+    ) async throws -> ModelNode {
+        // Download to temporary file
+        var request = URLRequest(url: remoteURL)
+        request.timeoutInterval = timeout
+
+        let (tempURL, response) = try await URLSession.shared.download(for: request)
+
+        // Validate HTTP response
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200..<300).contains(httpResponse.statusCode) {
+            throw URLError(.badServerResponse)
+        }
+
+        // Move to a named temp file with correct extension (RealityKit needs it)
+        let ext = remoteURL.pathExtension.isEmpty ? "usdz" : remoteURL.pathExtension
+        let namedTempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(ext)
+        try FileManager.default.moveItem(at: tempURL, to: namedTempURL)
+
+        defer {
+            try? FileManager.default.removeItem(at: namedTempURL)
+        }
+
+        return try await load(contentsOf: namedTempURL, enableCollision: enableCollision)
+    }
+
     // MARK: - Transform helpers (mirrors Android's Node API)
 
     /// Returns self positioned at the given coordinates.
