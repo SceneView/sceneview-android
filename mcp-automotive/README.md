@@ -55,7 +55,7 @@ Ask your AI assistant:
 - "List free 3D car models I can use for a configurator demo"
 - "Validate my car viewer SceneView code for common mistakes"
 
-Every tool returns complete, compilable Kotlin code using SceneView 3.5.1 with proper:
+Every tool returns complete, compilable Kotlin code using SceneView 3.5.2 with proper:
 - Gradle dependencies
 - SceneView composable setup (engine, modelLoader, collisionSystem)
 - Null-safe model loading

@@ -13,7 +13,7 @@
  * Powered by Filament.js v1.70.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
- * @version 3.5.1
+ * @version 3.5.2
  * @license MIT
  */
 (function(global) {

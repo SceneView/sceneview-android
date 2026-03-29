@@ -17,7 +17,7 @@ An honest comparison for developers evaluating 3D and AR options.
 
 | Library | Approach | Status |
 |---|---|---|
-| **SceneView** | Jetpack Compose composables, Filament + ARCore | Active, v3.5.1 |
+| **SceneView** | Jetpack Compose composables, Filament + ARCore | Active, v3.5.2 |
 | **Google Sceneform** | View-based, custom renderer, ARCore | Abandoned (archived 2021) |
 | **Raw ARCore SDK** | Low-level session/frame API, bring your own renderer | Active but no UI layer |
 | **Unity** | Full game engine embedded via `UnityPlayerActivity` | Active, heavy |
@@ -31,7 +31,7 @@ An honest comparison for developers evaluating 3D and AR options.
 
     ```kotlin
     // build.gradle
-    implementation("io.github.sceneview:sceneview:3.5.1")
+    implementation("io.github.sceneview:sceneview:3.5.2")
 
     // One composable
     @Composable

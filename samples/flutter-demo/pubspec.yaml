@@ -1,6 +1,6 @@
 name: sceneview_flutter_example
 description: Example app for sceneview_flutter plugin.
-version: 3.5.1
+version: 3.5.2
 publish_to: 'none'
 
 environment:

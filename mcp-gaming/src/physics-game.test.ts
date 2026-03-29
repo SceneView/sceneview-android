@@ -112,7 +112,7 @@ describe("generatePhysicsGame", () => {
     const code = generatePhysicsGame({ preset: "bouncing-balls", ar: true });
     expect(code).toContain("ARScene(");
     expect(code).toContain("android.permission.CAMERA");
-    expect(code).toContain("arsceneview:3.5.1");
+    expect(code).toContain("arsceneview:3.5.2");
   });
 
   it("includes LightNode with named apply parameter", () => {

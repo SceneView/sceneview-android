@@ -1,4 +1,4 @@
-SceneView Demo v3.5.1:
+SceneView Demo v3.5.2:
 • 3D Explorer tab — orbit, zoom, and spin 14 premium models
 • AR tab — tap-to-place 6 models with drag/scale/rotate
 • Samples tab — 14 live interactive feature demos

@@ -96,9 +96,9 @@ export const SAMPLES: Record<SampleId, Sample> = {
     description:
       "Full-screen 3D scene with a GLB model, HDR environment, orbit camera, and animation controls",
     tags: ["3d", "model", "environment", "camera", "animation"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create an Android Compose screen that loads a GLB model and displays it with HDR lighting, orbit camera, and animation playback. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create an Android Compose screen that loads a GLB model and displays it with HDR lighting, orbit camera, and animation playback. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun ModelViewerScreen() {
     val engine = rememberEngine()
@@ -133,9 +133,9 @@ fun ModelViewerScreen() {
     description:
       "AR scene with plane detection. Tap a surface to place a 3D model with pinch-to-scale and drag-to-rotate gestures.",
     tags: ["ar", "model", "anchor", "plane-detection", "placement", "gestures"],
-    dependency: "io.github.sceneview:arsceneview:3.5.1",
+    dependency: "io.github.sceneview:arsceneview:3.5.2",
     prompt:
-      "Create an AR screen that detects surfaces and lets the user tap to place a GLB model. Support pinch-to-scale and drag-to-rotate. Use SceneView `io.github.sceneview:arsceneview:3.5.1`.",
+      "Create an AR screen that detects surfaces and lets the user tap to place a GLB model. Support pinch-to-scale and drag-to-rotate. Use SceneView `io.github.sceneview:arsceneview:3.5.2`.",
     code: `@Composable
 fun ARModelViewerScreen() {
     val engine = rememberEngine()
@@ -181,9 +181,9 @@ fun ARModelViewerScreen() {
     description:
       "Detects reference images in the camera feed and overlays 3D models or video above them.",
     tags: ["ar", "model", "image-tracking"],
-    dependency: "io.github.sceneview:arsceneview:3.5.1",
+    dependency: "io.github.sceneview:arsceneview:3.5.2",
     prompt:
-      "Create an AR screen that detects a printed reference image and places a 3D model above it. Use SceneView `io.github.sceneview:arsceneview:3.5.1`.",
+      "Create an AR screen that detects a printed reference image and places a 3D model above it. Use SceneView `io.github.sceneview:arsceneview:3.5.2`.",
     code: `@Composable
 fun AugmentedImageScreen() {
     val engine = rememberEngine()
@@ -226,9 +226,9 @@ fun AugmentedImageScreen() {
     description:
       "Host and resolve persistent cross-device anchors using ARCore Cloud Anchors.",
     tags: ["ar", "anchor", "cloud-anchor"],
-    dependency: "io.github.sceneview:arsceneview:3.5.1",
+    dependency: "io.github.sceneview:arsceneview:3.5.2",
     prompt:
-      "Create an AR screen that can host a cloud anchor (saving its ID) and resolve it later on another device. Use SceneView `io.github.sceneview:arsceneview:3.5.1`.",
+      "Create an AR screen that can host a cloud anchor (saving its ID) and resolve it later on another device. Use SceneView `io.github.sceneview:arsceneview:3.5.2`.",
     code: `@Composable
 fun CloudAnchorScreen() {
     val engine = rememberEngine()
@@ -260,9 +260,9 @@ fun CloudAnchorScreen() {
     description:
       "Visualizes ARCore feature points as 3D spheres with confidence-based filtering.",
     tags: ["ar", "point-cloud"],
-    dependency: "io.github.sceneview:arsceneview:3.5.1",
+    dependency: "io.github.sceneview:arsceneview:3.5.2",
     prompt:
-      "Create an AR screen that visualizes ARCore feature points as small 3D spheres, filtered by confidence. Use SceneView `io.github.sceneview:arsceneview:3.5.1`.",
+      "Create an AR screen that visualizes ARCore feature points as small 3D spheres, filtered by confidence. Use SceneView `io.github.sceneview:arsceneview:3.5.2`.",
     code: `@Composable
 fun PointCloudScreen() {
     val engine = rememberEngine()
@@ -295,9 +295,9 @@ fun PointCloudScreen() {
     description:
       "AR face tracking with AugmentedFaceNode — applies a textured mesh overlay to detected faces using the front camera.",
     tags: ["ar", "face-tracking", "model"],
-    dependency: "io.github.sceneview:arsceneview:3.5.1",
+    dependency: "io.github.sceneview:arsceneview:3.5.2",
     prompt:
-      "Create an AR screen that uses the front camera to detect faces and overlay a 3D mesh on them. Use SceneView `io.github.sceneview:arsceneview:3.5.1`.",
+      "Create an AR screen that uses the front camera to detect faces and overlay a 3D mesh on them. Use SceneView `io.github.sceneview:arsceneview:3.5.2`.",
     code: `@Composable
 fun ARFaceMeshScreen() {
     val engine = rememberEngine()
@@ -342,9 +342,9 @@ fun ARFaceMeshScreen() {
     description:
       "Extracts and uses camera definitions embedded in a glTF file for cinematic viewpoints.",
     tags: ["3d", "model", "camera"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene that loads a GLB file containing embedded camera definitions, then uses those cameras for cinematic viewpoints. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene that loads a GLB file containing embedded camera definitions, then uses those cameras for cinematic viewpoints. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun GltfCameraScreen() {
     val engine = rememberEngine()
@@ -375,9 +375,9 @@ fun GltfCameraScreen() {
     description:
       "Orbit, pan, and zoom camera with customizable sensitivity and bounds.",
     tags: ["3d", "camera", "gestures"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with a fully configurable orbit camera — drag to rotate, two-finger pan, pinch to zoom. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with a fully configurable orbit camera — drag to rotate, two-finger pan, pinch to zoom. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun CameraManipulatorScreen() {
     val engine = rememberEngine()
@@ -409,9 +409,9 @@ fun CameraManipulatorScreen() {
     description:
       "Animated camera flythrough around a 3D model — smooth orbit using LaunchedEffect and trigonometric interpolation.",
     tags: ["3d", "camera", "animation", "model"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with a camera that automatically orbits around a model in a smooth circle. Include a play/pause button. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with a camera that automatically orbits around a model in a smooth circle. Include a play/pause button. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun CameraAnimationScreen() {
     val engine = rememberEngine()
@@ -473,9 +473,9 @@ fun CameraAnimationScreen() {
     description:
       "Autonomous driving HUD with animated car, road geometry, and real-time telemetry overlay.",
     tags: ["3d", "model", "animation", "geometry"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create an autopilot-style visualization with a 3D car on a road and a HUD overlay showing speed, distance, and status. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create an autopilot-style visualization with a 3D car on a road and a HUD overlay showing speed, distance, and status. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun AutopilotScreen() {
     val engine = rememberEngine()
@@ -545,9 +545,9 @@ fun AutopilotScreen() {
     description:
       "Animated physics simulation with spheres falling under gravity and bouncing off a floor, using onFrame for per-frame updates.",
     tags: ["3d", "physics", "geometry", "animation"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with spheres that fall under gravity and bounce on a floor using per-frame animation. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with spheres that fall under gravity and bounce on a floor using per-frame animation. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun PhysicsDemoScreen() {
     val engine = rememberEngine()
@@ -641,9 +641,9 @@ fun PhysicsDemoScreen() {
     description:
       "Time-of-day sun cycle with animated LightNode direction, intensity, and color to simulate sunrise through sunset.",
     tags: ["3d", "sky", "environment", "animation", "lighting"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with a time-of-day sun that moves from sunrise through noon to sunset, with animated light color and intensity. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with a time-of-day sun that moves from sunrise through noon to sunset, with animated light color and intensity. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun DynamicSkyScreen() {
     val engine = rememberEngine()
@@ -728,9 +728,9 @@ fun DynamicSkyScreen() {
     description:
       "Animated 3D line art with sine waves and Lissajous curves using PathNode and LineNode, with parameter sliders.",
     tags: ["3d", "lines", "geometry", "animation"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene that draws animated parametric curves (sine wave, Lissajous) using PathNode with amplitude and frequency sliders. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene that draws animated parametric curves (sine wave, Lissajous) using PathNode with amplitude and frequency sliders. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun LinePathScreen() {
     val engine = rememberEngine()
@@ -808,9 +808,9 @@ fun LinePathScreen() {
     description:
       "Camera-facing 3D text labels using TextNode — floating labels above geometry spheres representing planets.",
     tags: ["3d", "text", "geometry"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with floating text labels above colored spheres representing planets. Use TextNode for the labels. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with floating text labels above colored spheres representing planets. Use TextNode for the labels. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun TextLabelsScreen() {
     val engine = rememberEngine()
@@ -869,9 +869,9 @@ fun TextLabelsScreen() {
     description:
       "Zone-based IBL overrides with material picker (Chrome, Gold, Copper, Rough) and probe toggle.",
     tags: ["3d", "reflection", "environment", "model"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with a metallic sphere and a ReflectionProbeNode that overrides the IBL. Add a material picker to switch between Chrome, Gold, Copper, and Rough. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with a metallic sphere and a ReflectionProbeNode that overrides the IBL. Add a material picker to switch between Chrome, Gold, Copper, and Rough. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun ReflectionProbeScreen() {
     val engine = rememberEngine()
@@ -908,9 +908,9 @@ fun ReflectionProbeScreen() {
     description:
       "Real-time post-processing effects: bloom, vignette, tone mapping, FXAA, and SSAO controls.",
     tags: ["3d", "post-processing", "environment"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with interactive post-processing controls for bloom, vignette, tone mapping, FXAA, and SSAO. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with interactive post-processing controls for bloom, vignette, tone mapping, FXAA, and SSAO. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun PostProcessingScreen() {
     val engine = rememberEngine()
@@ -939,9 +939,9 @@ fun PostProcessingScreen() {
     description:
       "Video playback on a 3D plane using VideoNode with MediaPlayer — supports looping, chroma-key, and auto-sizing.",
     tags: ["3d", "video", "model"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with a video playing on a floating 3D plane. Include play/pause controls and chroma-key support. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with a video playing on a floating 3D plane. Include play/pause controls and chroma-key support. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun VideoTextureScreen() {
     val context = LocalContext.current
@@ -992,9 +992,9 @@ fun VideoTextureScreen() {
     description:
       "Scene with multiple 3D models loaded independently, positioned and scaled to create a complete environment.",
     tags: ["3d", "model", "multi-model", "environment"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene that loads multiple GLB models (a car, a building, and trees) and positions them to form a street scene. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene that loads multiple GLB models (a car, a building, and trees) and positions them to form a street scene. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun MultiModelScreen() {
     val engine = rememberEngine()
@@ -1061,9 +1061,9 @@ fun MultiModelScreen() {
     description:
       "Full gesture handling — tap to select, double-tap to scale, long-press for info, pinch-to-scale, drag-to-move on editable nodes.",
     tags: ["3d", "gestures", "model"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with a model that responds to tap (select), double-tap (scale up), long-press (show info), and supports pinch-to-scale and drag-to-move. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with a model that responds to tap (select), double-tap (scale up), long-press (show info), and supports pinch-to-scale and drag-to-move. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun GestureInteractionScreen() {
     val engine = rememberEngine()
@@ -1128,9 +1128,9 @@ fun GestureInteractionScreen() {
     description:
       "Complete lighting setup — HDR environment (IBL + skybox), main directional light, point light, and spot light with LightNode.",
     tags: ["3d", "environment", "lighting", "model"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with full HDR environment lighting (IBL + skybox), a directional sun light, a red point light, and a blue spot light. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with full HDR environment lighting (IBL + skybox), a directional sun light, a red point light, and a blue spot light. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun EnvironmentLightingScreen() {
     val engine = rememberEngine()
@@ -1200,9 +1200,9 @@ fun EnvironmentLightingScreen() {
     description:
       "Procedural shapes — CubeNode, SphereNode, CylinderNode, PlaneNode — with PBR materials (metallic, roughness, color).",
     tags: ["3d", "geometry", "model"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene showing procedural geometry shapes (cube, sphere, cylinder, plane) with different PBR materials. No model files needed. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene showing procedural geometry shapes (cube, sphere, cylinder, plane) with different PBR materials. No model files needed. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun ProceduralGeometryScreen() {
     val engine = rememberEngine()
@@ -1283,9 +1283,9 @@ fun ProceduralGeometryScreen() {
     description:
       "Embed interactive Jetpack Compose UI (Cards, Buttons, Text) inside 3D space using ViewNode.",
     tags: ["3d", "compose-ui", "text"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with interactive Compose UI elements (Card with text and a button) floating in 3D space using ViewNode. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with interactive Compose UI elements (Card with text and a button) floating in 3D space using ViewNode. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun ComposeUI3DScreen() {
     val engine = rememberEngine()
@@ -1336,9 +1336,9 @@ fun ComposeUI3DScreen() {
     description:
       "Parent-child node relationships — a spinning solar system with planet groups orbiting a central sun.",
     tags: ["3d", "hierarchy", "geometry", "animation"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D solar system where planets orbit a sun using parent-child node hierarchies. Each planet group rotates independently. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D solar system where planets orbit a sun using parent-child node hierarchies. Each planet group rotates independently. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun NodeHierarchyScreen() {
     val engine = rememberEngine()
@@ -1421,7 +1421,7 @@ fun NodeHierarchyScreen() {
     description:
       "SwiftUI 3D scene with a USDZ model, IBL environment, orbit camera, and animation playback.",
     tags: ["3d", "model", "environment", "camera", "animation", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create a SwiftUI screen that loads a USDZ model and displays it with IBL lighting, orbit camera, and animation playback. Use SceneViewSwift.",
@@ -1463,7 +1463,7 @@ struct ModelViewerScreen: View {
     description:
       "AR scene with plane detection. Tap a surface to place a 3D model using ARKit + RealityKit.",
     tags: ["ar", "model", "anchor", "plane-detection", "placement", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create an iOS AR screen that detects surfaces and lets the user tap to place a USDZ model. Use SceneViewSwift.",
@@ -1506,7 +1506,7 @@ struct ARModelViewerScreen: View {
     description:
       "Detects reference images in the camera feed and overlays 3D content above them using ARKit.",
     tags: ["ar", "model", "image-tracking", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create an iOS AR screen that detects a printed reference image and places a 3D model above it. Use SceneViewSwift.",
@@ -1547,7 +1547,7 @@ struct AugmentedImageScreen: View {
     description:
       "Procedural geometry shapes — cube, sphere, cylinder, cone, and plane — with PBR materials.",
     tags: ["3d", "geometry", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create a SwiftUI scene showing procedural geometry shapes (cube, sphere, cylinder, cone, plane) with different materials. Use SceneViewSwift.",
@@ -1604,7 +1604,7 @@ struct GeometryShapesScreen: View {
     description:
       "Directional, point, and spot lights with configurable intensity, color, and shadows.",
     tags: ["3d", "lighting", "environment", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create a SwiftUI 3D scene with directional, point, and spot lights illuminating geometry. Use SceneViewSwift.",
@@ -1671,7 +1671,7 @@ struct LightingScreen: View {
     description:
       "Interactive physics simulation with bouncing spheres, gravity, and configurable restitution.",
     tags: ["3d", "physics", "geometry", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create a SwiftUI 3D scene where tapping spawns coloured spheres that fall under gravity and bounce off a floor. Use SceneViewSwift.",
@@ -1738,7 +1738,7 @@ struct PhysicsDemoScreen: View {
     description:
       "Camera-facing 3D text labels using TextNode and BillboardNode for always-facing-camera behavior.",
     tags: ["3d", "text", "geometry", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create a SwiftUI 3D scene with floating text labels that always face the camera, showing planet names. Use SceneViewSwift.",
@@ -1789,7 +1789,7 @@ struct TextLabelsScreen: View {
     description:
       "Video playback on a 3D plane using VideoNode with play/pause controls.",
     tags: ["3d", "video", "ios", "swift"],
-    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.1\"",
+    dependency: "https://github.com/sceneview/sceneview — from: \"3.5.2\"",
     spmDependency: "https://github.com/sceneview/sceneview",
     prompt:
       "Create a SwiftUI 3D scene with a video playing on a floating 3D plane. Include play/pause controls. Use SceneViewSwift.",
@@ -1864,9 +1864,9 @@ struct VideoPlayerScreen: View {
     description:
       "Display images on 3D planes using ImageNode — from assets, resources, or Bitmaps.",
     tags: ["3d", "image", "geometry"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with images displayed on floating planes using ImageNode. Show examples from file, resource, and Bitmap. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with images displayed on floating planes using ImageNode. Show examples from file, resource, and Bitmap. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun ImageNodeScreen() {
     val engine = rememberEngine()
@@ -1926,9 +1926,9 @@ fun ImageNodeScreen() {
     description:
       "Always-facing-camera sprites using BillboardNode — useful for markers, icons, and info overlays in 3D space.",
     tags: ["3d", "billboard", "image"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with billboard sprites that always face the camera, useful for markers and info overlays. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with billboard sprites that always face the camera, useful for markers and info overlays. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun BillboardSpriteScreen() {
     val engine = rememberEngine()
@@ -1994,9 +1994,9 @@ fun BillboardSpriteScreen() {
     description:
       "Reactive animation driven by Compose state — switch between Idle, Walk, and Run animations on a character model.",
     tags: ["3d", "model", "animation"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with a character model that switches between Idle, Walk, and Run animations based on button clicks. Use animationName for state-driven animation. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with a character model that switches between Idle, Walk, and Run animations based on button clicks. Use animationName for state-driven animation. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun AnimationStateScreen() {
     val engine = rememberEngine()
@@ -2061,9 +2061,9 @@ fun AnimationStateScreen() {
     description:
       "Smooth spring-based node animations using Compose animateFloatAsState with spring spec for natural motion.",
     tags: ["3d", "animation", "spring", "geometry"],
-    dependency: "io.github.sceneview:sceneview:3.5.1",
+    dependency: "io.github.sceneview:sceneview:3.5.2",
     prompt:
-      "Create a 3D scene with geometry nodes that animate position using spring physics via Compose's animateFloatAsState. Tap to toggle positions with springy motion. Use SceneView `io.github.sceneview:sceneview:3.5.1`.",
+      "Create a 3D scene with geometry nodes that animate position using spring physics via Compose's animateFloatAsState. Tap to toggle positions with springy motion. Use SceneView `io.github.sceneview:sceneview:3.5.2`.",
     code: `@Composable
 fun SpringAnimationScreen() {
     val engine = rememberEngine()
@@ -2157,9 +2157,9 @@ fun SpringAnimationScreen() {
     description:
       "AR scene with a center-screen reticle using HitResultNode that follows the detected surface.",
     tags: ["ar", "cursor", "plane-detection", "placement"],
-    dependency: "io.github.sceneview:arsceneview:3.5.1",
+    dependency: "io.github.sceneview:arsceneview:3.5.2",
     prompt:
-      "Create an AR screen with a surface cursor (reticle) in the center of the screen that follows detected surfaces, using HitResultNode. Tap to place a model at the cursor position. Use SceneView `io.github.sceneview:arsceneview:3.5.1`.",
+      "Create an AR screen with a surface cursor (reticle) in the center of the screen that follows detected surfaces, using HitResultNode. Tap to place a model at the cursor position. Use SceneView `io.github.sceneview:arsceneview:3.5.2`.",
     code: `@Composable
 fun ARSurfaceCursorScreen() {
     val engine = rememberEngine()
