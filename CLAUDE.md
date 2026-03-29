@@ -245,6 +245,72 @@ Based on [Anthropic harness design for long-running apps](https://www.anthropic.
 | `/test` | Test coverage audit |
 | `/sync-check` | Repo synchronization verification |
 | `/contribute` | Full contribution workflow |
+| `/version-bump` | Coordinated version update across all platforms |
+| `/publish-check` | Verify all published artifacts are up to date |
+| `/release` | Full release lifecycle (bump, changelog, tag, publish) |
+| `/maintain` | Daily maintenance sweep (CI, issues, deps, quality) |
+
+---
+
+## Automation ecosystem
+
+### Hooks (settings.json)
+
+Hooks trigger automatically on specific Claude Code actions:
+
+| Trigger | When | Action |
+|---|---|---|
+| Pre-commit version check | `git commit` | Blocks if VERSION_NAME mismatches across modules |
+| Post-edit gradle.properties | Any gradle.properties edit | Reminds to update ALL version locations |
+| Post-edit Android API | Edit in `sceneview/src/` | Reminds to check SceneViewSwift + llms.txt |
+| Post-edit Swift API | Edit in `SceneViewSwift/Sources/` | Reminds to check Android + llms.txt |
+| Post-push reminder | `git push` | Reminds to update CLAUDE.md and website |
+
+### Scripts (.claude/scripts/)
+
+| Script | Purpose |
+|---|---|
+| `sync-versions.sh` | Scan ALL version declarations, report/fix mismatches |
+| `cross-platform-check.sh` | Compare Android vs iOS vs Web API surface, report gaps |
+| `release-checklist.sh` | Pre-release validation (versions, changelog, tests, etc.) |
+
+### Version location map
+
+Source of truth: `gradle.properties` → `VERSION_NAME=X.Y.Z`
+
+| File | Field |
+|---|---|
+| `gradle.properties` (root) | `VERSION_NAME=` |
+| `sceneview/gradle.properties` | `VERSION_NAME=` |
+| `arsceneview/gradle.properties` | `VERSION_NAME=` |
+| `sceneview-core/gradle.properties` | `VERSION_NAME=` |
+| `mcp/package.json` | `"version":` |
+| `llms.txt` | Artifact version references |
+| `README.md` | Install snippets |
+| `CLAUDE.md` | "Latest release" in session state |
+
+### Published artifact registry
+
+| Artifact | Platform | How to check |
+|---|---|---|
+| sceneview | Maven Central | Maven search API |
+| arsceneview | Maven Central | Maven search API |
+| sceneview-mcp | npm | `npm view sceneview-mcp version` |
+| sceneview.js | npm | `npm view sceneview version` |
+| SceneViewSwift | SPM (git tags) | `git tag -l 'v*'` |
+| GitHub Release | GitHub | `gh release list` |
+| Website | GitHub Pages | sceneview.github.io |
+
+### Quality gates (must pass before any push to main)
+
+1. All versions aligned (run `sync-versions.sh`)
+2. No lint errors in library modules
+3. Unit tests pass (`./gradlew :sceneview-core:allTests`)
+4. MCP tests pass (`cd mcp && npm test`)
+5. llms.txt matches current public API
+6. CLAUDE.md session state is current
+7. No model-viewer or Three.js in website code
+8. No external CDN dependencies in website
 
 ---
 
