@@ -64,7 +64,7 @@ describe("generateCarConfigurator", () => {
     const code = generateCarConfigurator({ bodyStyle: "sedan", ar: true });
     expect(code).toContain("import io.github.sceneview.ar.ARScene");
     expect(code).toContain("ARScene(");
-    expect(code).toContain("arsceneview:3.3.0");
+    expect(code).toContain("arsceneview:3.5.0");
     expect(code).toContain("android.permission.CAMERA");
   });
 

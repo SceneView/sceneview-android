@@ -1,3 +1,8 @@
+## 3.5.0
+
+- Update SceneView dependency to 3.5.0
+- Version alignment with SceneView SDK
+
 ## 3.4.7
 
 - Update SceneView dependency to 2.3.0 (latest on Maven Central)

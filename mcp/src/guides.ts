@@ -350,7 +350,7 @@ export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide (Android 
 ## 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")
+.package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.0")
 \`\`\`
 
 ## 2. Info.plist — Camera Permission

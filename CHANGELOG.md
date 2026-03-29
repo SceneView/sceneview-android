@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.5.0 — Full coherence audit, version alignment (2026-03-29)
+
+### Version coherence
+- Unified all version references across 60+ files to 3.5.0
+- Fixed module gradle.properties (sceneview, arsceneview, sceneview-core)
+- Updated MCP source + dist files, docs, website, samples, Flutter, React Native
+- Fixed Flutter/React Native Android build files (were still on 2.3.0)
+
+### Documentation
+- Updated llms.txt, all docs, codelabs, cheatsheets, quickstarts
+- Updated CLAUDE.md code samples and platform table
+- Cross-platform version consistency across all READMEs
+
 ## 3.4.7 — MCP 18 tools, orbit fix, geometry demo (2026-03-26)
 
 ### MCP Server v3.4.13

@@ -54,7 +54,8 @@ Shared Kotlin Multiplatform module providing:
 
 ## Upcoming
 
-- **v3.5.0**: KMP core XCFramework consumption in SceneViewSwift, SceneViewSwift API parity with Android core nodes
+- **v3.4.0**: SceneViewSwift stabilization, API parity with Android core nodes
+- **v3.5.0**: KMP core XCFramework consumption in SceneViewSwift
 - **v4.0.0**: Android XR, visionOS spatial computing, cross-framework bridges (Flutter, React Native)
 
 ## How to Stay Updated
@@ -338,7 +339,7 @@ export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide (Android 
 ## 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.5.0")
+.package(url: "https://github.com/sceneview/sceneview-swift", from: "3.5.0")
 \`\`\`
 
 ## 2. Info.plist — Camera Permission
