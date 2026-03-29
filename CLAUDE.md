@@ -25,8 +25,8 @@ composable signatures, node types, resource loading, threading rules, and common
 
 ## When writing any SceneView code
 
-- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.3.0`)
-- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.3.0`)
+- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.0`)
+- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.5.0`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case
@@ -79,7 +79,7 @@ Never say "everything is good" without verifying published packages.
 ### Current state (last updated: 2026-03-27, accuracy audit)
 
 - **Active branch**: `main`
-- **Latest release**: v3.4.7 (GitHub Release), v2.3.0 (Maven Central — NOT yet published as 3.4.x)
+- **Latest release**: v3.5.0 (GitHub Release), v2.3.0 (Maven Central — NOT yet published as 3.4.x)
 - **MCP servers**: 9 MCPs on npm (versions vary: sceneview-mcp 3.4.14, french-admin 2.1.0, realestate 2.1.0, education 1.0.0, finance 1.0.0, others 2.0.0), 22 MCP tools, 858 tests + Healthcare MCP (134 tests) + Automotive MCP (160 tests) ready to publish
 - **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web
 - **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
@@ -95,7 +95,7 @@ Never say "everything is good" without verifying published packages.
   - **PR #472 on Anthropic Claude Cookbooks** — SceneView MCP featured
   - **2 PRs on awesome-mcp-servers** — SceneView MCPs listed
   - **Orgs reorganized**: sceneview-tools (commercial) + mcp-tools-lab (MCP ecosystem)
-  - **v3.4.7 released** on GitHub
+  - **v3.5.0 released** on GitHub
   - **Polar.sh**: account approved, Stripe connected (production ready)
   - **Pro link on website** now points to Polar.sh
   - **GitHub Sponsors**: 5 tiers configured ($5/$15/$50/$99/$200)
@@ -155,7 +155,7 @@ Never say "everything is good" without verifying published packages.
   - Configure GitHub Sponsors tiers on github.com/sponsors/sceneview
 
 - **What's next (for future sessions)**:
-  - **PRIORITY 1 — Maven Central v3.4.5 publish**: gradle.properties says 3.4.5, needs Sonatype publish (Maven Central currently at 2.3.0)
+  - **PRIORITY 1 — Maven Central v3.5.0 publish**: gradle.properties says 3.5.0, needs Sonatype publish (Maven Central currently at 2.3.0)
   - **PRIORITY 2 — App Store first TestFlight build**: needs real Apple cert (Thomas action first)
   - **PRIORITY 3 — Play Store deploy**: key reset should be done by ~27 March
   - **PRIORITY 4 — MCP Pro backend**: connect Stripe + Redis via Cloudflare Workers
@@ -190,7 +190,7 @@ Never say "everything is good" without verifying published packages.
 - **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
 - **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web (Filament.js WASM, double-init fixed)
 - **Open source PRs**: PR #472 Claude Cookbooks, 2 PRs awesome-mcp-servers
-- **Pending**: Maven Central v3.4.5 publish (currently 2.3.0), App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
+- **Pending**: Maven Central v3.5.0 publish (currently 2.3.0), App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
 
 ### How to update this section
 
@@ -284,12 +284,12 @@ Rationale:
 
 | Platform | Renderer | Framework | Status |
 |---|---|---|---|
-| Android | Filament | Jetpack Compose | Stable (v3.3.0) |
+| Android | Filament | Jetpack Compose | Stable (v3.5.0) |
 | Android TV | Filament | Compose TV | Alpha (sample app) |
 | Android XR | Jetpack XR SceneCore | Compose XR | Planned |
-| iOS | RealityKit | SwiftUI | Alpha (v3.3.0) |
-| macOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
-| visionOS | RealityKit | SwiftUI | Alpha (v3.3.0, in Package.swift) |
+| iOS | RealityKit | SwiftUI | Alpha (v3.5.0) |
+| macOS | RealityKit | SwiftUI | Alpha (v3.5.0, in Package.swift) |
+| visionOS | RealityKit | SwiftUI | Alpha (v3.5.0, in Package.swift) |
 | Web | Filament.js (WASM) | Kotlin/JS | Alpha (sceneview-web + WebXR) |
 | Desktop | Wireframe placeholder (not SceneView) | Compose Desktop | Placeholder (Filament JNI not available) |
 | Flutter | Filament / RealityKit | PlatformView | Alpha (bridge implemented) |
