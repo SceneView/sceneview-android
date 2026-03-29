@@ -713,13 +713,27 @@ node.animateRotations(...)
 
 ### rememberModelInstance (composable, async)
 ```kotlin
+// Load from local asset
 @Composable
 fun rememberModelInstance(
     modelLoader: ModelLoader,
     assetFileLocation: String
 ): ModelInstance?
+
+// Load from any location (local asset, file path, or HTTP/HTTPS URL)
+@Composable
+fun rememberModelInstance(
+    modelLoader: ModelLoader,
+    fileLocation: String,
+    resourceResolver: (resourceFileName: String) -> String = { ModelLoader.getFolderPath(fileLocation, it) }
+): ModelInstance?
 ```
 Returns `null` while loading, recomposes when ready. **Always handle the null case.**
+
+The `fileLocation` overload auto-detects URLs (http/https) and routes through Fuel HTTP client for download. Use it for remote model loading:
+```kotlin
+val model = rememberModelInstance(modelLoader, "https://example.com/model.glb")
+```
 
 ### ModelLoader (imperative)
 ```kotlin
@@ -1471,6 +1485,7 @@ public struct ModelNode: @unchecked Sendable {
 
     public static func load(_ path: String, enableCollision: Bool = true) async throws -> ModelNode
     public static func load(contentsOf url: URL, enableCollision: Bool = true) async throws -> ModelNode
+    public static func load(from remoteURL: URL, enableCollision: Bool = true, timeout: TimeInterval = 60.0) async throws -> ModelNode
 
     // Transform (fluent)
     public func position(_ position: SIMD3<Float>) -> ModelNode
@@ -1636,6 +1651,7 @@ AnchorNode.plane(alignment: .horizontal)
 | 3D scene | `Scene { }` | `SceneView { root in }` |
 | AR scene | `ARScene { }` | `ARSceneView(planeDetection:onTapOnPlane:)` |
 | Load model | `rememberModelInstance(loader, "m.glb")` | `ModelNode.load("m.usdz")` |
+| Load remote model | `rememberModelInstance(loader, "https://…/m.glb")` | `ModelNode.load(from: URL(string: "https://…/m.usdz")!)` |
 | Scale to fit | `ModelNode(scaleToUnits = 1f)` | `.scaleToUnits(1.0)` |
 | Play animations | `autoAnimate = true` / `animationName = "Walk"` | `.playAllAnimations()` / `.playAnimation(named:)` |
 | Orbit camera | `rememberCameraManipulator()` | `.cameraControls(.orbit)` |
