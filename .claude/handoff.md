@@ -64,15 +64,27 @@
 
 ## CURRENT STATE
 - **Active branch**: main
-- **Latest release**: v3.5.1 (GitHub Release + Maven Central + npm)
+- **Latest release**: v3.5.2 (GitHub Release + Maven Central + npm — ALL published)
 - **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests)
-- **sceneview-web**: v3.5.1 on npm
-- **Website**: All pages verified visually — zero JS errors, zero model-viewer, zero Three.js
-- **CI**: All 10 workflows green
+- **sceneview-web**: v3.5.2 on npm
+- **Website**: Deployed via docs.yml — all pages use sceneview.js, zero model-viewer/Three.js
+- **CI**: All 10 workflows green on v3.5.2
+- **Play Store**: Deploy workflow completed successfully
+- **App Store**: Deploy workflow completed successfully
+
+## PUBLISHED ARTIFACTS (v3.5.2)
+| Artifact | Registry | Status |
+|---|---|---|
+| sceneview | Maven Central | Published |
+| arsceneview | Maven Central | Published |
+| sceneview-web | npm | 3.5.2 published |
+| sceneview-mcp | npm | 3.5.4 (independent cycle) |
+| GitHub Release | GitHub | v3.5.2 created |
+| Website | GitHub Pages | Deployed |
+| Play Store | Google Play | Deployed |
+| App Store | TestFlight | Deployed |
 
 ## NEXT STEPS
-- Visual polish: garden demo model appears small — consider adjusting camera distance
 - Consider implementing setQuality/setBloom/addLight in sceneview.js for richer demos
-- Deploy website to sceneview.github.io (separate repo)
 - iOS demo: verify SceneViewSwift fixes compile in Xcode
-- Android demo: verify Play Store build
+- v3.6.0 roadmap: API simplification (merge sceneview + arsceneview)
