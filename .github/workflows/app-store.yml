@@ -72,9 +72,6 @@ jobs:
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
 
-      - name: Install iOS platform
-        run: xcodebuild -downloadPlatform iOS
-
       - name: Install the Apple certificate and provisioning profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
@@ -125,7 +122,7 @@ jobs:
           xcodebuild archive \
             -project SceneViewDemo.xcodeproj \
             -scheme SceneViewDemo \
-            -destination 'generic/platform=iOS' \
+            -sdk iphoneos \
             -archivePath $RUNNER_TEMP/SceneViewDemo.xcarchive \
             -clonedSourcePackagesDirPath SourcePackages \
             -skipPackagePluginValidation \
