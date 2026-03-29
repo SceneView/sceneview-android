@@ -1,7 +1,6 @@
 # SceneView Samples — Recipe Index
 
-This directory contains sample apps demonstrating SceneView capabilities.
-Each sample is a self-contained Android project.
+This directory contains sample apps demonstrating SceneView capabilities across Android, iOS, Web, Desktop, Flutter, and React Native.
 
 ## Quick reference — "I want to..."
 
@@ -20,7 +19,7 @@ Each sample is a self-contained Android project.
 | Detect real-world images in AR | `ar-augmented-image` | `AugmentedImageNode(image)` |
 | Share AR anchors across devices | `ar-cloud-anchor` | `CloudAnchorNode(anchor)` |
 | Visualize AR feature points | `ar-point-cloud` | ARCore point cloud rendering |
-| Build a full demo app | `sceneview-demo` | 4-tab showcase app |
+| Build a full demo app | `android-demo` | 4-tab Material 3 app (3D, AR, Samples, About) |
 
 ## Samples by category
 
@@ -52,7 +51,7 @@ Each sample is a self-contained Android project.
 
 | Sample | Description |
 |---|---|
-| `sceneview-demo` | Play Store demo app — Explore, Showcase, Gallery, QA tabs |
+| `android-demo` | Play Store demo app — 3D, AR, Samples, About tabs (14 demos, Material 3) |
 
 ## Common recipes (copy-paste ready)
 
@@ -186,12 +185,25 @@ fun MultiModelScene() {
 }
 ```
 
+## Sample apps by platform
+
+| Directory | Platform | Run |
+|---|---|---|
+| `android-demo/` | Android (Jetpack Compose) | `./gradlew :samples:android-demo:assembleDebug` |
+| `android-tv-demo/` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` |
+| `ios-demo/` | iOS (SwiftUI) | Open `SceneViewSwift/` in Xcode |
+| `web-demo/` | Web (Kotlin/JS) | `./gradlew :samples:web-demo:jsBrowserRun` |
+| `desktop-demo/` | Desktop (Compose) | `./gradlew :samples:desktop-demo:run` |
+| `flutter-demo/` | Flutter | `cd samples/flutter-demo && flutter run` |
+| `react-native-demo/` | React Native | See `samples/react-native-demo/README.md` |
+
 ## Shared module
 
-`samples/common/` contains shared helpers (theme, icons, navigation) used across all samples.
+`samples/common/` contains shared helpers (theme, icons, navigation) used across all Android samples.
 
-## Running a sample
+## Running the Android demo
 
 ```bash
-./gradlew :samples:model-viewer:installDebug
+./gradlew :samples:android-demo:assembleDebug
+adb install samples/android-demo/build/outputs/apk/debug/android-demo-debug.apk
 ```
