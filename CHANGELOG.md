@@ -1,5 +1,32 @@
 # Changelog
 
+## 3.5.2 — Comprehensive quality audit, SwiftUI fixes, website migration (2026-03-30)
+
+### SceneViewSwift
+- Fixed SceneSnapshot visionOS compilation (ARView unavailable)
+- Fixed VideoNode memory leak (NotificationCenter observer never removed)
+- Fixed CameraNode macOS support (removed unnecessary platform guards)
+- Removed unreachable dead code in GeometryNode
+
+### Website
+- Migrated ALL pages from model-viewer/Three.js to sceneview.js
+- Removed Three.js (53K LOC) and model-viewer.min.js
+- Rewrote sceneview-demo.html to use SceneView.modelViewer() API
+- Fixed 3 demo pages crashing from non-existent API calls
+- Fixed model paths in claude-3d.html
+- Deleted 3 dead demo pages
+
+### CI/CD
+- Fixed maintenance.yml (Filament version grep, graceful fallback)
+- Fixed docs.yml (download-artifact version, deploy retry)
+- All 10 workflows verified green
+
+### Version alignment
+- Updated 100+ files from 3.5.0/3.5.1 to 3.5.2
+- All satellite MCPs (automotive, gaming, healthcare, interior) aligned
+
+---
+
 ## 3.5.1 — macOS support, environment picker, MCP 3.5.3 (2026-03-29)
 
 ### Apple platforms

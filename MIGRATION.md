@@ -14,8 +14,8 @@ implementation("io.github.sceneview:sceneview:2.3.0")
 implementation("io.github.sceneview:arsceneview:2.3.0")
 
 // After
-implementation("io.github.sceneview:sceneview:3.5.1")
-implementation("io.github.sceneview:arsceneview:3.5.1")
+implementation("io.github.sceneview:sceneview:3.5.2")
+implementation("io.github.sceneview:arsceneview:3.5.2")
 ```
 
 ---
@@ -300,8 +300,8 @@ implementation("io.github.sceneview:sceneview:3.3.0")
 implementation("io.github.sceneview:arsceneview:3.3.0")
 
 // After
-implementation("io.github.sceneview:sceneview:3.5.1")
-implementation("io.github.sceneview:arsceneview:3.5.1")
+implementation("io.github.sceneview:sceneview:3.5.2")
+implementation("io.github.sceneview:arsceneview:3.5.2")
 ```
 
 No API changes — this is a maintenance release with Filament 1.70.0 compatibility fixes,

@@ -185,7 +185,7 @@
   <span class="rendered">Rendered by</span>
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#60a5fa" stroke-width="1.6" fill="rgba(96,165,250,0.1)"/><path d="M12 22V12M2 7l10 5 10-5" stroke="#60a5fa" stroke-width="1.6"/></svg>
   <span style="color:rgba(255,255,255,0.85);font-weight:600;font-size:0.75rem;">SceneView</span>
-  <span class="version">v3.5.1</span>
+  <span class="version">v3.5.2</span>
 </div>
 
 <!-- Butterfly — lavender -->
@@ -211,7 +211,7 @@
 <canvas id="viewer"></canvas>
 
 <script src="js/filament/filament.js"></script>
-<script src="js/sceneview.js?v=3.5.1"></script>
+<script src="js/sceneview.js?v=3.5.2"></script>
 <script>
 // ── Fireflies — 24 particles, warm-cool palette ──
 (function() {
@@ -232,7 +232,7 @@
   }
 })();
 
-// ── SceneView v3.5.1 — Full post-processing pipeline ──
+// ── SceneView v3.5.2 — Full post-processing pipeline ──
 SceneView.modelViewer("viewer", "models/platforms/GlassVaseFlowers.glb", {
   backgroundColor: [0.02, 0.025, 0.045, 1.0],
   fov: 30,
@@ -251,7 +251,7 @@ SceneView.modelViewer("viewer", "models/platforms/GlassVaseFlowers.glb", {
   instance._orbitHeight = 1;
   instance._angle = 0;
 
-  console.log("SceneView v3.5.1: Garden postcard loaded");
+  console.log("SceneView v3.5.2: Garden postcard loaded");
   console.log("  Post-processing: bloom, vignette, subtle DOF, MSAA 4x");
   console.log("  Lights: 3 point lights (warm key, cool fill, warm back)");
   console.log("  Camera: slow orbit (0.004), cinematic intro, limits [1.5, 5]");

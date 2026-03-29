@@ -25,8 +25,8 @@ composable signatures, node types, resource loading, threading rules, and common
 
 ## When writing any SceneView code
 
-- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.1`)
-- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.5.1`)
+- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.2`)
+- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.5.2`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case
@@ -120,12 +120,12 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-29)
+### Current state (last updated: 2026-03-30)
 
 - **Active branch**: `main`
-- **Latest release**: v3.5.1 (GitHub Release + Maven Central PUBLISHED)
+- **Latest release**: v3.5.2 (GitHub Release + Maven Central)
 - **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests), 9 MCPs total
-- **sceneview-web**: v3.5.1 on npm (Kotlin/JS + Filament.js)
+- **sceneview-web**: v3.5.2 on npm (Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
 - **Website**: sceneview.github.io
 

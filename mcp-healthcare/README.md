@@ -54,7 +54,7 @@ Ask your AI assistant:
 - "Create a dental scan viewer with orthodontic treatment stage timeline"
 - "List free 3D models for cardiac anatomy education"
 
-Every tool returns complete, compilable Kotlin code using SceneView 3.5.1 with proper:
+Every tool returns complete, compilable Kotlin code using SceneView 3.5.2 with proper:
 - Gradle dependencies
 - SceneView composable setup (engine, modelLoader, collisionSystem)
 - Null-safe model loading

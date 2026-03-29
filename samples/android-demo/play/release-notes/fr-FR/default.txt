@@ -1,4 +1,4 @@
-SceneView Demo v3.5.1 :
+SceneView Demo v3.5.2 :
 • Onglet 3D — orbite, zoom et rotation de 14 modèles premium
 • Onglet AR — placement de 6 modèles par tap avec déplacement/échelle/rotation
 • Onglet Samples — 14 démos interactives de fonctionnalités

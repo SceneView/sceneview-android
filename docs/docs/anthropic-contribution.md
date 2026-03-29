@@ -94,7 +94,7 @@ protocol feature demonstrations are welcome.
 
 #### D. MCP Registry: Ensure Quality Listing
 - **Registry**: registry.modelcontextprotocol.io
-- **What**: SceneView MCP is already published (io.github.sceneview/mcp v3.5.1).
+- **What**: SceneView MCP is already published (io.github.sceneview/mcp v3.5.2).
   Ensure the listing has excellent metadata, description, and examples.
 - **Action**: Verify server.json quality, add screenshots, ensure all tools are
   documented, add usage examples.
