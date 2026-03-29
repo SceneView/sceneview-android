@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "SceneView shared 3D asset catalog. Source of truth for all demo assets across platforms.",
+  "version": "1.0.0",
+  "lastUpdated": "2026-03-29",
+  "sources": {
+    "sketchfab": {
+      "apiBase": "https://api.sketchfab.com/v3",
+      "authHeader": "Authorization: Token <SKETCHFAB_TOKEN>",
+      "note": "Token stored in .claude memory, not in repo"
+    },
+    "fab": {
+      "url": "https://www.fab.com",
+      "note": "No API — manual download via browser or Epic Games Launcher, then export to GLB/USDZ"
+    },
+    "polyhaven": {
+      "apiBase": "https://api.polyhaven.com",
+      "note": "Free CC0 HDR environments and textures, no auth needed"
+    }
+  },
+  "models": [
+    {
+      "id": "game_boy_classic",
+      "name": "Game Boy Classic",
+      "source": "sketchfab",
+      "sourceId": "0ae80019e6f046168923286d7e628f6f",
+      "sourceUrl": "https://sketchfab.com/3d-models/game-boy-classic-0ae80019e6f046168923286d7e628f6f",
+      "author": "JonhyOliver",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/game_boy_classic.glb", "size": "2.7MB" },
+        "usdz": { "file": "models/usdz/game_boy_classic.usdz", "size": "5.2MB" }
+      },
+      "tags": ["retro", "electronics", "iconic"],
+      "usedIn": ["android-demo", "ios-demo"],
+      "defaultScale": 0.7,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "tree_scene",
+      "name": "Low Poly Tree Scene",
+      "source": "sketchfab",
+      "sourceId": "89daa5e21f0d4f08a59dba0d566e88bd",
+      "sourceUrl": "https://sketchfab.com/3d-models/low-poly-tree-scene-free-89daa5e21f0d4f08a59dba0d566e88bd",
+      "author": "mateustorresg",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": null, "size": "41MB", "note": "Too large for repo — download on demand" },
+        "usdz": { "file": "models/usdz/tree_scene.usdz", "size": "14MB" }
+      },
+      "tags": ["nature", "low-poly", "scene"],
+      "usedIn": ["ios-demo"],
+      "defaultScale": 0.6,
+      "cameraDistance": 3.5
+    },
+    {
+      "id": "toy_car",
+      "name": "Toy Car",
+      "source": "sketchfab",
+      "sourceId": null,
+      "formats": {
+        "glb": { "file": "models/glb/toy_car.glb", "size": "~3MB" }
+      },
+      "tags": ["toy", "vehicle", "colorful"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 0.8,
+      "cameraDistance": 3.0
+    }
+  ],
+  "environments": [
+    {
+      "id": "rooftop_night",
+      "name": "Rooftop Night",
+      "source": "polyhaven",
+      "file": "environments/hdr/rooftop_night_2k.hdr",
+      "tags": ["night", "urban", "moody"],
+      "usedIn": ["android-demo"]
+    },
+    {
+      "id": "studio",
+      "name": "Studio",
+      "source": "polyhaven",
+      "file": "environments/hdr/studio_2k.hdr",
+      "tags": ["neutral", "studio", "product"],
+      "usedIn": ["android-demo"]
+    },
+    {
+      "id": "sunset",
+      "name": "Sunset",
+      "source": "polyhaven",
+      "file": "environments/hdr/sunset_2k.hdr",
+      "tags": ["golden-hour", "outdoor", "warm"],
+      "usedIn": ["android-demo"]
+    },
+    {
+      "id": "outdoor_cloudy",
+      "name": "Outdoor Cloudy",
+      "source": "polyhaven",
+      "file": "environments/hdr/outdoor_cloudy_2k.hdr",
+      "tags": ["outdoor", "daylight", "natural"],
+      "usedIn": ["android-demo"]
+    },
+    {
+      "id": "studio_warm",
+      "name": "Studio Warm",
+      "source": "polyhaven",
+      "file": "environments/hdr/studio_warm_2k.hdr",
+      "tags": ["warm", "cozy", "studio"],
+      "usedIn": ["android-demo"]
+    },
+    {
+      "id": "autumn_field",
+      "name": "Autumn Field",
+      "source": "polyhaven",
+      "file": "environments/hdr/autumn_field_2k.hdr",
+      "tags": ["autumn", "natural", "outdoor"],
+      "usedIn": ["android-demo"]
+    }
+  ],
+  "pendingReview": [
+    {
+      "sourceUrl": "https://www.fab.com/listings/fb1f7ef9-f58f-42e4-b76e-b3b98fbad469",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/11d20d01-b764-4936-8163-cb20d05c369e",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/668b943b-d857-44e3-a6be-8f9174909769",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/9e04c752-1979-4723-b78f-6d24afc532bc",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/287fcb79-1c1c-4a38-a760-1c7507c722a8",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/597d5fb2-35ac-4c1c-88f9-44f416b1547b",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/11b48ab2-5ac6-4507-bb8a-ac0b898c90c5",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/b98bbbbc-f231-41f8-a2fd-67164b01d8b6",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/c7c90f53-50b8-4df2-8d29-9a45daf3be4e",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/427e19dd-ca86-47cd-b1b2-0b0fd01d8853",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://www.fab.com/listings/c86be43c-3923-4c98-b752-40bedb121239",
+      "source": "fab",
+      "status": "needs-browser-check"
+    },
+    {
+      "sourceUrl": "https://sketchfab.com/3d-models/realistic-eyeball-9c58222c560842938a787264f0af545c",
+      "source": "sketchfab",
+      "status": "not-downloadable",
+      "reason": "Author disabled downloads"
+    },
+    {
+      "sourceUrl": "https://sketchfab.com/3d-models/una-109b3c7bfc09474cbd9ba0ddde45e3d6",
+      "source": "sketchfab",
+      "status": "not-downloadable",
+      "reason": "Author disabled downloads"
+    },
+    {
+      "sourceUrl": "https://sketchfab.com/3d-models/pagani-utopia-2023-4787fa901db1454bb971ba83739d1de6",
+      "source": "sketchfab",
+      "status": "paid",
+      "price": "$29.99",
+      "reason": "Sketchfab Store — requires purchase"
+    }
+  ]
+}
