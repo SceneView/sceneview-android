@@ -2,6 +2,7 @@
 import UIKit
 
 /// Centralized haptic feedback for the demo app.
+@MainActor
 enum HapticManager {
     /// Light tap -- used for button presses and selections.
     static func lightTap() {
