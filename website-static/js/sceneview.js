@@ -4,16 +4,10 @@
  * One line to render a 3D model:
  *   SceneView.modelViewer("canvas", "model.glb")
  *
- * Scene graph with declarative builder:
- *   scene.build(root => {
- *     root.model('robot.glb', { position: [0, 0, 0] })
- *     root.group('furniture', group => {
- *       group.model('chair.glb', { position: [1, 0, 0] })
- *       group.model('table.glb', { position: [0, 0, 1] })
- *     })
- *     root.light('point', { position: [2, 3, 0], intensity: 10000 })
- *     root.cube({ size: [1,1,1], position: [3, 0, 0], color: [1, 0, 0] })
- *   })
+ * Procedural geometry:
+ *   var sv = await SceneView.create("canvas");
+ *   var cube = await sv.createCube({ size: [1,1,1], color: [1,0,0,1] });
+ *   var sphere = await sv.createSphere({ radius: 0.5, color: '#00ff00' });
  *
  * Powered by Filament.js v1.70.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
@@ -27,13 +21,795 @@
   // Filament.js is loaded via <script> tag in HTML (js/filament/filament.js)
   // This avoids dynamic script injection issues with WASM resolution.
 
+  // =========================================================================
+  // Internal: material cache and base path resolution
+  // =========================================================================
+
+  // Cached compiled Filament Material objects (keyed by type: 'lit', 'unlit', 'transparent')
+  var _materialCache = {};
+
+  // Base path for .filamat material files — relative to HTML page
+  var _materialsBasePath = 'materials/';
+
   /**
-   * Wait for Filament to be available (loaded by the script tag).
+   * Resolve the materials base path. Looks for the sceneview.js script tag
+   * to compute a sibling path, falling back to 'materials/'.
    */
+  function _resolveMaterialsPath() {
+    try {
+      var scripts = document.querySelectorAll('script[src]');
+      for (var i = 0; i < scripts.length; i++) {
+        var src = scripts[i].getAttribute('src');
+        if (src && src.indexOf('sceneview') !== -1 && src.indexOf('.js') !== -1) {
+          // e.g. "js/sceneview.js" -> "js/../materials/" -> "materials/"
+          var dir = src.substring(0, src.lastIndexOf('/') + 1);
+          _materialsBasePath = dir + '../materials/';
+          return;
+        }
+      }
+    } catch (e) { /* use default */ }
+  }
+
+  // Run once at load time
+  _resolveMaterialsPath();
+
+  /**
+   * Load and cache a compiled .filamat material.
+   * @param {Filament.Engine} engine
+   * @param {string} type - 'lit', 'unlit', or 'transparent'
+   * @returns {Promise<Filament.Material>}
+   */
+  function _loadMaterial(engine, type) {
+    if (_materialCache[type]) return Promise.resolve(_materialCache[type]);
+
+    var filename = {
+      'lit': 'lit_colored.filamat',
+      'unlit': 'unlit_colored.filamat',
+      'transparent': 'transparent_colored.filamat'
+    }[type];
+
+    if (!filename) return Promise.reject(new Error('Unknown material type: ' + type));
+
+    var url = _materialsBasePath + filename;
+    return fetch(url)
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('Failed to load material: ' + url + ' (' + resp.status + ')');
+        return resp.arrayBuffer();
+      })
+      .then(function(buffer) {
+        var mat = engine.createMaterial(new Uint8Array(buffer));
+        _materialCache[type] = mat;
+        console.log('SceneView: Material loaded — ' + type + ' (' + Math.round(buffer.byteLength / 1024) + 'KB)');
+        return mat;
+      });
+  }
+
+  // =========================================================================
+  // Internal: color parsing utility
+  // =========================================================================
+
+  /**
+   * Parse a color into [r, g, b, a] floats (0-1 range).
+   * Accepts:
+   *   - [r, g, b] or [r, g, b, a] arrays (0-1 range)
+   *   - hex string '#rrggbb' or '#rrggbbaa'
+   *   - CSS-style 'rgb(r,g,b)' (0-255 range)
+   *   - undefined -> default white [1, 1, 1, 1]
+   */
+  function _parseColor(color) {
+    if (!color) return [1, 1, 1, 1];
+
+    if (Array.isArray(color)) {
+      return [
+        color[0] || 0,
+        color[1] || 0,
+        color[2] || 0,
+        color[3] !== undefined ? color[3] : 1
+      ];
+    }
+
+    if (typeof color === 'string') {
+      // Hex: #rgb, #rrggbb, #rrggbbaa
+      if (color[0] === '#') {
+        var hex = color.substring(1);
+        if (hex.length === 3) {
+          hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        var r = parseInt(hex.substring(0, 2), 16) / 255;
+        var g = parseInt(hex.substring(2, 4), 16) / 255;
+        var b = parseInt(hex.substring(4, 6), 16) / 255;
+        var a = hex.length >= 8 ? parseInt(hex.substring(6, 8), 16) / 255 : 1;
+        return [r, g, b, a];
+      }
+
+      // rgb(r, g, b)
+      var match = color.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+      if (match) {
+        return [parseInt(match[1]) / 255, parseInt(match[2]) / 255, parseInt(match[3]) / 255, 1];
+      }
+    }
+
+    return [1, 1, 1, 1];
+  }
+
+  // =========================================================================
+  // Internal: geometry generation
+  // =========================================================================
+
+  /**
+   * Build a Filament entity from raw geometry data + material options.
+   *
+   * @param {SceneViewInstance} sv - The SceneView instance
+   * @param {Object} geom - { positions: Float32Array, normals: Float32Array, uvs: Float32Array, indices: Uint16Array }
+   * @param {Object} matOpts - { color, metallic, roughness, reflectance, unlit, transparent }
+   * @param {Object} bbox - { min: [x,y,z], max: [x,y,z] }
+   * @param {number} primitiveType - Filament primitive type (TRIANGLES, LINES, etc.)
+   * @returns {Promise<number>} - Filament Entity handle
+   */
+  function _buildEntity(sv, geom, matOpts, bbox, primitiveType) {
+    var engine = sv._engine;
+    var scene = sv._scene;
+
+    // Determine material type
+    var matType = matOpts.unlit ? 'unlit' : (matOpts.transparent ? 'transparent' : 'lit');
+
+    return _loadMaterial(engine, matType).then(function(material) {
+      var matInstance = material.createInstance();
+      var color = _parseColor(matOpts.color);
+
+      // Set material parameters
+      matInstance.setColor4Parameter('baseColor', Filament.RgbaType.sRGB, color);
+      if (!matOpts.unlit) {
+        matInstance.setFloatParameter('metallic', matOpts.metallic !== undefined ? matOpts.metallic : 0.0);
+        matInstance.setFloatParameter('roughness', matOpts.roughness !== undefined ? matOpts.roughness : 0.4);
+        matInstance.setFloatParameter('reflectance', matOpts.reflectance !== undefined ? matOpts.reflectance : 0.5);
+      }
+
+      // Compute tangent quaternions from normals using SurfaceOrientation
+      var nVerts = geom.positions.length / 3;
+      var tangents;
+      try {
+        var sob = new Filament.SurfaceOrientation$Builder();
+        sob.vertexCount(nVerts);
+        sob.normals(geom.normals, 0);
+        if (geom.positions) sob.positions(geom.positions, 0);
+        var orientation = sob.build();
+        tangents = orientation.getQuats(nVerts);
+        orientation.delete();
+      } catch (e) {
+        // Fallback: create identity tangent quaternions (SHORT4)
+        tangents = new Int16Array(nVerts * 4);
+        for (var i = 0; i < nVerts; i++) {
+          tangents[i * 4 + 3] = 32767; // w = 1.0 as snorm16
+        }
+      }
+
+      // Build vertex buffer: 3 attributes — position (FLOAT3), tangents (SHORT4), uv (FLOAT2)
+      var vb = Filament.VertexBuffer.Builder()
+        .vertexCount(nVerts)
+        .bufferCount(3)
+        .attribute(Filament.VertexAttribute.POSITION, 0, Filament.VertexBuffer$AttributeType.FLOAT3, 0, 12)
+        .attribute(Filament.VertexAttribute.TANGENTS, 1, Filament.VertexBuffer$AttributeType.SHORT4, 0, 8)
+        .normalized(Filament.VertexAttribute.TANGENTS)
+        .attribute(Filament.VertexAttribute.UV0, 2, Filament.VertexBuffer$AttributeType.FLOAT2, 0, 8)
+        .build(engine);
+
+      vb.setBufferAt(engine, 0, geom.positions);
+      vb.setBufferAt(engine, 1, tangents);
+      vb.setBufferAt(engine, 2, geom.uvs);
+
+      // Build index buffer
+      var ib = Filament.IndexBuffer.Builder()
+        .indexCount(geom.indices.length)
+        .bufferType(Filament.IndexBuffer$IndexType.USHORT)
+        .build(engine);
+      ib.setBuffer(engine, geom.indices);
+
+      // Create entity
+      var entity = Filament.EntityManager.get().create();
+      var primType = primitiveType || Filament.RenderableManager$PrimitiveType.TRIANGLES;
+
+      Filament.RenderableManager.Builder(1)
+        .boundingBox(bbox)
+        .material(0, matInstance)
+        .geometry(0, primType, vb, ib)
+        .culling(false)
+        .receiveShadows(true)
+        .castShadows(true)
+        .build(engine, entity);
+
+      // Set initial position from center option
+      var center = matOpts.center || [0, 0, 0];
+      var tcm = engine.getTransformManager();
+      var inst = tcm.getInstance(entity);
+      tcm.setTransform(inst, _translationMatrix(center[0], center[1], center[2]));
+
+      // Add to scene
+      scene.addEntity(entity);
+
+      // Track for cleanup
+      if (!sv._geometryEntities) sv._geometryEntities = [];
+      sv._geometryEntities.push({
+        entity: entity,
+        vertexBuffer: vb,
+        indexBuffer: ib,
+        matInstance: matInstance
+      });
+
+      return entity;
+    });
+  }
+
+  // =========================================================================
+  // Internal: 4x4 matrix helpers (column-major for Filament)
+  // =========================================================================
+
+  function _identityMatrix() {
+    return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  }
+
+  function _translationMatrix(x, y, z) {
+    return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1];
+  }
+
+  function _scaleMatrix(sx, sy, sz) {
+    return [sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1];
+  }
+
+  /** Euler rotation matrix (XYZ order, degrees) */
+  function _rotationMatrix(rx, ry, rz) {
+    var toRad = Math.PI / 180;
+    var ax = rx * toRad, ay = ry * toRad, az = rz * toRad;
+    var cx = Math.cos(ax), sx = Math.sin(ax);
+    var cy = Math.cos(ay), sy = Math.sin(ay);
+    var cz = Math.cos(az), sz = Math.sin(az);
+    // Combined XYZ rotation matrix (column-major)
+    return [
+      cy * cz,                    cy * sz,                    -sy,    0,
+      sx * sy * cz - cx * sz,     sx * sy * sz + cx * cz,     sx * cy, 0,
+      cx * sy * cz + sx * sz,     cx * sy * sz - sx * cz,     cx * cy, 0,
+      0, 0, 0, 1
+    ];
+  }
+
+  /** Multiply two 4x4 column-major matrices: result = a * b */
+  function _mat4Mul(a, b) {
+    var r = new Array(16);
+    for (var col = 0; col < 4; col++) {
+      for (var row = 0; row < 4; row++) {
+        r[col * 4 + row] =
+          a[0 * 4 + row] * b[col * 4 + 0] +
+          a[1 * 4 + row] * b[col * 4 + 1] +
+          a[2 * 4 + row] * b[col * 4 + 2] +
+          a[3 * 4 + row] * b[col * 4 + 3];
+      }
+    }
+    return r;
+  }
+
+  // =========================================================================
+  // Geometry generators — cube, sphere, cylinder, cone, plane
+  // =========================================================================
+
+  /**
+   * Generate a box with per-face normals and UVs.
+   * @param {number} w - width (X)
+   * @param {number} h - height (Y)
+   * @param {number} d - depth (Z)
+   * @returns {{ positions: Float32Array, normals: Float32Array, uvs: Float32Array, indices: Uint16Array }}
+   */
+  function _genCube(w, h, d) {
+    var hw = w / 2, hh = h / 2, hd = d / 2;
+
+    // 6 faces * 4 vertices = 24 vertices
+    // Face order: +X, -X, +Y, -Y, +Z, -Z
+    var positions = new Float32Array([
+      // +X
+       hw, -hh,  hd,   hw,  hh,  hd,   hw,  hh, -hd,   hw, -hh, -hd,
+      // -X
+      -hw, -hh, -hd,  -hw,  hh, -hd,  -hw,  hh,  hd,  -hw, -hh,  hd,
+      // +Y
+      -hw,  hh,  hd,  -hw,  hh, -hd,   hw,  hh, -hd,   hw,  hh,  hd,
+      // -Y
+      -hw, -hh, -hd,  -hw, -hh,  hd,   hw, -hh,  hd,   hw, -hh, -hd,
+      // +Z
+      -hw, -hh,  hd,  -hw,  hh,  hd,   hw,  hh,  hd,   hw, -hh,  hd,
+      // -Z
+       hw, -hh, -hd,   hw,  hh, -hd,  -hw,  hh, -hd,  -hw, -hh, -hd
+    ]);
+
+    var normals = new Float32Array([
+      // +X
+      1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,
+      // -X
+      -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0,
+      // +Y
+      0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,
+      // -Y
+      0, -1, 0,  0, -1, 0,  0, -1, 0,  0, -1, 0,
+      // +Z
+      0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,
+      // -Z
+      0, 0, -1,  0, 0, -1,  0, 0, -1,  0, 0, -1
+    ]);
+
+    var uvs = new Float32Array([
+      // Each face gets full 0-1 UVs
+      0, 0,  0, 1,  1, 1,  1, 0,
+      0, 0,  0, 1,  1, 1,  1, 0,
+      0, 0,  0, 1,  1, 1,  1, 0,
+      0, 0,  0, 1,  1, 1,  1, 0,
+      0, 0,  0, 1,  1, 1,  1, 0,
+      0, 0,  0, 1,  1, 1,  1, 0
+    ]);
+
+    // 6 faces * 2 triangles * 3 indices = 36 indices
+    var indices = new Uint16Array([
+       0,  1,  2,   0,  2,  3,   // +X
+       4,  5,  6,   4,  6,  7,   // -X
+       8,  9, 10,   8, 10, 11,   // +Y
+      12, 13, 14,  12, 14, 15,   // -Y
+      16, 17, 18,  16, 18, 19,   // +Z
+      20, 21, 22,  20, 22, 23    // -Z
+    ]);
+
+    return { positions: positions, normals: normals, uvs: uvs, indices: indices };
+  }
+
+  /**
+   * Generate a UV sphere.
+   * @param {number} radius
+   * @param {number} stacks - vertical divisions
+   * @param {number} slices - horizontal divisions
+   */
+  function _genSphere(radius, stacks, slices) {
+    stacks = stacks || 16;
+    slices = slices || 32;
+    var nVerts = (stacks + 1) * (slices + 1);
+    var nIndices = stacks * slices * 6;
+
+    var positions = new Float32Array(nVerts * 3);
+    var normals = new Float32Array(nVerts * 3);
+    var uvs = new Float32Array(nVerts * 2);
+    var indices = new Uint16Array(nIndices);
+
+    var vi = 0, ui = 0;
+    for (var stack = 0; stack <= stacks; stack++) {
+      var phi = (stack / stacks) * Math.PI;
+      var sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+
+      for (var slice = 0; slice <= slices; slice++) {
+        var theta = (slice / slices) * 2 * Math.PI;
+        var sinTheta = Math.sin(theta), cosTheta = Math.cos(theta);
+
+        var nx = sinPhi * cosTheta;
+        var ny = cosPhi;
+        var nz = sinPhi * sinTheta;
+
+        positions[vi] = nx * radius;
+        positions[vi + 1] = ny * radius;
+        positions[vi + 2] = nz * radius;
+        normals[vi] = nx;
+        normals[vi + 1] = ny;
+        normals[vi + 2] = nz;
+        vi += 3;
+
+        uvs[ui] = slice / slices;
+        uvs[ui + 1] = stack / stacks;
+        ui += 2;
+      }
+    }
+
+    var ii = 0;
+    for (var stack = 0; stack < stacks; stack++) {
+      for (var slice = 0; slice < slices; slice++) {
+        var a = stack * (slices + 1) + slice;
+        var b = a + slices + 1;
+
+        indices[ii++] = a;
+        indices[ii++] = b;
+        indices[ii++] = a + 1;
+
+        indices[ii++] = a + 1;
+        indices[ii++] = b;
+        indices[ii++] = b + 1;
+      }
+    }
+
+    return { positions: positions, normals: normals, uvs: uvs, indices: indices };
+  }
+
+  /**
+   * Generate a cylinder with top and bottom caps.
+   * @param {number} radius
+   * @param {number} height
+   * @param {number} sides - number of radial segments
+   */
+  function _genCylinder(radius, height, sides) {
+    sides = sides || 32;
+    var hh = height / 2;
+
+    // Side vertices: (sides+1) * 2 (top ring + bottom ring with wrap)
+    // Top cap: 1 center + sides+1
+    // Bottom cap: 1 center + sides+1
+    var nSideVerts = (sides + 1) * 2;
+    var nCapVerts = (sides + 1 + 1) * 2; // top + bottom caps
+    var nVerts = nSideVerts + nCapVerts;
+    var nSideIdx = sides * 6;
+    var nCapIdx = sides * 3 * 2; // top + bottom
+    var nIndices = nSideIdx + nCapIdx;
+
+    var positions = new Float32Array(nVerts * 3);
+    var normals = new Float32Array(nVerts * 3);
+    var uvs = new Float32Array(nVerts * 2);
+    var indices = new Uint16Array(nIndices);
+
+    var vi = 0, ui = 0, ii = 0;
+
+    // === Side vertices ===
+    for (var i = 0; i <= sides; i++) {
+      var angle = (i / sides) * Math.PI * 2;
+      var nx = Math.cos(angle), nz = Math.sin(angle);
+      var u = i / sides;
+
+      // Top vertex
+      positions[vi] = nx * radius; positions[vi + 1] = hh; positions[vi + 2] = nz * radius;
+      normals[vi] = nx; normals[vi + 1] = 0; normals[vi + 2] = nz;
+      vi += 3;
+      uvs[ui] = u; uvs[ui + 1] = 1; ui += 2;
+
+      // Bottom vertex
+      positions[vi] = nx * radius; positions[vi + 1] = -hh; positions[vi + 2] = nz * radius;
+      normals[vi] = nx; normals[vi + 1] = 0; normals[vi + 2] = nz;
+      vi += 3;
+      uvs[ui] = u; uvs[ui + 1] = 0; ui += 2;
+    }
+
+    // Side indices
+    for (var i = 0; i < sides; i++) {
+      var top = i * 2, bot = top + 1;
+      var nextTop = top + 2, nextBot = top + 3;
+      indices[ii++] = top;
+      indices[ii++] = bot;
+      indices[ii++] = nextTop;
+      indices[ii++] = nextTop;
+      indices[ii++] = bot;
+      indices[ii++] = nextBot;
+    }
+
+    // === Top cap ===
+    var topCenterIdx = vi / 3;
+    positions[vi] = 0; positions[vi + 1] = hh; positions[vi + 2] = 0;
+    normals[vi] = 0; normals[vi + 1] = 1; normals[vi + 2] = 0;
+    vi += 3;
+    uvs[ui] = 0.5; uvs[ui + 1] = 0.5; ui += 2;
+
+    for (var i = 0; i <= sides; i++) {
+      var angle = (i / sides) * Math.PI * 2;
+      var nx = Math.cos(angle), nz = Math.sin(angle);
+      positions[vi] = nx * radius; positions[vi + 1] = hh; positions[vi + 2] = nz * radius;
+      normals[vi] = 0; normals[vi + 1] = 1; normals[vi + 2] = 0;
+      vi += 3;
+      uvs[ui] = nx * 0.5 + 0.5; uvs[ui + 1] = nz * 0.5 + 0.5; ui += 2;
+    }
+
+    for (var i = 0; i < sides; i++) {
+      indices[ii++] = topCenterIdx;
+      indices[ii++] = topCenterIdx + 1 + i;
+      indices[ii++] = topCenterIdx + 2 + i;
+    }
+
+    // === Bottom cap ===
+    var botCenterIdx = vi / 3;
+    positions[vi] = 0; positions[vi + 1] = -hh; positions[vi + 2] = 0;
+    normals[vi] = 0; normals[vi + 1] = -1; normals[vi + 2] = 0;
+    vi += 3;
+    uvs[ui] = 0.5; uvs[ui + 1] = 0.5; ui += 2;
+
+    for (var i = 0; i <= sides; i++) {
+      var angle = (i / sides) * Math.PI * 2;
+      var nx = Math.cos(angle), nz = Math.sin(angle);
+      positions[vi] = nx * radius; positions[vi + 1] = -hh; positions[vi + 2] = nz * radius;
+      normals[vi] = 0; normals[vi + 1] = -1; normals[vi + 2] = 0;
+      vi += 3;
+      uvs[ui] = nx * 0.5 + 0.5; uvs[ui + 1] = nz * 0.5 + 0.5; ui += 2;
+    }
+
+    for (var i = 0; i < sides; i++) {
+      indices[ii++] = botCenterIdx;
+      indices[ii++] = botCenterIdx + 2 + i;
+      indices[ii++] = botCenterIdx + 1 + i;
+    }
+
+    return { positions: positions, normals: normals, uvs: uvs, indices: indices };
+  }
+
+  /**
+   * Generate a cone with a base cap.
+   * @param {number} radius
+   * @param {number} height
+   * @param {number} sides
+   */
+  function _genCone(radius, height, sides) {
+    sides = sides || 32;
+    var hh = height / 2;
+
+    // Side vertices: (sides+1) * 2 (apex ring duplicated + base ring)
+    // Base cap: 1 center + sides+1
+    var nSideVerts = (sides + 1) * 2;
+    var nCapVerts = sides + 2;
+    var nVerts = nSideVerts + nCapVerts;
+    var nSideIdx = sides * 3;
+    var nCapIdx = sides * 3;
+    var nIndices = nSideIdx + nCapIdx;
+
+    var positions = new Float32Array(nVerts * 3);
+    var normals = new Float32Array(nVerts * 3);
+    var uvs = new Float32Array(nVerts * 2);
+    var indices = new Uint16Array(nIndices);
+
+    // Compute the cone's slope angle for normals
+    var slopeLen = Math.sqrt(radius * radius + height * height);
+    var nY = radius / slopeLen;
+    var nR = height / slopeLen;
+
+    var vi = 0, ui = 0, ii = 0;
+
+    // === Side vertices ===
+    for (var i = 0; i <= sides; i++) {
+      var angle = (i / sides) * Math.PI * 2;
+      var cosA = Math.cos(angle), sinA = Math.sin(angle);
+      var u = i / sides;
+
+      // Normal for this side face
+      var snx = cosA * nR, sny = nY, snz = sinA * nR;
+
+      // Apex vertex (top)
+      positions[vi] = 0; positions[vi + 1] = hh; positions[vi + 2] = 0;
+      normals[vi] = snx; normals[vi + 1] = sny; normals[vi + 2] = snz;
+      vi += 3;
+      uvs[ui] = u; uvs[ui + 1] = 1; ui += 2;
+
+      // Base vertex (bottom)
+      positions[vi] = cosA * radius; positions[vi + 1] = -hh; positions[vi + 2] = sinA * radius;
+      normals[vi] = snx; normals[vi + 1] = sny; normals[vi + 2] = snz;
+      vi += 3;
+      uvs[ui] = u; uvs[ui + 1] = 0; ui += 2;
+    }
+
+    // Side indices (triangles from apex to base)
+    for (var i = 0; i < sides; i++) {
+      var apex = i * 2;
+      var base = apex + 1;
+      var nextBase = base + 2;
+      indices[ii++] = apex;
+      indices[ii++] = base;
+      indices[ii++] = nextBase;
+    }
+
+    // === Base cap ===
+    var baseCenterIdx = vi / 3;
+    positions[vi] = 0; positions[vi + 1] = -hh; positions[vi + 2] = 0;
+    normals[vi] = 0; normals[vi + 1] = -1; normals[vi + 2] = 0;
+    vi += 3;
+    uvs[ui] = 0.5; uvs[ui + 1] = 0.5; ui += 2;
+
+    for (var i = 0; i <= sides; i++) {
+      var angle = (i / sides) * Math.PI * 2;
+      var cosA = Math.cos(angle), sinA = Math.sin(angle);
+      positions[vi] = cosA * radius; positions[vi + 1] = -hh; positions[vi + 2] = sinA * radius;
+      normals[vi] = 0; normals[vi + 1] = -1; normals[vi + 2] = 0;
+      vi += 3;
+      uvs[ui] = cosA * 0.5 + 0.5; uvs[ui + 1] = sinA * 0.5 + 0.5; ui += 2;
+    }
+
+    for (var i = 0; i < sides; i++) {
+      indices[ii++] = baseCenterIdx;
+      indices[ii++] = baseCenterIdx + 2 + i;
+      indices[ii++] = baseCenterIdx + 1 + i;
+    }
+
+    return { positions: positions, normals: normals, uvs: uvs, indices: indices };
+  }
+
+  /**
+   * Generate a plane (quad) with a given normal direction.
+   * @param {number} w - width
+   * @param {number} h - height
+   * @param {Array} normal - [nx, ny, nz] default [0, 1, 0]
+   */
+  function _genPlane(w, h, normal) {
+    normal = normal || [0, 1, 0];
+    var hw = w / 2, hh = h / 2;
+
+    // Default plane lies in XZ plane (Y-up normal)
+    // We'll generate it in XZ then rotate if needed
+    var nx = normal[0], ny = normal[1], nz = normal[2];
+    var len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+    if (len > 0) { nx /= len; ny /= len; nz /= len; }
+
+    // Generate basis vectors for the plane
+    var up = [0, 1, 0];
+    // If normal is nearly parallel to up, use a different reference
+    if (Math.abs(ny) > 0.99) {
+      up = [0, 0, 1];
+    }
+    // tangent = normalize(up x normal)
+    var tx = up[1] * nz - up[2] * ny;
+    var ty = up[2] * nx - up[0] * nz;
+    var tz = up[0] * ny - up[1] * nx;
+    var tLen = Math.sqrt(tx * tx + ty * ty + tz * tz);
+    if (tLen > 0) { tx /= tLen; ty /= tLen; tz /= tLen; }
+
+    // bitangent = normal x tangent
+    var bx = ny * tz - nz * ty;
+    var by = nz * tx - nx * tz;
+    var bz = nx * ty - ny * tx;
+
+    // 4 corners: (-hw,-hh), (-hw,+hh), (+hw,+hh), (+hw,-hh) in tangent/bitangent space
+    var positions = new Float32Array([
+      -hw * tx + -hh * bx, -hw * ty + -hh * by, -hw * tz + -hh * bz,
+      -hw * tx +  hh * bx, -hw * ty +  hh * by, -hw * tz +  hh * bz,
+       hw * tx +  hh * bx,  hw * ty +  hh * by,  hw * tz +  hh * bz,
+       hw * tx + -hh * bx,  hw * ty + -hh * by,  hw * tz + -hh * bz
+    ]);
+
+    var normals = new Float32Array([
+      nx, ny, nz,  nx, ny, nz,  nx, ny, nz,  nx, ny, nz
+    ]);
+
+    var uvs = new Float32Array([
+      0, 0,  0, 1,  1, 1,  1, 0
+    ]);
+
+    var indices = new Uint16Array([
+      0, 1, 2,  0, 2, 3
+    ]);
+
+    return { positions: positions, normals: normals, uvs: uvs, indices: indices };
+  }
+
+  /**
+   * Generate a thin cylinder between two points (for line rendering).
+   * @param {Array} from - [x, y, z]
+   * @param {Array} to - [x, y, z]
+   * @param {number} thickness - diameter
+   * @param {number} sides - radial segments
+   */
+  function _genLineCylinder(from, to, thickness, sides) {
+    sides = sides || 8;
+    var radius = thickness / 2;
+
+    // Direction vector
+    var dx = to[0] - from[0], dy = to[1] - from[1], dz = to[2] - from[2];
+    var length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (length < 0.0001) length = 0.0001;
+
+    // Normalized direction
+    var dirX = dx / length, dirY = dy / length, dirZ = dz / length;
+
+    // Find a perpendicular vector
+    var perpX, perpY, perpZ;
+    if (Math.abs(dirY) < 0.99) {
+      // Cross with up [0,1,0]
+      perpX = dirZ; perpY = 0; perpZ = -dirX;
+    } else {
+      // Cross with right [1,0,0]
+      perpX = 0; perpY = -dirZ; perpZ = dirY;
+    }
+    var pLen = Math.sqrt(perpX * perpX + perpY * perpY + perpZ * perpZ);
+    if (pLen > 0) { perpX /= pLen; perpY /= pLen; perpZ /= pLen; }
+
+    // Second perpendicular: dir x perp
+    var perp2X = dirY * perpZ - dirZ * perpY;
+    var perp2Y = dirZ * perpX - dirX * perpZ;
+    var perp2Z = dirX * perpY - dirY * perpX;
+
+    // Midpoint
+    var mx = (from[0] + to[0]) / 2;
+    var my = (from[1] + to[1]) / 2;
+    var mz = (from[2] + to[2]) / 2;
+
+    var nVerts = (sides + 1) * 2;
+    var nIndices = sides * 6;
+    var positions = new Float32Array(nVerts * 3);
+    var normals = new Float32Array(nVerts * 3);
+    var uvs = new Float32Array(nVerts * 2);
+    var indices = new Uint16Array(nIndices);
+
+    var vi = 0, ui = 0;
+    for (var i = 0; i <= sides; i++) {
+      var angle = (i / sides) * Math.PI * 2;
+      var cosA = Math.cos(angle), sinA = Math.sin(angle);
+
+      var nx = perpX * cosA + perp2X * sinA;
+      var ny = perpY * cosA + perp2Y * sinA;
+      var nz = perpZ * cosA + perp2Z * sinA;
+
+      // Start point
+      positions[vi] = from[0] + nx * radius;
+      positions[vi + 1] = from[1] + ny * radius;
+      positions[vi + 2] = from[2] + nz * radius;
+      normals[vi] = nx; normals[vi + 1] = ny; normals[vi + 2] = nz;
+      vi += 3;
+      uvs[ui] = i / sides; uvs[ui + 1] = 0; ui += 2;
+
+      // End point
+      positions[vi] = to[0] + nx * radius;
+      positions[vi + 1] = to[1] + ny * radius;
+      positions[vi + 2] = to[2] + nz * radius;
+      normals[vi] = nx; normals[vi + 1] = ny; normals[vi + 2] = nz;
+      vi += 3;
+      uvs[ui] = i / sides; uvs[ui + 1] = 1; ui += 2;
+    }
+
+    var ii = 0;
+    for (var i = 0; i < sides; i++) {
+      var a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+      indices[ii++] = a; indices[ii++] = b; indices[ii++] = c;
+      indices[ii++] = c; indices[ii++] = b; indices[ii++] = d;
+    }
+
+    return { positions: positions, normals: normals, uvs: uvs, indices: indices };
+  }
+
+  /**
+   * Generate a path (polyline) as a series of connected thin cylinders.
+   * Returns merged geometry for all segments.
+   * @param {Array<Array<number>>} points - array of [x,y,z]
+   * @param {number} thickness
+   * @param {boolean} closed - connect last point to first
+   * @param {number} sides - radial segments per segment
+   */
+  function _genPath(points, thickness, closed, sides) {
+    sides = sides || 8;
+    if (points.length < 2) throw new Error('Path needs at least 2 points');
+
+    var segments = [];
+    for (var i = 0; i < points.length - 1; i++) {
+      segments.push(_genLineCylinder(points[i], points[i + 1], thickness, sides));
+    }
+    if (closed && points.length > 2) {
+      segments.push(_genLineCylinder(points[points.length - 1], points[0], thickness, sides));
+    }
+
+    // Merge all segment geometries
+    var totalVerts = 0, totalIndices = 0;
+    for (var i = 0; i < segments.length; i++) {
+      totalVerts += segments[i].positions.length / 3;
+      totalIndices += segments[i].indices.length;
+    }
+
+    var positions = new Float32Array(totalVerts * 3);
+    var normals = new Float32Array(totalVerts * 3);
+    var uvs = new Float32Array(totalVerts * 2);
+    var indices = new Uint16Array(totalIndices);
+
+    var vOff = 0, uOff = 0, iOff = 0, vertOff = 0;
+    for (var i = 0; i < segments.length; i++) {
+      var seg = segments[i];
+      positions.set(seg.positions, vOff);
+      normals.set(seg.normals, vOff);
+      uvs.set(seg.uvs, uOff);
+      for (var j = 0; j < seg.indices.length; j++) {
+        indices[iOff + j] = seg.indices[j] + vertOff;
+      }
+      vOff += seg.positions.length;
+      uOff += seg.uvs.length;
+      iOff += seg.indices.length;
+      vertOff += seg.positions.length / 3;
+    }
+
+    return { positions: positions, normals: normals, uvs: uvs, indices: indices };
+  }
+
+  // =========================================================================
+  // Wait for Filament to be available
+  // =========================================================================
+
   function _ensureFilament() {
     return new Promise(function(resolve, reject) {
       if (typeof Filament !== 'undefined') { resolve(); return; }
-      // Poll briefly in case the script tag hasn't finished loading
       var attempts = 0;
       var check = setInterval(function() {
         if (typeof Filament !== 'undefined') { clearInterval(check); resolve(); }
@@ -43,1297 +819,9 @@
   }
 
   // =========================================================================
-  // Math utilities for 4x4 matrix operations (column-major, Float32Array[16])
+  // SceneViewInstance
   // =========================================================================
 
-  var _mat4 = {
-    /** Return a new identity matrix */
-    identity: function() {
-      return new Float32Array([
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1
-      ]);
-    },
-
-    /** Multiply two 4x4 column-major matrices: out = a * b */
-    multiply: function(a, b) {
-      var out = new Float32Array(16);
-      for (var col = 0; col < 4; col++) {
-        for (var row = 0; row < 4; row++) {
-          out[col * 4 + row] =
-            a[0 * 4 + row] * b[col * 4 + 0] +
-            a[1 * 4 + row] * b[col * 4 + 1] +
-            a[2 * 4 + row] * b[col * 4 + 2] +
-            a[3 * 4 + row] * b[col * 4 + 3];
-        }
-      }
-      return out;
-    },
-
-    /** Build a TRS matrix from position [x,y,z], euler rotation [rx,ry,rz] in degrees, scale [sx,sy,sz] */
-    fromTRS: function(position, rotation, scale) {
-      var px = position[0], py = position[1], pz = position[2];
-      var sx = scale[0], sy = scale[1], sz = scale[2];
-
-      // Euler angles (degrees) to radians — rotation order: Y * X * Z (standard for 3D scenes)
-      var DEG2RAD = Math.PI / 180;
-      var rx = rotation[0] * DEG2RAD;
-      var ry = rotation[1] * DEG2RAD;
-      var rz = rotation[2] * DEG2RAD;
-
-      var cx = Math.cos(rx), sx_ = Math.sin(rx);
-      var cy = Math.cos(ry), sy_ = Math.sin(ry);
-      var cz = Math.cos(rz), sz_ = Math.sin(rz);
-
-      // Combined rotation matrix R = Ry * Rx * Rz
-      var r00 = cy * cz + sy_ * sx_ * sz_;
-      var r01 = cx * sz_;
-      var r02 = -sy_ * cz + cy * sx_ * sz_;
-      var r10 = cy * -sz_ + sy_ * sx_ * cz;
-      var r11 = cx * cz;
-      var r12 = sy_ * sz_ + cy * sx_ * cz;
-      var r20 = sy_ * cx;
-      var r21 = -sx_;
-      var r22 = cy * cx;
-
-      // Column-major TRS matrix
-      return new Float32Array([
-        r00 * sx, r01 * sx, r02 * sx, 0,
-        r10 * sy, r11 * sy, r12 * sy, 0,
-        r20 * sz, r21 * sz, r22 * sz, 0,
-        px,       py,       pz,       1
-      ]);
-    },
-
-    /** Extract translation from a 4x4 column-major matrix */
-    getTranslation: function(m) {
-      return [m[12], m[13], m[14]];
-    },
-
-    /** Extract scale from a 4x4 column-major matrix (length of each column) */
-    getScale: function(m) {
-      return [
-        Math.sqrt(m[0] * m[0] + m[1] * m[1] + m[2] * m[2]),
-        Math.sqrt(m[4] * m[4] + m[5] * m[5] + m[6] * m[6]),
-        Math.sqrt(m[8] * m[8] + m[9] * m[9] + m[10] * m[10])
-      ];
-    },
-
-    /** Extract euler angles (degrees) from a 4x4 column-major matrix — assumes Y*X*Z order */
-    getRotation: function(m) {
-      var scale = _mat4.getScale(m);
-      var invSx = scale[0] !== 0 ? 1 / scale[0] : 0;
-      var invSy = scale[1] !== 0 ? 1 / scale[1] : 0;
-      var invSz = scale[2] !== 0 ? 1 / scale[2] : 0;
-
-      // Normalized rotation matrix elements
-      var r20 = m[8] * invSz;
-      var r21 = m[9] * invSz;
-      var r22 = m[10] * invSz;
-      var r00 = m[0] * invSx;
-      var r11 = m[5] * invSy;
-
-      var RAD2DEG = 180 / Math.PI;
-      var rx = Math.asin(-Math.max(-1, Math.min(1, r21))) * RAD2DEG;
-      var ry = Math.atan2(r20, r22) * RAD2DEG;
-      var rz = Math.atan2(r00 !== 0 ? m[1] * invSx : 0, r11) * RAD2DEG;
-      return [rx, ry, rz];
-    }
-  };
-
-  // =========================================================================
-  // SceneNode — base class for all scene graph nodes
-  // =========================================================================
-
-  var _nodeIdCounter = 0;
-
-  /**
-   * SceneNode — base class for all nodes in the scene graph.
-   *
-   * Provides transform hierarchy (position, rotation, scale), parent-child
-   * relationships, visibility, and Filament entity management.
-   */
-  class SceneNode {
-    /**
-     * @param {string} name - Human-readable name for lookup
-     * @param {object} [options] - Initial transform and state
-     * @param {number[]} [options.position=[0,0,0]] - Local position
-     * @param {number[]} [options.rotation=[0,0,0]] - Local euler rotation in degrees
-     * @param {number[]} [options.scale=[1,1,1]] - Local scale
-     * @param {boolean} [options.visible=true] - Initial visibility
-     * @param {boolean} [options.enabled=true] - Initial enabled state
-     */
-    constructor(name, options) {
-      options = options || {};
-      this._id = ++_nodeIdCounter;
-      this._name = name || ('node_' + this._id);
-      this._position = options.position ? options.position.slice() : [0, 0, 0];
-      this._rotation = options.rotation ? options.rotation.slice() : [0, 0, 0];
-      this._scale = options.scale ? options.scale.slice() : [1, 1, 1];
-      this._visible = options.visible !== undefined ? options.visible : true;
-      this._enabled = options.enabled !== undefined ? options.enabled : true;
-      this._parent = null;
-      this._children = [];
-      this._destroyed = false;
-
-      // Filament references (set by subclasses or scene)
-      this._entity = null;      // Primary Filament entity (if any)
-      this._entities = [];      // All Filament entities owned by this node
-      this._sceneInstance = null; // Reference to SceneViewInstance
-
-      // Cached matrices
-      this._localMatrixDirty = true;
-      this._worldMatrixDirty = true;
-      this._localMatrix = _mat4.identity();
-      this._worldMatrix = _mat4.identity();
-    }
-
-    /** @returns {string} Node name */
-    get name() { return this._name; }
-    set name(v) { this._name = v; }
-
-    /** @returns {number} Unique node ID */
-    get id() { return this._id; }
-
-    /** @returns {string} Node type identifier */
-    get type() { return 'node'; }
-
-    // --- Transform properties ---
-
-    /** @returns {number[]} Local position [x, y, z] */
-    get position() { return this._position; }
-    set position(v) {
-      this._position[0] = v[0];
-      this._position[1] = v[1];
-      this._position[2] = v[2];
-      this._markDirty();
-    }
-
-    /** @returns {number[]} Local euler rotation [rx, ry, rz] in degrees */
-    get rotation() { return this._rotation; }
-    set rotation(v) {
-      this._rotation[0] = v[0];
-      this._rotation[1] = v[1];
-      this._rotation[2] = v[2];
-      this._markDirty();
-    }
-
-    /** @returns {number[]} Local scale [sx, sy, sz] */
-    get scale() { return this._scale; }
-    set scale(v) {
-      this._scale[0] = v[0];
-      this._scale[1] = v[1];
-      this._scale[2] = v[2];
-      this._markDirty();
-    }
-
-    /** @returns {boolean} Whether this node is visible */
-    get visible() { return this._visible; }
-    set visible(v) {
-      this._visible = v;
-      this._applyVisibility();
-    }
-
-    /** @returns {boolean} Whether this node is enabled (processes updates) */
-    get enabled() { return this._enabled; }
-    set enabled(v) { this._enabled = v; }
-
-    // --- Hierarchy ---
-
-    /** @returns {SceneNode|null} Parent node */
-    get parent() { return this._parent; }
-
-    /** @returns {SceneNode[]} Direct children (shallow copy) */
-    get children() { return this._children.slice(); }
-
-    /**
-     * Add a child node. Removes from previous parent if any.
-     * @param {SceneNode} node
-     * @returns {SceneNode} The added child (for chaining)
-     */
-    addChild(node) {
-      if (node._destroyed) throw new Error('SceneView: Cannot add destroyed node');
-      if (node === this) throw new Error('SceneView: Cannot add node as its own child');
-      if (this._isDescendantOf(node)) throw new Error('SceneView: Cannot create circular hierarchy');
-
-      // Remove from old parent
-      if (node._parent) {
-        node._parent._removeChildInternal(node);
-      }
-
-      node._parent = this;
-      this._children.push(node);
-
-      // Propagate scene instance reference
-      if (this._sceneInstance) {
-        node._setSceneInstance(this._sceneInstance);
-      }
-
-      node._markWorldDirty();
-      return node;
-    }
-
-    /**
-     * Remove a child node.
-     * @param {SceneNode} node
-     */
-    removeChild(node) {
-      this._removeChildInternal(node);
-      node._parent = null;
-      node._markWorldDirty();
-    }
-
-    /** Remove this node from its parent */
-    removeFromParent() {
-      if (this._parent) {
-        this._parent.removeChild(this);
-      }
-    }
-
-    // --- Lookup ---
-
-    /**
-     * Find a descendant by name (depth-first).
-     * @param {string} name
-     * @returns {SceneNode|null}
-     */
-    findByName(name) {
-      if (this._name === name) return this;
-      for (var i = 0; i < this._children.length; i++) {
-        var found = this._children[i].findByName(name);
-        if (found) return found;
-      }
-      return null;
-    }
-
-    /**
-     * Find all descendants matching a predicate.
-     * @param {function(SceneNode): boolean} predicate
-     * @returns {SceneNode[]}
-     */
-    findAll(predicate) {
-      var results = [];
-      this._collectMatching(predicate, results);
-      return results;
-    }
-
-    /**
-     * Depth-first traversal of this node and all descendants.
-     * @param {function(SceneNode, number): void} callback - Receives (node, depth)
-     * @param {number} [depth=0]
-     */
-    traverse(callback, depth) {
-      depth = depth || 0;
-      callback(this, depth);
-      for (var i = 0; i < this._children.length; i++) {
-        this._children[i].traverse(callback, depth + 1);
-      }
-    }
-
-    // --- World transform (computed from hierarchy) ---
-
-    /** @returns {Float32Array} The local 4x4 transform matrix (column-major) */
-    get localMatrix() {
-      if (this._localMatrixDirty) {
-        this._localMatrix = _mat4.fromTRS(this._position, this._rotation, this._scale);
-        this._localMatrixDirty = false;
-      }
-      return this._localMatrix;
-    }
-
-    /** @returns {Float32Array} The world 4x4 transform matrix (column-major) */
-    get worldMatrix() {
-      if (this._worldMatrixDirty) {
-        if (this._parent) {
-          this._worldMatrix = _mat4.multiply(this._parent.worldMatrix, this.localMatrix);
-        } else {
-          this._worldMatrix = new Float32Array(this.localMatrix);
-        }
-        this._worldMatrixDirty = false;
-      }
-      return this._worldMatrix;
-    }
-
-    /** @returns {number[]} World-space position [x, y, z] */
-    get worldPosition() {
-      return _mat4.getTranslation(this.worldMatrix);
-    }
-
-    /** @returns {number[]} World-space euler rotation [rx, ry, rz] in degrees */
-    get worldRotation() {
-      return _mat4.getRotation(this.worldMatrix);
-    }
-
-    /** @returns {number[]} World-space scale [sx, sy, sz] */
-    get worldScale() {
-      return _mat4.getScale(this.worldMatrix);
-    }
-
-    // --- Lifecycle ---
-
-    /**
-     * Destroy this node: remove from parent, destroy all children,
-     * and clean up Filament resources.
-     */
-    destroy() {
-      if (this._destroyed) return;
-      this._destroyed = true;
-
-      // Destroy children first (copy array since it mutates)
-      var childrenCopy = this._children.slice();
-      for (var i = 0; i < childrenCopy.length; i++) {
-        childrenCopy[i].destroy();
-      }
-      this._children = [];
-
-      // Remove from parent
-      if (this._parent) {
-        this._parent._removeChildInternal(this);
-        this._parent = null;
-      }
-
-      // Remove Filament entities from scene
-      this._removeFromFilamentScene();
-
-      // Destroy Filament entities
-      this._destroyFilamentEntities();
-
-      this._sceneInstance = null;
-    }
-
-    /**
-     * Deep clone this node and its children with new Filament entities.
-     * Note: model assets are shared (same glTF data), but entities are new.
-     * @returns {SceneNode}
-     */
-    clone() {
-      var cloned = this._cloneSelf();
-      for (var i = 0; i < this._children.length; i++) {
-        cloned.addChild(this._children[i].clone());
-      }
-      return cloned;
-    }
-
-    // --- Internal methods ---
-
-    _markDirty() {
-      this._localMatrixDirty = true;
-      this._markWorldDirty();
-    }
-
-    _markWorldDirty() {
-      this._worldMatrixDirty = true;
-      for (var i = 0; i < this._children.length; i++) {
-        this._children[i]._markWorldDirty();
-      }
-    }
-
-    _removeChildInternal(node) {
-      var idx = this._children.indexOf(node);
-      if (idx !== -1) {
-        this._children.splice(idx, 1);
-      }
-    }
-
-    _isDescendantOf(node) {
-      var current = this._parent;
-      while (current) {
-        if (current === node) return true;
-        current = current._parent;
-      }
-      return false;
-    }
-
-    _collectMatching(predicate, results) {
-      if (predicate(this)) results.push(this);
-      for (var i = 0; i < this._children.length; i++) {
-        this._children[i]._collectMatching(predicate, results);
-      }
-    }
-
-    _setSceneInstance(sceneInstance) {
-      this._sceneInstance = sceneInstance;
-      for (var i = 0; i < this._children.length; i++) {
-        this._children[i]._setSceneInstance(sceneInstance);
-      }
-    }
-
-    /**
-     * Apply the world transform to the Filament entity via TransformManager.
-     * Called each frame for dirty nodes.
-     */
-    _applyTransformToFilament() {
-      if (!this._entity || !this._sceneInstance) return;
-      var engine = this._sceneInstance._engine;
-      try {
-        var tm = engine.getTransformManager();
-        var inst = tm.getInstance(this._entity);
-        if (inst) {
-          // Filament TransformManager uses column-major Float64Array
-          tm.setTransform(inst, this.worldMatrix);
-        }
-      } catch (e) {
-        // TransformManager may not be available for all entity types
-      }
-    }
-
-    _applyVisibility() {
-      if (!this._sceneInstance) return;
-      var scene = this._sceneInstance._scene;
-      var effectiveVisible = this._isEffectivelyVisible();
-
-      for (var i = 0; i < this._entities.length; i++) {
-        try {
-          if (effectiveVisible) {
-            scene.addEntity(this._entities[i]);
-          } else {
-            scene.remove(this._entities[i]);
-          }
-        } catch (e) { /* entity may not be in scene */ }
-      }
-
-      // Propagate to children
-      for (var c = 0; c < this._children.length; c++) {
-        this._children[c]._applyVisibility();
-      }
-    }
-
-    _isEffectivelyVisible() {
-      if (!this._visible) return false;
-      if (this._parent) return this._parent._isEffectivelyVisible();
-      return true;
-    }
-
-    _addToFilamentScene() {
-      if (!this._sceneInstance || !this._isEffectivelyVisible()) return;
-      var scene = this._sceneInstance._scene;
-      for (var i = 0; i < this._entities.length; i++) {
-        try { scene.addEntity(this._entities[i]); } catch (e) { /* skip */ }
-      }
-    }
-
-    _removeFromFilamentScene() {
-      if (!this._sceneInstance) return;
-      var scene = this._sceneInstance._scene;
-      for (var i = 0; i < this._entities.length; i++) {
-        try { scene.remove(this._entities[i]); } catch (e) { /* skip */ }
-      }
-    }
-
-    _destroyFilamentEntities() {
-      if (!this._sceneInstance) return;
-      var engine = this._sceneInstance._engine;
-      for (var i = 0; i < this._entities.length; i++) {
-        try { engine.destroyEntity(this._entities[i]); } catch (e) { /* skip */ }
-      }
-      this._entities = [];
-      this._entity = null;
-    }
-
-    /**
-     * Clone just this node (no children). Override in subclasses.
-     * @returns {SceneNode}
-     */
-    _cloneSelf() {
-      return new SceneNode(this._name + '_clone', {
-        position: this._position.slice(),
-        rotation: this._rotation.slice(),
-        scale: this._scale.slice(),
-        visible: this._visible,
-        enabled: this._enabled
-      });
-    }
-  }
-
-  // =========================================================================
-  // ModelNode — wraps a loaded glTF/GLB model
-  // =========================================================================
-
-  /**
-   * ModelNode — a scene node that displays a loaded glTF/GLB model.
-   */
-  class ModelNode extends SceneNode {
-    /**
-     * @param {string} name
-     * @param {object} [options]
-     * @param {string} [options.url] - Model URL to load
-     */
-    constructor(name, options) {
-      super(name, options);
-      this._url = (options && options.url) || null;
-      this._asset = null;
-      this._loaded = false;
-      this._boundingBox = null;
-    }
-
-    get type() { return 'model'; }
-
-    /** @returns {string|null} The model URL */
-    get url() { return this._url; }
-
-    /** @returns {boolean} Whether the model has finished loading */
-    get loaded() { return this._loaded; }
-
-    /** @returns {object|null} Bounding box {min: [x,y,z], max: [x,y,z]} */
-    get boundingBox() { return this._boundingBox; }
-
-    /**
-     * Load a glTF/GLB model from URL.
-     * @param {string} url
-     * @returns {Promise<ModelNode>}
-     */
-    load(url) {
-      var self = this;
-      this._url = url || this._url;
-      if (!this._url) return Promise.reject(new Error('ModelNode: No URL specified'));
-      if (!this._sceneInstance) return Promise.reject(new Error('ModelNode: Not attached to a scene'));
-
-      return fetch(this._url)
-        .then(function(resp) {
-          if (!resp.ok) throw new Error('ModelNode: HTTP ' + resp.status + ' loading ' + self._url);
-          return resp.arrayBuffer();
-        })
-        .then(function(buffer) {
-          if (self._destroyed) return self;
-
-          Filament.assets = Filament.assets || {};
-          Filament.assets[self._url] = new Uint8Array(buffer);
-
-          var data = Filament.assets[self._url];
-          var loader = self._sceneInstance._loader;
-          var asset = loader.createAsset(data);
-          if (!asset) throw new Error('ModelNode: Failed to parse model: ' + self._url);
-
-          asset.loadResources();
-          self._asset = asset;
-          self._loaded = true;
-
-          // Collect entities
-          var root = asset.getRoot();
-          var renderables = asset.getRenderableEntities();
-          self._entity = root;
-          self._entities = [root].concat(Array.from(renderables));
-
-          // Add to scene
-          self._addToFilamentScene();
-
-          // Compute bounding box
-          try {
-            var bbox = asset.getBoundingBox();
-            self._boundingBox = { min: bbox.min.slice(), max: bbox.max.slice() };
-          } catch (e) { /* skip */ }
-
-          // Apply transform
-          self._applyTransformToFilament();
-
-          return self;
-        });
-    }
-
-    _removeFromFilamentScene() {
-      if (!this._sceneInstance || !this._asset) return;
-      var scene = this._sceneInstance._scene;
-      try {
-        var renderables = this._asset.getRenderableEntities();
-        for (var i = 0; i < renderables.length; i++) {
-          scene.remove(renderables[i]);
-        }
-        scene.remove(this._asset.getRoot());
-      } catch (e) { /* ignore */ }
-    }
-
-    _addToFilamentScene() {
-      if (!this._sceneInstance || !this._asset || !this._isEffectivelyVisible()) return;
-      var scene = this._sceneInstance._scene;
-      try {
-        scene.addEntity(this._asset.getRoot());
-        scene.addEntities(this._asset.getRenderableEntities());
-      } catch (e) { /* skip */ }
-    }
-
-    _cloneSelf() {
-      return new ModelNode(this._name + '_clone', {
-        position: this._position.slice(),
-        rotation: this._rotation.slice(),
-        scale: this._scale.slice(),
-        visible: this._visible,
-        enabled: this._enabled,
-        url: this._url
-      });
-    }
-  }
-
-  // =========================================================================
-  // LightNode — wraps a Filament light entity
-  // =========================================================================
-
-  /** Map light type strings to Filament enum values */
-  var _lightTypeMap = {
-    'point': 'POINT',
-    'spot': 'SPOT',
-    'directional': 'DIRECTIONAL',
-    'sun': 'SUN'
-  };
-
-  /**
-   * LightNode — a scene node that emits light.
-   */
-  class LightNode extends SceneNode {
-    /**
-     * @param {string} name
-     * @param {object} [options]
-     * @param {string} [options.lightType='point'] - 'point', 'spot', 'directional', 'sun'
-     * @param {number[]} [options.color=[1,1,1]] - Light color RGB
-     * @param {number} [options.intensity=10000] - Light intensity (lumens for point/spot, lux for directional/sun)
-     * @param {number[]} [options.direction=[0,-1,0]] - Direction for directional/sun/spot lights
-     * @param {number} [options.falloffRadius=10] - Falloff radius for point/spot lights
-     * @param {number} [options.spotInnerAngle=30] - Inner cone angle in degrees for spot lights
-     * @param {number} [options.spotOuterAngle=45] - Outer cone angle in degrees for spot lights
-     * @param {boolean} [options.castShadows=false] - Whether this light casts shadows
-     */
-    constructor(name, options) {
-      super(name, options);
-      options = options || {};
-      this._lightType = options.lightType || 'point';
-      this._color = options.color ? options.color.slice() : [1, 1, 1];
-      this._intensity = options.intensity !== undefined ? options.intensity : 10000;
-      this._direction = options.direction ? options.direction.slice() : [0, -1, 0];
-      this._falloffRadius = options.falloffRadius !== undefined ? options.falloffRadius : 10;
-      this._spotInnerAngle = options.spotInnerAngle !== undefined ? options.spotInnerAngle : 30;
-      this._spotOuterAngle = options.spotOuterAngle !== undefined ? options.spotOuterAngle : 45;
-      this._castShadows = options.castShadows || false;
-    }
-
-    get type() { return 'light'; }
-
-    /** @returns {string} Light type */
-    get lightType() { return this._lightType; }
-
-    /** @returns {number[]} Light color RGB */
-    get color() { return this._color; }
-    set color(v) {
-      this._color = v.slice();
-      this._rebuildLight();
-    }
-
-    /** @returns {number} Light intensity */
-    get intensity() { return this._intensity; }
-    set intensity(v) {
-      this._intensity = v;
-      this._rebuildLight();
-    }
-
-    /** @returns {number[]} Light direction */
-    get direction() { return this._direction; }
-    set direction(v) {
-      this._direction = v.slice();
-      this._rebuildLight();
-    }
-
-    /** @returns {boolean} Whether this light casts shadows */
-    get castShadows() { return this._castShadows; }
-    set castShadows(v) {
-      this._castShadows = v;
-      this._rebuildLight();
-    }
-
-    /**
-     * Build the Filament light entity. Called when attached to a scene.
-     * @private
-     */
-    _buildLight() {
-      if (!this._sceneInstance) return;
-      var engine = this._sceneInstance._engine;
-
-      // Destroy previous entity
-      this._removeFromFilamentScene();
-      this._destroyFilamentEntities();
-
-      var entity = Filament.EntityManager.get().create();
-      var typeStr = _lightTypeMap[this._lightType] || 'POINT';
-      var filamentType = Filament.LightManager$Type[typeStr];
-      if (!filamentType) {
-        console.warn('SceneView: Unknown light type "' + this._lightType + '", falling back to POINT');
-        filamentType = Filament.LightManager$Type.POINT;
-      }
-
-      var builder = Filament.LightManager.Builder(filamentType)
-        .color(this._color)
-        .intensity(this._intensity)
-        .castShadows(this._castShadows);
-
-      if (this._lightType === 'directional' || this._lightType === 'sun' || this._lightType === 'spot') {
-        builder.direction(this._direction);
-      }
-
-      if (this._lightType === 'point' || this._lightType === 'spot') {
-        builder.falloff(this._falloffRadius);
-      }
-
-      if (this._lightType === 'spot') {
-        var DEG2RAD = Math.PI / 180;
-        builder.spotLightCone(
-          this._spotInnerAngle * DEG2RAD,
-          this._spotOuterAngle * DEG2RAD
-        );
-      }
-
-      if (this._lightType === 'sun') {
-        builder.sunAngularRadius(1.9);
-        builder.sunHaloSize(10.0);
-        builder.sunHaloFalloff(80.0);
-      }
-
-      builder.build(engine, entity);
-
-      this._entity = entity;
-      this._entities = [entity];
-
-      this._addToFilamentScene();
-      this._applyTransformToFilament();
-    }
-
-    /** Rebuild light when properties change */
-    _rebuildLight() {
-      if (this._sceneInstance) {
-        this._buildLight();
-      }
-    }
-
-    _cloneSelf() {
-      return new LightNode(this._name + '_clone', {
-        position: this._position.slice(),
-        rotation: this._rotation.slice(),
-        scale: this._scale.slice(),
-        visible: this._visible,
-        enabled: this._enabled,
-        lightType: this._lightType,
-        color: this._color.slice(),
-        intensity: this._intensity,
-        direction: this._direction.slice(),
-        falloffRadius: this._falloffRadius,
-        spotInnerAngle: this._spotInnerAngle,
-        spotOuterAngle: this._spotOuterAngle,
-        castShadows: this._castShadows
-      });
-    }
-  }
-
-  // =========================================================================
-  // GeometryNode — wraps procedural geometry (cube, sphere, etc.)
-  // =========================================================================
-
-  /**
-   * GeometryNode — a scene node for procedural geometry shapes.
-   */
-  class GeometryNode extends SceneNode {
-    /**
-     * @param {string} name
-     * @param {object} [options]
-     * @param {string} [options.shape='cube'] - Shape type: 'cube', 'sphere', 'cylinder', 'plane'
-     * @param {number[]} [options.size=[1,1,1]] - Size for cube, [radius] for sphere, [radius,height] for cylinder, [w,h] for plane
-     * @param {number[]} [options.color=[0.8,0.8,0.8]] - Base color RGB
-     * @param {number} [options.metallic=0.0] - Metallic factor (0-1)
-     * @param {number} [options.roughness=0.4] - Roughness factor (0-1)
-     * @param {number} [options.segments=32] - Tessellation segments (sphere, cylinder)
-     */
-    constructor(name, options) {
-      super(name, options);
-      options = options || {};
-      this._shape = options.shape || 'cube';
-      this._size = options.size ? options.size.slice() : [1, 1, 1];
-      this._color = options.color ? options.color.slice() : [0.8, 0.8, 0.8];
-      this._metallic = options.metallic !== undefined ? options.metallic : 0.0;
-      this._roughness = options.roughness !== undefined ? options.roughness : 0.4;
-      this._segments = options.segments || 32;
-    }
-
-    get type() { return 'geometry'; }
-
-    /** @returns {string} Shape type */
-    get shape() { return this._shape; }
-
-    /** @returns {number[]} Base color RGB */
-    get color() { return this._color; }
-    set color(v) {
-      this._color = v.slice();
-      this._rebuildGeometry();
-    }
-
-    /**
-     * Build the Filament renderable entity. Called when attached to a scene.
-     * @private
-     */
-    _buildGeometry() {
-      if (!this._sceneInstance) return;
-      var engine = this._sceneInstance._engine;
-
-      // Destroy previous
-      this._removeFromFilamentScene();
-      this._destroyFilamentEntities();
-
-      var mesh;
-      try {
-        switch (this._shape) {
-          case 'cube':
-            mesh = this._createCubeMesh(engine);
-            break;
-          case 'sphere':
-            mesh = this._createSphereMesh(engine);
-            break;
-          case 'cylinder':
-            mesh = this._createCylinderMesh(engine);
-            break;
-          case 'plane':
-            mesh = this._createPlaneMesh(engine);
-            break;
-          default:
-            console.warn('SceneView: Unknown geometry shape "' + this._shape + '", using cube');
-            mesh = this._createCubeMesh(engine);
-        }
-      } catch (e) {
-        console.warn('SceneView: Failed to create geometry for "' + this._shape + '":', e.message);
-        return;
-      }
-
-      if (!mesh) return;
-
-      this._entity = mesh.entity;
-      this._entities = [mesh.entity];
-
-      this._addToFilamentScene();
-      this._applyTransformToFilament();
-    }
-
-    /** Create a unit cube renderable */
-    _createCubeMesh(engine) {
-      var sx = this._size[0] / 2, sy = this._size[1] / 2, sz = this._size[2] / 2;
-
-      // 24 vertices (4 per face for proper normals)
-      var positions = new Float32Array([
-        // Front face (z+)
-        -sx, -sy,  sz,   sx, -sy,  sz,   sx,  sy,  sz,  -sx,  sy,  sz,
-        // Back face (z-)
-        sx, -sy, -sz,  -sx, -sy, -sz,  -sx,  sy, -sz,   sx,  sy, -sz,
-        // Top face (y+)
-        -sx,  sy,  sz,   sx,  sy,  sz,   sx,  sy, -sz,  -sx,  sy, -sz,
-        // Bottom face (y-)
-        -sx, -sy, -sz,   sx, -sy, -sz,   sx, -sy,  sz,  -sx, -sy,  sz,
-        // Right face (x+)
-        sx, -sy,  sz,   sx, -sy, -sz,   sx,  sy, -sz,   sx,  sy,  sz,
-        // Left face (x-)
-        -sx, -sy, -sz,  -sx, -sy,  sz,  -sx,  sy,  sz,  -sx,  sy, -sz
-      ]);
-
-      var normals = new Float32Array([
-        0,0,1, 0,0,1, 0,0,1, 0,0,1,     // Front
-        0,0,-1, 0,0,-1, 0,0,-1, 0,0,-1,  // Back
-        0,1,0, 0,1,0, 0,1,0, 0,1,0,      // Top
-        0,-1,0, 0,-1,0, 0,-1,0, 0,-1,0,  // Bottom
-        1,0,0, 1,0,0, 1,0,0, 1,0,0,      // Right
-        -1,0,0, -1,0,0, -1,0,0, -1,0,0   // Left
-      ]);
-
-      var indices = new Uint16Array([
-        0,1,2, 0,2,3,       // Front
-        4,5,6, 4,6,7,       // Back
-        8,9,10, 8,10,11,    // Top
-        12,13,14, 12,14,15, // Bottom
-        16,17,18, 16,18,19, // Right
-        20,21,22, 20,22,23  // Left
-      ]);
-
-      return this._buildRenderable(engine, positions, normals, indices, 24, 36);
-    }
-
-    /** Create a UV sphere renderable */
-    _createSphereMesh(engine) {
-      var radius = this._size[0] || 0.5;
-      var seg = this._segments;
-      var rings = Math.floor(seg / 2);
-
-      var verts = [];
-      var norms = [];
-      var idxArr = [];
-
-      for (var ring = 0; ring <= rings; ring++) {
-        var phi = Math.PI * ring / rings;
-        var sp = Math.sin(phi), cp = Math.cos(phi);
-        for (var s = 0; s <= seg; s++) {
-          var theta = 2 * Math.PI * s / seg;
-          var st = Math.sin(theta), ct = Math.cos(theta);
-          var nx = ct * sp, ny = cp, nz = st * sp;
-          verts.push(nx * radius, ny * radius, nz * radius);
-          norms.push(nx, ny, nz);
-        }
-      }
-
-      for (var ring = 0; ring < rings; ring++) {
-        for (var s = 0; s < seg; s++) {
-          var a = ring * (seg + 1) + s;
-          var b = a + seg + 1;
-          idxArr.push(a, b, a + 1);
-          idxArr.push(a + 1, b, b + 1);
-        }
-      }
-
-      return this._buildRenderable(engine,
-        new Float32Array(verts), new Float32Array(norms),
-        new Uint16Array(idxArr), verts.length / 3, idxArr.length);
-    }
-
-    /** Create a cylinder renderable */
-    _createCylinderMesh(engine) {
-      var radius = this._size[0] || 0.5;
-      var height = this._size[1] || 1.0;
-      var seg = this._segments;
-      var halfH = height / 2;
-
-      var verts = [];
-      var norms = [];
-      var idxArr = [];
-
-      // Side vertices
-      for (var i = 0; i <= seg; i++) {
-        var angle = 2 * Math.PI * i / seg;
-        var ca = Math.cos(angle), sa = Math.sin(angle);
-        // Bottom ring
-        verts.push(ca * radius, -halfH, sa * radius);
-        norms.push(ca, 0, sa);
-        // Top ring
-        verts.push(ca * radius, halfH, sa * radius);
-        norms.push(ca, 0, sa);
-      }
-
-      // Side indices
-      for (var i = 0; i < seg; i++) {
-        var b0 = i * 2, t0 = b0 + 1, b1 = b0 + 2, t1 = b0 + 3;
-        idxArr.push(b0, b1, t0);
-        idxArr.push(t0, b1, t1);
-      }
-
-      // Top and bottom caps
-      var topCenter = verts.length / 3;
-      verts.push(0, halfH, 0);
-      norms.push(0, 1, 0);
-      var botCenter = verts.length / 3;
-      verts.push(0, -halfH, 0);
-      norms.push(0, -1, 0);
-
-      for (var i = 0; i <= seg; i++) {
-        var angle = 2 * Math.PI * i / seg;
-        var ca = Math.cos(angle), sa = Math.sin(angle);
-        // Top cap vertex
-        var tIdx = verts.length / 3;
-        verts.push(ca * radius, halfH, sa * radius);
-        norms.push(0, 1, 0);
-        // Bottom cap vertex
-        var bIdx = verts.length / 3;
-        verts.push(ca * radius, -halfH, sa * radius);
-        norms.push(0, -1, 0);
-
-        if (i > 0) {
-          idxArr.push(topCenter, tIdx - 2, tIdx);
-          idxArr.push(botCenter, bIdx, bIdx - 2);
-        }
-      }
-
-      return this._buildRenderable(engine,
-        new Float32Array(verts), new Float32Array(norms),
-        new Uint16Array(idxArr), verts.length / 3, idxArr.length);
-    }
-
-    /** Create a flat plane renderable (XZ plane, centered at origin) */
-    _createPlaneMesh(engine) {
-      var hw = (this._size[0] || 1) / 2;
-      var hh = (this._size[1] || 1) / 2;
-
-      var positions = new Float32Array([
-        -hw, 0, -hh,
-         hw, 0, -hh,
-         hw, 0,  hh,
-        -hw, 0,  hh
-      ]);
-      var normals = new Float32Array([
-        0, 1, 0,
-        0, 1, 0,
-        0, 1, 0,
-        0, 1, 0
-      ]);
-      var indices = new Uint16Array([0, 2, 1, 0, 3, 2]);
-
-      return this._buildRenderable(engine, positions, normals, indices, 4, 6);
-    }
-
-    /**
-     * Build a Filament renderable from raw vertex/index data.
-     * Uses the default material (lit PBR via Filament's default material).
-     */
-    _buildRenderable(engine, positions, normals, indices, vertexCount, indexCount) {
-      var entity = Filament.EntityManager.get().create();
-
-      // Create vertex buffer
-      var vb = Filament.VertexBuffer.Builder()
-        .vertexCount(vertexCount)
-        .bufferCount(2)
-        .attribute(Filament.VertexAttribute.POSITION, 0,
-          Filament.VertexBuffer$AttributeType.FLOAT3, 0, 12)
-        .attribute(Filament.VertexAttribute.TANGENTS, 1,
-          Filament.VertexBuffer$AttributeType.FLOAT3, 0, 12)
-        .build(engine);
-
-      vb.setBufferAt(engine, 0, positions);
-      vb.setBufferAt(engine, 1, normals);
-
-      // Create index buffer
-      var ib = Filament.IndexBuffer.Builder()
-        .indexCount(indexCount)
-        .bufferType(Filament.IndexBuffer$IndexType.USHORT)
-        .build(engine);
-
-      ib.setBuffer(engine, indices);
-
-      // Create default lit material
-      var mat;
-      try {
-        mat = Filament.Material.Builder()
-          .package(Filament.getSupportedMaterial('defaultlit'))
-          .build(engine);
-      } catch (e) {
-        // Fallback: try creating a basic material
-        try {
-          mat = Filament.Material.Builder()
-            .package(Filament.getSupportedMaterial('lit'))
-            .build(engine);
-        } catch (e2) {
-          console.warn('SceneView: No default material available for geometry');
-          return null;
-        }
-      }
-
-      var matInstance = mat.createInstance();
-      try {
-        matInstance.setColor3Parameter('baseColor', Filament.RgbType.LINEAR, this._color);
-      } catch (e) { /* param may not exist */ }
-      try {
-        matInstance.setFloatParameter('metallic', this._metallic);
-        matInstance.setFloatParameter('roughness', this._roughness);
-      } catch (e) { /* skip */ }
-
-      // Build renderable
-      Filament.RenderableManager.Builder(1)
-        .boundingBox({
-          center: [0, 0, 0],
-          halfExtent: [this._size[0]/2, this._size[1]/2, this._size[2]/2]
-        })
-        .material(0, matInstance)
-        .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, vb, ib)
-        .build(engine, entity);
-
-      return { entity: entity, vb: vb, ib: ib, mat: mat, matInstance: matInstance };
-    }
-
-    /** Rebuild when properties change */
-    _rebuildGeometry() {
-      if (this._sceneInstance) {
-        this._buildGeometry();
-      }
-    }
-
-    _cloneSelf() {
-      return new GeometryNode(this._name + '_clone', {
-        position: this._position.slice(),
-        rotation: this._rotation.slice(),
-        scale: this._scale.slice(),
-        visible: this._visible,
-        enabled: this._enabled,
-        shape: this._shape,
-        size: this._size.slice(),
-        color: this._color.slice(),
-        metallic: this._metallic,
-        roughness: this._roughness,
-        segments: this._segments
-      });
-    }
-  }
-
-  // =========================================================================
-  // GroupNode — empty transform node for grouping children
-  // =========================================================================
-
-  /**
-   * GroupNode — an empty transform node for hierarchical grouping.
-   * Has no Filament entity of its own; exists only to group children
-   * under a shared transform.
-   */
-  class GroupNode extends SceneNode {
-    constructor(name, options) {
-      super(name, options);
-    }
-
-    get type() { return 'group'; }
-
-    _cloneSelf() {
-      return new GroupNode(this._name + '_clone', {
-        position: this._position.slice(),
-        rotation: this._rotation.slice(),
-        scale: this._scale.slice(),
-        visible: this._visible,
-        enabled: this._enabled
-      });
-    }
-  }
-
-  // =========================================================================
-  // SceneBuilder — fluent DSL for declarative scene construction
-  // =========================================================================
-
-  /**
-   * SceneBuilder — provides a chainable, declarative API for building scenes.
-   * Used inside scene.build(root => { ... }) callbacks.
-   */
-  class SceneBuilder {
-    /**
-     * @param {SceneNode} parentNode - The node to add children to
-     * @param {SceneViewInstance} sceneInstance - The scene instance
-     */
-    constructor(parentNode, sceneInstance) {
-      this._parentNode = parentNode;
-      this._sceneInstance = sceneInstance;
-    }
-
-    /**
-     * Add a model node.
-     * @param {string} url - Model URL (.glb/.gltf)
-     * @param {object} [options] - Node options (position, rotation, scale, name, etc.)
-     * @returns {ModelNode}
-     */
-    model(url, options) {
-      options = options || {};
-      var name = options.name || url.split('/').pop().split('.')[0];
-      var node = new ModelNode(name, options);
-      node._url = url;
-      this._parentNode.addChild(node);
-      node._setSceneInstance(this._sceneInstance);
-      // Kick off async model loading
-      node.load(url).catch(function(e) {
-        console.warn('SceneView: Failed to load model "' + url + '":', e.message);
-      });
-      return node;
-    }
-
-    /**
-     * Add a light node.
-     * @param {string} lightType - 'point', 'spot', 'directional', 'sun'
-     * @param {object} [options] - Light and node options
-     * @returns {LightNode}
-     */
-    light(lightType, options) {
-      options = options || {};
-      options.lightType = lightType;
-      var name = options.name || (lightType + '_light_' + (++_nodeIdCounter));
-      var node = new LightNode(name, options);
-      this._parentNode.addChild(node);
-      node._setSceneInstance(this._sceneInstance);
-      node._buildLight();
-      return node;
-    }
-
-    /**
-     * Add a group node with optional builder callback for children.
-     * @param {string} name - Group name
-     * @param {function(SceneBuilder)|object} [optionsOrCallback] - Options or builder callback
-     * @param {function(SceneBuilder)} [callback] - Builder callback if options provided
-     * @returns {GroupNode}
-     */
-    group(name, optionsOrCallback, callback) {
-      var options = {};
-      var cb = null;
-
-      if (typeof optionsOrCallback === 'function') {
-        cb = optionsOrCallback;
-      } else if (optionsOrCallback) {
-        options = optionsOrCallback;
-        cb = callback || null;
-      }
-
-      var node = new GroupNode(name, options);
-      this._parentNode.addChild(node);
-      node._setSceneInstance(this._sceneInstance);
-
-      if (cb) {
-        var childBuilder = new SceneBuilder(node, this._sceneInstance);
-        cb(childBuilder);
-      }
-
-      return node;
-    }
-
-    /**
-     * Add a cube geometry node.
-     * @param {object} [options] - size, color, position, etc.
-     * @returns {GeometryNode}
-     */
-    cube(options) {
-      return this._geometry('cube', options);
-    }
-
-    /**
-     * Add a sphere geometry node.
-     * @param {object} [options] - size (radius), color, segments, position, etc.
-     * @returns {GeometryNode}
-     */
-    sphere(options) {
-      return this._geometry('sphere', options);
-    }
-
-    /**
-     * Add a cylinder geometry node.
-     * @param {object} [options] - size ([radius, height]), color, segments, position, etc.
-     * @returns {GeometryNode}
-     */
-    cylinder(options) {
-      return this._geometry('cylinder', options);
-    }
-
-    /**
-     * Add a plane geometry node.
-     * @param {object} [options] - size ([width, height]), color, position, etc.
-     * @returns {GeometryNode}
-     */
-    plane(options) {
-      return this._geometry('plane', options);
-    }
-
-    /**
-     * Add a generic geometry node.
-     * @param {string} shape
-     * @param {object} [options]
-     * @returns {GeometryNode}
-     * @private
-     */
-    _geometry(shape, options) {
-      options = options || {};
-      options.shape = shape;
-      var name = options.name || (shape + '_' + (++_nodeIdCounter));
-      var node = new GeometryNode(name, options);
-      this._parentNode.addChild(node);
-      node._setSceneInstance(this._sceneInstance);
-      node._buildGeometry();
-      return node;
-    }
-  }
-
-  // =========================================================================
-  // SceneViewInstance — wraps Filament engine, scene, camera, renderer
-  // =========================================================================
-
-  /**
-   * SceneView instance — wraps Filament engine, scene, camera, renderer.
-   * Now includes a scene graph with a root node and declarative builder.
-   */
   class SceneViewInstance {
     constructor(canvas, engine, scene, renderer, view, swapChain, camera, cameraEntity, loader) {
       this._canvas = canvas;
@@ -1346,7 +834,7 @@
       this._cameraEntity = cameraEntity;
       this._loader = loader;
       this._asset = null;
-      this._angle = 0.785; // Start at ~45° like model-viewer
+      this._angle = 0.785; // Start at ~45deg like model-viewer
       this._autoRotate = true;
       this._orbitRadius = 3.5;
       this._orbitHeight = 0.8;
@@ -1354,169 +842,22 @@
       this._running = true;
       this._isDragging = false;
       this._lastMouse = { x: 0, y: 0 };
-      // Inertia for smooth orbit deceleration
       this._velocityAngle = 0;
       this._velocityHeight = 0;
       this._dampingFactor = 0.95;
-      this._wantsAutoRotate = true; // Remember initial preference for resume after drag
+      this._wantsAutoRotate = true;
       this._autoRotateTimer = null;
-
-      // Scene graph
-      this._root = new GroupNode('root');
-      this._root._setSceneInstance(this);
-
+      this._geometryEntities = []; // Track procedural geometry entities
       this._setupControls();
       this._setupResizeObserver();
       this._startRenderLoop();
     }
 
-    // --- Scene graph access ---
+    // -----------------------------------------------------------------------
+    // Model loading (existing API)
+    // -----------------------------------------------------------------------
 
-    /** @returns {GroupNode} The root node of the scene graph */
-    get root() { return this._root; }
-
-    /**
-     * Declarative scene builder. Pass a callback that receives a SceneBuilder
-     * for the root node.
-     *
-     * @example
-     * scene.build(root => {
-     *   root.model('robot.glb', { position: [0, 0, 0] })
-     *   root.light('point', { position: [2, 3, 0], intensity: 10000 })
-     *   root.group('furniture', group => {
-     *     group.model('chair.glb', { position: [1, 0, 0] })
-     *     group.model('table.glb', { position: [0, 0, 1] })
-     *   })
-     *   root.cube({ size: [1,1,1], position: [3, 0, 0], color: [1, 0, 0] })
-     * })
-     *
-     * @param {function(SceneBuilder): void} callback
-     * @returns {SceneViewInstance} this (for chaining)
-     */
-    build(callback) {
-      var builder = new SceneBuilder(this._root, this);
-      callback(builder);
-      return this;
-    }
-
-    /**
-     * Search the entire scene graph for a node by name.
-     * @param {string} name
-     * @returns {SceneNode|null}
-     */
-    findByName(name) {
-      return this._root.findByName(name);
-    }
-
-    /**
-     * Clear all nodes from the scene graph (except the root).
-     * Destroys all child nodes and their Filament resources.
-     */
-    clear() {
-      var children = this._root.children;
-      for (var i = 0; i < children.length; i++) {
-        children[i].destroy();
-      }
-    }
-
-    /**
-     * Depth-first traversal of the entire scene graph.
-     * @param {function(SceneNode, number): void} callback - Receives (node, depth)
-     */
-    traverse(callback) {
-      this._root.traverse(callback);
-    }
-
-    // --- Convenience methods that return SceneNode wrappers ---
-
-    /**
-     * Add a model to the scene. Returns a ModelNode.
-     * @param {string} url - Model URL (.glb/.gltf)
-     * @param {object} [options] - position, rotation, scale, name, etc.
-     * @returns {Promise<ModelNode>}
-     */
-    addModel(url, options) {
-      options = options || {};
-      var name = options.name || url.split('/').pop().split('.')[0];
-      var node = new ModelNode(name, options);
-      this._root.addChild(node);
-      node._setSceneInstance(this);
-      return node.load(url);
-    }
-
-    /**
-     * Add a light to the scene. Returns a LightNode.
-     * @param {string} lightType - 'point', 'spot', 'directional', 'sun'
-     * @param {object} [options] - Light options (color, intensity, direction, position, etc.)
-     * @returns {LightNode}
-     */
-    addLight(lightType, options) {
-      options = options || {};
-      options.lightType = lightType;
-      var name = options.name || (lightType + '_light');
-      var node = new LightNode(name, options);
-      this._root.addChild(node);
-      node._setSceneInstance(this);
-      node._buildLight();
-      return node;
-    }
-
-    /**
-     * Add a cube geometry node. Returns a GeometryNode.
-     * @param {object} [options] - size, color, position, etc.
-     * @returns {GeometryNode}
-     */
-    addCube(options) { return this._addGeometry('cube', options); }
-
-    /**
-     * Add a sphere geometry node. Returns a GeometryNode.
-     * @param {object} [options] - size (radius), color, segments, position, etc.
-     * @returns {GeometryNode}
-     */
-    addSphere(options) { return this._addGeometry('sphere', options); }
-
-    /**
-     * Add a cylinder geometry node. Returns a GeometryNode.
-     * @param {object} [options] - size ([radius, height]), color, segments, position, etc.
-     * @returns {GeometryNode}
-     */
-    addCylinder(options) { return this._addGeometry('cylinder', options); }
-
-    /**
-     * Add a plane geometry node. Returns a GeometryNode.
-     * @param {object} [options] - size ([width, height]), color, position, etc.
-     * @returns {GeometryNode}
-     */
-    addPlane(options) { return this._addGeometry('plane', options); }
-
-    /**
-     * Add a group node. Returns a GroupNode.
-     * @param {string} [name] - Group name
-     * @param {object} [options] - position, rotation, scale
-     * @returns {GroupNode}
-     */
-    addGroup(name, options) {
-      var node = new GroupNode(name || 'group', options);
-      this._root.addChild(node);
-      node._setSceneInstance(this);
-      return node;
-    }
-
-    /** @private */
-    _addGeometry(shape, options) {
-      options = options || {};
-      options.shape = shape;
-      var name = options.name || shape;
-      var node = new GeometryNode(name, options);
-      this._root.addChild(node);
-      node._setSceneInstance(this);
-      node._buildGeometry();
-      return node;
-    }
-
-    // --- Legacy API (backward compatible) ---
-
-    /** Load a glTF/GLB model from URL (legacy API, still works) */
+    /** Load a glTF/GLB model from URL */
     loadModel(url) {
       var self = this;
       return new Promise(function(resolve, reject) {
@@ -1537,7 +878,6 @@
     }
 
     _showModel(url) {
-      // Remove previous model
       if (this._asset) {
         try {
           this._asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
@@ -1557,7 +897,6 @@
       this._scene.addEntities(asset.getRenderableEntities());
       this._asset = asset;
 
-      // Auto-frame the model
       try {
         var bbox = asset.getBoundingBox();
         var cx = (bbox.min[0] + bbox.max[0]) / 2;
@@ -1569,12 +908,396 @@
         var maxDim = Math.max(sx, sy, sz);
         if (maxDim > 0) {
           this._orbitTarget = [cx, cy, cz];
-          // Tighter framing than before (1.8x instead of 2.5x)
           this._orbitRadius = maxDim * 1.8;
           this._orbitHeight = cy;
         }
       } catch (e) { /* use defaults */ }
     }
+
+    /** Add a model to the scene (without removing existing ones) */
+    addModel(url) {
+      var self = this;
+      return new Promise(function(resolve, reject) {
+        fetch(url)
+          .then(function(resp) { return resp.arrayBuffer(); })
+          .then(function(buffer) {
+            var data = new Uint8Array(buffer);
+            try {
+              var asset = self._loader.createAsset(data);
+              if (!asset) { reject(new Error('Failed to parse: ' + url)); return; }
+              asset.loadResources();
+              self._scene.addEntity(asset.getRoot());
+              self._scene.addEntities(asset.getRenderableEntities());
+              resolve(asset);
+            } catch (e) { reject(e); }
+          })
+          .catch(reject);
+      });
+    }
+
+    /** Load a GLB from a Uint8Array buffer directly */
+    loadGLBBuffer(buffer, key) {
+      var asset = this._loader.createAsset(buffer);
+      if (!asset) return null;
+      asset.loadResources();
+      this._scene.addEntity(asset.getRoot());
+      this._scene.addEntities(asset.getRenderableEntities());
+      return asset;
+    }
+
+    /** Remove an asset from the scene */
+    removeAsset(asset) {
+      if (!asset) return;
+      try {
+        asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
+        this._scene.remove(asset.getRoot());
+      } catch (e) { /* ignore cleanup errors */ }
+    }
+
+    // -----------------------------------------------------------------------
+    // Procedural geometry — create primitives
+    // -----------------------------------------------------------------------
+
+    /**
+     * Create a box/cube entity.
+     * @param {Object} options
+     * @param {Array<number>} [options.size=[1,1,1]] - [width, height, depth]
+     * @param {Array<number>} [options.center=[0,0,0]] - position
+     * @param {*} [options.color=[1,1,1,1]] - color (array, hex string, or rgb())
+     * @param {number} [options.metallic=0] - metallic factor 0-1
+     * @param {number} [options.roughness=0.4] - roughness factor 0-1
+     * @param {number} [options.reflectance=0.5] - reflectance factor 0-1
+     * @param {boolean} [options.unlit=false] - use unlit material
+     * @returns {Promise<number>} Filament Entity handle
+     */
+    createCube(options) {
+      options = options || {};
+      var size = options.size || [1, 1, 1];
+      var w = size[0], h = size[1], d = size[2];
+      var geom = _genCube(w, h, d);
+      var bbox = { min: [-w / 2, -h / 2, -d / 2], max: [w / 2, h / 2, d / 2] };
+      return _buildEntity(this, geom, options, bbox);
+    }
+
+    /**
+     * Create a UV sphere entity.
+     * @param {Object} options
+     * @param {number} [options.radius=0.5] - sphere radius
+     * @param {number} [options.stacks=16] - vertical divisions
+     * @param {number} [options.slices=32] - horizontal divisions
+     * @param {Array<number>} [options.center=[0,0,0]] - position
+     * @param {*} [options.color=[1,1,1,1]] - color
+     * @param {number} [options.metallic=0]
+     * @param {number} [options.roughness=0.4]
+     * @returns {Promise<number>} Filament Entity handle
+     */
+    createSphere(options) {
+      options = options || {};
+      var r = options.radius !== undefined ? options.radius : 0.5;
+      var geom = _genSphere(r, options.stacks, options.slices);
+      var bbox = { min: [-r, -r, -r], max: [r, r, r] };
+      return _buildEntity(this, geom, options, bbox);
+    }
+
+    /**
+     * Create a cylinder entity with top and bottom caps.
+     * @param {Object} options
+     * @param {number} [options.radius=0.5] - cylinder radius
+     * @param {number} [options.height=1] - cylinder height
+     * @param {number} [options.sideCount=32] - number of radial segments
+     * @param {Array<number>} [options.center=[0,0,0]] - position
+     * @param {*} [options.color=[1,1,1,1]]
+     * @param {number} [options.metallic=0]
+     * @param {number} [options.roughness=0.4]
+     * @returns {Promise<number>} Filament Entity handle
+     */
+    createCylinder(options) {
+      options = options || {};
+      var r = options.radius !== undefined ? options.radius : 0.5;
+      var h = options.height !== undefined ? options.height : 1;
+      var sides = options.sideCount || 32;
+      var geom = _genCylinder(r, h, sides);
+      var bbox = { min: [-r, -h / 2, -r], max: [r, h / 2, r] };
+      return _buildEntity(this, geom, options, bbox);
+    }
+
+    /**
+     * Create a cone entity with a base cap.
+     * @param {Object} options
+     * @param {number} [options.radius=0.5] - base radius
+     * @param {number} [options.height=1] - cone height
+     * @param {number} [options.sideCount=32] - number of radial segments
+     * @param {Array<number>} [options.center=[0,0,0]] - position
+     * @param {*} [options.color=[1,1,1,1]]
+     * @param {number} [options.metallic=0]
+     * @param {number} [options.roughness=0.4]
+     * @returns {Promise<number>} Filament Entity handle
+     */
+    createCone(options) {
+      options = options || {};
+      var r = options.radius !== undefined ? options.radius : 0.5;
+      var h = options.height !== undefined ? options.height : 1;
+      var sides = options.sideCount || 32;
+      var geom = _genCone(r, h, sides);
+      var bbox = { min: [-r, -h / 2, -r], max: [r, h / 2, r] };
+      return _buildEntity(this, geom, options, bbox);
+    }
+
+    /**
+     * Create a plane (quad) entity.
+     * @param {Object} options
+     * @param {Array<number>} [options.size=[1,1]] - [width, height]
+     * @param {Array<number>} [options.normal=[0,1,0]] - plane normal direction
+     * @param {Array<number>} [options.center=[0,0,0]] - position
+     * @param {*} [options.color=[1,1,1,1]]
+     * @param {number} [options.metallic=0]
+     * @param {number} [options.roughness=0.4]
+     * @returns {Promise<number>} Filament Entity handle
+     */
+    createPlane(options) {
+      options = options || {};
+      var size = options.size || [1, 1];
+      var normal = options.normal || [0, 1, 0];
+      var geom = _genPlane(size[0], size[1], normal);
+      // Approximate bounding box
+      var maxDim = Math.max(size[0], size[1]) / 2;
+      var bbox = { min: [-maxDim, -maxDim, -maxDim], max: [maxDim, maxDim, maxDim] };
+      return _buildEntity(this, geom, options, bbox);
+    }
+
+    /**
+     * Create a line segment (rendered as a thin cylinder).
+     * @param {Object} options
+     * @param {Array<number>} options.from - [x, y, z] start point
+     * @param {Array<number>} options.to - [x, y, z] end point
+     * @param {*} [options.color=[1,1,1,1]]
+     * @param {number} [options.thickness=0.02] - line thickness (diameter)
+     * @param {boolean} [options.unlit=true] - lines are unlit by default
+     * @returns {Promise<number>} Filament Entity handle
+     */
+    createLine(options) {
+      options = options || {};
+      var from = options.from || [0, 0, 0];
+      var to = options.to || [1, 0, 0];
+      var thickness = options.thickness || 0.02;
+
+      // Default lines to unlit for cleaner look
+      if (options.unlit === undefined) options.unlit = true;
+      // Lines don't use center — they're positioned by from/to
+      options.center = [0, 0, 0];
+
+      var geom = _genLineCylinder(from, to, thickness, 8);
+
+      var minX = Math.min(from[0], to[0]) - thickness;
+      var minY = Math.min(from[1], to[1]) - thickness;
+      var minZ = Math.min(from[2], to[2]) - thickness;
+      var maxX = Math.max(from[0], to[0]) + thickness;
+      var maxY = Math.max(from[1], to[1]) + thickness;
+      var maxZ = Math.max(from[2], to[2]) + thickness;
+      var bbox = { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
+
+      return _buildEntity(this, geom, options, bbox);
+    }
+
+    /**
+     * Create a polyline path through multiple points (rendered as connected thin cylinders).
+     * @param {Object} options
+     * @param {Array<Array<number>>} options.points - array of [x,y,z] points
+     * @param {*} [options.color=[1,1,1,1]]
+     * @param {number} [options.thickness=0.02] - line thickness (diameter)
+     * @param {boolean} [options.closed=false] - connect last point to first
+     * @param {boolean} [options.unlit=true] - paths are unlit by default
+     * @returns {Promise<number>} Filament Entity handle
+     */
+    createPath(options) {
+      options = options || {};
+      var points = options.points;
+      if (!points || points.length < 2) {
+        return Promise.reject(new Error('createPath requires at least 2 points'));
+      }
+      var thickness = options.thickness || 0.02;
+      var closed = options.closed || false;
+
+      // Default paths to unlit
+      if (options.unlit === undefined) options.unlit = true;
+      options.center = [0, 0, 0];
+
+      var geom = _genPath(points, thickness, closed, 8);
+
+      // Compute bounding box from all points
+      var minX = Infinity, minY = Infinity, minZ = Infinity;
+      var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+      for (var i = 0; i < points.length; i++) {
+        var p = points[i];
+        if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+        if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+        if (p[2] < minZ) minZ = p[2]; if (p[2] > maxZ) maxZ = p[2];
+      }
+      minX -= thickness; minY -= thickness; minZ -= thickness;
+      maxX += thickness; maxY += thickness; maxZ += thickness;
+      var bbox = { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
+
+      return _buildEntity(this, geom, options, bbox);
+    }
+
+    // -----------------------------------------------------------------------
+    // Entity transform helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Set the world-space position of an entity.
+     * @param {number} entity - Filament Entity handle
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    setEntityPosition(entity, x, y, z) {
+      var tcm = this._engine.getTransformManager();
+      var inst = tcm.getInstance(entity);
+      if (!inst) return this;
+
+      // Get current transform, replace translation
+      var mat = tcm.getTransform(inst);
+      if (mat && mat.length === 16) {
+        mat[12] = x; mat[13] = y; mat[14] = z;
+        tcm.setTransform(inst, mat);
+      } else {
+        tcm.setTransform(inst, _translationMatrix(x, y, z));
+      }
+      return this;
+    }
+
+    /**
+     * Set the rotation of an entity (Euler angles in degrees, XYZ order).
+     * @param {number} entity - Filament Entity handle
+     * @param {number} rx - rotation around X axis (degrees)
+     * @param {number} ry - rotation around Y axis (degrees)
+     * @param {number} rz - rotation around Z axis (degrees)
+     */
+    setEntityRotation(entity, rx, ry, rz) {
+      var tcm = this._engine.getTransformManager();
+      var inst = tcm.getInstance(entity);
+      if (!inst) return this;
+
+      // Get current transform to preserve translation and scale
+      var current = tcm.getTransform(inst);
+      var tx = 0, ty = 0, tz = 0;
+      if (current && current.length === 16) {
+        tx = current[12]; ty = current[13]; tz = current[14];
+      }
+
+      // Extract current scale from columns
+      var sx = 1, sy = 1, sz = 1;
+      if (current && current.length === 16) {
+        sx = Math.sqrt(current[0] * current[0] + current[1] * current[1] + current[2] * current[2]);
+        sy = Math.sqrt(current[4] * current[4] + current[5] * current[5] + current[6] * current[6]);
+        sz = Math.sqrt(current[8] * current[8] + current[9] * current[9] + current[10] * current[10]);
+      }
+
+      var rot = _rotationMatrix(rx, ry, rz);
+      var scaled = _mat4Mul(_scaleMatrix(sx, sy, sz), rot);
+      // Actually: T * R * S — but we want rotation applied after scale
+      var newMat = _mat4Mul(rot, _scaleMatrix(sx, sy, sz));
+      newMat[12] = tx; newMat[13] = ty; newMat[14] = tz;
+      tcm.setTransform(inst, newMat);
+      return this;
+    }
+
+    /**
+     * Set the scale of an entity.
+     * @param {number} entity - Filament Entity handle
+     * @param {number} sx - scale X
+     * @param {number} sy - scale Y
+     * @param {number} sz - scale Z
+     */
+    setEntityScale(entity, sx, sy, sz) {
+      var tcm = this._engine.getTransformManager();
+      var inst = tcm.getInstance(entity);
+      if (!inst) return this;
+
+      var current = tcm.getTransform(inst);
+      if (current && current.length === 16) {
+        // Extract current column lengths (old scales) and normalize rotation
+        var oldSx = Math.sqrt(current[0] * current[0] + current[1] * current[1] + current[2] * current[2]) || 1;
+        var oldSy = Math.sqrt(current[4] * current[4] + current[5] * current[5] + current[6] * current[6]) || 1;
+        var oldSz = Math.sqrt(current[8] * current[8] + current[9] * current[9] + current[10] * current[10]) || 1;
+
+        // Rescale each column
+        current[0] = (current[0] / oldSx) * sx; current[1] = (current[1] / oldSx) * sx; current[2] = (current[2] / oldSx) * sx;
+        current[4] = (current[4] / oldSy) * sy; current[5] = (current[5] / oldSy) * sy; current[6] = (current[6] / oldSy) * sy;
+        current[8] = (current[8] / oldSz) * sz; current[9] = (current[9] / oldSz) * sz; current[10] = (current[10] / oldSz) * sz;
+
+        tcm.setTransform(inst, current);
+      } else {
+        tcm.setTransform(inst, _scaleMatrix(sx, sy, sz));
+      }
+      return this;
+    }
+
+    /**
+     * Change the color of a procedural geometry entity.
+     * @param {number} entity - Filament Entity handle
+     * @param {number} r - red 0-1
+     * @param {number} g - green 0-1
+     * @param {number} b - blue 0-1
+     * @param {number} [a=1] - alpha 0-1
+     */
+    setEntityColor(entity, r, g, b, a) {
+      if (a === undefined) a = 1;
+      var record = this._findGeometryRecord(entity);
+      if (record && record.matInstance) {
+        try {
+          record.matInstance.setColor4Parameter('baseColor', Filament.RgbaType.sRGB, [r, g, b, a]);
+        } catch (e) {
+          console.warn('SceneView: setEntityColor failed —', e.message);
+        }
+      }
+      return this;
+    }
+
+    /**
+     * Remove a procedural geometry entity from the scene and free its resources.
+     * @param {number} entity - Filament Entity handle
+     */
+    removeEntity(entity) {
+      if (!entity) return;
+      this._scene.remove(entity);
+
+      // Clean up tracked resources
+      var idx = -1;
+      for (var i = 0; i < this._geometryEntities.length; i++) {
+        if (this._geometryEntities[i].entity === entity) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx >= 0) {
+        var record = this._geometryEntities[idx];
+        try {
+          this._engine.destroyEntity(entity);
+        } catch (e) { /* ignore */ }
+        this._geometryEntities.splice(idx, 1);
+      } else {
+        // Not a tracked geometry entity, just remove from scene
+        try {
+          this._engine.destroyEntity(entity);
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    /** @private Find tracked geometry record by entity */
+    _findGeometryRecord(entity) {
+      for (var i = 0; i < this._geometryEntities.length; i++) {
+        if (this._geometryEntities[i].entity === entity) {
+          return this._geometryEntities[i];
+        }
+      }
+      return null;
+    }
+
+    // -----------------------------------------------------------------------
+    // Camera & scene settings (existing API)
+    // -----------------------------------------------------------------------
 
     setAutoRotate(enabled) { this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this; }
     setCameraDistance(d) { this._orbitRadius = d; return this; }
@@ -1584,15 +1307,24 @@
       return this;
     }
 
+    /** Access engine for advanced Filament operations */
+    get engine() { return this._engine; }
+    get scene() { return this._scene; }
+
     dispose() {
       this._running = false;
       if (this._resizeObserver) this._resizeObserver.disconnect();
-
-      // Destroy scene graph
-      this.clear();
-
+      // Clean up geometry entities
+      for (var i = 0; i < this._geometryEntities.length; i++) {
+        try { this._engine.destroyEntity(this._geometryEntities[i].entity); } catch (e) { /* skip */ }
+      }
+      this._geometryEntities = [];
       try { Filament.Engine.destroy(this._engine); } catch (e) { /* already destroyed */ }
     }
+
+    // -----------------------------------------------------------------------
+    // Controls, resize, render loop (unchanged from original)
+    // -----------------------------------------------------------------------
 
     _setupControls() {
       var canvas = this._canvas;
@@ -1618,7 +1350,6 @@
       });
       canvas.addEventListener('mouseup', function() {
         self._isDragging = false;
-        // Resume auto-rotate after 3s idle (like model-viewer)
         if (self._wantsAutoRotate) {
           self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
         }
@@ -1669,7 +1400,7 @@
       var self = this;
       this._resizeObserver = new ResizeObserver(function() {
         var canvas = self._canvas;
-        var dpr = Math.min(devicePixelRatio, 2); // Cap at 2x for performance
+        var dpr = Math.min(devicePixelRatio, 2);
         canvas.width = canvas.clientWidth * dpr;
         canvas.height = canvas.clientHeight * dpr;
         self._view.setViewport([0, 0, canvas.width, canvas.height]);
@@ -1686,10 +1417,8 @@
       function render() {
         if (!self._running) return;
 
-        // Auto-rotate: 30°/sec ÷ 60fps (matches model-viewer)
         if (self._autoRotate) self._angle += 0.00873;
 
-        // Inertia damping after drag release
         if (!self._isDragging) {
           self._angle += self._velocityAngle;
           self._orbitHeight += self._velocityHeight;
@@ -1698,9 +1427,6 @@
           if (Math.abs(self._velocityAngle) < 0.00005) self._velocityAngle = 0;
           if (Math.abs(self._velocityHeight) < 0.00005) self._velocityHeight = 0;
         }
-
-        // Update scene graph transforms (apply world matrices to Filament entities)
-        self._updateSceneGraph();
 
         var t = self._orbitTarget;
         var r = self._orbitRadius;
@@ -1718,7 +1444,6 @@
             self._renderer.endFrame();
           }
         } catch (e) {
-          // Filament 1.70 may need different render call
           console.error('SceneView render error:', e.message);
           self._running = false;
         }
@@ -1726,27 +1451,14 @@
       }
       render();
     }
-
-    /**
-     * Walk the scene graph and apply transforms to Filament entities.
-     * Called once per frame in the render loop.
-     * @private
-     */
-    _updateSceneGraph() {
-      this._root.traverse(function(node) {
-        if (node._entity && node._worldMatrixDirty) {
-          node._applyTransformToFilament();
-        }
-      });
-    }
   }
 
-  // Singleton guard — prevent multiple engine creations on same canvas
+  // =========================================================================
+  // Engine creation
+  // =========================================================================
+
   var _activeCanvases = new Set();
 
-  /**
-   * Set up Filament engine, scene, lights on a canvas.
-   */
   function _createEngine(canvasOrId, options) {
     options = options || {};
 
@@ -1755,7 +1467,6 @@
       : canvasOrId;
     if (!canvas) throw new Error('Canvas not found: ' + canvasOrId);
 
-    // Prevent double initialization on the same canvas
     if (_activeCanvases.has(canvas)) {
       console.warn('SceneView: Canvas already initialized, skipping');
       return null;
@@ -1763,7 +1474,6 @@
     _activeCanvases.add(canvas);
 
     var dpr = Math.min(devicePixelRatio, 2);
-    // Ensure canvas has actual layout dimensions (not default 300x150)
     var cssW = canvas.clientWidth || canvas.offsetWidth || 500;
     var cssH = canvas.clientHeight || canvas.offsetHeight || 500;
     canvas.width = cssW * dpr;
@@ -1788,15 +1498,14 @@
     camera.setProjectionFov(fov, canvas.width / canvas.height, 0.1, 1000, Filament.Camera$Fov.VERTICAL);
     camera.lookAt([0, 1, 5], [0, 0, 0], [0, 1, 0]);
 
-    // --- Post-processing quality ---
+    // Post-processing
     try {
       view.setAmbientOcclusionOptions({
         enabled: true, radius: 0.3, bias: 0.0005, intensity: 1.0, quality: 1
       });
     } catch (e) { /* skip */ }
 
-    // --- 3-point studio lighting ---
-    // Sun/key light — warm, strong
+    // 3-point studio lighting
     var sun = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.SUN)
       .color([0.98, 0.92, 0.89])
@@ -1808,7 +1517,6 @@
       .build(engine, sun);
     scene.addEntity(sun);
 
-    // Fill light — cool, softer
     var fill = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
       .color([0.7, 0.75, 0.9])
@@ -1817,7 +1525,6 @@
       .build(engine, fill);
     scene.addEntity(fill);
 
-    // Back/rim light — edge highlight
     var back = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
       .color([0.5, 0.6, 0.9])
@@ -1826,7 +1533,7 @@
       .build(engine, back);
     scene.addEntity(back);
 
-    // --- IBL: load real KTX if available, fallback to synthetic SH ---
+    // IBL
     var iblUrl = options.iblUrl || 'environments/neutral_ibl.ktx';
     fetch(iblUrl)
       .then(function(r) {
@@ -1838,6 +1545,17 @@
           var ibl = engine.createIblFromKtx1(buffer);
           ibl.setIntensity(options.iblIntensity || 40000);
           scene.setIndirectLight(ibl);
+          if (options.skybox !== false) {
+            try {
+              var reflections = ibl.getReflectionsTexture();
+              if (reflections) {
+                var skybox = Filament.Skybox.Builder()
+                  .environment(reflections)
+                  .build(engine);
+                scene.setSkybox(skybox);
+              }
+            } catch (skyErr) { /* skip */ }
+          }
           console.log('SceneView: KTX IBL loaded (' + Math.round(buffer.length / 1024) + 'KB)');
         } catch (e) {
           console.warn('SceneView: createIblFromKtx1 failed, using SH fallback', e);
@@ -1857,7 +1575,6 @@
     return instance;
   }
 
-  /** Fallback IBL from spherical harmonics when KTX not available */
   function _applySyntheticIBL(engine, scene) {
     try {
       var ibl = Filament.IndirectLight.Builder()
@@ -1878,6 +1595,10 @@
       console.log('SceneView: Using synthetic SH IBL');
     } catch (e) { /* skip */ }
   }
+
+  // =========================================================================
+  // Public API
+  // =========================================================================
 
   function create(canvasOrId, options) {
     return _ensureFilament().then(function() {
@@ -1907,21 +1628,21 @@
     });
   }
 
-  // =========================================================================
-  // Public API
-  // =========================================================================
+  /**
+   * Set the base path for material files (.filamat).
+   * Default is auto-detected from the sceneview.js script tag location.
+   * @param {string} path - e.g. '/assets/materials/' or 'materials/'
+   */
+  function setMaterialsPath(path) {
+    _materialsBasePath = path;
+    if (path[path.length - 1] !== '/') _materialsBasePath += '/';
+  }
 
   global.SceneView = {
     version: '2.0.0',
     create: create,
     modelViewer: modelViewer,
-
-    // Node classes (for advanced usage, instanceof checks, or extending)
-    SceneNode: SceneNode,
-    ModelNode: ModelNode,
-    LightNode: LightNode,
-    GeometryNode: GeometryNode,
-    GroupNode: GroupNode
+    setMaterialsPath: setMaterialsPath
   };
 
 })(typeof globalThis !== 'undefined' ? globalThis : window);

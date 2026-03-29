@@ -1,0 +1,17 @@
+material {
+    "name" : "Unlit Colored",
+    "parameters" : [
+        { "type" : "float4", "name" : "baseColor" }
+    ],
+    "requires" : [
+        "position"
+    ],
+    "shadingModel" : "unlit",
+    "blending" : "opaque"
+}
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.baseColor;
+    }
+}
