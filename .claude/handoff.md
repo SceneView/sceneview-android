@@ -4,63 +4,69 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session nuit — massive evolution wave)
-**Branch:** main (tout mergé, 0 PR ouverte)
-**Repo website:** sceneview.github.io (séparé, pushé directement)
+**Date:** 29 mars 2026
+**Branch:** main
 
-## CE QUI A ÉTÉ FAIT CETTE SESSION
+## CE QUI A ETE FAIT CETTE SESSION
 
-### Release v3.5.0 — Maven Central PUBLIÉ
-- **Maven Central v3.5.0 PUBLIÉ avec succès** — la priorité #1 est enfin résolue
-- Fix du Gradle task : `publishAndReleaseToMavenCentral` (était incorrect avant)
-- GitHub Release v3.5.0 créée
-- sceneview-mcp 3.5.0 déjà sur npm (de la run précédente)
-- gradle.properties VERSION_NAME=3.5.0
+### Audit securite — donnees personnelles
+- Scan exhaustif du repo : fichiers actuels + historique git complet
+- 3 fuites CRITIQUES trouvees et corrigees :
+  - Cle API Sketchfab en dur dans scripts/ → remplacee par variable d'env (GitHub Secret)
+  - Infos personnelles/pro dans handoff.md, branding/, SPONSOR_TIERS.md → nettoyees
+  - Hook settings.json listant les termes sensibles → deplace dans settings.local.json (hors git)
+- `git filter-repo` execute : historique complet reecrit (1510 commits)
+  - Tous les termes sensibles remplaces par [REDACTED]
+  - Email de commit `@octopuscommunity.com` → `@gmail.com`
+  - Messages de commit nettoyes
+- Force push sur origin/main
+- 2 stash sensibles supprimes
+- Donnees personnelles migrees vers profile-private (hors repo)
 
-### 10 agents d'évolution lancés et mergés
-Tous en worktree isolé, tous pushés sur origin, tous mergés sur main sans conflit :
+### Audit ecosysteme Claude Code
+- 11 skills, 10 hooks, 4 scripts — tous audites et valides
+- 43 memories → 30 memories (doublons fusionnes, orphelins indexes, historique condense)
+- CLAUDE.md allege (historique de sessions supprime, pointeur vers handoff)
+- MEMORY.md reecrit proprement (zero orphelin, zero lien mort)
 
-1. **evolve-build** — Version catalog, BOM, Gradle 8.13, detekt config
-2. **evolve-kmp-core** — +4333 lignes : Capsule collision, Octree, CSG, 8 nouvelles géométries (Torus, Icosphere, Lathe, Heightmap, RoundedCube, Extrude, Capsule), Noise, Splines, Color utils
-3. **evolve-llms-txt** — Réécriture complète llms.txt, source-verified API reference
-4. **evolve-android-lib** — AnimationState, ShadowOptions, EnvironmentPresets, DebugOverlay, SafeFilament, SceneInspector, TextNode amélioré, 6 test suites
-5. **evolve-android-demo** — 5 nouveaux demos, string resources, accessibilité
-6. **evolve-sceneview-swift** — AnimationController, GestureSystem, CustomMaterial, NodeModifiers, NodeBuilder, ViewNode, SceneReconstruction, SceneSerialization, SceneSnapshot, SceneObservation + 8 test suites
-7. **evolve-ios-demo** — Architecture multi-fichiers, 14 démos (AllShapes, AutoRotate, Billboard, CustomMesh, DynamicSky, Fog, ImagePlane, LightTypes, LinesPaths, Materials, OrbitCamera, Physics, SceneGallery, Text), 4 onglets (Explore, AR, Samples, About)
-8. **evolve-website** — Design premium, docs.html, SceneView.js intégré, responsive
-9. **evolve-mcp** — 10 nouveaux tools (animation, gesture, physics, environment, multiplatform, convert, explain, optimize, debug), v3.6.0, 1204 tests / 42 fichiers
-10. **evolve-kmp-core** — Collision (Capsule, Octree, MeshCollider, CollisionResponse), Geometry (8 types), Math (Noise, Splines, Color)
+### Fix CI
+- TestFlight : workflow reecrit avec check/deploy split (green skip quand secrets manquent)
+- Daily Maintenance : labels auto-crees avant utilisation
+- Fix `generic/platform=iOS` destination pour xcodebuild archive
+- Erreur Swift restante : `AnimationComponent` not found — agent en cours de fix
 
-### sceneview.js v2.0.0 (mergé session précédente)
-- 3459 lignes — full scene graph, animation, geometry, collision, materials, media nodes
-- Feature parity avec native platforms
+### Optimisation environnement
+- `disableAllHooks: false` dans settings globaux (hooks etaient tous desactives !)
+- Scheduled tasks : 17 → 7 actives (obsoletes desactivees, QA consolidee en une seule toutes les 6h)
+- settings.local.json retire du tracking git
 
-### CI Status
-- Website deploy : succès
-- iOS CI : succès (TestFlight failure — besoin du cert Apple)
-- Android CI : en cours
-- Play Store deploy : en cours
+## CE QUI RESTE A FAIRE
 
-## CE QUI RESTE À FAIRE
+### Priorite 1 — Swift compilation
+- Agent Opus en cours pour fixer `AnimationComponent` et autres erreurs SwiftRealityKit
+- Une fois fixe, TestFlight CI devrait passer au vert
 
-### Prochaine session
-1. **Vérifier CI finales** — Android build + Play Store deploy
-2. **Fix sceneview-web npm publish** — task Gradle `jsBrowserProductionLibraryDistribution` n'existe pas
-3. **MCP v3.6.0 publish** — npm publish (10 nouveaux tools)
-4. **Dependabot vulns** — 5 alertes GitHub (2 high, 3 moderate)
-5. **App Store** — Thomas doit créer l'app sur App Store Connect + cert
-6. **Play Store** — vérifier si review Google passée
+### Priorite 2 — Publier
+- MCP v3.6.0 npm publish (32 tools, 1204 tests, pret)
+- sceneview.js v2.0.0 npm publish (3459 lignes, feature parity)
+
+### Priorite 3 — Stores
+- Play Store : verifier si review Google passee
+- App Store : Thomas doit creer l'app sur App Store Connect
+
+### Priorite 4 — Dependabot
+- 3 alertes GitHub (1 high, 2 moderate)
 
 ## ACTIONS THOMAS
-1. **App Store Connect** : créer app "SceneView Demo" bundle ID `io.github.sceneview.demo`
-2. **Apple Developer** : créer certificat de distribution iOS
-3. **Play Store** : checker si review Google est passée
+1. **App Store Connect** : creer app "SceneView Demo" bundle ID `io.github.sceneview.demo`
+2. **Play Store** : checker si review Google est passee
+3. **Sketchfab** : regenerer la cle API si possible (l'ancienne a ete exposee dans l'historique git)
 
-## RÈGLES
-- Merge direct sur main après review auto
+## REGLES
+- Merge direct sur main apres review auto
 - Fast release : auto-deploy stores sur push to main
-- Alerter sur consommation tokens
-- JAMAIS toucher [REDACTED]
-- Assets toujours hébergés localement
+- Zero donnees personnelles dans le repo
+- Ne modifier que les orgs SceneView
+- Assets toujours heberges localement
 - TOUJOURS opus pour les agents importants
-- ZÉRO perte de données — chaque agent sur sa branche, pushée
+- ZERO perte de donnees — chaque agent sur sa branche, pushee
