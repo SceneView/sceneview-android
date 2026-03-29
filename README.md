@@ -8,7 +8,7 @@ Same concepts, same simplicity — Android, iOS, Web, Desktop, TV, Flutter, Reac
 <!-- Platforms -->
 [![Android 3D](https://img.shields.io/maven-central/v/io.github.sceneview/sceneview?label=Android%203D&logo=android&color=34a853)](https://central.sonatype.com/artifact/io.github.sceneview/sceneview)
 [![Android AR](https://img.shields.io/maven-central/v/io.github.sceneview/arsceneview?label=Android%20AR&logo=android&color=34a853)](https://central.sonatype.com/artifact/io.github.sceneview/arsceneview)
-[![iOS / macOS / visionOS](https://img.shields.io/github/v/tag/sceneview/sceneview?filter=v*&label=Swift&logo=swift&color=f05138)](https://github.com/sceneview/sceneview-swift)
+[![iOS / macOS / visionOS](https://img.shields.io/github/v/release/sceneview/sceneview?label=Swift&logo=swift&color=f05138)](https://github.com/sceneview/sceneview-swift)
 [![sceneview.js](https://img.shields.io/npm/v/sceneview-web?label=sceneview.js&logo=javascript&color=f7df1e)](https://www.npmjs.com/package/sceneview-web)
 [![MCP Server](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&logo=anthropic&color=d97706)](https://www.npmjs.com/package/sceneview-mcp)
 [![Flutter](https://img.shields.io/badge/Flutter-3.5.0-02569B?logo=flutter)](https://github.com/sceneview/sceneview/tree/main/flutter)
