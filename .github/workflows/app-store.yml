@@ -132,7 +132,8 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM=5G3DZ3TH45 \
-            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_UUID"
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_UUID" \
+            ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS=NO
 
       - name: Export IPA and upload to TestFlight
         env:
