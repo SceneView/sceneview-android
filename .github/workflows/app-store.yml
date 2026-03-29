@@ -1,29 +1,24 @@
 name: Deploy iOS Demo to TestFlight
 
-# PREREQUISITES (Thomas manual actions):
+# PREREQUISITES (manual actions):
 # 1. Create an iOS Distribution certificate in Apple Developer portal
-# 2. Export it as .p12 WITH a password you remember
+# 2. Export it as .p12 WITH a password
 # 3. base64 encode it: base64 -i certificate.p12 | pbcopy
 # 4. Set GitHub secrets:
 #    - IOS_BUILD_CERTIFICATE_BASE64: the base64 string from step 3
 #    - IOS_BUILD_CERTIFICATE_PASSWORD: the password from step 2
 #    - IOS_PROVISIONING_PROFILE_BASE64: base64-encoded .mobileprovision
 #    - APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_API_KEY
-#
-# ALTERNATIVE: Use Xcode Cloud (free 25 hrs/month) — zero certificate management.
-# See docs/ios-build-guide.md for details.
 
 on:
-  # Disabled automatic trigger — requires Apple Distribution certificate + App Store Connect setup
-  # Re-enable push trigger once all secrets are configured (see PREREQUISITES above)
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - 'SceneViewSwift/**'
-  #     - 'samples/ios-demo/**'
+  push:
+    branches: [main]
+    paths:
+      - 'SceneViewSwift/**'
+      - 'samples/ios-demo/**'
+      - '.github/workflows/app-store.yml'
   workflow_dispatch:
 
-# Only one TestFlight deploy at a time
 concurrency:
   group: testflight-deploy
   cancel-in-progress: false
@@ -32,8 +27,32 @@ permissions:
   contents: read
 
 jobs:
+  check:
+    name: Check prerequisites
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.secrets.outputs.ready }}
+    steps:
+      - name: Check if secrets are configured
+        id: secrets
+        env:
+          HAS_CERT: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 != '' }}
+          HAS_PASS: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD != '' }}
+          HAS_PROF: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 != '' }}
+          HAS_KEY: ${{ secrets.APP_STORE_CONNECT_KEY_ID != '' }}
+        run: |
+          if [ "$HAS_CERT" = "true" ] && [ "$HAS_PASS" = "true" ] && [ "$HAS_PROF" = "true" ] && [ "$HAS_KEY" = "true" ]; then
+            echo "ready=true" >> $GITHUB_OUTPUT
+            echo "All secrets configured — proceeding with build"
+          else
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "::notice::Skipping TestFlight deploy — iOS signing secrets not yet configured. See workflow comments for setup."
+          fi
+
   deploy:
     name: Build & Upload to TestFlight
+    needs: check
+    if: needs.check.outputs.ready == 'true'
     runs-on: macos-15
     timeout-minutes: 60
     defaults:
@@ -46,40 +65,12 @@ jobs:
 
       - name: Select Xcode
         run: |
-          # Use latest Xcode available (16.2+ needed for RealityKit iOS 18 APIs)
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer 2>/dev/null \
             || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer 2>/dev/null \
             || sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer 2>/dev/null \
             || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
-
-      - name: Validate secrets exist
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.IOS_BUILD_CERTIFICATE_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-        run: |
-          MISSING=()
-          [ -z "$BUILD_CERTIFICATE_BASE64" ]       && MISSING+=("IOS_BUILD_CERTIFICATE_BASE64")
-          [ -z "$P12_PASSWORD" ]                   && MISSING+=("IOS_BUILD_CERTIFICATE_PASSWORD")
-          [ -z "$BUILD_PROVISION_PROFILE_BASE64" ] && MISSING+=("IOS_PROVISIONING_PROFILE_BASE64")
-          [ -z "$APP_STORE_CONNECT_KEY_ID" ]       && MISSING+=("APP_STORE_CONNECT_KEY_ID")
-          [ -z "$APP_STORE_CONNECT_ISSUER_ID" ]    && MISSING+=("APP_STORE_CONNECT_ISSUER_ID")
-          [ -z "$APP_STORE_CONNECT_API_KEY" ]      && MISSING+=("APP_STORE_CONNECT_API_KEY")
-          if [ ${#MISSING[@]} -gt 0 ]; then
-            echo "::error::Missing required secrets: ${MISSING[*]}"
-            echo "See the workflow comments for setup instructions."
-            exit 1
-          fi
-          # Validate base64 decodes to a valid PKCS12 file
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > /tmp/test_cert.p12
-          FILE_TYPE=$(file /tmp/test_cert.p12)
-          echo "Certificate file type: $FILE_TYPE"
-          rm -f /tmp/test_cert.p12
 
       - name: Install the Apple certificate and provisioning profile
         env:
@@ -95,27 +86,21 @@ jobs:
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PROFILE_PATH
 
-          # Verify the .p12 can be read with the given password before keychain import
           if ! openssl pkcs12 -in "$CERTIFICATE_PATH" -passin "pass:$P12_PASSWORD" -nokeys -noout 2>/dev/null; then
-            echo "::error::P12 password verification failed. The IOS_BUILD_CERTIFICATE_PASSWORD secret does not match the certificate. Re-export the .p12 from Keychain Access with the correct password and update both secrets."
+            echo "::error::P12 password verification failed."
             exit 1
           fi
-          echo "P12 password verified successfully."
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-
-          # Extract UUID and install provisioning profile
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i $PROFILE_PATH))
           cp $PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$PROFILE_UUID.mobileprovision
-          echo "Installed provisioning profile: $PROFILE_UUID"
           echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> $GITHUB_ENV
 
       - name: Cache Swift Package dependencies
@@ -123,8 +108,7 @@ jobs:
         with:
           path: samples/ios-demo/SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('samples/ios-demo/SceneViewDemo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: |
-            spm-${{ runner.os }}-
+          restore-keys: spm-${{ runner.os }}-
 
       - name: Resolve Swift Package dependencies
         run: |
@@ -138,7 +122,7 @@ jobs:
           xcodebuild archive \
             -project SceneViewDemo.xcodeproj \
             -scheme SceneViewDemo \
-            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -archivePath $RUNNER_TEMP/SceneViewDemo.xcarchive \
             -clonedSourcePackagesDirPath SourcePackages \
             -skipPackagePluginValidation \
@@ -156,11 +140,10 @@ jobs:
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: |
-          # Create App Store Connect API key file for xcodebuild authentication
           mkdir -p ~/.private_keys
           echo "$APP_STORE_CONNECT_API_KEY" > ~/.private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8
 
-          cat > $RUNNER_TEMP/ExportOptions.plist << 'PLIST'
+          cat > $RUNNER_TEMP/ExportOptions.plist << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -176,14 +159,11 @@ jobs:
             <key>provisioningProfiles</key>
             <dict>
               <key>io.github.sceneview.demo</key>
-              <string>PROVISIONING_PROFILE_UUID_PLACEHOLDER</string>
+              <string>$PROVISIONING_PROFILE_UUID</string>
             </dict>
           </dict>
           </plist>
           PLIST
-
-          # Replace placeholder with actual UUID (can't use shell vars inside heredoc with quotes)
-          sed -i '' "s/PROVISIONING_PROFILE_UUID_PLACEHOLDER/$PROVISIONING_PROFILE_UUID/" $RUNNER_TEMP/ExportOptions.plist
 
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/SceneViewDemo.xcarchive \
