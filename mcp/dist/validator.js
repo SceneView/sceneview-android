@@ -597,7 +597,7 @@ function detectLanguage(code) {
     if (code.includes("import SwiftUI") ||
         code.includes("import RealityKit") ||
         code.includes("import SceneViewSwift") ||
-        code.includes("struct ") && code.includes(": View") ||
+        (code.includes("struct ") && code.includes(": View")) ||
         code.includes("@State private var") ||
         /SceneView\s*\{.*\bin\b/.test(code)) {
         return "swift";
