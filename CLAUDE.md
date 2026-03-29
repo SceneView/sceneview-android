@@ -124,8 +124,8 @@ Never say "everything is good" without verifying published packages.
 
 - **Active branch**: `main`
 - **Latest release**: v3.5.0 (GitHub Release + Maven Central PUBLISHED)
-- **MCP servers**: sceneview-mcp 3.5.0 on npm (32 tools, 1204 tests), 9 MCPs total
-- **sceneview.js**: v2.0.0 local, v1.2.0 on npm
+- **MCP servers**: sceneview-mcp 3.5.2 on npm (32 tools, 1204 tests), 9 MCPs total
+- **sceneview-web**: v3.5.0 on npm (Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
 - **Website**: sceneview.github.io
 
@@ -232,7 +232,7 @@ Source of truth: `gradle.properties` → `VERSION_NAME=X.Y.Z`
 | sceneview | Maven Central | Maven search API |
 | arsceneview | Maven Central | Maven search API |
 | sceneview-mcp | npm | `npm view sceneview-mcp version` |
-| sceneview.js | npm | `npm view sceneview version` |
+| sceneview-web | npm | `npm view sceneview-web version` |
 | SceneViewSwift | SPM (git tags) | `git tag -l 'v*'` |
 | GitHub Release | GitHub | `gh release list` |
 | Website | GitHub Pages | sceneview.github.io |
