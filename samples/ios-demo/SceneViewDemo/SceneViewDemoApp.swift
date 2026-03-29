@@ -10,50 +10,71 @@ import SceneViewSwift
 struct SceneViewDemoApp: App {
     var body: some SwiftUI.Scene {
         WindowGroup {
-            TabView {
-                ExploreTab()
-                    .tabItem {
-                        Label("3D", systemImage: "cube.fill")
-                    }
-
-                ARViewerTab()
-                    .tabItem {
-                        Label("AR", systemImage: "arkit")
-                    }
-
-                SamplesTab()
-                    .tabItem {
-                        Label("Samples", systemImage: "square.grid.2x2.fill")
-                    }
-
-                AboutTab()
-                    .tabItem {
-                        Label("About", systemImage: "info.circle.fill")
-                    }
-            }
-            .tint(.blue)
+            ContentView()
         }
+    }
+}
+
+struct ContentView: View {
+    var body: some View {
+        TabView {
+            ExploreTab()
+                .tabItem {
+                    Label("3D", systemImage: "cube.fill")
+                }
+                .accessibilityLabel("3D Viewer")
+
+            ARViewerTab()
+                .tabItem {
+                    Label("AR", systemImage: "arkit")
+                }
+                .accessibilityLabel("Augmented Reality Viewer")
+
+            SamplesTab()
+                .tabItem {
+                    Label("Samples", systemImage: "square.grid.2x2.fill")
+                }
+                .accessibilityLabel("Code Samples")
+
+            AboutTab()
+                .tabItem {
+                    Label("About", systemImage: "info.circle.fill")
+                }
+                .accessibilityLabel("About SceneView")
+        }
+        .tint(.blue)
     }
 }
 
 // MARK: - 3D Explore Tab
 
+private struct ShapeOption {
+    let name: String
+    let make: () -> GeometryNode
+}
+
 struct ExploreTab: View {
-    private let shapes: [(String, () -> GeometryNode)] = [
-        ("Cube", { GeometryNode.cube(size: 0.4, color: .systemBlue, cornerRadius: 0.02) }),
-        ("Sphere", { GeometryNode.sphere(radius: 0.25, material: .pbr(color: .red, metallic: 0.8, roughness: 0.2)) }),
-        ("Cylinder", { GeometryNode.cylinder(radius: 0.2, height: 0.5, color: .green) }),
+    private let shapes: [ShapeOption] = [
+        ShapeOption(name: "Cube",
+            make: { GeometryNode.cube(size: 0.4, color: .systemBlue, cornerRadius: 0.02) }),
+        ShapeOption(name: "Sphere",
+            make: { GeometryNode.sphere(radius: 0.25, material: .pbr(color: .red, metallic: 0.8, roughness: 0.2)) }),
+        ShapeOption(name: "Cylinder",
+            make: { GeometryNode.cylinder(radius: 0.2, height: 0.5, color: .green) }),
     ]
     @State private var selectedIndex = 0
 
     var body: some View {
         ZStack {
+            // Use .id to force SceneView rebuild when selected shape changes
             SceneView { root in
-                let shape = shapes[selectedIndex].1()
+                let shape = shapes[selectedIndex].make()
                 shape.entity.position = .init(x: 0, y: 0, z: -1.5)
                 root.addChild(shape.entity)
             }
             .cameraControls(.orbit)
+            .id(selectedIndex)
+            .ignoresSafeArea()
 
             VStack {
                 // Title overlay
@@ -75,11 +96,13 @@ struct ExploreTab: View {
                 // Shape picker
                 HStack(spacing: 12) {
                     ForEach(0..<shapes.count, id: \.self) { index in
-                        Button(shapes[index].0) {
+                        Button(shapes[index].name) {
                             selectedIndex = index
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(index == selectedIndex ? .blue : .gray.opacity(0.6))
+                        .accessibilityLabel("Show \(shapes[index].name)")
+                        .accessibilityAddTraits(index == selectedIndex ? .isSelected : [])
                     }
                 }
                 .padding(.bottom, 20)
@@ -106,7 +129,10 @@ struct ARViewerTab: View {
                 ARSceneView(
                     planeDetection: .horizontal,
                     onTapOnPlane: { position, arView in
-                        let colors: [UIColor] = [.systemBlue, .systemRed, .systemGreen, .systemOrange, .systemPurple]
+                        let colors: [UIColor] = [
+                            .systemBlue, .systemRed, .systemGreen,
+                            .systemOrange, .systemPurple
+                        ]
                         let cube = GeometryNode.cube(
                             size: 0.1,
                             color: colors[placedCount % colors.count],
@@ -120,6 +146,7 @@ struct ARViewerTab: View {
                         placedCount += 1
                     }
                 )
+                .ignoresSafeArea()
                 #else
                 VStack(spacing: 16) {
                     Image(systemName: "arkit")
@@ -131,11 +158,16 @@ struct ARViewerTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemGroupedBackground))
                 #endif
 
                 VStack {
-                    // Status pill
-                    Text(placedCount == 0 ? "Tap a surface to place" : "\(placedCount) object(s) placed")
+                    #if !targetEnvironment(simulator)
+                    // Status pill — only shown on device when AR is active
+                    Text(placedCount == 0
+                        ? "Point at a surface and tap to place"
+                        : "\(placedCount) object\(placedCount == 1 ? "" : "s") placed")
                         .font(.caption)
                         .fontWeight(.medium)
                         .padding(.horizontal, 16)
@@ -143,6 +175,12 @@ struct ARViewerTab: View {
                         .background(.ultraThinMaterial)
                         .clipShape(Capsule())
                         .padding(.top, 8)
+                        .accessibilityLabel(
+                            placedCount == 0
+                                ? "Point at a surface and tap to place an object"
+                                : "\(placedCount) \(placedCount == 1 ? "object" : "objects") placed in the scene"
+                        )
+                    #endif
 
                     Spacer()
                 }
@@ -161,21 +199,46 @@ struct SampleItem: Identifiable {
     let icon: String
     let subtitle: String
     let category: String
-    let view: AnyView
+    let destination: () -> AnyView
 }
 
 struct SamplesTab: View {
     let samples: [SampleItem] = [
-        SampleItem(title: "Geometry", icon: "cube.fill", subtitle: "Cube, sphere, cylinder shapes", category: "3D",
-                   view: AnyView(GeometryDemo())),
-        SampleItem(title: "Materials", icon: "paintpalette.fill", subtitle: "PBR metallic & roughness", category: "3D",
-                   view: AnyView(MaterialsDemo())),
-        SampleItem(title: "Orbit Camera", icon: "camera.fill", subtitle: "Interactive orbit controls", category: "3D",
-                   view: AnyView(OrbitCameraDemo())),
-        SampleItem(title: "Text Labels", icon: "textformat", subtitle: "3D billboard text", category: "Content",
-                   view: AnyView(TextLabelsDemo())),
-        SampleItem(title: "Line Paths", icon: "point.topleft.down.to.point.bottomright.curvepath", subtitle: "3D polylines & curves", category: "Content",
-                   view: AnyView(LinePathsDemo())),
+        SampleItem(
+            title: "Geometry",
+            icon: "cube.fill",
+            subtitle: "Cube, sphere, cylinder shapes",
+            category: "3D",
+            destination: { AnyView(GeometryDemo()) }
+        ),
+        SampleItem(
+            title: "Materials",
+            icon: "paintpalette.fill",
+            subtitle: "PBR metallic & roughness",
+            category: "3D",
+            destination: { AnyView(MaterialsDemo()) }
+        ),
+        SampleItem(
+            title: "Orbit Camera",
+            icon: "camera.fill",
+            subtitle: "Interactive orbit controls",
+            category: "3D",
+            destination: { AnyView(OrbitCameraDemo()) }
+        ),
+        SampleItem(
+            title: "Text Labels",
+            icon: "textformat",
+            subtitle: "3D billboard text nodes",
+            category: "Content",
+            destination: { AnyView(TextLabelsDemo()) }
+        ),
+        SampleItem(
+            title: "Line Paths",
+            icon: "point.topleft.down.to.point.bottomright.curvepath",
+            subtitle: "3D polylines & helices",
+            category: "Content",
+            destination: { AnyView(LinePathsDemo()) }
+        ),
     ]
 
     var body: some View {
@@ -185,22 +248,28 @@ struct SamplesTab: View {
                 ForEach(categories.keys.sorted(), id: \.self) { category in
                     Section(category) {
                         ForEach(categories[category]!) { sample in
-                            NavigationLink(destination: sample.view.navigationTitle(sample.title).navigationBarTitleDisplayMode(.inline)) {
+                            NavigationLink(destination:
+                                sample.destination()
+                                    .navigationTitle(sample.title)
+                                    .navigationBarTitleDisplayMode(.inline)
+                            ) {
                                 HStack(spacing: 12) {
                                     Image(systemName: sample.icon)
                                         .font(.title2)
-                                        .foregroundColor(.accentColor)
+                                        .foregroundStyle(.accent)
                                         .frame(width: 40)
+                                        .accessibilityHidden(true)
                                     VStack(alignment: .leading) {
                                         Text(sample.title)
                                             .font(.headline)
                                         Text(sample.subtitle)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 .padding(.vertical, 4)
                             }
+                            .accessibilityLabel("\(sample.title): \(sample.subtitle)")
                         }
                     }
                 }
@@ -221,6 +290,7 @@ struct AboutTab: View {
                         Image(systemName: "cube.fill")
                             .font(.system(size: 50))
                             .foregroundStyle(.blue)
+                            .accessibilityHidden(true)
                         Text("SceneView")
                             .font(.title).bold()
                         Text("v3.4.7")
@@ -236,9 +306,24 @@ struct AboutTab: View {
                 }
 
                 Section("Features") {
-                    FeatureRow(icon: "cube.fill", title: "3D Scenes", description: "RealityKit with SwiftUI integration", color: .blue)
-                    FeatureRow(icon: "arkit", title: "Augmented Reality", description: "ARKit plane detection & tap-to-place", color: .green)
-                    FeatureRow(icon: "sparkles", title: "AI-First SDK", description: "Designed for AI code generation", color: .purple)
+                    FeatureRow(
+                        icon: "cube.fill",
+                        title: "3D Scenes",
+                        description: "RealityKit with SwiftUI integration",
+                        color: .blue
+                    )
+                    FeatureRow(
+                        icon: "arkit",
+                        title: "Augmented Reality",
+                        description: "ARKit plane detection & tap-to-place",
+                        color: .green
+                    )
+                    FeatureRow(
+                        icon: "sparkles",
+                        title: "AI-First SDK",
+                        description: "Designed for AI code generation",
+                        color: .purple
+                    )
                 }
 
                 Section("Platforms") {
@@ -253,9 +338,12 @@ struct AboutTab: View {
                     Link(destination: URL(string: "https://github.com/sceneview/sceneview")!) {
                         Label("GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
+                    .accessibilityLabel("Open SceneView on GitHub")
+
                     Link(destination: URL(string: "https://sceneview.github.io")!) {
                         Label("Website", systemImage: "globe")
                     }
+                    .accessibilityLabel("Open SceneView website")
                 }
 
                 Section("Credits") {
@@ -284,11 +372,13 @@ struct FeatureRow: View {
                 .font(.title3)
                 .foregroundStyle(color)
                 .frame(width: 32)
+                .accessibilityHidden(true)
             VStack(alignment: .leading) {
                 Text(title).font(.subheadline).bold()
                 Text(description).font(.caption).foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -302,6 +392,8 @@ struct PlatformRow: View {
             Spacer()
             Text(detail).font(.caption).foregroundStyle(.secondary)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(name): \(detail)")
     }
 }
 
@@ -326,13 +418,14 @@ struct GeometryDemo: View {
             root.addChild(cylinder.entity)
         }
         .cameraControls(.orbit)
+        .ignoresSafeArea()
     }
 }
 
 struct MaterialsDemo: View {
     var body: some View {
         SceneView { root in
-            // Rough
+            // Rough non-metallic
             let rough = GeometryNode.sphere(
                 radius: 0.2,
                 material: .pbr(color: .gray, metallic: 0.0, roughness: 1.0)
@@ -348,7 +441,7 @@ struct MaterialsDemo: View {
             semi.entity.position = .init(x: 0, y: 0, z: -2)
             root.addChild(semi.entity)
 
-            // Full metal
+            // Full metal mirror
             let metal = GeometryNode.sphere(
                 radius: 0.2,
                 material: .pbr(color: .gray, metallic: 1.0, roughness: 0.0)
@@ -357,6 +450,28 @@ struct MaterialsDemo: View {
             root.addChild(metal.entity)
         }
         .cameraControls(.orbit)
+        .ignoresSafeArea()
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 24) {
+                VStack(spacing: 4) {
+                    Circle().fill(.gray.opacity(0.5)).frame(width: 12)
+                    Text("Rough").font(.caption2).foregroundStyle(.white)
+                }
+                VStack(spacing: 4) {
+                    Circle().fill(.gray.opacity(0.7)).frame(width: 12)
+                    Text("Semi").font(.caption2).foregroundStyle(.white)
+                }
+                VStack(spacing: 4) {
+                    Circle().fill(.gray).frame(width: 12)
+                    Text("Metal").font(.caption2).foregroundStyle(.white)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(Capsule())
+            .padding(.bottom, 24)
+        }
     }
 }
 
@@ -378,6 +493,7 @@ struct OrbitCameraDemo: View {
                 }
             }
             .cameraControls(.orbit)
+            .ignoresSafeArea()
 
             VStack {
                 Spacer()
@@ -397,42 +513,89 @@ struct OrbitCameraDemo: View {
     }
 }
 
+/// Demonstrates TextNode — 3D extruded text labels in the scene.
 struct TextLabelsDemo: View {
     var body: some View {
         SceneView { root in
-            let cube = GeometryNode.cube(size: 0.3, color: .systemBlue, cornerRadius: 0.02)
-            cube.entity.position = .init(x: -0.5, y: 0, z: -2)
+            // Header label
+            let title = TextNode(text: "Hello 3D!", fontSize: 0.12, color: .white, depth: 0.02)
+                .centered()
+                .position(.init(x: 0, y: 0.5, z: -2.5))
+            root.addChild(title.entity)
+
+            // Cube with label beneath it
+            let cube = GeometryNode.cube(size: 0.25, color: .systemBlue, cornerRadius: 0.02)
+            cube.entity.position = .init(x: -0.45, y: -0.2, z: -2.5)
             root.addChild(cube.entity)
 
+            let cubeLabel = TextNode(text: "Cube", fontSize: 0.07, color: .systemBlue, depth: 0.01)
+                .centered()
+                .position(.init(x: -0.45, y: -0.5, z: -2.5))
+            root.addChild(cubeLabel.entity)
+
+            // Sphere with label beneath it
             let sphere = GeometryNode.sphere(
-                radius: 0.2,
+                radius: 0.15,
                 material: .pbr(color: .red, metallic: 0.5, roughness: 0.3)
             )
-            sphere.entity.position = .init(x: 0.5, y: 0, z: -2)
+            sphere.entity.position = .init(x: 0.45, y: -0.2, z: -2.5)
             root.addChild(sphere.entity)
+
+            let sphereLabel = TextNode(text: "Sphere", fontSize: 0.07, color: .red, depth: 0.01)
+                .centered()
+                .position(.init(x: 0.45, y: -0.5, z: -2.5))
+            root.addChild(sphereLabel.entity)
         }
         .cameraControls(.orbit)
+        .ignoresSafeArea()
     }
 }
 
+/// Demonstrates a 3D helix path using small metallic spheres.
 struct LinePathsDemo: View {
     var body: some View {
-        SceneView { root in
-            // Create a visible path using small spheres along a helix
-            for i in 0..<60 {
-                let t = Float(i) / 60.0 * 4 * .pi
-                let dot = GeometryNode.sphere(
-                    radius: 0.015,
-                    material: .pbr(color: .orange, metallic: 0.8, roughness: 0.2)
-                )
-                dot.entity.position = .init(
-                    x: cos(t) * 0.5,
-                    y: Float(i) / 60.0 * 1.0 - 0.5,
-                    z: sin(t) * 0.5 - 2.0
-                )
-                root.addChild(dot.entity)
+        ZStack {
+            SceneView { root in
+                // Helix path approximated with small metallic spheres
+                let stepCount = 60
+                for i in 0..<stepCount {
+                    let t = Float(i) / Float(stepCount) * 4 * .pi
+                    let progress = Float(i) / Float(stepCount)
+                    // Interpolate hue from orange to blue along the helix
+                    let color = UIColor(
+                        hue: CGFloat(0.08 + progress * 0.55),
+                        saturation: 0.9,
+                        brightness: 1.0,
+                        alpha: 1.0
+                    )
+                    let dot = GeometryNode.sphere(
+                        radius: 0.018,
+                        material: .pbr(color: color, metallic: 0.8, roughness: 0.2)
+                    )
+                    dot.entity.position = .init(
+                        x: cos(t) * 0.5,
+                        y: progress * 1.2 - 0.6,
+                        z: sin(t) * 0.5 - 2.0
+                    )
+                    root.addChild(dot.entity)
+                }
+
+                // Central axis indicator
+                let axis = GeometryNode.cylinder(radius: 0.008, height: 1.2, color: .darkGray)
+                axis.entity.position = .init(x: 0, y: 0, z: -2)
+                root.addChild(axis.entity)
+            }
+            .cameraControls(.orbit)
+            .ignoresSafeArea()
+
+            VStack {
+                Spacer()
+                Text("Helix path · 60 nodes")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.bottom, 12)
             }
         }
-        .cameraControls(.orbit)
+        .background(Color.black)
     }
 }
