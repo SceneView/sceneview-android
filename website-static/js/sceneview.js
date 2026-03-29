@@ -4,17 +4,14 @@
  * One line to render a 3D model:
  *   SceneView.modelViewer("canvas", "model.glb")
  *
+ * Text, Image, and Video nodes:
+ *   const sv = await SceneView.create("canvas");
+ *   sv.createText({ text: "Hello 3D", position: [0, 2, 0] });
+ *   sv.createImage({ url: "photo.jpg", position: [1, 1, 0] });
+ *   sv.createVideo({ url: "clip.mp4", position: [-1, 1, 0] });
+ *
  * Powered by Filament.js v1.70.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
- *
- * Features:
- *   - Model loading (glTF/GLB)
- *   - Camera orbit with inertia
- *   - Ray casting & hit testing
- *   - Collision shapes (AABB, sphere)
- *   - Gesture system (tap, double-tap, long-press, drag, pinch, rotate)
- *   - Entity selection with visual feedback
- *   - Draggable entities with axis constraints
  *
  * @version 1.4.0
  * @license MIT
@@ -40,272 +37,344 @@
     });
   }
 
-  // =========================================================================
-  // Vec3 — lightweight 3-component vector math (pure JS, no dependencies)
-  // =========================================================================
+  // ---------------------------------------------------------------
+  // Minimal GLB generator — creates a 1x1 textured quad in memory
+  // ---------------------------------------------------------------
 
-  var Vec3 = {
-    create: function(x, y, z) { return [x || 0, y || 0, z || 0]; },
-    add: function(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; },
-    sub: function(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; },
-    scale: function(v, s) { return [v[0] * s, v[1] * s, v[2] * s]; },
-    dot: function(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; },
-    cross: function(a, b) {
-      return [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0]
-      ];
-    },
-    length: function(v) { return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]); },
-    normalize: function(v) {
-      var len = Vec3.length(v);
-      return len > 1e-8 ? [v[0] / len, v[1] / len, v[2] / len] : [0, 0, 0];
-    },
-    distance: function(a, b) { return Vec3.length(Vec3.sub(a, b)); },
-    lerp: function(a, b, t) {
-      return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-    },
-    min: function(a, b) { return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2])]; },
-    max: function(a, b) { return [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2])]; },
-    negate: function(v) { return [-v[0], -v[1], -v[2]]; }
-  };
+  /**
+   * Generate a minimal glTF-binary (GLB) containing a 1x1 unit quad plane
+   * with an unlit material and a 2x2 white base texture.
+   * This lets us use the existing gltfio UbershaderProvider for materials,
+   * then swap the texture at runtime for text/image/video content.
+   *
+   * The quad is in the XY plane, centered at origin, 1 unit wide and tall.
+   * Vertices: (-0.5,-0.5,0), (0.5,-0.5,0), (0.5,0.5,0), (-0.5,0.5,0)
+   * UVs: (0,1), (1,1), (1,0), (0,0)
+   * Triangles: [0,1,2], [0,2,3]
+   */
+  function _buildQuadGLB() {
+    // ---- JSON chunk ----
+    var gltf = {
+      asset: { version: "2.0", generator: "SceneView.js" },
+      scene: 0,
+      scenes: [{ nodes: [0] }],
+      nodes: [{ mesh: 0, name: "quad" }],
+      meshes: [{
+        primitives: [{
+          attributes: { POSITION: 0, TEXCOORD_0: 1 },
+          indices: 2,
+          material: 0,
+          mode: 4 // TRIANGLES
+        }]
+      }],
+      materials: [{
+        name: "unlit_tex",
+        pbrMetallicRoughness: {
+          baseColorTexture: { index: 0 },
+          metallicFactor: 0.0,
+          roughnessFactor: 1.0
+        },
+        alphaMode: "BLEND",
+        doubleSided: true,
+        extensions: { KHR_materials_unlit: {} }
+      }],
+      extensionsUsed: ["KHR_materials_unlit"],
+      textures: [{ source: 0, sampler: 0 }],
+      images: [{
+        bufferView: 3,
+        mimeType: "image/png"
+      }],
+      samplers: [{
+        magFilter: 9729, // LINEAR
+        minFilter: 9987, // LINEAR_MIPMAP_LINEAR
+        wrapS: 33071,    // CLAMP_TO_EDGE
+        wrapT: 33071
+      }],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 4, type: "VEC3",
+          max: [0.5, 0.5, 0], min: [-0.5, -0.5, 0] },
+        { bufferView: 1, componentType: 5126, count: 4, type: "VEC2" },
+        { bufferView: 2, componentType: 5123, count: 6, type: "SCALAR" }
+      ],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 48, target: 34962 },   // positions
+        { buffer: 0, byteOffset: 48, byteLength: 32, target: 34962 },  // uvs
+        { buffer: 0, byteOffset: 80, byteLength: 12, target: 34963 },  // indices
+        { buffer: 0, byteOffset: 92 }  // png image (byteLength set below)
+      ],
+      buffers: [{ byteLength: 0 }] // set below
+    };
 
-  // =========================================================================
-  // Mat4 — 4x4 matrix utilities (column-major, OpenGL convention)
-  // =========================================================================
+    // ---- Binary data ----
+    // Positions: 4 vertices * 3 floats * 4 bytes = 48 bytes
+    var positions = new Float32Array([
+      -0.5, -0.5, 0,
+       0.5, -0.5, 0,
+       0.5,  0.5, 0,
+      -0.5,  0.5, 0
+    ]);
 
-  var Mat4 = {
-    /** Create identity matrix */
-    identity: function() {
-      return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
-    },
+    // UVs: 4 vertices * 2 floats * 4 bytes = 32 bytes
+    var uvs = new Float32Array([
+      0, 1,
+      1, 1,
+      1, 0,
+      0, 0
+    ]);
 
-    /** Multiply two 4x4 column-major matrices: result = a * b */
-    multiply: function(a, b) {
-      var r = new Array(16);
-      for (var c = 0; c < 4; c++) {
-        for (var row = 0; row < 4; row++) {
-          r[c * 4 + row] =
-            a[0 * 4 + row] * b[c * 4 + 0] +
-            a[1 * 4 + row] * b[c * 4 + 1] +
-            a[2 * 4 + row] * b[c * 4 + 2] +
-            a[3 * 4 + row] * b[c * 4 + 3];
-        }
-      }
-      return r;
-    },
+    // Indices: 6 uint16 = 12 bytes
+    var indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
-    /** Transform a vec4 by a 4x4 matrix: result = M * v */
-    mulVec4: function(m, v) {
-      return [
-        m[0] * v[0] + m[4] * v[1] + m[8]  * v[2] + m[12] * v[3],
-        m[1] * v[0] + m[5] * v[1] + m[9]  * v[2] + m[13] * v[3],
-        m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3],
-        m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3]
-      ];
-    },
+    // Minimal 2x2 white PNG (RGBA)
+    // This is a valid PNG: 2x2 pixels, all white with full alpha
+    var pngBytes = new Uint8Array([
+      0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A, // PNG signature
+      0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52, // IHDR chunk
+      0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x02, // 2x2
+      0x08,0x06,0x00,0x00,0x00,0x72,0xD1,0x0D, // 8-bit RGBA
+      0x5F,
+      0x00,0x00,0x00,0x1C,0x49,0x44,0x41,0x54, // IDAT chunk
+      0x78,0x9C,0x62,0xF8,0x0F,0x00,0x01,0x01, // zlib compressed
+      0x00,0x05,0x18,0xD8,0x4A,0x00,0x06,0x00,
+      0x00,0x22,0x00,0x01,0xE7,0x40,0xA3,0x6E,
+      0x00,0x00,0x00,0x00,0x49,0x45,0x4E,0x44, // IEND chunk
+      0xAE,0x42,0x60,0x82
+    ]);
 
-    /** Invert a 4x4 matrix. Returns null if singular. */
-    invert: function(m) {
-      var inv = new Array(16);
-      inv[0]  =  m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
-      inv[4]  = -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15] - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
-      inv[8]  =  m[4]*m[9]*m[15]  - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
-      inv[12] = -m[4]*m[9]*m[14]  + m[4]*m[10]*m[13] + m[8]*m[5]*m[14] - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
-      inv[1]  = -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
-      inv[5]  =  m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
-      inv[9]  = -m[0]*m[9]*m[15]  + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
-      inv[13] =  m[0]*m[9]*m[14]  - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
-      inv[2]  =  m[1]*m[6]*m[15]  - m[1]*m[7]*m[14]  - m[5]*m[2]*m[15] + m[5]*m[3]*m[14] + m[13]*m[2]*m[7]  - m[13]*m[3]*m[6];
-      inv[6]  = -m[0]*m[6]*m[15]  + m[0]*m[7]*m[14]  + m[4]*m[2]*m[15] - m[4]*m[3]*m[14] - m[12]*m[2]*m[7]  + m[12]*m[3]*m[6];
-      inv[10] =  m[0]*m[5]*m[15]  - m[0]*m[7]*m[13]  - m[4]*m[1]*m[15] + m[4]*m[3]*m[13] + m[12]*m[1]*m[7]  - m[12]*m[3]*m[5];
-      inv[14] = -m[0]*m[5]*m[14]  + m[0]*m[6]*m[13]  + m[4]*m[1]*m[14] - m[4]*m[2]*m[13] - m[12]*m[1]*m[6]  + m[12]*m[2]*m[5];
-      inv[3]  = -m[1]*m[6]*m[11]  + m[1]*m[7]*m[10]  + m[5]*m[2]*m[11] - m[5]*m[3]*m[10] - m[9]*m[2]*m[7]   + m[9]*m[3]*m[6];
-      inv[7]  =  m[0]*m[6]*m[11]  - m[0]*m[7]*m[10]  - m[4]*m[2]*m[11] + m[4]*m[3]*m[10] + m[8]*m[2]*m[7]   - m[8]*m[3]*m[6];
-      inv[11] = -m[0]*m[5]*m[11]  + m[0]*m[7]*m[9]   + m[4]*m[1]*m[11] - m[4]*m[3]*m[9]  - m[8]*m[1]*m[7]   + m[8]*m[3]*m[5];
-      inv[15] =  m[0]*m[5]*m[10]  - m[0]*m[6]*m[9]   - m[4]*m[1]*m[10] + m[4]*m[2]*m[9]  + m[8]*m[1]*m[6]   - m[8]*m[2]*m[5];
+    var geomSize = 48 + 32 + 12; // 92 bytes for positions + uvs + indices
+    var binLength = geomSize + pngBytes.length;
+    // Pad to 4-byte alignment
+    var binPad = (4 - (binLength % 4)) % 4;
+    var binLengthAligned = binLength + binPad;
 
-      var det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
-      if (Math.abs(det) < 1e-12) return null;
+    gltf.bufferViews[3].byteLength = pngBytes.length;
+    gltf.buffers[0].byteLength = binLengthAligned;
 
-      var invDet = 1.0 / det;
-      for (var i = 0; i < 16; i++) inv[i] *= invDet;
-      return inv;
-    },
+    var jsonStr = JSON.stringify(gltf);
+    // Pad JSON to 4-byte alignment
+    while (jsonStr.length % 4 !== 0) jsonStr += ' ';
 
-    /** Build a perspective projection matrix (column-major). */
-    perspective: function(fovYRadians, aspect, near, far) {
-      var f = 1.0 / Math.tan(fovYRadians / 2);
-      var nf = 1.0 / (near - far);
-      return [
-        f / aspect, 0, 0, 0,
-        0, f, 0, 0,
-        0, 0, (far + near) * nf, -1,
-        0, 0, 2 * far * near * nf, 0
-      ];
-    },
+    var jsonLength = jsonStr.length;
+    var totalLength = 12 + 8 + jsonLength + 8 + binLengthAligned; // GLB header + JSON chunk + BIN chunk
 
-    /** Build a lookAt view matrix (column-major). */
-    lookAt: function(eye, target, up) {
-      var z = Vec3.normalize(Vec3.sub(eye, target));
-      var x = Vec3.normalize(Vec3.cross(up, z));
-      var y = Vec3.cross(z, x);
-      return [
-        x[0], y[0], z[0], 0,
-        x[1], y[1], z[1], 0,
-        x[2], y[2], z[2], 0,
-        -Vec3.dot(x, eye), -Vec3.dot(y, eye), -Vec3.dot(z, eye), 1
-      ];
+    var glb = new ArrayBuffer(totalLength);
+    var view = new DataView(glb);
+    var offset = 0;
+
+    // GLB header
+    view.setUint32(offset, 0x46546C67, true); offset += 4; // magic "glTF"
+    view.setUint32(offset, 2, true); offset += 4;          // version 2
+    view.setUint32(offset, totalLength, true); offset += 4; // total length
+
+    // JSON chunk
+    view.setUint32(offset, jsonLength, true); offset += 4;
+    view.setUint32(offset, 0x4E4F534A, true); offset += 4; // "JSON"
+    for (var i = 0; i < jsonStr.length; i++) {
+      view.setUint8(offset++, jsonStr.charCodeAt(i));
     }
-  };
 
-  // =========================================================================
-  // Collision — ray casting, AABB, sphere intersection (port of KMP core)
-  // =========================================================================
+    // BIN chunk
+    view.setUint32(offset, binLengthAligned, true); offset += 4;
+    view.setUint32(offset, 0x004E4942, true); offset += 4; // "BIN\0"
 
-  var Collision = {
-    /**
-     * Ray-AABB intersection (slab method).
-     * @param {Array} origin Ray origin [x,y,z]
-     * @param {Array} dir Ray direction [x,y,z] (need not be normalized)
-     * @param {Array} boxMin AABB minimum corner [x,y,z]
-     * @param {Array} boxMax AABB maximum corner [x,y,z]
-     * @returns {{ distance: number, point: Array }|null} Hit info or null
-     */
-    rayAABB: function(origin, dir, boxMin, boxMax) {
-      var tMin = -Infinity;
-      var tMax = Infinity;
+    // Write positions
+    var posView = new Float32Array(glb, offset, 12);
+    posView.set(positions);
+    offset += 48;
 
-      for (var i = 0; i < 3; i++) {
-        if (Math.abs(dir[i]) < 1e-12) {
-          // Ray is parallel to this slab — check if origin is inside
-          if (origin[i] < boxMin[i] || origin[i] > boxMax[i]) return null;
-        } else {
-          var invD = 1.0 / dir[i];
-          var t1 = (boxMin[i] - origin[i]) * invD;
-          var t2 = (boxMax[i] - origin[i]) * invD;
-          if (t1 > t2) { var tmp = t1; t1 = t2; t2 = tmp; }
-          tMin = Math.max(tMin, t1);
-          tMax = Math.min(tMax, t2);
-          if (tMin > tMax) return null;
-        }
-      }
+    // Write UVs
+    var uvView = new Float32Array(glb, offset, 8);
+    uvView.set(uvs);
+    offset += 32;
 
-      // Box is behind the ray
-      if (tMax < 0) return null;
+    // Write indices
+    var idxView = new Uint16Array(glb, offset, 6);
+    idxView.set(indices);
+    offset += 12;
 
-      var dist = tMin >= 0 ? tMin : tMax;
-      return {
-        distance: dist,
-        point: Vec3.add(origin, Vec3.scale(dir, dist))
-      };
-    },
+    // Write PNG
+    var pngView = new Uint8Array(glb, offset, pngBytes.length);
+    pngView.set(pngBytes);
+    offset += pngBytes.length;
 
-    /**
-     * Ray-sphere intersection (quadratic formula).
-     * @param {Array} origin Ray origin [x,y,z]
-     * @param {Array} dir Ray direction [x,y,z] (need not be normalized)
-     * @param {Array} center Sphere center [x,y,z]
-     * @param {number} radius Sphere radius
-     * @returns {{ distance: number, point: Array }|null} Hit info or null
-     */
-    raySphere: function(origin, dir, center, radius) {
-      var oc = Vec3.sub(origin, center);
-      var a = Vec3.dot(dir, dir);
-      var b = 2.0 * Vec3.dot(oc, dir);
-      var c = Vec3.dot(oc, oc) - radius * radius;
-      var discriminant = b * b - 4 * a * c;
-
-      if (discriminant < 0) return null;
-
-      var sqrtD = Math.sqrt(discriminant);
-      var t1 = (-b - sqrtD) / (2 * a);
-      var t2 = (-b + sqrtD) / (2 * a);
-
-      // Both intersections behind the ray
-      if (t1 < 0 && t2 < 0) return null;
-
-      var dist;
-      if (t1 < 0) dist = t2;       // Ray starts inside sphere
-      else dist = t1;               // Nearest intersection
-
-      return {
-        distance: dist,
-        point: Vec3.add(origin, Vec3.scale(dir, dist))
-      };
-    },
-
-    /**
-     * Ray-plane intersection.
-     * @param {Array} origin Ray origin [x,y,z]
-     * @param {Array} dir Ray direction [x,y,z]
-     * @param {Array} planeNormal Plane normal [x,y,z]
-     * @param {number} planeD Plane distance from origin (dot(normal, pointOnPlane))
-     * @returns {{ distance: number, point: Array }|null}
-     */
-    rayPlane: function(origin, dir, planeNormal, planeD) {
-      var denom = Vec3.dot(dir, planeNormal);
-      if (Math.abs(denom) < 1e-8) return null;
-      var t = (planeD - Vec3.dot(origin, planeNormal)) / denom;
-      if (t < 0) return null;
-      return {
-        distance: t,
-        point: Vec3.add(origin, Vec3.scale(dir, t))
-      };
-    },
-
-    /**
-     * AABB-AABB overlap test.
-     * @param {Array} minA [x,y,z]
-     * @param {Array} maxA [x,y,z]
-     * @param {Array} minB [x,y,z]
-     * @param {Array} maxB [x,y,z]
-     * @returns {boolean}
-     */
-    aabbOverlap: function(minA, maxA, minB, maxB) {
-      return minA[0] <= maxB[0] && maxA[0] >= minB[0] &&
-             minA[1] <= maxB[1] && maxA[1] >= minB[1] &&
-             minA[2] <= maxB[2] && maxA[2] >= minB[2];
-    },
-
-    /**
-     * Sphere-sphere overlap test.
-     * @param {Array} cA Center A [x,y,z]
-     * @param {number} rA Radius A
-     * @param {Array} cB Center B [x,y,z]
-     * @param {number} rB Radius B
-     * @returns {boolean}
-     */
-    sphereOverlap: function(cA, rA, cB, rB) {
-      var d = Vec3.distance(cA, cB);
-      return d <= rA + rB;
-    },
-
-    /**
-     * Sphere-AABB overlap test (closest-point on AABB method).
-     * @param {Array} center Sphere center [x,y,z]
-     * @param {number} radius Sphere radius
-     * @param {Array} boxMin AABB min [x,y,z]
-     * @param {Array} boxMax AABB max [x,y,z]
-     * @returns {boolean}
-     */
-    sphereAABBOverlap: function(center, radius, boxMin, boxMax) {
-      var closest = [
-        Math.max(boxMin[0], Math.min(center[0], boxMax[0])),
-        Math.max(boxMin[1], Math.min(center[1], boxMax[1])),
-        Math.max(boxMin[2], Math.min(center[2], boxMax[2]))
-      ];
-      var d = Vec3.distance(center, closest);
-      return d <= radius;
+    // Pad
+    for (var p = 0; p < binPad; p++) {
+      view.setUint8(offset++, 0);
     }
-  };
 
-  // =========================================================================
-  // SceneView instance — wraps Filament engine, scene, camera, renderer,
-  // collision system, and gesture handling.
-  // =========================================================================
+    return new Uint8Array(glb);
+  }
 
+  // ---------------------------------------------------------------
+  // Canvas2D text rendering helper
+  // ---------------------------------------------------------------
+
+  /**
+   * Render text to an off-screen canvas and return the canvas + dimensions.
+   * Handles word wrapping, multi-line, font customization, colors.
+   */
+  function _renderTextToCanvas(options) {
+    var text = options.text || '';
+    var fontSize = options.fontSize || 48;
+    var color = options.color || '#ffffff';
+    var bgColor = options.backgroundColor || null;
+    var fontFamily = options.fontFamily || 'system-ui, -apple-system, sans-serif';
+    var fontWeight = options.fontWeight || 'normal';
+    var fontStyle = options.fontStyle || 'normal';
+    var maxWidth = options.maxWidth || 0;
+    var padding = options.padding || 16;
+
+    var font = fontStyle + ' ' + fontWeight + ' ' + fontSize + 'px ' + fontFamily;
+
+    // Measure text first to determine canvas size
+    var measureCanvas = document.createElement('canvas');
+    var mCtx = measureCanvas.getContext('2d');
+    mCtx.font = font;
+
+    // Word wrap if maxWidth is specified
+    var lines = [];
+    var rawLines = text.split('\n');
+
+    for (var r = 0; r < rawLines.length; r++) {
+      var line = rawLines[r];
+      if (maxWidth > 0) {
+        var words = line.split(' ');
+        var currentLine = '';
+        for (var w = 0; w < words.length; w++) {
+          var testLine = currentLine ? currentLine + ' ' + words[w] : words[w];
+          var metrics = mCtx.measureText(testLine);
+          if (maxWidth > 0 && metrics.width > maxWidth - padding * 2 && currentLine) {
+            lines.push(currentLine);
+            currentLine = words[w];
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) lines.push(currentLine);
+      } else {
+        lines.push(line);
+      }
+    }
+
+    if (lines.length === 0) lines = [''];
+
+    // Calculate dimensions
+    var lineHeight = fontSize * 1.3;
+    var textHeight = lines.length * lineHeight;
+    var textWidth = 0;
+    for (var l = 0; l < lines.length; l++) {
+      var w = mCtx.measureText(lines[l]).width;
+      if (w > textWidth) textWidth = w;
+    }
+
+    var canvasWidth = Math.ceil(textWidth + padding * 2);
+    var canvasHeight = Math.ceil(textHeight + padding * 2);
+
+    // Constrain to maxWidth if set
+    if (maxWidth > 0 && canvasWidth > maxWidth) canvasWidth = maxWidth;
+
+    // Round up to power-of-two for better GPU compatibility
+    canvasWidth = _nextPow2(Math.max(canvasWidth, 4));
+    canvasHeight = _nextPow2(Math.max(canvasHeight, 4));
+
+    // Create the actual canvas
+    var canvas = document.createElement('canvas');
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    var ctx = canvas.getContext('2d');
+
+    // Background
+    if (bgColor) {
+      ctx.fillStyle = bgColor;
+      // Rounded rectangle for a polished look
+      var radius = Math.min(fontSize * 0.3, 12);
+      _roundRect(ctx, 0, 0, canvasWidth, canvasHeight, radius);
+      ctx.fill();
+    } else {
+      // Transparent background
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    }
+
+    // Draw text
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+
+    for (var i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], padding, padding + i * lineHeight);
+    }
+
+    return {
+      canvas: canvas,
+      width: canvasWidth,
+      height: canvasHeight,
+      // Aspect ratio for 3D plane sizing
+      aspect: canvasWidth / canvasHeight
+    };
+  }
+
+  /** Draw a rounded rectangle path */
+  function _roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  /** Round up to next power of 2 */
+  function _nextPow2(v) {
+    v--;
+    v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16;
+    return v + 1;
+  }
+
+  // ---------------------------------------------------------------
+  // Chroma key processing (green screen removal on CPU)
+  // ---------------------------------------------------------------
+
+  /**
+   * Process pixel data to remove chroma key color, setting those pixels transparent.
+   * Operates on RGBA Uint8ClampedArray in-place.
+   *
+   * @param {ImageData} imageData - Canvas ImageData to process
+   * @param {Array} keyColor - Normalized RGB [0..1] of the color to remove (e.g. [0,1,0] for green)
+   * @param {number} threshold - Distance threshold (0..1), larger = more tolerance
+   */
+  function _applyChromaKey(imageData, keyColor, threshold) {
+    var data = imageData.data;
+    var kr = keyColor[0] * 255;
+    var kg = keyColor[1] * 255;
+    var kb = keyColor[2] * 255;
+    var threshSq = (threshold * 255) * (threshold * 255) * 3; // squared distance threshold
+
+    for (var i = 0; i < data.length; i += 4) {
+      var dr = data[i] - kr;
+      var dg = data[i + 1] - kg;
+      var db = data[i + 2] - kb;
+      var distSq = dr * dr + dg * dg + db * db;
+      if (distSq < threshSq) {
+        // Soft edge: fade alpha based on distance
+        var t = distSq / threshSq;
+        data[i + 3] = Math.floor(data[i + 3] * t);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // SceneView instance
+  // ---------------------------------------------------------------
+
+  /**
+   * SceneView instance — wraps Filament engine, scene, camera, renderer.
+   */
   class SceneViewInstance {
     constructor(canvas, engine, scene, renderer, view, swapChain, camera, cameraEntity, loader) {
       this._canvas = canvas;
@@ -333,49 +402,20 @@
       this._wantsAutoRotate = true; // Remember initial preference for resume after drag
       this._autoRotateTimer = null;
 
-      // --- Collision system ---
-      // Maps entity id -> { type: 'box'|'sphere', entity, ... shape params }
-      this._colliders = new Map();
-      // Entity bounding boxes cache: entity id -> { min: [x,y,z], max: [x,y,z] }
-      this._entityBounds = new Map();
-
-      // --- Gesture system ---
-      this._gestureCallbacks = {
-        tap: [],
-        doubleTap: [],
-        longPress: [],
-        drag: new Map(),        // entity -> { onStart, onMove, onEnd }
-        pinch: [],
-        rotate: [],
-        select: []
-      };
-      this._selectableEntities = new Set();
-      this._selectedEntities = new Set();
-      this._draggableEntities = new Map(); // entity -> { axis, snap, bounds }
-      this._activeDragEntity = null;
-      this._activeDragPlane = null;        // { normal, d } for the drag constraint plane
-      this._activeDragLastWorld = null;
-
-      // Pointer tracking for gesture detection
-      this._pointers = new Map();          // pointerId -> { x, y, startX, startY, startTime }
-      this._lastTapTime = 0;
-      this._lastTapPos = { x: 0, y: 0 };
-      this._longPressTimer = null;
-      this._longPressDuration = 500;
-      this._tapDistanceThreshold = 8;      // px — movement beyond this = drag, not tap
-      this._doubleTapInterval = 300;       // ms
-      this._gestureConsumed = false;       // true when an entity gesture consumed the pointer
-      this._pinchStartDist = 0;
-      this._rotateStartAngle = 0;
+      // Media node tracking
+      this._mediaNodes = new Map(); // entity -> { type, asset, texture, ... }
+      this._billboards = new Set(); // entities that should always face camera
+      this._videoElements = new Map(); // entity -> { video, canvas, ctx, rafId }
+      this._quadGLB = null; // Cached quad GLB bytes
 
       this._setupControls();
       this._setupResizeObserver();
       this._startRenderLoop();
     }
 
-    // =====================================================================
-    // Model loading
-    // =====================================================================
+    // ---------------------------------------------------------------
+    // Model loading (existing)
+    // ---------------------------------------------------------------
 
     /** Load a glTF/GLB model from URL */
     loadModel(url) {
@@ -401,12 +441,10 @@
       // Remove previous model
       if (this._asset) {
         try {
-          var self = this;
-          this._asset.getRenderableEntities().forEach(function(e) { self._scene.remove(e); });
+          this._asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
           this._scene.remove(this._asset.getRoot());
         } catch (e) { /* ignore cleanup errors */ }
         this._asset = null;
-        this._entityBounds.clear();
       }
 
       var data = Filament.assets[url];
@@ -419,9 +457,6 @@
       this._scene.addEntity(asset.getRoot());
       this._scene.addEntities(asset.getRenderableEntities());
       this._asset = asset;
-
-      // Compute and cache bounding boxes for each renderable entity
-      this._cacheEntityBounds();
 
       // Auto-frame the model
       try {
@@ -442,85 +477,6 @@
       } catch (e) { /* use defaults */ }
     }
 
-    /** Add a model to the scene (without removing existing ones) */
-    addModel(url) {
-      var self = this;
-      return new Promise(function(resolve, reject) {
-        fetch(url)
-          .then(function(resp) { return resp.arrayBuffer(); })
-          .then(function(buffer) {
-            var data = new Uint8Array(buffer);
-            try {
-              var asset = self._loader.createAsset(data);
-              if (!asset) { reject(new Error('Failed to parse: ' + url)); return; }
-              asset.loadResources();
-              self._scene.addEntity(asset.getRoot());
-              self._scene.addEntities(asset.getRenderableEntities());
-              resolve(asset);
-            } catch (e) { reject(e); }
-          })
-          .catch(reject);
-      });
-    }
-
-    /** Load a GLB from a Uint8Array buffer directly */
-    loadGLBBuffer(buffer, key) {
-      var asset = this._loader.createAsset(buffer);
-      if (!asset) return null;
-      asset.loadResources();
-      this._scene.addEntity(asset.getRoot());
-      this._scene.addEntities(asset.getRenderableEntities());
-      return asset;
-    }
-
-    /** Remove an asset from the scene */
-    removeAsset(asset) {
-      if (!asset) return;
-      try {
-        var self = this;
-        asset.getRenderableEntities().forEach(function(e) { self._scene.remove(e); });
-        this._scene.remove(asset.getRoot());
-      } catch (e) { /* ignore cleanup errors */ }
-    }
-
-    /** Cache bounding boxes for all renderable entities in the current asset */
-    _cacheEntityBounds() {
-      if (!this._asset) return;
-      try {
-        var entities = this._asset.getRenderableEntities();
-        var rm = this._engine.getRenderableManager();
-        for (var i = 0; i < entities.length; i++) {
-          var entity = entities[i];
-          try {
-            var inst = rm.getInstance(entity);
-            if (inst) {
-              var aabb = rm.getAxisAlignedBoundingBox(inst);
-              if (aabb) {
-                this._entityBounds.set(entity, {
-                  min: [aabb.min[0], aabb.min[1], aabb.min[2]],
-                  max: [aabb.max[0], aabb.max[1], aabb.max[2]]
-                });
-              }
-            }
-          } catch (e) { /* some entities may not have renderables */ }
-        }
-      } catch (e) {
-        // If RenderableManager API differs, try asset-level bounding box
-        try {
-          var bbox = this._asset.getBoundingBox();
-          var root = this._asset.getRoot();
-          this._entityBounds.set(root, {
-            min: [bbox.min[0], bbox.min[1], bbox.min[2]],
-            max: [bbox.max[0], bbox.max[1], bbox.max[2]]
-          });
-        } catch (e2) { /* no bounds available */ }
-      }
-    }
-
-    /** Access engine for advanced Filament operations */
-    get engine() { return this._engine; }
-    get scene() { return this._scene; }
-
     setAutoRotate(enabled) { this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this; }
     setCameraDistance(d) { this._orbitRadius = d; return this; }
 
@@ -529,677 +485,761 @@
       return this;
     }
 
+    // ---------------------------------------------------------------
+    // createText — Render text as a textured quad in the 3D scene
+    // ---------------------------------------------------------------
+
+    /**
+     * Create a text node in the 3D scene.
+     *
+     * @param {Object} options
+     * @param {string} options.text - The text to display
+     * @param {number} [options.fontSize=48] - Font size in pixels for the canvas rendering
+     * @param {string} [options.color='#ffffff'] - Text color (CSS color string)
+     * @param {string} [options.backgroundColor=null] - Background color (null for transparent)
+     * @param {Array} [options.position=[0,0,0]] - World position [x, y, z]
+     * @param {boolean} [options.billboard=true] - Always face the camera
+     * @param {number} [options.maxWidth=0] - Maximum width for word wrapping (0 = no wrap)
+     * @param {string} [options.fontFamily] - CSS font family
+     * @param {string} [options.fontWeight] - CSS font weight (e.g. 'bold', '600')
+     * @param {string} [options.fontStyle] - CSS font style (e.g. 'italic')
+     * @param {number} [options.scale=1] - Scale factor for the text plane in world units
+     * @returns {Promise<number>} Entity handle
+     */
+    createText(options) {
+      options = options || {};
+      var self = this;
+
+      // Render text to canvas
+      var result = _renderTextToCanvas(options);
+      var textCanvas = result.canvas;
+      var aspect = result.aspect;
+
+      var position = options.position || [0, 0, 0];
+      var billboard = options.billboard !== undefined ? options.billboard : true;
+      var scale = options.scale || 1;
+
+      // Size the plane to preserve text aspect ratio
+      var planeWidth = scale * aspect * 0.5;
+      var planeHeight = scale * 0.5;
+
+      return this._createTexturedQuad(textCanvas, position, [planeWidth, planeHeight], billboard)
+        .then(function(entity) {
+          var nodeInfo = self._mediaNodes.get(entity);
+          if (nodeInfo) {
+            nodeInfo.type = 'text';
+            nodeInfo.textOptions = options;
+          }
+          return entity;
+        });
+    }
+
+    // ---------------------------------------------------------------
+    // createImage — Load an image and display as a textured quad
+    // ---------------------------------------------------------------
+
+    /**
+     * Create an image node in the 3D scene.
+     *
+     * @param {Object} options
+     * @param {string} options.url - Image URL to load
+     * @param {Array} [options.position=[0,0,0]] - World position [x, y, z]
+     * @param {Array} [options.size=[1,1]] - Width and height in world units
+     * @param {boolean} [options.billboard=false] - Always face the camera
+     * @param {number} [options.opacity=1.0] - Opacity (0..1)
+     * @returns {Promise<number>} Entity handle
+     */
+    createImage(options) {
+      options = options || {};
+      var self = this;
+      var url = options.url;
+      if (!url) return Promise.reject(new Error('SceneView: createImage requires a url'));
+
+      var position = options.position || [0, 0, 0];
+      var size = options.size || [1, 1];
+      var billboard = options.billboard || false;
+      var opacity = options.opacity !== undefined ? options.opacity : 1.0;
+
+      return fetch(url)
+        .then(function(resp) {
+          if (!resp.ok) throw new Error('Failed to load image: ' + url + ' (HTTP ' + resp.status + ')');
+          return resp.blob();
+        })
+        .then(function(blob) {
+          return createImageBitmap(blob);
+        })
+        .then(function(bitmap) {
+          // Draw the image to a canvas (to get pixel data and handle power-of-two sizing)
+          var cw = _nextPow2(bitmap.width);
+          var ch = _nextPow2(bitmap.height);
+          var canvas = document.createElement('canvas');
+          canvas.width = cw;
+          canvas.height = ch;
+          var ctx = canvas.getContext('2d');
+
+          // Apply opacity by setting global alpha
+          ctx.globalAlpha = opacity;
+          // Draw image at top-left, stretched to power-of-two size
+          ctx.drawImage(bitmap, 0, 0, cw, ch);
+          bitmap.close();
+
+          return self._createTexturedQuad(canvas, position, size, billboard);
+        })
+        .then(function(entity) {
+          var nodeInfo = self._mediaNodes.get(entity);
+          if (nodeInfo) {
+            nodeInfo.type = 'image';
+            nodeInfo.imageOptions = options;
+          }
+          return entity;
+        });
+    }
+
+    // ---------------------------------------------------------------
+    // createVideo — Stream video frames to a textured quad
+    // ---------------------------------------------------------------
+
+    /**
+     * Create a video node in the 3D scene.
+     *
+     * @param {Object} options
+     * @param {string} options.url - Video URL
+     * @param {Array} [options.position=[0,0,0]] - World position [x, y, z]
+     * @param {Array} [options.size=[1.6,0.9]] - Width and height in world units (default 16:9)
+     * @param {boolean} [options.loop=true] - Loop the video
+     * @param {boolean} [options.autoplay=true] - Start playing automatically
+     * @param {Object} [options.chromaKey=null] - Chroma key settings
+     * @param {Array} [options.chromaKey.color=[0,1,0]] - Key color in normalized RGB
+     * @param {number} [options.chromaKey.threshold=0.4] - Removal threshold (0..1)
+     * @param {boolean} [options.billboard=false] - Always face the camera
+     * @returns {Promise<number>} Entity handle
+     */
+    createVideo(options) {
+      options = options || {};
+      var self = this;
+      var url = options.url;
+      if (!url) return Promise.reject(new Error('SceneView: createVideo requires a url'));
+
+      var position = options.position || [0, 0, 0];
+      var size = options.size || [1.6, 0.9];
+      var loop = options.loop !== undefined ? options.loop : true;
+      var autoplay = options.autoplay !== undefined ? options.autoplay : true;
+      var chromaKey = options.chromaKey || null;
+      var billboard = options.billboard || false;
+
+      return new Promise(function(resolve, reject) {
+        // Create hidden video element
+        var video = document.createElement('video');
+        video.crossOrigin = 'anonymous';
+        video.playsInline = true;
+        video.muted = true; // Required for autoplay in most browsers
+        video.loop = loop;
+        video.preload = 'auto';
+        video.style.display = 'none';
+        document.body.appendChild(video);
+
+        video.addEventListener('loadeddata', function onLoaded() {
+          video.removeEventListener('loadeddata', onLoaded);
+
+          // Create a canvas to capture video frames
+          var vw = _nextPow2(video.videoWidth || 640);
+          var vh = _nextPow2(video.videoHeight || 360);
+          var frameCanvas = document.createElement('canvas');
+          frameCanvas.width = vw;
+          frameCanvas.height = vh;
+          var frameCtx = frameCanvas.getContext('2d', { willReadFrequently: !!chromaKey });
+
+          // Draw first frame as initial texture
+          frameCtx.drawImage(video, 0, 0, vw, vh);
+
+          if (chromaKey) {
+            var imgData = frameCtx.getImageData(0, 0, vw, vh);
+            _applyChromaKey(imgData, chromaKey.color || [0, 1, 0], chromaKey.threshold || 0.4);
+            frameCtx.putImageData(imgData, 0, 0);
+          }
+
+          self._createTexturedQuad(frameCanvas, position, size, billboard)
+            .then(function(entity) {
+              var nodeInfo = self._mediaNodes.get(entity);
+              if (nodeInfo) {
+                nodeInfo.type = 'video';
+                nodeInfo.videoOptions = options;
+              }
+
+              // Store video metadata for frame updates
+              self._videoElements.set(entity, {
+                video: video,
+                canvas: frameCanvas,
+                ctx: frameCtx,
+                chromaKey: chromaKey,
+                playing: false,
+                lastFrameTime: -1
+              });
+
+              // Start frame streaming
+              self._startVideoFrameLoop(entity);
+
+              if (autoplay) {
+                video.play().catch(function(e) {
+                  console.warn('SceneView: Autoplay blocked, user interaction needed:', e.message);
+                });
+              }
+
+              resolve(entity);
+            })
+            .catch(reject);
+        });
+
+        video.addEventListener('error', function() {
+          reject(new Error('SceneView: Failed to load video: ' + url));
+        });
+
+        video.src = url;
+        video.load();
+      });
+    }
+
+    /**
+     * Start the per-frame video texture update loop for an entity.
+     * Uses requestVideoFrameCallback when available, falls back to requestAnimationFrame.
+     */
+    _startVideoFrameLoop(entity) {
+      var self = this;
+      var vInfo = this._videoElements.get(entity);
+      if (!vInfo) return;
+
+      function updateFrame() {
+        if (!self._running || !self._videoElements.has(entity)) return;
+
+        var vi = self._videoElements.get(entity);
+        if (!vi || vi.video.paused || vi.video.ended) {
+          // Schedule next check even when paused
+          requestAnimationFrame(updateFrame);
+          return;
+        }
+
+        // Only update if we have a new frame
+        var currentTime = vi.video.currentTime;
+        if (currentTime !== vi.lastFrameTime) {
+          vi.lastFrameTime = currentTime;
+
+          // Draw current video frame to canvas
+          vi.ctx.drawImage(vi.video, 0, 0, vi.canvas.width, vi.canvas.height);
+
+          // Apply chroma key if configured
+          if (vi.chromaKey) {
+            var imgData = vi.ctx.getImageData(0, 0, vi.canvas.width, vi.canvas.height);
+            _applyChromaKey(imgData, vi.chromaKey.color || [0, 1, 0], vi.chromaKey.threshold || 0.4);
+            vi.ctx.putImageData(imgData, 0, 0);
+          }
+
+          // Update the Filament texture
+          self._updateQuadTexture(entity, vi.canvas);
+        }
+
+        // Use requestVideoFrameCallback if available (more efficient)
+        if ('requestVideoFrameCallback' in vi.video) {
+          vi.video.requestVideoFrameCallback(updateFrame);
+        } else {
+          requestAnimationFrame(updateFrame);
+        }
+      }
+
+      // Start the loop
+      if ('requestVideoFrameCallback' in vInfo.video) {
+        vInfo.video.requestVideoFrameCallback(updateFrame);
+      }
+      // Also use rAF as a fallback kickstarter
+      requestAnimationFrame(updateFrame);
+    }
+
+    // ---------------------------------------------------------------
+    // Video playback controls
+    // ---------------------------------------------------------------
+
+    /** Play a video entity */
+    playVideo(entity) {
+      var vInfo = this._videoElements.get(entity);
+      if (vInfo && vInfo.video) {
+        return vInfo.video.play();
+      }
+      return Promise.reject(new Error('SceneView: Entity is not a video node'));
+    }
+
+    /** Pause a video entity */
+    pauseVideo(entity) {
+      var vInfo = this._videoElements.get(entity);
+      if (vInfo && vInfo.video) {
+        vInfo.video.pause();
+        return;
+      }
+      throw new Error('SceneView: Entity is not a video node');
+    }
+
+    /** Seek a video entity to a specific time in seconds */
+    seekVideo(entity, time) {
+      var vInfo = this._videoElements.get(entity);
+      if (vInfo && vInfo.video) {
+        vInfo.video.currentTime = time;
+        return;
+      }
+      throw new Error('SceneView: Entity is not a video node');
+    }
+
+    /** Get the current playback state of a video entity */
+    getVideoState(entity) {
+      var vInfo = this._videoElements.get(entity);
+      if (vInfo && vInfo.video) {
+        return {
+          currentTime: vInfo.video.currentTime,
+          duration: vInfo.video.duration,
+          paused: vInfo.video.paused,
+          ended: vInfo.video.ended,
+          loop: vInfo.video.loop
+        };
+      }
+      return null;
+    }
+
+    // ---------------------------------------------------------------
+    // Billboard system
+    // ---------------------------------------------------------------
+
+    /**
+     * Enable or disable billboard mode for an entity.
+     * Billboard entities always face the camera.
+     *
+     * @param {number} entity - Entity handle
+     * @param {boolean} enabled - Whether billboard mode is on
+     */
+    setBillboard(entity, enabled) {
+      if (enabled) {
+        this._billboards.add(entity);
+      } else {
+        this._billboards.delete(entity);
+      }
+      return this;
+    }
+
+    /**
+     * Update billboard transforms — called each frame in the render loop.
+     * Makes billboard entities face the camera by setting their rotation.
+     */
+    _updateBillboards() {
+      if (this._billboards.size === 0) return;
+
+      var tcm;
+      try {
+        tcm = this._engine.getTransformManager();
+      } catch (e) {
+        return; // TransformManager not available
+      }
+
+      // Camera position (from orbit params)
+      var t = this._orbitTarget;
+      var r = this._orbitRadius;
+      var camX = t[0] + Math.sin(this._angle) * r;
+      var camY = this._orbitHeight;
+      var camZ = t[2] + Math.cos(this._angle) * r;
+
+      var self = this;
+      this._billboards.forEach(function(entity) {
+        var nodeInfo = self._mediaNodes.get(entity);
+        if (!nodeInfo || !nodeInfo.asset) return;
+
+        var rootEntity = nodeInfo.asset.getRoot();
+        var pos = nodeInfo.position || [0, 0, 0];
+
+        // Calculate direction from entity to camera (Y-up world)
+        var dx = camX - pos[0];
+        var dy = camY - pos[1];
+        var dz = camZ - pos[2];
+        var lenXZ = Math.sqrt(dx * dx + dz * dz);
+
+        // Yaw angle (rotation around Y axis) to face camera
+        var yaw = Math.atan2(dx, dz);
+
+        // Build a transform matrix: Translation * RotationY * Scale
+        var sx = nodeInfo.scaleX || 1;
+        var sy = nodeInfo.scaleY || 1;
+
+        // Column-major 4x4 matrix for Filament
+        var cosY = Math.cos(yaw);
+        var sinY = Math.sin(yaw);
+        var mat = [
+          cosY * sx, 0, -sinY * sx, 0,
+          0, sy, 0, 0,
+          sinY, 0, cosY, 0,
+          pos[0], pos[1], pos[2], 1
+        ];
+
+        try {
+          var inst = tcm.getInstance(rootEntity);
+          tcm.setTransform(inst, mat);
+        } catch (e) {
+          // Entity may have been destroyed
+          self._billboards.delete(entity);
+        }
+      });
+    }
+
+    // ---------------------------------------------------------------
+    // Texture utilities
+    // ---------------------------------------------------------------
+
+    /**
+     * Create a Filament texture from a Canvas2D element.
+     * Returns the Filament.Texture object.
+     *
+     * @param {HTMLCanvasElement} canvas - Source canvas
+     * @returns {Object} Filament texture object
+     */
+    createTexture(canvas) {
+      return this._createFilamentTexture(canvas);
+    }
+
+    /**
+     * Update an existing entity's texture from a Canvas2D element.
+     * Useful for dynamic content (live data, animated text, etc.)
+     *
+     * @param {number} entity - Entity handle (from createText/createImage/createVideo)
+     * @param {HTMLCanvasElement} canvas - New canvas content
+     */
+    updateTexture(entity, canvas) {
+      this._updateQuadTexture(entity, canvas);
+    }
+
+    // ---------------------------------------------------------------
+    // Internal: Create Filament texture from canvas pixels
+    // ---------------------------------------------------------------
+
+    _createFilamentTexture(canvas) {
+      var width = canvas.width;
+      var height = canvas.height;
+      var ctx = canvas.getContext('2d');
+      var imageData = ctx.getImageData(0, 0, width, height);
+      var pixels = new Uint8Array(imageData.data.buffer);
+
+      var tex = Filament.Texture.Builder()
+        .width(width)
+        .height(height)
+        .levels(1)
+        .sampler(Filament.Texture$Sampler.SAMPLER_2D)
+        .format(Filament.Texture$InternalFormat.SRGB8_A8)
+        .build(this._engine);
+
+      var pb = Filament.PixelBuffer(pixels, Filament.PixelDataFormat.RGBA, Filament.PixelDataType.UBYTE);
+      tex.setImage(this._engine, 0, pb);
+
+      return tex;
+    }
+
+    /**
+     * Update the texture on an existing quad entity by re-uploading canvas pixels.
+     */
+    _updateQuadTexture(entity, canvas) {
+      var nodeInfo = this._mediaNodes.get(entity);
+      if (!nodeInfo || !nodeInfo.asset) return;
+
+      var width = canvas.width;
+      var height = canvas.height;
+      var ctx = canvas.getContext('2d');
+      var imageData = ctx.getImageData(0, 0, width, height);
+      var pixels = new Uint8Array(imageData.data.buffer);
+
+      // If the texture dimensions changed, we need a new texture
+      if (nodeInfo.texWidth !== width || nodeInfo.texHeight !== height) {
+        // Create new texture with updated dimensions
+        var newTex = Filament.Texture.Builder()
+          .width(width)
+          .height(height)
+          .levels(1)
+          .sampler(Filament.Texture$Sampler.SAMPLER_2D)
+          .format(Filament.Texture$InternalFormat.SRGB8_A8)
+          .build(this._engine);
+
+        var pb = Filament.PixelBuffer(pixels, Filament.PixelDataFormat.RGBA, Filament.PixelDataType.UBYTE);
+        newTex.setImage(this._engine, 0, pb);
+
+        // Update the material instance's texture
+        try {
+          var renderables = nodeInfo.asset.getRenderableEntities();
+          if (renderables.length > 0) {
+            var rm = this._engine.getRenderableManager();
+            var ri = rm.getInstance(renderables[0]);
+            var mi = rm.getMaterialInstanceAt(ri, 0);
+            mi.setTextureParameter('baseColorMap', newTex,
+              new Filament.TextureSampler(
+                Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+                Filament.MagFilter.LINEAR,
+                Filament.WrapMode.CLAMP_TO_EDGE
+              )
+            );
+          }
+        } catch (e) {
+          // Material parameter name may differ — try alternatives
+          try {
+            var renderables2 = nodeInfo.asset.getRenderableEntities();
+            if (renderables2.length > 0) {
+              var rm2 = this._engine.getRenderableManager();
+              var ri2 = rm2.getInstance(renderables2[0]);
+              var mi2 = rm2.getMaterialInstanceAt(ri2, 0);
+              mi2.setTextureParameter('baseColor', newTex,
+                new Filament.TextureSampler(
+                  Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+                  Filament.MagFilter.LINEAR,
+                  Filament.WrapMode.CLAMP_TO_EDGE
+                )
+              );
+            }
+          } catch (e2) { /* texture update failed silently */ }
+        }
+
+        nodeInfo.texture = newTex;
+        nodeInfo.texWidth = width;
+        nodeInfo.texHeight = height;
+      } else {
+        // Same size — just re-upload pixels to existing texture
+        try {
+          var pb2 = Filament.PixelBuffer(pixels, Filament.PixelDataFormat.RGBA, Filament.PixelDataType.UBYTE);
+          nodeInfo.texture.setImage(this._engine, 0, pb2);
+        } catch (e) {
+          // Fallback: create new texture
+          this._updateQuadTexture(entity, canvas);
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // Internal: Create a textured quad using GLB loader
+    // ---------------------------------------------------------------
+
+    /**
+     * Create a quad plane entity with a texture from a canvas.
+     * Uses an in-memory GLB loaded through gltfio for proper materials.
+     *
+     * @param {HTMLCanvasElement} canvas - Source for the texture
+     * @param {Array} position - [x, y, z] world position
+     * @param {Array} size - [width, height] in world units
+     * @param {boolean} billboard - Enable billboard mode
+     * @returns {Promise<number>} Entity handle (actually the root entity of the quad asset)
+     */
+    _createTexturedQuad(canvas, position, size, billboard) {
+      var self = this;
+
+      // Cache the GLB bytes
+      if (!this._quadGLB) {
+        this._quadGLB = _buildQuadGLB();
+      }
+
+      // Create a unique key for this quad instance
+      var quadKey = '__sv_quad_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+      return new Promise(function(resolve, reject) {
+        try {
+          // Load the quad GLB through the asset loader
+          var asset = self._loader.createAsset(self._quadGLB);
+          if (!asset) {
+            reject(new Error('SceneView: Failed to create quad asset'));
+            return;
+          }
+          asset.loadResources();
+
+          var rootEntity = asset.getRoot();
+          self._scene.addEntity(rootEntity);
+          self._scene.addEntities(asset.getRenderableEntities());
+
+          // Create the Filament texture from canvas
+          var texture = self._createFilamentTexture(canvas);
+
+          // Apply the texture to the material
+          try {
+            var renderables = asset.getRenderableEntities();
+            if (renderables.length > 0) {
+              var rm = self._engine.getRenderableManager();
+              var ri = rm.getInstance(renderables[0]);
+              var mi = rm.getMaterialInstanceAt(ri, 0);
+
+              // gltfio ubershader uses "baseColorMap" for the texture
+              var sampler = new Filament.TextureSampler(
+                Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+                Filament.MagFilter.LINEAR,
+                Filament.WrapMode.CLAMP_TO_EDGE
+              );
+              mi.setTextureParameter('baseColorMap', texture, sampler);
+            }
+          } catch (e) {
+            console.warn('SceneView: Could not set texture parameter, trying alternative name:', e.message);
+            // Try alternative parameter names used by different material versions
+            try {
+              var renderables2 = asset.getRenderableEntities();
+              if (renderables2.length > 0) {
+                var rm2 = self._engine.getRenderableManager();
+                var ri2 = rm2.getInstance(renderables2[0]);
+                var mi2 = rm2.getMaterialInstanceAt(ri2, 0);
+                var sampler2 = new Filament.TextureSampler(
+                  Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+                  Filament.MagFilter.LINEAR,
+                  Filament.WrapMode.CLAMP_TO_EDGE
+                );
+                mi2.setTextureParameter('baseColor', texture, sampler2);
+              }
+            } catch (e2) {
+              console.warn('SceneView: Texture parameter fallback also failed:', e2.message);
+            }
+          }
+
+          // Apply position and scale via TransformManager
+          var tcm;
+          try {
+            tcm = self._engine.getTransformManager();
+          } catch (e) {
+            tcm = null;
+          }
+
+          if (tcm) {
+            var sx = size[0];
+            var sy = size[1];
+
+            // Column-major 4x4 matrix: Scale * Translation
+            var mat = [
+              sx, 0, 0, 0,
+              0, sy, 0, 0,
+              0, 0, 1, 0,
+              position[0], position[1], position[2], 1
+            ];
+            try {
+              var inst = tcm.getInstance(rootEntity);
+              tcm.setTransform(inst, mat);
+            } catch (e) {
+              console.warn('SceneView: Could not set transform:', e.message);
+            }
+          }
+
+          // Use a synthetic entity ID based on the root entity for tracking
+          var entityId = rootEntity;
+
+          // Store node metadata
+          self._mediaNodes.set(entityId, {
+            type: 'quad',
+            asset: asset,
+            texture: texture,
+            position: position,
+            scaleX: size[0],
+            scaleY: size[1],
+            texWidth: canvas.width,
+            texHeight: canvas.height,
+            key: quadKey
+          });
+
+          // Enable billboard if requested
+          if (billboard) {
+            self._billboards.add(entityId);
+          }
+
+          resolve(entityId);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
+    // ---------------------------------------------------------------
+    // Remove a media node
+    // ---------------------------------------------------------------
+
+    /**
+     * Remove a text, image, or video entity from the scene.
+     *
+     * @param {number} entity - Entity handle
+     */
+    removeNode(entity) {
+      var nodeInfo = this._mediaNodes.get(entity);
+      if (!nodeInfo) return;
+
+      // Remove from scene
+      if (nodeInfo.asset) {
+        try {
+          nodeInfo.asset.getRenderableEntities().forEach(function(e) {
+            this._scene.remove(e);
+          }.bind(this));
+          this._scene.remove(nodeInfo.asset.getRoot());
+        } catch (e) { /* ignore */ }
+      }
+
+      // Clean up video element if present
+      var vInfo = this._videoElements.get(entity);
+      if (vInfo) {
+        vInfo.video.pause();
+        vInfo.video.src = '';
+        if (vInfo.video.parentNode) vInfo.video.parentNode.removeChild(vInfo.video);
+        this._videoElements.delete(entity);
+      }
+
+      // Remove from tracking
+      this._billboards.delete(entity);
+      this._mediaNodes.delete(entity);
+    }
+
+    // ---------------------------------------------------------------
+    // Dispose
+    // ---------------------------------------------------------------
+
     dispose() {
       this._running = false;
+
+      // Clean up video elements
+      var self = this;
+      this._videoElements.forEach(function(vInfo) {
+        vInfo.video.pause();
+        vInfo.video.src = '';
+        if (vInfo.video.parentNode) vInfo.video.parentNode.removeChild(vInfo.video);
+      });
+      this._videoElements.clear();
+      this._mediaNodes.clear();
+      this._billboards.clear();
+
       if (this._resizeObserver) this._resizeObserver.disconnect();
-      this._colliders.clear();
-      this._entityBounds.clear();
-      this._selectableEntities.clear();
-      this._selectedEntities.clear();
-      this._draggableEntities.clear();
-      this._pointers.clear();
       try { Filament.Engine.destroy(this._engine); } catch (e) { /* already destroyed */ }
     }
 
-    // =====================================================================
-    // Ray casting — screen-to-world ray unprojection
-    // =====================================================================
-
-    /**
-     * Get the current camera matrices (view and projection) computed from
-     * orbit parameters, matching the render loop exactly.
-     * @returns {{ view: Array, projection: Array, eye: Array }}
-     */
-    _getCameraMatrices() {
-      var t = this._orbitTarget;
-      var r = this._orbitRadius;
-      var h = this._orbitHeight;
-      var eye = [
-        t[0] + Math.sin(this._angle) * r,
-        h,
-        t[2] + Math.cos(this._angle) * r
-      ];
-      var fovRad = (this._fov || 45) * Math.PI / 180;
-      var aspect = this._canvas.width / this._canvas.height;
-      var projection = Mat4.perspective(fovRad, aspect, 0.1, 1000);
-      var view = Mat4.lookAt(eye, t, [0, 1, 0]);
-      return { view: view, projection: projection, eye: eye };
-    }
-
-    /**
-     * Convert screen pixel coordinates to a world-space ray.
-     * Uses the same camera state as the current render frame.
-     *
-     * @param {number} screenX Pixel X (relative to canvas, e.g. from event.offsetX)
-     * @param {number} screenY Pixel Y (relative to canvas, e.g. from event.offsetY)
-     * @returns {{ origin: Array, direction: Array }} World-space ray
-     */
-    screenToRay(screenX, screenY) {
-      var cam = this._getCameraMatrices();
-      var canvas = this._canvas;
-
-      // Normalize screen coordinates to NDC [-1, 1]
-      var ndcX = (screenX / canvas.clientWidth) * 2 - 1;
-      var ndcY = 1 - (screenY / canvas.clientHeight) * 2; // Y is flipped
-
-      // Inverse view-projection matrix
-      var vp = Mat4.multiply(cam.projection, cam.view);
-      var vpInv = Mat4.invert(vp);
-      if (!vpInv) {
-        return { origin: cam.eye, direction: [0, 0, -1] };
-      }
-
-      // Unproject near point (z = -1 in NDC) and far point (z = 1)
-      var nearClip = Mat4.mulVec4(vpInv, [ndcX, ndcY, -1, 1]);
-      var farClip  = Mat4.mulVec4(vpInv, [ndcX, ndcY,  1, 1]);
-
-      // Perspective divide
-      var nearWorld = [nearClip[0] / nearClip[3], nearClip[1] / nearClip[3], nearClip[2] / nearClip[3]];
-      var farWorld  = [farClip[0]  / farClip[3],  farClip[1]  / farClip[3],  farClip[2]  / farClip[3]];
-
-      var direction = Vec3.normalize(Vec3.sub(farWorld, nearWorld));
-      return { origin: nearWorld, direction: direction };
-    }
-
-    // =====================================================================
-    // Hit testing — ray vs entity bounding boxes & custom colliders
-    // =====================================================================
-
-    /**
-     * Perform a hit test against all entities at the given screen coordinates.
-     * Tests custom colliders first, then falls back to entity bounding boxes.
-     *
-     * @param {number} screenX Pixel X (offsetX from canvas)
-     * @param {number} screenY Pixel Y (offsetY from canvas)
-     * @returns {{ entity: number, point: Array, distance: number }|null} Nearest hit or null
-     */
-    hitTest(screenX, screenY) {
-      var hits = this.hitTestAll(screenX, screenY);
-      return hits.length > 0 ? hits[0] : null;
-    }
-
-    /**
-     * Perform a hit test returning ALL intersected entities, sorted by distance.
-     *
-     * @param {number} screenX Pixel X
-     * @param {number} screenY Pixel Y
-     * @returns {Array<{ entity: number, point: Array, distance: number }>}
-     */
-    hitTestAll(screenX, screenY) {
-      var ray = this.screenToRay(screenX, screenY);
-      var hits = [];
-
-      // 1. Test custom colliders (setCollisionBox / setCollisionSphere)
-      this._colliders.forEach(function(collider, entityId) {
-        var hit = null;
-        if (collider.type === 'box') {
-          hit = Collision.rayAABB(
-            ray.origin, ray.direction,
-            collider.min, collider.max
-          );
-        } else if (collider.type === 'sphere') {
-          hit = Collision.raySphere(
-            ray.origin, ray.direction,
-            collider.center, collider.radius
-          );
-        }
-        if (hit) {
-          hits.push({ entity: entityId, point: hit.point, distance: hit.distance });
-        }
-      });
-
-      // 2. Test entity bounding boxes (from loaded models)
-      var self = this;
-      this._entityBounds.forEach(function(bounds, entity) {
-        // Skip if this entity already has a custom collider
-        if (self._colliders.has(entity)) return;
-        var hit = Collision.rayAABB(ray.origin, ray.direction, bounds.min, bounds.max);
-        if (hit) {
-          hits.push({ entity: entity, point: hit.point, distance: hit.distance });
-        }
-      });
-
-      // Sort by distance (nearest first)
-      hits.sort(function(a, b) { return a.distance - b.distance; });
-      return hits;
-    }
-
-    // =====================================================================
-    // Collision shapes — custom AABB and sphere colliders
-    // =====================================================================
-
-    /**
-     * Set an axis-aligned bounding box collider on an entity.
-     * @param {number} entity Filament entity ID
-     * @param {Array} halfExtents [hx, hy, hz] half-sizes in each axis
-     * @param {Array} [center] Optional center offset [x,y,z], defaults to [0,0,0]
-     * @returns {this}
-     */
-    setCollisionBox(entity, halfExtents, center) {
-      center = center || [0, 0, 0];
-      this._colliders.set(entity, {
-        type: 'box',
-        entity: entity,
-        halfExtents: halfExtents,
-        center: center,
-        min: Vec3.sub(center, halfExtents),
-        max: Vec3.add(center, halfExtents)
-      });
-      return this;
-    }
-
-    /**
-     * Set a sphere collider on an entity.
-     * @param {number} entity Filament entity ID
-     * @param {number} radius Sphere radius
-     * @param {Array} [center] Optional center offset [x,y,z], defaults to [0,0,0]
-     * @returns {this}
-     */
-    setCollisionSphere(entity, radius, center) {
-      center = center || [0, 0, 0];
-      this._colliders.set(entity, {
-        type: 'sphere',
-        entity: entity,
-        radius: radius,
-        center: center
-      });
-      return this;
-    }
-
-    /**
-     * Remove a collider from an entity.
-     * @param {number} entity
-     * @returns {this}
-     */
-    removeCollision(entity) {
-      this._colliders.delete(entity);
-      return this;
-    }
-
-    /**
-     * Check if two entities' colliders overlap.
-     * @param {number} entityA
-     * @param {number} entityB
-     * @returns {boolean}
-     */
-    checkCollision(entityA, entityB) {
-      var a = this._colliders.get(entityA) || this._entityBoundsAsCollider(entityA);
-      var b = this._colliders.get(entityB) || this._entityBoundsAsCollider(entityB);
-      if (!a || !b) return false;
-
-      if (a.type === 'box' && b.type === 'box') {
-        return Collision.aabbOverlap(a.min, a.max, b.min, b.max);
-      }
-      if (a.type === 'sphere' && b.type === 'sphere') {
-        return Collision.sphereOverlap(a.center, a.radius, b.center, b.radius);
-      }
-      if (a.type === 'sphere' && b.type === 'box') {
-        return Collision.sphereAABBOverlap(a.center, a.radius, b.min, b.max);
-      }
-      if (a.type === 'box' && b.type === 'sphere') {
-        return Collision.sphereAABBOverlap(b.center, b.radius, a.min, a.max);
-      }
-      return false;
-    }
-
-    /** Convert entity bounds to a collider-like object for checkCollision */
-    _entityBoundsAsCollider(entity) {
-      var bounds = this._entityBounds.get(entity);
-      if (!bounds) return null;
-      return {
-        type: 'box',
-        min: bounds.min,
-        max: bounds.max,
-        center: Vec3.scale(Vec3.add(bounds.min, bounds.max), 0.5)
-      };
-    }
-
-    // =====================================================================
-    // Gesture system — tap, double-tap, long-press, drag, pinch, rotate
-    // =====================================================================
-
-    /**
-     * Register a tap callback. Fires when the user taps (clicks) on the canvas.
-     * If the tap hits an entity, the entity and world-space hit point are provided.
-     *
-     * @param {Function} callback ({ entity, point, screenX, screenY }) => void
-     * @returns {this}
-     */
-    onTap(callback) {
-      this._gestureCallbacks.tap.push(callback);
-      return this;
-    }
-
-    /**
-     * Register a double-tap callback.
-     * @param {Function} callback ({ entity, point, screenX, screenY }) => void
-     * @returns {this}
-     */
-    onDoubleTap(callback) {
-      this._gestureCallbacks.doubleTap.push(callback);
-      return this;
-    }
-
-    /**
-     * Register a long-press callback.
-     * @param {Function} callback ({ entity, point, screenX, screenY }) => void
-     * @param {number} [duration=500] Long press duration in ms
-     * @returns {this}
-     */
-    onLongPress(callback, duration) {
-      if (typeof duration === 'number' && duration > 0) {
-        this._longPressDuration = duration;
-      }
-      this._gestureCallbacks.longPress.push(callback);
-      return this;
-    }
-
-    /**
-     * Register drag callbacks for a specific entity.
-     * @param {number} entity Filament entity ID
-     * @param {{ onStart: Function, onMove: Function, onEnd: Function }} callbacks
-     *   onStart({ entity, point, screenX, screenY })
-     *   onMove({ entity, point, delta, screenX, screenY })
-     *   onEnd({ entity, point, screenX, screenY })
-     * @returns {this}
-     */
-    onDrag(entity, callbacks) {
-      this._gestureCallbacks.drag.set(entity, callbacks);
-      return this;
-    }
-
-    /**
-     * Register a pinch (two-finger zoom) callback.
-     * @param {Function} callback ({ scale, centerX, centerY }) => void
-     *   scale: ratio relative to pinch start (1 = no change, >1 = zoom in)
-     * @returns {this}
-     */
-    onPinch(callback) {
-      this._gestureCallbacks.pinch.push(callback);
-      return this;
-    }
-
-    /**
-     * Register a two-finger rotation callback.
-     * @param {Function} callback ({ angle, centerX, centerY }) => void
-     *   angle: rotation delta in radians since gesture start
-     * @returns {this}
-     */
-    onRotate(callback) {
-      this._gestureCallbacks.rotate.push(callback);
-      return this;
-    }
-
-    /**
-     * Enable automatic dragging of an entity in world space.
-     * The entity will follow the pointer projected onto the constraint plane.
-     *
-     * @param {number} entity Filament entity ID
-     * @param {{ axis: string, snap: number|null, bounds: { min: Array, max: Array }|null }} [options]
-     *   axis: 'xz' (ground plane), 'xy' (vertical), or 'xyz' (free)
-     *   snap: grid snap size (null = no snap)
-     *   bounds: movement bounds (null = unlimited)
-     * @returns {this}
-     */
-    enableEntityDrag(entity, options) {
-      options = options || {};
-      this._draggableEntities.set(entity, {
-        axis: options.axis || 'xz',
-        snap: options.snap || null,
-        bounds: options.bounds || null
-      });
-      return this;
-    }
-
-    /**
-     * Disable automatic dragging for an entity.
-     * @param {number} entity
-     * @returns {this}
-     */
-    disableEntityDrag(entity) {
-      this._draggableEntities.delete(entity);
-      if (this._activeDragEntity === entity) {
-        this._activeDragEntity = null;
-        this._activeDragPlane = null;
-        this._activeDragLastWorld = null;
-      }
-      return this;
-    }
-
-    // =====================================================================
-    // Selection system — selectable entities with visual highlight
-    // =====================================================================
-
-    /**
-     * Mark an entity as selectable/unselectable.
-     * @param {number} entity Filament entity ID
-     * @param {boolean} enabled
-     * @returns {this}
-     */
-    setSelectable(entity, enabled) {
-      if (enabled) {
-        this._selectableEntities.add(entity);
-      } else {
-        this._selectableEntities.delete(entity);
-        if (this._selectedEntities.has(entity)) {
-          this._selectedEntities.delete(entity);
-          this._applySelectionHighlight(entity, false);
-          this._fireSelectCallbacks(entity, false);
-        }
-      }
-      return this;
-    }
-
-    /**
-     * Register a selection change callback.
-     * @param {Function} callback ({ entity, selected }) => void
-     * @returns {this}
-     */
-    onSelect(callback) {
-      this._gestureCallbacks.select.push(callback);
-      return this;
-    }
-
-    /**
-     * Get all currently selected entities.
-     * @returns {Array<number>}
-     */
-    getSelectedEntities() {
-      return Array.from(this._selectedEntities);
-    }
-
-    /**
-     * Programmatically select an entity.
-     * @param {number} entity
-     * @param {boolean} [selected=true]
-     * @returns {this}
-     */
-    selectEntity(entity, selected) {
-      selected = selected !== false;
-      if (!this._selectableEntities.has(entity)) return this;
-      if (selected) {
-        this._selectedEntities.add(entity);
-      } else {
-        this._selectedEntities.delete(entity);
-      }
-      this._applySelectionHighlight(entity, selected);
-      this._fireSelectCallbacks(entity, selected);
-      return this;
-    }
-
-    _fireSelectCallbacks(entity, selected) {
-      var cbs = this._gestureCallbacks.select;
-      for (var i = 0; i < cbs.length; i++) {
-        try { cbs[i]({ entity: entity, selected: selected }); } catch (e) { console.error('SceneView select callback error:', e); }
-      }
-    }
-
-    /**
-     * Apply visual selection feedback via color tint using the material API.
-     * Uses a subtle emissive tint to highlight selected entities.
-     * Falls back gracefully if material access is unavailable.
-     */
-    _applySelectionHighlight(entity, selected) {
-      try {
-        var rm = this._engine.getRenderableManager();
-        var inst = rm.getInstance(entity);
-        if (!inst) return;
-
-        // Try to modify the material's emissive to indicate selection
-        var count = rm.getPrimitiveCount(inst);
-        for (var p = 0; p < count; p++) {
-          try {
-            var mat = rm.getMaterialInstanceAt(inst, p);
-            if (mat) {
-              if (selected) {
-                // Apply a blue-ish highlight tint via emissive
-                mat.setColor3Parameter('emissive', Filament.RgbType.LINEAR, [0.15, 0.25, 0.5]);
-              } else {
-                // Remove highlight
-                mat.setColor3Parameter('emissive', Filament.RgbType.LINEAR, [0, 0, 0]);
-              }
-            }
-          } catch (e) { /* material param may not exist */ }
-        }
-      } catch (e) {
-        // Filament material API may not be available — selection still
-        // works logically, just without visual feedback
-      }
-    }
-
-    // =====================================================================
-    // Input handling — unified pointer events with gesture detection
-    // =====================================================================
+    // ---------------------------------------------------------------
+    // Controls (existing)
+    // ---------------------------------------------------------------
 
     _setupControls() {
       var canvas = this._canvas;
       var self = this;
 
-      // Use pointer events for unified mouse + touch handling
-      canvas.style.touchAction = 'none'; // Prevent browser gestures
-
-      canvas.addEventListener('pointerdown', function(e) {
-        canvas.setPointerCapture(e.pointerId);
-        var rect = canvas.getBoundingClientRect();
-        var sx = e.clientX - rect.left;
-        var sy = e.clientY - rect.top;
-
-        self._pointers.set(e.pointerId, {
-          x: sx, y: sy,
-          startX: sx, startY: sy,
-          startTime: Date.now(),
-          moved: false
-        });
-
-        // Two-pointer gesture start (pinch/rotate)
-        if (self._pointers.size === 2) {
-          var pts = Array.from(self._pointers.values());
-          self._pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-          self._rotateStartAngle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
-          self._gestureConsumed = true;
-          self._cancelLongPress();
-          return;
-        }
-
-        // Single pointer — try entity interaction first
-        self._gestureConsumed = false;
-
-        var hit = self.hitTest(sx, sy);
-
-        // Check if hit a draggable entity
-        if (hit && self._draggableEntities.has(hit.entity)) {
-          self._gestureConsumed = true;
-          self._startEntityDrag(hit.entity, hit.point, sx, sy);
-          return;
-        }
-
-        // Check if hit an entity with custom drag callbacks
-        if (hit && self._gestureCallbacks.drag.has(hit.entity)) {
-          self._gestureConsumed = true;
-          self._activeDragEntity = hit.entity;
-          self._activeDragLastWorld = hit.point;
-          self._activeDragPlane = self._computeDragPlane(hit.point, 'xz');
-          var dragCb = self._gestureCallbacks.drag.get(hit.entity);
-          if (dragCb.onStart) {
-            try { dragCb.onStart({ entity: hit.entity, point: hit.point, screenX: sx, screenY: sy }); } catch (err) { console.error(err); }
-          }
-          return;
-        }
-
-        // Start long-press timer
-        self._startLongPress(sx, sy, hit);
-
-        // Fall through to camera orbit
-        if (!self._gestureConsumed) {
-          self._isDragging = true;
-          self._lastMouse = { x: e.clientX, y: e.clientY };
-          self._autoRotate = false;
-          self._velocityAngle = 0;
-          self._velocityHeight = 0;
-          if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
+      canvas.addEventListener('mousedown', function(e) {
+        self._isDragging = true;
+        self._lastMouse = { x: e.clientX, y: e.clientY };
+        self._autoRotate = false;
+        self._velocityAngle = 0;
+        self._velocityHeight = 0;
+        if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
+      });
+      canvas.addEventListener('mousemove', function(e) {
+        if (!self._isDragging) return;
+        var dx = (e.clientX - self._lastMouse.x) * 0.005;
+        var dy = (e.clientY - self._lastMouse.y) * 0.01;
+        self._velocityAngle = -dx;
+        self._velocityHeight = dy;
+        self._angle -= dx;
+        self._orbitHeight += dy;
+        self._lastMouse = { x: e.clientX, y: e.clientY };
+      });
+      canvas.addEventListener('mouseup', function() {
+        self._isDragging = false;
+        // Resume auto-rotate after 3s idle (like model-viewer)
+        if (self._wantsAutoRotate) {
+          self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
         }
       });
-
-      canvas.addEventListener('pointermove', function(e) {
-        var rect = canvas.getBoundingClientRect();
-        var sx = e.clientX - rect.left;
-        var sy = e.clientY - rect.top;
-
-        var ptr = self._pointers.get(e.pointerId);
-        if (ptr) {
-          ptr.x = sx;
-          ptr.y = sy;
-          // Track if pointer has moved beyond tap threshold
-          var distFromStart = Math.hypot(sx - ptr.startX, sy - ptr.startY);
-          if (distFromStart > self._tapDistanceThreshold) {
-            ptr.moved = true;
-            self._cancelLongPress();
-          }
-        }
-
-        // Two-pointer gestures (pinch / rotate)
-        if (self._pointers.size === 2) {
-          var pts = Array.from(self._pointers.values());
-          var dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-          var angle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
-          var centerX = (pts[0].x + pts[1].x) / 2;
-          var centerY = (pts[0].y + pts[1].y) / 2;
-
-          // Pinch
-          if (self._pinchStartDist > 0) {
-            var scale = dist / self._pinchStartDist;
-            var pinchCbs = self._gestureCallbacks.pinch;
-            for (var pi = 0; pi < pinchCbs.length; pi++) {
-              try { pinchCbs[pi]({ scale: scale, centerX: centerX, centerY: centerY }); } catch (err) { console.error(err); }
-            }
-            // Also drive camera zoom if no custom pinch handlers
-            if (pinchCbs.length === 0) {
-              self._orbitRadius /= (scale > 1 ? 1.01 : 0.99);
-              self._orbitRadius = Math.max(0.5, Math.min(50, self._orbitRadius));
-            }
-          }
-
-          // Rotate
-          var angleDelta = angle - self._rotateStartAngle;
-          var rotateCbs = self._gestureCallbacks.rotate;
-          for (var ri = 0; ri < rotateCbs.length; ri++) {
-            try { rotateCbs[ri]({ angle: angleDelta, centerX: centerX, centerY: centerY }); } catch (err) { console.error(err); }
-          }
-          return;
-        }
-
-        // Entity drag in progress
-        if (self._activeDragEntity !== null && self._activeDragPlane) {
-          self._updateEntityDrag(sx, sy);
-          return;
-        }
-
-        // Camera orbit drag
-        if (self._isDragging && !self._gestureConsumed) {
-          var dx = (e.clientX - self._lastMouse.x) * 0.005;
-          var dy = (e.clientY - self._lastMouse.y) * 0.01;
-          self._velocityAngle = -dx;
-          self._velocityHeight = dy;
-          self._angle -= dx;
-          self._orbitHeight += dy;
-          self._lastMouse = { x: e.clientX, y: e.clientY };
-        }
-      });
-
-      canvas.addEventListener('pointerup', function(e) {
-        canvas.releasePointerCapture(e.pointerId);
-        var ptr = self._pointers.get(e.pointerId);
-        self._pointers.delete(e.pointerId);
-
-        // End entity drag
-        if (self._activeDragEntity !== null) {
-          self._endEntityDrag(ptr ? ptr.x : 0, ptr ? ptr.y : 0);
-        }
-
-        // Detect gestures only for single-pointer releases
-        if (ptr && !ptr.moved && self._pointers.size === 0) {
-          var elapsed = Date.now() - ptr.startTime;
-          var sx = ptr.startX;
-          var sy = ptr.startY;
-
-          self._cancelLongPress();
-
-          // It was a tap (not a drag, not a long-press)
-          if (elapsed < 500) {
-            var hit = self.hitTest(sx, sy);
-
-            // Double-tap detection
-            var now = Date.now();
-            var tapDist = Math.hypot(sx - self._lastTapPos.x, sy - self._lastTapPos.y);
-            if (now - self._lastTapTime < self._doubleTapInterval && tapDist < self._tapDistanceThreshold * 2) {
-              // Double tap
-              var dtCbs = self._gestureCallbacks.doubleTap;
-              for (var i = 0; i < dtCbs.length; i++) {
-                try { dtCbs[i]({ entity: hit ? hit.entity : null, point: hit ? hit.point : null, screenX: sx, screenY: sy }); } catch (err) { console.error(err); }
-              }
-              self._lastTapTime = 0; // Reset to prevent triple-tap = double
-            } else {
-              // Single tap
-              self._lastTapTime = now;
-              self._lastTapPos = { x: sx, y: sy };
-
-              // Fire tap callbacks
-              var tapCbs = self._gestureCallbacks.tap;
-              for (var j = 0; j < tapCbs.length; j++) {
-                try { tapCbs[j]({ entity: hit ? hit.entity : null, point: hit ? hit.point : null, screenX: sx, screenY: sy }); } catch (err) { console.error(err); }
-              }
-
-              // Handle selection
-              if (hit && self._selectableEntities.has(hit.entity)) {
-                var wasSelected = self._selectedEntities.has(hit.entity);
-                if (wasSelected) {
-                  self._selectedEntities.delete(hit.entity);
-                } else {
-                  self._selectedEntities.add(hit.entity);
-                }
-                self._applySelectionHighlight(hit.entity, !wasSelected);
-                self._fireSelectCallbacks(hit.entity, !wasSelected);
-              }
-            }
-          }
-        }
-
-        // Camera orbit end
-        if (self._pointers.size === 0) {
-          self._isDragging = false;
-          self._gestureConsumed = false;
-          if (self._wantsAutoRotate) {
-            self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
-          }
-        }
-      });
-
-      canvas.addEventListener('pointercancel', function(e) {
-        self._pointers.delete(e.pointerId);
-        if (self._activeDragEntity !== null) {
-          self._endEntityDrag(0, 0);
-        }
-        self._cancelLongPress();
-        if (self._pointers.size === 0) {
-          self._isDragging = false;
-          self._gestureConsumed = false;
-          if (self._wantsAutoRotate) {
-            self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
-          }
-        }
-      });
-
-      canvas.addEventListener('pointerleave', function(e) {
-        self._pointers.delete(e.pointerId);
-        self._cancelLongPress();
-        if (self._pointers.size === 0) {
-          self._isDragging = false;
-          if (self._activeDragEntity !== null) {
-            self._endEntityDrag(0, 0);
-          }
-          if (self._wantsAutoRotate) {
-            self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
-          }
+      canvas.addEventListener('mouseleave', function() {
+        self._isDragging = false;
+        if (self._wantsAutoRotate) {
+          self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
         }
       });
 
@@ -1208,170 +1248,35 @@
         self._orbitRadius *= (1 + e.deltaY * 0.001);
         self._orbitRadius = Math.max(0.5, Math.min(50, self._orbitRadius));
       }, { passive: false });
-    }
 
-    // =====================================================================
-    // Long-press detection
-    // =====================================================================
-
-    _startLongPress(sx, sy, hit) {
-      var self = this;
-      this._cancelLongPress();
-      if (this._gestureCallbacks.longPress.length === 0) return;
-      this._longPressTimer = setTimeout(function() {
-        self._longPressTimer = null;
-        // Re-check hit at original position (pointer may not have moved)
-        var actualHit = hit || self.hitTest(sx, sy);
-        var cbs = self._gestureCallbacks.longPress;
-        for (var i = 0; i < cbs.length; i++) {
-          try { cbs[i]({ entity: actualHit ? actualHit.entity : null, point: actualHit ? actualHit.point : null, screenX: sx, screenY: sy }); } catch (err) { console.error(err); }
+      canvas.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+          self._isDragging = true;
+          self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          self._autoRotate = false;
+          self._velocityAngle = 0;
+          self._velocityHeight = 0;
+          if (self._autoRotateTimer) { clearTimeout(self._autoRotateTimer); self._autoRotateTimer = null; }
         }
-        // Consume the gesture so it does not turn into a tap on release
-        self._pointers.forEach(function(ptr) { ptr.moved = true; });
-      }, this._longPressDuration);
-    }
-
-    _cancelLongPress() {
-      if (this._longPressTimer) {
-        clearTimeout(this._longPressTimer);
-        this._longPressTimer = null;
-      }
-    }
-
-    // =====================================================================
-    // Entity dragging — world-space plane-constrained movement
-    // =====================================================================
-
-    /**
-     * Compute the drag constraint plane for an axis mode.
-     * Returns { normal: [x,y,z], d: number } where dot(normal, P) = d for points on the plane.
-     */
-    _computeDragPlane(worldPoint, axis) {
-      var cam = this._getCameraMatrices();
-      var viewDir = Vec3.normalize(Vec3.sub(this._orbitTarget, cam.eye));
-      var normal;
-
-      if (axis === 'xz') {
-        // Horizontal ground plane (Y-up)
-        normal = [0, 1, 0];
-      } else if (axis === 'xy') {
-        // Vertical plane facing camera
-        normal = [0, 0, 1];
-        // Use the camera's forward Z direction projected to XY
-        if (Math.abs(viewDir[2]) > 0.1) {
-          normal = Vec3.normalize([0, 0, viewDir[2] > 0 ? -1 : 1]);
+      });
+      canvas.addEventListener('touchmove', function(e) {
+        if (!self._isDragging || e.touches.length !== 1) return;
+        e.preventDefault();
+        var dx = (e.touches[0].clientX - self._lastMouse.x) * 0.005;
+        var dy = (e.touches[0].clientY - self._lastMouse.y) * 0.01;
+        self._velocityAngle = -dx;
+        self._velocityHeight = dy;
+        self._angle -= dx;
+        self._orbitHeight += dy;
+        self._lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }, { passive: false });
+      canvas.addEventListener('touchend', function() {
+        self._isDragging = false;
+        if (self._wantsAutoRotate) {
+          self._autoRotateTimer = setTimeout(function() { self._autoRotate = true; }, 3000);
         }
-      } else {
-        // 'xyz' — free movement on a plane facing the camera
-        normal = Vec3.normalize(Vec3.negate(viewDir));
-      }
-
-      return { normal: normal, d: Vec3.dot(normal, worldPoint) };
+      });
     }
-
-    _startEntityDrag(entity, worldPoint, sx, sy) {
-      var dragOpts = this._draggableEntities.get(entity);
-      var axis = dragOpts ? dragOpts.axis : 'xz';
-
-      this._activeDragEntity = entity;
-      this._activeDragLastWorld = worldPoint;
-      this._activeDragPlane = this._computeDragPlane(worldPoint, axis);
-
-      // Also fire custom drag callbacks if registered
-      var dragCb = this._gestureCallbacks.drag.get(entity);
-      if (dragCb && dragCb.onStart) {
-        try { dragCb.onStart({ entity: entity, point: worldPoint, screenX: sx, screenY: sy }); } catch (err) { console.error(err); }
-      }
-    }
-
-    _updateEntityDrag(sx, sy) {
-      if (!this._activeDragEntity || !this._activeDragPlane) return;
-
-      var ray = this.screenToRay(sx, sy);
-      var plane = this._activeDragPlane;
-      var hit = Collision.rayPlane(ray.origin, ray.direction, plane.normal, plane.d);
-      if (!hit) return;
-
-      var newWorld = hit.point;
-      var entity = this._activeDragEntity;
-      var dragOpts = this._draggableEntities.get(entity);
-
-      // Apply snapping
-      if (dragOpts && dragOpts.snap) {
-        var snap = dragOpts.snap;
-        newWorld = [
-          Math.round(newWorld[0] / snap) * snap,
-          Math.round(newWorld[1] / snap) * snap,
-          Math.round(newWorld[2] / snap) * snap
-        ];
-      }
-
-      // Apply bounds
-      if (dragOpts && dragOpts.bounds) {
-        var b = dragOpts.bounds;
-        newWorld = Vec3.max(b.min, Vec3.min(b.max, newWorld));
-      }
-
-      var delta = Vec3.sub(newWorld, this._activeDragLastWorld);
-      this._activeDragLastWorld = newWorld;
-
-      // Move the entity using Filament's TransformManager
-      try {
-        var tm = this._engine.getTransformManager();
-        var inst = tm.getInstance(entity);
-        if (inst) {
-          var transform = tm.getTransform(inst);
-          // The transform is a 4x4 column-major matrix — update translation
-          transform[12] += delta[0];
-          transform[13] += delta[1];
-          transform[14] += delta[2];
-          tm.setTransform(inst, transform);
-        }
-      } catch (e) {
-        // TransformManager may not be available for all entities
-      }
-
-      // Update collider position if one exists
-      var collider = this._colliders.get(entity);
-      if (collider) {
-        collider.center = Vec3.add(collider.center, delta);
-        if (collider.type === 'box') {
-          collider.min = Vec3.sub(collider.center, collider.halfExtents);
-          collider.max = Vec3.add(collider.center, collider.halfExtents);
-        }
-      }
-
-      // Update cached bounds
-      var bounds = this._entityBounds.get(entity);
-      if (bounds) {
-        bounds.min = Vec3.add(bounds.min, delta);
-        bounds.max = Vec3.add(bounds.max, delta);
-      }
-
-      // Fire custom drag callbacks
-      var dragCb = this._gestureCallbacks.drag.get(entity);
-      if (dragCb && dragCb.onMove) {
-        try { dragCb.onMove({ entity: entity, point: newWorld, delta: delta, screenX: sx, screenY: sy }); } catch (err) { console.error(err); }
-      }
-    }
-
-    _endEntityDrag(sx, sy) {
-      var entity = this._activeDragEntity;
-      if (entity === null) return;
-
-      var dragCb = this._gestureCallbacks.drag.get(entity);
-      if (dragCb && dragCb.onEnd) {
-        try { dragCb.onEnd({ entity: entity, point: this._activeDragLastWorld, screenX: sx, screenY: sy }); } catch (err) { console.error(err); }
-      }
-
-      this._activeDragEntity = null;
-      this._activeDragPlane = null;
-      this._activeDragLastWorld = null;
-    }
-
-    // =====================================================================
-    // Resize handling
-    // =====================================================================
 
     _setupResizeObserver() {
       var self = this;
@@ -1389,16 +1294,12 @@
       this._resizeObserver.observe(this._canvas);
     }
 
-    // =====================================================================
-    // Render loop
-    // =====================================================================
-
     _startRenderLoop() {
       var self = this;
       function render() {
         if (!self._running) return;
 
-        // Auto-rotate: 30deg/sec / 60fps (matches model-viewer)
+        // Auto-rotate: 30°/sec ÷ 60fps (matches model-viewer)
         if (self._autoRotate) self._angle += 0.00873;
 
         // Inertia damping after drag release
@@ -1410,6 +1311,9 @@
           if (Math.abs(self._velocityAngle) < 0.00005) self._velocityAngle = 0;
           if (Math.abs(self._velocityHeight) < 0.00005) self._velocityHeight = 0;
         }
+
+        // Update billboard transforms before rendering
+        self._updateBillboards();
 
         var t = self._orbitTarget;
         var r = self._orbitRadius;
@@ -1534,22 +1438,6 @@
           var ibl = engine.createIblFromKtx1(buffer);
           ibl.setIntensity(options.iblIntensity || 40000);
           scene.setIndirectLight(ibl);
-          // Create skybox from IBL reflection cubemap if skybox enabled
-          if (options.skybox !== false) {
-            try {
-              var reflections = ibl.getReflectionsTexture();
-              if (reflections) {
-                var skybox = Filament.Skybox.Builder()
-                  .environment(reflections)
-                  .build(engine);
-                scene.setSkybox(skybox);
-                console.log('SceneView: Skybox created from IBL cubemap');
-              }
-            } catch (skyErr) {
-              // Skybox not supported in this build — that's OK
-              console.log('SceneView: Skybox not available (IBL-only mode)');
-            }
-          }
           console.log('SceneView: KTX IBL loaded (' + Math.round(buffer.length / 1024) + 'KB)');
         } catch (e) {
           console.warn('SceneView: createIblFromKtx1 failed, using SH fallback', e);
@@ -1619,15 +1507,10 @@
     });
   }
 
-  // Expose internals for advanced usage and testing
   global.SceneView = {
     version: '1.4.0',
     create: create,
-    modelViewer: modelViewer,
-    // Math utilities (for advanced users)
-    Vec3: Vec3,
-    Mat4: Mat4,
-    Collision: Collision
+    modelViewer: modelViewer
   };
 
 })(typeof globalThis !== 'undefined' ? globalThis : window);
