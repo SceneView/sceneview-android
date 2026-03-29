@@ -1,7 +1,7 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.compose'
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -26,6 +26,9 @@ android {
 }
 
 dependencies {
+    // Compose BOM — manages all Compose artifact versions
+    api platform(libs.androidx.compose.bom)
+
     // Kotlin
     api libs.kotlin.coroutines.core
     api libs.kotlin.coroutines.android

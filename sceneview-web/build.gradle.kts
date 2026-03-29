@@ -1,10 +1,10 @@
 plugins {
-    kotlin("multiplatform")
+    alias(libs.plugins.kotlin.multiplatform)
 }
 
 kotlin {
     js(IR) {
-        moduleName = "sceneview"
+        outputModuleName.set("sceneview")
         browser {
             commonWebpackConfig {
                 outputFileName = "sceneview-web.js"

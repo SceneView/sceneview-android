@@ -1,7 +1,7 @@
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.compose'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -37,12 +37,15 @@ android {
 }
 
 dependencies {
+    // Compose BOM
+    implementation platform(libs.androidx.compose.bom)
+
     implementation project(":samples:common")
 
     // SceneView
     implementation project(":sceneview")
 
     // TV Compose (Leanback)
-    implementation "androidx.tv:tv-foundation:1.0.0-alpha11"
-    implementation "androidx.tv:tv-material:1.0.0"
+    implementation libs.androidx.tv.foundation
+    implementation libs.androidx.tv.material
 }
