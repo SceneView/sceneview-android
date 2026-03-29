@@ -1,0 +1,558 @@
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://sceneview.github.io/#organization",
+    "name": "SceneView",
+    "legalName": "SceneView Open Source Project",
+    "url": "https://sceneview.github.io",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://sceneview.github.io/assets/images/favicon.svg",
+      "width": 192,
+      "height": 192
+    },
+    "image": "https://sceneview.github.io/assets/images/hero-banner.svg",
+    "description": "The #1 open-source 3D & AR SDK for Android and iOS — Compose-native on Android, SwiftUI-native on iOS, shared core via Kotlin Multiplatform.",
+    "foundingDate": "2021",
+    "founder": {
+      "@type": "Person",
+      "name": "Thomas Gorisse",
+      "url": "https://github.com/ThomasGorisse",
+      "jobTitle": "Lead Developer"
+    },
+    "sameAs": [
+      "https://github.com/sceneview",
+      "https://github.com/sceneview/sceneview",
+      "https://discord.gg/UbNDDBTNqb",
+      "https://opencollective.com/sceneview",
+      "https://central.sonatype.com/artifact/io.github.sceneview/sceneview",
+      "https://github.com/sceneview/sceneview-swift",
+      "https://www.npmjs.com/package/sceneview-mcp"
+    ],
+    "contactPoint": [
+      {
+        "@type": "ContactPoint",
+        "contactType": "technical support",
+        "url": "https://discord.gg/UbNDDBTNqb",
+        "availableLanguage": "English"
+      },
+      {
+        "@type": "ContactPoint",
+        "contactType": "bug reports",
+        "url": "https://github.com/sceneview/sceneview/issues"
+      }
+    ],
+    "knowsAbout": [
+      "3D Rendering",
+      "Augmented Reality",
+      "Android Development",
+      "iOS Development",
+      "macOS Development",
+      "visionOS Development",
+      "Jetpack Compose",
+      "SwiftUI",
+      "Google Filament",
+      "RealityKit",
+      "ARCore",
+      "ARKit",
+      "Kotlin Multiplatform",
+      "glTF",
+      "USDZ",
+      "PBR Rendering"
+    ],
+    "slogan": "The #1 3D & AR SDK for Android, iOS, macOS, and visionOS"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://sceneview.github.io/#website",
+    "name": "SceneView — 3D & AR SDK for Android and iOS",
+    "alternateName": ["SceneView SDK", "SceneView Android", "SceneView iOS", "SceneView 3D", "SceneView AR", "SceneView Compose", "SceneView SwiftUI"],
+    "url": "https://sceneview.github.io",
+    "description": "The modern, cross-platform 3D and AR SDK for Android and iOS. Build immersive 3D scenes and augmented reality experiences with Jetpack Compose on Android and SwiftUI on iOS.",
+    "inLanguage": "en",
+    "publisher": {
+      "@id": "https://sceneview.github.io/#organization"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://sceneview.github.io/search/?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://sceneview.github.io/#software",
+    "name": "SceneView SDK",
+    "alternateName": ["SceneView", "SceneView Android", "SceneView iOS", "sceneview", "SceneViewSwift"],
+    "description": "The #1 open-source 3D & AR SDK for Android and iOS — Jetpack Compose on Android, SwiftUI on iOS, shared core via Kotlin Multiplatform. Drop-in Scene{}/ARScene{} on Android and SceneView/ARSceneView on iOS for model viewing, AR placement, physics, and immersive experiences.",
+    "url": "https://sceneview.github.io",
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "3D Rendering & Augmented Reality SDK",
+    "operatingSystem": "Android 7.0+ (API 24), iOS 17+",
+    "softwareVersion": "3.5.0",
+    "datePublished": "2021-06-01",
+    "dateModified": "2026-03-27",
+    "downloadUrl": "https://central.sonatype.com/artifact/io.github.sceneview/sceneview",
+    "installUrl": "https://sceneview.github.io/quickstart/",
+    "releaseNotes": "https://github.com/sceneview/sceneview/releases/tag/v3.5.0",
+    "softwareHelp": {
+      "@type": "CreativeWork",
+      "url": "https://sceneview.github.io/cheatsheet/"
+    },
+    "featureList": [
+      "Compose-native Scene{} and ARScene{} composables",
+      "26+ built-in node types (ModelNode, CubeNode, SphereNode, etc.)",
+      "glTF/GLB 3D model loading with animations",
+      "ARCore integration (plane detection, image tracking, face mesh, cloud anchors)",
+      "Physics simulation (rigid body, gravity, collisions)",
+      "PBR rendering with HDR environment lighting",
+      "Dynamic sky and atmospheric fog",
+      "3D text, lines, paths, billboards",
+      "Video playback surfaces",
+      "Compose UI rendered as 3D surfaces (ViewNode)",
+      "Reflection probes for local IBL",
+      "Gesture support (tap, double-tap, long press, editing)",
+      "MCP server for AI-assisted development",
+      "15 working sample apps",
+      "~5MB APK footprint"
+    ],
+    "screenshot": [
+      {
+        "@type": "ImageObject",
+        "url": "https://sceneview.github.io/screenshots/model-viewer.png",
+        "caption": "SceneView 3D Model Viewer — glTF model with HDR environment"
+      },
+      {
+        "@type": "ImageObject",
+        "url": "https://sceneview.github.io/screenshots/ar-model-viewer.png",
+        "caption": "SceneView AR — Tap-to-place furniture in augmented reality"
+      },
+      {
+        "@type": "ImageObject",
+        "url": "https://sceneview.github.io/screenshots/autopilot-demo.png",
+        "caption": "SceneView Autopilot — Automated scene animation demo"
+      },
+      {
+        "@type": "ImageObject",
+        "url": "https://sceneview.github.io/screenshots/camera-manipulator.png",
+        "caption": "SceneView Camera Manipulator — Orbit, pan, zoom controls"
+      },
+      {
+        "@type": "ImageObject",
+        "url": "https://sceneview.github.io/screenshots/ar-augmented-image.png",
+        "caption": "SceneView AR Augmented Image — Real-world image detection and overlay"
+      },
+      {
+        "@type": "ImageObject",
+        "url": "https://sceneview.github.io/screenshots/gltf-camera.png",
+        "caption": "SceneView glTF Camera — Import cameras from 3D models"
+      },
+      {
+        "@type": "ImageObject",
+        "url": "https://sceneview.github.io/screenshots/ar-point-cloud.png",
+        "caption": "SceneView AR Point Cloud — ARCore feature visualization"
+      }
+    ],
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "398",
+      "bestRating": "5",
+      "worstRating": "1"
+    },
+    "license": "https://www.apache.org/licenses/LICENSE-2.0",
+    "author": {
+      "@type": "Person",
+      "name": "Thomas Gorisse",
+      "url": "https://github.com/ThomasGorisse"
+    },
+    "maintainer": {
+      "@id": "https://sceneview.github.io/#organization"
+    },
+    "isAccessibleForFree": true,
+    "programmingLanguage": ["Kotlin", "Swift", "Java"],
+    "runtimePlatform": ["Android", "iOS", "macOS", "visionOS"],
+    "softwareRequirements": [
+      "Android SDK API 24+ (Android)",
+      "iOS 17+ (iOS)",
+      "Kotlin 2.1.21",
+      "Jetpack Compose (Android)",
+      "SwiftUI (iOS)",
+      "Google Filament 1.70.0 (Android)",
+      "RealityKit (iOS)",
+      "ARCore 1.53.0 (Android AR)",
+      "ARKit (iOS AR)"
+    ],
+    "keywords": [
+      "3D", "AR", "Android", "iOS", "Jetpack Compose", "SwiftUI", "Filament", "RealityKit",
+      "ARCore", "ARKit", "glTF", "USDZ", "augmented reality", "3D rendering", "Kotlin", "Swift",
+      "Kotlin Multiplatform", "scene graph", "model viewer", "product visualization",
+      "AR placement", "physics simulation", "PBR rendering", "HDR lighting",
+      "Sceneform replacement", "Android XR", "spatial computing",
+      "Compose 3D", "3D SDK", "AR SDK", "cross-platform 3D", "mobile AR"
+    ],
+    "codeRepository": "https://github.com/sceneview/sceneview"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "@id": "https://sceneview.github.io/#sourcecode",
+    "name": "SceneView",
+    "description": "Open-source 3D & AR SDK for Android and iOS — Compose-native on Android, SwiftUI-native on iOS, shared core via Kotlin Multiplatform.",
+    "url": "https://github.com/sceneview/sceneview",
+    "codeRepository": "https://github.com/sceneview/sceneview",
+    "codeSampleType": "full solution",
+    "programmingLanguage": ["Kotlin", "Swift", "Java"],
+    "runtimePlatform": ["Android", "iOS", "macOS", "visionOS"],
+    "targetProduct": {
+      "@id": "https://sceneview.github.io/#software"
+    },
+    "license": "https://www.apache.org/licenses/LICENSE-2.0",
+    "author": {
+      "@type": "Person",
+      "name": "Thomas Gorisse",
+      "url": "https://github.com/ThomasGorisse"
+    },
+    "maintainer": {
+      "@id": "https://sceneview.github.io/#organization"
+    },
+    "datePublished": "2021-06-01",
+    "dateModified": "2026-03-23"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": "https://sceneview.github.io/faq/#faqpage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is SceneView?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView is the #1 open-source 3D and AR SDK for Android and iOS. On Android, it provides Compose-native declarative APIs (Scene{} and ARScene{}) powered by Google Filament and ARCore. On iOS, it provides SwiftUI views (SceneView and ARSceneView) powered by RealityKit and ARKit. A shared Kotlin Multiplatform core handles math, collision, animation, and geometry across platforms. It is the official successor to the deprecated Google Sceneform."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I add 3D content to my Android app?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Add the SceneView dependency (io.github.sceneview:sceneview:3.5.0), then use the Scene{} composable with ModelNode to load and display glTF/GLB 3D models. It takes just 5 lines of Kotlin code to display a 3D model in your Compose UI."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is SceneView free to use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, SceneView is completely free and open source under the Apache 2.0 license. You can use it in personal and commercial projects without any licensing fees."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What replaced Google Sceneform?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView is the official community successor to Google Sceneform, which was deprecated in 2021. SceneView provides a modern, Compose-native API that is actively maintained and significantly more capable than the original Sceneform."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does SceneView support AR (Augmented Reality)?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, SceneView provides full ARCore integration through its arsceneview module. Use the ARScene{} composable with AnchorNode, AugmentedImageNode, AugmentedFaceNode, and more to build AR experiences with plane detection, image tracking, face mesh, cloud anchors, and geospatial features."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What platforms does SceneView support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView supports Android (API 24+) with Jetpack Compose, Filament, and ARCore, and iOS (17+) with SwiftUI, RealityKit, and ARKit. A shared Kotlin Multiplatform core (sceneview-core) provides cross-platform math, collision, animation, and geometry. SceneView also provides an MCP server for AI assistant integration."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does SceneView compare to Unity or Unreal for Android 3D?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView adds only ~5MB to APK size compared to ~50MB for Unity and ~100MB for Unreal. SceneView is Compose-native on Android and SwiftUI-native on iOS, meaning it integrates naturally with each platform's native UI framework, while Unity and Unreal require bridge layers. SceneView has a much lower learning curve, making it the best choice for non-game 3D and AR apps."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What 3D file formats does SceneView support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView natively supports glTF 2.0 and GLB (binary glTF) on Android, and USDZ on iOS. glTF supports PBR materials, animations, morph targets, and skinned meshes. Models can be loaded from local assets, URLs, or platform-specific content URIs."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I add physics to my SceneView 3D scene?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use PhysicsNode to add rigid body simulation. Set a shape (Sphere, Box, Plane, etc.), mass (0 for static objects), restitution (bounciness), and friction. SceneView handles gravity, collision detection, and physics stepping automatically within the Compose declarative model."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use SceneView with Java instead of Kotlin?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView is written in Kotlin and designed for Jetpack Compose, but since Kotlin is fully interoperable with Java, you can use SceneView from Java code. However, the recommended approach is Kotlin with Compose for the best developer experience and access to all declarative features."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I animate 3D models in SceneView?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView supports glTF animations natively. Set autoAnimate = true on ModelNode to play all animations automatically, or control specific animations with animationName, animationLoop, and animationSpeed properties. Animations are reactive — changing the animationName state triggers smooth transitions."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does SceneView have an MCP server for AI coding assistants?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, SceneView provides an MCP (Model Context Protocol) server that AI assistants like Claude and ChatGPT can use. Install it with 'npm install -g sceneview-mcp' and configure it in your AI assistant. It provides tools like get_sample(), get_setup(), get_node_reference(), and list_node_types for AI-assisted SceneView development."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the minimum Android version required for SceneView?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SceneView requires Android 7.0 (API level 24) or higher. For AR features using ARCore, you also need a device that supports Google Play Services for AR. The SDK targets Android 15 (API 35) and supports all CPU architectures (arm64-v8a, armeabi-v7a, x86, x86_64)."
+        }
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "@id": "https://sceneview.github.io/quickstart/#howto",
+    "name": "How to Add 3D Content to Your Android App with SceneView",
+    "description": "Step-by-step guide to display a 3D model in your Android app using SceneView and Jetpack Compose in under 5 minutes.",
+    "image": "https://sceneview.github.io/screenshots/model-viewer.png",
+    "totalTime": "PT5M",
+    "estimatedCost": {
+      "@type": "MonetaryAmount",
+      "currency": "USD",
+      "value": "0"
+    },
+    "supply": [
+      {
+        "@type": "HowToSupply",
+        "name": "Android Studio (latest stable)"
+      },
+      {
+        "@type": "HowToSupply",
+        "name": "A glTF or GLB 3D model file"
+      }
+    ],
+    "tool": [
+      {
+        "@type": "HowToTool",
+        "name": "Android Studio"
+      },
+      {
+        "@type": "HowToTool",
+        "name": "Gradle"
+      }
+    ],
+    "step": [
+      {
+        "@type": "HowToStep",
+        "position": 1,
+        "name": "Add the SceneView dependency",
+        "text": "In your app-level build.gradle.kts file, add: implementation(\"io.github.sceneview:sceneview:3.5.0\")",
+        "url": "https://sceneview.github.io/quickstart/#step-1"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 2,
+        "name": "Add a 3D model to your assets",
+        "text": "Place your .glb or .gltf model file in the src/main/assets/models/ directory of your Android project.",
+        "url": "https://sceneview.github.io/quickstart/#step-2"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 3,
+        "name": "Create the 3D Scene composable",
+        "text": "Use Scene{} composable with rememberEngine(), rememberModelLoader(), and rememberModelInstance() to load and display the model with ModelNode.",
+        "url": "https://sceneview.github.io/quickstart/#step-3"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 4,
+        "name": "Run the app",
+        "text": "Build and run on an Android device or emulator. You should see your 3D model rendered with PBR lighting and orbit camera controls.",
+        "url": "https://sceneview.github.io/quickstart/#step-4"
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "@id": "https://sceneview.github.io/#breadcrumb",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://sceneview.github.io/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Get Started",
+        "item": "https://sceneview.github.io/quickstart/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "Try Online",
+        "item": "https://sceneview.github.io/try/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 4,
+        "name": "API Cheatsheet",
+        "item": "https://sceneview.github.io/cheatsheet/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 5,
+        "name": "Samples",
+        "item": "https://sceneview.github.io/samples/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 6,
+        "name": "Codelabs",
+        "item": "https://sceneview.github.io/codelabs/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 7,
+        "name": "Showcase",
+        "item": "https://sceneview.github.io/showcase/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 8,
+        "name": "Use Cases",
+        "item": "https://sceneview.github.io/use-cases/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 9,
+        "name": "Comparison",
+        "item": "https://sceneview.github.io/comparison/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 10,
+        "name": "FAQ",
+        "item": "https://sceneview.github.io/faq/"
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": "SceneView 3D Model Viewer Demo",
+    "description": "Demonstration of SceneView's 3D model viewing capabilities with glTF models, HDR environment lighting, orbit camera controls, and Jetpack Compose integration on Android.",
+    "thumbnailUrl": "https://sceneview.github.io/screenshots/model-viewer.png",
+    "uploadDate": "2026-03-01",
+    "contentUrl": "https://sceneview.github.io/showcase/",
+    "embedUrl": "https://sceneview.github.io/showcase/",
+    "publisher": {
+      "@id": "https://sceneview.github.io/#organization"
+    },
+    "about": {
+      "@id": "https://sceneview.github.io/#software"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": "https://sceneview.github.io/samples/#itemlist",
+    "name": "SceneView Sample Apps",
+    "description": "15 working sample apps demonstrating SceneView 3D and AR features",
+    "numberOfItems": 15,
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Model Viewer",
+        "description": "3D model viewer with HDR environment and orbit camera",
+        "url": "https://sceneview.github.io/samples/#model-viewer"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "AR Model Viewer",
+        "description": "Tap-to-place AR with plane detection",
+        "url": "https://sceneview.github.io/samples/#ar-model-viewer"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "Physics Demo",
+        "description": "Rigid body simulation with gravity and collisions",
+        "url": "https://sceneview.github.io/samples/#physics-demo"
+      },
+      {
+        "@type": "ListItem",
+        "position": 4,
+        "name": "Dynamic Sky",
+        "description": "Time-of-day sun simulation with atmospheric fog",
+        "url": "https://sceneview.github.io/samples/#dynamic-sky"
+      },
+      {
+        "@type": "ListItem",
+        "position": 5,
+        "name": "AR Augmented Image",
+        "description": "Real-world image detection and 3D overlay",
+        "url": "https://sceneview.github.io/samples/#ar-augmented-image"
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "@id": "https://sceneview.github.io/cheatsheet/#techarticle",
+    "headline": "SceneView API Cheatsheet — Complete Reference for 22+ Node Types",
+    "description": "Complete API reference for SceneView SDK covering all node types, composables, resource loading, camera controls, gestures, and AR features.",
+    "url": "https://sceneview.github.io/cheatsheet/",
+    "author": {
+      "@id": "https://sceneview.github.io/#organization"
+    },
+    "publisher": {
+      "@id": "https://sceneview.github.io/#organization"
+    },
+    "datePublished": "2026-01-15",
+    "dateModified": "2026-03-23",
+    "about": {
+      "@id": "https://sceneview.github.io/#software"
+    },
+    "proficiencyLevel": "Beginner to Advanced",
+    "inLanguage": "en"
+  }
+]
