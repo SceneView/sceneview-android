@@ -1,5 +1,35 @@
 # Changelog
 
+## 3.5.1 — macOS support, environment picker, MCP 3.5.3 (2026-03-29)
+
+### Apple platforms
+- Native macOS support in SceneViewSwift (all source files + demo app)
+- macOS App Store submission (build 357, pending review)
+- iOS App Store submission (build 355, pending review)
+- Environment picker UI with 6 HDR presets (Studio, Outdoor, Sunset, Night, Warm, Autumn)
+- Proper macOS app icon sizes (16px to 1024px)
+- Swift 6 strict concurrency fix (`@MainActor` on HapticManager)
+
+### MCP Server v3.5.3
+- Updated all dependency references from 3.4.7 to 3.5.0
+- Published to npm as sceneview-mcp@3.5.3
+- 1204 tests passing
+
+### CI/CD
+- Extended app-store.yml with macOS deploy job (parallel iOS + macOS)
+- Fixed TestFlight deploy failure (Swift 6 concurrency)
+
+### Documentation
+- Added ViewNode, SceneSnapshot, SceneEnvironment.allPresets to llms.txt
+- Rebuilt docs site — zero stale version references
+- Fixed CDN versions in README (1.2.0 → 3.5.1) and website (1.4.0 → 3.5.1)
+
+### Assets
+- URL-based model loading (Android + iOS)
+- 6 iOS HDR environments
+- Progressive texture loading (Filament async)
+- 25 models migrated to GitHub Releases CDN (Play Store compliance)
+
 ## 3.5.0 — Full coherence audit, version alignment (2026-03-29)
 
 ### Version coherence

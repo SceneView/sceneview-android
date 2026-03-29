@@ -80,8 +80,8 @@ No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 **Android** (3D + AR):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.5.0")     // 3D
-    implementation("io.github.sceneview:arsceneview:3.5.0")   // AR (includes 3D)
+    implementation("io.github.sceneview:sceneview:3.5.1")     // 3D
+    implementation("io.github.sceneview:arsceneview:3.5.1")   // AR (includes 3D)
 }
 ```
 

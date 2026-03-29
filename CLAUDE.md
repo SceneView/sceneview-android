@@ -25,8 +25,8 @@ composable signatures, node types, resource loading, threading rules, and common
 
 ## When writing any SceneView code
 
-- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.0`)
-- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.5.0`)
+- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.1`)
+- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.5.1`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case

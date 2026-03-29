@@ -10,8 +10,8 @@ export const PLATFORM_ROADMAP = `# SceneView Multi-Platform Roadmap
 
 | Platform | Status | Artifact | Renderer |
 |----------|--------|----------|----------|
-| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.5.0\` | Filament |
-| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.5.0\` | Filament + ARCore |
+| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.5.1\` | Filament |
+| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.5.1\` | Filament + ARCore |
 | **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.5.0"\` | RealityKit + ARKit |
 | **macOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
 | **visionOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
@@ -424,7 +424,7 @@ ARSceneView(
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.5.0")
+    implementation("io.github.sceneview:arsceneview:3.5.1")
     // arsceneview includes sceneview transitively — no need to add both
 }
 \`\`\`
