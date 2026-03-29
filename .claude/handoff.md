@@ -9,29 +9,41 @@
 
 ## WHAT WAS DONE THIS SESSION (session 8)
 
-### 1. macOS support — committed & pushed
-- 21 files committed (`e74e408e`) — all macOS compilation support:
-  - `SceneViewSwift/Sources/` — Added `os(macOS)` platform checks across 12 files
-  - `samples/ios-demo/` — Multiplatform Xcode project, Package.swift with .macOS(.v15)
-  - `SceneViewDemoApp.swift` — NSColor typealias, AR tab iOS-only guard
-  - `.entitlements` — App Sandbox + network.client
-  - `Info.plist` — LSApplicationCategoryType
-  - `AppIcon.appiconset/Contents.json` — macOS icon sizes
-  - `SamplesTab.swift` — iOS-only navigationBarTitleDisplayMode
+### 1. CI Fix — Swift 6 strict concurrency
+- Added `@MainActor` to `HapticManager` — UIKit haptic generators are MainActor-isolated
+- Fixed TestFlight deploy failure (exit code 65)
+- All 4 CI workflows now green
 
 ### 2. macOS App Store submission — SUCCESS
-- Built macOS app locally (debug, unsigned, 1200x800 window)
-- Created 3 synthetic macOS screenshots (2880x1800) with PIL — macOS window chrome
-- Uploaded screenshots to App Store Connect
-- Selected build 357 (with RealityKit fix)
-- Handled export compliance ("Aucun des algorithmes")
-- Filled contact info, unchecked login requirement
-- **Submitted for review — "En attente de vérification"**
+- 21 files committed for macOS support (previous session, pushed this session)
+- Created 3 synthetic macOS screenshots (2880x1800) with PIL
+- Submitted build 357 — **En attente de vérification**
 
-### 3. tvOS / visionOS — assessed, deferred
-- Both show "À finaliser avant soumission" on App Store Connect but have NO builds
-- Would require new Xcode targets + platform-specific SDK work
-- Not actionable this session — deferred to future work
+### 3. iOS demo improvements
+- **Environment picker** — 6 HDR presets (Studio, Outdoor, Sunset, Night, Warm, Autumn) in ExploreTab
+- **macOS app icons** — Generated proper sizes (16-1024px) from 1024x1024 source
+- **Version fix** — AboutTab updated from v3.4.7 to v3.5.0
+
+### 4. Version alignment — complete sweep
+- MCP source: 18 files updated 3.4.7 → 3.5.0
+- MCP bumped to 3.5.3 and **published to npm**
+- README CDN: 1.2.0 → 3.5.0 (3 occurrences)
+- website-static: 1.4.0 → 3.5.0 (index.html + web.html)
+- CLAUDE.md: MCP version updated to 3.5.3
+- All 1204 MCP tests pass
+
+### 5. Documentation
+- Rebuilt mkdocs site (166 files) — zero 3.4.7 references
+- Site deployed via GitHub Actions
+- Added ViewNode, SceneSnapshot, allPresets to llms.txt
+
+### 6. CI/CD improvements
+- Extended app-store.yml: iOS + macOS deploy jobs (parallel)
+- macOS job ready — just needs `MACOS_PROVISIONING_PROFILE_BASE64` secret
+- Renamed workflow: "Deploy Demo to App Store"
+
+### 7. Cleanup
+- Added `samples/ios-demo/.build/` to .gitignore
 
 ## Previous sessions (7 and earlier)
 
@@ -57,23 +69,28 @@ gh run list --branch main --limit 5
 
 ### Priority 1 — App Store reviews in progress
 - **iOS**: v1.0 build 355 — **En attente de vérification**
-- **macOS**: v1.0 build 357 — **En attente de vérification** (just submitted session 8)
+- **macOS**: v1.0 build 357 — **En attente de vérification**
 
-### Priority 2 — Future platform builds
-- **tvOS**: Needs new Xcode target + build + screenshots + metadata
-- **visionOS**: Needs new Xcode target + build + screenshots + metadata
+### Priority 2 — CI secrets for macOS auto-deploy
+- Create macOS provisioning profile on Apple Developer Portal
+- base64 encode it and set `MACOS_PROVISIONING_PROFILE_BASE64` GitHub secret
+- Then macOS builds will auto-deploy alongside iOS
 
-### Priority 3 — Monitoring
+### Priority 3 — Future platform builds
+- **tvOS**: Needs new Xcode target + build (RealityKit not available — would need SceneKit)
+- **visionOS**: Needs new Xcode target + build (RealityKit available, feasible)
+
+### Priority 4 — Monitoring
 - Check iOS review result
 - Check macOS review result
 - Check Play Store status (deployed)
 
-### Priority 4 — Polish
+### Priority 5 — Polish
 - Loading indicator for URL-based models in demo
-- Environment picker UI in iOS demo
+- More demos in iOS app
 
-### Priority 5 — Signing maintenance
-- Backup `.secrets/` to Google Drive when sync resumes (currently paused)
+### Priority 6 — Signing maintenance
+- Backup `.secrets/` to Google Drive when sync resumes
 - Update GitHub Actions secrets with new API key if CI needs it
 - P12 password for `.secrets/ios_distribution_2027.p12` is `sceneview`
 
@@ -94,7 +111,7 @@ gh run list --branch main --limit 5
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
-# Archive
+# Archive iOS
 cd samples/ios-demo
 xcodebuild -scheme SceneViewDemo -destination "generic/platform=iOS" archive \
   -archivePath /tmp/SceneViewDemo-iOS.xcarchive \
@@ -102,11 +119,11 @@ xcodebuild -scheme SceneViewDemo -destination "generic/platform=iOS" archive \
   "CODE_SIGN_IDENTITY=iPhone Distribution: Thomas Gorisse (5G3DZ3TH45)" \
   PROVISIONING_PROFILE_SPECIFIER="SceneView Demo App Store"
 
-# Export IPA
-xcodebuild -exportArchive \
-  -archivePath /tmp/SceneViewDemo-iOS.xcarchive \
-  -exportOptionsPlist /tmp/ExportOptions-local.plist \
-  -exportPath /tmp/SceneViewDemo-export
+# Archive macOS
+xcodebuild -scheme SceneViewDemo -destination "generic/platform=macOS" archive \
+  -archivePath /tmp/SceneViewDemo-macOS.xcarchive \
+  CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=5G3DZ3TH45 \
+  "CODE_SIGN_IDENTITY=Apple Distribution: Thomas Gorisse (5G3DZ3TH45)"
 
 # Upload
 xcrun altool --upload-app --type ios \
@@ -120,7 +137,7 @@ xcrun altool --upload-app --type ios \
 - **25 models on GitHub Releases CDN** (assets-v1 tag)
 - **6 HDR environments** on both Android AND iOS
 - Android demo: 26 local models + 24 CDN models = 50 total in carousel
-- iOS demo: 28 USDZ models (local)
+- iOS demo: 28 USDZ models (local) + environment picker (6 HDR presets)
 - **Sources**: Sketchfab (28), KhronosGroup (5), Fab.com (1)
 
 ## FINANCIAL STATUS
@@ -135,6 +152,13 @@ xcrun altool --upload-app --type ios \
 - **App Store macOS**: 🟡 v1.0 (build 357) — En attente de vérification
 - **App Store tvOS**: ⏳ Needs new Xcode target + build
 - **App Store visionOS**: ⏳ Needs new Xcode target + build
+
+## PUBLISHED ARTIFACTS
+- **sceneview-mcp**: 3.5.3 on npm (1204 tests)
+- **sceneview-web**: 3.5.0 on npm
+- **sceneview**: 3.5.0 on Maven Central
+- **arsceneview**: 3.5.0 on Maven Central
+- **Website**: sceneview.github.io (deployed, all versions 3.5.0)
 
 ## RULES
 - Merge direct sur main
