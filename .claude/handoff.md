@@ -4,32 +4,49 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session 6)
+**Date:** 29 mars 2026 (session 6, continued)
 **Branch:** main (all pushed to origin)
 
 ## WHAT WAS DONE THIS SESSION
 
 ### 1. URL-based model loading (Android + iOS)
-- **Android**: Added `rememberModelInstance(modelLoader, fileLocation)` overload in `Scene.kt` that auto-detects HTTP/HTTPS URLs and routes through ModelLoader's existing Fuel HTTP client
-- **iOS**: Added `ModelNode.load(from: URL)` in `ModelNode.swift` with download-to-temp approach (RealityKit requires local file URLs with correct extension)
-- Updated `llms.txt` with both new APIs and platform mapping table
+- **Android**: `rememberModelInstance(modelLoader, fileLocation)` overload — auto-detects HTTP/HTTPS URLs
+- **iOS**: `ModelNode.load(from: URL)` with download-to-temp for RealityKit
 
 ### 2. iOS HDR environments
-- Copied 6 HDR files from Android demo to `samples/ios-demo/SceneViewDemo/Environments/`
-- Files: `studio.hdr`, `outdoor_cloudy.hdr`, `sunset.hdr`, `rooftop_night.hdr`, `studio_warm.hdr`, `autumn_field.hdr`
-- Updated Xcode `project.pbxproj` with PBXBuildFile, PBXFileReference, PBXGroup, and PBXResourcesBuildPhase entries
+- 6 HDR files in `samples/ios-demo/SceneViewDemo/Environments/`
+- Xcode project.pbxproj fully configured
 
 ### 3. Progressive texture loading
-- Enabled Filament async resource loading in `ModelLoader.kt`:
-  - `resourceLoader.asyncUpdateLoad()` in `updateLoad()` (called every frame)
-  - `resourceLoader.asyncBeginLoad(model)` + `evictResourceData()` in `loadResources()`
-  - `resourceLoader.asyncBeginLoad(model)` in `loadResourcesSuspended()`
-- Models now appear immediately with textures streaming in progressively
+- Enabled Filament async resource loading (`asyncBeginLoad`/`asyncUpdateLoad`)
 
 ### 4. GitHub Releases CDN
-- Created `assets-v1` release on GitHub for hosting large models
-- Uploaded: earthquake_california.glb (39MB), nike_air_jordan.glb (30MB), porsche_911_turbo.glb (21MB), earthquake_california.usdz (24MB)
-- Base URL: `https://github.com/sceneview/sceneview/releases/download/assets-v1/`
+- `assets-v1` release with **25 models** hosted
+- URL: `https://github.com/sceneview/sceneview/releases/download/assets-v1/<filename>`
+
+### 5. Play Store fix — APK size reduction
+- **Problem**: AAB exceeded 200 MB limit (421 MB of embedded models)
+- **Fix**: Migrated 24 large models (>7MB) from local assets to CDN URL loading
+- **Result**: APK reduced from 421 MB → 109 MB
+- **Play Store deploy: SUCCESS** ✅
+
+### 6. GitHub Sponsors tiers
+- Added **$50/mo** tier (priority support, early access, medium logo)
+- Added **$100/mo** tier (dedicated support, large logo, roadmap input)
+- Now 4 tiers: $5, $25, $50, $100
+
+### 7. Polar.sh
+- Account active with dashboard working
+- 3 products already configured (MCP Creator Kit €29, MCP Pro €9.99/mo, Starter Kit €49)
+- No public profile page — Polar uses checkout links now (normal behavior)
+
+### 8. App Store Connect
+- iOS 1.0 **in Apple review** (submitted, waiting 24-48h)
+- macOS/tvOS/visionOS: builds needed — Xcode installation in progress
+
+### 9. Xcode installation
+- Installing via `mas` (Mac App Store CLI) — ~30 GB download in progress
+- Needed for macOS/tvOS/visionOS archives + App Store uploads
 
 ## CI TO CHECK AT START
 
@@ -39,47 +56,40 @@ gh run list --branch main --limit 5
 
 ## WHAT REMAINS TO DO
 
-### Priority 1 — Thomas actions (accounts)
-- **Activate Polar.sh** — go to polar.sh, connect SceneView GitHub org, set up tiers
-- **Enrich GitHub Sponsors tiers** — add $50 and $100 tiers with better perks
-- **App Store Connect** — create app "SceneView Demo" bundle ID `io.github.sceneview.demo`
+### Priority 1 — Xcode builds (when Xcode finishes installing)
+- Archive and upload macOS build to App Store Connect
+- Archive and upload tvOS build
+- Archive and upload visionOS build
+- Submit all 3 for review
 
-### Priority 2 — Demo apps URL loading integration
-- Add URL loading demo/example in Android ExploreScreen (load from GitHub Releases CDN)
-- Add URL loading demo in iOS ExploreTab
-- Test progressive loading behavior with large models
+### Priority 2 — Monitoring
+- Check iOS review status (24-48h)
+- Check Play Store review status (app is now deployed)
 
-### Priority 3 — Play Store review
-- Wait for Google to approve with updated screenshots
-
-### Priority 4 — iOS environment switching UI
-- HDR files are now in the iOS bundle
-- Add environment picker UI in iOS demo (similar to Android's environment selector)
-
-### Priority 5 — Further CDN optimization
-- Consider hosting more models on GitHub Releases to reduce APK/IPA size
-- Add progress indicator for URL-based model loading
+### Priority 3 — Polish
+- Add loading indicator for URL-based models in demo (they take a moment to download)
+- Add environment picker UI in iOS demo
 
 ## ASSET CATALOG STATUS
 - **34 models** in catalog from 3 sources
-- **6 HDR environments** from Poly Haven (now on both Android AND iOS)
-- **61 GLB** in Android, **28 USDZ** in iOS
-- **4 models on GitHub Releases CDN** (assets-v1 tag)
+- **25 models on GitHub Releases CDN** (assets-v1 tag)
+- **6 HDR environments** on both Android AND iOS
+- Android demo: 26 local models + 24 CDN models = 50 total in carousel
+- iOS demo: 28 USDZ models (local)
 - **Sources**: Sketchfab (28), KhronosGroup (5), Fab.com (1)
-- **Licenses**: CC-BY-4.0 (20+), CC-BY-NC-4.0 (8), CC-BY-NC-SA-4.0 (2), CC0-1.0 (1)
 
 ## FINANCIAL STATUS
 - **Open Collective**: $2,338 USD (OSC fiscal host, 10% fee)
-- **GitHub Sponsors**: configured for org `sceneview`, no active sponsors
-- **Polar.sh**: in FUNDING.yml but page 404 — Thomas needs to activate
+- **GitHub Sponsors**: 4 tiers ($5/$25/$50/$100), no active sponsors yet
+- **Polar.sh**: active, 3 products, checkout links working
 - **Monthly expenses**: Claude Max ~$168/mo (reimbursed via OC expense)
-- **Process**: Pay with personal card → submit expense on OC → get reimbursed
 
-## ACTIONS THOMAS
-1. **Polar.sh**: activate account at polar.sh/sceneview
-2. **GitHub Sponsors**: add $50 and $100 tiers
-3. **App Store Connect**: create app "SceneView Demo" (`io.github.sceneview.demo`)
-4. **Play Store**: check if Google review passes
+## STORE STATUS
+- **Play Store**: ✅ Deployed successfully (109 MB AAB)
+- **App Store iOS**: 🟡 In review (v1.0)
+- **App Store macOS**: ⏳ Needs build upload (Xcode installing)
+- **App Store tvOS**: ⏳ Needs build upload
+- **App Store visionOS**: ⏳ Needs build upload
 
 ## RULES
 - Merge direct sur main
