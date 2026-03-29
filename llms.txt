@@ -1642,6 +1642,23 @@ AnchorNode.plane(alignment: .horizontal)
 ```swift
 .studio / .outdoor / .sunset / .night / .warm / .autumn
 .custom(name: "My Env", hdrFile: "custom.hdr", intensity: 1.0, showSkybox: true)
+SceneEnvironment.allPresets  // [SceneEnvironment] for UI pickers
+```
+
+**ViewNode** — embed SwiftUI in 3D:
+```swift
+let view = ViewNode(width: 0.5, height: 0.3) {
+    VStack { Text("Hello").padding().background(.regularMaterial) }
+}
+view.position = SIMD3<Float>(0, 1.5, -2)
+root.addChild(view.entity)
+```
+
+**SceneSnapshot** — capture scene as image (iOS):
+```swift
+let image = await SceneSnapshot.capture(from: arView)
+SceneSnapshot.saveToPhotoLibrary(image)
+let data = SceneSnapshot.pngData(image) // or jpegData(image, quality: 0.9)
 ```
 
 ### Platform Mapping
