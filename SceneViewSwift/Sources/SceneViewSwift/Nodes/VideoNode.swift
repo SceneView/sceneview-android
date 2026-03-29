@@ -114,15 +114,10 @@ public struct VideoNode: @unchecked Sendable {
         let videoEntity = Entity()
         videoEntity.name = "VideoNode"
 
-        // Add VideoPlayerComponent for RealityKit rendering
+        // Add VideoPlayerComponent for RealityKit rendering (iOS/visionOS only)
         #if os(iOS) || os(visionOS)
         let videoComponent = VideoPlayerComponent(avPlayer: player)
         videoEntity.components.set(videoComponent)
-        #elseif os(macOS)
-        if #available(macOS 15.0, *) {
-            let videoComponent = VideoPlayerComponent(avPlayer: player)
-            videoEntity.components.set(videoComponent)
-        }
         #endif
 
         // Set scale to approximate the desired display size

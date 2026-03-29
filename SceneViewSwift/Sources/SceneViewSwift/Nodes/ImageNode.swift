@@ -67,7 +67,7 @@ public struct ImageNode: Sendable {
         height: Float? = nil,
         isLit: Bool = false
     ) async throws -> ImageNode {
-        guard let texture = try? await TextureResource(named: name) else {
+        guard let texture = try? await TextureResource.load(named: name) else {
             throw ImageNodeError.textureLoadFailed(name)
         }
         return create(texture: texture, width: width, height: height, isLit: isLit)
@@ -88,7 +88,7 @@ public struct ImageNode: Sendable {
         height: Float? = nil,
         isLit: Bool = false
     ) async throws -> ImageNode {
-        let texture = try await TextureResource(contentsOf: url)
+        let texture = try await TextureResource.load(contentsOf: url)
         return create(texture: texture, width: width, height: height, isLit: isLit)
     }
 
