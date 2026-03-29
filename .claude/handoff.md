@@ -154,11 +154,12 @@ xcrun altool --upload-app --type ios \
 - **App Store visionOS**: ⏳ Needs new Xcode target + build
 
 ## PUBLISHED ARTIFACTS
-- **sceneview-mcp**: 3.5.3 on npm (1204 tests)
-- **sceneview-web**: 3.5.0 on npm
-- **sceneview**: 3.5.0 on Maven Central
-- **arsceneview**: 3.5.0 on Maven Central
-- **Website**: sceneview.github.io (deployed, all versions 3.5.0)
+- **GitHub Release**: v3.5.1 (https://github.com/sceneview/sceneview/releases/tag/v3.5.1)
+- **sceneview-mcp**: 3.5.4 on npm (1204 tests)
+- **sceneview-web**: 3.5.1 on npm (version bumped, not republished)
+- **sceneview**: 3.5.1 (version bumped, Maven Central publish pending)
+- **arsceneview**: 3.5.1 (version bumped, Maven Central publish pending)
+- **Website**: sceneview.github.io (deployed, all versions 3.5.1)
 
 ## RULES
 - Merge direct sur main
