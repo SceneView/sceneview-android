@@ -125,7 +125,7 @@ public struct GeometryNode: Sendable {
         height: Float = 1.0,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
-        #if os(iOS) || os(visionOS)
+        #if os(iOS) || os(visionOS) || os(macOS)
         let mesh = MeshResource.generateCylinder(
             height: height,
             radius: radius
@@ -179,7 +179,7 @@ public struct GeometryNode: Sendable {
         radius: Float = 0.5,
         color: SimpleMaterial.Color = .white
     ) -> GeometryNode {
-        #if os(iOS) || os(visionOS)
+        #if os(iOS) || os(visionOS) || os(macOS)
         let mesh = MeshResource.generateCone(height: height, radius: radius)
         #else
         // generateCone is not available on macOS; approximate with a box
@@ -228,7 +228,7 @@ public struct GeometryNode: Sendable {
     /// Returns self with a grounding shadow.
     @discardableResult
     public func withGroundingShadow() -> GeometryNode {
-        #if os(iOS) || os(visionOS)
+        #if os(iOS) || os(visionOS) || os(macOS)
         if #available(iOS 18.0, visionOS 2.0, *) {
             entity.components.set(GroundingShadowComponent(castsShadow: true))
         }

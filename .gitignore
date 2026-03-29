@@ -76,3 +76,4 @@ branding/SPONSOR_TIERS.md
 
 # Build artifacts
 docs/site/
+.secrets/

@@ -16,7 +16,9 @@ struct SamplesTab: View {
                             NavigationLink {
                                 demo.destination
                                     .navigationTitle(demo.title)
+                                    #if os(iOS)
                                     .navigationBarTitleDisplayMode(.inline)
+                                    #endif
                             } label: {
                                 DemoRow(demo: demo)
                             }
