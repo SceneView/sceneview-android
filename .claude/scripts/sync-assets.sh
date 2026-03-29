@@ -18,8 +18,17 @@ CATALOG="$ASSETS_DIR/catalog.json"
 # Platform asset directories
 ANDROID_MODELS="$REPO_ROOT/samples/android-demo/src/main/assets/models"
 ANDROID_ENVS="$REPO_ROOT/samples/android-demo/src/main/assets/environments"
+ANDROID_TV_MODELS="$REPO_ROOT/samples/android-tv-demo/src/main/assets/models"
+ANDROID_TV_ENVS="$REPO_ROOT/samples/android-tv-demo/src/main/assets/environments"
 IOS_MODELS="$REPO_ROOT/samples/ios-demo/SceneViewDemo/Models"
 WEB_MODELS="$REPO_ROOT/samples/web-demo/public/models"
+FLUTTER_ANDROID_MODELS="$REPO_ROOT/samples/flutter-demo/example/android/app/src/main/assets/models"
+FLUTTER_ANDROID_ENVS="$REPO_ROOT/samples/flutter-demo/example/android/app/src/main/assets/environments"
+FLUTTER_IOS_MODELS="$REPO_ROOT/samples/flutter-demo/example/ios/Runner/Models"
+RN_ANDROID_MODELS="$REPO_ROOT/samples/react-native-demo/android/app/src/main/assets/models"
+RN_ANDROID_ENVS="$REPO_ROOT/samples/react-native-demo/android/app/src/main/assets/environments"
+RN_IOS_MODELS="$REPO_ROOT/samples/react-native-demo/ios/Models"
+WEBSITE_MODELS="$REPO_ROOT/website-static/models/platforms"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -132,6 +141,13 @@ for glb in "$ASSETS_DIR"/models/glb/*.glb; do
     check_or_fix "$glb" "$ANDROID_MODELS/$(basename "$glb")" "$MODE"
 done
 
+# --- Sync GLB models to Android TV ---
+echo -e "${BLUE}[Android TV] GLB models → $( echo "$ANDROID_TV_MODELS" | sed "s|$REPO_ROOT/||" )${NC}"
+for glb in "$ASSETS_DIR"/models/glb/*.glb; do
+    [ -f "$glb" ] || continue
+    check_or_fix "$glb" "$ANDROID_TV_MODELS/$(basename "$glb")" "$MODE"
+done
+
 # --- Sync USDZ models to iOS ---
 echo -e "${BLUE}[iOS] USDZ models → $( echo "$IOS_MODELS" | sed "s|$REPO_ROOT/||" )${NC}"
 for usdz in "$ASSETS_DIR"/models/usdz/*.usdz; do
@@ -144,6 +160,41 @@ echo -e "${BLUE}[Web] GLB models → $( echo "$WEB_MODELS" | sed "s|$REPO_ROOT/|
 for glb in "$ASSETS_DIR"/models/glb/*.glb; do
     [ -f "$glb" ] || continue
     check_or_fix "$glb" "$WEB_MODELS/$(basename "$glb")" "$MODE"
+done
+
+# --- Sync GLB models to Flutter (Android side) ---
+echo -e "${BLUE}[Flutter/Android] GLB models → $( echo "$FLUTTER_ANDROID_MODELS" | sed "s|$REPO_ROOT/||" )${NC}"
+for glb in "$ASSETS_DIR"/models/glb/*.glb; do
+    [ -f "$glb" ] || continue
+    check_or_fix "$glb" "$FLUTTER_ANDROID_MODELS/$(basename "$glb")" "$MODE"
+done
+
+# --- Sync USDZ models to Flutter (iOS side) ---
+echo -e "${BLUE}[Flutter/iOS] USDZ models → $( echo "$FLUTTER_IOS_MODELS" | sed "s|$REPO_ROOT/||" )${NC}"
+for usdz in "$ASSETS_DIR"/models/usdz/*.usdz; do
+    [ -f "$usdz" ] || continue
+    check_or_fix "$usdz" "$FLUTTER_IOS_MODELS/$(basename "$usdz")" "$MODE"
+done
+
+# --- Sync GLB models to React Native (Android side) ---
+echo -e "${BLUE}[RN/Android] GLB models → $( echo "$RN_ANDROID_MODELS" | sed "s|$REPO_ROOT/||" )${NC}"
+for glb in "$ASSETS_DIR"/models/glb/*.glb; do
+    [ -f "$glb" ] || continue
+    check_or_fix "$glb" "$RN_ANDROID_MODELS/$(basename "$glb")" "$MODE"
+done
+
+# --- Sync USDZ models to React Native (iOS side) ---
+echo -e "${BLUE}[RN/iOS] USDZ models → $( echo "$RN_IOS_MODELS" | sed "s|$REPO_ROOT/||" )${NC}"
+for usdz in "$ASSETS_DIR"/models/usdz/*.usdz; do
+    [ -f "$usdz" ] || continue
+    check_or_fix "$usdz" "$RN_IOS_MODELS/$(basename "$usdz")" "$MODE"
+done
+
+# --- Sync GLB models to Website ---
+echo -e "${BLUE}[Website] GLB models → $( echo "$WEBSITE_MODELS" | sed "s|$REPO_ROOT/||" )${NC}"
+for glb in "$ASSETS_DIR"/models/glb/*.glb; do
+    [ -f "$glb" ] || continue
+    check_or_fix "$glb" "$WEBSITE_MODELS/$(basename "$glb")" "$MODE"
 done
 
 # --- Summary ---
