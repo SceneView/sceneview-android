@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SceneView 3D Chart</title>
+<title>SceneView 3D Chart — Apex Ventures Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     overflow: hidden; font-family: -apple-system, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
     height: 100vh; background: #000;
   }
-  /* Polyhaven HDRI sky background — equirectangular panorama */
+  /* Polyhaven HDRI sky background */
   #sky {
     position: fixed; inset: 0; z-index: 0;
     background: url('environments/sky/citrus_2k.jpg') center/cover no-repeat;
-    filter: brightness(0.35) saturate(1.2);
+    filter: brightness(0.3) saturate(1.3) contrast(1.1);
+    transition: filter 1.5s ease;
   }
   canvas {
     position: relative; z-index: 1;
@@ -22,70 +24,134 @@
   }
   canvas:active { cursor: grabbing; }
 
-  /* Header */
+  /* Header glassmorphism */
   #header {
     position: absolute; top: 24px; left: 28px; z-index: 10; pointer-events: none;
-    animation: fadeSlideIn 1s ease-out;
+    animation: fadeSlideIn 1.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
   #header .card {
-    background: rgba(10,15,25,0.6); backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 22px;
+    background: rgba(8,12,22,0.55); backdrop-filter: blur(24px) saturate(1.5);
+    border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 18px 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
   }
-  #header .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  #header .brand svg { width: 28px; height: 28px; }
-  #header .brand span { font-size: 0.95rem; font-weight: 700; color: rgba(255,255,255,0.85); letter-spacing: 0.02em; }
-  #header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; transition: opacity 0.5s; letter-spacing: -0.01em; }
-  #header p { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 4px; transition: opacity 0.5s; }
+  #header .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  #header .brand svg { width: 30px; height: 30px; }
+  #header .brand span {
+    font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.5);
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  #header h1 {
+    font-size: 1.5rem; font-weight: 700; color: #fff;
+    transition: opacity 0.6s, transform 0.6s; letter-spacing: -0.02em;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  #header p {
+    font-size: 0.78rem; color: rgba(255,255,255,0.4); margin-top: 5px;
+    transition: opacity 0.6s, transform 0.6s;
+  }
+
+  /* KPI strip */
+  #kpi-strip {
+    position: absolute; top: 24px; right: 28px; z-index: 10; pointer-events: none;
+    display: flex; gap: 8px;
+    animation: fadeSlideIn 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  }
+  .kpi-card {
+    background: rgba(8,12,22,0.55); backdrop-filter: blur(24px) saturate(1.5);
+    border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 12px 16px;
+    text-align: center; min-width: 85px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transition: opacity 0.6s, transform 0.6s;
+  }
+  .kpi-card .kpi-val { font-size: 1.2rem; font-weight: 800; color: #fff; }
+  .kpi-card .kpi-delta { font-size: 0.6rem; font-weight: 700; margin-top: 2px; }
+  .kpi-card .kpi-delta.up { color: #4ade80; }
+  .kpi-card .kpi-delta.down { color: #f87171; }
+  .kpi-card .kpi-label {
+    font-size: 0.5rem; color: rgba(255,255,255,0.3); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-top: 3px;
+  }
 
   /* Badge */
   #badge {
     position: absolute; bottom: 24px; right: 24px; z-index: 10;
     display: flex; align-items: center; gap: 8px;
-    background: rgba(10,15,25,0.5); backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 16px;
+    background: rgba(8,12,22,0.5); backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    animation: fadeSlideIn 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
   }
-  #badge .rendered { color: rgba(255,255,255,0.4); font-size: 0.65rem; }
+  #badge .rendered { color: rgba(255,255,255,0.35); font-size: 0.6rem; letter-spacing: 0.04em; }
+  #badge .sv-name { color: rgba(255,255,255,0.85); font-weight: 600; font-size: 0.75rem; }
+  #badge .sv-version { color: rgba(96,165,250,0.7); font-size: 0.55rem; font-weight: 500; margin-left: 2px; }
 
-  /* Dots */
+  /* Scene nav dots */
   #scene-nav {
     position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
-    z-index: 10; display: flex; gap: 6px;
+    z-index: 10; display: flex; gap: 8px;
+    animation: fadeSlideIn 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
   }
   #scene-nav .dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: rgba(255,255,255,0.2); transition: all 0.4s;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
   }
-  #scene-nav .dot.active { background: rgba(255,255,255,0.8); width: 20px; border-radius: 3px; }
+  #scene-nav .dot:hover { background: rgba(255,255,255,0.35); }
+  #scene-nav .dot.active {
+    background: rgba(96,165,250,0.9); width: 28px; border-radius: 4px;
+    box-shadow: 0 0 12px rgba(96,165,250,0.4);
+    border-color: rgba(96,165,250,0.3);
+  }
 
-  /* Legend */
+  /* Legend bar */
   #legend {
     position: absolute; bottom: 24px; left: 28px; z-index: 10;
-    display: flex; gap: 5px; transition: opacity 0.5s;
+    display: flex; gap: 6px; transition: opacity 0.6s;
+    animation: fadeSlideIn 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
   }
   .legend-item {
-    background: rgba(10,15,25,0.55); backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
+    background: rgba(8,12,22,0.55); backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
     padding: 10px 14px; text-align: center; min-width: 90px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s;
   }
+  .legend-item:hover { transform: translateY(-2px); }
   .legend-item .val { font-size: 1.05rem; font-weight: 700; color: #fff; }
-  .legend-item .growth { font-size: 0.6rem; font-weight: 600; color: #4ade80; margin-top: 2px; }
+  .legend-item .growth { font-size: 0.58rem; font-weight: 600; color: #4ade80; margin-top: 2px; }
   .legend-item .name {
-    font-size: 0.55rem; color: rgba(255,255,255,0.35); text-transform: uppercase;
-    letter-spacing: 0.08em; margin-top: 3px; white-space: nowrap;
+    font-size: 0.52rem; color: rgba(255,255,255,0.3); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-top: 3px; white-space: nowrap;
   }
   .legend-item .swatch {
-    width: 8px; height: 8px; border-radius: 2px;
+    width: 8px; height: 8px; border-radius: 3px;
     display: inline-block; margin-right: 4px; vertical-align: middle;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  /* Scene transition overlay */
+  #transition-overlay {
+    position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.3) 100%);
   }
 
   @keyframes fadeSlideIn {
-    0% { opacity: 0; transform: translateY(-8px); }
+    0% { opacity: 0; transform: translateY(-12px); }
     100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    #header h1 { font-size: 1.1rem; }
+    #kpi-strip { display: none; }
+    .legend-item { min-width: 70px; padding: 8px 10px; }
+    .legend-item .val { font-size: 0.85rem; }
   }
 </style>
 </head>
 <body>
 <div id="sky"></div>
+<div id="transition-overlay"></div>
 
 <div id="header">
   <div class="card">
@@ -103,10 +169,13 @@
   </div>
 </div>
 
+<div id="kpi-strip"></div>
+
 <div id="badge">
   <span class="rendered">Rendered by</span>
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#60a5fa" stroke-width="1.6" fill="rgba(96,165,250,0.1)"/><path d="M12 22V12M2 7l10 5 10-5" stroke="#60a5fa" stroke-width="1.6"/></svg>
-  <span style="color:rgba(255,255,255,0.85);font-weight:600;font-size:0.75rem;">SceneView</span>
+  <span class="sv-name">SceneView</span>
+  <span class="sv-version">v1.5.0</span>
 </div>
 
 <div id="scene-nav"></div>
@@ -115,68 +184,94 @@
 <canvas id="viewer"></canvas>
 
 <script src="js/filament/filament.js"></script>
-<script src="js/sceneview.js?v=140"></script>
+<script src="js/sceneview.js?v=150"></script>
 <script>
-// ============================================================
-// SceneView 3D Business Charts — Filament WASM + Polyhaven HDR
-// ============================================================
+// ================================================================
+// SceneView 3D Business Charts v2 — Full v1.5.0 Feature Showcase
+// Bloom, Vignette, animateCamera, Point Lights, Orbit Controls
+// ================================================================
 
 var scenes = [
   {
     title: "Q1 2026 Revenue by Region",
-    subtitle: "Year-over-year performance",
+    subtitle: "Year-over-year performance across 5 markets",
     bars: [
-      { label: "North America", value: 4.2, growth: "+12%", color: 0x3b82f6 },
-      { label: "Europe", value: 3.1, growth: "+8%", color: 0x6366f1 },
-      { label: "Asia Pacific", value: 2.8, growth: "+22%", color: 0x8b5cf6 },
-      { label: "Latin America", value: 1.4, growth: "+15%", color: 0xa855f7 },
-      { label: "Middle East", value: 0.9, growth: "+31%", color: 0xd946ef },
+      { label: "North America", value: 4.2, growth: "+12%", color: 0x3b82f6, glow: [0.23, 0.51, 0.96] },
+      { label: "Europe",        value: 3.1, growth: "+8%",  color: 0x6366f1, glow: [0.39, 0.40, 0.95] },
+      { label: "Asia Pacific",  value: 2.8, growth: "+22%", color: 0x8b5cf6, glow: [0.55, 0.36, 0.96] },
+      { label: "Latin America", value: 1.4, growth: "+15%", color: 0xa855f7, glow: [0.66, 0.33, 0.97] },
+      { label: "Middle East",   value: 0.9, growth: "+31%", color: 0xd946ef, glow: [0.85, 0.27, 0.94] },
     ],
     prefix: "$", suffix: "M",
+    kpis: [
+      { val: "$12.4M", delta: "+16%", dir: "up", label: "Total Rev" },
+      { val: "847", delta: "+23%", dir: "up", label: "New Deals" },
+      { val: "94%", delta: "+2%", dir: "up", label: "Retention" },
+    ],
+    camera: { distance: 14, height: 5.5, angle: 0.6, target: [0, 1.8, 0] },
   },
   {
-    title: "Quarterly Revenue Trend",
-    subtitle: "Consistent growth trajectory",
+    title: "Product Line Growth",
+    subtitle: "SaaS platform leading with +28% YoY",
     bars: [
-      { label: "Q1 2025", value: 8.2, growth: "", color: 0x64748b },
-      { label: "Q2 2025", value: 9.1, growth: "+11%", color: 0x6366f1 },
-      { label: "Q3 2025", value: 10.8, growth: "+19%", color: 0x818cf8 },
-      { label: "Q4 2025", value: 11.5, growth: "+6%", color: 0xa78bfa },
-      { label: "Q1 2026", value: 12.4, growth: "+8%", color: 0x3b82f6 },
+      { label: "SaaS Platform",  value: 5.8, growth: "+28%", color: 0x0ea5e9, glow: [0.05, 0.65, 0.91] },
+      { label: "Consulting",     value: 3.2, growth: "+5%",  color: 0x6366f1, glow: [0.39, 0.40, 0.95] },
+      { label: "Data Analytics",value: 2.1, growth: "+42%", color: 0x8b5cf6, glow: [0.55, 0.36, 0.96] },
+      { label: "Cloud Infra",    value: 1.3, growth: "+18%", color: 0xd946ef, glow: [0.85, 0.27, 0.94] },
     ],
     prefix: "$", suffix: "M",
+    kpis: [
+      { val: "$12.4M", delta: "+19%", dir: "up", label: "Product Rev" },
+      { val: "4.2x", delta: "+0.8", dir: "up", label: "LTV:CAC" },
+      { val: "142%", delta: "+12%", dir: "up", label: "NRR" },
+    ],
+    camera: { distance: 13, height: 4.5, angle: -0.4, target: [0, 1.6, 0] },
   },
   {
-    title: "Product Line Breakdown",
-    subtitle: "SaaS platform leading growth",
+    title: "Team Performance Index",
+    subtitle: "Engineering velocity at all-time high",
     bars: [
-      { label: "SaaS Platform", value: 5.8, growth: "+28%", color: 0x0ea5e9 },
-      { label: "Consulting", value: 3.2, growth: "+5%", color: 0x6366f1 },
-      { label: "Data Analytics", value: 2.1, growth: "+42%", color: 0x8b5cf6 },
-      { label: "Cloud Infra", value: 1.3, growth: "+18%", color: 0xd946ef },
+      { label: "Engineering", value: 96, growth: "+8%",  color: 0x06b6d4, glow: [0.02, 0.71, 0.83] },
+      { label: "Sales",       value: 88, growth: "+12%", color: 0x3b82f6, glow: [0.23, 0.51, 0.96] },
+      { label: "Marketing",   value: 82, growth: "+15%", color: 0x8b5cf6, glow: [0.55, 0.36, 0.96] },
+      { label: "Support",     value: 91, growth: "+6%",  color: 0x10b981, glow: [0.06, 0.73, 0.51] },
+      { label: "Product",     value: 94, growth: "+10%", color: 0xf59e0b, glow: [0.96, 0.62, 0.04] },
     ],
-    prefix: "$", suffix: "M",
+    prefix: "", suffix: "",
+    kpis: [
+      { val: "92", delta: "+9%", dir: "up", label: "Avg Score" },
+      { val: "4.8", delta: "+0.3", dir: "up", label: "ESAT" },
+      { val: "12%", delta: "-3%", dir: "down", label: "Attrition" },
+    ],
+    camera: { distance: 15, height: 6, angle: 0.9, target: [0, 2.0, 0] },
   },
   {
-    title: "2026 Annual Forecast",
-    subtitle: "On track to exceed targets",
+    title: "Q2 2026 Forecast",
+    subtitle: "On track to exceed annual targets by 18%",
     bars: [
-      { label: "Revenue", value: 48.6, growth: "+24%", color: 0x3b82f6 },
-      { label: "ARR", value: 42.0, growth: "+31%", color: 0x8b5cf6 },
-      { label: "Pipeline", value: 85.0, growth: "+18%", color: 0x06b6d4 },
+      { label: "Revenue",  value: 48.6, growth: "+24%", color: 0x3b82f6, glow: [0.23, 0.51, 0.96] },
+      { label: "ARR",      value: 42.0, growth: "+31%", color: 0x8b5cf6, glow: [0.55, 0.36, 0.96] },
+      { label: "Pipeline", value: 85.0, growth: "+18%", color: 0x06b6d4, glow: [0.02, 0.71, 0.83] },
     ],
     prefix: "$", suffix: "M",
+    kpis: [
+      { val: "$175M", delta: "+18%", dir: "up", label: "Forecast" },
+      { val: "2.1x", delta: "+0.4", dir: "up", label: "Pipeline" },
+      { val: "$48.6M", delta: "+24%", dir: "up", label: "Q2 Target" },
+    ],
+    camera: { distance: 12, height: 4, angle: -0.2, target: [0, 1.5, 0] },
   },
 ];
 
-var SCENE_DURATION = 8.0;
+var SCENE_DURATION = 10.0;
+var TRANSITION_DURATION = 1800;
 
 function hexToRGB(hex) {
   return [((hex >> 16) & 0xFF) / 255, ((hex >> 8) & 0xFF) / 255, (hex & 0xFF) / 255];
 }
 function hexToCSS(hex) { return '#' + hex.toString(16).padStart(6, '0'); }
 
-// === GLB BUILDER — generate valid glTF Binary with PBR materials ===
+// === GLB BUILDER ===
 
 var CUBE_POS = new Float32Array([
   -0.5,-0.5, 0.5,  0.5,-0.5, 0.5,  0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
@@ -207,24 +302,25 @@ function createChartGLB(barData) {
   bin.set(new Uint8Array(CUBE_NRM.buffer), posBytes);
   bin.set(new Uint8Array(CUBE_IDX.buffer), posBytes + nrmBytes);
 
-  // Bar materials — vivid opaque PBR, high metallic for reflections
+  // Bar materials — high metallic PBR with slight emissive tint for bloom pickup
   var materials = barData.map(function(b, i) {
     return {
       name: "bar" + i,
       pbrMetallicRoughness: {
         baseColorFactor: [b.color[0], b.color[1], b.color[2], 1.0],
-        metallicFactor: 0.85,
-        roughnessFactor: 0.08,
+        metallicFactor: 0.92,
+        roughnessFactor: 0.04,
       },
+      emissiveFactor: [b.color[0] * 0.15, b.color[1] * 0.15, b.color[2] * 0.15],
     };
   });
-  // Ground — dark mirror
+  // Ground — dark mirror surface
   materials.push({
     name: "ground",
     pbrMetallicRoughness: {
-      baseColorFactor: [0.03, 0.04, 0.06, 1.0],
-      metallicFactor: 0.95,
-      roughnessFactor: 0.05,
+      baseColorFactor: [0.02, 0.025, 0.04, 1.0],
+      metallicFactor: 0.98,
+      roughnessFactor: 0.02,
     },
   });
 
@@ -236,15 +332,19 @@ function createChartGLB(barData) {
   var children = [];
   var barNodes = barData.map(function(b, i) {
     children.push(i + 1);
-    return { mesh: i, name: "bar" + i, translation: [b.x, b.height / 2, 0], scale: [b.width, b.height, b.depth] };
+    return {
+      mesh: i, name: "bar" + i,
+      translation: [b.x, b.height / 2, 0],
+      scale: [b.width, b.height, b.depth],
+    };
   });
   children.push(barData.length + 1);
   var nodes = [{ children: children, name: "root" }]
     .concat(barNodes)
-    .concat([{ mesh: barData.length, name: "ground", translation: [0, -0.01, 0], scale: [30, 0.02, 16] }]);
+    .concat([{ mesh: barData.length, name: "ground", translation: [0, -0.01, 0], scale: [35, 0.02, 18] }]);
 
   var json = {
-    asset: { version: "2.0", generator: "SceneView" },
+    asset: { version: "2.0", generator: "SceneView 3D Charts" },
     scene: 0, scenes: [{ nodes: [0] }],
     nodes: nodes, meshes: meshes, materials: materials,
     accessors: [
@@ -285,14 +385,23 @@ function buildGLB(json, binBuf) {
 
 function buildBarData(sd) {
   var maxVal = Math.max.apply(null, sd.bars.map(function(b) { return b.value; }));
-  var spacing = sd.bars.length <= 3 ? 2.8 : 2.0;
-  var offset = -(sd.bars.length - 1) * spacing / 2;
+  var n = sd.bars.length;
+  var spacing = n <= 3 ? 3.0 : (n <= 4 ? 2.2 : 1.8);
+  var barWidth = n <= 3 ? 1.1 : (n <= 4 ? 0.95 : 0.85);
+  var offset = -(n - 1) * spacing / 2;
   return sd.bars.map(function(b, i) {
-    return { x: offset + i * spacing, height: (b.value / maxVal) * 4.5, width: 0.9, depth: 0.9, color: hexToRGB(b.color) };
+    return {
+      x: offset + i * spacing,
+      height: (b.value / maxVal) * 5.0,
+      width: barWidth,
+      depth: barWidth,
+      color: hexToRGB(b.color),
+      glow: b.glow,
+    };
   });
 }
 
-// === UI ===
+// === UI UPDATES ===
 
 function initDots() {
   var nav = document.getElementById('scene-nav');
@@ -300,98 +409,238 @@ function initDots() {
     var d = document.createElement('div');
     d.className = 'dot' + (i === 0 ? ' active' : '');
     d.id = 'dot-' + i;
+    d.onclick = function() { jumpToScene(i); };
     nav.appendChild(d);
   });
 }
+
 function updateDots(idx) {
   scenes.forEach(function(_, i) {
     document.getElementById('dot-' + i).className = 'dot' + (i === idx ? ' active' : '');
   });
 }
+
 function updateLegend(sd) {
   var el = document.getElementById('legend');
   el.style.opacity = '0';
   setTimeout(function() {
-    el.innerHTML = sd.bars.map(function(b) {
-      return '<div class="legend-item">' +
-        '<div class="val"><span class="swatch" style="background:' + hexToCSS(b.color) + '"></span>' +
+    el.innerHTML = sd.bars.map(function(b, i) {
+      var delay = i * 0.08;
+      return '<div class="legend-item" style="animation:fadeSlideIn 0.5s cubic-bezier(0.22,1,0.36,1) ' + delay + 's both">' +
+        '<div class="val"><span class="swatch" style="background:' + hexToCSS(b.color) +
+        ';box-shadow:0 0 8px ' + hexToCSS(b.color) + '"></span>' +
         sd.prefix + b.value + sd.suffix + '</div>' +
         (b.growth ? '<div class="growth">' + b.growth + '</div>' : '') +
         '<div class="name">' + b.label + '</div></div>';
     }).join('');
     el.style.opacity = '1';
-  }, 350);
+  }, 400);
 }
+
 function updateHeader(sd) {
   var t = document.getElementById('title');
   var s = document.getElementById('subtitle');
-  t.style.opacity = '0'; s.style.opacity = '0';
+  t.style.opacity = '0'; t.style.transform = 'translateY(-4px)';
+  s.style.opacity = '0'; s.style.transform = 'translateY(-4px)';
   setTimeout(function() {
     t.textContent = sd.title; s.textContent = sd.subtitle;
-    t.style.opacity = '1'; s.style.opacity = '1';
-  }, 350);
+    t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+    s.style.opacity = '1'; s.style.transform = 'translateY(0)';
+  }, 400);
 }
 
-// === INIT ===
+function updateKPIs(sd) {
+  var el = document.getElementById('kpi-strip');
+  var kpis = sd.kpis || [];
+  el.innerHTML = kpis.map(function(k, i) {
+    var delay = i * 0.1 + 0.2;
+    return '<div class="kpi-card" style="animation:fadeSlideIn 0.5s cubic-bezier(0.22,1,0.36,1) ' + delay + 's both">' +
+      '<div class="kpi-val">' + k.val + '</div>' +
+      '<div class="kpi-delta ' + k.dir + '">' + k.delta + '</div>' +
+      '<div class="kpi-label">' + k.label + '</div></div>';
+  }).join('');
+}
+
+// === POINT LIGHTS PER SCENE ===
+
+function addBarLights(instance, barData) {
+  barData.forEach(function(b) {
+    // Light above each bar, colored to match
+    instance.addLight('point', {
+      color: b.glow,
+      intensity: 280000,
+      position: [b.x, b.height + 1.5, 1.5],
+      falloff: 8,
+    });
+    // Subtle ground reflection light below
+    instance.addLight('point', {
+      color: b.glow,
+      intensity: 80000,
+      position: [b.x, 0.3, -1.0],
+      falloff: 5,
+    });
+  });
+}
+
+// === MAIN ===
+
 initDots();
 var currentAsset = null;
 var currentSceneIdx = -1;
-var startTime = performance.now() / 1000;
+var sceneTimer = 0;
+var isTransitioning = false;
+var svInstance = null;
+
+function jumpToScene(idx) {
+  if (isTransitioning || idx === currentSceneIdx || !svInstance) return;
+  sceneTimer = 0;
+  loadScene(svInstance, idx);
+}
 
 SceneView.create("viewer", {
-  backgroundColor: [0.02, 0.025, 0.04, 1.0],
+  backgroundColor: [0.01, 0.015, 0.025, 1.0],
   autoRotate: false,
-  fov: 35,
+  fov: 32,
   iblIntensity: 55000,
+  skybox: false,
 }).then(function(instance) {
-  console.log("SceneView 3D Charts — Filament WASM + Polyhaven HDR sky");
-  instance._wantsAutoRotate = false;
+  svInstance = instance;
+  console.log("SceneView 3D Charts v2 — v1.5.0 Feature Showcase");
+
+  // === v1.5.0: Quality preset ===
+  instance.setQuality('high');
+
+  // === v1.5.0: Bloom for metallic glow ===
+  instance.setBloom({ strength: 0.12, resolution: 512, levels: 7 });
+
+  // === v1.5.0: Cinematic vignette ===
+  instance.setVignette({ midPoint: 0.52, roundness: 0.6, feather: 0.65 });
+
+  // === v1.5.0: Slow cinematic orbit ===
+  instance.setOrbitSpeed(0.003);
+
+  // === v1.5.0: Orbit limits ===
+  instance.setOrbitLimits({ minDistance: 6, maxDistance: 30 });
+
+  // === v1.5.0: MSAA for crisp edges ===
+  instance.setMSAA({ sampleCount: 4 });
+
+  // Initial camera — far away for dramatic intro
+  instance._angle = 0;
+  instance._orbitRadius = 28;
+  instance._orbitHeight = 10;
+  instance._orbitTarget = [0, 2, 0];
   instance._autoRotate = false;
+  instance._wantsAutoRotate = false;
 
-  function loadScene(idx) {
-    if (currentAsset) {
-      try {
-        currentAsset.getRenderableEntities().forEach(function(e) { instance._scene.remove(e); });
-        instance._scene.remove(currentAsset.getRoot());
-      } catch(e) {}
-      currentAsset = null;
+  // Load first scene
+  loadSceneImmediate(instance, 0);
+  currentSceneIdx = 0;
+
+  // === v1.5.0: Dramatic intro camera animation ===
+  var firstScene = scenes[0].camera;
+  setTimeout(function() {
+    instance.animateCamera({
+      distance: firstScene.distance,
+      height: firstScene.height,
+      angle: firstScene.angle,
+      target: firstScene.target,
+      duration: 2800,
+      onComplete: function() {
+        instance.setAutoRotate(true);
+        instance.setOrbitSpeed(0.0025);
+      },
+    });
+  }, 300);
+
+  // Scene cycling
+  var lastTime = performance.now();
+  function tick() {
+    requestAnimationFrame(tick);
+    var now = performance.now();
+    var dt = (now - lastTime) / 1000;
+    lastTime = now;
+    sceneTimer += dt;
+    if (sceneTimer >= SCENE_DURATION && !isTransitioning) {
+      sceneTimer = 0;
+      var next = (currentSceneIdx + 1) % scenes.length;
+      loadScene(instance, next);
     }
-    var sd = scenes[idx];
-    var glb = createChartGLB(buildBarData(sd));
-    try {
-      var asset = instance._loader.createAsset(glb);
-      if (asset) {
-        asset.loadResources();
-        instance._scene.addEntity(asset.getRoot());
-        instance._scene.addEntities(asset.getRenderableEntities());
-        currentAsset = asset;
-      }
-    } catch(e) { console.error("Chart GLB error:", e); }
-    updateHeader(sd); updateLegend(sd); updateDots(idx);
   }
+  tick();
 
-  function animate() {
-    requestAnimationFrame(animate);
-    var elapsed = performance.now() / 1000 - startTime;
-    var newIdx = Math.floor((elapsed % (scenes.length * SCENE_DURATION)) / SCENE_DURATION) % scenes.length;
-    if (newIdx !== currentSceneIdx) { currentSceneIdx = newIdx; loadScene(newIdx); }
-
-    // Cinematic camera — wide orbit, gentle breathing
-    var intro = smoothstep(0, 3.5, elapsed);
-    var angle = elapsed * 0.1;
-    var breathe = Math.sin(elapsed * 0.15) * 0.25 * intro;
-    instance._angle = angle;
-    instance._orbitRadius = 22 - 8 * intro;    // far → close
-    instance._orbitHeight = 6 - 1.5 * intro + breathe; // high → level
-    instance._orbitTarget = [0, 2.0, 0];
-  }
-  loadScene(0); currentSceneIdx = 0;
-  animate();
 }).catch(function(err) { console.error("SceneView init:", err); });
 
-function smoothstep(a, b, t) {
-  t = Math.max(0, Math.min(1, (t - a) / (b - a)));
-  return t * t * (3 - 2 * t);
+function loadSceneImmediate(instance, idx) {
+  // Remove old asset
+  if (currentAsset) {
+    try {
+      currentAsset.getRenderableEntities().forEach(function(e) { instance._scene.remove(e); });
+      instance._scene.remove(currentAsset.getRoot());
+    } catch(e) {}
+    currentAsset = null;
+  }
+  // Clear previous point lights
+  instance.clearLights();
+
+  var sd = scenes[idx];
+  var barData = buildBarData(sd);
+  var glb = createChartGLB(barData);
+  try {
+    var asset = instance._loader.createAsset(glb);
+    if (asset) {
+      asset.loadResources();
+      instance._scene.addEntity(asset.getRoot());
+      instance._scene.addEntities(asset.getRenderableEntities());
+      currentAsset = asset;
+    }
+  } catch(e) { console.error("Chart GLB error:", e); }
+
+  // Add colored point lights for each bar
+  addBarLights(instance, barData);
+
+  updateHeader(sd);
+  updateLegend(sd);
+  updateKPIs(sd);
+  updateDots(idx);
+}
+
+function loadScene(instance, idx) {
+  if (isTransitioning) return;
+  isTransitioning = true;
+
+  var sd = scenes[idx];
+  var cam = sd.camera;
+
+  // === v1.5.0: animateCamera for transitions ===
+  // First animate camera up and away
+  instance.animateCamera({
+    distance: instance._orbitRadius + 4,
+    height: instance._orbitHeight + 3,
+    angle: instance._angle + 0.5,
+    duration: TRANSITION_DURATION * 0.45,
+    onComplete: function() {
+      // Swap scene content at the peak of the transition
+      loadSceneImmediate(instance, idx);
+      currentSceneIdx = idx;
+
+      // Then animate to the new scene's camera position
+      setTimeout(function() {
+        instance.animateCamera({
+          distance: cam.distance,
+          height: cam.height,
+          angle: cam.angle,
+          target: cam.target,
+          duration: TRANSITION_DURATION * 0.55,
+          onComplete: function() {
+            isTransitioning = false;
+            instance.setAutoRotate(true);
+            instance.setOrbitSpeed(0.0025);
+          },
+        });
+      }, 100);
+    },
+  });
 }
 </script>
 </body>
