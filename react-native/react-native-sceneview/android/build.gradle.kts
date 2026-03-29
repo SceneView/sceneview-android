@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "io.github.sceneview.reactnative"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
@@ -16,20 +16,21 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 }
 
 dependencies {
-    // SceneView
-    implementation("io.github.sceneview:sceneview:3.3.0")
-    implementation("io.github.sceneview:arsceneview:3.3.0")
+    // SceneView — latest on Maven Central
+    implementation("io.github.sceneview:sceneview:2.3.0")
+    implementation("io.github.sceneview:arsceneview:2.3.0")
 
     // React Native
-    implementation("com.facebook.react:react-android:+")
+    implementation("com.facebook.react:react-android")
 
     // Compose
-    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.runtime:runtime")
 }

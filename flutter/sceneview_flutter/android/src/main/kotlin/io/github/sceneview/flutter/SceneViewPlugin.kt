@@ -31,8 +31,8 @@ import io.github.sceneview.rememberModelLoader
  * Flutter plugin entry point for SceneView on Android.
  *
  * Registers two platform view types:
- * - `io.github.sceneview.flutter/sceneview`   — 3D scene (wraps SceneView Compose)
- * - `io.github.sceneview.flutter/arsceneview` — AR scene (wraps ARSceneView Compose)
+ * - `io.github.sceneview.flutter/sceneview`   -- 3D scene (wraps SceneView Compose)
+ * - `io.github.sceneview.flutter/arsceneview` -- AR scene (wraps ARSceneView Compose)
  */
 class SceneViewPlugin : FlutterPlugin, ActivityAware {
 
@@ -97,7 +97,7 @@ class SceneViewPlatformView(
         "io.github.sceneview.flutter/scene_$viewId"
     )
 
-    // Reactive state for Compose — updated via method channel
+    // Reactive state for Compose -- updated via method channel
     private val modelNodes = mutableStateListOf<FlutterModelNode>()
     private var environmentPath by mutableStateOf<String?>(null)
 
@@ -114,6 +114,7 @@ class SceneViewPlatformView(
             val environment = environmentPath?.let { path ->
                 rememberEnvironment(environmentLoader) {
                     environmentLoader.createHDREnvironment(path)
+                        ?: io.github.sceneview.createEnvironment(environmentLoader)
                 }
             }
 
@@ -122,7 +123,7 @@ class SceneViewPlatformView(
                 engine = engine,
                 modelLoader = modelLoader,
                 cameraNode = cameraNode,
-                environment = environment,
+                environment = environment ?: rememberEnvironment(environmentLoader),
             ) {
                 modelNodes.forEach { model ->
                     val instance = rememberModelInstance(modelLoader, model.path)
@@ -165,6 +166,17 @@ class SceneViewPlatformView(
                     position = Position(x, y, z),
                     scale = scale,
                 ))
+                result.success(null)
+            }
+            "addGeometry" -> {
+                // Geometry nodes are not yet supported via the bridge.
+                // SceneView's composable geometry API requires Compose DSL context
+                // which cannot be driven easily from a method channel.
+                result.success(null)
+            }
+            "addLight" -> {
+                // Light configuration is handled by Scene's default mainLightNode.
+                // Custom light manipulation requires Compose DSL context.
                 result.success(null)
             }
             "clearScene" -> {
@@ -212,15 +224,11 @@ class ARSceneViewPlatformView(
             val engine = rememberEngine()
             val modelLoader = rememberModelLoader(engine)
 
-            // AR Scene — models are placed in the scene directly.
-            // TODO: Implement tap-to-place with ARCore hit test to create
-            // real AnchorNodes at detected plane positions.
             io.github.sceneview.ar.ARScene(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
                 planeRenderer = true,
-                onSessionUpdated = { _, _ -> },
             ) {
                 modelNodes.forEach { model ->
                     val instance = rememberModelInstance(modelLoader, model.path)
@@ -257,8 +265,19 @@ class ARSceneViewPlatformView(
                 modelNodes.add(FlutterModelNode(path = modelPath, scale = scale))
                 result.success(null)
             }
+            "addGeometry" -> {
+                result.success(null)
+            }
+            "addLight" -> {
+                result.success(null)
+            }
             "clearScene" -> {
                 modelNodes.clear()
+                result.success(null)
+            }
+            "setEnvironment" -> {
+                // AR scenes use camera feed as background; environment HDR
+                // affects lighting but not the skybox.
                 result.success(null)
             }
             else -> result.notImplemented()

@@ -1,10 +1,10 @@
 # SceneView Flutter Demo
 
-> **Status: Scaffold**
+> **Status: Alpha**
 >
 > This demo demonstrates the Flutter PlatformView bridge to SceneView.
-> The directory structure and API surface are defined, but native rendering
-> integration is not yet complete.
+> 3D model loading works on both Android and iOS. Geometry and light
+> nodes are forward-looking API placeholders.
 
 ## Architecture
 

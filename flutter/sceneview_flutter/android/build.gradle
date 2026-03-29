@@ -1,8 +1,8 @@
 group 'io.github.sceneview.flutter'
-version '0.1.0'
+version '3.4.7'
 
 buildscript {
-    ext.kotlin_version = '1.9.22'
+    ext.kotlin_version = '2.0.21'
     repositories {
         google()
         mavenCentral()
@@ -25,7 +25,7 @@ apply plugin: 'kotlin-android'
 
 android {
     namespace 'io.github.sceneview.flutter'
-    compileSdk 34
+    compileSdk 35
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -45,7 +45,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.8'
+        kotlinCompilerExtensionVersion '1.5.14'
     }
 
     sourceSets {
@@ -55,11 +55,13 @@ android {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'androidx.compose.ui:ui:1.6.0'
-    implementation 'androidx.compose.ui:ui-tooling:1.6.0'
-    implementation 'androidx.activity:activity-compose:1.8.2'
+
+    implementation platform('androidx.compose:compose-bom:2024.06.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.activity:activity-compose:1.9.0'
 
     // SceneView — 3D and AR rendering
-    implementation 'io.github.sceneview:sceneview:3.3.0'
-    implementation 'io.github.sceneview:arsceneview:3.3.0'
+    implementation 'io.github.sceneview:sceneview:2.3.0'
+    implementation 'io.github.sceneview:arsceneview:2.3.0'
 }

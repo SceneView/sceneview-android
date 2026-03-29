@@ -62,6 +62,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                 val environment = state.environmentPath.value?.let { path ->
                     rememberEnvironment(environmentLoader) {
                         environmentLoader.createHDREnvironment(path)
+                            ?: io.github.sceneview.createEnvironment(environmentLoader)
                     }
                 }
 
@@ -70,7 +71,7 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
                     engine = engine,
                     modelLoader = modelLoader,
                     cameraNode = cameraNode,
-                    environment = environment,
+                    environment = environment ?: rememberEnvironment(environmentLoader),
                 ) {
                     state.modelPaths.forEach { model ->
                         val instance = rememberModelInstance(modelLoader, model.src)
@@ -102,13 +103,23 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
             for (i in 0 until array.size()) {
                 val map = array.getMap(i) ?: continue
                 val src = map.getString("src") ?: continue
-                state.modelPaths.add(
-                    ModelNodeData(
-                        src = src,
-                        scale = if (map.hasKey("scale")) map.getDouble("scale").toFloat() else 1.0f,
-                        animate = if (map.hasKey("animation")) map.getBoolean("animation") else true
-                    )
-                )
+                val scale = if (map.hasKey("scale")) {
+                    try {
+                        map.getDouble("scale").toFloat()
+                    } catch (_: Exception) {
+                        1.0f
+                    }
+                } else {
+                    1.0f
+                }
+                // "animation" is a string (animation name) in the TS types.
+                // If present and non-null, auto-animate is enabled.
+                val animate = if (map.hasKey("animation")) {
+                    map.getString("animation") != null
+                } else {
+                    true
+                }
+                state.modelPaths.add(ModelNodeData(src = src, scale = scale, animate = animate))
             }
         }
     }

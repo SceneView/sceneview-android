@@ -1,4 +1,4 @@
-/// Flutter plugin for SceneView — 3D and AR scenes.
+/// Flutter plugin for SceneView -- 3D and AR scenes.
 ///
 /// Uses native platform views:
 /// - Android: SceneView (Filament renderer via Jetpack Compose)
@@ -18,10 +18,19 @@ import 'package:flutter/services.dart';
 
 /// Describes a 3D model to load into the scene.
 class ModelNode {
+  /// Asset path or URL to the glTF/GLB model file.
   final String modelPath;
+
+  /// X position in world space.
   final double x;
+
+  /// Y position in world space.
   final double y;
+
+  /// Z position in world space.
   final double z;
+
+  /// Uniform scale factor applied to the model.
   final double scale;
 
   const ModelNode({
@@ -42,13 +51,19 @@ class ModelNode {
 }
 
 /// Describes a geometry primitive in the scene.
+///
+/// Note: Geometry nodes are acknowledged by the native bridge but rendering
+/// is not yet implemented. This is a forward-looking API placeholder.
 class GeometryNode {
-  final String type; // 'cube', 'sphere', 'cylinder', 'plane'
+  /// Geometry type: 'cube', 'sphere', 'cylinder', or 'plane'.
+  final String type;
   final double x;
   final double y;
   final double z;
   final double size;
-  final int color; // ARGB int
+
+  /// Fill color as an ARGB integer (e.g. 0xFF6750A4).
+  final int color;
 
   const GeometryNode({
     required this.type,
@@ -70,10 +85,16 @@ class GeometryNode {
 }
 
 /// Describes a light source in the scene.
+///
+/// Note: Light nodes are acknowledged by the native bridge but custom
+/// light configuration is not yet implemented. Scenes use sensible defaults.
 class LightNode {
-  final String type; // 'directional', 'point', 'spot'
+  /// Light type: 'directional', 'point', or 'spot'.
+  final String type;
   final double intensity;
-  final int color; // ARGB int
+
+  /// Light color as an ARGB integer.
+  final int color;
   final double x;
   final double y;
   final double z;
@@ -102,37 +123,80 @@ class LightNode {
 // ---------------------------------------------------------------------------
 
 /// Controls a [SceneView] or [ARSceneView] after creation.
+///
+/// Attach a controller to a scene widget, then call methods on it
+/// after [onViewCreated] fires:
+///
+/// ```dart
+/// final controller = SceneViewController();
+///
+/// SceneView(
+///   controller: controller,
+///   onViewCreated: () {
+///     controller.loadModel(ModelNode(modelPath: 'models/helmet.glb'));
+///   },
+/// );
+/// ```
 class SceneViewController {
   MethodChannel? _channel;
+  bool _disposed = false;
+
+  /// Whether this controller is attached to a platform view.
+  bool get isAttached => _channel != null && !_disposed;
 
   /// Called internally when the platform view is created.
   void attach(int viewId) {
     _channel = MethodChannel('io.github.sceneview.flutter/scene_$viewId');
+    _disposed = false;
+  }
+
+  /// Called internally when the platform view is disposed.
+  void dispose() {
+    _disposed = true;
+    _channel = null;
   }
 
   /// Load a glTF/GLB model into the scene.
+  ///
+  /// Throws [StateError] if the controller is not yet attached.
   Future<void> loadModel(ModelNode node) async {
-    await _channel?.invokeMethod('loadModel', node.toMap());
+    _ensureAttached();
+    await _channel!.invokeMethod('loadModel', node.toMap());
   }
 
-  /// Add a geometry node.
+  /// Add a geometry node (placeholder -- not yet rendered natively).
   Future<void> addGeometry(GeometryNode node) async {
-    await _channel?.invokeMethod('addGeometry', node.toMap());
+    _ensureAttached();
+    await _channel!.invokeMethod('addGeometry', node.toMap());
   }
 
-  /// Add a light node.
+  /// Add a light node (placeholder -- uses scene defaults on native side).
   Future<void> addLight(LightNode node) async {
-    await _channel?.invokeMethod('addLight', node.toMap());
+    _ensureAttached();
+    await _channel!.invokeMethod('addLight', node.toMap());
   }
 
   /// Clear all nodes from the scene.
   Future<void> clearScene() async {
-    await _channel?.invokeMethod('clearScene');
+    _ensureAttached();
+    await _channel!.invokeMethod('clearScene');
   }
 
-  /// Set the environment HDR.
+  /// Set the environment HDR for image-based lighting.
+  ///
+  /// [hdrPath] should be an asset path like `'environments/studio_small.hdr'`.
   Future<void> setEnvironment(String hdrPath) async {
-    await _channel?.invokeMethod('setEnvironment', {'hdrPath': hdrPath});
+    _ensureAttached();
+    await _channel!.invokeMethod('setEnvironment', {'hdrPath': hdrPath});
+  }
+
+  void _ensureAttached() {
+    if (!isAttached) {
+      throw StateError(
+        'SceneViewController is not attached to a view. '
+        'Wait for onViewCreated before calling methods.',
+      );
+    }
   }
 }
 
@@ -151,8 +215,13 @@ class SceneViewController {
 /// )
 /// ```
 class SceneView extends StatefulWidget {
+  /// Optional controller for imperative commands (loadModel, clearScene, etc).
   final SceneViewController? controller;
+
+  /// Called when the native platform view has been created and is ready.
   final VoidCallback? onViewCreated;
+
+  /// Models to load immediately when the view is created.
   final List<ModelNode> initialModels;
 
   const SceneView({
@@ -172,6 +241,12 @@ class _SceneViewState extends State<SceneView> {
   void _onPlatformViewCreated(int id) {
     widget.controller?.attach(id);
     widget.onViewCreated?.call();
+  }
+
+  @override
+  void dispose() {
+    widget.controller?.dispose();
+    super.dispose();
   }
 
   @override
@@ -217,6 +292,8 @@ class _SceneViewState extends State<SceneView> {
 
 /// Embeds a native AR SceneView as a platform view.
 ///
+/// Requires camera permission on both Android and iOS.
+///
 /// ```dart
 /// ARSceneView(
 ///   controller: controller,
@@ -226,8 +303,13 @@ class _SceneViewState extends State<SceneView> {
 /// )
 /// ```
 class ARSceneView extends StatefulWidget {
+  /// Optional controller for imperative commands.
   final SceneViewController? controller;
+
+  /// Called when the native platform view has been created and is ready.
   final VoidCallback? onViewCreated;
+
+  /// Whether to enable plane detection and rendering.
   final bool planeDetection;
 
   const ARSceneView({
@@ -247,6 +329,12 @@ class _ARSceneViewState extends State<ARSceneView> {
   void _onPlatformViewCreated(int id) {
     widget.controller?.attach(id);
     widget.onViewCreated?.call();
+  }
+
+  @override
+  void dispose() {
+    widget.controller?.dispose();
+    super.dispose();
   }
 
   @override

@@ -6,8 +6,8 @@ import SceneViewSwift
 /// Flutter plugin entry point for SceneView on iOS.
 ///
 /// Registers two platform view types:
-/// - `io.github.sceneview.flutter/sceneview`   — 3D scene (wraps SceneViewSwift.SceneView)
-/// - `io.github.sceneview.flutter/arsceneview` — AR scene (wraps SceneViewSwift.ARSceneView)
+/// - `io.github.sceneview.flutter/sceneview`   -- 3D scene (wraps SceneViewSwift.SceneView)
+/// - `io.github.sceneview.flutter/arsceneview` -- AR scene (wraps SceneViewSwift.ARSceneView)
 public class SceneViewPlugin: NSObject, FlutterPlugin {
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -19,6 +19,18 @@ public class SceneViewPlugin: NSObject, FlutterPlugin {
             ARSceneViewFactory(messenger: registrar.messenger()),
             withId: "io.github.sceneview.flutter/arsceneview"
         )
+    }
+}
+
+// MARK: - Model data
+
+struct FlutterModelData: Identifiable, Equatable {
+    let id = UUID()
+    let path: String
+    let scale: Float
+
+    static func == (lhs: FlutterModelData, rhs: FlutterModelData) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
@@ -53,7 +65,7 @@ class SceneViewFactory: NSObject, FlutterPlatformViewFactory {
 /// Observable model holding scene state, updated via method channel.
 @MainActor
 class SceneState: ObservableObject {
-    @Published var modelPaths: [String] = []
+    @Published var models: [FlutterModelData] = []
     @Published var environmentPath: String?
 }
 
@@ -90,14 +102,25 @@ class SceneViewPlatformView: NSObject, FlutterPlatformView {
                 result(FlutterError(code: "INVALID_ARGS", message: "modelPath required", details: nil))
                 return
             }
+            let scale = (args["scale"] as? NSNumber)?.floatValue ?? 1.0
             Task { @MainActor in
-                sceneState.modelPaths.append(modelPath)
+                sceneState.models.append(FlutterModelData(path: modelPath, scale: scale))
             }
+            result(nil)
+
+        case "addGeometry":
+            // Geometry nodes require Compose/SwiftUI DSL context.
+            // Acknowledged but no-op for now.
+            result(nil)
+
+        case "addLight":
+            // Light configuration uses scene defaults on iOS.
+            // Acknowledged but no-op for now.
             result(nil)
 
         case "clearScene":
             Task { @MainActor in
-                sceneState.modelPaths.removeAll()
+                sceneState.models.removeAll()
             }
             result(nil)
 
@@ -120,8 +143,9 @@ struct SceneViewSwiftUIWrapper: View {
 
     var body: some View {
         SceneView {
-            ForEach(state.modelPaths, id: \.self) { path in
-                ModelNode(path)
+            ForEach(state.models) { model in
+                ModelNode(model.path)
+                    .scale(model.scale)
             }
         }
     }
@@ -188,15 +212,26 @@ class ARSceneViewPlatformView: NSObject, FlutterPlatformView {
                 result(FlutterError(code: "INVALID_ARGS", message: "modelPath required", details: nil))
                 return
             }
+            let scale = (args["scale"] as? NSNumber)?.floatValue ?? 1.0
             Task { @MainActor in
-                sceneState.modelPaths.append(modelPath)
+                sceneState.models.append(FlutterModelData(path: modelPath, scale: scale))
             }
+            result(nil)
+
+        case "addGeometry":
+            result(nil)
+
+        case "addLight":
             result(nil)
 
         case "clearScene":
             Task { @MainActor in
-                sceneState.modelPaths.removeAll()
+                sceneState.models.removeAll()
             }
+            result(nil)
+
+        case "setEnvironment":
+            // AR scenes use camera feed; environment HDR affects lighting only.
             result(nil)
 
         default:
@@ -211,9 +246,9 @@ struct ARSceneViewSwiftUIWrapper: View {
 
     var body: some View {
         ARSceneView { anchor in
-            ForEach(state.modelPaths, id: \.self) { path in
-                ModelNode(path)
-                    .scale(0.3)
+            ForEach(state.models) { model in
+                ModelNode(model.path)
+                    .scale(model.scale)
             }
         }
     }
