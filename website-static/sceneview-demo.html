@@ -72,8 +72,8 @@ canvas:active { cursor: grabbing; }
 <script src="js/filament/filament.js"></script>
 <script src="js/sceneview.js?v=3.5.1"></script>
 <script>
-const BASE = 'models/platforms';
-const MODELS = {
+var BASE = 'models/platforms';
+var MODELS = {
   'DamagedHelmet':        BASE + '/DamagedHelmet.glb',
   'SheenChair':           BASE + '/SheenChair.glb',
   'ToyCar':               BASE + '/ToyCar.glb',
@@ -90,114 +90,30 @@ const MODELS = {
   'BoomBox':              BASE + '/BoomBox.glb'
 };
 
-const status = document.getElementById('status');
-let viewer = null;
+var status = document.getElementById('status');
+var viewer = null;
 
-// Wait for Filament WASM to be ready, then use one-liner
-const DEFAULT_MODEL = MODELS['DamagedHelmet'];
-Filament.init([DEFAULT_MODEL], function() {
-  status.textContent = 'Creating viewer...';
-  try {
-    const canvas = document.getElementById('viewer');
-    canvas.width = canvas.clientWidth * devicePixelRatio;
-    canvas.height = canvas.clientHeight * devicePixelRatio;
-
-    const engine = Filament.Engine.create(canvas);
-    const scene = engine.createScene();
-    const renderer = engine.createRenderer();
-    const cam = engine.createCamera(Filament.EntityManager.get().create());
-    const view = engine.createView();
-    const sc = engine.createSwapChain();
-
-    view.setCamera(cam);
-    view.setScene(scene);
-    view.setViewport([0, 0, canvas.width, canvas.height]);
-    renderer.setClearOptions({ clearColor: [0.05, 0.06, 0.1, 1.0], clear: true });
-    cam.setProjectionFov(45, canvas.width / canvas.height, 0.1, 100, Filament.Camera$Fov.VERTICAL);
-
-    // Lights
-    const sun = Filament.EntityManager.get().create();
-    Filament.LightManager.Builder(Filament.LightManager$Type.SUN)
-      .color([0.98, 0.92, 0.89]).intensity(110000).direction([0.6, -1, -0.8])
-      .sunAngularRadius(1.9).sunHaloSize(10).sunHaloFalloff(80)
-      .build(engine, sun);
-    scene.addEntity(sun);
-
-    const fill = Filament.EntityManager.get().create();
-    Filament.LightManager.Builder(Filament.LightManager$Type.DIRECTIONAL)
-      .color([0.6, 0.65, 0.8]).intensity(30000).direction([-0.5, 0.5, 1])
-      .build(engine, fill);
-    scene.addEntity(fill);
-
-    // Load default model
-    const loader = engine.createAssetLoader();
-    let currentAsset = null;
-
-    function loadModel(url) {
-      if (Filament.assets[url]) {
-        showModel(url);
-      } else {
-        status.textContent = 'Downloading model...';
-        status.style.color = '#8ab4f8';
-        Filament.init([url], function() { showModel(url); });
-      }
-    }
-
-    function showModel(url) {
-      // Remove old
-      if (currentAsset) {
-        scene.remove(currentAsset.getRoot());
-        currentAsset.getRenderableEntities().forEach(e => scene.remove(e));
-      }
-      const asset = loader.createAsset(Filament.assets[url]);
-      if (asset) {
-        asset.loadResources();
-        scene.addEntity(asset.getRoot());
-        scene.addEntities(asset.getRenderableEntities());
-        currentAsset = asset;
-        status.textContent = 'Drag to rotate · Scroll to zoom';
-        status.style.color = '#34a853';
-      }
-    }
-
-    showModel(DEFAULT_MODEL);
-
-    // Orbit controls
-    let angle = 0, orbitR = 3.5, orbitH = 0.8, dragging = false, lastX = 0, lastY = 0, autoRotate = true;
-
-    canvas.addEventListener('mousedown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; autoRotate = false; });
-    canvas.addEventListener('mousemove', e => { if (!dragging) return; angle -= (e.clientX - lastX) * 0.005; orbitH -= (e.clientY - lastY) * 0.01; lastX = e.clientX; lastY = e.clientY; });
-    canvas.addEventListener('mouseup', () => dragging = false);
-    canvas.addEventListener('mouseleave', () => dragging = false);
-    canvas.addEventListener('wheel', e => { e.preventDefault(); orbitR *= (1 + e.deltaY * 0.001); orbitR = Math.max(0.5, Math.min(20, orbitR)); }, { passive: false });
-    canvas.addEventListener('touchstart', e => { if (e.touches.length === 1) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; autoRotate = false; } });
-    canvas.addEventListener('touchmove', e => { if (!dragging) return; e.preventDefault(); angle -= (e.touches[0].clientX - lastX) * 0.005; orbitH -= (e.touches[0].clientY - lastY) * 0.01; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }, { passive: false });
-    canvas.addEventListener('touchend', () => dragging = false);
-
-    // Render loop
-    function render() {
-      if (autoRotate) angle += 0.006;
-      cam.lookAt([Math.sin(angle) * orbitR, orbitH, Math.cos(angle) * orbitR], [0, 0, 0], [0, 1, 0]);
-      if (renderer.beginFrame(sc)) { renderer.render(sc, view); renderer.endFrame(); }
-      engine.execute();
-      requestAnimationFrame(render);
-    }
-    render();
-
-    // Expose for model switching buttons
-    window.loadModel = loadModel;
-
-  } catch(e) {
-    status.textContent = 'Error: ' + e.message;
-    status.style.color = '#ea4335';
-    console.error(e);
-  }
+SceneView.modelViewer('viewer', MODELS['DamagedHelmet']).then(function(v) {
+  viewer = v;
+  status.textContent = 'Drag to rotate \u00b7 Scroll to zoom';
+  status.style.color = '#34a853';
+}).catch(function(e) {
+  status.textContent = 'Error: ' + e.message;
+  status.style.color = '#ea4335';
+  console.error(e);
 });
 
 function load(btn, name) {
-  document.querySelectorAll('.models button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.models button').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
-  if (window.loadModel) window.loadModel(MODELS[name]);
+  if (viewer) {
+    status.textContent = 'Loading...';
+    status.style.color = '#8ab4f8';
+    viewer.loadModel(MODELS[name]).then(function() {
+      status.textContent = 'Drag to rotate \u00b7 Scroll to zoom';
+      status.style.color = '#34a853';
+    });
+  }
 }
 </script>
 </body>

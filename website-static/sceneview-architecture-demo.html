@@ -135,52 +135,10 @@ SceneView.modelViewer("viewer", "models/DamagedHelmet.glb", {
   skybox: false
 }).then(function(instance) {
 
-  // ── Quality preset ──
-  instance.setQuality('high');
-
-  // ── Post-processing: subtle bloom on metallic reflections ──
-  instance.setBloom({ strength: 0.08, resolution: 384, levels: 7 });
-
-  // ── Nocturnal fog — deep blue atmospheric haze ──
-  instance.setFog({ distance: 15, maximumOpacity: 0.3, color: [0.05, 0.08, 0.15] });
-
-  // ── Dark cinematic vignette ──
-  instance.setVignette({ midPoint: 0.3, roundness: 0.6, feather: 0.7 });
-
-  // ── Camera: tight architectural perspective ──
-  instance.setCameraFOV(35);
-  instance.setOrbitSpeed(0.006);
-  instance.setOrbitLimits({ minDistance: 2, maxDistance: 8 });
-
-  // ── Architectural blue spot light — cool accent from upper right ──
-  instance.addLight('spot', {
-    color: [0.4, 0.6, 1],
-    intensity: 80000,
-    position: [3, 4, 2],
-    direction: [-1, -1, -0.5],
-    innerCone: 0.3,
-    outerCone: 0.6,
-    castShadows: true
-  });
-
-  // ── Warm accent point light — golden counterbalance from lower left ──
-  instance.addLight('point', {
-    color: [1, 0.7, 0.3],
-    intensity: 40000,
-    position: [-2, 1, -1],
-    falloff: 8
-  });
-
-  // ── Intro camera animation: slow cinematic reveal ──
-  instance.animateCamera({
-    distance: 4,
-    height: 1.5,
-    angle: -0.5,
-    duration: 2500,
-    onComplete: function() {
-      console.log("SceneView: Camera intro complete");
-    }
-  });
+  // ── Camera position ──
+  instance._orbitRadius = 4;
+  instance._orbitHeight = 1.5;
+  instance._angle = -0.5;
 
   // ── Hide loading overlay ──
   document.getElementById('loading').classList.add('hidden');
