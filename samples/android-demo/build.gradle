@@ -1,7 +1,7 @@
 plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.compose'
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -13,7 +13,7 @@ android {
         applicationId "io.github.sceneview.demo"
         minSdk 28
         targetSdk 36
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 347
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 350
         versionName project.hasProperty('versionName') ? project.property('versionName') : "3.5.0"
     }
 
@@ -62,18 +62,21 @@ android {
 }
 
 dependencies {
+    // Compose BOM
+    implementation platform(libs.androidx.compose.bom)
+
     implementation project(":samples:common")
 
     // Compose (extras beyond what :samples:common provides)
     implementation libs.androidx.compose.material.icons.extended
-    // Material 3 Expressive APIs require a newer alpha than the version catalog's stable release
-    implementation 'androidx.compose.material3:material3:1.5.0-alpha15'
+    // Material 3 Expressive APIs (alpha, newer than BOM's stable release)
+    implementation libs.androidx.compose.material3.expressive
 
     // SceneView — 3D + AR
     implementation project(":sceneview")
     implementation project(":arsceneview")
 
     // Google Play In-App Updates
-    implementation 'com.google.android.play:app-update:2.1.0'
-    implementation 'com.google.android.play:app-update-ktx:2.1.0'
+    implementation libs.play.app.update
+    implementation libs.play.app.update.ktx
 }
