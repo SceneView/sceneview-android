@@ -44,20 +44,19 @@ public struct SceneEnvironment: Sendable {
     ///
     /// - Returns: An `EnvironmentResource` ready to apply via
     ///   `ImageBasedLightComponent`.
-    /// - Throws: If the HDR file cannot be loaded.
+    /// - Throws: `SceneEnvironmentError.noResourceSpecified` if no HDR resource
+    ///   name was provided, or a RealityKit error if the file cannot be loaded.
     public func load() async throws -> EnvironmentResource {
-        if let hdrResource {
-            // Check cache first
-            if let cached = EnvironmentCache.shared.get(hdrResource) {
-                return cached
-            }
-            let resource = try await EnvironmentResource(named: hdrResource)
-            EnvironmentCache.shared.set(hdrResource, resource: resource)
-            return resource
-        } else {
-            // Default RealityKit environment
-            return try await EnvironmentResource(named: "default")
+        guard let hdrResource else {
+            throw SceneEnvironmentError.noResourceSpecified
         }
+        // Check cache first
+        if let cached = EnvironmentCache.shared.get(hdrResource) {
+            return cached
+        }
+        let resource = try await EnvironmentResource(named: hdrResource)
+        EnvironmentCache.shared.set(hdrResource, resource: resource)
+        return resource
     }
 
     /// Creates a custom environment from an HDR file in the bundle.
@@ -79,6 +78,22 @@ public struct SceneEnvironment: Sendable {
             intensity: intensity,
             showSkybox: showSkybox
         )
+    }
+}
+
+// MARK: - Errors
+
+/// Errors that can occur when loading a scene environment.
+public enum SceneEnvironmentError: LocalizedError {
+    /// No HDR resource name was provided to the environment.
+    case noResourceSpecified
+
+    public var errorDescription: String? {
+        switch self {
+        case .noResourceSpecified:
+            return "No HDR resource name specified for this SceneEnvironment. "
+                + "Provide an hdrResource name or use a preset like .studio."
+        }
     }
 }
 

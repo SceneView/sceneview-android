@@ -9,6 +9,7 @@ let package = Package(
         .macOS("15.0"),
         .visionOS(.v1)
     ],
+    swiftLanguageVersions: [.v5],
     products: [
         .library(
             name: "SceneViewSwift",
