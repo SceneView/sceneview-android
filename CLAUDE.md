@@ -76,12 +76,12 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-27, accuracy audit)
+### Current state (last updated: 2026-03-29)
 
 - **Active branch**: `main`
-- **Latest release**: v3.4.7 (GitHub Release), v2.3.0 (Maven Central — NOT yet published as 3.4.x)
-- **MCP servers**: 9 MCPs on npm (versions vary: sceneview-mcp 3.4.14, french-admin 2.1.0, realestate 2.1.0, education 1.0.0, finance 1.0.0, others 2.0.0), 22 MCP tools, 858 tests + Healthcare MCP (134 tests) + Automotive MCP (160 tests) ready to publish
-- **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web
+- **Latest release**: v3.5.0 (GitHub Release + Maven Central PUBLISHED)
+- **MCP servers**: sceneview-mcp 3.5.0 on npm (32 tools, 1204 tests), 9 MCPs total on npm
+- **sceneview.js**: v2.0.0 local (full feature parity), v1.2.0 on npm
 - **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
 - **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
 
@@ -155,10 +155,11 @@ Never say "everything is good" without verifying published packages.
   - Configure GitHub Sponsors tiers on github.com/sponsors/sceneview
 
 - **What's next (for future sessions)**:
-  - **PRIORITY 1 — Maven Central v3.4.5 publish**: gradle.properties says 3.4.5, needs Sonatype publish (Maven Central currently at 2.3.0)
+  - ~~PRIORITY 1 — Maven Central publish~~ **DONE — v3.5.0 published**
+  - **PRIORITY 1 — MCP v3.6.0 npm publish**: 10 new tools, 1204 tests, ready to publish
   - **PRIORITY 2 — App Store first TestFlight build**: needs real Apple cert (Thomas action first)
-  - **PRIORITY 3 — Play Store deploy**: key reset should be done by ~27 March
-  - **PRIORITY 4 — MCP Pro backend**: connect Stripe + Redis via Cloudflare Workers
+  - **PRIORITY 3 — Play Store deploy**: verify review status
+  - **PRIORITY 4 — Fix sceneview-web npm publish**: Gradle task name incorrect in release.yml
   - **PRIORITY 5 — LinkedIn post**: publish when approved (3 drafts ready)
   - Filament JNI Desktop (18-29 day effort, high complexity)
   - Android XR module
@@ -183,14 +184,13 @@ Never say "everything is good" without verifying published packages.
   native, Flutter (PlatformView), React Native (Fabric), KMP Compose (UIKitView)
 - **Demo app** (`samples/android-demo/`): Play Store ready, 4-tab architecture (3D, AR,
   Samples, About), Material 3 Expressive
-- **MCP server** (`mcp/`): `sceneview-mcp` v3.4.14 on npm + registry; iOS support
-  (8 Swift samples, `get_ios_setup` tool, Swift code validation), `render_3d_preview` tool
-- **MCP ecosystem**: 9 MCPs on npm (versions vary: sceneview-mcp 3.4.14, french-admin 2.1.0, realestate 2.1.0, education 1.0.0, finance 1.0.0, others 2.0.0; Education + Finance new, Social Media retired for non-concurrence)
+- **MCP server** (`mcp/`): `sceneview-mcp` v3.5.0 on npm (v3.6.0 ready locally with 32 tools, 1204 tests)
+- **MCP ecosystem**: 9 MCPs on npm (sceneview-mcp 3.5.0, french-admin 2.1.0, realestate 2.1.0, education 1.0.0, finance 1.0.0, others 2.0.0)
 - **GitHub orgs**: `sceneview` (open source), `sceneview-tools` (commercial), `mcp-tools-lab` (MCP ecosystem)
 - **Website**: sceneview.github.io (static HTML + playground + embed widget + SEO + Pro link to Polar.sh)
 - **sceneview.js**: v1.2.0 on npm — one-liner 3D for the web (Filament.js WASM, double-init fixed)
 - **Open source PRs**: PR #472 Claude Cookbooks, 2 PRs awesome-mcp-servers
-- **Pending**: Maven Central v3.4.5 publish (currently 2.3.0), App Store TestFlight (needs Apple cert), Play Store deploy (~27 March)
+- **Pending**: Maven Central v3.5.0 PUBLISHED, App Store TestFlight (needs Apple cert), Play Store deploy (in review)
 
 ### How to update this section
 
