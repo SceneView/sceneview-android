@@ -14,6 +14,16 @@ struct ExploreTab: View {
         ("Dragon", "flame.fill", "animated_dragon", 0.6),
         ("Butterfly", "leaf.fill", "animated_butterfly", 0.8),
         ("Piano", "pianokeys", "retro_piano", 0.7),
+        ("Phoenix", "bird.fill", "phoenix_bird", 0.8),
+        ("Cyberpunk", "car.side.fill", "cyberpunk_car", 0.8),
+        ("Fantasy Book", "book.fill", "fantasy_book", 0.7),
+        ("Mosquito", "ant.fill", "mosquito_amber", 1.0),
+        ("Ship", "cloud.fill", "ship_in_clouds", 0.5),
+        ("Hovercar", "bolt.car.fill", "cyberpunk_hovercar", 0.6),
+        ("Cyber Guy", "figure.stand", "cyberpunk_character", 0.7),
+        ("Porsche 911", "car.fill", "porsche_911", 0.6),
+        ("Black Dragon", "lizard.fill", "black_dragon", 0.5),
+        ("Fiat Punto", "car.rear.fill", "fiat_punto", 0.7),
     ]
 
     @State private var selectedIndex = 0
