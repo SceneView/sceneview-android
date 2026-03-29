@@ -5,16 +5,53 @@ void main() {
   runApp(const SceneViewExampleApp());
 }
 
+/// Available 3D models for the demo.
+const _models = [
+  _ModelInfo(
+    name: 'Damaged Helmet',
+    path: 'models/damaged_helmet.glb',
+    icon: Icons.sports_motorsports,
+  ),
+  _ModelInfo(
+    name: 'Toy Car',
+    path: 'models/toy_car.glb',
+    icon: Icons.directions_car,
+  ),
+  _ModelInfo(
+    name: 'Sheen Chair',
+    path: 'models/sheen_chair.glb',
+    icon: Icons.chair,
+  ),
+  _ModelInfo(
+    name: 'Water Bottle',
+    path: 'models/water_bottle.glb',
+    icon: Icons.water_drop,
+  ),
+];
+
+class _ModelInfo {
+  final String name;
+  final String path;
+  final IconData icon;
+
+  const _ModelInfo({
+    required this.name,
+    required this.path,
+    required this.icon,
+  });
+}
+
 class SceneViewExampleApp extends StatelessWidget {
   const SceneViewExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SceneView Flutter Example',
+      title: 'SceneView Flutter Demo',
       theme: ThemeData(
         colorSchemeSeed: Colors.deepPurple,
         useMaterial3: true,
+        brightness: Brightness.dark,
       ),
       home: const ModelViewerPage(),
     );
@@ -30,41 +67,85 @@ class ModelViewerPage extends StatefulWidget {
 
 class _ModelViewerPageState extends State<ModelViewerPage> {
   final _controller = SceneViewController();
+  int _selectedModelIndex = 0;
+  bool _sceneReady = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('3D Model Viewer')),
+      appBar: AppBar(
+        title: const Text('SceneView Flutter Demo'),
+        actions: [
+          IconButton(
+            onPressed: () => _controller.clearScene(),
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Clear scene',
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
-            child: SceneView(
-              controller: _controller,
-              onViewCreated: _onSceneCreated,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Stack(
               children: [
-                ElevatedButton.icon(
-                  onPressed: _loadHelmet,
-                  icon: const Icon(Icons.view_in_ar),
-                  label: const Text('Load Model'),
+                SceneView(
+                  controller: _controller,
+                  onViewCreated: _onSceneCreated,
                 ),
-                ElevatedButton.icon(
-                  onPressed: _addCube,
-                  icon: const Icon(Icons.square_outlined),
-                  label: const Text('Add Cube'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _controller.clearScene(),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Clear'),
-                ),
+                if (!_sceneReady)
+                  const Center(child: CircularProgressIndicator()),
               ],
             ),
+          ),
+          _buildModelSelector(),
+          _buildActionBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModelSelector() {
+    return SizedBox(
+      height: 80,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        itemCount: _models.length,
+        itemBuilder: (context, index) {
+          final model = _models[index];
+          final isSelected = index == _selectedModelIndex;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: ChoiceChip(
+              avatar: Icon(model.icon, size: 20),
+              label: Text(model.name),
+              selected: isSelected,
+              onSelected: (_) {
+                setState(() => _selectedModelIndex = index);
+                _loadModel(index);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildActionBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          FilledButton.icon(
+            onPressed: _sceneReady ? () => _loadModel(_selectedModelIndex) : null,
+            icon: const Icon(Icons.view_in_ar),
+            label: const Text('Load Model'),
+          ),
+          FilledButton.tonalIcon(
+            onPressed: _sceneReady ? _addCube : null,
+            icon: const Icon(Icons.square_outlined),
+            label: const Text('Add Cube'),
           ),
         ],
       ),
@@ -78,11 +159,15 @@ class _ModelViewerPageState extends State<ModelViewerPage> {
       type: 'directional',
       intensity: 100000,
     ));
+    setState(() => _sceneReady = true);
+    // Load the first model automatically
+    _loadModel(0);
   }
 
-  void _loadHelmet() {
-    _controller.loadModel(const ModelNode(
-      modelPath: 'models/damaged_helmet.glb',
+  void _loadModel(int index) {
+    _controller.clearScene();
+    _controller.loadModel(ModelNode(
+      modelPath: _models[index].path,
     ));
   }
 
