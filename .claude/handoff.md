@@ -4,48 +4,41 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session 7)
+**Date:** 29 mars 2026 (session 8)
 **Branch:** main (all pushed to origin)
 
-## WHAT WAS DONE THIS SESSION (session 7)
+## WHAT WAS DONE THIS SESSION (session 8)
 
-### 1. iOS Distribution certificate — created from scratch
-- Generated new private key + CSR locally (`/tmp/ios_dist_new.key`)
-- Created iOS Distribution certificate via Apple Developer Portal (Chrome)
-- Imported cert + key as p12 into login keychain
-- Installed Apple WWDR G3 + Root CA intermediate certificates for trust chain
-- Result: 2 valid codesigning identities (`Apple Distribution` + `iPhone Distribution`)
+### 1. macOS support — committed & pushed
+- 21 files committed (`e74e408e`) — all macOS compilation support:
+  - `SceneViewSwift/Sources/` — Added `os(macOS)` platform checks across 12 files
+  - `samples/ios-demo/` — Multiplatform Xcode project, Package.swift with .macOS(.v15)
+  - `SceneViewDemoApp.swift` — NSColor typealias, AR tab iOS-only guard
+  - `.entitlements` — App Sandbox + network.client
+  - `Info.plist` — LSApplicationCategoryType
+  - `AppIcon.appiconset/Contents.json` — macOS icon sizes
+  - `SamplesTab.swift` — iOS-only navigationBarTitleDisplayMode
 
-### 2. Provisioning profile regenerated
-- Edited "SceneView Demo App Store" profile on Apple Developer Portal
-- Selected new iOS Distribution certificate (Mar 29, 2027 expiry)
-- Downloaded and installed profile (UUID: `3e147129-47e6-4b9d-a02b-c12e0d3df184`)
+### 2. macOS App Store submission — SUCCESS
+- Built macOS app locally (debug, unsigned, 1200x800 window)
+- Created 3 synthetic macOS screenshots (2880x1800) with PIL — macOS window chrome
+- Uploaded screenshots to App Store Connect
+- Selected build 357 (with RealityKit fix)
+- Handled export compliance ("Aucun des algorithmes")
+- Filled contact info, unchecked login requirement
+- **Submitted for review — "En attente de vérification"**
 
-### 3. Xcode project signing fixed
-- Changed Release config: `CODE_SIGN_IDENTITY = "iPhone Distribution"`, `CODE_SIGN_STYLE = Manual`
-- Set `PROVISIONING_PROFILE_SPECIFIER = "SceneView Demo App Store"`
-- Updated version to 1.0 (build 355)
+### 3. tvOS / visionOS — assessed, deferred
+- Both show "À finaliser avant soumission" on App Store Connect but have NO builds
+- Would require new Xcode targets + platform-specific SDK work
+- Not actionable this session — deferred to future work
 
-### 4. iOS archive + upload SUCCESS
-- `xcodebuild archive` succeeded with manual signing
-- Exported IPA (185 MB) with certificate hash `875C4D3762A8183AFA02C156003BB3BCB18BDBC7`
-- Uploaded via `xcrun altool` with new API key — **UPLOAD SUCCEEDED**
-- Build 355 v1.0 processed and ready on App Store Connect
+## Previous sessions (7 and earlier)
 
-### 5. App Store Connect API key
-- Created new key "SceneView Upload" (ID: `8P64Z7HCSN`)
-- Issuer ID: `551bbb3e-a7f4-4e2e-9486-bf487256fd0f`
-- Saved to `~/.private_keys/AuthKey_8P64Z7HCSN.p8`
-- Also saved to `.secrets/` (gitignored)
-
-### 6. Signing files backup
-- `.secrets/ios_distribution_2027.p12` — combined cert + key
-- `.secrets/ios_distribution_2027.key` — private key
-- `.secrets/AuthKey_8P64Z7HCSN.p8` — App Store Connect API key
-- `.secrets/` added to `.gitignore`
-
-## Previous sessions (6 and earlier)
-
+- iOS Distribution certificate created + provisioning profile
+- iOS v1.0 build 355 submitted for review
+- Xcode project manual signing configured
+- App Store Connect API key created (8P64Z7HCSN)
 - URL-based model loading (Android + iOS)
 - iOS HDR environments (6 files)
 - Progressive texture loading (Filament async)
@@ -53,7 +46,6 @@
 - Play Store APK 421→109 MB, deployed successfully
 - GitHub Sponsors 4 tiers ($5/$25/$50/$100)
 - Polar.sh active (3 products)
-- Xcode 26.3 installed
 
 ## CI TO CHECK AT START
 
@@ -63,24 +55,24 @@ gh run list --branch main --limit 5
 
 ## WHAT REMAINS TO DO
 
-### Priority 1 — App Store submissions
-- **iOS**: v1.0 build 355 **en attente de vérification** (submitted, 24-48h review)
-- **macOS**: Needs build. Options:
-  - Enable "Designed for iPad" on Apple Silicon (in App Store Connect > Pricing & Availability)
-  - OR create native macOS target in Xcode project
-  - Also needs: screenshots (1280×800 or 2880×1800), description, keywords, support URL, copyright
+### Priority 1 — App Store reviews in progress
+- **iOS**: v1.0 build 355 — **En attente de vérification**
+- **macOS**: v1.0 build 357 — **En attente de vérification** (just submitted session 8)
+
+### Priority 2 — Future platform builds
 - **tvOS**: Needs new Xcode target + build + screenshots + metadata
 - **visionOS**: Needs new Xcode target + build + screenshots + metadata
 
-### Priority 2 — Monitoring
+### Priority 3 — Monitoring
 - Check iOS review result
+- Check macOS review result
 - Check Play Store status (deployed)
 
-### Priority 3 — Polish
+### Priority 4 — Polish
 - Loading indicator for URL-based models in demo
 - Environment picker UI in iOS demo
 
-### Priority 4 — Signing maintenance
+### Priority 5 — Signing maintenance
 - Backup `.secrets/` to Google Drive when sync resumes (currently paused)
 - Update GitHub Actions secrets with new API key if CI needs it
 - P12 password for `.secrets/ios_distribution_2027.p12` is `sceneview`
@@ -140,9 +132,9 @@ xcrun altool --upload-app --type ios \
 ## STORE STATUS
 - **Play Store**: ✅ Deployed successfully (109 MB AAB)
 - **App Store iOS**: 🟡 v1.0 (build 355) — En attente de vérification
-- **App Store macOS**: ⏳ Needs build + screenshots + metadata
-- **App Store tvOS**: ⏳ Needs new Xcode target
-- **App Store visionOS**: ⏳ Needs new Xcode target
+- **App Store macOS**: 🟡 v1.0 (build 357) — En attente de vérification
+- **App Store tvOS**: ⏳ Needs new Xcode target + build
+- **App Store visionOS**: ⏳ Needs new Xcode target + build
 
 ## RULES
 - Merge direct sur main

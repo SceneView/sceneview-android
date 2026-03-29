@@ -43,6 +43,7 @@ struct ExploreTab: View {
     @State private var showControls = true
     @State private var loadedModel: ModelNode?
     @State private var isLoading = false
+    @State private var selectedEnvironment: SceneEnvironment = .studio
 
     var body: some View {
         ZStack {
@@ -116,15 +117,17 @@ struct ExploreTab: View {
             SceneView { root in
                 buildContent(into: root)
             }
+            .environment(selectedEnvironment)
             .cameraControls(.orbit)
             .autoRotate(speed: 0.4)
-            .id("model-\(selectedIndex)-auto-\(loadedModel != nil)")
+            .id("model-\(selectedIndex)-auto-\(loadedModel != nil)-\(selectedEnvironment.name)")
         } else {
             SceneView { root in
                 buildContent(into: root)
             }
+            .environment(selectedEnvironment)
             .cameraControls(.orbit)
-            .id("model-\(selectedIndex)-manual-\(loadedModel != nil)")
+            .id("model-\(selectedIndex)-manual-\(loadedModel != nil)-\(selectedEnvironment.name)")
         }
     }
 
@@ -193,6 +196,34 @@ struct ExploreTab: View {
 
     private var controlsOverlay: some View {
         VStack(spacing: 12) {
+            // Environment selector
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(SceneEnvironment.allPresets, id: \.name) { env in
+                        Button {
+                            selectedEnvironment = env
+                            #if os(iOS)
+                            HapticManager.lightTap()
+                            #endif
+                        } label: {
+                            Text(env.name)
+                                .font(.caption2)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    selectedEnvironment.name == env.name
+                                        ? AnyShapeStyle(.blue)
+                                        : AnyShapeStyle(.white.opacity(0.15))
+                                )
+                                .clipShape(Capsule())
+                                .foregroundStyle(.white)
+                        }
+                        .accessibilityLabel("Environment: \(env.name)")
+                        .accessibilityAddTraits(selectedEnvironment.name == env.name ? .isSelected : [])
+                    }
+                }
+            }
+
             // Model selector
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
