@@ -162,9 +162,16 @@ public struct ModelNode: @unchecked Sendable {
     }
 
     /// Whether any animation is currently playing.
+    ///
+    /// - Note: RealityKit does not expose a direct API to query active playback
+    ///   controllers. This returns `true` if an `AnimationComponent` is present
+    ///   and animations are available, which is a reliable heuristic after
+    ///   calling `playAllAnimations()` or `playAnimation(at:)`.
+    ///   For precise tracking, retain the `AnimationPlaybackController` returned
+    ///   by `entity.playAnimation(_:)` and check its `.isComplete` property.
     public var isAnimating: Bool {
-        // Check if entity has active animation playback controllers
-        !entity.availableAnimations.isEmpty
+        entity.components[AnimationComponent.self] != nil
+            && !entity.availableAnimations.isEmpty
     }
 
     /// Plays all animations on the model.

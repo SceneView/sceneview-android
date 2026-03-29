@@ -1,9 +1,9 @@
-// swift-tools-version:5.9
+// swift-tools-version:5.10
 import PackageDescription
 
 let package = Package(
     name: "SceneViewDemo",
-    platforms: [.iOS(.v17)],
+    platforms: [.iOS(.v18)],
     dependencies: [
         .package(name: "SceneViewSwift", path: "../../SceneViewSwift")
     ],
