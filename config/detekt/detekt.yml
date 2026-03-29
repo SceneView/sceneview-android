@@ -1,0 +1,58 @@
+# Detekt configuration for SceneView
+# Builds upon the default config — only overrides are listed here.
+
+complexity:
+  LongParameterList:
+    # Compose functions and Filament builders legitimately have many parameters
+    functionThreshold: 12
+    constructorThreshold: 12
+    ignoreAnnotated:
+      - 'Composable'
+  TooManyFunctions:
+    # Node types and scope objects expose many public functions by design
+    thresholdInFiles: 25
+    thresholdInClasses: 25
+    thresholdInInterfaces: 25
+  LargeClass:
+    threshold: 800
+  CyclomaticComplexMethod:
+    threshold: 25
+
+style:
+  MagicNumber:
+    # 3D code is full of legitimate numeric constants (coordinates, angles, etc.)
+    active: false
+  UnusedPrivateMember:
+    active: true
+    allowedNames: '(_.*|serialVersionUID)'
+  MaxLineLength:
+    maxLineLength: 120
+    excludeCommentStatements: true
+  WildcardImport:
+    active: false
+  ReturnCount:
+    max: 5
+  ForbiddenComment:
+    active: false
+
+naming:
+  FunctionNaming:
+    # Compose functions are PascalCase by convention
+    ignoreAnnotated:
+      - 'Composable'
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+
+potential-bugs:
+  HasPlatformType:
+    active: true
+
+performance:
+  SpreadOperator:
+    # Acceptable in build/config code, not hot paths
+    active: false
+
+exceptions:
+  TooGenericExceptionCaught:
+    # Filament JNI can throw generic exceptions that need catching
+    active: false
