@@ -20,7 +20,8 @@ Same concepts, same simplicity — Android, iOS, Web, Desktop, TV, Flutter, Reac
 [![GitHub Stars](https://img.shields.io/github/stars/sceneview/sceneview?style=flat&color=yellow&logo=github)](https://github.com/sceneview/sceneview/stargazers)
 [![GitHub Release](https://img.shields.io/github/v/release/sceneview/sceneview?label=Release&color=1a73e8&logo=github)](https://github.com/sceneview/sceneview/releases/latest)
 [![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=discord&logoColor=ffffff)](https://discord.gg/UbNDDBTNqb)
-[![Sponsors](https://img.shields.io/github/sponsors/ThomasGorisse?label=Sponsors&color=ea4aaa&logo=githubsponsors)](https://github.com/sponsors/ThomasGorisse)
+[![Sponsors](https://img.shields.io/github/sponsors/sceneview?label=Sponsors&color=ea4aaa&logo=githubsponsors)](https://github.com/sponsors/sceneview)
+[![Open Collective](https://img.shields.io/opencollective/all/sceneview?label=Backers&color=7FADF2&logo=opencollective)](https://opencollective.com/sceneview)
 
 ---
 
@@ -307,5 +308,12 @@ sceneview-core (Kotlin Multiplatform)
 
 ## Support
 
-- [GitHub Sponsors](https://github.com/sponsors/ThomasGorisse) — [Sponsors](SPONSORS.md)
-- [SceneView Pro](https://sceneview.github.io/#pro) — Premium tools and templates
+SceneView is free and open source. Sponsors help keep it maintained across 9 platforms.
+
+| | Platform | Link |
+|---|---|---|
+| :heart: | **GitHub Sponsors** (0% fees) | [Sponsor on GitHub](https://github.com/sponsors/sceneview) |
+| :blue_heart: | **Open Collective** (transparent) | [opencollective.com/sceneview](https://opencollective.com/sceneview) |
+| :rocket: | **Polar** (fund features) | [polar.sh/sceneview](https://polar.sh/sceneview) |
+
+See [SPONSORS.md](SPONSORS.md) for tiers and current sponsors.

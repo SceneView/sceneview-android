@@ -40,7 +40,19 @@ private val MODELS = linkedMapOf(
     "Cyberpunk Car" to "models/cyberpunk_car.glb",
     "Fantasy Book" to "models/fantasy_book.glb",
     "Retro Piano" to "models/retro_piano.glb",
-    "Mosquito Amber" to "models/mosquito_amber.glb"
+    "Mosquito Amber" to "models/mosquito_amber.glb",
+    "Shelby Cobra" to "models/shelby_cobra.glb",
+    "Audi TT" to "models/audi_tt.glb",
+    "Earthquake" to "models/earthquake_california.glb",
+    "Lamborghini" to "models/lamborghini_countach.glb",
+    "Nike Jordan" to "models/nike_air_jordan.glb",
+    "Ferrari F40" to "models/ferrari_f40.glb",
+    "Porsche Turbo" to "models/porsche_911_turbo.glb",
+    "PS5 Controller" to "models/ps5_dualsense.glb",
+    "Cybertruck" to "models/tesla_cybertruck.glb",
+    "Mercedes AMG" to "models/mercedes_a45_amg.glb",
+    "Switch" to "models/nintendo_switch.glb",
+    "BMW M3 E30" to "models/bmw_m3_e30.glb"
 )
 
 private var currentSceneView: SceneView? = null

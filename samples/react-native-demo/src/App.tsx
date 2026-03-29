@@ -63,6 +63,86 @@ const MODELS: ModelEntry[] = [
       animation: 'ArmatureAction',
     },
   },
+  {
+    label: 'Shelby Cobra',
+    node: {
+      src: 'models/shelby_cobra.glb',
+      position: [0, -0.5, -3],
+      scale: [0.5, 0.5, 0.5],
+    },
+  },
+  {
+    label: 'Audi TT',
+    node: {
+      src: 'models/audi_tt.glb',
+      position: [0, -0.5, -2.5],
+      scale: [0.6, 0.6, 0.6],
+    },
+  },
+  {
+    label: 'Earthquake',
+    node: {
+      src: 'models/earthquake_california.glb',
+      position: [0, -1, -4],
+      scale: [0.3, 0.3, 0.3],
+    },
+  },
+  {
+    label: 'Lamborghini',
+    node: {
+      src: 'models/lamborghini_countach.glb',
+      position: [0, -0.5, -3],
+      scale: [0.4, 0.4, 0.4],
+    },
+  },
+  {
+    label: 'Nike Jordan',
+    node: {
+      src: 'models/nike_air_jordan.glb',
+      position: [0, 0, -1.5],
+      scale: [0.8, 0.8, 0.8],
+    },
+  },
+  {
+    label: 'Ferrari F40',
+    node: {
+      src: 'models/ferrari_f40.glb',
+      position: [0, -0.5, -3],
+      scale: [0.5, 0.5, 0.5],
+    },
+  },
+  {
+    label: 'PS5 Controller',
+    node: {
+      src: 'models/ps5_dualsense.glb',
+      position: [0, 0, -2],
+      scale: [0.7, 0.7, 0.7],
+    },
+  },
+  {
+    label: 'Cybertruck',
+    node: {
+      src: 'models/tesla_cybertruck.glb',
+      position: [0, -0.5, -3],
+      scale: [0.5, 0.5, 0.5],
+    },
+  },
+  {
+    label: 'Switch',
+    node: {
+      src: 'models/nintendo_switch.glb',
+      position: [0, 0, -1.5],
+      scale: [0.8, 0.8, 0.8],
+    },
+  },
+  {
+    label: 'BMW M3 E30',
+    node: {
+      src: 'models/bmw_m3_e30.glb',
+      position: [0, -0.5, -3],
+      scale: [0.5, 0.5, 0.5],
+    },
+  },
 ];
 
 const ENVIRONMENT = 'environments/studio_small.hdr';

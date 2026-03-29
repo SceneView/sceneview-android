@@ -1,52 +1,69 @@
 # Sponsors & Supporters
 
-SceneView is free and open source. Development is supported by generous sponsors.
+SceneView is free and open source. Development is funded by generous sponsors.
 
-## Enterprise Sponsors — $200/month
+Funds go directly toward maintaining SceneView, fixing bugs, adding features,
+and keeping the SDK up to date across all 9 platforms.
+
+---
+
+## Sponsor SceneView
+
+| Tier | Price | Benefits |
+|------|-------|----------|
+| **Supporter** | $5/mo | Name in SPONSORS.md, sponsor badge |
+| **Pro Developer** | $15/mo | + Priority issues, roadmap voting, private Discord |
+| **Team** | $50/mo | + Logo on README and website, 1 priority bug fix/month |
+| **Enterprise** | $200/mo | + Logo on hero section, monthly support call, priority features |
+
+### How to sponsor
+
+| Platform | Link | Fees |
+|----------|------|------|
+| **GitHub Sponsors** | [github.com/sponsors/sceneview](https://github.com/sponsors/sceneview) | 0% (GitHub absorbs fees) |
+| **Open Collective** | [opencollective.com/sceneview](https://opencollective.com/sceneview) | 10% fiscal host + processing |
+| **Polar** | [polar.sh/sceneview](https://polar.sh/sceneview) | 5% + processing |
+
+GitHub Sponsors is the most cost-effective (zero platform fees).
+Open Collective provides full expense transparency and corporate invoicing.
+Polar lets you fund specific features via issue funding.
+
+---
+
+## Enterprise Sponsors
 
 > Logo on website hero, monthly support call, priority feature requests
 
 <!-- Enterprise sponsor logos here -->
 
-*Become the first enterprise sponsor — [get in touch](https://github.com/sponsors/ThomasGorisse)*
+*Become the first enterprise sponsor — [get in touch](https://github.com/sponsors/sceneview)*
 
-## Team Sponsors — $50/month
+## Team Sponsors
 
 > Logo on README and website, 1 priority bug fix/month, pre-release access
 
 <!-- Team sponsor logos here -->
 
-*No team sponsors yet — [become one!](https://github.com/sponsors/ThomasGorisse)*
+*No team sponsors yet — [become one!](https://github.com/sponsors/sceneview)*
 
-## Pro Developers — $15/month
+## Backers
 
-> Priority issue responses, roadmap voting, private Discord channel
+Thank you to all our backers!
 
-<!-- Pro developer names here -->
+<!-- backers will be listed here -->
 
-*No pro developer sponsors yet — [join!](https://github.com/sponsors/ThomasGorisse)*
-
-## Supporters — $5/month
-
-> Name listed here, sponsor badge, early release notes
-
-<!-- Supporter names here -->
-
-*No supporters yet — [be the first!](https://github.com/sponsors/ThomasGorisse)*
+[![Backers on Open Collective](https://opencollective.com/sceneview/backers/badge.svg)](https://opencollective.com/sceneview#backers)
 
 ---
 
-## Become a Sponsor
+## Where the money goes
 
-| Tier | Price | Benefits |
-|------|-------|----------|
-| **Supporter** | $5/mo | Name in SPONSORS.md, sponsor badge, early release notes |
-| **Pro Developer** | $15/mo | + Priority issues, roadmap voting, private Discord |
-| **Team** | $50/mo | + Logo on README/website, 1 priority bug fix/month |
-| **Enterprise** | $200/mo | + Logo on hero, monthly support call, priority features |
+SceneView uses donations to pay for:
 
-[**Sponsor SceneView on GitHub**](https://github.com/sponsors/ThomasGorisse)
+- **AI tooling** — Claude Max subscription for AI-assisted development
+- **Infrastructure** — Hosting, domains, CI/CD
+- **3D assets** — Models and environments for demo apps
+- **Marketing** — Reaching more developers
+- **Hardware** — Devices for testing across platforms
 
-Funds go directly toward maintaining SceneView, fixing bugs, adding features,
-and keeping the documentation up to date across all platforms
-(Android, iOS, Web, Desktop, Flutter, React Native).
+All expenses are transparent on [Open Collective](https://opencollective.com/sceneview).

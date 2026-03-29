@@ -122,6 +122,18 @@ private val exploreModels = listOf(
     ExploreModel("Antique Camera", "models/khronos_antique_camera.glb", 0.7f, 2.5f),
     ExploreModel("Corset", "models/khronos_corset.glb", 0.8f, 2.5f),
     ExploreModel("Crystal Dragon", "models/khronos_dragon_attenuation.glb", 0.6f, 3.0f),
+    ExploreModel("Shelby Cobra", "models/shelby_cobra.glb", 0.6f, 4.0f),
+    ExploreModel("Audi TT", "models/audi_tt.glb", 0.7f, 3.5f),
+    ExploreModel("Earthquake", "models/earthquake_california.glb", 0.4f, 5.0f),
+    ExploreModel("Lamborghini", "models/lamborghini_countach.glb", 0.5f, 4.0f),
+    ExploreModel("Nike Jordan", "models/nike_air_jordan.glb", 0.8f, 2.0f),
+    ExploreModel("Ferrari F40", "models/ferrari_f40.glb", 0.6f, 4.0f),
+    ExploreModel("Porsche Turbo", "models/porsche_911_turbo.glb", 0.5f, 4.0f),
+    ExploreModel("PS5 Controller", "models/ps5_dualsense.glb", 0.8f, 2.5f),
+    ExploreModel("Cybertruck", "models/tesla_cybertruck.glb", 0.6f, 4.0f),
+    ExploreModel("Mercedes AMG", "models/mercedes_a45_amg.glb", 0.5f, 4.0f),
+    ExploreModel("Switch", "models/nintendo_switch.glb", 0.8f, 2.5f),
+    ExploreModel("BMW M3 E30", "models/bmw_m3_e30.glb", 0.6f, 4.0f),
 )
 
 @Composable

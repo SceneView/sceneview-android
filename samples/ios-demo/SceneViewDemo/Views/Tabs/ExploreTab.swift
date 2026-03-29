@@ -24,6 +24,18 @@ struct ExploreTab: View {
         ("Porsche 911", "car.fill", "porsche_911", 0.6),
         ("Black Dragon", "lizard.fill", "black_dragon", 0.5),
         ("Fiat Punto", "car.rear.fill", "fiat_punto", 0.7),
+        ("Shelby Cobra", "car.fill", "shelby_cobra", 0.6),
+        ("Audi TT", "car.side.fill", "audi_tt", 0.7),
+        ("Earthquake", "waveform.path", "earthquake_california", 0.4),
+        ("Lamborghini", "car.fill", "lamborghini_countach", 0.5),
+        ("Nike Jordan", "shoe.fill", "nike_air_jordan", 0.8),
+        ("Ferrari F40", "car.fill", "ferrari_f40", 0.6),
+        ("Porsche Turbo", "car.side.fill", "porsche_911_turbo", 0.5),
+        ("PS5 Controller", "gamecontroller.fill", "ps5_dualsense", 0.8),
+        ("Cybertruck", "truck.box.fill", "tesla_cybertruck", 0.6),
+        ("Mercedes AMG", "car.rear.fill", "mercedes_a45_amg", 0.5),
+        ("Switch", "gamecontroller.fill", "nintendo_switch", 0.8),
+        ("BMW M3 E30", "car.fill", "bmw_m3_e30", 0.6),
     ]
 
     @State private var selectedIndex = 0
