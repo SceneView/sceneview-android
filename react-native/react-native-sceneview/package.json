@@ -1,6 +1,6 @@
 {
   "name": "react-native-sceneview",
-  "version": "3.4.7",
+  "version": "3.5.0",
   "description": "React Native bindings for SceneView — 3D and AR scenes powered by Filament (Android) and RealityKit (iOS)",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
