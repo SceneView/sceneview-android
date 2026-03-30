@@ -47,18 +47,18 @@ Glassmorphism adds depth and layering to surfaces that float over content (nav, 
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `primary` | #1a73e8 | #8ab4f8 | Links, buttons, accents |
-| `primary-hover` | #1557b0 | #aecbfa | Interactive hover states |
-| `primary-light` | rgba(26,115,232,0.08) | rgba(138,180,248,0.10) | Subtle backgrounds |
-| `primary-subtle` | rgba(26,115,232,0.12) | rgba(138,180,248,0.15) | Borders, overlays |
+| `primary` | #005bc1 | #a4c1ff | Links, buttons, accents |
+| `primary-hover` | #0050aa | #b8d0ff | Interactive hover states |
+| `primary-light` | rgba(0,91,193,0.08) | rgba(164,193,255,0.10) | Subtle backgrounds |
+| `primary-subtle` | rgba(0,91,193,0.12) | rgba(164,193,255,0.15) | Borders, overlays |
 
 ### Brand Gradient
 
 | Token | Value | Usage |
 |---|---|---|
-| `gradient-hero` | `linear-gradient(135deg, #1565c0 0%, #5b3cc4 100%)` | Hero headings (light) |
-| `gradient-hero-dark` | `linear-gradient(135deg, #8ab4f8 0%, #bb86fc 100%)` | Hero headings (dark) |
-| `gradient-hero-alt` | `linear-gradient(135deg, #1a73e8 0%, #6c4fe8 100%)` | Secondary hero treatment |
+| `gradient-hero` | `linear-gradient(135deg, #005bc1 0%, #6446cd 100%)` | Hero headings (light) |
+| `gradient-hero-dark` | `linear-gradient(135deg, #a4c1ff 0%, #d2a8ff 100%)` | Hero headings (dark) |
+| `gradient-hero-alt` | `linear-gradient(135deg, #0d419d 0%, #5a32a3 100%)` | Secondary hero treatment |
 
 ### Surfaces
 

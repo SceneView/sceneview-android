@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- SceneView brand blue — dark mode variant -->
-    <color name="md_theme_primary">#8AB4F8</color>
-    <color name="md_theme_onPrimary">#003258</color>
-    <color name="md_theme_primaryContainer">#004880</color>
-    <color name="md_theme_secondary">#C3C7CF</color>
+    <!-- SceneView M3 Expressive — Dark (GitHub-dark inspired, from Stitch design system) -->
+    <color name="md_theme_primary">#A4C1FF</color>
+    <color name="md_theme_onPrimary">#002F64</color>
+    <color name="md_theme_primaryContainer">#00448D</color>
+    <color name="md_theme_onPrimaryContainer">#D6E3FF</color>
+    <color name="md_theme_secondary">#BDC7DC</color>
+    <color name="md_theme_onSecondary">#273141</color>
+    <color name="md_theme_secondaryContainer">#3D4758</color>
+    <color name="md_theme_tertiary">#D2A8FF</color>
+    <color name="md_theme_onTertiary">#37139B</color>
+    <color name="md_theme_tertiaryContainer">#4D2CB4</color>
+    <color name="md_theme_surface">#111318</color>
+    <color name="md_theme_onSurface">#E2E2E9</color>
+    <color name="md_theme_error">#FFB4AB</color>
+    <color name="md_theme_onError">#690005</color>
+
+    <!-- Status colors — dark variants -->
+    <color name="status_stable">#56D364</color>
+    <color name="status_beta">#58A6FF</color>
+    <color name="status_alpha">#BC8CFF</color>
 </resources>
