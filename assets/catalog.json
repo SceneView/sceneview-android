@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "_comment": "SceneView shared 3D asset catalog. Source of truth for all demo assets across platforms.",
   "version": "1.0.0",
-  "lastUpdated": "2026-03-29",
+  "lastUpdated": "2026-03-30",
   "sources": {
     "sketchfab": {
       "apiBase": "https://api.sketchfab.com/v3",
@@ -581,6 +581,304 @@
       "usedIn": ["android-demo"],
       "defaultScale": 0.6,
       "cameraDistance": 3.0
+    },
+    {
+      "id": "shiba",
+      "name": "Shiba",
+      "source": "sketchfab",
+      "sourceId": "faef9fe5ace445e7b2989d1c1ece361c",
+      "sourceUrl": "https://sketchfab.com/3d-models/shiba-faef9fe5ace445e7b2989d1c1ece361c",
+      "author": "zixisun51",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/shiba.glb", "size": "721KB" },
+        "usdz": { "file": "models/usdz/shiba.usdz", "size": "376KB" }
+      },
+      "tags": ["shiba", "dog", "animal", "cute", "low-poly"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 1.0,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "animated_cat",
+      "name": "An Animated Cat",
+      "source": "sketchfab",
+      "sourceId": "aec25699660043a29595f9572149d1e8",
+      "sourceUrl": "https://sketchfab.com/3d-models/an-animated-cat-aec25699660043a29595f9572149d1e8",
+      "author": "Evil_Katz",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_cat.glb", "size": "3.0MB" },
+        "usdz": { "file": "models/usdz/animated_cat.usdz", "size": "1.7MB" }
+      },
+      "tags": ["cat", "animated", "animal", "cute", "pet"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "animated_trex",
+      "name": "Animated T-Rex Dinosaur Biting Attack Loop",
+      "source": "sketchfab",
+      "sourceId": "5bbcadb7d9274843abb5ada35767dba1",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-t-rex-dinosaur-biting-attack-loop-5bbcadb7d9274843abb5ada35767dba1",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_trex.glb", "size": "6.3MB" },
+        "usdz": { "file": "models/usdz/animated_trex.usdz", "size": "5.8MB" }
+      },
+      "tags": ["trex", "dinosaur", "animated", "attack", "prehistoric", "creature"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.5,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "animated_astronaut",
+      "name": "Animated Floating Astronaut in Space Suit Loop",
+      "source": "sketchfab",
+      "sourceId": "e2c4b146e58141e4b87917456a9970b1",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-floating-astronaut-in-space-suit-loop-e2c4b146e58141e4b87917456a9970b1",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_astronaut.glb", "size": "19MB" },
+        "usdz": { "file": "models/usdz/animated_astronaut.usdz", "size": "7.1MB" }
+      },
+      "tags": ["astronaut", "space", "animated", "floating", "sci-fi"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.7,
+      "cameraDistance": 3.0
+    },
+    {
+      "id": "monstera_plant",
+      "name": "Monstera Deliciosa Potted Mid-Century Plant",
+      "source": "sketchfab",
+      "sourceId": "1ab9bf841df04c07b1819be596327629",
+      "sourceUrl": "https://sketchfab.com/3d-models/monstera-deliciosa-potted-mid-century-plant-1ab9bf841df04c07b1819be596327629",
+      "author": "ChubbyPanda",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/monstera_plant.glb", "size": "7.8MB" },
+        "usdz": { "file": "models/usdz/monstera_plant.usdz", "size": "3.5MB" }
+      },
+      "tags": ["monstera", "plant", "nature", "indoor", "tropical", "decor"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "mushroom_potion",
+      "name": "Mushroom Potion",
+      "source": "sketchfab",
+      "sourceId": "731600a7ec984f06a7f8ea248850859a",
+      "sourceUrl": "https://sketchfab.com/3d-models/mushroom-potion-731600a7ec984f06a7f8ea248850859a",
+      "author": "Ergoni",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/mushroom_potion.glb", "size": "3.5MB" },
+        "usdz": { "file": "models/usdz/mushroom_potion.usdz", "size": "2.0MB" }
+      },
+      "tags": ["mushroom", "potion", "fantasy", "cute", "magic"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.9,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "animated_pterodactyl",
+      "name": "Animated Flying Pterodactyl Dinosaur Loop",
+      "source": "sketchfab",
+      "sourceId": "09f6b1ff7bfd4a2d8d9c0b9827f2a708",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-flying-pteradactal-dinosaur-loop-09f6b1ff7bfd4a2d8d9c0b9827f2a708",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_pterodactyl.glb", "size": "5.4MB" },
+        "usdz": { "file": "models/usdz/animated_pterodactyl.usdz", "size": "5.6MB" }
+      },
+      "tags": ["pterodactyl", "dinosaur", "animated", "flying", "prehistoric"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.6,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "animated_bee",
+      "name": "Animated Bee Flying Landing Loop",
+      "source": "sketchfab",
+      "sourceId": "a39c45911dab421da0de51672c7a8f62",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-bee-flying-landing-loop-a39c45911dab421da0de51672c7a8f62",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_bee.glb", "size": "7.3MB" },
+        "usdz": { "file": "models/usdz/animated_bee.usdz", "size": "8.1MB" }
+      },
+      "tags": ["bee", "insect", "animated", "nature", "flying"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "animated_hummingbird",
+      "name": "Animated Hovering Flying Hummingbird Loop",
+      "source": "sketchfab",
+      "sourceId": "102884713a2742ce829e368d2a790c45",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-hovering-flying-hummingbird-loop-102884713a2742ce829e368d2a790c45",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_hummingbird.glb", "size": "5.8MB" },
+        "usdz": { "file": "models/usdz/animated_hummingbird.usdz", "size": "7.6MB" }
+      },
+      "tags": ["hummingbird", "bird", "animated", "nature", "flying"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "animated_shark",
+      "name": "Animated Swimming Great White Shark Loop",
+      "source": "sketchfab",
+      "sourceId": "297ed35c6a5f43749b0ae189d991a3f1",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-swimming-great-white-shark-loop-297ed35c6a5f43749b0ae189d991a3f1",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_shark.glb", "size": "7.3MB" },
+        "usdz": { "file": "models/usdz/animated_shark.usdz", "size": "4.8MB" }
+      },
+      "tags": ["shark", "ocean", "animated", "swimming", "predator"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.5,
+      "cameraDistance": 4.0
+    },
+    {
+      "id": "animated_dog",
+      "name": "Animated Dog Sits Rolls Over Shake Paw",
+      "source": "sketchfab",
+      "sourceId": "d9020159339145e6b9ecd5f3d830830f",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-dog-sits-rolls-over-shake-paw-d9020159339145e6b9ecd5f3d830830f",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_dog.glb", "size": "7.0MB" },
+        "usdz": { "file": "models/usdz/animated_dog.usdz", "size": "12.7MB" }
+      },
+      "tags": ["dog", "animal", "animated", "cute", "pet", "tricks"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.8,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "animated_tropical_fish",
+      "name": "Animated Swimming Tropical Fish School Loop",
+      "source": "sketchfab",
+      "sourceId": "62ccf83b35c744d7b5ffb7be80d4ea99",
+      "sourceUrl": "https://sketchfab.com/3d-models/animated-swimming-tropical-fish-school-loop-62ccf83b35c744d7b5ffb7be80d4ea99",
+      "author": "LasquetiSpice",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/animated_tropical_fish.glb", "size": "18MB" },
+        "usdz": { "file": "models/usdz/animated_tropical_fish.usdz", "size": "10MB" }
+      },
+      "tags": ["fish", "ocean", "animated", "tropical", "school", "underwater"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.6,
+      "cameraDistance": 3.5
+    },
+    {
+      "id": "choco_bunny",
+      "name": "Choco Bunny",
+      "source": "sketchfab",
+      "sourceId": "583deedf74ab4df4a3f102b123d3382e",
+      "sourceUrl": "https://sketchfab.com/3d-models/choco-bunny-583deedf74ab4df4a3f102b123d3382e",
+      "author": "Ergoni",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/choco_bunny.glb", "size": "2.1MB" },
+        "usdz": { "file": "models/usdz/choco_bunny.usdz", "size": "1.4MB" }
+      },
+      "tags": ["bunny", "chocolate", "cute", "holiday", "easter", "food"],
+      "usedIn": ["android-demo", "android-tv-demo", "ios-demo", "web-demo", "website", "flutter", "react-native"],
+      "defaultScale": 0.9,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "lowpoly_fruits",
+      "name": "Lowpoly Fruits & Vegetables",
+      "source": "sketchfab",
+      "sourceId": "d3be8fed96eb48be88b47bbe8d2951e1",
+      "sourceUrl": "https://sketchfab.com/3d-models/lowpoly-fruits-vegetables-d3be8fed96eb48be88b47bbe8d2951e1",
+      "author": "norgeotloic",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": null, "size": "145MB", "note": "Too large for repo (>50MB) — download on demand" },
+        "usdz": { "file": "models/usdz/lowpoly_fruits.usdz", "size": "9.7MB" }
+      },
+      "tags": ["fruits", "vegetables", "food", "low-poly", "colorful"],
+      "usedIn": ["ios-demo"],
+      "defaultScale": 0.5,
+      "cameraDistance": 3.0
+    },
+    {
+      "id": "khronos_fox",
+      "name": "Fox",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox",
+      "author": "KhronosGroup",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_fox.glb", "size": "159KB" }
+      },
+      "tags": ["fox", "animal", "animated", "reference", "khronos"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 0.5,
+      "cameraDistance": 2.5
+    },
+    {
+      "id": "khronos_avocado",
+      "name": "Avocado",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Avocado",
+      "author": "KhronosGroup",
+      "license": "CC0-1.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_avocado.glb", "size": "7.6MB" }
+      },
+      "tags": ["avocado", "food", "pbr", "reference", "khronos"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 1.0,
+      "cameraDistance": 1.5
+    },
+    {
+      "id": "khronos_boombox",
+      "name": "BoomBox",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/BoomBox",
+      "author": "KhronosGroup",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_boombox.glb", "size": "10MB" }
+      },
+      "tags": ["boombox", "electronics", "music", "pbr", "reference", "khronos"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 1.0,
+      "cameraDistance": 2.0
+    },
+    {
+      "id": "khronos_chronograph_watch",
+      "name": "Chronograph Watch",
+      "source": "khronos",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ChronographWatch",
+      "author": "KhronosGroup",
+      "license": "CC-BY-4.0",
+      "formats": {
+        "glb": { "file": "models/glb/khronos_chronograph_watch.glb", "size": "7.1MB" }
+      },
+      "tags": ["watch", "luxury", "detailed", "pbr", "reference", "khronos", "accessories"],
+      "usedIn": ["android-demo"],
+      "defaultScale": 1.0,
+      "cameraDistance": 1.5
     }
   ],
   "environments": [
