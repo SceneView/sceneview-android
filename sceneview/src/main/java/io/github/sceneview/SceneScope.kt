@@ -581,6 +581,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         size: Size? = null,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: ImageNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -595,6 +598,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         }
         SideEffect {
             node.bitmap = bitmap
+            node.position = position
+            node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -615,6 +621,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         size: Size? = null,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: ImageNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -626,6 +635,11 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 center = center,
                 normal = normal
             ).apply(apply)
+        }
+        SideEffect {
+            node.position = position
+            node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -646,6 +660,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         size: Size? = null,
         center: Position = Plane.DEFAULT_CENTER,
         normal: Direction = Plane.DEFAULT_NORMAL,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: ImageNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -657,6 +674,11 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 center = center,
                 normal = normal
             ).apply(apply)
+        }
+        SideEffect {
+            node.position = position
+            node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -684,6 +706,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         widthMeters: Float? = null,
         heightMeters: Float? = null,
         position: Position = Position(x = 0f),
+        scale: Scale = Scale(1f),
         cameraPositionProvider: (() -> Position)? = null,
         apply: BillboardNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
@@ -700,6 +723,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         SideEffect {
             node.bitmap = bitmap
             node.position = position
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -733,6 +757,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         widthMeters: Float = 0.6f,
         heightMeters: Float = 0.2f,
         position: Position = Position(x = 0f),
+        scale: Scale = Scale(1f),
         cameraPositionProvider: (() -> Position)? = null,
         apply: TextNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
@@ -757,6 +782,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             node.backgroundColor = backgroundColor
             node.typeface = typeface
             node.position = position
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -798,6 +824,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         player: MediaPlayer,
         chromaKeyColor: Int? = null,
         size: Size? = null,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: VideoNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -808,6 +837,11 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 chromaKeyColor = chromaKeyColor,
                 size = size
             ).apply(apply)
+        }
+        SideEffect {
+            node.position = position
+            node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
