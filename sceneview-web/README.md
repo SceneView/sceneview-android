@@ -29,6 +29,40 @@ SceneView.create(
 )
 ```
 
+## JavaScript API (sceneview.js v1.5.0)
+
+For browser usage without Kotlin, use `sceneview.js` directly:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview.js"></script>
+<script>
+  SceneView.modelViewer("canvas", "model.glb", {
+    backgroundColor: [0.05, 0.05, 0.08, 1],
+    lightIntensity: 150000,
+    fov: 35
+  });
+</script>
+```
+
+### Full API
+
+| Method | Description |
+|---|---|
+| `SceneView.modelViewer(canvas, url, options?)` | One-line 3D model viewer |
+| `SceneView.create(canvas, options?)` | Create instance for full API |
+| `instance.loadModel(url)` | Load glTF/GLB model |
+| `instance.setAutoRotate(enabled)` | Toggle auto-rotation |
+| `instance.setCameraDistance(d)` | Set orbit camera distance |
+| `instance.setBackgroundColor(r, g, b, a?)` | Set clear color |
+| `instance.setQuality('low'\|'medium'\|'high')` | AO + anti-aliasing quality |
+| `instance.setBloom(true\|false\|options)` | Bloom post-processing |
+| `instance.addLight(options)` | Add directional/point/spot light |
+| `instance.createText(options)` | Render text as 3D quad |
+| `instance.createImage(options)` | Render image as 3D quad |
+| `instance.createVideo(options)` | Stream video to 3D quad |
+| `instance.removeNode(entity)` | Remove node from scene |
+| `instance.dispose()` | Clean up resources |
+
 ## Features
 
 - Same Filament PBR renderer as Android (compiled to WASM)
@@ -37,7 +71,11 @@ SceneView.create(
 - Camera configuration (FOV, position, exposure)
 - Directional, point, and spot lights
 - Animation playback
-- Kotlin/JS DSL API
+- Quality presets (low/medium/high)
+- Bloom post-processing
+- Text, image, and video nodes
+- Billboard mode (always face camera)
+- Kotlin/JS DSL API + vanilla JavaScript API
 
 ## Requirements
 
