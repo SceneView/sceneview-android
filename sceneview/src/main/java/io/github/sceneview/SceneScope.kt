@@ -1,5 +1,6 @@
 package io.github.sceneview
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaPlayer
 import androidx.annotation.DrawableRes
@@ -9,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.platform.LocalContext
 import com.google.android.filament.Box
 import com.google.android.filament.Engine
 import com.google.android.filament.IndexBuffer
@@ -859,6 +861,68 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             node.scale = scale
         }
         NodeLifecycle(node, content)
+    }
+
+    /**
+     * Convenience overload that loads a video from an asset file path and manages the
+     * [MediaPlayer] lifecycle automatically.
+     *
+     * Mirrors the Android roadmap goal of `VideoNode(videoPath = "videos/promo.mp4", autoPlay = true)`.
+     * Internally uses [rememberMediaPlayer] for lifecycle management and [VideoNode] for rendering.
+     *
+     * ```kotlin
+     * Scene {
+     *     VideoNode(
+     *         videoPath = "videos/promo.mp4",
+     *         position = Position(z = -2f)
+     *     )
+     * }
+     * ```
+     *
+     * @param videoPath        Asset file path (e.g. `"videos/promo.mp4"`).
+     * @param autoPlay         Whether to start playback immediately. Default `true`.
+     * @param isLooping        Whether the video should loop. Default `true`.
+     * @param chromaKeyColor   Optional ARGB chroma-key colour for green-screen compositing.
+     * @param size             Fixed plane size in world units. `null` = auto-size from video.
+     * @param position         World-space position.
+     * @param rotation         World-space rotation.
+     * @param scale            World-space scale.
+     * @param apply            Additional configuration on the [VideoNodeImpl] instance.
+     * @param content          Optional child nodes in a [NodeScope].
+     */
+    @ExperimentalSceneViewApi
+    @Composable
+    fun VideoNode(
+        videoPath: String,
+        autoPlay: Boolean = true,
+        isLooping: Boolean = true,
+        chromaKeyColor: Int? = null,
+        size: Size? = null,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
+        apply: VideoNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val context: Context = LocalContext.current
+        val player = rememberMediaPlayer(
+            context = context,
+            assetFileLocation = videoPath,
+            isLooping = isLooping,
+            autoStart = autoPlay
+        )
+        if (player != null) {
+            VideoNode(
+                player = player,
+                chromaKeyColor = chromaKeyColor,
+                size = size,
+                position = position,
+                rotation = rotation,
+                scale = scale,
+                apply = apply,
+                content = content
+            )
+        }
     }
 
     // ── ViewNode ──────────────────────────────────────────────────────────────────────────────────

@@ -442,6 +442,22 @@ Reactive: `text`, `fontSize`, `textColor`, `backgroundColor`, `position`, `scale
 
 ### VideoNode — video on 3D plane
 ```kotlin
+// Simple — asset path (recommended):
+@ExperimentalSceneViewApi
+@Composable fun VideoNode(
+    videoPath: String,              // e.g. "videos/promo.mp4"
+    autoPlay: Boolean = true,
+    isLooping: Boolean = true,
+    chromaKeyColor: Int? = null,
+    size: Size? = null,
+    position: Position = Position(x = 0f),
+    rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
+    apply: VideoNode.() -> Unit = {},
+    content: (@Composable NodeScope.() -> Unit)? = null
+)
+
+// Advanced — bring your own MediaPlayer:
 @Composable fun VideoNode(
     player: MediaPlayer,
     chromaKeyColor: Int? = null,
@@ -454,20 +470,19 @@ Reactive: `text`, `fontSize`, `textColor`, `backgroundColor`, `position`, `scale
 )
 ```
 
-Usage:
+Usage (simple):
 ```kotlin
-val player = remember {
-    MediaPlayer().apply {
-        setDataSource(context, videoUri)
-        isLooping = true
-        prepare()
-        start()
-    }
+Scene {
+    VideoNode(videoPath = "videos/promo.mp4", position = Position(z = -2f))
 }
-DisposableEffect(Unit) { onDispose { player.release() } }
+```
+
+Usage (advanced — custom MediaPlayer):
+```kotlin
+val player = rememberMediaPlayer(context, assetFileLocation = "videos/promo.mp4")
 
 Scene(...) {
-    VideoNode(player = player, position = Position(z = -2f))
+    player?.let { VideoNode(player = it, position = Position(z = -2f)) }
 }
 ```
 
@@ -1757,7 +1772,7 @@ let data = SceneSnapshot.pngData(image) // or jpegData(image, quality: 0.9)
 | Text | `TextNode(text = "...")` | `TextNode(text:fontSize:color:depth:)` |
 | Line | `LineNode(start, end, materialInstance)` | `LineNode(from:to:color:)` |
 | Image | `ImageNode(bitmap)` / `ImageNode(path)` | `ImageNode.load("img.png")` |
-| Video | `VideoNode(player)` | `VideoNode.load("video.mp4")` |
+| Video | `VideoNode(videoPath = "v.mp4")` / `VideoNode(player)` | `VideoNode.load("video.mp4")` |
 | Anchor | `AnchorNode(anchor) { }` | `AnchorNode.world(position:)` |
 | Material | `materialLoader.createColorInstance(Color.Red)` | `.pbr(color:metallic:roughness:)` |
 | Tap | `onGestureListener(onSingleTapConfirmed = ...)` | `.onEntityTapped { }` / `NodeGesture.onTap(entity)` |
