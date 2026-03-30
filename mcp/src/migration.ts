@@ -17,8 +17,8 @@ SceneView 3.0 is a full rewrite from Android Views to **Jetpack Compose**. Nearl
 
 | 2.x | 3.0 |
 |-----|-----|
-| \`SceneView(…)\` | \`Scene(…)\` |
-| \`ArSceneView(…)\` | \`ARScene(…)\` |
+| \`SceneView(…)\` | \`SceneView(…)\` |
+| \`ArSceneView(…)\` | \`ARSceneView(…)\` |
 
 **Before:**
 \`\`\`kotlin
@@ -28,7 +28,7 @@ SceneView(modifier = Modifier.fillMaxSize())
 **After:**
 \`\`\`kotlin
 val engine = rememberEngine()
-Scene(modifier = Modifier.fillMaxSize(), engine = engine)
+SceneView(modifier = Modifier.fillMaxSize(), engine = engine)
 \`\`\`
 
 ---
@@ -62,7 +62,7 @@ LaunchedEffect(Unit) {
 
 **After:**
 \`\`\`kotlin
-Scene(engine = engine, modelLoader = modelLoader) {
+SceneView(engine = engine, modelLoader = modelLoader) {
     rememberModelInstance(modelLoader, "models/chair.glb")?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
     }
@@ -73,7 +73,7 @@ Scene(engine = engine, modelLoader = modelLoader) {
 
 ## 5. Node hierarchy — imperative → declarative DSL
 
-In 2.x nodes were added imperatively (\`scene.addChild(node)\`). In 3.0 nodes are declared as composables inside \`Scene { }\` or \`ARScene { }\`.
+In 2.x nodes were added imperatively (\`scene.addChild(node)\`). In 3.0 nodes are declared as composables inside \`SceneView { }\` or \`ARSceneView { }\`.
 
 **Before:**
 \`\`\`kotlin
@@ -88,7 +88,7 @@ sceneView.addChildNode(modelNode)
 
 **After:**
 \`\`\`kotlin
-Scene(engine = engine, modelLoader = modelLoader) {
+SceneView(engine = engine, modelLoader = modelLoader) {
     rememberModelInstance(modelLoader, "models/chair.glb")?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1f)
     }
@@ -131,7 +131,7 @@ ViewRenderable.builder()
 
 // After
 val windowManager = rememberViewNodeManager()
-Scene(viewNodeWindowManager = windowManager) {
+SceneView(viewNodeWindowManager = windowManager) {
     ViewNode(windowManager = windowManager) {
         Card { Text("Hello 3D World!") }
     }
@@ -183,10 +183,10 @@ Scene(
 
 ## 9. AR session configuration
 
-In 3.0 \`sessionConfiguration\` is a lambda parameter on \`ARScene\` (not a separate builder).
+In 3.0 \`sessionConfiguration\` is a lambda parameter on \`ARSceneView\` (not a separate builder).
 
 \`\`\`kotlin
-ARScene(
+ARSceneView(
     engine = engine,
     modelLoader = modelLoader,
     sessionConfiguration = { session, config ->

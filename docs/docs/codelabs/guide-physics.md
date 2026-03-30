@@ -27,7 +27,7 @@ fun PhysicsScreen() {
             ?: createEnvironment(environmentLoader)
     }
 
-    Scene(
+    SceneView(
         engine = engine,
         modelLoader = modelLoader,
         environment = environment
@@ -69,7 +69,7 @@ fun PhysicsScreen() {
 ## Step 3 — Multiple objects with different properties
 
 ```kotlin
-Scene(engine = engine, modelLoader = modelLoader, environment = environment) {
+SceneView(engine = engine, modelLoader = modelLoader, environment = environment) {
     // Heavy bowling ball — low bounce
     val heavyBall = remember(engine) {
         SphereNode(engine, radius = 0.2f).apply {

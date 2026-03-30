@@ -37,7 +37,7 @@ fun SkyScreen() {
         label = "time"
     )
 
-    Scene(engine = engine, modelLoader = modelLoader) {
+    SceneView(engine = engine, modelLoader = modelLoader) {
         DynamicSkyNode(
             timeOfDay = timeOfDay,   // 0–24 hour float
             turbidity = 2f,          // atmospheric haze [1–10]
@@ -71,7 +71,7 @@ val view = rememberView(engine)
 var fogEnabled by remember { mutableStateOf(true) }
 var fogDensity by remember { mutableFloatStateOf(0.05f) }
 
-Scene(engine = engine, modelLoader = modelLoader, view = view) {
+SceneView(engine = engine, modelLoader = modelLoader, view = view) {
     DynamicSkyNode(timeOfDay = timeOfDay)
 
     FogNode(
@@ -104,7 +104,7 @@ The real power is combining both. As the sun sets, increase fog density for a mo
 ```kotlin
 val fogDensity = if (timeOfDay in 6f..18f) 0.02f else 0.12f
 
-Scene(engine = engine, modelLoader = modelLoader, view = view) {
+SceneView(engine = engine, modelLoader = modelLoader, view = view) {
     DynamicSkyNode(timeOfDay = timeOfDay, turbidity = 3f)
     FogNode(view = view, density = fogDensity, color = Color(0xFFEED8AA))
 }

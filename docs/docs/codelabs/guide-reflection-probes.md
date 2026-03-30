@@ -35,7 +35,7 @@ fun ReflectionScreen() {
         position = Position(z = 3f)
     }
 
-    Scene(
+    SceneView(
         engine = engine,
         modelLoader = modelLoader,
         cameraNode = cameraNode,
@@ -72,7 +72,7 @@ val indoorEnv = rememberEnvironment(environmentLoader) {
         ?: createEnvironment(environmentLoader)
 }
 
-Scene(
+SceneView(
     engine = engine,
     modelLoader = modelLoader,
     environment = outdoorEnv,
@@ -111,7 +111,7 @@ Since probes are composables, toggling is just an `if` statement:
 ```kotlin
 var probeEnabled by remember { mutableStateOf(true) }
 
-Scene(...) {
+SceneView(...) {
     if (probeEnabled) {
         ReflectionProbeNode(
             filamentScene = scene,

@@ -72,7 +72,7 @@ When `anchor` becomes non-null, `AnchorNode` enters the composition. When it's c
 ```kotlin
 @Composable
 fun ARViewerScreen() {
-    ARScene(modifier = Modifier.fillMaxSize())
+    ARSceneView(modifier = Modifier.fillMaxSize())
 }
 ```
 
@@ -89,7 +89,7 @@ Enable plane rendering and react to detected planes:
 ```kotlin
 var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-ARScene(
+ARSceneView(
     modifier = Modifier.fillMaxSize(),
     planeRenderer = true,    // shows the AR grid on detected planes
     onSessionUpdated = { _, frame ->
@@ -121,7 +121,7 @@ val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.gl
 
 var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-ARScene(
+ARSceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -157,7 +157,7 @@ Run on device. When a horizontal plane is detected, the model appears on it — 
 Enable depth and HDR light estimation for a more realistic result:
 
 ```kotlin
-ARScene(
+ARSceneView(
     // ...
     sessionConfiguration = { session, config ->
         // Depth — makes virtual objects occlude behind real ones
@@ -194,7 +194,7 @@ ModelNode(
 Or handle gestures manually for full control:
 
 ```kotlin
-ARScene(
+ARSceneView(
     // ...
     onGestureListener = rememberOnGestureListener(
         onSingleTapConfirmed = { event, _ ->
@@ -214,7 +214,7 @@ Show what ARCore is doing with a simple overlay:
 
 ```kotlin
 Box(modifier = Modifier.fillMaxSize()) {
-    ARScene(modifier = Modifier.fillMaxSize(), /* ... */) { /* ... */ }
+    ARSceneView(modifier = Modifier.fillMaxSize(), /* ... */) { /* ... */ }
 
     AnimatedVisibility(
         visible = anchor == null,
@@ -250,7 +250,7 @@ fun ARViewerScreen() {
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

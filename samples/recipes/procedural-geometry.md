@@ -11,7 +11,7 @@ fun ProceduralScene() {
     val materialLoader = rememberMaterialLoader(engine)
     val material = rememberMaterialInstance(materialLoader)
 
-    Scene(modifier = Modifier.fillMaxSize(), engine = engine) {
+    SceneView(modifier = Modifier.fillMaxSize(), engine = engine) {
         CubeNode(size = Size(0.5f), materialInstance = material)
         SphereNode(radius = 0.3f, materialInstance = material,
             position = Position(x = 1f))

@@ -57,7 +57,7 @@ You need a glTF/GLB file in the assets folder. The **Damaged Helmet** from Khron
 
 ---
 
-## Step 4: Write the Scene composable
+## Step 4: Write the SceneView composable
 
 Replace the contents of `MainActivity.kt` with the following:
 
@@ -69,7 +69,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import io.github.sceneview.Scene
+import io.github.sceneview.SceneView
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironmentLoader
@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
             val modelLoader = rememberModelLoader(engine)
             val environmentLoader = rememberEnvironmentLoader(engine)
 
-            Scene(
+            SceneView(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 modelLoader = modelLoader,
@@ -112,7 +112,7 @@ That is the entire app. Here is what each piece does:
 | `rememberModelLoader(engine)` | Loads glTF/GLB models from assets |
 | `rememberEnvironmentLoader(engine)` | Loads HDR environment maps for lighting |
 | `rememberCameraManipulator()` | Adds built-in orbit, pan, and zoom touch gestures |
-| `Scene { }` | The 3D viewport composable — nodes go inside the trailing lambda |
+| `SceneView { }` | The 3D viewport composable — nodes go inside the trailing lambda |
 | `rememberModelInstance(...)` | Asynchronously loads a model; returns `null` until ready |
 | `ModelNode(...)` | Places the loaded model in the scene |
 
@@ -133,8 +133,8 @@ That is a production-quality, physically-based 3D viewer in under 30 lines of co
 
 ## Next steps
 
-- **Add HDR lighting** — Download a `.hdr` environment map and pass it via `rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/sky_2k.hdr") ?: createEnvironment(environmentLoader) }` to the `environment` parameter of `Scene`.
-- **Try AR** — Follow the [AR Compose codelab](codelabs/codelab-ar-compose.md) to place models in the real world using `ARScene`.
+- **Add HDR lighting** — Download a `.hdr` environment map and pass it via `rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment("environments/sky_2k.hdr") ?: createEnvironment(environmentLoader) }` to the `environment` parameter of `SceneView`.
+- **Try AR** — Follow the [AR Compose codelab](codelabs/codelab-ar-compose.md) to place models in the real world using `ARSceneView`.
 - **Explore the samples** — The [samples page](samples.md) covers model animation, camera manipulation, cloud anchors, and more.
 - **Browse the API** — See the full [API reference](https://sceneview.github.io/api/) for every composable, node type, and loader.
 - **Building for Apple platforms?** — See the [Apple Quickstart](quickstart-ios.md) for iOS, macOS, and visionOS setup with SwiftUI and RealityKit.

@@ -30,7 +30,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
-import io.github.sceneview.Scene
+import io.github.sceneview.SceneView
 import io.github.sceneview.animation.Transition.animateRotation
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -149,7 +149,7 @@ private fun TvModelViewerScreen() {
                 ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
         }
 
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

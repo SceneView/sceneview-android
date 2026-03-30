@@ -29,7 +29,7 @@ Same concepts, same simplicity — Android, iOS, Web, Desktop, TV, Flutter, Reac
 
 ```kotlin
 // Android — Jetpack Compose
-Scene(modifier = Modifier.fillMaxSize()) {
+SceneView(modifier = Modifier.fillMaxSize()) {
     rememberModelInstance(modelLoader, "models/helmet.glb")?.let {
         ModelNode(modelInstance = it, scaleToUnits = 1.0f, autoAnimate = true)
     }
@@ -116,10 +116,10 @@ claude mcp add sceneview -- npx sceneview-mcp
 
 ## 3D scene
 
-`Scene` is a Composable that renders a Filament 3D viewport. Nodes are composables inside it.
+`SceneView` is a Composable that renders a Filament 3D viewport. Nodes are composables inside it.
 
 ```kotlin
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = rememberEngine(),
     modelLoader = rememberModelLoader(engine),
@@ -159,12 +159,12 @@ Scene(
 
 ## AR scene
 
-`ARScene` is `Scene` with ARCore. The camera follows real-world tracking.
+`ARSceneView` is `SceneView` with ARCore. The camera follows real-world tracking.
 
 ```kotlin
 var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-ARScene(
+ARSceneView(
     modifier = Modifier.fillMaxSize(),
     planeRenderer = true,
     onSessionUpdated = { _, frame ->

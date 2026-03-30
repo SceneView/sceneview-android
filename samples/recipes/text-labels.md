@@ -9,7 +9,7 @@
 fun TextLabels() {
     val engine = rememberEngine()
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         cameraManipulator = rememberCameraManipulator()
