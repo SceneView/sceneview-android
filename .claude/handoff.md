@@ -4,43 +4,39 @@
 
 ## Last Session Summary
 
-**Date:** 30 mars 2026 (session 11)
+**Date:** 30 mars 2026 (session 12)
 **Branch:** main (all pushed to origin)
 
-## WHAT WAS DONE THIS SESSION (session 11)
+## WHAT WAS DONE THIS SESSION (session 12)
 
-### 1. Repository reorganization (342 files changed)
-- MCPs satellites → `mcp/packages/` (automotive, gaming, healthcare, interior)
-- MCP docs → `mcp/docs/` (registry-submission-guide, strategy-report)
-- Community docs → `.github/` (CoC, Governance, Support, Security, Sponsors, Privacy)
-- `scripts/` → `tools/`, `config/detekt/` → `buildSrc/config/detekt/`
-- Removed tracked build artifacts (docs/site, kotlin-js-store, buildSrc/.gradle)
-- Root items: 67 → 33
+### 1. Security audit — API key leak check
+- Deep scanned entire git history for API keys (AIza*, AQ.*, sk-*, etc.)
+- **CONFIRMED: zero API keys in repo history** — all clean
+- Stitch API key only exists in `~/.claude/stitch-wrapper.sh` (local, not tracked)
 
-### 2. Version cleanup (18 files)
-- Fixed all remaining 3.5.1 → 3.5.2 references across docs, samples, website, Flutter, iOS, MCP READMEs
+### 2. Stitch MCP — Fixed and verified
+- `.mcp.json` in project root with correct config (gitignored)
+- Wrapper script `~/.claude/stitch-wrapper.sh` tested: **12 tools discovered, proxy running**
+- `stitch-mcp` v0.5.1 installed globally via npm
+- **Root cause of Stitch not loading**: MCP servers load at session start — `.mcp.json` was reconfigured mid-session
+- **FIX**: Just start a new Claude Code session → Stitch loads automatically
 
-### 3. DESIGN.md — Google Stitch format
-- Created complete design system document in Stitch agent-friendly format
-- Enhanced with M3 Expressive philosophy, Liquid Glass specs, spring motion, M3 shape scale
+### 3. Git cleanup
+- Committed `.mcp.json` removal from git tracking + added to `.gitignore`
 
-### 4. Website M3 Expressive + Liquid Glass redesign
-- `styles.css` complete rewrite (497 insertions): design tokens, spring animations, liquid glass nav/cards, dark mode
-- Verified via preview tools — light + dark mode working
-- Deployed to sceneview.github.io
-
-### 5. Google Stitch MCP configured
-- `.mcp.json` added with stitch-mcp proxy server
-- API key saved in `~/.zshrc` as `STITCH_API_KEY`
-- API key backed up in `profile-private/preferences/api-keys.md`
-- Config synced to `profile-private/sync/from-perso/`
+## Previous session (session 11)
+- Repository reorganization (342 files, root: 67→33 items)
+- Version cleanup 3.5.1→3.5.2 (18 files)
+- DESIGN.md in Google Stitch format
+- Website M3 Expressive + Liquid Glass redesign (deployed)
+- Google Stitch MCP configured
 
 ## DECISIONS MADE
 - Website uses M3 Expressive (structure) + Liquid Glass (floating surfaces) — correct for web
 - Android demo should use Material 3 Expressive (Compose Material 3)
 - iOS demo should use Apple Liquid Glass / HIG (SwiftUI native) — NOT Material Design
 - Dark mode hero title: solid white text (gradient text invisible in dark mode)
-- Google Stitch needs API key from https://stitch.withgoogle.com — cannot be automated
+- `.mcp.json` must stay gitignored (contains local paths)
 
 ## CURRENT STATE
 - **Active branch**: main
@@ -53,8 +49,10 @@
 
 ## NEXT STEPS (priority order)
 
-### BLOCKER — Google Stitch MCP must be loaded first
-- **STITCH_API_KEY** is in `~/.zshrc` — user must restart Claude Code to load the MCP
+### ✅ BLOCKER RESOLVED — Stitch MCP ready
+- `.mcp.json` is in project root, gitignored, config correct
+- Wrapper at `~/.claude/stitch-wrapper.sh` tested and working (12 tools)
+- **Just start a new Claude Code session** → Stitch tools appear automatically
 - Once loaded, ALL visual work goes through Stitch
 
 ### Phase 1 — FULL REDESIGN VIA GOOGLE STITCH
