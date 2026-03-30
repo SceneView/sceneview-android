@@ -924,6 +924,7 @@ Most are default parameter values in `Scene`/`ARScene` — call them explicitly 
 | `rememberScene(engine)` | `Scene` | Filament scene graph |
 | `rememberCollisionSystem(view)` | `CollisionSystem` | Hit-testing system |
 | `rememberNode(engine) { ... }` | `Node` | Generic node with apply block |
+| `rememberMediaPlayer(context, assetFileLocation)` | `MediaPlayer?` | Auto-lifecycle video player (null while loading) |
 
 **AR-specific helpers** (from `arsceneview` module):
 
