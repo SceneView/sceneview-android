@@ -1,20 +1,27 @@
 /* SceneView — Polished developer docs styling */
 /* Extends MkDocs Material with branded hero, stats, feature cards */
 
+/* SceneView M3 Expressive tokens — aligned with Stitch design system */
 :root {
-  --md-primary-fg-color: #1a73e8;
-  --md-primary-fg-color--light: #4285f4;
-  --md-primary-fg-color--dark: #1557b0;
-  --md-accent-fg-color: #1a73e8;
-  --sv-gradient-start: #1a73e8;
-  --sv-gradient-end: #6c4fe8;
-  --sv-card-bg: rgba(26, 115, 232, 0.04);
-  --sv-card-border: rgba(26, 115, 232, 0.12);
+  --md-primary-fg-color: #005bc1;
+  --md-primary-fg-color--light: #3d7fd9;
+  --md-primary-fg-color--dark: #0050aa;
+  --md-accent-fg-color: #6446cd;
+  --sv-gradient-start: #005bc1;
+  --sv-gradient-end: #6446cd;
+  --sv-card-bg: rgba(0, 91, 193, 0.04);
+  --sv-card-border: rgba(0, 91, 193, 0.12);
 }
 
 [data-md-color-scheme="slate"] {
-  --sv-card-bg: rgba(66, 133, 244, 0.08);
-  --sv-card-border: rgba(66, 133, 244, 0.2);
+  --md-primary-fg-color: #a4c1ff;
+  --md-primary-fg-color--light: #79a8ff;
+  --md-primary-fg-color--dark: #5a8ee8;
+  --md-accent-fg-color: #d2a8ff;
+  --sv-gradient-start: #0d419d;
+  --sv-gradient-end: #5a32a3;
+  --sv-card-bg: rgba(164, 193, 255, 0.08);
+  --sv-card-border: rgba(164, 193, 255, 0.15);
 }
 
 /* ─── Hero Section ─── */
@@ -169,7 +176,7 @@
 
 .sv-feature-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(26, 115, 232, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 91, 193, 0.08);
 }
 
 .sv-feature-card h3 {
