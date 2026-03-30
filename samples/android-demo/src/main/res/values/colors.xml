@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- SceneView brand blue -->
-    <color name="md_theme_primary">#1A73E8</color>
+    <!-- SceneView M3 Expressive — Light (from Stitch design system, source #005bc1) -->
+    <color name="md_theme_primary">#005BC1</color>
     <color name="md_theme_onPrimary">#FFFFFF</color>
-    <color name="md_theme_primaryContainer">#D3E3FD</color>
-    <color name="md_theme_secondary">#5B6B7D</color>
+    <color name="md_theme_primaryContainer">#D6E3FF</color>
+    <color name="md_theme_onPrimaryContainer">#001B3E</color>
+    <color name="md_theme_secondary">#555F71</color>
+    <color name="md_theme_onSecondary">#FFFFFF</color>
+    <color name="md_theme_secondaryContainer">#D9E3F8</color>
+    <color name="md_theme_tertiary">#6446CD</color>
+    <color name="md_theme_onTertiary">#FFFFFF</color>
+    <color name="md_theme_tertiaryContainer">#E8DEFF</color>
+    <color name="md_theme_surface">#F9F9FF</color>
+    <color name="md_theme_onSurface">#1A1C20</color>
+    <color name="md_theme_error">#BA1A1A</color>
+    <color name="md_theme_onError">#FFFFFF</color>
+
+    <!-- Status colors -->
+    <color name="status_stable">#16A34A</color>
+    <color name="status_beta">#2563EB</color>
+    <color name="status_alpha">#7C3AED</color>
 </resources>
