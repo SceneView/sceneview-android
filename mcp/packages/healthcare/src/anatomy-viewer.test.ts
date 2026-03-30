@@ -57,7 +57,7 @@ describe("generateAnatomyViewer", () => {
     const code = generateAnatomyViewer({ system: "skeleton", ar: true });
     expect(code).toContain("import io.github.sceneview.ar.ARScene");
     expect(code).toContain("ARScene(");
-    expect(code).toContain("arsceneview:3.5.2");
+    expect(code).toContain("arsceneview:3.6.0");
     expect(code).toContain("android.permission.CAMERA");
   });
 

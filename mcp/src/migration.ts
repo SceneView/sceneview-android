@@ -8,8 +8,8 @@ SceneView 3.0 is a full rewrite from Android Views to **Jetpack Compose**. Nearl
 
 | 2.x | 3.0 |
 |-----|-----|
-| \`io.github.sceneview:sceneview:2.x.x\` | \`io.github.sceneview:sceneview:3.5.2\` |
-| \`io.github.sceneview:arsceneview:2.x.x\` | \`io.github.sceneview:arsceneview:3.5.2\` |
+| \`io.github.sceneview:sceneview:2.x.x\` | \`io.github.sceneview:sceneview:3.6.0\` |
+| \`io.github.sceneview:arsceneview:2.x.x\` | \`io.github.sceneview:arsceneview:3.6.0\` |
 
 ---
 

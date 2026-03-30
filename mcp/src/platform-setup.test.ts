@@ -17,7 +17,7 @@ describe("PLATFORM_IDS", () => {
 describe("getPlatformSetup", () => {
   it("returns Android 3D setup with Gradle dependency", () => {
     const result = getPlatformSetup("android", "3d");
-    expect(result).toContain("io.github.sceneview:sceneview:3.5.2");
+    expect(result).toContain("io.github.sceneview:sceneview:3.6.0");
     expect(result).toContain("rememberEngine");
     expect(result).toContain("Scene(");
   });

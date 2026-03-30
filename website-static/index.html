@@ -40,7 +40,7 @@
   <!-- Preload critical resources -->
   <link rel="preload" href="styles.css" as="style">
   <link rel="preload" href="js/filament/filament.js" as="script">
-  <link rel="preload" href="js/sceneview.js?v=3.5.2" as="script">
+  <link rel="preload" href="js/sceneview.js?v=3.6.0" as="script">
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -49,7 +49,7 @@
   <!-- Filament.js v1.70.1 WASM engine (required by SceneView Web) -->
   <script src="js/filament/filament.js"></script>
   <!-- SceneView Web library -->
-  <script src="js/sceneview.js?v=3.5.2"></script>
+  <script src="js/sceneview.js?v=3.6.0"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
@@ -65,7 +65,7 @@
     "url": "https://sceneview.github.io/",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Android, iOS, macOS, visionOS, Web, Windows, Linux",
-    "softwareVersion": "3.5.2",
+    "softwareVersion": "3.6.0",
     "license": "https://github.com/sceneview/sceneview/blob/main/LICENSE",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "author": { "@type": "Organization", "name": "SceneView", "url": "https://github.com/sceneview" },
@@ -217,9 +217,9 @@
             <pre class="code-block"><code><span class="syn-green">// build.gradle.kts</span>
 <span class="syn-purple">dependencies</span> {
     <span class="syn-green">// 3D only</span>
-    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:sceneview:3.5.2"</span>)
+    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:sceneview:3.6.0"</span>)
     <span class="syn-green">// 3D + AR</span>
-    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:arsceneview:3.5.2"</span>)
+    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:arsceneview:3.6.0"</span>)
 }</code></pre>
           </div>
           <div class="tabs__panel" data-panel="ios">
@@ -227,13 +227,13 @@
 <span class="syn-green">// Add in Xcode: File &rarr; Add Package Dependencies</span>
 
 <span class="syn-green-light">"https://github.com/sceneview/sceneview-swift"</span>
-<span class="syn-green">// Version: 3.5.2</span>
+<span class="syn-green">// Version: 3.6.0</span>
 
 <span class="syn-purple">import</span> SceneViewSwift</code></pre>
           </div>
           <div class="tabs__panel" data-panel="web">
             <pre class="code-block"><code><span class="syn-green">// One line in your HTML:</span>
-<span class="syn-purple">&lt;script</span> <span class="syn-blue">src</span>=<span class="syn-green-light">"https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview.js"</span><span class="syn-purple">&gt;&lt;/script&gt;</span>
+<span class="syn-purple">&lt;script</span> <span class="syn-blue">src</span>=<span class="syn-green-light">"https://cdn.jsdelivr.net/npm/sceneview-web@3.6.0/sceneview.js"</span><span class="syn-purple">&gt;&lt;/script&gt;</span>
 
 <span class="syn-green">// Then use the API:</span>
 <span class="syn-blue">SceneView</span>.<span class="syn-blue">modelViewer</span>(<span class="syn-green-light">"canvas"</span>, <span class="syn-green-light">"model.glb"</span>)</code></pre>

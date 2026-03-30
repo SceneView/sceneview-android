@@ -2,7 +2,7 @@
 
 > Ship fast, ship often. Every feature = a release.
 
-## Current: v3.5.2 (March 2026)
+## Current: v3.6.0 (March 2026)
 
 **Multi-platform expansion** — 9 platforms, MCP Registry, store-ready.
 

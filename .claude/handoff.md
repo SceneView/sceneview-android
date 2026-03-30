@@ -230,7 +230,7 @@
 
 ## Previous sessions
 - Session 12: Security audit (clean), Stitch MCP fixed, git cleanup
-- Session 11: Repo reorganization, version cleanup 3.5.1→3.5.2, DESIGN.md, Stitch config
+- Session 11: Repo reorganization, version cleanup 3.5.1→3.6.0, DESIGN.md, Stitch config
 
 ## DECISIONS MADE
 - Website uses M3 Expressive (structure) + Liquid Glass (floating surfaces) — correct for web
@@ -241,9 +241,9 @@
 
 ## CURRENT STATE
 - **Active branch**: main
-- **Latest release**: v3.5.2 (ALL PUBLISHED — Maven Central + npm + GitHub + Stores)
+- **Latest release**: v3.6.0 (ALL PUBLISHED — Maven Central + npm + GitHub + Stores)
 - **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests), 9 MCPs total
-- **sceneview-web**: v3.5.2 on npm
+- **sceneview-web**: v3.6.0 on npm
 - **Website**: sceneview.github.io — M3 Expressive + Liquid Glass redesign deployed
 - **Google Stitch**: MCP configured, API key set
 - **GitHub orgs**: sceneview, sceneview-tools, mcp-tools-lab
