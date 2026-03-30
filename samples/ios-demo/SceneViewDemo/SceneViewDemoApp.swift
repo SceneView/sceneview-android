@@ -58,6 +58,6 @@ struct ContentView: View {
                 }
                 .accessibilityLabel("About SceneView")
         }
-        .tint(.blue)
+        .tint(SceneViewTheme.primary)
     }
 }
