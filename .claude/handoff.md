@@ -4,10 +4,24 @@
 
 ## Last Session Summary
 
-**Date:** 30 mars 2026 (session 15)
+**Date:** 30 mars 2026 (session 16)
 **Branch:** main
 
-## WHAT WAS DONE THIS SESSION (session 15)
+## WHAT WAS DONE THIS SESSION (session 16)
+
+### 1. SceneViewSwift Xcode verification ✅
+- **iOS build**: BUILD SUCCEEDED (Xcode 26.3, iOS 26.2 SDK) — zero warnings, zero errors
+- **macOS build**: BUILD SUCCEEDED — zero warnings, zero errors
+- **visionOS**: Not tested (SDK not downloaded, not a code issue)
+- **Swift 6 fixes** (6 files):
+  - BillboardNode.swift, GeometryNode.swift, TextNode.swift, LineNode.swift, MeshNode.swift, ViewNode.swift
+  - Added `#if os(macOS) import AppKit #else import UIKit #endif` to resolve `SimpleMaterial.Color` default argument warnings
+  - GeometryNode.swift: migrated `TextureResource.load(named:)` → `TextureResource(named:)` (async-safe initializer)
+- Committed `3cf99024` and pushed to main
+
+## Previous session (session 15)
+
+## WHAT WAS DONE IN SESSION 15
 
 ### 1. Review fixes committed and deployed ✅
 - **index.html**: Nav links aligned to cross-page pattern (Showcase/Playground/Docs), 4 external lh3.googleusercontent.com images replaced with CSS gradient placeholders, added `<main>` wrapper
@@ -192,7 +206,9 @@ Stitch generates the design → Claude applies it in code. NO manual CSS/UI writ
   - addLight({type, color, intensity, direction, position, falloff}) — custom lights
   - llms.txt updated with full sceneview.js API surface
   - Deployed to sceneview.github.io
-- iOS: verify SceneViewSwift fixes compile in Xcode (needs full Xcode, not just CLI tools)
+- ~~iOS: verify SceneViewSwift fixes compile in Xcode~~ ✅ DONE (session 16)
+  - iOS + macOS build clean (zero warnings), Swift 6 fixes committed
+  - visionOS SDK not installed (not a code issue)
 
 ## RULES REMINDER
 - **STITCH MANDATORY** — ALL design/UI work goes through Google Stitch MCP. NEVER write CSS/theme by hand.
