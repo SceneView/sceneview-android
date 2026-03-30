@@ -2,6 +2,11 @@
 import RealityKit
 import Foundation
 import CoreText
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 /// A 3D text label that can be placed in the scene.
 ///

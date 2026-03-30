@@ -1,6 +1,11 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 /// Procedural geometry node for creating primitive shapes.
 ///
@@ -317,12 +322,12 @@ extension GeometryMaterial {
     /// let material = GeometryMaterial.textured(baseColor: texture, roughness: 0.8)
     /// ```
     public static func loadTexture(_ name: String) async throws -> TextureResource {
-        try await TextureResource.load(named: name)
+        try await TextureResource(named: name)
     }
 
     /// Loads a texture from a URL.
     public static func loadTexture(contentsOf url: URL) async throws -> TextureResource {
-        try await TextureResource.load(contentsOf: url)
+        try await TextureResource(contentsOf: url)
     }
 }
 
