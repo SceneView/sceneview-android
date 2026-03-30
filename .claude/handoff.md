@@ -4,10 +4,39 @@
 
 ## Last Session Summary
 
-**Date:** 30 mars 2026 (session 16)
+**Date:** 30 mars 2026 (session 17)
 **Branch:** main
 
-## WHAT WAS DONE THIS SESSION (session 16)
+## WHAT WAS DONE THIS SESSION (session 17)
+
+### 1. Swift: NodeGesture cleanup (#9) + async-safe APIs + zero warnings ✅
+- **NodeGesture cleanup**: WeakEntity tracking, purgeStaleHandlers() auto-cleanup, Entity fluent extensions (.onTap, .onDrag, .onScale, .onRotate, .onLongPress)
+- **Async-safe migrations**: `TextureResource(named:)`, `Entity(named:)`, `Entity(contentsOf:)`, `EnvironmentResource(named:)` — replaces deprecated `.load()` across ModelNode, ImageNode, ReflectionProbeNode, GeometryNode, Environment
+- **LightNode**: fixed deprecated `maximumDistance` setter by re-creating Shadow
+- **Tests**: fixed Float? accuracy parameter compilation errors in 5 test files
+- **Clean build**: zero warnings, zero errors (iOS + macOS), 544 tests pass
+- Committed `ae89b215`
+
+### 2. CameraNode → SecondaryCamera rename (#2) ✅
+- `SecondaryCamera()` composable added to SceneScope with full docs
+- `CameraNode()` composable deprecated with `@Deprecated(replaceWith = ...)` for migration
+- llms.txt updated with new name
+- Android builds pass (sceneview + android-demo)
+- Committed `b0b00c74`
+
+### 3. Docs: cross-platform naming alignment (#10) + ARNodeScope nesting (#14) ✅
+- llms.txt platform mapping table expanded: SecondaryCamera, drag gesture, billboard, reflection probe, @NodeBuilder init
+- ARNodeScope nesting limitation documented prominently
+- Committed `ff713805`
+
+### 4. v3.6.0 roadmap status
+- **DONE**: #1 LightNode, #2 CameraNode rename, #3 Geometry params, #4 scaleToUnits docs, #5 ShapeNode/PhysicsNode, #8 Swift declarative, #9 NodeGesture, #10 Naming alignment, #11 SideEffect guards, #12 HitResultNode docs, #14 ARNodeScope docs
+- **Already correct**: #7 ReflectionProbeNode (already follows composable pattern)
+- **Remaining**: #6 VideoNode convenience (requires MediaPlayer lifecycle rework), #13 SceneNode integration (architecture — deferred to post-3.6.0)
+
+## Previous session (session 16)
+
+## WHAT WAS DONE IN SESSION 16
 
 ### 1. v3.6.0 API simplification — 3 batches ✅
 - **Full API audit**: 14 issues identified across Android, Swift, and KMP core
@@ -246,6 +275,16 @@ Stitch generates the design → Claude applies it in code. NO manual CSS/UI writ
 - ~~iOS: verify SceneViewSwift fixes compile in Xcode~~ ✅ DONE (session 16)
   - iOS + macOS build clean (zero warnings), Swift 6 fixes committed
   - visionOS SDK not installed (not a code issue)
+- ~~v3.6.0 API simplification~~ ✅ NEARLY COMPLETE (session 17)
+  - 12/14 issues done, 1 already correct, 1 deferred
+  - Only #6 (VideoNode convenience) and #13 (SceneNode integration) remain
+  - All builds verified clean (Android + iOS + macOS)
+
+### Phase 3 — Post-3.6.0
+- VideoNode convenience (#6): requires MediaPlayer lifecycle rework — best done with real device testing
+- SceneNode integration (#13): make Android Node implement KMP SceneNode — architecture change for post-3.6.0
+- visionOS: test SceneViewSwift with visionOS SDK when available
+- App screenshots: need emulator GUI or physical device
 
 ## RULES REMINDER
 - **STITCH MANDATORY** — ALL design/UI work goes through Google Stitch MCP. NEVER write CSS/theme by hand.
