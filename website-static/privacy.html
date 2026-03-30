@@ -1,125 +1,206 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy — SceneView</title>
-<meta name="description" content="Privacy Policy for the SceneView Demo app. No personal data collected, no tracking, no analytics.">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="https://sceneview.github.io/privacy.html">
-<meta property="og:title" content="Privacy Policy — SceneView">
-<meta property="og:description" content="SceneView Demo does not collect, store, or transmit any personal data.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://sceneview.github.io/privacy.html">
-<meta property="og:image" content="https://sceneview.github.io/favicon.svg">
-<meta name="twitter:card" content="summary">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<style>
-  .privacy-page {
-    padding-top: calc(var(--nav-height) + var(--space-3xl));
-    padding-bottom: var(--space-4xl);
-  }
-  .privacy-content {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 var(--space-lg);
-  }
-  .privacy-content h1 {
-    font-size: clamp(1.8rem, 4vw, 2.4rem);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    margin-bottom: var(--space-xs);
-    color: var(--color-on-surface);
-  }
-  .privacy-content .updated {
-    color: var(--color-on-surface-faint);
-    font-size: 0.9rem;
-    margin-bottom: var(--space-2xl);
-    display: block;
-  }
-  .privacy-content h2 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-top: var(--space-2xl);
-    margin-bottom: var(--space-sm);
-    padding-bottom: var(--space-xs);
-    border-bottom: 1px solid var(--color-outline);
-    color: var(--color-on-surface);
-  }
-  .privacy-content h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-top: var(--space-lg);
-    margin-bottom: var(--space-xs);
-    color: var(--color-on-surface);
-  }
-  .privacy-content p,
-  .privacy-content li {
-    font-size: 0.95rem;
-    color: var(--color-on-surface-dim);
-    line-height: 1.7;
-    margin-bottom: var(--space-sm);
-  }
-  .privacy-content ul {
-    padding-left: var(--space-lg);
-  }
-  .privacy-content table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: var(--space-md) 0;
-    font-size: 0.9rem;
-  }
-  .privacy-content th,
-  .privacy-content td {
-    border: 1px solid var(--color-outline);
-    padding: 10px 14px;
-    text-align: left;
-    color: var(--color-on-surface-dim);
-  }
-  .privacy-content th {
-    background: var(--color-surface-dim);
-    font-weight: 600;
-    color: var(--color-on-surface);
-  }
-  .privacy-content a {
-    color: var(--color-primary);
-  }
-  .privacy-content a:hover {
-    text-decoration: underline;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — SceneView</title>
+  <meta name="description" content="Privacy Policy for the SceneView Demo app. No personal data collected, no tracking, no analytics.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://sceneview.github.io/privacy.html">
+  <meta property="og:title" content="Privacy Policy — SceneView">
+  <meta property="og:description" content="SceneView Demo does not collect, store, or transmit any personal data.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sceneview.github.io/privacy.html">
+  <meta property="og:image" content="https://sceneview.github.io/favicon.svg">
+  <meta name="twitter:card" content="summary">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ===== PRIVACY PAGE ===== */
+    .privacy-page {
+      padding-top: var(--nav-height);
+    }
+
+    /* Hero */
+    .privacy-hero {
+      padding: 80px 0 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .privacy-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(0,91,193,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    [data-theme="dark"] .privacy-hero::before {
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(141,179,255,0.06) 0%, transparent 70%);
+    }
+
+    .privacy-hero__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
+    }
+
+    .privacy-hero__title {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-tertiary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .privacy-hero__updated {
+      font-size: 0.9rem;
+      color: var(--color-on-surface-variant);
+    }
+
+    /* Content */
+    .privacy-content {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px var(--container-padding) 80px;
+    }
+
+    .privacy-content__summary {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--color-on-surface);
+      background: var(--color-surface-container-low);
+      border: 1px solid var(--color-outline-variant);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 48px;
+      line-height: 1.6;
+    }
+
+    .privacy-content h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-top: 40px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--color-outline-variant);
+      color: var(--color-on-surface);
+    }
+
+    .privacy-content h2:first-of-type {
+      margin-top: 0;
+    }
+
+    .privacy-content h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 8px;
+      color: var(--color-on-surface);
+    }
+
+    .privacy-content p {
+      font-size: 0.95rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .privacy-content ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+      list-style: disc;
+    }
+
+    .privacy-content li {
+      font-size: 0.95rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.7;
+      margin-bottom: 8px;
+    }
+
+    .privacy-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 16px 0;
+      font-size: 0.9rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--color-outline-variant);
+    }
+
+    .privacy-content th,
+    .privacy-content td {
+      padding: 12px 16px;
+      text-align: left;
+      color: var(--color-on-surface-variant);
+      border-bottom: 1px solid var(--color-outline-variant);
+    }
+
+    .privacy-content th {
+      background: var(--color-surface-container-low);
+      font-weight: 600;
+      color: var(--color-on-surface);
+    }
+
+    .privacy-content tr:last-child td {
+      border-bottom: none;
+    }
+
+    .privacy-content a {
+      color: var(--color-primary);
+      transition: opacity var(--duration-short);
+    }
+
+    .privacy-content a:hover {
+      text-decoration: underline;
+      opacity: 0.85;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .privacy-hero { padding: 48px 0 32px; }
+      .privacy-content { padding: 32px var(--container-padding) 64px; }
+    }
+
+    @media (max-width: 480px) {
+      .privacy-hero { padding: 32px 0 24px; }
+      .privacy-content { padding: 24px var(--container-padding) 48px; }
+      .privacy-content table { font-size: 0.8rem; }
+      .privacy-content th,
+      .privacy-content td { padding: 8px 10px; }
+    }
+  </style>
 </head>
 <body>
 
   <!-- ===== NAVIGATION ===== -->
   <nav class="nav" id="nav">
     <div class="nav__container">
-      <a href="/" class="nav__logo">
-        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
-          <rect width="32" height="32" rx="8" fill="currentColor"/>
-          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-        <span class="nav__logo-text">SceneView</span>
-      </a>
+      <div class="nav__brand">SceneView SDK</div>
 
       <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
 
       <div class="nav__links" id="navLinks">
-        <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
-        <a href="/claude-3d.html" class="nav__link" style="color:#d97757;font-weight:600">AI + 3D</a>
-        <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
-        <a href="/#demos" class="nav__link">Demos</a>
+        <a href="/" class="nav__link">Home</a>
+        <a href="/#features" class="nav__link">Features</a>
+        <a href="/showcase.html" class="nav__link">Showcase</a>
         <a href="/playground.html" class="nav__link">Playground</a>
-        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
-        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
-        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
+        <a href="/docs.html" class="nav__link">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -129,16 +210,34 @@
           </svg>
         </button>
       </div>
+
+      <div class="nav__actions">
+        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View source code">
+          <span class="material-symbols-outlined">code</span>
+        </a>
+        <button class="nav__hamburger nav__hamburger--mobile" id="hamburgerMobile" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </nav>
 
   <main class="privacy-page">
-    <div class="privacy-content">
-      <h1>Privacy Policy</h1>
-      <span class="updated"><strong>SceneView Demo</strong> &mdash; Last updated: March 27, 2026</span>
 
-      <h2>Summary</h2>
-      <p><strong>SceneView Demo does not collect, store, or transmit any personal data.</strong></p>
+    <!-- ===== HERO ===== -->
+    <section class="privacy-hero">
+      <div class="privacy-hero__container">
+        <h1 class="privacy-hero__title reveal">Privacy Policy</h1>
+        <p class="privacy-hero__updated reveal"><strong>SceneView Demo</strong> &mdash; Last updated: March 27, 2026</p>
+      </div>
+    </section>
+
+    <!-- ===== CONTENT ===== -->
+    <div class="privacy-content">
+
+      <div class="privacy-content__summary reveal">
+        SceneView Demo does not collect, store, or transmit any personal data.
+      </div>
 
       <h2>Data Collection</h2>
       <ul>
@@ -158,10 +257,14 @@
 
       <h2>Third-Party SDKs</h2>
       <table>
-        <tr><th>SDK</th><th>Purpose</th><th>Data collected</th></tr>
-        <tr><td>Google Filament</td><td>3D rendering engine</td><td>None</td></tr>
-        <tr><td>Google ARCore</td><td>Augmented reality</td><td>Camera processed locally, no data sent</td></tr>
-        <tr><td>Jetpack Compose</td><td>UI framework</td><td>None</td></tr>
+        <thead>
+          <tr><th>SDK</th><th>Purpose</th><th>Data collected</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Google Filament</td><td>3D rendering engine</td><td>None</td></tr>
+          <tr><td>Google ARCore</td><td>Augmented reality</td><td>Camera processed locally, no data sent</td></tr>
+          <tr><td>Jetpack Compose</td><td>UI framework</td><td>None</td></tr>
+        </tbody>
       </table>
 
       <h2>Data Sharing</h2>
@@ -178,30 +281,65 @@
         <li><strong>Website:</strong> <a href="https://sceneview.github.io">sceneview.github.io</a></li>
         <li><strong>GitHub:</strong> <a href="https://github.com/sceneview/sceneview">github.com/sceneview/sceneview</a></li>
       </ul>
+
     </div>
+
   </main>
 
   <!-- ===== FOOTER ===== -->
   <footer class="footer">
-    <div class="container">
-      <div class="footer__inner">
-        <div class="footer__brand">
-          <svg class="footer__logo" viewBox="0 0 32 32" width="24" height="24" fill="none">
-            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
-            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          </svg>
-          <span>SceneView</span>
+    <div class="footer__container">
+      <div class="footer__grid">
+        <div class="footer__brand-col">
+          <div class="footer__brand-name">SceneView SDK</div>
+          <p class="footer__brand-desc">The architectural logic for building high-performance 3D spatial experiences across all modern platforms.</p>
+          <div class="footer__copyright">&copy; 2026 SceneView SDK. Architectural Logic.</div>
         </div>
-        <div class="footer__links">
-          <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
-          <a href="https://github.com/sponsors/sceneview">Sponsor</a>
-          <a href="https://github.com/sceneview/sceneview">Source Code</a>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Documentation</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://sceneview.github.io/docs/" target="_blank" rel="noopener">Examples</a></li>
+            <li><a href="/showcase.html">Showcase</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Community</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://github.com/sceneview/sceneview" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://discord.gg/sceneview" target="_blank" rel="noopener">Discord</a></li>
+            <li><a href="https://twitter.com/nicoadams_" target="_blank" rel="noopener">Twitter</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Legal</h4>
+          <ul class="footer__col-list">
+            <li><a href="/privacy.html">Privacy</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">Terms</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          </ul>
         </div>
       </div>
     </div>
   </footer>
 
   <script src="script.js"></script>
+
+  <!-- Scroll reveal -->
+  <script>
+  (function() {
+    var reveals = document.querySelectorAll('.reveal');
+    if (!reveals.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      reveals.forEach(function(el) { el.classList.add('revealed'); });
+      return;
+    }
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) { e.target.classList.add('revealed'); obs.unobserve(e.target); }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(function(el) { obs.observe(el); });
+  })();
+  </script>
 </body>
 </html>

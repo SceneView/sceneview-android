@@ -18,235 +18,492 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ===== DOCS PAGE ===== */
+    .docs-page {
+      padding-top: var(--nav-height);
+    }
+
+    /* Hero */
+    .docs-hero {
+      padding: 80px 0 64px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .docs-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(0,91,193,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    [data-theme="dark"] .docs-hero::before {
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(141,179,255,0.06) 0%, transparent 70%);
+    }
+
+    .docs-hero__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
+    }
+
+    .docs-hero__title {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-tertiary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+
+    .docs-hero__subtitle {
+      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+      color: var(--color-on-surface-variant);
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* Section */
+    .docs-section {
+      padding: 80px 0;
+    }
+
+    .docs-section--alt {
+      background: var(--color-surface-dim);
+    }
+
+    .docs-section__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
+    }
+
+    .docs-section__header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .docs-section__title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--color-on-surface);
+      margin-bottom: 8px;
+    }
+
+    .docs-section__subtitle {
+      font-size: 1.05rem;
+      color: var(--color-on-surface-variant);
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Card grid */
+    .docs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .docs-card {
+      display: flex;
+      flex-direction: column;
+      background: var(--color-surface-container-lowest);
+      border: 1px solid var(--color-outline-variant);
+      border-radius: 16px;
+      padding: 32px;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: var(--shadow-card);
+      transition: transform var(--duration-medium) var(--ease-spring),
+                  box-shadow var(--duration-medium) var(--ease-expressive);
+    }
+
+    .docs-card:hover {
+      box-shadow: 0 16px 40px rgba(30, 50, 86, 0.1);
+      transform: translateY(-4px);
+    }
+
+    [data-theme="dark"] .docs-card:hover {
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .docs-card__icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(0, 91, 193, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    [data-theme="dark"] .docs-card__icon {
+      background: rgba(121, 192, 255, 0.1);
+    }
+
+    .docs-card__icon .material-symbols-outlined {
+      font-size: 24px;
+      color: var(--color-primary);
+    }
+
+    .docs-card__title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+      color: var(--color-on-surface);
+    }
+
+    .docs-card__text {
+      font-size: 0.875rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    /* CTA banner */
+    .docs-cta {
+      padding: 80px 0;
+      text-align: center;
+    }
+
+    .docs-cta__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
+    }
+
+    .docs-cta__card {
+      background: var(--gradient-hero);
+      border-radius: 24px;
+      padding: 48px;
+      color: #ffffff;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .docs-cta__title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .docs-cta__text {
+      font-size: 1rem;
+      opacity: 0.9;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .docs-cta__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background var(--duration-short);
+    }
+
+    .docs-cta__btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .docs-hero { padding: 48px 0 40px; }
+      .docs-section { padding: 48px 0; }
+      .docs-grid { grid-template-columns: 1fr; }
+      .docs-cta__card { padding: 32px 24px; }
+    }
+
+    @media (max-width: 480px) {
+      .docs-hero { padding: 32px 0; }
+      .docs-section { padding: 40px 0; }
+    }
+  </style>
 </head>
 <body>
 
   <!-- ===== NAVIGATION ===== -->
   <nav class="nav" id="nav">
     <div class="nav__container">
-      <a href="/" class="nav__logo">
-        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="28" height="28" fill="none">
-          <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
-          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-        <span class="nav__logo-text">SceneView</span>
-      </a>
+      <div class="nav__brand">SceneView SDK</div>
+
       <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
+
       <div class="nav__links" id="navLinks">
+        <a href="/" class="nav__link">Home</a>
+        <a href="/#features" class="nav__link">Features</a>
         <a href="/showcase.html" class="nav__link">Showcase</a>
         <a href="/playground.html" class="nav__link">Playground</a>
-        <a href="/docs.html" class="nav__link" style="color:var(--color-primary);font-weight:600">Docs</a>
-        <a href="/#features" class="nav__link">Features</a>
-        <a href="https://github.com/sceneview/sceneview" class="nav__link" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://discord.gg/sceneview" class="nav__link" target="_blank" rel="noopener">Discord</a>
+        <a href="/docs.html" class="nav__link nav__link--active">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="nav__actions">
+        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View source code">
+          <span class="material-symbols-outlined">code</span>
+        </a>
+        <button class="nav__hamburger nav__hamburger--mobile" id="hamburgerMobile" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
         </button>
       </div>
     </div>
   </nav>
 
-  <!-- ===== HERO ===== -->
-  <section class="docs-hero">
-    <div class="container">
-      <h1 class="showcase-hero__title reveal">Documentation</h1>
-      <p class="showcase-hero__sub reveal">Quick start guides, API reference, tutorials, and recipes for every platform.</p>
-    </div>
-  </section>
+  <main class="docs-page">
 
-  <!-- ===== QUICK START ===== -->
-  <section class="section" id="quickstart">
-    <div class="container">
-      <h2 class="section__title reveal">Quick Start Guides</h2>
-      <p class="section__subtitle reveal">Get up and running in minutes on your platform of choice.</p>
-
-      <div class="docs-grid">
-        <a href="https://github.com/sceneview/sceneview#android" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.27-.85-.31-.16-.69-.04-.85.27l-1.86 3.22c-1.18-.46-2.48-.72-3.87-.72s-2.69.26-3.87.72L6.87 5.72c-.16-.31-.54-.43-.85-.27-.31.16-.43.54-.27.85L7.6 9.48C4.49 11.05 2.35 14.02 2 17.5h20.01c-.36-3.48-2.5-6.45-5.61-8.02zM7 15.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zm10 0c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z"/></svg>
-          </div>
-          <h3 class="docs-card__title">Android (Jetpack Compose)</h3>
-          <p class="docs-card__text">Add one Gradle dependency and start building 3D scenes with Compose. Scene, ModelNode, LightNode, CameraNode &mdash; all declarative.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview#ar-android" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><circle cx="12" cy="12" r="3.2"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
-          </div>
-          <h3 class="docs-card__title">AR (Android)</h3>
-          <p class="docs-card__text">ARScene composable with plane detection, hit testing, anchors, and augmented images. Powered by ARCore.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview-swift" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-          </div>
-          <h3 class="docs-card__title">iOS / macOS / visionOS (SwiftUI)</h3>
-          <p class="docs-card__text">Swift Package with RealityKit renderer. SceneView and ARSceneView for iOS 17+, macOS 14+, visionOS 1+.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview/tree/main/sceneview-web" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.9-4.33-3.56zm2.95-8H5.08c.96-1.66 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
-          </div>
-          <h3 class="docs-card__title">Web (Filament.js)</h3>
-          <p class="docs-card__text">SceneView.modelViewer() renders glTF/GLB in the browser with PBR via Filament.js WASM. WebXR AR/VR support.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview/tree/main/flutter" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M14.314 0L2.3 12 6 15.7 21.684.013h-7.357L14.314 0zm.014 11.072L7.857 17.53l6.47 6.47H21.7l-6.46-6.468 6.46-6.46h-7.37z"/></svg>
-          </div>
-          <h3 class="docs-card__title">Flutter</h3>
-          <p class="docs-card__text">PlatformView bridge to native SceneView on Android (Filament) and iOS (RealityKit). Coming soon to pub.dev.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview/tree/main/react-native" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M14.23 12.004a2.236 2.236 0 0 1-2.235 2.236 2.236 2.236 0 0 1-2.236-2.236 2.236 2.236 0 0 1 2.235-2.236 2.236 2.236 0 0 1 2.236 2.236zm2.648-10.69c-1.346 0-3.107.96-4.888 2.622-1.78-1.653-3.542-2.602-4.887-2.602-.31 0-.6.045-.862.132C4.03 2.11 3.1 4.266 3.722 7.517c.19.97.486 1.993.867 3.053-.38 1.065-.68 2.09-.87 3.059-.622 3.255.306 5.41 2.52 6.055.256.09.546.133.86.133 1.344 0 3.105-.96 4.887-2.622 1.78 1.655 3.542 2.605 4.886 2.605.31 0 .6-.044.862-.132 2.213-.644 3.143-2.8 2.52-6.055-.19-.97-.486-1.993-.867-3.053.38-1.065.68-2.09.87-3.059.622-3.255-.306-5.41-2.52-6.055-.258-.087-.548-.13-.862-.13z"/></svg>
-          </div>
-          <h3 class="docs-card__title">React Native</h3>
-          <p class="docs-card__text">Fabric/Turbo bridge to native SceneView. Use JSX to define 3D scenes rendered natively on both platforms.</p>
-        </a>
+    <!-- ===== HERO ===== -->
+    <section class="docs-hero">
+      <div class="docs-hero__container">
+        <h1 class="docs-hero__title reveal">Documentation</h1>
+        <p class="docs-hero__subtitle reveal">Quick start guides, API reference, tutorials, and recipes for every platform.</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ===== API REFERENCE ===== -->
-  <section class="section" id="api" style="background:var(--color-surface-dim)">
-    <div class="container">
-      <h2 class="section__title reveal">API Reference</h2>
-      <p class="section__subtitle reveal">Full API documentation and machine-readable reference for AI assistants.</p>
+    <!-- ===== QUICK START GUIDES ===== -->
+    <section class="docs-section" id="quickstart">
+      <div class="docs-section__container">
+        <div class="docs-section__header">
+          <h2 class="docs-section__title reveal">Quick Start Guides</h2>
+          <p class="docs-section__subtitle reveal">Get up and running in minutes on your platform of choice.</p>
+        </div>
 
-      <div class="docs-grid">
-        <a href="https://github.com/sceneview/sceneview/blob/main/llms.txt" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-          </div>
-          <h3 class="docs-card__title">llms.txt (AI Reference)</h3>
-          <p class="docs-card__text">Complete machine-readable API reference: composable signatures, node types, resource loading, threading rules, and patterns.</p>
-        </a>
+        <div class="docs-grid">
+          <a href="https://github.com/sceneview/sceneview#android" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">android</span>
+            </div>
+            <h3 class="docs-card__title">Android (Jetpack Compose)</h3>
+            <p class="docs-card__text">Add one Gradle dependency and start building 3D scenes with Compose. Scene, ModelNode, LightNode, CameraNode &mdash; all declarative.</p>
+          </a>
 
-        <a href="https://www.npmjs.com/package/sceneview-mcp" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/></svg>
-          </div>
-          <h3 class="docs-card__title">SceneView MCP</h3>
-          <p class="docs-card__text">22 AI tools for Claude, Cursor, and Windsurf. Get setup, code generation, samples, and best practices via MCP protocol.</p>
-        </a>
+          <a href="https://github.com/sceneview/sceneview#ar-android" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">view_in_ar</span>
+            </div>
+            <h3 class="docs-card__title">AR (Android)</h3>
+            <p class="docs-card__text">ARScene composable with plane detection, hit testing, anchors, and augmented images. Powered by ARCore.</p>
+          </a>
 
-        <a href="https://github.com/sceneview/sceneview/tree/main/sceneview" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
-          </div>
-          <h3 class="docs-card__title">Android KDoc</h3>
-          <p class="docs-card__text">Full KDoc documentation for Scene, ARScene, all node types, loaders, and utilities in the sceneview and arsceneview modules.</p>
-        </a>
+          <a href="https://github.com/sceneview/sceneview-swift" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">phone_iphone</span>
+            </div>
+            <h3 class="docs-card__title">iOS / macOS / visionOS (SwiftUI)</h3>
+            <p class="docs-card__text">Swift Package with RealityKit renderer. SceneView and ARSceneView for iOS 17+, macOS 14+, visionOS 1+.</p>
+          </a>
 
-        <a href="https://github.com/sceneview/sceneview-swift" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          </div>
-          <h3 class="docs-card__title">Swift DocC</h3>
-          <p class="docs-card__text">SceneViewSwift documentation: 16 node types, RealityKit integration, iOS/macOS/visionOS platform guides.</p>
-        </a>
-      </div>
-    </div>
-  </section>
+          <a href="https://github.com/sceneview/sceneview/tree/main/sceneview-web" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">language</span>
+            </div>
+            <h3 class="docs-card__title">Web (Filament.js)</h3>
+            <p class="docs-card__text">SceneView.modelViewer() renders glTF/GLB in the browser with PBR via Filament.js WASM. WebXR AR/VR support.</p>
+          </a>
 
-  <!-- ===== RECIPES ===== -->
-  <section class="section" id="recipes">
-    <div class="container">
-      <h2 class="section__title reveal">Code Recipes</h2>
-      <p class="section__subtitle reveal">Copy-paste patterns for common 3D and AR tasks.</p>
+          <a href="https://github.com/sceneview/sceneview/tree/main/flutter" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">flutter_dash</span>
+            </div>
+            <h3 class="docs-card__title">Flutter</h3>
+            <p class="docs-card__text">PlatformView bridge to native SceneView on Android (Filament) and iOS (RealityKit). Coming soon to pub.dev.</p>
+          </a>
 
-      <div class="docs-grid">
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--color-primary)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
-          </div>
-          <h3 class="docs-card__title">Model Viewer</h3>
-          <p class="docs-card__text">Load glTF/GLB, orbit camera, HDR environment, shadows, and auto-rotation in 10 lines of Compose.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--color-primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          </div>
-          <h3 class="docs-card__title">AR Placement</h3>
-          <p class="docs-card__text">Tap-to-place 3D objects on detected planes with anchors, scale gestures, and rotation controls.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          </div>
-          <h3 class="docs-card__title">Procedural Geometry</h3>
-          <p class="docs-card__text">Generate cubes, spheres, cylinders, and custom shapes at runtime with Filament materials.</p>
-        </a>
-
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-          </div>
-          <h3 class="docs-card__title">Physics & Animation</h3>
-          <p class="docs-card__text">Spring animations, smooth transforms, physics simulation, and skeletal animation playback.</p>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== VIDEO TUTORIALS ===== -->
-  <section class="section" id="tutorials" style="background:var(--color-surface-dim)">
-    <div class="container">
-      <h2 class="section__title reveal">Video Tutorials</h2>
-      <p class="section__subtitle reveal">Step-by-step video guides for building with SceneView.</p>
-
-      <div class="docs-grid" style="max-width:800px;margin:0 auto">
-        <div class="docs-card reveal" style="opacity:0.7">
-          <div class="docs-card__icon">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--color-primary)"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-          <h3 class="docs-card__title">Coming Soon</h3>
-          <p class="docs-card__text">Video tutorials covering 3D model loading, AR experiences, procedural geometry, and cross-platform development are in production. Subscribe to the GitHub repo to get notified.</p>
+          <a href="https://github.com/sceneview/sceneview/tree/main/react-native" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">deployed_code</span>
+            </div>
+            <h3 class="docs-card__title">React Native</h3>
+            <p class="docs-card__text">Fabric/Turbo bridge to native SceneView. Use JSX to define 3D scenes rendered natively on both platforms.</p>
+          </a>
         </div>
       </div>
+    </section>
 
-      <div style="text-align:center;margin-top:var(--space-2xl)" class="reveal">
-        <a href="https://github.com/sceneview/sceneview" class="btn btn--outline" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          Watch for updates
-        </a>
+    <!-- ===== API REFERENCE ===== -->
+    <section class="docs-section docs-section--alt" id="api">
+      <div class="docs-section__container">
+        <div class="docs-section__header">
+          <h2 class="docs-section__title reveal">API Reference</h2>
+          <p class="docs-section__subtitle reveal">Full API documentation and machine-readable reference for AI assistants.</p>
+        </div>
+
+        <div class="docs-grid">
+          <a href="https://github.com/sceneview/sceneview/blob/main/llms.txt" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">description</span>
+            </div>
+            <h3 class="docs-card__title">llms.txt (AI Reference)</h3>
+            <p class="docs-card__text">Complete machine-readable API reference: composable signatures, node types, resource loading, threading rules, and patterns.</p>
+          </a>
+
+          <a href="https://www.npmjs.com/package/sceneview-mcp" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">smart_toy</span>
+            </div>
+            <h3 class="docs-card__title">SceneView MCP</h3>
+            <p class="docs-card__text">32 AI tools for Claude, Cursor, and Windsurf. Get setup, code generation, samples, and best practices via MCP protocol.</p>
+          </a>
+
+          <a href="https://github.com/sceneview/sceneview/tree/main/sceneview" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">code</span>
+            </div>
+            <h3 class="docs-card__title">Android KDoc</h3>
+            <p class="docs-card__text">Full KDoc documentation for Scene, ARScene, all node types, loaders, and utilities in the sceneview and arsceneview modules.</p>
+          </a>
+
+          <a href="https://github.com/sceneview/sceneview-swift" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">menu_book</span>
+            </div>
+            <h3 class="docs-card__title">Swift DocC</h3>
+            <p class="docs-card__text">SceneViewSwift documentation: 16 node types, RealityKit integration, iOS/macOS/visionOS platform guides.</p>
+          </a>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- ===== CODE RECIPES ===== -->
+    <section class="docs-section" id="recipes">
+      <div class="docs-section__container">
+        <div class="docs-section__header">
+          <h2 class="docs-section__title reveal">Code Recipes</h2>
+          <p class="docs-section__subtitle reveal">Copy-paste patterns for common 3D and AR tasks.</p>
+        </div>
+
+        <div class="docs-grid">
+          <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">3d_rotation</span>
+            </div>
+            <h3 class="docs-card__title">Model Viewer</h3>
+            <p class="docs-card__text">Load glTF/GLB, orbit camera, HDR environment, shadows, and auto-rotation in 10 lines of Compose.</p>
+          </a>
+
+          <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">place_item</span>
+            </div>
+            <h3 class="docs-card__title">AR Placement</h3>
+            <p class="docs-card__text">Tap-to-place 3D objects on detected planes with anchors, scale gestures, and rotation controls.</p>
+          </a>
+
+          <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">category</span>
+            </div>
+            <h3 class="docs-card__title">Procedural Geometry</h3>
+            <p class="docs-card__text">Generate cubes, spheres, cylinders, and custom shapes at runtime with Filament materials.</p>
+          </a>
+
+          <a href="https://github.com/sceneview/sceneview/tree/main/samples/recipes" class="docs-card reveal" target="_blank" rel="noopener">
+            <div class="docs-card__icon">
+              <span class="material-symbols-outlined">animation</span>
+            </div>
+            <h3 class="docs-card__title">Physics & Animation</h3>
+            <p class="docs-card__text">Spring animations, smooth transforms, physics simulation, and skeletal animation playback.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VIDEO TUTORIALS ===== -->
+    <section class="docs-section docs-section--alt" id="tutorials">
+      <div class="docs-section__container">
+        <div class="docs-section__header">
+          <h2 class="docs-section__title reveal">Video Tutorials</h2>
+          <p class="docs-section__subtitle reveal">Step-by-step video guides for building with SceneView.</p>
+        </div>
+
+        <div class="docs-grid" style="max-width:480px;margin:0 auto">
+          <div class="docs-card reveal" style="opacity:0.7;text-align:center">
+            <div class="docs-card__icon" style="margin:0 auto 16px">
+              <span class="material-symbols-outlined">play_circle</span>
+            </div>
+            <h3 class="docs-card__title">Coming Soon</h3>
+            <p class="docs-card__text">Video tutorials covering 3D model loading, AR experiences, procedural geometry, and cross-platform development are in production. Subscribe to the GitHub repo to get notified.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CTA ===== -->
+    <section class="docs-cta">
+      <div class="docs-cta__container">
+        <div class="docs-cta__card reveal">
+          <h2 class="docs-cta__title">Ready to build?</h2>
+          <p class="docs-cta__text">Star the repo, join Discord, and start building 3D experiences today.</p>
+          <a href="https://github.com/sceneview/sceneview" class="docs-cta__btn" target="_blank" rel="noopener">
+            <span class="material-symbols-outlined" style="font-size:18px">code</span>
+            View on GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
 
   <!-- ===== FOOTER ===== -->
   <footer class="footer">
-    <div class="container">
-      <div class="footer__inner">
-        <div class="footer__brand">
-          <svg viewBox="0 0 32 32" width="24" height="24" fill="none">
-            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
-            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          </svg>
-          <span>SceneView</span>
+    <div class="footer__container">
+      <div class="footer__grid">
+        <div class="footer__brand-col">
+          <div class="footer__brand-name">SceneView SDK</div>
+          <p class="footer__brand-desc">The architectural logic for building high-performance 3D spatial experiences across all modern platforms.</p>
+          <div class="footer__copyright">&copy; 2026 SceneView SDK. Architectural Logic.</div>
         </div>
-        <div class="footer__links">
-          <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">Apache 2.0</a>
-          <a href="https://github.com/sponsors/sceneview" target="_blank" rel="noopener">Sponsor</a>
-          <a href="https://github.com/sceneview/sceneview" target="_blank" rel="noopener">Source Code</a>
-          <a href="/">Home</a>
-          <a href="/privacy.html">Privacy</a>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Documentation</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://sceneview.github.io/docs/" target="_blank" rel="noopener">Examples</a></li>
+            <li><a href="/showcase.html">Showcase</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Community</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://github.com/sceneview/sceneview" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://discord.gg/sceneview" target="_blank" rel="noopener">Discord</a></li>
+            <li><a href="https://twitter.com/nicoadams_" target="_blank" rel="noopener">Twitter</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Legal</h4>
+          <ul class="footer__col-list">
+            <li><a href="/privacy.html">Privacy</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">Terms</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          </ul>
         </div>
       </div>
     </div>
