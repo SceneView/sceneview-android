@@ -43,7 +43,7 @@ dokka = "2.0.0"
 
 # Testing
 androidxTestJunit = "1.2.1"
-androidxTestRunner = "1.6.2"
+androidxTestRunner = "1.7.0"
 androidxTestRules = "1.7.0"
 
 # Code Quality
