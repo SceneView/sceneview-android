@@ -42,6 +42,13 @@
 - #8 Swift declarative ✅, #9 NodeGesture cleanup ✅, #10 Naming alignment ✅
 - #11 SideEffect guards ✅, #12 HitResultNode docs ✅, #13 SceneNode (deferred) ✅, #14 ARNodeScope ✅
 
+### 6. Documentation updates ✅
+- **Migration guide**: v3.6.0 section with 7 before/after examples (SecondaryCamera, geometry params, LightNode, VideoNode, ShapeNode/PhysicsNode, Swift declarative, NodeGesture)
+- **Android cheatsheet**: updated VideoNode, SecondaryCamera entries
+- **iOS cheatsheet**: added declarative SceneView init, per-entity gesture API section
+- **llms.txt**: rememberMediaPlayer in helpers table
+- Committed `77a37bed`, `42945b9e`, `e3c46e32`
+
 ## Previous session (session 16)
 
 ## WHAT WAS DONE IN SESSION 16
