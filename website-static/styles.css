@@ -1064,7 +1064,7 @@ ul { list-style: none; }
 
 /* Terminal */
 .cta__terminal {
-  background: var(--color-inverse-surface);
+  background: #0d1117;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow-xl);
