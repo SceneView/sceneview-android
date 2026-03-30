@@ -4,10 +4,41 @@
 
 ## Last Session Summary
 
-**Date:** 30 mars 2026 (session 17)
+**Date:** 30 mars 2026 (session 18)
 **Branch:** main
 
-## WHAT WAS DONE THIS SESSION (session 17)
+## WHAT WAS DONE THIS SESSION (session 18)
+
+### 1. v3.6.0 Release — FULLY PUBLISHED ✅
+- Version bumped from 3.5.2 → 3.6.0 across 150+ files
+- GitHub Release created: v3.6.0
+- Maven Central: published (sceneview + arsceneview + sceneview-core)
+- npm: sceneview-web 3.6.0 published
+- sceneview.github.io: updated to 3.6.0
+- SPM: tag v3.6.0 pushed
+
+### 2. CI fixes ✅
+- **Play Store**: Fixed 200MB AAB limit by creating Play Asset Delivery install-time pack (`samples/android-demo-assets/`). 50 models + 10 environments moved out of base module.
+- **App Store**: Fixed `SceneViewTheme` not in scope — added Theme.swift to Xcode pbxproj (PBXBuildFile, PBXFileReference, group, sources build phase).
+- **GitHub Actions**: Bumped all to latest (checkout v6, cache v5, upload-artifact v7, download-artifact v8, configure-pages v6) — fixes Node.js 20 deprecation.
+
+### 3. Scene → SceneView cross-platform rename ✅
+- Android composables: `Scene { }` → `SceneView { }`, `ARScene { }` → `ARSceneView { }`
+- `@Deprecated(replaceWith = ...)` aliases for old names — zero breaking change
+- All samples, docs, cheatsheets, llms.txt, codelabs, recipes, website, MCP tools updated
+- 2360 MCP tests pass
+- BUILD SUCCESSFUL (sceneview + arsceneview + android-demo)
+
+### 4. Dependabot PRs merged ✅
+- Kotlin 2.1.21 → 2.3.20
+- Compose BOM 2025.06.00 → 2025.12.01
+- Media3 1.9.2 → 1.10.0
+- TV Foundation alpha11 → beta01
+- Test Runner 1.6.2 → 1.7.0
+
+## Previous session (session 17)
+
+## WHAT WAS DONE IN SESSION 17
 
 ### 1. Swift: NodeGesture cleanup (#9) + async-safe APIs + zero warnings ✅
 - **NodeGesture cleanup**: WeakEntity tracking, purgeStaleHandlers() auto-cleanup, Entity fluent extensions (.onTap, .onDrag, .onScale, .onRotate, .onLongPress)
