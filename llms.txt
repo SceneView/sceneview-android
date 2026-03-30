@@ -374,6 +374,9 @@ Scene(...) {
     size: Size? = null,      // null = auto from aspect ratio
     center: Position = Plane.DEFAULT_CENTER,
     normal: Direction = Plane.DEFAULT_NORMAL,
+    position: Position = Position(x = 0f),
+    rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: ImageNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -384,6 +387,9 @@ Scene(...) {
     size: Size? = null,
     center: Position = Plane.DEFAULT_CENTER,
     normal: Direction = Plane.DEFAULT_NORMAL,
+    position: Position = Position(x = 0f),
+    rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: ImageNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -394,6 +400,9 @@ Scene(...) {
     size: Size? = null,
     center: Position = Plane.DEFAULT_CENTER,
     normal: Direction = Plane.DEFAULT_NORMAL,
+    position: Position = Position(x = 0f),
+    rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: ImageNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -409,12 +418,13 @@ Scene(...) {
     widthMeters: Float = 0.6f,
     heightMeters: Float = 0.2f,
     position: Position = Position(x = 0f),
+    scale: Scale = Scale(1f),
     cameraPositionProvider: (() -> Position)? = null,
     apply: TextNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
 ```
-Reactive: `text`, `fontSize`, `textColor`, `backgroundColor`, `position` update on recomposition.
+Reactive: `text`, `fontSize`, `textColor`, `backgroundColor`, `position`, `scale` update on recomposition.
 
 ### BillboardNode — always-facing-camera sprite
 ```kotlin
@@ -423,6 +433,7 @@ Reactive: `text`, `fontSize`, `textColor`, `backgroundColor`, `position` update 
     widthMeters: Float? = null,
     heightMeters: Float? = null,
     position: Position = Position(x = 0f),
+    scale: Scale = Scale(1f),
     cameraPositionProvider: (() -> Position)? = null,
     apply: BillboardNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
@@ -435,6 +446,9 @@ Reactive: `text`, `fontSize`, `textColor`, `backgroundColor`, `position` update 
     player: MediaPlayer,
     chromaKeyColor: Int? = null,
     size: Size? = null,    // null = auto-sized from video aspect ratio
+    position: Position = Position(x = 0f),
+    rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: VideoNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
