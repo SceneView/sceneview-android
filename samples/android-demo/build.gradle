@@ -9,6 +9,8 @@ android {
 
     compileSdk 36
 
+    assetPacks = [":samples:android-demo-assets"]
+
     defaultConfig {
         applicationId "io.github.sceneview.demo"
         minSdk 28
