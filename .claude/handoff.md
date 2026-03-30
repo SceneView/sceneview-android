@@ -9,7 +9,23 @@
 
 ## WHAT WAS DONE THIS SESSION (session 16)
 
-### 1. SceneViewSwift Xcode verification ✅
+### 1. v3.6.0 API simplification — first batch ✅
+- **Full API audit**: 14 issues identified across Android, Swift, and KMP core
+- **docs/v3.6.0-roadmap.md**: Complete roadmap with priorities, implementation plan, migration strategy
+- **Geometry composable consistency** (non-breaking):
+  - `CubeNode`: added `scale` param
+  - `SphereNode`: added `rotation` + `scale` params
+  - `CylinderNode`, `PlaneNode`, `LineNode`, `PathNode`: added `scale` param
+  - All geometry nodes now have uniform `position`/`rotation`/`scale` trio
+- **LightNode simplification** (non-breaking):
+  - Added explicit `intensity`, `direction`, `position` params
+  - No more need for dual `apply`/`nodeApply` for common config
+  - `apply` still available for advanced Builder properties (falloff, spotLightCone, etc.)
+- **llms.txt updated** with all new signatures
+- All builds pass: `sceneview`, `arsceneview`, `android-demo`
+- Committed `36710231` and pushed to main
+
+### 2. SceneViewSwift Xcode verification ✅
 - **iOS build**: BUILD SUCCEEDED (Xcode 26.3, iOS 26.2 SDK) — zero warnings, zero errors
 - **macOS build**: BUILD SUCCEEDED — zero warnings, zero errors
 - **visionOS**: Not tested (SDK not downloaded, not a code issue)
@@ -198,7 +214,10 @@ Stitch generates the design → Claude applies it in code. NO manual CSS/UI writ
    - App screenshots pending (need emulator GUI or physical device — can't capture Filament SurfaceView headless)
 
 ### Phase 2 — Post-redesign
-- v3.6.0 roadmap: API simplification
+- ~~v3.6.0 roadmap: API simplification~~ ✅ STARTED (session 16)
+  - Roadmap created (14 issues, 5 priority tiers)
+  - First batch implemented: geometry param consistency + LightNode simplification
+  - Next: PhysicsNode/ShapeNode composables, VideoNode convenience, SideEffect guards
 - ~~sceneview.js enhancements (setQuality, setBloom, addLight)~~ ✅ DONE (session 15)
   - sceneview.js bumped to v1.5.0
   - setQuality('low'|'medium'|'high') — AO + anti-aliasing control
