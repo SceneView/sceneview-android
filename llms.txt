@@ -260,7 +260,10 @@ ModelNode class properties (available via `apply` block):
 ```kotlin
 @Composable fun LightNode(
     type: LightManager.Type,
-    apply: LightManager.Builder.() -> Unit = {},
+    intensity: Float? = null,              // lux (directional/sun) or candela (point/spot)
+    direction: Direction? = null,          // for directional/spot/sun
+    position: Position = Position(x = 0f),
+    apply: LightManager.Builder.() -> Unit = {},   // advanced: color, falloff, spotLightCone, etc.
     nodeApply: LightNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -270,17 +273,19 @@ ModelNode class properties (available via `apply` block):
 
 ```kotlin
 Scene(...) {
+    // Simple — use explicit params (recommended):
     LightNode(
         type = LightManager.Type.SUN,
-        apply = {
-            color(1.0f, 1.0f, 1.0f)
-            intensity(100_000f)
-            castShadows(true)
-        }
+        intensity = 100_000f,
+        direction = Direction(0f, -1f, 0f),
+        apply = { castShadows(true) }
     )
+    // Advanced — use apply for full Builder access:
     LightNode(
-        type = LightManager.Type.POINT,
-        apply = { intensity(50_000f); falloff(5.0f) }
+        type = LightManager.Type.SPOT,
+        intensity = 50_000f,
+        position = Position(2f, 3f, 0f),
+        apply = { falloff(5.0f); spotLightCone(0.1f, 0.5f) }
     )
 }
 ```
@@ -293,6 +298,7 @@ Scene(...) {
     materialInstance: MaterialInstance? = null,
     position: Position = Position(x = 0f),
     rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: CubeNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -307,6 +313,8 @@ Scene(...) {
     slices: Int = Sphere.DEFAULT_SLICES,    // 24
     materialInstance: MaterialInstance? = null,
     position: Position = Position(x = 0f),
+    rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: SphereNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -322,6 +330,7 @@ Scene(...) {
     materialInstance: MaterialInstance? = null,
     position: Position = Position(x = 0f),
     rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: CylinderNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -337,6 +346,7 @@ Scene(...) {
     materialInstance: MaterialInstance? = null,
     position: Position = Position(x = 0f),
     rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: PlaneNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -478,6 +488,7 @@ Scene(viewNodeWindowManager = windowManager) {
     materialInstance: MaterialInstance? = null,
     position: Position = Position(x = 0f),
     rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: LineNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
@@ -491,6 +502,7 @@ Scene(viewNodeWindowManager = windowManager) {
     materialInstance: MaterialInstance? = null,
     position: Position = Position(x = 0f),
     rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
     apply: PathNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )

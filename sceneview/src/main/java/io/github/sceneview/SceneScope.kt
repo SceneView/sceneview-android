@@ -266,21 +266,57 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      *
      * At least one light must be added to the scene to see anything unless using unlit materials.
      *
+     * Simplified overload — pass common properties directly without needing `apply` lambdas:
+     * ```kotlin
+     * LightNode(
+     *     type = LightManager.Type.DIRECTIONAL,
+     *     intensity = 100_000f,
+     *     color = Color(1f, 0.95f, 0.9f),
+     *     direction = Direction(0f, -1f, 0f),
+     *     position = Position(0f, 5f, 0f)
+     * )
+     * ```
+     *
+     * Advanced overload — use `apply` for full [LightManager.Builder] access:
+     * ```kotlin
+     * LightNode(
+     *     type = LightManager.Type.SPOT,
+     *     apply = {
+     *         intensity(50_000f)
+     *         falloff(10f)
+     *         spotLightCone(innerAngle = 0.1f, outerAngle = 0.5f)
+     *     }
+     * )
+     * ```
+     *
      * @param type       The [LightManager.Type] of light (DIRECTIONAL, POINT, SPOT, SUN, etc.).
-     * @param apply      Builder configuration for [LightManager.Builder] (color, intensity,
-     *                   direction, falloff, etc.).
+     * @param intensity  Luminous intensity in candela (point/spot) or lux (directional/sun).
+     * @param direction  Direction vector for directional/spot/sun lights.
+     * @param position   World-space position of the light node.
+     * @param apply      Builder configuration for [LightManager.Builder] — for advanced properties
+     *                   (color, falloff, spotLightCone, sunAngularRadius, etc.).
      * @param nodeApply  Additional imperative configuration on the [LightNodeImpl] after creation.
      * @param content    Optional child nodes declared in a [NodeScope].
      */
     @Composable
     fun LightNode(
         type: LightManager.Type,
+        intensity: Float? = null,
+        direction: Direction? = null,
+        position: Position = Position(x = 0f),
         apply: LightManager.Builder.() -> Unit = {},
         nodeApply: LightNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
         val node = remember(engine, type) {
-            LightNodeImpl(engine = engine, type = type, apply = apply).apply(nodeApply)
+            LightNodeImpl(engine = engine, type = type, apply = {
+                intensity?.let { intensity(it) }
+                direction?.let { direction(it.x, it.y, it.z) }
+                apply()
+            }).apply(nodeApply)
+        }
+        SideEffect {
+            node.position = position
         }
         NodeLifecycle(node, content)
     }
@@ -318,6 +354,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param size             Full size (width × height × depth) of the cube in meters.
      * @param center           Center of the cube in local space.
      * @param materialInstance The material instance to apply to all faces.
+     * @param position         World-space position.
+     * @param rotation         World-space rotation (Euler angles in degrees).
+     * @param scale            Uniform or non-uniform scale.
      * @param apply            Additional configuration on the [CubeNodeImpl].
      * @param content          Optional child nodes.
      */
@@ -328,6 +367,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         materialInstance: MaterialInstance? = null,
         position: Position = Position(x = 0f),
         rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: CubeNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -343,6 +383,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             node.updateGeometry(center = center, size = size)
             node.position = position
             node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -357,6 +398,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param stacks           Number of horizontal subdivisions.
      * @param slices           Number of vertical subdivisions.
      * @param materialInstance The material instance to apply.
+     * @param position         World-space position.
+     * @param rotation         World-space rotation (Euler angles in degrees).
+     * @param scale            Uniform or non-uniform scale.
      * @param apply            Additional configuration on the [SphereNodeImpl].
      * @param content          Optional child nodes.
      */
@@ -368,6 +412,8 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         slices: Int = Sphere.DEFAULT_SLICES,
         materialInstance: MaterialInstance? = null,
         position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: SphereNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -384,6 +430,8 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         SideEffect {
             node.updateGeometry(radius = radius, center = center, stacks = stacks, slices = slices)
             node.position = position
+            node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -398,6 +446,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param center           Center of the cylinder in local space.
      * @param sideCount        Number of sides (polygon resolution of the cylinder).
      * @param materialInstance The material instance to apply.
+     * @param position         World-space position.
+     * @param rotation         World-space rotation (Euler angles in degrees).
+     * @param scale            Uniform or non-uniform scale.
      * @param apply            Additional configuration on the [CylinderNodeImpl].
      * @param content          Optional child nodes.
      */
@@ -410,6 +461,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         materialInstance: MaterialInstance? = null,
         position: Position = Position(x = 0f),
         rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: CylinderNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -432,6 +484,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             )
             node.position = position
             node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -446,6 +499,9 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param normal           Facing direction of the plane.
      * @param uvScale          UV texture coordinate scale.
      * @param materialInstance The material instance to apply.
+     * @param position         World-space position.
+     * @param rotation         World-space rotation (Euler angles in degrees).
+     * @param scale            Uniform or non-uniform scale.
      * @param apply            Additional configuration on the [PlaneNodeImpl].
      * @param content          Optional child nodes.
      */
@@ -458,6 +514,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         materialInstance: MaterialInstance? = null,
         position: Position = Position(x = 0f),
         rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: PlaneNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -475,6 +532,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             node.updateGeometry(size = size, center = center, normal = normal)
             node.position = position
             node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -798,6 +856,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param materialInstance The material instance to apply (color, unlit, etc.).
      * @param position         Local position of the node's origin.
      * @param rotation         Local rotation in Euler angles (degrees).
+     * @param scale            Uniform or non-uniform scale.
      * @param apply            Additional configuration on the [LineNodeImpl].
      * @param content          Optional child nodes.
      */
@@ -808,6 +867,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         materialInstance: MaterialInstance? = null,
         position: Position = Position(x = 0f),
         rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: LineNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -823,6 +883,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             node.updateGeometry(start = start, end = end)
             node.position = position
             node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
@@ -848,6 +909,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param materialInstance The material instance to apply.
      * @param position         Local position of the node's origin.
      * @param rotation         Local rotation in Euler angles (degrees).
+     * @param scale            Uniform or non-uniform scale.
      * @param apply            Additional configuration on the [PathNodeImpl].
      * @param content          Optional child nodes.
      */
@@ -858,6 +920,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         materialInstance: MaterialInstance? = null,
         position: Position = Position(x = 0f),
         rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
         apply: PathNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
@@ -873,6 +936,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             node.updateGeometry(points = points, closed = closed)
             node.position = position
             node.rotation = rotation
+            node.scale = scale
         }
         NodeLifecycle(node, content)
     }
