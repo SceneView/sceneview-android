@@ -13,27 +13,45 @@ SceneView 3.6.0 simplifies the API surface so that AI assistants and developers 
 code on the first try. All changes use `@Deprecated(replaceWith = ...)` — the Kotlin compiler will
 auto-suggest fixes via IDE quick actions.
 
-### 1. `CameraNode` composable renamed to `SecondaryCamera`
+### 1. `Scene` composable renamed to `SceneView`, `ARScene` to `ARSceneView`
 
-The `CameraNode { }` composable inside `Scene { }` creates a non-active camera — it does NOT
+The `Scene { }` composable is renamed to `SceneView { }` and `ARScene { }` is renamed to
+`ARSceneView { }`. This aligns Android naming with Apple (SwiftUI already uses `SceneView` and
+`ARSceneView`) and avoids confusion with Filament's internal `Scene` class.
+
+```kotlin
+// Before
+Scene(modifier = Modifier.fillMaxSize()) { /* nodes */ }
+ARScene(modifier = Modifier.fillMaxSize()) { /* AR nodes */ }
+
+// After (3.6.0)
+SceneView(modifier = Modifier.fillMaxSize()) { /* nodes */ }
+ARSceneView(modifier = Modifier.fillMaxSize()) { /* AR nodes */ }
+```
+
+`SceneScope` and `ARSceneScope` are **unchanged** — only the top-level composable names changed.
+
+### 2. `CameraNode` composable renamed to `SecondaryCamera`
+
+The `CameraNode { }` composable inside `SceneView { }` creates a non-active camera — it does NOT
 become the scene's rendering camera. The name was misleading, so it's renamed to `SecondaryCamera`.
 
 ```kotlin
 // Before
-Scene(cameraNode = rememberCameraNode(engine)) {
+SceneView(cameraNode = rememberCameraNode(engine)) {
     CameraNode { /* secondary camera — name was confusing */ }
 }
 
 // After (3.6.0)
-Scene(cameraNode = rememberCameraNode(engine)) {
+SceneView(cameraNode = rememberCameraNode(engine)) {
     SecondaryCamera { /* clearly named as non-primary */ }
 }
 ```
 
-The scene's active camera is still set via `Scene(cameraNode = rememberCameraNode(engine))` —
+The scene's active camera is still set via `SceneView(cameraNode = rememberCameraNode(engine))` —
 this has NOT changed.
 
-### 2. All geometry nodes now have uniform transform params
+### 3. All geometry nodes now have uniform transform params
 
 Every geometry composable (`CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode`, `LineNode`,
 `PathNode`) now accepts the same `position`, `rotation`, `scale` trio. Previously, some were missing.
@@ -52,7 +70,7 @@ SphereNode(
 )
 ```
 
-### 3. `LightNode` — explicit params instead of dual lambdas
+### 4. `LightNode` — explicit params instead of dual lambdas
 
 `LightNode` now exposes `intensity`, `direction`, and `position` as direct parameters instead of
 requiring two separate `apply` / `nodeApply` lambdas.
@@ -74,29 +92,29 @@ LightNode(
 )
 ```
 
-### 4. `VideoNode` — convenience overload with asset path
+### 5. `VideoNode` — convenience overload with asset path
 
 New overload that handles `MediaPlayer` lifecycle automatically:
 
 ```kotlin
 // Before — manual MediaPlayer setup
 val player = rememberMediaPlayer(context, assetFileLocation = "videos/promo.mp4")
-Scene {
+SceneView {
     player?.let { VideoNode(player = it, position = Position(z = -2f)) }
 }
 
 // After (3.6.0) — one-liner
-Scene {
+SceneView {
     VideoNode(videoPath = "videos/promo.mp4", position = Position(z = -2f))
 }
 ```
 
-### 5. New composables: `ShapeNode` and `PhysicsNode`
+### 6. New composables: `ShapeNode` and `PhysicsNode`
 
-Both are now available directly in the `Scene { }` DSL:
+Both are now available directly in the `SceneView { }` DSL:
 
 ```kotlin
-Scene {
+SceneView {
     ShapeNode(
         polygonPath = listOf(Position2(0f, 0f), Position2(1f, 0f), Position2(0.5f, 1f)),
         color = Color(0xFF2196F3.toInt())
@@ -107,9 +125,9 @@ Scene {
 }
 ```
 
-### 6. Swift: Declarative `SceneView` with `@NodeBuilder`
+### 7. Swift: Declarative `SceneView` with `@NodeBuilder`
 
-SwiftUI `SceneView` now supports a declarative builder matching Android's `Scene { }`:
+SwiftUI `SceneView` now supports a declarative builder matching Android's `SceneView { }`:
 
 ```swift
 // Before — imperative
@@ -127,7 +145,7 @@ SceneView {
 }
 ```
 
-### 7. Swift: `NodeGesture` automatic cleanup
+### 8. Swift: `NodeGesture` automatic cleanup
 
 `NodeGesture` now tracks entities with weak references and automatically purges stale handlers.
 Entity fluent extensions are available for cleaner syntax:
@@ -169,13 +187,13 @@ implementation("io.github.sceneview:arsceneview:3.6.0")
 
 ---
 
-## 2. `Scene` — nodes move into the content block
+## 2. `SceneView` — nodes move into the content block
 
-The `childNodes` parameter is gone. Declare nodes directly inside the `Scene { }` trailing lambda.
+The `childNodes` parameter is gone. Declare nodes directly inside the `SceneView { }` trailing lambda.
 
 ```kotlin
 // Before — nodes passed as a list
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -194,7 +212,7 @@ Scene(
 // After — nodes declared as composables in the DSL
 val modelInstance = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     cameraManipulator = rememberCameraManipulator()
 ) {
@@ -237,13 +255,13 @@ declared inside that lambda are automatically parented to the enclosing node.
 
 ---
 
-## 4. `ARScene` — AR nodes move into the content block
+## 4. `ARSceneView` — AR nodes move into the content block
 
 ```kotlin
 // Before
 var anchor: Anchor? = null
 
-ARScene(
+ARSceneView(
     modifier = Modifier.fillMaxSize(),
     childNodes = rememberNodes { /* populated imperatively in onSessionUpdated */ },
     onSessionUpdated = { session, frame ->
@@ -263,7 +281,7 @@ ARScene(
 // After — state drives composition
 var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-ARScene(
+ARSceneView(
     modifier = Modifier.fillMaxSize(),
     onSessionUpdated = { _, frame ->
         if (anchor == null) {
@@ -306,11 +324,11 @@ main thread, so it is both non-blocking and thread-safe.
 
 ```kotlin
 // Before (if the flag existed in your version)
-Scene(isOpaque = false)
+SceneView(isOpaque = false)
 
 // After — explicit enum
-Scene(surfaceType = SurfaceType.TextureSurface)  // TextureView, supports alpha blending
-Scene(surfaceType = SurfaceType.Surface)          // SurfaceView, best performance (default)
+SceneView(surfaceType = SurfaceType.TextureSurface)  // TextureView, supports alpha blending
+SceneView(surfaceType = SurfaceType.Surface)          // SurfaceView, best performance (default)
 ```
 
 ---
@@ -324,7 +342,7 @@ obtained with `rememberViewNodeManager()`.
 // After
 val windowManager = rememberViewNodeManager()
 
-Scene {
+SceneView {
     ViewNode(windowManager = windowManager) {
         Card { Text("Hello from 3D!") }
     }
@@ -353,7 +371,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ARScene(modifier = Modifier.fillMaxSize()) {
+            ARSceneView(modifier = Modifier.fillMaxSize()) {
                 // AR content here
             }
         }
@@ -379,7 +397,7 @@ the imports continue to work. No action required.
 | Change | Action |
 |---|---|
 | Bump dependency to `3.6.0` | Update `build.gradle` |
-| Remove `childNodes = rememberNodes { }` | Move node declarations into `Scene { }` |
+| Remove `childNodes = rememberNodes { }` | Move node declarations into `SceneView { }` |
 | Replace `add(ModelNode(...))` | Use `ModelNode(...)` composable directly |
 | Replace `addChildNode(...)` | Use nested `NodeScope` content lambda |
 | Replace `modelLoader.createModelInstance(...)` | Use `rememberModelInstance(modelLoader, path)` |

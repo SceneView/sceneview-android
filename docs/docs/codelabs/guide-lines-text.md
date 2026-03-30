@@ -21,7 +21,7 @@ SceneView 3.2.0 adds three geometry primitives for annotation and visualization:
 ### Single line
 
 ```kotlin
-Scene(engine = engine, modelLoader = modelLoader) {
+SceneView(engine = engine, modelLoader = modelLoader) {
     val line = remember(engine) {
         LineNode(
             engine = engine,
@@ -47,7 +47,7 @@ val points = remember {
     }
 }
 
-Scene(engine = engine, modelLoader = modelLoader) {
+SceneView(engine = engine, modelLoader = modelLoader) {
     val path = remember(engine, points) {
         PathNode(engine = engine, points = points)
     }
@@ -78,7 +78,7 @@ val closedPath = remember(engine) {
 ```kotlin
 var cameraPos by remember { mutableStateOf(Position()) }
 
-Scene(
+SceneView(
     engine = engine,
     modelLoader = modelLoader,
     onFrame = { cameraPos = cameraNode.worldPosition }
@@ -129,7 +129,7 @@ TextNode(
 A common pattern is annotating a 3D scene with measurement lines and labels:
 
 ```kotlin
-Scene(engine = engine, modelLoader = modelLoader) {
+SceneView(engine = engine, modelLoader = modelLoader) {
     // Measurement line
     val measureLine = remember(engine) {
         LineNode(engine, start = Position(-1f, 0f, 0f), end = Position(1f, 0f, 0f))

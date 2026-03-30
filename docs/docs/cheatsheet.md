@@ -44,10 +44,10 @@ val viewNodeManager = rememberViewNodeManager()
 
 ---
 
-## Scene
+## SceneView
 
 ```kotlin
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -72,10 +72,10 @@ Scene(
 
 ---
 
-## ARScene
+## ARSceneView
 
 ```kotlin
-ARScene(
+ARSceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -199,7 +199,7 @@ materialLoader.createColorInstance(Color.Red)
 |---|---|
 | `rememberModelInstance(...)` | `modelLoader.createModelInstance(...)` on IO |
 | `loadModelInstanceAsync(...)` | `materialLoader.createMaterial(...)` on IO |
-| Any composable in `Scene { }` | Direct Filament API on background thread |
+| Any composable in `SceneView { }` | Direct Filament API on background thread |
 
 **Rule:** Filament JNI = main thread only. `remember*` hooks handle this for you.
 

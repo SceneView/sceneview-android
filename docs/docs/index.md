@@ -63,7 +63,7 @@ No boilerplate. No manual cleanup. Just declare what you want.
     ```kotlin
     // build.gradle: implementation("io.github.sceneview:sceneview:3.6.0")
 
-    Scene(modifier = Modifier.fillMaxSize()) {
+    SceneView(modifier = Modifier.fillMaxSize()) {
         val model = rememberModelInstance(modelLoader, "models/helmet.glb")
         model?.let { instance ->
             ModelNode(
@@ -130,7 +130,7 @@ Place 3D objects on real-world surfaces with a single tap. ARCore on Android, AR
 
 ### Declarative API
 
-Nodes are composables inside `Scene { }`. State drives the scene. No `addChildNode()` or `destroy()` calls. Toggle a Boolean to show/hide. Update state to animate.
+Nodes are composables inside `SceneView { }`. State drives the scene. No `addChildNode()` or `destroy()` calls. Toggle a Boolean to show/hide. Update state to animate.
 
 </div>
 
@@ -223,7 +223,7 @@ Rigid body physics with gravity, collisions, and restitution. Drop objects, boun
 === "Kotlin (Android)"
 
     ```kotlin
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         onSessionUpdated = { session, frame -> }
     ) {
@@ -303,7 +303,7 @@ Step-by-step guides to build your first 3D and AR apps.
 
 ### :material-puzzle: Nodes are composables
 
-Every 3D object -- models, lights, geometry, cameras -- is a `@Composable` function inside `Scene { }`. No manual `addChildNode()` or `destroy()` calls.
+Every 3D object -- models, lights, geometry, cameras -- is a `@Composable` function inside `SceneView { }`. No manual `addChildNode()` or `destroy()` calls.
 
 ### :material-state-machine: State drives the scene
 
@@ -328,7 +328,7 @@ Android uses Filament (high-performance C++ via JNI). Apple platforms use Realit
 <p>"SceneView made adding 3D to our Compose app trivial. What would have taken weeks with raw Filament took us an afternoon."</p>
 </div>
 <div class="sv-testimonial">
-<p>"The declarative API just makes sense. Coming from Compose, Scene {} felt immediately natural."</p>
+<p>"The declarative API just makes sense. Coming from Compose, SceneView {} felt immediately natural."</p>
 </div>
 <div class="sv-testimonial">
 <p>"Finally an AR SDK that doesn't fight the framework. It's just Compose."</p>

@@ -737,7 +737,7 @@ fun ModelViewerScreen() {\n\
     val modelLoader = rememberModelLoader(engine)\n\
     val environmentLoader = rememberEnvironmentLoader(engine)\n\
 \n\
-    Scene(\n\
+    SceneView(\n\
         modifier = Modifier.fillMaxSize(),\n\
         engine = engine,\n\
         modelLoader = modelLoader,\n\
@@ -792,7 +792,7 @@ fun ARPlacementScreen() {\n\
         modelLoader, "models/chair.glb"\n\
     )\n\
 \n\
-    ARScene(\n\
+    ARSceneView(\n\
         modifier = Modifier.fillMaxSize(),\n\
         engine = engine,\n\
         modelLoader = modelLoader,\n\
@@ -853,7 +853,7 @@ fun CustomGeometryScreen() {\n\
     val engine = rememberEngine()\n\
     val materialLoader = rememberMaterialLoader(engine)\n\
 \n\
-    Scene(\n\
+    SceneView(\n\
         modifier = Modifier.fillMaxSize(),\n\
         engine = engine,\n\
         cameraNode = rememberCameraNode(engine) {\n\
@@ -933,7 +933,7 @@ fun AnimationScreen() {\n\
     )\n\
 \n\
     Box(modifier = Modifier.fillMaxSize()) {\n\
-        Scene(\n\
+        SceneView(\n\
             modifier = Modifier.fillMaxSize(),\n\
             engine = engine,\n\
             modelLoader = modelLoader,\n\

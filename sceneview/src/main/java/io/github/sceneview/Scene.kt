@@ -132,7 +132,7 @@ import dev.romainguy.kotlin.math.Float2
  * @param content               Declare 3D scene content using the [SceneScope] composable DSL.
  */
 @Composable
-fun Scene(
+fun SceneView(
     modifier: Modifier = Modifier,
     /**
      * Selects whether the backing surface is SurfaceView-based ([SurfaceType.Surface], renders
@@ -462,6 +462,46 @@ fun Scene(
         scope.content()
     }
 }
+
+/**
+ * Renamed to [SceneView] for cross-platform consistency with the Apple SDK.
+ */
+@Deprecated(
+    message = "Renamed to SceneView for cross-platform consistency.",
+    replaceWith = ReplaceWith("SceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem, cameraManipulator, viewNodeWindowManager, onGestureListener, onTouchEvent, activity, lifecycle, onFrame, content)")
+)
+@Composable
+fun Scene(
+    modifier: Modifier = Modifier,
+    surfaceType: SurfaceType = SurfaceType.Surface,
+    engine: Engine = rememberEngine(),
+    modelLoader: ModelLoader = rememberModelLoader(engine),
+    materialLoader: MaterialLoader = rememberMaterialLoader(engine),
+    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
+    view: View = rememberView(engine),
+    isOpaque: Boolean = true,
+    renderer: Renderer = rememberRenderer(engine),
+    scene: Scene = rememberScene(engine),
+    environment: Environment = rememberEnvironment(environmentLoader, isOpaque = isOpaque),
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    cameraNode: CameraNode = rememberCameraNode(engine),
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    cameraManipulator: CameraGestureDetector.CameraManipulator? = rememberCameraManipulator(
+        cameraNode.worldPosition
+    ),
+    viewNodeWindowManager: ViewNode.WindowManager? = null,
+    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
+    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
+    onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
+    content: (@Composable SceneScope.() -> Unit)? = null
+) = SceneView(
+    modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader,
+    view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode,
+    collisionSystem, cameraManipulator, viewNodeWindowManager, onGestureListener,
+    onTouchEvent, activity, lifecycle, onFrame, content
+)
 
 // ── Async resource helpers ────────────────────────────────────────────────────────────────────────
 

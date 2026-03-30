@@ -12,7 +12,7 @@ fun ARTapToPlace() {
     val modelLoader = rememberModelLoader(engine)
     val model = rememberModelInstance(modelLoader, "models/chair.glb")
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,

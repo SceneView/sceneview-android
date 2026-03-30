@@ -12,7 +12,7 @@ fun PhysicsScene() {
     val material = rememberMaterialInstance(materialLoader)
     var balls by remember { mutableStateOf(listOf<BallState>()) }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         cameraManipulator = rememberCameraManipulator(),

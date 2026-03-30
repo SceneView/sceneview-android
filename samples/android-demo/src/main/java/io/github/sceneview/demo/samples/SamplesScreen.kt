@@ -109,8 +109,8 @@ import com.google.ar.core.AugmentedImageDatabase
 import com.google.ar.core.Config
 import com.google.ar.core.TrackingState
 import dev.romainguy.kotlin.math.Float3
-import io.github.sceneview.Scene
-import io.github.sceneview.ar.ARScene
+import io.github.sceneview.SceneView
+import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.rememberARCameraNode
 import io.github.sceneview.demo.R
 import io.github.sceneview.math.Position
@@ -595,7 +595,7 @@ private fun ModelViewerDemo() {
             .fillMaxSize()
             .semantics { contentDescription = "Model viewer 3D scene" }
     ) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -635,7 +635,7 @@ private fun GeometryDemo() {
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         materialLoader = materialLoader,
@@ -708,7 +708,7 @@ private fun AnimationDemo() {
     val modelInstance = rememberModelInstance(modelLoader, "models/animated_robot_mantis.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -770,7 +770,7 @@ private fun AnimationControlDemo() {
     val currentAnimName = animationNames.getOrNull(selectedAnimIndex)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -899,7 +899,7 @@ private fun DynamicSkyDemo() {
     var timeOfDay by remember { mutableFloatStateOf(16f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             view = view,
@@ -974,7 +974,7 @@ private fun LightingDemo() {
     var sunIntensity by remember { mutableFloatStateOf(80000f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -1092,7 +1092,7 @@ private fun DynamicLightingDemo() {
     val selectedColor = lightColors[selectedColorIndex]
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -1231,7 +1231,7 @@ private fun CameraControlsDemo() {
     val modelInstance = rememberModelInstance(modelLoader, "models/iridescence_lamp.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -1311,7 +1311,7 @@ private fun MultiModelDemo() {
     val allLoaded = sofa != null && lamp != null && plant != null && vase != null
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -1424,7 +1424,7 @@ private fun FogDemo() {
     var fogDensity by remember { mutableFloatStateOf(0.05f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             view = view,
@@ -1529,7 +1529,7 @@ private fun EnvironmentGalleryDemo() {
     val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -1620,7 +1620,7 @@ private fun TextLabelsDemo() {
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         materialLoader = materialLoader,
@@ -1691,7 +1691,7 @@ private fun LinePathsDemo() {
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         materialLoader = materialLoader,
@@ -1766,7 +1766,7 @@ private fun GestureEditingDemo() {
     val modelInstance = rememberModelInstance(modelLoader, "models/sneaker.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -1866,7 +1866,7 @@ private fun PhysicsDemo() {
     var resetKey by remember { mutableIntStateOf(0) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             materialLoader = materialLoader,
@@ -1980,7 +1980,7 @@ private fun PostProcessingDemo() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             view = view,
@@ -2105,7 +2105,7 @@ private fun ImageDetectionDemo() {
     var detectedImages by remember { mutableStateOf<List<AugmentedImage>>(emptyList()) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ARScene(
+        ARSceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             view = view,
@@ -2243,7 +2243,7 @@ private fun ReflectionProbesDemo() {
     val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -2353,7 +2353,7 @@ private fun GltfCamerasDemo() {
     val modelInstance = rememberModelInstance(modelLoader, "models/animated_bunny_detective.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

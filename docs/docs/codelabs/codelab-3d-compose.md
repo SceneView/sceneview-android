@@ -61,7 +61,7 @@ Create `ModelViewerScreen.kt`:
 ```kotlin
 @Composable
 fun ModelViewerScreen() {
-    Scene(modifier = Modifier.fillMaxSize())
+    SceneView(modifier = Modifier.fillMaxSize())
 }
 ```
 
@@ -82,7 +82,7 @@ fun ModelViewerScreen() {
     val modelLoader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -107,7 +107,7 @@ fun ModelViewerScreen() {
     // Returns null while loading, non-null when ready.
     val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -135,7 +135,7 @@ It's probably pitch black. That's because there's no light yet.
 ### Direct light (the sun)
 
 ```kotlin
-Scene(
+SceneView(
     // ...
     mainLightNode = rememberMainLightNode(engine) {
         intensity = 100_000.0f
@@ -153,7 +153,7 @@ val environment = rememberEnvironment(environmentLoader) {
         ?: createEnvironment(environmentLoader)
 }
 
-Scene(
+SceneView(
     // ...
     environment = environment,
 ) {
@@ -170,7 +170,7 @@ Run again. The model is now lit with physically-based rendering — specular hig
 The default camera is at the origin looking down -Z. Move it back so the model is visible:
 
 ```kotlin
-Scene(
+SceneView(
     // ...
     cameraNode = rememberCameraNode(engine) {
         position = Position(z = 2.5f)
@@ -189,7 +189,7 @@ Scene(
 One line:
 
 ```kotlin
-Scene(
+SceneView(
     // ...
     cameraManipulator = rememberCameraManipulator()
 ) {
@@ -211,7 +211,7 @@ That's the complete camera interaction system.
 Add double-tap-to-scale:
 
 ```kotlin
-Scene(
+SceneView(
     // ...
     onGestureListener = rememberOnGestureListener(
         onDoubleTap = { _, node ->
@@ -233,7 +233,7 @@ Scene(
 
 ```kotlin
 Box(modifier = Modifier.fillMaxSize()) {
-    Scene(modifier = Modifier.fillMaxSize(), /* ... */) {
+    SceneView(modifier = Modifier.fillMaxSize(), /* ... */) {
         // 3D content
     }
 
@@ -273,7 +273,7 @@ fun ModelViewerScreen() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,

@@ -307,8 +307,8 @@ model?.stopAllAnimations()
 
 | Android (Compose) | Apple (SwiftUI) |
 |---|---|
-| `Scene { }` | `SceneView { root in }` |
-| `ARScene { }` | `ARSceneView(...)` |
+| `SceneView { }` | `SceneView { root in }` |
+| `ARSceneView { }` | `ARSceneView(...)` |
 | `rememberModelInstance(loader, path)` | `ModelNode.load(path)` |
 | `ModelNode(modelInstance, scaleToUnits)` | `model.scaleToUnits(units)` |
 | `CubeNode(size, material)` | `GeometryNode.cube(size:color:)` |

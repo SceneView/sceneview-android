@@ -11,7 +11,7 @@ fun ModelViewer() {
     val modelLoader = rememberModelLoader(engine)
     val model = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,

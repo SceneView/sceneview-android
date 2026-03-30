@@ -160,7 +160,7 @@ import java.util.concurrent.atomic.AtomicReference
  * @param content                  Declare AR scene content using the [ARSceneScope] composable DSL.
  */
 @Composable
-fun ARScene(
+fun ARSceneView(
     modifier: Modifier = Modifier,
     /**
      * Selects whether the backing surface is SurfaceView-based ([SurfaceType.Surface], renders
@@ -651,6 +651,55 @@ fun ARScene(
         scope.content()
     }
 }
+
+/**
+ * Renamed to [ARSceneView] for cross-platform consistency with the Apple SDK.
+ */
+@Deprecated(
+    message = "Renamed to ARSceneView for cross-platform consistency.",
+    replaceWith = ReplaceWith("ARSceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, sessionFeatures, sessionCameraConfig, sessionConfiguration, planeRenderer, cameraStream, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem, viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed, onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, activity, lifecycle, content)")
+)
+@Composable
+fun ARScene(
+    modifier: Modifier = Modifier,
+    surfaceType: SurfaceType = SurfaceType.Surface,
+    engine: Engine = rememberEngine(),
+    modelLoader: ModelLoader = rememberModelLoader(engine),
+    materialLoader: MaterialLoader = rememberMaterialLoader(engine),
+    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
+    sessionFeatures: Set<Session.Feature> = setOf(),
+    sessionCameraConfig: ((Session) -> CameraConfig)? = null,
+    sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    planeRenderer: Boolean = true,
+    cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
+    view: View = rememberARView(engine),
+    isOpaque: Boolean = true,
+    renderer: Renderer = rememberRenderer(engine),
+    scene: Scene = rememberScene(engine),
+    environment: Environment = rememberAREnvironment(engine),
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    cameraNode: ARCameraNode = rememberARCameraNode(engine),
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    viewNodeWindowManager: WindowManager? = null,
+    onSessionCreated: ((session: Session) -> Unit)? = null,
+    onSessionResumed: ((session: Session) -> Unit)? = null,
+    onSessionPaused: ((session: Session) -> Unit)? = null,
+    onSessionFailed: ((exception: Exception) -> Unit)? = null,
+    onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
+    onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
+    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
+    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
+    content: (@Composable ARSceneScope.() -> Unit)? = null
+) = ARSceneView(
+    modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader,
+    sessionFeatures, sessionCameraConfig, sessionConfiguration, planeRenderer, cameraStream,
+    view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem,
+    viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed,
+    onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, activity,
+    lifecycle, content
+)
 
 // ── AR frame update helpers ───────────────────────────────────────────────────────────────────────
 
