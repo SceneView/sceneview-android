@@ -53,20 +53,33 @@
 
 ## NEXT STEPS (priority order)
 
-### Immediate — M3 Expressive rollout to remaining surfaces
-1. **Android demo app theme** — Apply M3 Expressive tokens to Compose theme (Color.kt, Theme.kt in `samples/android-demo`)
-2. **iOS demo app** — Apply Liquid Glass / Apple HIG design to SwiftUI views (NOT Material Design)
-3. **Docs MkDocs theme** — Align CSS with DESIGN.md tokens
-4. **Store screenshots** — Update with new design
+### BLOCKER — Google Stitch MCP must be loaded first
+- **STITCH_API_KEY** is in `~/.zshrc` — user must restart Claude Code to load the MCP
+- Once loaded, ALL visual work goes through Stitch
 
-### Medium term
-5. Test Google Stitch MCP (need to restart Claude Code first)
-6. Consider implementing setQuality/setBloom/addLight in sceneview.js for richer demos
-7. iOS demo: verify SceneViewSwift fixes compile in Xcode
-8. v3.6.0 roadmap: API simplification (merge sceneview + arsceneview)
+### Phase 1 — FULL REDESIGN VIA GOOGLE STITCH
+Everything visual must be redesigned using Google Stitch as the design tool.
+Stitch generates the design → Claude applies it in code. NO manual CSS/UI writing.
+
+1. **Website** (sceneview.github.io) — Full redesign via Stitch
+   - Give Stitch context: DESIGN.md, SDK for 3D/AR, developer audience
+   - M3 Expressive + Liquid Glass mix for web
+   - All pages: index.html, showcase.html, claude-3d.html, etc.
+2. **Android demo app** — Theme via Stitch (M3 Expressive)
+   - Color.kt, Theme.kt, Shape.kt, Type.kt
+3. **iOS demo app** — Theme via Stitch (Liquid Glass / Apple HIG)
+   - All SwiftUI views (19 views, no centralized theme currently)
+4. **Docs MkDocs** — CSS via Stitch
+5. **All other demos** — web-demo, tv-demo, etc.
+6. **Store assets** — Screenshots with new design
+
+### Phase 2 — Post-redesign
+- v3.6.0 roadmap: API simplification
+- sceneview.js enhancements (setQuality, setBloom, addLight)
+- iOS: verify SceneViewSwift fixes compile in Xcode
 
 ## RULES REMINDER
+- **STITCH MANDATORY** — ALL design/UI work goes through Google Stitch MCP. NEVER write CSS/theme by hand.
 - ALWAYS save API keys/credentials in `profile-private/preferences/api-keys.md` + `~/.zshrc`
 - ALWAYS push `profile-private` after saving sensitive data
-- ALWAYS sync learnings to `profile-private/sync/from-perso/`
 - Material 3 Expressive = Android/Web, Liquid Glass = Apple platforms
