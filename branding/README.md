@@ -43,13 +43,13 @@ See `DESIGN.md` for full font scale, weights, and letter spacing.
 - [x] Full description with features list
 
 ### Apple App Store
-- [ ] App icon (1024x1024) — generate from apple-touch-icon.svg at higher res
-- [ ] Screenshots (iPhone, iPad) — iOS demo app running on simulator
+- [x] App icon (1024x1024) — `branding/app-icon-1024.svg`
+- [ ] Screenshots (iPhone, iPad) — iOS demo app running on simulator (manual)
 - [ ] App preview video (optional)
 - [x] Description matching Play Store
 
 ### npm
-- [ ] Package icon for sceneview-mcp and sceneview.js
+- [x] Package icon — `branding/npm-icon.svg` (256x256, for sceneview-mcp and sceneview.js)
 
 ### Website
 - [x] Favicon (blue cube) — `website-static/favicon.svg` (Stitch #005bc1 palette)
