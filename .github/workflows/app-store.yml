@@ -192,7 +192,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           python3 -m venv $RUNNER_TEMP/asc-venv
-          $RUNNER_TEMP/asc-venv/bin/pip install PyJWT requests --quiet
+          $RUNNER_TEMP/asc-venv/bin/pip install "PyJWT[crypto]" requests --quiet
 
           # Wait for Apple to process the build
           echo "Waiting 120s for Apple to process the build..."
