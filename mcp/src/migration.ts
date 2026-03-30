@@ -172,7 +172,7 @@ LightNode(
 \`\`\`kotlin
 // 3.0
 val environmentLoader = rememberEnvironmentLoader(engine)
-Scene(
+SceneView(
     environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/sky_2k.hdr") ?: createEnvironment(environmentLoader)
     }
@@ -213,10 +213,10 @@ Plain nodes whose \`worldPosition\` is set manually will drift when ARCore remap
 
 ## 11. Shadows
 
-In 3.0, \`ARScene\` has shadows enabled by default via \`createARView()\`. For \`Scene\` (3D only), shadows are disabled by default — enable with:
+In 3.0, \`ARSceneView\` has shadows enabled by default via \`createARView()\`. For \`SceneView\` (3D only), shadows are disabled by default — enable with:
 
 \`\`\`kotlin
-Scene(
+SceneView(
     view = rememberView(engine).also { it.setShadowingEnabled(true) },
     …
 )
@@ -228,15 +228,15 @@ Scene(
 
 | 2.x | 3.0 |
 |-----|-----|
-| \`CameraManipulator\` set on the View | \`cameraManipulator = rememberCameraManipulator()\` on \`Scene\` |
-| Custom camera via \`setCameraNode\` | \`cameraNode = rememberCameraNode(engine) { … }\` on \`Scene\` |
+| \`CameraManipulator\` set on the View | \`cameraManipulator = rememberCameraManipulator()\` on \`SceneView\` |
+| Custom camera via \`setCameraNode\` | \`cameraNode = rememberCameraNode(engine) { … }\` on \`SceneView\` |
 
 ---
 
 ## Checklist
 
-- [ ] Replace \`SceneView(…)\` → \`Scene(engine = rememberEngine(), …)\`
-- [ ] Replace \`ArSceneView(…)\` → \`ARScene(engine = rememberEngine(), …)\`
+- [ ] Replace \`SceneView(…)\` → \`SceneView(engine = rememberEngine(), …)\`
+- [ ] Replace \`ArSceneView(…)\` → \`ARSceneView(engine = rememberEngine(), …)\`
 - [ ] Replace \`modelLoader.loadModelAsync\` → \`rememberModelInstance\`
 - [ ] Add null-check on every \`rememberModelInstance\` result
 - [ ] Replace \`TransformableNode\` → \`isEditable = true\`
@@ -245,7 +245,7 @@ Scene(
 - [ ] Fix \`LightNode { … }\` → \`LightNode(apply = { … })\`
 - [ ] Remove manual \`engine.destroy()\` calls
 - [ ] Replace manual \`worldPosition\` in AR → \`AnchorNode\`
-- [ ] Replace \`ArFragment\` → \`ARScene()\` composable
+- [ ] Replace \`ArFragment\` → \`ARSceneView()\` composable
 - [ ] Replace \`onTapArPlane\` → \`onTouchEvent\`
 - [ ] Replace \`setRenderable\` → \`ModelNode(modelInstance = ...)\`
 - [ ] Replace \`setParent\` → nest composable nodes inside parent
@@ -273,8 +273,8 @@ Scene(
 
 | 2.x | 3.0 |
 |-----|-----|
-| \`ArFragment\` in XML layout | \`ARScene()\` composable |
-| \`arFragment.setOnTapArPlaneListener\` | \`ARScene(onTouchEvent = { … })\` |
+| \`ArFragment\` in XML layout | \`ARSceneView()\` composable |
+| \`arFragment.setOnTapArPlaneListener\` | \`ARSceneView(onTouchEvent = { … })\` |
 | \`arFragment.arSceneView\` | Direct access via composable params |
 
 ---
@@ -284,7 +284,7 @@ Scene(
 | 2.x | 3.0 |
 |-----|-----|
 | \`node.setParent(parentNode)\` | Nest composable nodes inside parent's content block |
-| \`sceneView.scene.addChild(node)\` | Declare nodes inside \`Scene { }\` content block |
+| \`sceneView.scene.addChild(node)\` | Declare nodes inside \`SceneView { }\` content block |
 
 ---
 
@@ -295,13 +295,13 @@ If migrating from Google Sceneform 1.x (the original \`com.google.ar.sceneform\`
 | Sceneform 1.x | SceneView 3.0 |
 |---|---|
 | \`com.google.ar.sceneform.*\` imports | \`io.github.sceneview.*\` imports |
-| \`ArFragment\` + XML | \`ARScene()\` composable |
+| \`ArFragment\` + XML | \`ARSceneView()\` composable |
 | \`ModelRenderable.builder().setSource()\` | \`rememberModelInstance(modelLoader, "file.glb")\` |
 | \`ViewRenderable.builder().setView()\` | \`ViewNode { ComposeContent() }\` |
-| \`Node().setParent(scene)\` | Declare nodes inside \`Scene { }\` |
+| \`Node().setParent(scene)\` | Declare nodes inside \`SceneView { }\` |
 | \`TransformableNode(transformSystem)\` | \`ModelNode(isEditable = true)\` |
 | \`node.localPosition = Vector3()\` | \`position = Position(x, y, z)\` on node composable |
-| \`ArSceneView\` (View) | \`ARScene()\` (Composable) |
+| \`ArSceneView\` (View) | \`ARSceneView()\` (Composable) |
 | Java callbacks | Kotlin coroutines + Compose state |
 
 **Key differences from Sceneform:**

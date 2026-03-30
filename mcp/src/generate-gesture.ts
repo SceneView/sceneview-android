@@ -35,7 +35,7 @@ fun TapToSelectScene() {
     val modelInstance = rememberModelInstance(modelLoader, "models/object.glb")
     var selectedNode by remember { mutableStateOf<String?>(null) }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -112,7 +112,7 @@ fun DragToRotateScene() {
     var lastX by remember { mutableFloatStateOf(0f) }
     val sensitivity = 0.5f
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -189,7 +189,7 @@ fun PinchToScaleScene() {
     val minScale = 0.3f
     val maxScale = 3.0f
 
-    Scene(
+    SceneView(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
@@ -247,7 +247,7 @@ fun TapToPlaceARScene() {
     val modelInstance = rememberModelInstance(modelLoader, "models/object.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -319,7 +319,7 @@ fun EditableModelScene() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/object.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -361,7 +361,7 @@ fun MultiSelectScene() {
     val modelInstance = rememberModelInstance(modelLoader, "models/object.glb")
     val selectedNodes = remember { mutableStateListOf<String>() }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -418,7 +418,7 @@ fun SurfaceCursorARScene() {
     val objectModel = rememberModelInstance(modelLoader, "models/object.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -478,7 +478,7 @@ fun CustomTouchScene() {
             style = MaterialTheme.typography.bodyLarge
         )
 
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             modelLoader = modelLoader,

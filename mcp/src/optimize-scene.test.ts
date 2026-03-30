@@ -6,8 +6,8 @@ describe("optimizeScene", () => {
     const code = `
 val engine1 = rememberEngine()
 val engine2 = rememberEngine()
-Scene(engine = engine1) { }
-Scene(engine = engine2) { }
+SceneView(engine = engine1) { }
+SceneView(engine = engine2) { }
 `;
     const report = optimizeScene(code);
     expect(report.suggestions.some(s => s.category === "Memory" && s.issue.includes("Engine"))).toBe(true);
@@ -19,7 +19,7 @@ Scene(engine = engine2) { }
   });
 
   it("detects missing post-processing flag", () => {
-    const report = optimizeScene('Scene(engine = engine) { ModelNode(...) }');
+    const report = optimizeScene('SceneView(engine = engine) { ModelNode(...) }');
     expect(report.suggestions.some(s => s.issue.includes("Post-processing"))).toBe(true);
   });
 
@@ -37,7 +37,7 @@ Scene(engine = engine2) { }
   });
 
   it("formatOptimizationReport produces markdown", () => {
-    const report = optimizeScene('rememberEngine()\nrememberEngine()\nScene(engine = engine) { }');
+    const report = optimizeScene('rememberEngine()\nrememberEngine()\nSceneView(engine = engine) { }');
     const text = formatOptimizationReport(report);
     expect(text).toContain("## Scene Optimization Report");
     expect(text).toContain("**Score:**");

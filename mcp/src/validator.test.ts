@@ -56,7 +56,7 @@ describe("ar/node-not-anchor", () => {
 
   it("fires when worldPosition is set inside an ARScene", () => {
     const code = `
-      ARScene(engine = engine) {
+      ARSceneView(engine = engine) {
         node.worldPosition = Position(0f, 0f, -1f)
       }
     `;
@@ -70,7 +70,7 @@ describe("ar/node-not-anchor", () => {
 
   it("does NOT fire when AnchorNode is used correctly", () => {
     const code = `
-      ARScene(engine = engine) {
+      ARSceneView(engine = engine) {
         AnchorNode(anchor = hitResult.createAnchor()) { }
       }
     `;
@@ -228,8 +228,8 @@ describe("ar/anchor-node-missing-anchor", () => {
 describe("migration/old-api", () => {
   const RULE = "migration/old-api";
 
-  it("fires on SceneView composable", () => {
-    expect(hasRule(`SceneView(modifier = Modifier.fillMaxSize())`, RULE)).toBe(true);
+  it("does NOT fire on SceneView composable (correct 3.0 name)", () => {
+    expect(hasRule(`SceneView(modifier = Modifier.fillMaxSize())`, RULE)).toBe(false);
   });
 
   it("fires on ArSceneView composable", () => {
@@ -255,7 +255,7 @@ describe("migration/old-api", () => {
   it("does NOT fire on modern 3.0 APIs", () => {
     const code = `
       val engine = rememberEngine()
-      Scene(engine = engine) {
+      SceneView(engine = engine) {
         rememberModelInstance(modelLoader, "models/x.glb")?.let { ModelNode(modelInstance = it) }
       }
     `;
@@ -268,15 +268,15 @@ describe("migration/old-api", () => {
 describe("api/scene-missing-engine", () => {
   const RULE = "api/scene-missing-engine";
 
-  it("fires when Scene() has no engine nearby", () => {
-    const code = `Scene(modifier = Modifier.fillMaxSize()) { }`;
+  it("fires when SceneView() has no engine nearby", () => {
+    const code = `SceneView(modifier = Modifier.fillMaxSize()) { }`;
     expect(hasRule(code, RULE)).toBe(true);
   });
 
   it("does NOT fire when engine is provided", () => {
     const code = `
       val engine = rememberEngine()
-      Scene(modifier = Modifier.fillMaxSize(), engine = engine) { }
+      SceneView(modifier = Modifier.fillMaxSize(), engine = engine) { }
     `;
     expect(hasRule(code, RULE)).toBe(false);
   });
@@ -298,7 +298,7 @@ describe("api/fog-node-missing-view", () => {
   });
 
   it("does NOT fire when FogNode is not used", () => {
-    const code = `Scene(engine = engine) { }`;
+    const code = `SceneView(engine = engine) { }`;
     expect(hasRule(code, RULE)).toBe(false);
   });
 });
@@ -349,9 +349,9 @@ describe("api/dynamic-sky-outside-scene", () => {
     expect(hasRule(code, RULE)).toBe(true);
   });
 
-  it("does NOT fire when inside a Scene", () => {
+  it("does NOT fire when inside a SceneView", () => {
     const code = `
-      Scene(engine = engine) {
+      SceneView(engine = engine) {
         DynamicSkyNode(timeOfDay = 12f)
       }
     `;
@@ -421,13 +421,13 @@ describe("api/asset-path-leading-slash", () => {
 describe("api/scene-zero-size", () => {
   const RULE = "api/scene-zero-size";
 
-  it("fires info when Scene has no Modifier", () => {
-    const code = `Scene(engine = engine) { }`;
+  it("fires info when SceneView has no Modifier", () => {
+    const code = `SceneView(engine = engine) { }`;
     expect(hasRule(code, RULE)).toBe(true);
   });
 
   it("does NOT fire when fillMaxSize is used", () => {
-    const code = `Scene(modifier = Modifier.fillMaxSize(), engine = engine) { }`;
+    const code = `SceneView(modifier = Modifier.fillMaxSize(), engine = engine) { }`;
     expect(hasRule(code, RULE)).toBe(false);
   });
 });
@@ -486,7 +486,7 @@ describe("web/ar-not-supported", () => {
     const code = `
 import io.github.sceneview.web.SceneView
 import kotlinx.browser.document
-ARScene(modifier = Modifier.fillMaxSize())
+ARSceneView(modifier = Modifier.fillMaxSize())
 `;
     expect(hasRule(code, RULE)).toBe(true);
   });

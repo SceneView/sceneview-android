@@ -8,8 +8,8 @@ import {
 } from "./convert-platform.js";
 
 describe("convertAndroidToIos", () => {
-  it("converts Scene( to SceneView", () => {
-    const result = convertAndroidToIos('Scene(engine = engine) { }');
+  it("converts SceneView( to SceneView {", () => {
+    const result = convertAndroidToIos('SceneView(engine = engine) { }');
     expect(result.code).toContain("SceneView");
     expect(result.sourceplatform).toBe("android");
     expect(result.targetPlatform).toBe("ios");
@@ -21,12 +21,12 @@ describe("convertAndroidToIos", () => {
   });
 
   it("adds warnings about RealityKit differences", () => {
-    const result = convertAndroidToIos("Scene(engine = engine) { }");
+    const result = convertAndroidToIos("SceneView(engine = engine) { }");
     expect(result.warnings.length).toBeGreaterThan(0);
   });
 
   it("formatConversionResult produces markdown", () => {
-    const result = convertAndroidToIos("Scene(engine = engine) { }");
+    const result = convertAndroidToIos("SceneView(engine = engine) { }");
     const text = formatConversionResult(result);
     expect(text).toContain("## Code Converted to");
     expect(text).toContain("swift");
@@ -34,9 +34,9 @@ describe("convertAndroidToIos", () => {
 });
 
 describe("convertIosToAndroid", () => {
-  it("converts SceneView to Scene", () => {
+  it("converts SceneView { to SceneView(engine = engine) {", () => {
     const result = convertIosToAndroid("SceneView { root in }");
-    expect(result.code).toContain("Scene(engine = engine)");
+    expect(result.code).toContain("SceneView(engine = engine)");
     expect(result.sourceplatform).toBe("ios");
     expect(result.targetPlatform).toBe("android");
   });
@@ -57,7 +57,7 @@ describe("generateMultiplatformCode", () => {
 
   it("generates AR code when description mentions AR", () => {
     const result = generateMultiplatformCode("AR furniture viewer");
-    expect(result.androidCode).toContain("ARScene");
+    expect(result.androidCode).toContain("ARSceneView");
     expect(result.iosCode).toContain("ARSceneView");
   });
 

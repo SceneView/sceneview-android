@@ -33,11 +33,11 @@ describe("ANIMATION_GUIDE", () => {
     expect(ANIMATION_GUIDE).toContain("rememberEngine");
     expect(ANIMATION_GUIDE).toContain("rememberModelLoader");
     expect(ANIMATION_GUIDE).toContain("rememberModelInstance");
-    expect(ANIMATION_GUIDE).toContain("Scene(");
+    expect(ANIMATION_GUIDE).toContain("SceneView(");
   });
 
   it("contains AR animation example", () => {
-    expect(ANIMATION_GUIDE).toContain("ARScene(");
+    expect(ANIMATION_GUIDE).toContain("ARSceneView(");
     expect(ANIMATION_GUIDE).toContain("AnchorNode");
     expect(ANIMATION_GUIDE).toContain("hitResult.createAnchor");
   });
@@ -69,7 +69,7 @@ describe("GESTURE_GUIDE", () => {
   it("contains AR tap-to-place example", () => {
     expect(GESTURE_GUIDE).toContain("hitResult.createAnchor");
     expect(GESTURE_GUIDE).toContain("AnchorNode");
-    expect(GESTURE_GUIDE).toContain("ARScene(");
+    expect(GESTURE_GUIDE).toContain("ARSceneView(");
     expect(GESTURE_GUIDE).toContain("planeRenderer");
   });
 

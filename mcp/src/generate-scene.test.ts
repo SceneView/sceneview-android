@@ -4,7 +4,7 @@ import { generateScene, formatGeneratedScene } from "./generate-scene.js";
 describe("generateScene", () => {
   it("generates a scene with a table and two chairs", () => {
     const result = generateScene("a room with a table and two chairs");
-    expect(result.code).toContain("Scene(");
+    expect(result.code).toContain("SceneView(");
     expect(result.code).toContain("rememberEngine()");
     expect(result.code).toContain("CubeNode("); // table
     expect(result.code).toContain("models/chair.glb"); // chairs are ModelNode
@@ -14,7 +14,7 @@ describe("generateScene", () => {
 
   it("generates AR scene when description mentions AR", () => {
     const result = generateScene("AR scene with a chair placed in real world");
-    expect(result.code).toContain("ARScene(");
+    expect(result.code).toContain("ARSceneView(");
     expect(result.code).toContain("AnchorNode");
     expect(result.code).toContain("onTouchEvent");
     expect(result.isAR).toBe(true);
@@ -64,7 +64,7 @@ describe("generateScene", () => {
     const result = generateScene("a scene");
     // Should at least have a light and ground
     expect(result.elements.length).toBeGreaterThanOrEqual(1);
-    expect(result.code).toContain("Scene(");
+    expect(result.code).toContain("SceneView(");
   });
 
   it("uses dim lighting for dark scenes", () => {
@@ -92,12 +92,12 @@ describe("formatGeneratedScene", () => {
   it("shows AR mode for AR scenes", () => {
     const result = generateScene("AR with a robot");
     const formatted = formatGeneratedScene(result);
-    expect(formatted).toContain("AR (ARScene)");
+    expect(formatted).toContain("AR (ARSceneView)");
   });
 
   it("shows 3D mode for regular scenes", () => {
     const result = generateScene("a table");
     const formatted = formatGeneratedScene(result);
-    expect(formatted).toContain("3D (Scene)");
+    expect(formatted).toContain("3D (SceneView)");
   });
 });

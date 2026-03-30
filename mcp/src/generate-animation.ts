@@ -32,7 +32,7 @@ fun AnimatedModelScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/character.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -85,7 +85,7 @@ fun MorphTargetScreen() {
         label = "smile"
     )
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -145,7 +145,7 @@ fun SpringPositionDemo() {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             modelLoader = modelLoader,
@@ -204,7 +204,7 @@ fun SpringScaleDemo() {
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -265,7 +265,7 @@ fun RotatingModelScreen() {
         label = "rotY"
     )
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -312,7 +312,7 @@ fun ScaleToggleScreen() {
         label = "scale"
     )
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -351,7 +351,7 @@ fun SmoothFollowDemo() {
     var targetPosition by remember { mutableStateOf(Position(0f, 1f, 0f)) }
     var time by remember { mutableFloatStateOf(0f) }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -410,7 +410,7 @@ fun TransitionDemo() {
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             modelLoader = modelLoader,

@@ -157,9 +157,9 @@ describe("3D samples", () => {
     }
   });
 
-  it("all Android 3D samples contain Scene in code", () => {
+  it("all Android 3D samples contain SceneView in code", () => {
     for (const id of android3dIds) {
-      expect(SAMPLES[id].code).toContain("Scene(");
+      expect(SAMPLES[id].code).toContain("SceneView(");
     }
   });
 

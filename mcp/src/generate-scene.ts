@@ -364,7 +364,7 @@ export function generateScene(description: string): GeneratedScene {
   if (isAR) {
     lines.push("    var anchor by remember { mutableStateOf<Anchor?>(null) }");
     lines.push("");
-    lines.push("    ARScene(");
+    lines.push("    ARSceneView(");
     lines.push("        modifier = Modifier.fillMaxSize(),");
     lines.push("        engine = engine,");
     if (hasModel) lines.push("        modelLoader = modelLoader,");
@@ -382,7 +382,7 @@ export function generateScene(description: string): GeneratedScene {
     lines.push("        anchor?.let { a ->");
     lines.push("            AnchorNode(anchor = a) {");
   } else {
-    lines.push("    Scene(");
+    lines.push("    SceneView(");
     lines.push("        modifier = Modifier.fillMaxSize(),");
     lines.push("        engine = engine,");
     if (hasModel) lines.push("        modelLoader = modelLoader,");
@@ -550,7 +550,7 @@ export function formatGeneratedScene(result: GeneratedScene): string {
 
   parts.push(`## Generated Scene\n`);
   parts.push(`**Description:** "${result.description}"`);
-  parts.push(`**Mode:** ${result.isAR ? "AR (ARScene)" : "3D (Scene)"}`);
+  parts.push(`**Mode:** ${result.isAR ? "AR (ARSceneView)" : "3D (SceneView)"}`);
   parts.push(`**Elements:** ${result.elements.length} nodes\n`);
 
   parts.push(`### Dependency\n`);

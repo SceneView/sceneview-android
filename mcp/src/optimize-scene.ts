@@ -59,13 +59,13 @@ export function optimizeScene(code: string): OptimizationReport {
   }
 
   // ── Check for missing post-processing flag ──
-  if (/Scene\s*\(/.test(code) && !/postProcessing/.test(code)) {
+  if (/SceneView\s*\(/.test(code) && !/postProcessing/.test(code)) {
     suggestions.push({
       severity: "low",
       category: "Performance",
       issue: "Post-processing is enabled by default (bloom, SSAO, tone mapping).",
       suggestion: "If you don't need post-processing effects, disable them to save ~2ms per frame.",
-      codeExample: `Scene(\n    engine = engine,\n    postProcessing = false // saves ~2ms/frame\n) { ... }`,
+      codeExample: `SceneView(\n    engine = engine,\n    postProcessing = false // saves ~2ms/frame\n) { ... }`,
     });
   }
 
@@ -125,22 +125,22 @@ export function optimizeScene(code: string): OptimizationReport {
   }
 
   // ── Check for missing environment/IBL ──
-  if (/Scene\s*\(/.test(code) && !/environment|createHDR|rememberEnvironment/.test(code) && /ModelNode/.test(code)) {
+  if (/SceneView\s*\(/.test(code) && !/environment|createHDR|rememberEnvironment/.test(code) && /ModelNode/.test(code)) {
     suggestions.push({
       severity: "medium",
       category: "Quality",
       issue: "No environment/IBL detected. Metallic surfaces will appear black without image-based lighting.",
       suggestion: "Add an HDR environment for physically-correct reflections on PBR materials.",
-      codeExample: `Scene(\n    environment = rememberEnvironment(environmentLoader) {\n        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")\n            ?: createEnvironment(environmentLoader)\n    }\n)`,
+      codeExample: `SceneView(\n    environment = rememberEnvironment(environmentLoader) {\n        environmentLoader.createHDREnvironment("environments/sky_2k.hdr")\n            ?: createEnvironment(environmentLoader)\n    }\n)`,
     });
   }
 
   // ── Check for missing Modifier.fillMaxSize ──
-  if (/Scene\s*\(/.test(code) && !/fillMaxSize/.test(code)) {
+  if (/SceneView\s*\(/.test(code) && !/fillMaxSize/.test(code)) {
     suggestions.push({
       severity: "low",
       category: "Quality",
-      issue: "Scene may have zero size without Modifier.fillMaxSize().",
+      issue: "SceneView may have zero size without Modifier.fillMaxSize().",
       suggestion: "Add modifier = Modifier.fillMaxSize() to ensure the 3D view is visible.",
     });
   }

@@ -32,16 +32,10 @@ interface MigrationRule {
 const MIGRATION_RULES: MigrationRule[] = [
   // ── Composable renames ──────────────────────────────────────────────────
   {
-    id: "rename-sceneview-to-scene",
-    pattern: /\bSceneView\s*\(/g,
-    replacement: "Scene(",
-    explanation: "`SceneView(...)` renamed to `Scene(...)` in 3.0.",
-  },
-  {
-    id: "rename-arsceneview-to-arscene",
+    id: "rename-arsceneview-capitalization",
     pattern: /\bArSceneView\s*\(/g,
-    replacement: "ARScene(",
-    explanation: "`ArSceneView(...)` renamed to `ARScene(...)` in 3.0.",
+    replacement: "ARSceneView(",
+    explanation: "`ArSceneView(...)` renamed to `ARSceneView(...)` in 3.0 (capitalization fix).",
   },
 
   // ── Model loading ──────────────────────────────────────────────────────
@@ -126,8 +120,8 @@ const MIGRATION_RULES: MigrationRule[] = [
   {
     id: "replace-addChildNode",
     pattern: /(\w+)\.addChildNode\((\w+)\)/g,
-    replacement: "// $1.addChildNode($2) — in 3.0, declare nodes as composables inside Scene { } instead of adding imperatively",
-    explanation: "Imperative `addChildNode` replaced by declarative composable DSL. Declare nodes inside `Scene { }` content block.",
+    replacement: "// $1.addChildNode($2) — in 3.0, declare nodes as composables inside SceneView { } instead of adding imperatively",
+    explanation: "Imperative `addChildNode` replaced by declarative composable DSL. Declare nodes inside `SceneView { }` content block.",
   },
 
   // ── AR worldPosition → AnchorNode ──────────────────────────────────────
@@ -142,8 +136,8 @@ const MIGRATION_RULES: MigrationRule[] = [
   {
     id: "replace-camera-manipulator",
     pattern: /setCameraManipulator\(([^)]*)\)/g,
-    replacement: "// setCameraManipulator removed — use cameraManipulator = rememberCameraManipulator() on Scene",
-    explanation: "`setCameraManipulator` replaced by `cameraManipulator = rememberCameraManipulator()` parameter on `Scene`.",
+    replacement: "// setCameraManipulator removed — use cameraManipulator = rememberCameraManipulator() on SceneView",
+    explanation: "`setCameraManipulator` replaced by `cameraManipulator = rememberCameraManipulator()` parameter on `SceneView`.",
   },
 
   // ── Material loading ──────────────────────────────────────────────────
@@ -158,8 +152,8 @@ const MIGRATION_RULES: MigrationRule[] = [
   {
     id: "replace-setBackground",
     pattern: /\bsetBackground\s*\(\s*([^)]+)\s*\)/g,
-    replacement: "// setBackground($1) removed — use Scene(environment = ...) for background or skybox",
-    explanation: "`setBackground` removed. Use the `environment` parameter on `Scene` for backgrounds and skyboxes.",
+    replacement: "// setBackground($1) removed — use SceneView(environment = ...) for background or skybox",
+    explanation: "`setBackground` removed. Use the `environment` parameter on `SceneView` for backgrounds and skyboxes.",
   },
 
   // ── Node.setRenderable → ModelNode ──────────────────────────────────
@@ -174,8 +168,8 @@ const MIGRATION_RULES: MigrationRule[] = [
   {
     id: "replace-onUpdate",
     pattern: /\.onUpdate\s*=\s*\{/g,
-    replacement: "// .onUpdate removed — use Scene(onFrame = {",
-    explanation: "`.onUpdate` removed. Use the `onFrame` callback parameter on `Scene(onFrame = { ... })`.",
+    replacement: "// .onUpdate removed — use SceneView(onFrame = {",
+    explanation: "`.onUpdate` removed. Use the `onFrame` callback parameter on `SceneView(onFrame = { ... })`.",
   },
 
   // ── Node.setParent → composable DSL ──────────────────────────────────
@@ -190,16 +184,16 @@ const MIGRATION_RULES: MigrationRule[] = [
   {
     id: "replace-arfragment",
     pattern: /\bArFragment\b/g,
-    replacement: "/* ArFragment removed — use ARScene composable in Jetpack Compose */",
-    explanation: "`ArFragment` (Android View-based) removed. Use `ARScene(...)` composable in Jetpack Compose.",
+    replacement: "/* ArFragment removed — use ARSceneView composable in Jetpack Compose */",
+    explanation: "`ArFragment` (Android View-based) removed. Use `ARSceneView(...)` composable in Jetpack Compose.",
   },
 
   // ── onTapArPlane → onTouchEvent ─────────────────────────────────────
   {
     id: "replace-onTapArPlane",
     pattern: /\.onTapArPlane\s*\{/g,
-    replacement: "// .onTapArPlane removed — use ARScene(onTouchEvent = { hitResult, motionEvent ->",
-    explanation: "`.onTapArPlane` removed. Use `ARScene(onTouchEvent = { hitResult, motionEvent -> ... })` and call `hitResult.createAnchor()` yourself.",
+    replacement: "// .onTapArPlane removed — use ARSceneView(onTouchEvent = { hitResult, motionEvent ->",
+    explanation: "`.onTapArPlane` removed. Use `ARSceneView(onTouchEvent = { hitResult, motionEvent -> ... })` and call `hitResult.createAnchor()` yourself.",
   },
 ];
 
@@ -264,14 +258,14 @@ export function migrateCode(code: string): MigrationResult {
   if (code.includes("rememberEngine") && !result.includes("rememberEngine")) {
     // Already using 3.0 style
   }
-  if (code.includes("Scene(") && !code.includes("engine")) {
-    warnings.push("`Scene(...)` requires an explicit `engine` parameter in 3.0. Add `val engine = rememberEngine()` and pass it.");
+  if (code.includes("SceneView(") && !code.includes("engine")) {
+    warnings.push("`SceneView(...)` requires an explicit `engine` parameter in 3.0. Add `val engine = rememberEngine()` and pass it.");
   }
-  if (/node\w*\.destroy\(\)/.test(code) && /Scene\s*[({]/.test(code)) {
+  if (/node\w*\.destroy\(\)/.test(code) && /SceneView\s*[({]/.test(code)) {
     warnings.push("Manual `node.destroy()` calls inside composable Scenes should be removed — Compose manages node lifecycle automatically.");
   }
   if (code.includes("ArFragment")) {
-    warnings.push("`ArFragment` is the old Android View-based AR component. In 3.0, use the `ARScene` composable in Jetpack Compose instead.");
+    warnings.push("`ArFragment` is the old Android View-based AR component. In 3.0, use the `ARSceneView` composable in Jetpack Compose instead.");
   }
   if (code.includes("Dispatchers.IO") && (code.includes("modelLoader") || code.includes("materialLoader"))) {
     warnings.push("**CRITICAL**: Filament calls (modelLoader, materialLoader) on `Dispatchers.IO` will cause SIGABRT. Use `Dispatchers.Main` or `rememberModelInstance` in composables.");
