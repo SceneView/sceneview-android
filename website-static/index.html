@@ -1037,6 +1037,7 @@
 
   <!-- Scroll reveal animations -->
   <script>
+  // Scroll reveal
   (function() {
     var reveals = document.querySelectorAll('.reveal');
     if (!reveals.length) return;
@@ -1044,12 +1045,22 @@
       reveals.forEach(function(el) { el.classList.add('revealed'); });
       return;
     }
-    var obs = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) {
-        if (e.isIntersecting) { e.target.classList.add('revealed'); obs.unobserve(e.target); }
+    function revealVisible() {
+      reveals.forEach(function(el) {
+        if (el.getBoundingClientRect().top < window.innerHeight + 100) el.classList.add('revealed');
       });
-    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-    reveals.forEach(function(el) { obs.observe(el); });
+    }
+    revealVisible();
+    if ('IntersectionObserver' in window) {
+      var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) { e.target.classList.add('revealed'); obs.unobserve(e.target); }
+        });
+      }, { threshold: 0.01, rootMargin: '0px 0px 200px 0px' });
+      reveals.forEach(function(el) { if (!el.classList.contains('revealed')) obs.observe(el); });
+    }
+    var t; window.addEventListener('scroll', function() { clearTimeout(t); t = setTimeout(revealVisible, 50); }, { passive: true });
+    setTimeout(function() { reveals.forEach(function(el) { el.classList.add('revealed'); }); }, 3000);
   })();
   </script>
 </body>
