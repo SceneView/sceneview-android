@@ -327,10 +327,10 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
         NodeLifecycle(node, content)
     }
 
-    // ── CameraNode ────────────────────────────────────────────────────────────────────────────────
+    // ── SecondaryCamera (formerly CameraNode) ───────────────────────────────────────────────────
 
     /**
-     * A virtual camera node that can be used as a secondary viewpoint.
+     * A secondary camera node that can be used as an alternative viewpoint.
      *
      * **Note:** This does NOT automatically become the scene's active rendering camera.
      * The main rendering camera is configured via the `cameraNode` parameter of [Scene].
@@ -340,17 +340,30 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param content Optional child nodes declared in a [NodeScope].
      */
     @Composable
-    fun CameraNode(
+    fun SecondaryCamera(
         apply: CameraNodeImpl.() -> Unit = {},
         content: (@Composable NodeScope.() -> Unit)? = null
     ) {
         val node = remember(engine) {
-            // Use the secondary constructor so that engine.createCamera(entity) is called,
-            // properly registering the entity as a Filament camera component.
             CameraNodeImpl(engine = engine).apply(apply)
         }
         NodeLifecycle(node, content)
     }
+
+    /**
+     * @deprecated Use [SecondaryCamera] instead. This composable creates a non-active camera —
+     * the name `CameraNode` is misleading because the scene's active camera is set via the
+     * `cameraNode` parameter of [Scene], not via this composable.
+     */
+    @Deprecated(
+        message = "Renamed to SecondaryCamera for clarity. CameraNode creates a non-active camera.",
+        replaceWith = ReplaceWith("SecondaryCamera(apply, content)")
+    )
+    @Composable
+    fun CameraNode(
+        apply: CameraNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) = SecondaryCamera(apply, content)
 
     // ── CubeNode ──────────────────────────────────────────────────────────────────────────────────
 
