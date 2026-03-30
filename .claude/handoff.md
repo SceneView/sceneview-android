@@ -4,10 +4,20 @@
 
 ## Last Session Summary
 
-**Date:** 30 mars 2026 (session 14)
+**Date:** 30 mars 2026 (session 15)
 **Branch:** main
 
-## WHAT WAS DONE THIS SESSION (session 14)
+## WHAT WAS DONE THIS SESSION (session 15)
+
+### 1. Review fixes committed and deployed ✅
+- **index.html**: Nav links aligned to cross-page pattern (Showcase/Playground/Docs), 4 external lh3.googleusercontent.com images replaced with CSS gradient placeholders, added `<main>` wrapper
+- **6 secondary pages**: Added theme-color, og:site_name, og:locale, twitter meta tags; added `<main>` to showcase/web/platforms-showcase; fixed web.html nav link; standardized platforms-showcase font loading
+- **ThemePreview.kt**: Replaced 5 hardcoded RoundedCornerShape with MaterialTheme.shapes.*
+- Committed and pushed to sceneview/sceneview (main)
+- Deployed to sceneview.github.io and pushed
+- Visual QA verified: hero, nav, showcase cards, meta tags all correct
+
+## Previous session (session 14)
 
 ### 1. All secondary pages redesigned with Stitch M3 design system ✅
 - **showcase.html**: 6-section demo gallery (E-Commerce, AR, Automotive, Education, Luxury, Multi-Platform) with 3D viewers, device mockups, code snippets, category filter badges
