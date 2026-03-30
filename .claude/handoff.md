@@ -21,6 +21,7 @@
 - **Play Store**: Fixed 200MB AAB limit by creating Play Asset Delivery install-time pack (`samples/android-demo-assets/`). 50 models + 10 environments moved out of base module.
 - **App Store**: Fixed `SceneViewTheme` not in scope — added Theme.swift to Xcode pbxproj (PBXBuildFile, PBXFileReference, group, sources build phase).
 - **GitHub Actions**: Bumped all to latest (checkout v6, cache v5, upload-artifact v7, download-artifact v8, configure-pages v6) — fixes Node.js 20 deprecation.
+- **Xcode 26 upgrade**: iOS CI + App Store workflows now use macos-15 runners with Xcode 26.3 fallback chain (fixes Apple ITMS-90725 SDK warning).
 
 ### 3. Scene → SceneView cross-platform rename ✅
 - Android composables: `Scene { }` → `SceneView { }`, `ARScene { }` → `ARSceneView { }`
@@ -35,6 +36,11 @@
 - Media3 1.9.2 → 1.10.0
 - TV Foundation alpha11 → beta01
 - Test Runner 1.6.2 → 1.7.0
+
+### 5. App Store auto-submit ✅
+- Added auto-submit step to `app-store.yml` — uses ASC API (PyJWT) to find latest build, attach to version, submit for review
+- `continue-on-error: true` so TestFlight upload is never blocked
+- Workflow running now (run #23764364831)
 
 ## Previous session (session 17)
 
