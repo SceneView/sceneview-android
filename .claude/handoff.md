@@ -4,87 +4,69 @@
 
 ## Last Session Summary
 
-**Date:** 29 mars 2026 (session 10)
+**Date:** 30 mars 2026 (session 11)
 **Branch:** main (all pushed to origin)
 
-## WHAT WAS DONE THIS SESSION (session 10)
+## WHAT WAS DONE THIS SESSION (session 11)
 
-### 1. Comprehensive quality audit — 143 files, ~59K lines cleaned
-- **Version alignment**: ALL references updated from 3.5.0→3.5.1 across 100+ files (core, docs, MCPs, Flutter, React Native, Swift, samples, satellite MCPs)
-- **model-viewer→sceneview.js migration**: Migrated ALL remaining model-viewer/Three.js pages to sceneview.js (embed, preview, claude-3d, platforms-showcase)
-- **Three.js removal**: Deleted Three.js (53K LOC) and model-viewer.min.js from website-static
-- **Dead page cleanup**: Deleted demo-dashboard.html, demo-ar-staging.html, filament-chart.html
+### 1. Repository reorganization (342 files changed)
+- MCPs satellites → `mcp/packages/` (automotive, gaming, healthcare, interior)
+- MCP docs → `mcp/docs/` (registry-submission-guide, strategy-report)
+- Community docs → `.github/` (CoC, Governance, Support, Security, Sponsors, Privacy)
+- `scripts/` → `tools/`, `config/detekt/` → `buildSrc/config/detekt/`
+- Removed tracked build artifacts (docs/site, kotlin-js-store, buildSrc/.gradle)
+- Root items: 67 → 33
 
-### 2. SceneViewSwift fixes
-- **SceneSnapshot**: Fixed visionOS compilation (ARView unavailable — changed guard to `#if os(iOS)`)
-- **VideoNode**: Fixed memory leak — NotificationCenter observer never removed, added VideoLoopObserver with deinit cleanup
-- **CameraNode**: Removed unnecessary `#if !os(macOS)` guards (PerspectiveCameraComponent available macOS 15+)
-- **GeometryNode**: Removed unreachable `#else` dead code branches
+### 2. Version cleanup (18 files)
+- Fixed all remaining 3.5.1 → 3.5.2 references across docs, samples, website, Flutter, iOS, MCP READMEs
 
-### 3. Demo page fixes (visual verification with preview tools)
-- **sceneview-demo.html**: Rewritten from raw Filament API to SceneView.modelViewer() — was crashing with SwapChain error, now renders perfectly
-- **sceneview-3d-chart.html**: Removed 6 non-existent API calls (setQuality/setBloom/setVignette/setOrbitSpeed/clearLights/animateCamera), replaced with direct camera positioning
-- **sceneview-garden-demo.html**: Same — removed 6 non-existent API calls
-- **sceneview-architecture-demo.html**: Same — removed 7 non-existent API calls
-- **showcase.html**: Cleaned model-viewer CSS selectors
-- **sceneview-demo.html**: Fixed broken model buttons (removed dead models, added working ones)
+### 3. DESIGN.md — Google Stitch format
+- Created complete design system document in Stitch agent-friendly format
+- Enhanced with M3 Expressive philosophy, Liquid Glass specs, spring motion, M3 shape scale
 
-### 4. CI workflow hardening
-- **maintenance.yml**: Fixed Filament version grep pattern, removed failing `gh label create`, added graceful fallback
-- **docs.yml**: Fixed download-artifact@v4, added deploy retry for concurrent conflicts
-- **ios.yml**: Changed runner to macos-14 for consistency
-- **All 10 workflows verified green**
+### 4. Website M3 Expressive + Liquid Glass redesign
+- `styles.css` complete rewrite (497 insertions): design tokens, spring animations, liquid glass nav/cards, dark mode
+- Verified via preview tools — light + dark mode working
+- Deployed to sceneview.github.io
 
-### 5. MCP fixes
-- Removed `engine = engine` from LightNode calls (3 files)
-- Fixed stale roadmap references (v3.4.0/v3.5.0 "upcoming" → v3.6.0/v4.0.0)
-- Fixed CDN URLs (unpkg→jsdelivr)
-- All 1204 tests pass
-
-### 6. Satellite MCPs version alignment
-- mcp-automotive, mcp-gaming, mcp-healthcare, mcp-interior: all 3.5.0→3.5.1
+### 5. Google Stitch MCP configured
+- `.mcp.json` added with stitch-mcp proxy server
+- API key saved in `~/.zshrc` as `STITCH_API_KEY`
+- API key backed up in `profile-private/preferences/api-keys.md`
+- Config synced to `profile-private/sync/from-perso/`
 
 ## DECISIONS MADE
-- model-viewer and Three.js are GONE from the website — everything uses sceneview.js
-- Non-existent sceneview.js methods (setQuality, setBloom, addLight, animateCamera, etc.) removed from demos — these were aspirational API that was never implemented
-- sceneview-demo.html fully rewritten to use SceneView.modelViewer() instead of raw Filament API
-
-## WHAT WAS DONE IN SESSION 9
-
-### 1. Release workflow fully fixed
-- Maven Central: Fixed Gradle configuration cache incompatibility
-- MCP npm: Uses package.json version, skips if already published
-- sceneview-web npm: Fixed Gradle task, build output path, npm package name
-- Create GitHub Release: Only runs on tag push
-
-### 2. Version 3.5.1 fully released
-- Maven Central: sceneview + arsceneview 3.5.1 published
-- npm: sceneview-mcp 3.5.4, sceneview-web 3.5.1 published
-- GitHub Release: v3.5.1 created
+- Website uses M3 Expressive (structure) + Liquid Glass (floating surfaces) — correct for web
+- Android demo should use Material 3 Expressive (Compose Material 3)
+- iOS demo should use Apple Liquid Glass / HIG (SwiftUI native) — NOT Material Design
+- Dark mode hero title: solid white text (gradient text invisible in dark mode)
+- Google Stitch needs API key from https://stitch.withgoogle.com — cannot be automated
 
 ## CURRENT STATE
 - **Active branch**: main
-- **Latest release**: v3.5.2 (GitHub Release + Maven Central + npm — ALL published)
-- **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests)
+- **Latest release**: v3.5.2 (ALL PUBLISHED — Maven Central + npm + GitHub + Stores)
+- **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests), 9 MCPs total
 - **sceneview-web**: v3.5.2 on npm
-- **Website**: Deployed via docs.yml — all pages use sceneview.js, zero model-viewer/Three.js
-- **CI**: All 10 workflows green on v3.5.2
-- **Play Store**: Deploy workflow completed successfully
-- **App Store**: Deploy workflow completed successfully
+- **Website**: sceneview.github.io — M3 Expressive + Liquid Glass redesign deployed
+- **Google Stitch**: MCP configured, API key set
+- **GitHub orgs**: sceneview, sceneview-tools, mcp-tools-lab
 
-## PUBLISHED ARTIFACTS (v3.5.2)
-| Artifact | Registry | Status |
-|---|---|---|
-| sceneview | Maven Central | Published |
-| arsceneview | Maven Central | Published |
-| sceneview-web | npm | 3.5.2 published |
-| sceneview-mcp | npm | 3.5.4 (independent cycle) |
-| GitHub Release | GitHub | v3.5.2 created |
-| Website | GitHub Pages | Deployed |
-| Play Store | Google Play | Deployed |
-| App Store | TestFlight | Deployed |
+## NEXT STEPS (priority order)
 
-## NEXT STEPS
-- Consider implementing setQuality/setBloom/addLight in sceneview.js for richer demos
-- iOS demo: verify SceneViewSwift fixes compile in Xcode
-- v3.6.0 roadmap: API simplification (merge sceneview + arsceneview)
+### Immediate — M3 Expressive rollout to remaining surfaces
+1. **Android demo app theme** — Apply M3 Expressive tokens to Compose theme (Color.kt, Theme.kt in `samples/android-demo`)
+2. **iOS demo app** — Apply Liquid Glass / Apple HIG design to SwiftUI views (NOT Material Design)
+3. **Docs MkDocs theme** — Align CSS with DESIGN.md tokens
+4. **Store screenshots** — Update with new design
+
+### Medium term
+5. Test Google Stitch MCP (need to restart Claude Code first)
+6. Consider implementing setQuality/setBloom/addLight in sceneview.js for richer demos
+7. iOS demo: verify SceneViewSwift fixes compile in Xcode
+8. v3.6.0 roadmap: API simplification (merge sceneview + arsceneview)
+
+## RULES REMINDER
+- ALWAYS save API keys/credentials in `profile-private/preferences/api-keys.md` + `~/.zshrc`
+- ALWAYS push `profile-private` after saving sensitive data
+- ALWAYS sync learnings to `profile-private/sync/from-perso/`
+- Material 3 Expressive = Android/Web, Liquid Glass = Apple platforms
