@@ -11,7 +11,7 @@ Repository: https://github.com/KhronosGroup/glTF-Sample-Assets
 | File | Original Name | Category | Size | License |
 |---|---|---|---|---|
 | `chronograph_watch.glb` | ChronographWatch | Watch / Luxury product | 7.1 MB | CC-BY 4.0 (Wayfair) |
-| `sneaker.glb` | MaterialsVariantsShoe | Sneaker / E-commerce | 7.5 MB | CC-BY 4.0 (Khronos) |
+| `sneaker.glb` | MaterialsVariantsShoe | Sneaker / E-commerce | 7.5 MB | CC-BY 4.0 (Khronos) | *(not used in demos)* |
 | `avocado.glb` | Avocado | Food item | 7.7 MB | CC-BY 4.0 (Microsoft) |
 | `dish_with_olives.glb` | IridescentDishWithOlives | Food / Dish | 5.5 MB | CC-BY 4.0 (Wayfair) |
 | `damaged_helmet.glb` | DamagedHelmet | Sci-fi helmet | 3.6 MB | CC-BY 4.0 (theblueturtle_) |

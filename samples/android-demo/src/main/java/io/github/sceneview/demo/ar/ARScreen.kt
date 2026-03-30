@@ -82,6 +82,11 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberView
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 
 private data class ARModel(
@@ -113,6 +118,30 @@ fun ARScreen() {
 
     if (!arAvailability.isSupported) {
         ARNotAvailableScreen()
+        return
+    }
+
+    // Camera permission gate
+    var cameraPermissionGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                    PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> cameraPermissionGranted = granted }
+
+    LaunchedEffect(Unit) {
+        if (!cameraPermissionGranted) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    if (!cameraPermissionGranted) {
+        CameraPermissionScreen(onRequestPermission = {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        })
         return
     }
 
@@ -417,6 +446,45 @@ private fun ARNotAvailableScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+        }
+    }
+}
+
+@Composable
+private fun CameraPermissionScreen(onRequestPermission: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(80.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.VideocamOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.ar_camera_permission),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            OutlinedButton(onClick = onRequestPermission) {
+                Text(stringResource(R.string.ar_grant_permission))
+            }
         }
     }
 }

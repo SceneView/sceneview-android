@@ -1303,8 +1303,8 @@ private fun MultiModelDemo() {
     }
 
     // Load multiple models simultaneously
-    val sofa = rememberModelInstance(modelLoader, "models/leather_sofa.glb")
-    val lamp = rememberModelInstance(modelLoader, "models/barn_lamp.glb")
+    val sofa = rememberModelInstance(modelLoader, "models/velvet_sofa.glb")
+    val lamp = rememberModelInstance(modelLoader, "models/candle_holder.glb")
     val plant = rememberModelInstance(modelLoader, "models/plant.glb")
     val vase = rememberModelInstance(modelLoader, "models/glass_vase_flowers.glb")
 
@@ -1763,7 +1763,7 @@ private fun GestureEditingDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/sneaker.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "models/sunglasses.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
