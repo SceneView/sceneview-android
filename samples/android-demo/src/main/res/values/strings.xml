@@ -138,6 +138,7 @@
     <string name="ar_not_available">AR is not available on this device</string>
     <string name="ar_not_installed">Google Play Services for AR is not installed</string>
     <string name="ar_camera_permission">Camera permission is required for AR</string>
+    <string name="ar_grant_permission">Grant Camera Permission</string>
     <string name="model_loading">Loading 3D model\u2026</string>
     <string name="model_loading_error">Failed to load model</string>
     <string name="scene_error">Something went wrong rendering the scene</string>

@@ -50,7 +50,7 @@
 		D10000000000000000000027 /* animated_dog.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000027 /* animated_dog.usdz */; };
 		D10000000000000000000028 /* animated_tropical_fish.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000028 /* animated_tropical_fish.usdz */; };
 		D10000000000000000000029 /* choco_bunny.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000029 /* choco_bunny.usdz */; };
-		D1000000000000000000002A /* lowpoly_fruits.usdz in Resources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000002A /* lowpoly_fruits.usdz */; };
+
 		E10000000000000000000001 /* studio.hdr in Resources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000001 /* studio.hdr */; };
 		E10000000000000000000002 /* outdoor_cloudy.hdr in Resources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* outdoor_cloudy.hdr */; };
 		E10000000000000000000003 /* sunset.hdr in Resources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000003 /* sunset.hdr */; };
@@ -147,7 +147,7 @@
 		D20000000000000000000027 /* animated_dog.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = animated_dog.usdz; sourceTree = "<group>"; };
 		D20000000000000000000028 /* animated_tropical_fish.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = animated_tropical_fish.usdz; sourceTree = "<group>"; };
 		D20000000000000000000029 /* choco_bunny.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = choco_bunny.usdz; sourceTree = "<group>"; };
-		D2000000000000000000002A /* lowpoly_fruits.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = lowpoly_fruits.usdz; sourceTree = "<group>"; };
+
 		E20000000000000000000001 /* studio.hdr */ = {isa = PBXFileReference; lastKnownFileType = file; path = studio.hdr; sourceTree = "<group>"; };
 		E20000000000000000000002 /* outdoor_cloudy.hdr */ = {isa = PBXFileReference; lastKnownFileType = file; path = outdoor_cloudy.hdr; sourceTree = "<group>"; };
 		E20000000000000000000003 /* sunset.hdr */ = {isa = PBXFileReference; lastKnownFileType = file; path = sunset.hdr; sourceTree = "<group>"; };

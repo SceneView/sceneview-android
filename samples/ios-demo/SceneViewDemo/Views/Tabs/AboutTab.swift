@@ -35,7 +35,7 @@ struct AboutTab: View {
                 Text("SceneView")
                     .font(.title).bold()
 
-                Text("v3.6.0")
+                Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "3.6.0")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)

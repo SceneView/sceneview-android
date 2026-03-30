@@ -8,7 +8,9 @@ import SwiftUI
 struct RNModelData: Identifiable, Equatable {
     let id = UUID()
     let path: String
-    let scale: Float
+    let scale: SIMD3<Float>
+    let position: SIMD3<Float>
+    let animation: String?
 
     static func == (lhs: RNModelData, rhs: RNModelData) -> Bool {
         lhs.id == rhs.id
@@ -82,8 +84,22 @@ class RNSceneViewWrapper: UIView {
             Task { @MainActor in
                 sceneState.models = modelNodes?.compactMap { dict -> RNModelData? in
                     guard let src = dict["src"] as? String else { return nil }
-                    let scale = (dict["scale"] as? NSNumber)?.floatValue ?? 1.0
-                    return RNModelData(path: src, scale: scale)
+                    let scale: SIMD3<Float>
+                    if let arr = dict["scale"] as? [NSNumber], arr.count >= 3 {
+                        scale = SIMD3(arr[0].floatValue, arr[1].floatValue, arr[2].floatValue)
+                    } else if let s = (dict["scale"] as? NSNumber)?.floatValue {
+                        scale = SIMD3(repeating: s)
+                    } else {
+                        scale = SIMD3(repeating: 1.0)
+                    }
+                    let position: SIMD3<Float>
+                    if let arr = dict["position"] as? [NSNumber], arr.count >= 3 {
+                        position = SIMD3(arr[0].floatValue, arr[1].floatValue, arr[2].floatValue)
+                    } else {
+                        position = .zero
+                    }
+                    let animation = dict["animation"] as? String
+                    return RNModelData(path: src, scale: scale, position: position, animation: animation)
                 } ?? []
             }
         }
@@ -106,6 +122,7 @@ struct RNSceneViewContent: View {
         SceneView {
             ForEach(state.models) { model in
                 ModelNode(model.path)
+                    .position(model.position)
                     .scale(model.scale)
             }
         }
@@ -199,8 +216,22 @@ class RNARSceneViewWrapper: UIView {
             Task { @MainActor in
                 sceneState.models = modelNodes?.compactMap { dict -> RNModelData? in
                     guard let src = dict["src"] as? String else { return nil }
-                    let scale = (dict["scale"] as? NSNumber)?.floatValue ?? 1.0
-                    return RNModelData(path: src, scale: scale)
+                    let scale: SIMD3<Float>
+                    if let arr = dict["scale"] as? [NSNumber], arr.count >= 3 {
+                        scale = SIMD3(arr[0].floatValue, arr[1].floatValue, arr[2].floatValue)
+                    } else if let s = (dict["scale"] as? NSNumber)?.floatValue {
+                        scale = SIMD3(repeating: s)
+                    } else {
+                        scale = SIMD3(repeating: 1.0)
+                    }
+                    let position: SIMD3<Float>
+                    if let arr = dict["position"] as? [NSNumber], arr.count >= 3 {
+                        position = SIMD3(arr[0].floatValue, arr[1].floatValue, arr[2].floatValue)
+                    } else {
+                        position = .zero
+                    }
+                    let animation = dict["animation"] as? String
+                    return RNModelData(path: src, scale: scale, position: position, animation: animation)
                 } ?? []
             }
         }

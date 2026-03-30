@@ -1,0 +1,20 @@
+{
+  "name": "sceneview-react-native-demo",
+  "version": "3.6.0",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-native": "^0.73.0",
+    "react-native-sceneview": "file:../../react-native/react-native-sceneview"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-native": "^0.72.0",
+    "typescript": "^5.3.0"
+  }
+}
