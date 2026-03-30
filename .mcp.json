@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "stitch": {
+      "command": "/Users/thomasgorisse/.claude/stitch-wrapper.sh",
+      "args": []
+    }
+  }
+}
