@@ -521,6 +521,46 @@ Scene(viewNodeWindowManager = windowManager) {
 )
 ```
 
+### ShapeNode — 2D polygon shape
+```kotlin
+@Composable fun ShapeNode(
+    polygonPath: List<Position2> = listOf(),
+    polygonHoles: List<Int> = listOf(),
+    delaunayPoints: List<Position2> = listOf(),
+    normal: Direction = Shape.DEFAULT_NORMAL,
+    uvScale: UvScale = UvScale(1.0f),
+    color: Color? = null,
+    materialInstance: MaterialInstance? = null,
+    position: Position = Position(x = 0f),
+    rotation: Rotation = Rotation(x = 0f),
+    scale: Scale = Scale(1f),
+    apply: ShapeNode.() -> Unit = {},
+    content: (@Composable NodeScope.() -> Unit)? = null
+)
+```
+Renders a triangulated 2D polygon in 3D space. Supports holes, Delaunay refinement, and vertex colors.
+
+### PhysicsNode — simple rigid-body physics
+```kotlin
+@Composable fun PhysicsNode(
+    node: Node,
+    mass: Float = 1f,
+    restitution: Float = 0.6f,
+    linearVelocity: Position = Position(0f, 0f, 0f),
+    floorY: Float = 0f,
+    radius: Float = 0f
+)
+```
+Attaches gravity + floor bounce to an existing node. Does NOT add the node to the scene — the node
+must already exist. Uses Euler integration at 9.8 m/s² with configurable restitution and floor.
+
+```kotlin
+Scene {
+    val sphere = remember(engine) { SphereNode(engine, radius = 0.15f) }
+    PhysicsNode(node = sphere, restitution = 0.7f, linearVelocity = Position(0f, 3f, 0f), radius = 0.15f)
+}
+```
+
 ### CameraNode — secondary camera
 ```kotlin
 @Composable fun CameraNode(

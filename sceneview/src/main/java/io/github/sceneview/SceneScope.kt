@@ -32,6 +32,8 @@ import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Size
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.math.Color
+import io.github.sceneview.math.Position2
 import io.github.sceneview.node.BillboardNode as BillboardNodeImpl
 import io.github.sceneview.node.CameraNode as CameraNodeImpl
 import io.github.sceneview.node.CubeNode as CubeNodeImpl
@@ -44,7 +46,9 @@ import io.github.sceneview.node.ModelNode as ModelNodeImpl
 import io.github.sceneview.node.Node as NodeImpl
 import io.github.sceneview.node.PathNode as PathNodeImpl
 import io.github.sceneview.node.PlaneNode as PlaneNodeImpl
+import io.github.sceneview.node.PhysicsBody
 import io.github.sceneview.node.ReflectionProbeNode as ReflectionProbeNodeComposable
+import io.github.sceneview.node.ShapeNode as ShapeNodeImpl
 import io.github.sceneview.node.SphereNode as SphereNodeImpl
 import io.github.sceneview.node.TextNode as TextNodeImpl
 import io.github.sceneview.node.VideoNode as VideoNodeImpl
@@ -1033,6 +1037,147 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
             priority = priority,
             cameraPosition = cameraPosition
         )
+    }
+
+    // ── ShapeNode ──────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A node that renders a 2D polygon extruded into 3D space using triangulated geometry.
+     *
+     * Useful for rendering custom shapes like floor plans, map overlays, or UI elements generated
+     * from 2D polygon paths.
+     *
+     * ```kotlin
+     * Scene {
+     *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Blue) }
+     *     ShapeNode(
+     *         polygonPath = listOf(
+     *             Position2(-0.5f, -0.5f),
+     *             Position2( 0.5f, -0.5f),
+     *             Position2( 0.5f,  0.5f),
+     *             Position2(-0.5f,  0.5f)
+     *         ),
+     *         materialInstance = mat,
+     *         position = Position(0f, 0f, -2f)
+     *     )
+     * }
+     * ```
+     *
+     * @param polygonPath      Ordered 2D vertices of the polygon outline (at least 3).
+     * @param polygonHoles     Indices into [polygonPath] marking the start of each hole.
+     * @param delaunayPoints   Extra interior points for better triangulation quality.
+     * @param normal           Facing direction of the shape. Default up (+Y).
+     * @param uvScale          UV texture coordinate scale.
+     * @param color            Optional vertex colour.
+     * @param materialInstance The material instance to apply.
+     * @param position         World-space position.
+     * @param rotation         World-space rotation (Euler angles in degrees).
+     * @param scale            Uniform or non-uniform scale.
+     * @param apply            Additional configuration on the [ShapeNodeImpl].
+     * @param content          Optional child nodes.
+     */
+    @Composable
+    fun ShapeNode(
+        polygonPath: List<Position2> = listOf(),
+        polygonHoles: List<Int> = listOf(),
+        delaunayPoints: List<Position2> = listOf(),
+        normal: Direction = io.github.sceneview.geometries.Shape.DEFAULT_NORMAL,
+        uvScale: UvScale = UvScale(1.0f),
+        color: Color? = null,
+        materialInstance: MaterialInstance? = null,
+        position: Position = Position(x = 0f),
+        rotation: Rotation = Rotation(x = 0f),
+        scale: Scale = Scale(1f),
+        apply: ShapeNodeImpl.() -> Unit = {},
+        content: (@Composable NodeScope.() -> Unit)? = null
+    ) {
+        val node = remember(engine) {
+            ShapeNodeImpl(
+                engine = engine,
+                polygonPath = polygonPath,
+                polygonHoles = polygonHoles,
+                delaunayPoints = delaunayPoints,
+                normal = normal,
+                uvScale = uvScale,
+                color = color,
+                materialInstance = materialInstance
+            ).apply(apply)
+        }
+        SideEffect {
+            node.updateGeometry(
+                polygonPath = polygonPath,
+                polygonHoles = polygonHoles,
+                delaunayPoints = delaunayPoints,
+                normal = normal,
+                uvScale = uvScale,
+                color = color
+            )
+            node.position = position
+            node.rotation = rotation
+            node.scale = scale
+        }
+        NodeLifecycle(node, content)
+    }
+
+    // ── PhysicsNode ──────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Attaches a simple rigid-body physics simulation to a node.
+     *
+     * Applies gravity (-9.8 m/s²), floor collision, and bouncing via Euler integration. The target
+     * node must already exist in the scene graph — this composable drives its position each frame.
+     *
+     * ```kotlin
+     * Scene {
+     *     val mat = remember(materialLoader) { materialLoader.createColorInstance(Color.Red) }
+     *     SphereNode(radius = 0.15f, materialInstance = mat, position = Position(0f, 3f, -2f)) {
+     *         // This sphere will fall and bounce:
+     *     }
+     *     // Or use a remembered node reference:
+     *     val sphereNode = remember(engine) { SphereNode(engine, radius = 0.15f) }
+     *     PhysicsNode(
+     *         node = sphereNode,
+     *         restitution = 0.7f,
+     *         linearVelocity = Position(x = 0.5f, y = 2f, z = 0f),
+     *         radius = 0.15f
+     *     )
+     * }
+     * ```
+     *
+     * @param node           The [Node] whose position is driven by the simulation. Must be in scene.
+     * @param mass           Mass in kg (reserved for future impulse API).
+     * @param restitution    Bounciness in [0, 1]. 0 = inelastic, 1 = perfectly elastic.
+     * @param linearVelocity Initial velocity in m/s (world space).
+     * @param floorY         World Y coordinate of the floor plane. Default 0.
+     * @param radius         Collision radius in metres (offsets contact point for sphere surface).
+     */
+    @Composable
+    fun PhysicsNode(
+        node: NodeImpl,
+        mass: Float = 1f,
+        restitution: Float = 0.6f,
+        linearVelocity: Position = Position(0f, 0f, 0f),
+        floorY: Float = 0f,
+        radius: Float = 0f
+    ) {
+        val body = remember(node) {
+            PhysicsBody(
+                node = node,
+                mass = mass,
+                restitution = restitution,
+                floorY = floorY,
+                radius = radius,
+                initialVelocity = linearVelocity
+            )
+        }
+        DisposableEffect(node) {
+            var prevFrameTime: Long? = null
+            node.onFrame = { frameTimeNanos ->
+                body.step(frameTimeNanos, prevFrameTime)
+                prevFrameTime = frameTimeNanos
+            }
+            onDispose { node.onFrame = null }
+        }
     }
 
     // ── Internal lifecycle helper ─────────────────────────────────────────────────────────────────
