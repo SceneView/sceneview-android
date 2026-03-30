@@ -87,9 +87,9 @@
 
       <div class="nav__links" id="navLinks">
         <a href="#features" class="nav__link">Features</a>
-        <a href="#platforms" class="nav__link">Platforms</a>
-        <a href="#demos" class="nav__link">Demos</a>
-        <a href="https://sceneview.github.io/docs/" class="nav__link nav__link--active" target="_blank" rel="noopener">Docs</a>
+        <a href="/showcase.html" class="nav__link">Showcase</a>
+        <a href="/playground.html" class="nav__link">Playground</a>
+        <a href="https://sceneview.github.io/docs/" class="nav__link" target="_blank" rel="noopener">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -110,6 +110,8 @@
       </div>
     </div>
   </nav>
+
+  <main>
 
   <!-- ===== HERO ===== -->
   <section class="hero">
@@ -146,7 +148,7 @@
       </div>
       <div class="hero__visual">
         <div class="hero__model-wrapper">
-          <img class="hero__fallback-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhssVMf6pfki60KSWB35BGuI4ardEhisAFWbg1_dDLPhZS95MU9Ro1dgVo9NouVVaaht6LJd0IC3ajmWpLZrQpWHgxRSWE5-Dj5CweLMuvDgzxlqLIpD_9o3fwA9c_l3Bsk9Bxqv9g8eu8w_ZURy1iH_Qm8uIRfIpVLkX6X3XbAKC8dLf5S9__P-JA3X2Jq1GlerduKMZsTumoMCMfL7efWsNGlgkXyxdmjsywtssProxwYYmQQiaf_LnDYthROTU0l6MoScYgNFA" alt="3D Scene Preview" loading="eager">
+          <div class="hero__fallback-img" style="width:100%;aspect-ratio:16/9;border-radius:var(--radius-lg,16px);background:linear-gradient(135deg,var(--color-primary,#005bc1),var(--color-primary-container,#d4e3ff));display:flex;align-items:center;justify-content:center;color:var(--color-on-primary,#fff);font-size:1.25rem;font-weight:600" aria-label="3D Scene Preview">3D Scene Preview</div>
           <canvas id="hero-canvas" class="hero__canvas" aria-label="3D damaged helmet rendered by SceneView Web (Filament.js)"></canvas>
           <div id="hero-loader" class="hero__loader">
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" style="animation:spin 1.2s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="50 20"/></svg>
@@ -749,21 +751,21 @@
       <div class="showcase__grid">
         <div class="showcase-card reveal">
           <div class="showcase-card__img-wrap">
-            <img class="showcase-card__img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBFtowXAHYDTZI7omoh66eGGbvbJvvarBf4qAzjoinfrT9AkZt-dW2xkMNU8ujPi_ngria93c5lNje0U7EqdcekDUYIcCIKBygYlOCi0NJvvAKN9twT-VckhJgKtHA9UITh-h1zOll75RoR4kDHTC5TRbCZrdpTM3tkDOSQPNj0CcxWoG5nkqTY_FuMmMoCYsokXowGDMWsIPZjEqbIYXa3XnPP2GCWHtN20g3ARFDUdTkBPaL-cxm6hsHIvnNZSsRJ_CpP0p2e1c" alt="Modern architectural interior visualized in high-quality 3D" loading="lazy">
+            <div class="showcase-card__img" style="width:100%;aspect-ratio:16/10;border-radius:var(--radius-md,12px);background:linear-gradient(135deg,#1a5276,#2e86c1,#85c1e9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:600;text-align:center;padding:1rem" aria-label="Modern architectural interior visualized in high-quality 3D">ArchiVis Pro</div>
           </div>
           <h4 class="showcase-card__title">ArchiVis Pro</h4>
           <p class="showcase-card__text">Real-time architectural visualization on mobile.</p>
         </div>
         <div class="showcase-card reveal">
           <div class="showcase-card__img-wrap">
-            <img class="showcase-card__img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCT2Oc_mnKmYqsGKeekKDBD_ELMyaAWCu-lpd_S2MaX6uBNtNWwHI10tw4hqBrVHeMRN8v_cgyH9uNAYjirWdFWW8sHUYNpFjnQZOMea9nSAQl1DhpXTPF_mHw-cqEA_mLPUFVLhZNeWS-dyJa3noK5h54Rvp1hY04W9iINgG7-JvSEkrFQN_-IPDT8AFtBRBs858Z8P7HfPx-2TGEJyvpRVz8ezZw2vKOUdt5GewdNwR7jI1S-_rTJWxavFjS_aAf7o4Wq-5EJl7Q" alt="Doctor interacting with holographic 3D heart model" loading="lazy">
+            <div class="showcase-card__img" style="width:100%;aspect-ratio:16/10;border-radius:var(--radius-md,12px);background:linear-gradient(135deg,#1a3c5e,#c0392b,#e74c3c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:600;text-align:center;padding:1rem" aria-label="Doctor interacting with holographic 3D heart model">MedCore AR</div>
           </div>
           <h4 class="showcase-card__title">MedCore AR</h4>
           <p class="showcase-card__text">Advanced surgical training and 3D organ modeling.</p>
         </div>
         <div class="showcase-card reveal">
           <div class="showcase-card__img-wrap">
-            <img class="showcase-card__img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYMGDfndvVIYp7LB1ZNp1Mi5A11SeY2cyjXFPhX60vQVvce1HjZeEV_6f3G8gr74i8fzsHwVPz2QkkmRf4AJR1GErHsIslp5StUWtvYzaJR6EehJBcpBOc2jKCkr8KNA0WeTwKyXcfqcEdqK1suCCmhRwyKqSUOqojRR6FaXJ2vKnc9vAS14_AA3uqYoszpfDw_7QfbM0PH5H8D1DNOVG25-3g7bjooeO0xlZJff2VOWxs728Y5y8ygEN_9atindir9eB9jsLeqAk" alt="Furniture retail AR app showing 3D chair in living room" loading="lazy">
+            <div class="showcase-card__img" style="width:100%;aspect-ratio:16/10;border-radius:var(--radius-md,12px);background:linear-gradient(135deg,#1e8449,#27ae60,#82e0aa);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:600;text-align:center;padding:1rem" aria-label="Furniture retail AR app showing 3D chair in living room">Spatial Commerce</div>
           </div>
           <h4 class="showcase-card__title">Spatial Commerce</h4>
           <p class="showcase-card__text">Native "Try-before-you-buy" AR experiences for retail.</p>
@@ -915,6 +917,8 @@
       </div>
     </div>
   </section>
+
+  </main>
 
   <!-- ===== FOOTER ===== -->
   <footer class="footer">

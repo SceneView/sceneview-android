@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,7 +33,7 @@ private fun ThemeSampler() {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 )
@@ -52,15 +51,15 @@ private fun ThemeSampler() {
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {}, shape = RoundedCornerShape(50)) { Text("Primary") }
-                FilledTonalButton(onClick = {}, shape = RoundedCornerShape(50)) { Text("Tonal") }
+                Button(onClick = {}, shape = MaterialTheme.shapes.extraLarge) { Text("Primary") }
+                FilledTonalButton(onClick = {}, shape = MaterialTheme.shapes.extraLarge) { Text("Tonal") }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = true, onClick = {}, label = { Text("Selected") }, shape = RoundedCornerShape(50))
-                FilterChip(selected = false, onClick = {}, label = { Text("Unselected") }, shape = RoundedCornerShape(50))
+                FilterChip(selected = true, onClick = {}, label = { Text("Selected") }, shape = MaterialTheme.shapes.extraLarge)
+                FilterChip(selected = false, onClick = {}, label = { Text("Unselected") }, shape = MaterialTheme.shapes.extraLarge)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -74,7 +73,7 @@ private fun ThemeSampler() {
                         else -> MaterialTheme.colorScheme.error
                     }
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.small,
                         color = color,
                         modifier = Modifier.size(48.dp)
                     ) {}
