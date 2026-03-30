@@ -9,21 +9,28 @@
 
 ## WHAT WAS DONE THIS SESSION (session 16)
 
-### 1. v3.6.0 API simplification — first batch ✅
+### 1. v3.6.0 API simplification — 3 batches ✅
 - **Full API audit**: 14 issues identified across Android, Swift, and KMP core
 - **docs/v3.6.0-roadmap.md**: Complete roadmap with priorities, implementation plan, migration strategy
-- **Geometry composable consistency** (non-breaking):
-  - `CubeNode`: added `scale` param
-  - `SphereNode`: added `rotation` + `scale` params
-  - `CylinderNode`, `PlaneNode`, `LineNode`, `PathNode`: added `scale` param
-  - All geometry nodes now have uniform `position`/`rotation`/`scale` trio
-- **LightNode simplification** (non-breaking):
-  - Added explicit `intensity`, `direction`, `position` params
-  - No more need for dual `apply`/`nodeApply` for common config
-  - `apply` still available for advanced Builder properties (falloff, spotLightCone, etc.)
-- **llms.txt updated** with all new signatures
+
+**Batch 1 — Geometry param consistency (#3) + LightNode (#1):**
+  - All 6 geometry nodes now have uniform `position`/`rotation`/`scale` trio
+  - LightNode: explicit `intensity`, `direction`, `position` params
+  - llms.txt updated with all new signatures
+  - Committed `36710231`
+
+**Batch 2 — ShapeNode + PhysicsNode composables (#5):**
+  - `ShapeNode`: triangulated 2D polygon with full transform params, added to SceneScope
+  - `PhysicsNode`: gravity + floor bounce, added to SceneScope (was only a top-level function)
+  - llms.txt updated with new composable docs
+  - Committed `ca3a8bc7`
+
+**Batch 3 — SideEffect equality guards (#11):**
+  - All 7 geometry composables now cache prev geometry and skip updateGeometry() when unchanged
+  - Transform assignments (position/rotation/scale) remain unconditional (cheap)
+  - Committed `bc1746b8`
+
 - All builds pass: `sceneview`, `arsceneview`, `android-demo`
-- Committed `36710231` and pushed to main
 
 ### 2. SceneViewSwift Xcode verification ✅
 - **iOS build**: BUILD SUCCEEDED (Xcode 26.3, iOS 26.2 SDK) — zero warnings, zero errors
@@ -216,8 +223,8 @@ Stitch generates the design → Claude applies it in code. NO manual CSS/UI writ
 ### Phase 2 — Post-redesign
 - ~~v3.6.0 roadmap: API simplification~~ ✅ STARTED (session 16)
   - Roadmap created (14 issues, 5 priority tiers)
-  - First batch implemented: geometry param consistency + LightNode simplification
-  - Next: PhysicsNode/ShapeNode composables, VideoNode convenience, SideEffect guards
+  - 3 batches implemented: geometry params (#3), LightNode (#1), ShapeNode/PhysicsNode (#5), SideEffect guards (#11)
+  - Remaining: CameraNode rename (#2), scaleToUnits (#4), VideoNode convenience (#6), ReflectionProbe (#7), Swift declarative (#8), NodeGesture cleanup (#9), HitResultNode simplification (#12), SceneNode integration (#13), ARNodeScope (#14)
 - ~~sceneview.js enhancements (setQuality, setBloom, addLight)~~ ✅ DONE (session 15)
   - sceneview.js bumped to v1.5.0
   - setQuality('low'|'medium'|'high') — AO + anti-aliasing control
