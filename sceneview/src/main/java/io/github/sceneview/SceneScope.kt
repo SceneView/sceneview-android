@@ -198,6 +198,8 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      * @param animationLoop  Whether [animationName] loops. Default `true`.
      * @param animationSpeed Playback speed multiplier for [animationName]. Default `1f`.
      * @param scaleToUnits   Uniformly scales the model to fit within a cube of this size (meters).
+     *                       **Note:** when set, the [scale] parameter is ignored — the model's scale
+     *                       is computed from its bounding box. Use `null` to control scale manually.
      * @param centerOrigin   Origin alignment relative to the model's bounding box.
      *                       - `null` keeps the model's original center
      *                       - `Position(0,0,0)` centers horizontally and vertically
