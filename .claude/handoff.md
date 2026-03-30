@@ -4,32 +4,47 @@
 
 ## Last Session Summary
 
-**Date:** 30 mars 2026 (session 12)
-**Branch:** main (all pushed to origin)
+**Date:** 30 mars 2026 (session 13)
+**Branch:** main
 
-## WHAT WAS DONE THIS SESSION (session 12)
+## WHAT WAS DONE THIS SESSION (session 13)
 
-### 1. Security audit — API key leak check
-- Deep scanned entire git history for API keys (AIza*, AQ.*, sk-*, etc.)
-- **CONFIRMED: zero API keys in repo history** — all clean
-- Stitch API key only exists in `~/.claude/stitch-wrapper.sh` (local, not tracked)
+### 1. Website full redesign via Google Stitch (Phase 1 — Website ✅)
+- Created Stitch design system from DESIGN.md tokens (primary #1a73e8, secondary #5b3cc4, tertiary #d97757)
+- Generated landing page screen via `generate_screen_from_text` in Stitch project `8306300374268749650`
+- Downloaded Stitch-generated HTML, adapted it to SceneView conventions:
+  - Removed Tailwind CDN → pure CSS custom properties from DESIGN.md
+  - Removed external image CDN → self-hosted assets
+  - Kept sceneview.js/Filament.js for 3D rendering
+  - Preserved all SEO meta tags, structured data, OG/Twitter cards
+- **`website-static/index.html`** — Full rewrite with Stitch design structure:
+  - Hero: version badge, gradient title, subtitle, CTAs, platform icons, 3D model
+  - Features: 6-card grid (Declarative 3D, AR Ready, AI-First SDK, Cross-Platform, Native Renderers, Open Source)
+  - Code comparison: Kotlin (Compose) vs Swift (SwiftUI) side-by-side
+  - Platforms: horizontal scroll cards with status badges
+  - Install: Gradle dependency code block
+  - Showcase: 3-column grid (Architecture, Healthcare, Retail)
+  - CTA: "Start building in 5 minutes" with terminal command
+  - Footer: 4-column grid (Product, Community, Legal)
+- **`website-static/styles.css`** — Complete rewrite (~1340 lines):
+  - All tokens from DESIGN.md as CSS custom properties
+  - BEM naming, dark/light mode support
+  - Responsive: 1024px, 900px, 768px, 600px, 480px breakpoints
+  - M3 Expressive spring animations + Liquid Glass on nav/floating surfaces
 
-### 2. Stitch MCP — Fixed and verified
-- `.mcp.json` in project root with correct config (gitignored)
-- Wrapper script `~/.claude/stitch-wrapper.sh` tested: **12 tools discovered, proxy running**
-- `stitch-mcp` v0.5.1 installed globally via npm
-- **Root cause of Stitch not loading**: MCP servers load at session start — `.mcp.json` was reconfigured mid-session
-- **FIX**: Just start a new Claude Code session → Stitch loads automatically
+### 2. Visual QA — Complete
+- Desktop 1440×900: ✅ all sections verified (hero, features, code, platforms, install, showcase, CTA, footer)
+- Mobile 375×812: ✅ hamburger nav, stacked cards, full-width CTAs, stacked code blocks
+- Light mode: ✅ clean white surfaces, dark code blocks, gradient CTA
+- Dark mode: ✅ dark surfaces, glass effects, proper contrast
 
-### 3. Git cleanup
-- Committed `.mcp.json` removal from git tracking + added to `.gitignore`
+### 3. Cleanup
+- Removed temp `preview-stitch.html` and `/tmp/stitch-landing.html`
+- Removed CSS cache buster `?v=stitch2` from index.html
 
-## Previous session (session 11)
-- Repository reorganization (342 files, root: 67→33 items)
-- Version cleanup 3.5.1→3.5.2 (18 files)
-- DESIGN.md in Google Stitch format
-- Website M3 Expressive + Liquid Glass redesign (deployed)
-- Google Stitch MCP configured
+## Previous sessions
+- Session 12: Security audit (clean), Stitch MCP fixed, git cleanup
+- Session 11: Repo reorganization, version cleanup 3.5.1→3.5.2, DESIGN.md, Stitch config
 
 ## DECISIONS MADE
 - Website uses M3 Expressive (structure) + Liquid Glass (floating surfaces) — correct for web
@@ -59,10 +74,9 @@
 Everything visual must be redesigned using Google Stitch as the design tool.
 Stitch generates the design → Claude applies it in code. NO manual CSS/UI writing.
 
-1. **Website** (sceneview.github.io) — Full redesign via Stitch
-   - Give Stitch context: DESIGN.md, SDK for 3D/AR, developer audience
-   - M3 Expressive + Liquid Glass mix for web
-   - All pages: index.html, showcase.html, claude-3d.html, etc.
+1. ~~**Website** (sceneview.github.io) — Full redesign via Stitch~~ ✅ DONE (session 13)
+   - index.html fully redesigned, QA'd (desktop/mobile/light/dark)
+   - **TODO:** Deploy to sceneview.github.io (separate repo), redesign other pages (showcase, claude-3d)
 2. **Android demo app** — Theme via Stitch (M3 Expressive)
    - Color.kt, Theme.kt, Shape.kt, Type.kt
 3. **iOS demo app** — Theme via Stitch (Liquid Glass / Apple HIG)
