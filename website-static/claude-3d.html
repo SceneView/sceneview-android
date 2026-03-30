@@ -25,67 +25,83 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link rel="preload" href="styles.css" as="style">
+  <link rel="preload" href="js/filament/filament.js" as="script">
+  <link rel="preload" href="js/sceneview.js?v=3.5.2" as="script">
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+  <!-- Filament.js v1.70.1 WASM engine (required by SceneView Web) -->
+  <script src="js/filament/filament.js"></script>
+  <!-- SceneView Web library -->
+  <script src="js/sceneview.js?v=3.5.2"></script>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- SceneView 3D rendering (Filament WASM) -->
-  <script src="js/filament/filament.js"></script>
-  <script src="js/sceneview.js?v=3.5.2"></script>
-
   <style>
-    /* ===== PAGE-SPECIFIC STYLES ===== */
+    /* ===== CLAUDE-3D PAGE-SPECIFIC STYLES ===== */
 
-    .page-claude3d {
+    .claude-page {
       padding-top: var(--nav-height);
     }
 
-    /* --- Hero: Claude Desktop Mockup --- */
+    /* --- Hero --- */
     .claude-hero {
-      padding: var(--space-3xl) 0 var(--space-4xl);
+      padding: 80px 0 96px;
       overflow: hidden;
+      position: relative;
+    }
+
+    .claude-hero__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
     }
 
     .claude-hero__header {
       text-align: center;
-      margin-bottom: var(--space-3xl);
+      margin-bottom: 64px;
     }
 
     .claude-hero__badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 20px;
-      border-radius: var(--radius-full);
-      background: linear-gradient(135deg, rgba(217, 119, 87, 0.15), rgba(26, 115, 232, 0.15));
+      padding: 6px 16px;
+      border-radius: 9999px;
+      background: rgba(217, 119, 87, 0.12);
       color: #d97757;
-      font-size: 0.85rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      margin-bottom: var(--space-lg);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 24px;
     }
 
-    [data-theme="light"] .claude-hero__badge {
-      color: #c25d3a;
+    [data-theme="dark"] .claude-hero__badge {
+      background: rgba(217, 119, 87, 0.15);
+      color: #e8956e;
     }
 
     .claude-hero__title {
-      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-size: clamp(2.5rem, 6vw, 4rem);
       font-weight: 800;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.04em;
       line-height: 1.1;
-      background: linear-gradient(135deg, #d97757 0%, var(--color-primary) 50%, #bb86fc 100%);
+      background: linear-gradient(135deg, #d97757 0%, var(--color-primary) 50%, var(--color-tertiary) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      margin-bottom: var(--space-md);
+      margin-bottom: 16px;
     }
 
     .claude-hero__subtitle {
-      font-size: clamp(1rem, 2vw, 1.2rem);
-      color: var(--color-on-surface-dim);
-      max-width: 600px;
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      color: var(--color-on-surface-variant);
+      max-width: 640px;
       margin: 0 auto;
       line-height: 1.7;
     }
@@ -96,32 +112,27 @@
       margin: 0 auto;
       border-radius: 16px;
       overflow: hidden;
-      background: #1a1a2e;
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.06),
-        0 24px 80px rgba(0,0,0,0.5),
-        0 8px 32px rgba(0,0,0,0.3);
+      background: var(--color-surface-container-lowest);
+      box-shadow: var(--shadow-xl);
+      border: 1px solid var(--color-outline);
     }
 
-    [data-theme="light"] .claude-window {
-      background: #f8f8fa;
-      box-shadow:
-        0 0 0 1px rgba(0,0,0,0.08),
-        0 24px 80px rgba(0,0,0,0.12),
-        0 8px 32px rgba(0,0,0,0.08);
+    [data-theme="dark"] .claude-window {
+      background: #161b22;
+      border-color: rgba(48, 54, 61, 0.5);
     }
 
     .claude-window__titlebar {
       display: flex;
       align-items: center;
       padding: 12px 16px;
-      background: #14142a;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: var(--color-surface-container-high);
+      border-bottom: 1px solid var(--color-outline);
     }
 
-    [data-theme="light"] .claude-window__titlebar {
-      background: #ebebef;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
+    [data-theme="dark"] .claude-window__titlebar {
+      background: rgba(22, 27, 34, 1);
+      border-bottom-color: rgba(48, 54, 61, 0.5);
     }
 
     .claude-window__dots {
@@ -144,12 +155,9 @@
       text-align: center;
       font-size: 0.8rem;
       font-weight: 500;
-      color: rgba(255,255,255,0.4);
+      color: var(--color-on-surface-variant);
       letter-spacing: 0.02em;
-    }
-
-    [data-theme="light"] .claude-window__title {
-      color: rgba(0,0,0,0.4);
+      opacity: 0.6;
     }
 
     .claude-window__body {
@@ -158,47 +166,43 @@
       min-height: 480px;
     }
 
-    /* --- Chat Panel (Left) --- */
-    .chat-panel {
+    /* --- Chat Panel --- */
+    .claude-chat {
       padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 20px;
-      border-right: 1px solid rgba(255,255,255,0.06);
+      border-right: 1px solid var(--color-outline);
       overflow-y: auto;
       max-height: 520px;
     }
 
-    [data-theme="light"] .chat-panel {
-      border-right: 1px solid rgba(0,0,0,0.08);
+    [data-theme="dark"] .claude-chat {
+      border-right-color: rgba(48, 54, 61, 0.5);
     }
 
-    .chat-label {
+    .claude-chat__label {
       font-size: 0.7rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.25);
+      color: var(--color-on-surface-variant);
+      opacity: 0.5;
       padding-bottom: 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid var(--color-outline);
     }
 
-    [data-theme="light"] .chat-label {
-      color: rgba(0,0,0,0.3);
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-    }
-
-    .chat-msg {
+    .claude-msg {
       display: flex;
       gap: 12px;
       align-items: flex-start;
     }
 
-    .chat-msg--user {
+    .claude-msg--user {
       flex-direction: row-reverse;
     }
 
-    .chat-avatar {
+    .claude-msg__avatar {
       width: 32px;
       height: 32px;
       border-radius: 10px;
@@ -210,17 +214,17 @@
       font-weight: 700;
     }
 
-    .chat-avatar--claude {
+    .claude-msg__avatar--claude {
       background: linear-gradient(135deg, #d97757, #c25d3a);
       color: white;
     }
 
-    .chat-avatar--user {
+    .claude-msg__avatar--user {
       background: var(--color-primary);
       color: white;
     }
 
-    .chat-bubble {
+    .claude-msg__bubble {
       padding: 12px 16px;
       border-radius: 14px;
       font-size: 0.88rem;
@@ -228,154 +232,176 @@
       max-width: 85%;
     }
 
-    .chat-bubble--user {
+    .claude-msg__bubble--user {
       background: var(--color-primary);
       color: white;
       border-bottom-right-radius: 4px;
     }
 
-    .chat-bubble--claude {
-      background: rgba(255,255,255,0.06);
+    .claude-msg__bubble--claude {
+      background: var(--color-surface-container);
       color: var(--color-on-surface);
       border-bottom-left-radius: 4px;
     }
 
-    [data-theme="light"] .chat-bubble--claude {
-      background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    [data-theme="dark"] .claude-msg__bubble--claude {
+      background: var(--color-surface-container-high);
     }
 
-    .chat-bubble code {
+    .claude-msg__bubble code {
       font-family: var(--font-mono);
       font-size: 0.8rem;
-      background: rgba(0,0,0,0.15);
+      background: rgba(0, 0, 0, 0.15);
       padding: 2px 6px;
       border-radius: 4px;
     }
 
-    [data-theme="light"] .chat-bubble code {
-      background: rgba(0,0,0,0.06);
-    }
-
-    .chat-typing {
+    .claude-msg__typing {
       display: flex;
       gap: 4px;
       padding: 4px 0;
     }
 
-    .chat-typing span {
+    .claude-msg__typing span {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--color-on-surface-faint);
-      animation: typing 1.4s infinite;
+      background: var(--color-on-surface-variant);
+      opacity: 0.4;
+      animation: claude-typing 1.4s infinite;
     }
 
-    .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
-    .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+    .claude-msg__typing span:nth-child(2) { animation-delay: 0.2s; }
+    .claude-msg__typing span:nth-child(3) { animation-delay: 0.4s; }
 
-    @keyframes typing {
+    @keyframes claude-typing {
       0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
       30% { opacity: 1; transform: translateY(-4px); }
     }
 
-    /* --- Preview Panel (Right) --- */
-    .preview-panel {
+    /* --- Preview Panel --- */
+    .claude-preview {
       position: relative;
       display: flex;
       flex-direction: column;
-      background: #0f0f1a;
+      background: var(--color-surface-container-low);
     }
 
-    [data-theme="light"] .preview-panel {
-      background: #f0f0f4;
+    [data-theme="dark"] .claude-preview {
+      background: #0d1117;
     }
 
-    .preview-label {
+    .claude-preview__label {
       font-size: 0.7rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.25);
+      color: var(--color-on-surface-variant);
+      opacity: 0.5;
       padding: 16px 20px 8px;
     }
 
-    [data-theme="light"] .preview-label {
-      color: rgba(0,0,0,0.3);
-    }
-
-    .preview-panel canvas {
+    .claude-preview canvas {
       flex: 1;
       width: 100%;
       min-height: 420px;
+      cursor: grab;
     }
 
-    .preview-badge {
+    .claude-preview__badge {
       position: absolute;
       bottom: 12px;
       right: 14px;
       font-size: 0.65rem;
       font-weight: 500;
-      color: rgba(255,255,255,0.3);
+      color: var(--color-on-surface-variant);
+      opacity: 0.4;
       letter-spacing: 0.03em;
       pointer-events: none;
     }
 
-    [data-theme="light"] .preview-badge {
-      color: rgba(0,0,0,0.25);
-    }
-
     /* --- Examples Section --- */
-    .examples-section {
-      padding: var(--space-4xl) 0;
+    .claude-examples {
+      padding: 96px 0;
     }
 
-    .examples-grid {
+    .claude-examples__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
+    }
+
+    .claude-examples__header {
+      margin-bottom: 64px;
+    }
+
+    .claude-examples__title {
+      font-size: clamp(1.875rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--color-on-surface);
+      margin-bottom: 16px;
+    }
+
+    .claude-examples__accent-bar {
+      height: 6px;
+      width: 96px;
+      background: linear-gradient(135deg, #d97757, var(--color-primary));
+      border-radius: 9999px;
+      margin-bottom: 16px;
+    }
+
+    .claude-examples__subtitle {
+      font-size: 1.0625rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.7;
+      max-width: 640px;
+    }
+
+    .claude-examples__grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
-      gap: var(--space-xl);
-      margin-top: var(--space-2xl);
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
     }
 
+    /* --- Example Card --- */
     .example-card {
-      border-radius: var(--radius-md);
+      background: var(--color-surface-container-lowest);
+      border-radius: 16px;
       overflow: hidden;
-      background: var(--color-surface-container);
-      border: 1px solid var(--color-outline);
-      transition: transform var(--duration-medium) var(--ease-expressive),
-                  box-shadow var(--duration-medium) var(--ease-expressive);
-      cursor: pointer;
+      box-shadow: var(--shadow-card);
+      transition: transform var(--duration-medium) var(--ease-spring);
     }
 
     .example-card:hover {
       transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
     }
 
-    .example-card__3d {
+    .example-card__viewer {
       position: relative;
-      aspect-ratio: 4/3;
-      background: #0f0f1a;
+      aspect-ratio: 16 / 10;
+      background: var(--color-surface-container-low);
     }
 
-    [data-theme="light"] .example-card__3d {
-      background: #f0f0f4;
+    [data-theme="dark"] .example-card__viewer {
+      background: #0d1117;
     }
 
-    .example-card__3d canvas {
+    .example-card__viewer canvas {
       width: 100%;
       height: 100%;
+      cursor: grab;
     }
 
     .example-card__body {
-      padding: var(--space-lg);
+      padding: 24px;
     }
 
     .example-card__prompt {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: var(--space-md);
+      margin-bottom: 12px;
     }
 
     .example-card__prompt-icon {
@@ -390,39 +416,48 @@
     }
 
     .example-card__prompt-text {
-      font-size: 0.95rem;
+      font-size: 0.9375rem;
       font-weight: 600;
       color: var(--color-on-surface);
     }
 
     .example-card__desc {
-      font-size: 0.85rem;
-      color: var(--color-on-surface-dim);
-      line-height: 1.6;
-      margin-bottom: var(--space-md);
+      font-size: 0.875rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.7;
+      margin-bottom: 16px;
     }
 
     .example-card__code-toggle {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.8rem;
-      font-weight: 600;
+      font-size: 0.8125rem;
+      font-weight: 700;
       color: var(--color-primary);
       cursor: pointer;
-      padding: 6px 12px;
-      border-radius: var(--radius-xs);
-      background: var(--color-primary-light);
+      padding: 8px 16px;
+      border-radius: 12px;
+      background: rgba(0, 91, 193, 0.08);
       border: none;
-      transition: background var(--duration-short);
+      transition: background var(--duration-short), transform var(--duration-short) var(--ease-spring);
+    }
+
+    [data-theme="dark"] .example-card__code-toggle {
+      background: rgba(121, 192, 255, 0.1);
     }
 
     .example-card__code-toggle:hover {
-      background: var(--color-primary-subtle);
+      background: rgba(0, 91, 193, 0.14);
+      transform: scale(1.02);
+    }
+
+    [data-theme="dark"] .example-card__code-toggle:hover {
+      background: rgba(121, 192, 255, 0.18);
     }
 
     .example-card__code {
-      margin-top: var(--space-md);
+      margin-top: 16px;
       display: none;
     }
 
@@ -431,39 +466,85 @@
     }
 
     .example-card__code pre {
-      background: var(--color-code-bg);
-      color: var(--color-code-text);
-      padding: 16px;
-      border-radius: var(--radius-xs);
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 16px 20px;
+      border-radius: 12px;
       font-family: var(--font-mono);
       font-size: 0.78rem;
-      line-height: 1.6;
+      line-height: 1.7;
       overflow-x: auto;
       white-space: pre;
+      border: 1px solid rgba(48, 54, 61, 0.5);
     }
+
+    .example-card__code .kw { color: #ff7b72; }
+    .example-card__code .fn { color: #d2a8ff; }
+    .example-card__code .str { color: #a5d6ff; }
+    .example-card__code .num { color: #79c0ff; }
+    .example-card__code .cm { color: #8b949e; }
 
     /* --- How It Works --- */
-    .how-section {
-      padding: var(--space-4xl) 0;
-      background: var(--color-surface-dim);
+    .claude-how {
+      padding: 96px 0;
+      background: var(--color-surface-container-low);
     }
 
-    .how-steps {
+    .claude-how__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
+    }
+
+    .claude-how__header {
+      margin-bottom: 64px;
+    }
+
+    .claude-how__title {
+      font-size: clamp(1.875rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--color-on-surface);
+      margin-bottom: 16px;
+    }
+
+    .claude-how__accent-bar {
+      height: 6px;
+      width: 96px;
+      background: var(--color-primary);
+      border-radius: 9999px;
+      margin-bottom: 16px;
+    }
+
+    .claude-how__subtitle {
+      font-size: 1.0625rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.7;
+    }
+
+    .claude-how__steps {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-xl);
-      margin-top: var(--space-2xl);
+      gap: 24px;
     }
 
-    .how-step {
+    .claude-step {
+      background: var(--color-surface-container-lowest);
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-card);
       text-align: center;
-      padding: var(--space-xl);
+      transition: transform var(--duration-medium) var(--ease-spring);
     }
 
-    .how-step__number {
+    .claude-step:hover {
+      transform: translateY(-4px);
+    }
+
+    .claude-step__number {
       width: 48px;
       height: 48px;
-      border-radius: 50%;
+      border-radius: 12px;
       background: linear-gradient(135deg, #d97757, var(--color-primary));
       color: white;
       font-weight: 800;
@@ -471,80 +552,275 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto var(--space-md);
+      margin: 0 auto 20px;
     }
 
-    .how-step__title {
-      font-size: 1.1rem;
+    .claude-step__title {
+      font-size: 1.125rem;
       font-weight: 700;
-      margin-bottom: var(--space-sm);
+      color: var(--color-on-surface);
+      margin-bottom: 8px;
     }
 
-    .how-step__desc {
-      font-size: 0.9rem;
-      color: var(--color-on-surface-dim);
-      line-height: 1.6;
+    .claude-step__desc {
+      font-size: 0.875rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.7;
     }
 
-    /* --- CTA --- */
-    .cta-section {
-      padding: var(--space-4xl) 0;
-      text-align: center;
+    /* --- CTA Section --- */
+    .claude-cta {
+      padding: 96px 0;
     }
 
-    .cta-section .btn {
-      margin: 0 8px;
+    .claude-cta__container {
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--container-padding);
     }
 
-    .cta-actions {
+    .claude-cta__card {
+      background: var(--color-primary);
+      border-radius: 48px;
+      padding: 64px;
       display: flex;
-      justify-content: center;
-      gap: var(--space-md);
+      align-items: center;
+      gap: 48px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: var(--shadow-xl);
+    }
+
+    [data-theme="dark"] .claude-cta__card {
+      background: #003a7f;
+    }
+
+    .claude-cta__glow {
+      position: absolute;
+      top: -96px;
+      left: -96px;
+      width: 384px;
+      height: 384px;
+      background: #ffffff;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.1;
+      pointer-events: none;
+    }
+
+    .claude-cta__left {
+      flex: 1;
+      position: relative;
+      z-index: 10;
+    }
+
+    .claude-cta__title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--color-on-primary);
+      margin-bottom: 16px;
+    }
+
+    [data-theme="dark"] .claude-cta__title {
+      color: #ffffff;
+    }
+
+    .claude-cta__desc {
+      font-size: 1.0625rem;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.7;
+      margin-bottom: 32px;
+      max-width: 480px;
+    }
+
+    .claude-cta__actions {
+      display: flex;
       flex-wrap: wrap;
-      margin-top: var(--space-xl);
+      gap: 16px;
     }
 
-    .cta-code {
-      margin-top: var(--space-xl);
+    .claude-cta__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 12px 32px;
+      border-radius: 12px;
+      transition: all var(--duration-short) var(--ease-spring);
     }
 
-    .cta-code pre {
-      display: inline-block;
-      background: var(--color-code-bg);
-      color: var(--color-code-text);
-      padding: 14px 28px;
-      border-radius: var(--radius-sm);
+    .claude-cta__btn:active {
+      transform: scale(0.95);
+    }
+
+    .claude-cta__btn--white {
+      background: var(--color-surface-container-lowest);
+      color: var(--color-primary);
+    }
+
+    [data-theme="dark"] .claude-cta__btn--white {
+      background: #ffffff;
+      color: #005bc1;
+    }
+
+    .claude-cta__btn--white:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .claude-cta__btn--glass {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--color-on-primary);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    [data-theme="dark"] .claude-cta__btn--glass {
+      color: #ffffff;
+    }
+
+    .claude-cta__btn--glass:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .claude-cta__right {
+      flex: 1;
+      position: relative;
+      z-index: 10;
+    }
+
+    .claude-cta__terminal {
+      background: #0d1117;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+      border: 1px solid rgba(48, 54, 61, 0.5);
+    }
+
+    .claude-cta__terminal-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(22, 27, 34, 1);
+      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+    }
+
+    .claude-cta__terminal-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .claude-cta__terminal-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .claude-cta__terminal-dots span:nth-child(1) { background: #ff5f57; }
+    .claude-cta__terminal-dots span:nth-child(2) { background: #febc2e; }
+    .claude-cta__terminal-dots span:nth-child(3) { background: #28c840; }
+
+    .claude-cta__terminal-title {
+      font-size: 0.75rem;
+      color: #8b949e;
+      font-weight: 500;
+    }
+
+    .claude-cta__terminal-body {
+      padding: 20px;
       font-family: var(--font-mono);
-      font-size: 0.9rem;
+      font-size: 0.875rem;
+      line-height: 1.8;
+    }
+
+    .claude-cta__terminal-prompt {
+      color: #56d364;
+    }
+
+    .claude-cta__terminal-cmd {
+      color: #c9d1d9;
+    }
+
+    .claude-cta__terminal-success {
+      color: var(--color-primary-fixed-dim);
     }
 
     /* --- Responsive --- */
+    @media (max-width: 1024px) {
+      .claude-examples__grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .claude-cta__card {
+        flex-direction: column;
+        padding: 48px;
+        border-radius: 32px;
+        text-align: center;
+      }
+
+      .claude-cta__desc {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .claude-cta__actions {
+        justify-content: center;
+      }
+    }
+
     @media (max-width: 768px) {
       .claude-window__body {
         grid-template-columns: 1fr;
       }
 
-      .chat-panel {
+      .claude-chat {
         max-height: 360px;
         border-right: none;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid var(--color-outline);
       }
 
-      [data-theme="light"] .chat-panel {
-        border-bottom: 1px solid rgba(0,0,0,0.08);
+      [data-theme="dark"] .claude-chat {
+        border-bottom-color: rgba(48, 54, 61, 0.5);
       }
 
-      .preview-panel canvas {
+      .claude-preview canvas {
         min-height: 320px;
       }
 
-      .how-steps {
+      .claude-how__steps {
         grid-template-columns: 1fr;
-        gap: var(--space-lg);
+        gap: 16px;
       }
 
-      .examples-grid {
+      .claude-examples__grid {
         grid-template-columns: 1fr;
+      }
+
+      .claude-cta__card {
+        padding: 32px;
+        border-radius: 24px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .claude-hero {
+        padding: 48px 0 64px;
+      }
+
+      .claude-hero__header {
+        margin-bottom: 40px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .claude-cta__actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .claude-cta__btn {
+        justify-content: center;
       }
     }
   </style>
@@ -554,28 +830,18 @@
   <!-- ===== NAVIGATION ===== -->
   <nav class="nav" id="nav">
     <div class="nav__container">
-      <a href="/" class="nav__logo">
-        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
-          <rect width="32" height="32" rx="8" fill="currentColor"/>
-          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-        <span class="nav__logo-text">SceneView</span>
-      </a>
+      <div class="nav__brand">SceneView SDK</div>
 
       <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
 
       <div class="nav__links" id="navLinks">
-        <a href="/showcase.html" class="nav__link" style="font-weight:600">Showcase</a>
-        <a href="/claude-3d.html" class="nav__link" style="color:#d97757;font-weight:600">AI + 3D</a>
-        <a href="/platforms-showcase.html" class="nav__link">Platforms</a>
-        <a href="/#demos" class="nav__link">Demos</a>
+        <a href="/" class="nav__link">Home</a>
+        <a href="/#features" class="nav__link">Features</a>
+        <a href="/showcase.html" class="nav__link">Showcase</a>
         <a href="/playground.html" class="nav__link">Playground</a>
-        <a href="https://github.com/sceneview/sceneview#readme" class="nav__link">Docs</a>
-        <a href="https://github.com/sceneview/sceneview" class="nav__link">GitHub</a>
-        <a href="https://discord.gg/sceneview" class="nav__link">Discord</a>
+        <a href="https://sceneview.github.io/docs/" class="nav__link" target="_blank" rel="noopener">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -585,21 +851,30 @@
           </svg>
         </button>
       </div>
+
+      <div class="nav__actions">
+        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View source code">
+          <span class="material-symbols-outlined">code</span>
+        </a>
+        <button class="nav__hamburger nav__hamburger--mobile" id="hamburgerMobile" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </nav>
 
-  <main class="page-claude3d">
+  <main class="claude-page">
 
     <!-- ===== HERO: CLAUDE DESKTOP MOCKUP ===== -->
-    <section class="claude-hero">
-      <div class="container">
+    <section class="claude-hero reveal">
+      <div class="claude-hero__container">
         <div class="claude-hero__header">
           <div class="claude-hero__badge">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            <span class="material-symbols-outlined" style="font-size: 16px;">auto_awesome</span>
             AI-Powered 3D
           </div>
           <h1 class="claude-hero__title">Ask Claude. Get 3D.</h1>
-          <p class="claude-hero__subtitle">Describe what you want in natural language. Claude generates the SceneView code. See the result instantly in 3D.</p>
+          <p class="claude-hero__subtitle">Describe what you want in natural language. Claude generates the SceneView code. See the result instantly in interactive 3D.</p>
         </div>
 
         <!-- Claude Desktop Window -->
@@ -609,50 +884,50 @@
               <span></span><span></span><span></span>
             </div>
             <div class="claude-window__title">Claude Desktop &mdash; SceneView MCP</div>
-            <div style="width:52px"></div>
+            <div style="width: 52px;"></div>
           </div>
           <div class="claude-window__body">
             <!-- Chat Side -->
-            <div class="chat-panel" id="heroChat">
-              <div class="chat-label">Conversation</div>
+            <div class="claude-chat" id="heroChat">
+              <div class="claude-chat__label">Conversation</div>
 
-              <div class="chat-msg chat-msg--user">
-                <div class="chat-avatar chat-avatar--user">T</div>
-                <div class="chat-bubble chat-bubble--user">Show me a 3D chair for my living room</div>
+              <div class="claude-msg claude-msg--user">
+                <div class="claude-msg__avatar claude-msg__avatar--user">T</div>
+                <div class="claude-msg__bubble claude-msg__bubble--user">Show me a 3D chair for my living room</div>
               </div>
 
-              <div class="chat-msg">
-                <div class="chat-avatar chat-avatar--claude">C</div>
-                <div class="chat-bubble chat-bubble--claude">
+              <div class="claude-msg">
+                <div class="claude-msg__avatar claude-msg__avatar--claude">C</div>
+                <div class="claude-msg__bubble claude-msg__bubble--claude">
                   I'll load a chair model using SceneView. Here's a sheen fabric chair rendered in real-time with PBR materials and environment lighting.
                 </div>
               </div>
 
-              <div class="chat-msg chat-msg--user">
-                <div class="chat-avatar chat-avatar--user">T</div>
-                <div class="chat-bubble chat-bubble--user">Can I rotate it and see the back?</div>
+              <div class="claude-msg claude-msg--user">
+                <div class="claude-msg__avatar claude-msg__avatar--user">T</div>
+                <div class="claude-msg__bubble claude-msg__bubble--user">Can I rotate it and see the back?</div>
               </div>
 
-              <div class="chat-msg">
-                <div class="chat-avatar chat-avatar--claude">C</div>
-                <div class="chat-bubble chat-bubble--claude">
+              <div class="claude-msg">
+                <div class="claude-msg__avatar claude-msg__avatar--claude">C</div>
+                <div class="claude-msg__bubble claude-msg__bubble--claude">
                   Of course! The 3D preview is fully interactive. Drag to orbit, scroll to zoom, and pinch on mobile. Try it in the preview panel.
                 </div>
               </div>
 
-              <div class="chat-msg">
-                <div class="chat-avatar chat-avatar--claude">C</div>
-                <div class="chat-bubble chat-bubble--claude">
-                  <div class="chat-typing"><span></span><span></span><span></span></div>
+              <div class="claude-msg">
+                <div class="claude-msg__avatar claude-msg__avatar--claude">C</div>
+                <div class="claude-msg__bubble claude-msg__bubble--claude">
+                  <div class="claude-msg__typing"><span></span><span></span><span></span></div>
                 </div>
               </div>
             </div>
 
             <!-- Preview Side -->
-            <div class="preview-panel">
-              <div class="preview-label">Preview</div>
+            <div class="claude-preview">
+              <div class="claude-preview__label">Preview</div>
               <canvas id="viewer-1"></canvas>
-              <div class="preview-badge">Rendered by SceneView</div>
+              <div class="claude-preview__badge">Rendered by SceneView</div>
             </div>
           </div>
         </div>
@@ -660,16 +935,19 @@
     </section>
 
     <!-- ===== INTERACTIVE EXAMPLES ===== -->
-    <section class="examples-section">
-      <div class="container">
-        <h2 class="section__title">Try it yourself</h2>
-        <p class="section__subtitle">Click any example to see what Claude generates. Every 3D scene below is interactive &mdash; drag to orbit, scroll to zoom.</p>
+    <section class="claude-examples reveal">
+      <div class="claude-examples__container">
+        <div class="claude-examples__header">
+          <div class="claude-examples__accent-bar"></div>
+          <h2 class="claude-examples__title">Try it yourself</h2>
+          <p class="claude-examples__subtitle">Click any example to see what Claude generates. Every 3D scene below is interactive &mdash; drag to orbit, scroll to zoom.</p>
+        </div>
 
-        <div class="examples-grid">
+        <div class="claude-examples__grid">
 
-          <!-- Example 1: Product -->
+          <!-- Example 1: Product Viewer -->
           <div class="example-card">
-            <div class="example-card__3d">
+            <div class="example-card__viewer">
               <canvas id="viewer-2"></canvas>
             </div>
             <div class="example-card__body">
@@ -681,7 +959,7 @@
               </div>
               <p class="example-card__desc">Claude generates a product viewer with PBR materials, soft shadows, and auto-rotation. The model loads with camera orbit controls for a complete 360-degree view.</p>
               <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span class="material-symbols-outlined" style="font-size: 16px;">code</span>
                 View code
               </button>
               <div class="example-card__code">
@@ -708,9 +986,9 @@
             </div>
           </div>
 
-          <!-- Example 2: Sneakers / Product -->
+          <!-- Example 2: Sneakers / E-Commerce -->
           <div class="example-card">
-            <div class="example-card__3d">
+            <div class="example-card__viewer">
               <canvas id="viewer-3"></canvas>
             </div>
             <div class="example-card__body">
@@ -722,7 +1000,7 @@
               </div>
               <p class="example-card__desc">Perfect for e-commerce. Claude loads a product model with material variants, letting customers inspect every angle before purchase.</p>
               <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span class="material-symbols-outlined" style="font-size: 16px;">code</span>
                 View code
               </button>
               <div class="example-card__code">
@@ -752,7 +1030,7 @@
 
           <!-- Example 3: Animated Character -->
           <div class="example-card">
-            <div class="example-card__3d">
+            <div class="example-card__viewer">
               <canvas id="viewer-4"></canvas>
             </div>
             <div class="example-card__body">
@@ -764,7 +1042,7 @@
               </div>
               <p class="example-card__desc">Claude loads an animated glTF model with skeletal animations playing automatically. Great for games, education, and interactive storytelling.</p>
               <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span class="material-symbols-outlined" style="font-size: 16px;">code</span>
                 View code
               </button>
               <div class="example-card__code">
@@ -789,9 +1067,9 @@
             </div>
           </div>
 
-          <!-- Example 4: Furniture / AR -->
+          <!-- Example 4: AR Furniture Placement -->
           <div class="example-card">
-            <div class="example-card__3d">
+            <div class="example-card__viewer">
               <canvas id="viewer-5"></canvas>
             </div>
             <div class="example-card__body">
@@ -801,9 +1079,9 @@
                 </div>
                 <span class="example-card__prompt-text">"Place this chair in my room using AR"</span>
               </div>
-              <p class="example-card__desc">Claude generates an ARScene with plane detection and tap-to-place. On supported devices, tap the AR icon above to try it.</p>
+              <p class="example-card__desc">Claude generates an ARScene with plane detection and tap-to-place. On supported devices, tap the AR icon to try it live.</p>
               <button class="example-card__code-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span class="material-symbols-outlined" style="font-size: 16px;">code</span>
                 View code
               </button>
               <div class="example-card__code">
@@ -838,48 +1116,72 @@
     </section>
 
     <!-- ===== HOW IT WORKS ===== -->
-    <section class="how-section">
-      <div class="container">
-        <h2 class="section__title">How it works</h2>
-        <p class="section__subtitle">Three steps from idea to interactive 3D scene.</p>
+    <section class="claude-how reveal">
+      <div class="claude-how__container">
+        <div class="claude-how__header">
+          <div class="claude-how__accent-bar"></div>
+          <h2 class="claude-how__title">How it works</h2>
+          <p class="claude-how__subtitle">Three steps from idea to interactive 3D scene.</p>
+        </div>
 
-        <div class="how-steps">
-          <div class="how-step">
-            <div class="how-step__number">1</div>
-            <h3 class="how-step__title">Describe your scene</h3>
-            <p class="how-step__desc">Tell Claude what you want in plain language. A product viewer, an AR experience, a data visualization &mdash; anything 3D.</p>
+        <div class="claude-how__steps">
+          <div class="claude-step">
+            <div class="claude-step__number">1</div>
+            <h3 class="claude-step__title">Describe your scene</h3>
+            <p class="claude-step__desc">Tell Claude what you want in plain language. A product viewer, an AR experience, a data visualization &mdash; anything 3D.</p>
           </div>
-          <div class="how-step">
-            <div class="how-step__number">2</div>
-            <h3 class="how-step__title">Claude generates code</h3>
-            <p class="how-step__desc">Using the SceneView MCP, Claude has full access to the API reference, samples, and best practices. It writes correct Compose code on the first try.</p>
+          <div class="claude-step">
+            <div class="claude-step__number">2</div>
+            <h3 class="claude-step__title">Claude generates code</h3>
+            <p class="claude-step__desc">Using the SceneView MCP, Claude has full access to the API reference, samples, and best practices. It writes correct Compose code on the first try.</p>
           </div>
-          <div class="how-step">
-            <div class="how-step__number">3</div>
-            <h3 class="how-step__title">See it live in 3D</h3>
-            <p class="how-step__desc">The generated scene renders instantly. Orbit, zoom, and interact. Deploy to Android, iOS, Web, or any supported platform.</p>
+          <div class="claude-step">
+            <div class="claude-step__number">3</div>
+            <h3 class="claude-step__title">See it live in 3D</h3>
+            <p class="claude-step__desc">The generated scene renders instantly. Orbit, zoom, and interact. Deploy to Android, iOS, Web, or any supported platform.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ===== CTA ===== -->
-    <section class="cta-section">
-      <div class="container">
-        <h2 class="section__title">Start building with AI + 3D</h2>
-        <p class="section__subtitle">Add the SceneView MCP to your AI assistant and start generating 3D scenes in seconds.</p>
-
-        <div class="cta-code">
-          <pre><code>npx sceneview-mcp</code></pre>
-        </div>
-
-        <div class="cta-actions">
-          <a href="https://github.com/sceneview/sceneview#install" class="btn btn--primary">Get Started</a>
-          <a href="https://github.com/sceneview/sceneview" class="btn btn--outline">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-            View on GitHub
-          </a>
-          <a href="/" class="btn btn--outline">Back to Home</a>
+    <section class="claude-cta reveal">
+      <div class="claude-cta__container">
+        <div class="claude-cta__card">
+          <div class="claude-cta__glow"></div>
+          <div class="claude-cta__left">
+            <h2 class="claude-cta__title">Start building with AI + 3D</h2>
+            <p class="claude-cta__desc">Add the SceneView MCP to your AI assistant and start generating 3D scenes in seconds.</p>
+            <div class="claude-cta__actions">
+              <a href="https://github.com/sceneview/sceneview#install" class="claude-cta__btn claude-cta__btn--white">
+                <span class="material-symbols-outlined" style="font-size: 20px;">rocket_launch</span>
+                Get Started
+              </a>
+              <a href="https://github.com/sceneview/sceneview" class="claude-cta__btn claude-cta__btn--glass" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                View on GitHub
+              </a>
+              <a href="/" class="claude-cta__btn claude-cta__btn--glass">
+                <span class="material-symbols-outlined" style="font-size: 20px;">home</span>
+                Back to Home
+              </a>
+            </div>
+          </div>
+          <div class="claude-cta__right">
+            <div class="claude-cta__terminal">
+              <div class="claude-cta__terminal-titlebar">
+                <div class="claude-cta__terminal-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <div class="claude-cta__terminal-title">Terminal</div>
+              </div>
+              <div class="claude-cta__terminal-body">
+                <div><span class="claude-cta__terminal-prompt">$</span> <span class="claude-cta__terminal-cmd">npx sceneview-mcp</span></div>
+                <div><span class="claude-cta__terminal-success">SceneView MCP server started</span></div>
+                <div><span class="claude-cta__terminal-prompt">$</span> <span class="claude-cta__terminal-cmd">32 tools available</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -888,20 +1190,35 @@
 
   <!-- ===== FOOTER ===== -->
   <footer class="footer">
-    <div class="container">
-      <div class="footer__inner">
-        <div class="footer__brand">
-          <svg class="footer__logo" viewBox="0 0 32 32" width="24" height="24" fill="none">
-            <rect width="32" height="32" rx="8" fill="var(--color-primary)"/>
-            <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          </svg>
-          <span>SceneView</span>
+    <div class="footer__container">
+      <div class="footer__grid">
+        <div class="footer__brand-col">
+          <div class="footer__brand-name">SceneView SDK</div>
+          <p class="footer__brand-desc">The architectural logic for building high-performance 3D spatial experiences across all modern platforms.</p>
+          <div class="footer__copyright">&copy; 2026 SceneView SDK. Architectural Logic.</div>
         </div>
-        <div class="footer__links">
-          <a href="https://github.com/sceneview/sceneview/blob/main/LICENSE">Apache 2.0 License</a>
-          <a href="https://github.com/sponsors/sceneview">Sponsor</a>
-          <a href="https://github.com/sceneview/sceneview">Source Code</a>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Documentation</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://sceneview.github.io/docs/" target="_blank" rel="noopener">Examples</a></li>
+            <li><a href="/showcase.html">Showcase</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Community</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://github.com/sceneview/sceneview" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://discord.gg/sceneview" target="_blank" rel="noopener">Discord</a></li>
+            <li><a href="https://twitter.com/nicoadams_" target="_blank" rel="noopener">Twitter</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Legal</h4>
+          <ul class="footer__col-list">
+            <li><a href="/privacy.html">Privacy</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">Terms</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          </ul>
         </div>
       </div>
     </div>

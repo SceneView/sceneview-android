@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playground — SceneView</title>
   <meta name="description" content="Interactive SceneView playground — explore code examples for 3D and AR with live 3D preview.">
   <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#005bc1">
 
   <!-- Canonical URL -->
   <link rel="canonical" href="https://sceneview.github.io/playground.html">
@@ -20,29 +21,53 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://sceneview.github.io/playground.html">
   <meta property="og:site_name" content="SceneView">
+  <meta property="og:locale" content="en_US">
   <meta property="og:image" content="https://sceneview.github.io/favicon.svg">
+  <meta property="og:image:alt" content="SceneView logo — 3D and AR SDK">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Playground — SceneView">
   <meta name="twitter:description" content="Interactive code playground for SceneView — 3D & AR SDK for every platform.">
   <meta name="twitter:image" content="https://sceneview.github.io/favicon.svg">
+  <meta name="twitter:image:alt" content="SceneView logo — 3D and AR SDK">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Playground — SceneView",
+    "description": "Interactive code playground for SceneView — 3D & AR SDK for every platform.",
+    "url": "https://sceneview.github.io/playground.html",
+    "isPartOf": { "@type": "WebSite", "name": "SceneView", "url": "https://sceneview.github.io/" }
+  }
+  </script>
 
   <!-- Preconnect hints -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Preload critical resources -->
+  <link rel="preload" href="styles.css" as="style">
+  <link rel="preload" href="js/filament/filament.js" as="script">
+  <link rel="preload" href="js/sceneview.js?v=3.5.2" as="script">
+
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
   <!-- Filament.js v1.70.1 WASM engine (local) -->
   <script src="js/filament/filament.js"></script>
-  <!-- SceneView Web — our 3D library built on Filament.js -->
+  <!-- SceneView Web library -->
   <script src="js/sceneview.js?v=3.5.2"></script>
-  <!-- All 3D powered by SceneView (Filament.js WASM) -->
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="styles.css">
+
   <style>
-    /* ===== PLAYGROUND LAYOUT ===== */
+    /* ===== PLAYGROUND PAGE STYLES ===== */
+
     .playground {
       padding-top: var(--nav-height);
       min-height: 100vh;
@@ -51,20 +76,24 @@
       background: var(--color-surface);
     }
 
+    /* --- Toolbar --- */
     .playground__toolbar {
       display: flex;
       align-items: center;
-      gap: var(--space-md);
-      padding: var(--space-md) var(--space-lg);
-      background: var(--color-surface-dim);
+      gap: 16px;
+      padding: 12px 32px;
+      background: var(--glass-nav-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
       border-bottom: 1px solid var(--color-outline);
       flex-wrap: wrap;
+      transition: background var(--duration-medium) var(--ease-expressive);
     }
 
     .playground__toolbar-left {
       display: flex;
       align-items: center;
-      gap: var(--space-md);
+      gap: 16px;
       flex: 1;
       min-width: 0;
     }
@@ -72,30 +101,53 @@
     .playground__toolbar-right {
       display: flex;
       align-items: center;
-      gap: var(--space-sm);
+      gap: 8px;
       flex-shrink: 0;
+    }
+
+    .playground__label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
     }
 
     .playground__select {
       appearance: none;
       background: var(--color-surface-container);
       color: var(--color-on-surface);
-      border: 1px solid var(--color-outline);
-      border-radius: var(--radius-xs);
+      border: 1px solid var(--color-outline-variant);
+      border-radius: 12px;
       padding: 8px 36px 8px 14px;
       font-family: var(--font-body);
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
-      transition: border-color var(--duration-short) var(--ease-expressive);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+      transition: border-color var(--duration-short) var(--ease-expressive),
+                  box-shadow var(--duration-short) var(--ease-expressive);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23687ba3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center;
+    }
+
+    [data-theme="dark"] .playground__select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23c9d1d9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    }
+
+    .playground__select:hover {
+      border-color: var(--color-primary);
     }
 
     .playground__select:focus {
       outline: none;
       border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(0, 91, 193, 0.15);
+    }
+
+    [data-theme="dark"] .playground__select:focus {
+      box-shadow: 0 0 0 3px rgba(121, 192, 255, 0.15);
     }
 
     .playground__select optgroup {
@@ -107,60 +159,57 @@
       font-weight: 500;
     }
 
-    .playground__label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--color-on-surface-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
-    }
-
+    /* --- Action buttons --- */
     .playground__btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 14px;
+      padding: 8px 16px;
       font-size: 0.8rem;
       font-weight: 600;
-      border-radius: var(--radius-xs);
-      border: 1px solid var(--color-outline);
-      background: var(--color-surface-container);
-      color: var(--color-on-surface-dim);
+      border-radius: 12px;
+      border: 1px solid var(--color-outline-variant);
+      background: transparent;
+      color: var(--color-on-surface-variant);
       cursor: pointer;
       transition: all var(--duration-short) var(--ease-expressive);
       white-space: nowrap;
+      text-decoration: none;
     }
 
     .playground__btn:hover {
       border-color: var(--color-primary);
       color: var(--color-primary);
-      background: var(--color-primary-light);
+      background: rgba(0, 91, 193, 0.06);
+    }
+
+    [data-theme="dark"] .playground__btn:hover {
+      background: rgba(121, 192, 255, 0.08);
     }
 
     .playground__btn--primary {
       background: var(--color-primary);
-      color: #fff;
+      color: var(--color-on-primary);
       border-color: var(--color-primary);
     }
 
-    [data-theme="dark"] .playground__btn--primary {
-      color: #111827;
-    }
-
     .playground__btn--primary:hover {
-      background: var(--color-primary-hover);
-      border-color: var(--color-primary-hover);
-      color: #fff;
+      background: var(--color-primary-dim);
+      border-color: var(--color-primary-dim);
+      color: var(--color-on-primary);
     }
 
-    .playground__btn svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
+    .playground__btn .material-symbols-outlined {
+      font-size: 16px;
     }
 
-    /* Split panes */
+    .playground__btn--copied {
+      border-color: #34d399 !important;
+      color: #34d399 !important;
+      background: rgba(52, 211, 153, 0.08) !important;
+    }
+
+    /* --- Split panes --- */
     .playground__split {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -169,7 +218,7 @@
       overflow: hidden;
     }
 
-    /* Code editor pane */
+    /* --- Code editor pane --- */
     .playground__editor {
       display: flex;
       flex-direction: column;
@@ -182,44 +231,67 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: var(--space-sm) var(--space-md);
-      background: #1a1b26;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 10px 20px;
+      background: var(--color-surface-container-lowest);
+      border-bottom: 1px solid var(--color-outline);
       flex-shrink: 0;
     }
 
+    [data-theme="dark"] .playground__editor-header {
+      background: #161b22;
+      border-bottom-color: rgba(255, 255, 255, 0.06);
+    }
+
     .playground__editor-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-family: var(--font-mono);
       font-size: 0.8rem;
-      color: #8ab4f8;
+      color: var(--color-primary);
       font-weight: 500;
+    }
+
+    .playground__editor-tab .material-symbols-outlined {
+      font-size: 16px;
+      opacity: 0.6;
     }
 
     .playground__editor-lang {
       font-size: 0.7rem;
-      color: #6c7086;
-      font-weight: 500;
+      color: var(--color-on-surface-variant);
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--color-surface-container);
+    }
+
+    [data-theme="dark"] .playground__editor-lang {
+      background: rgba(255, 255, 255, 0.06);
     }
 
     .playground__code-wrap {
       flex: 1;
       overflow: auto;
-      background: #0d1117;
+      background: var(--color-surface-container-lowest);
       position: relative;
+    }
+
+    [data-theme="dark"] .playground__code-wrap {
+      background: #0d1117;
     }
 
     .playground__code {
       display: block;
       width: 100%;
       min-height: 100%;
-      padding: var(--space-lg);
-      padding-left: 60px;
+      padding: 24px 24px 24px 60px;
       font-family: var(--font-mono);
       font-size: 0.85rem;
       line-height: 1.8;
-      color: #c9d1d9;
+      color: var(--color-on-surface);
       background: transparent;
       border: none;
       resize: none;
@@ -230,61 +302,106 @@
       -moz-tab-size: 4;
     }
 
+    [data-theme="dark"] .playground__code {
+      color: #c9d1d9;
+    }
+
     /* Syntax highlighting */
-    .playground__code .kw { color: #ff7b72; }
-    .playground__code .fn { color: #d2a8ff; }
-    .playground__code .str { color: #a5d6ff; }
-    .playground__code .num { color: #79c0ff; }
-    .playground__code .cm { color: #484f58; font-style: italic; }
-    .playground__code .ann { color: #ffa657; }
+    .playground__code .kw { color: #d73a49; }
+    .playground__code .fn { color: #6f42c1; }
+    .playground__code .str { color: #032f62; }
+    .playground__code .num { color: #005cc5; }
+    .playground__code .cm { color: #6a737d; font-style: italic; }
+    .playground__code .ann { color: #e36209; }
+
+    [data-theme="dark"] .playground__code .kw { color: #ff7b72; }
+    [data-theme="dark"] .playground__code .fn { color: #d2a8ff; }
+    [data-theme="dark"] .playground__code .str { color: #a5d6ff; }
+    [data-theme="dark"] .playground__code .num { color: #79c0ff; }
+    [data-theme="dark"] .playground__code .cm { color: #484f58; }
+    [data-theme="dark"] .playground__code .ann { color: #ffa657; }
 
     .playground__line-numbers {
       position: absolute;
       top: 0;
       left: 0;
       width: 44px;
-      padding: var(--space-lg) 0;
+      padding: 24px 0;
       text-align: right;
       font-family: var(--font-mono);
       font-size: 0.85rem;
       line-height: 1.8;
-      color: #3d4452;
+      color: var(--color-outline-variant);
       user-select: none;
       pointer-events: none;
-      border-right: 1px solid rgba(255,255,255,0.04);
+      border-right: 1px solid var(--color-outline);
       padding-right: 8px;
     }
 
-    /* Preview pane */
+    [data-theme="dark"] .playground__line-numbers {
+      color: #3d4452;
+      border-right-color: rgba(255, 255, 255, 0.04);
+    }
+
+    /* --- Preview pane --- */
     .playground__preview {
       display: flex;
       flex-direction: column;
       min-height: 0;
       overflow: hidden;
-      background: var(--color-surface-dim);
+      background: var(--color-surface-container-low);
     }
 
     .playground__preview-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: var(--space-sm) var(--space-md);
-      background: var(--color-surface-dim);
+      padding: 10px 20px;
+      background: var(--color-surface-container-low);
       border-bottom: 1px solid var(--color-outline);
       flex-shrink: 0;
     }
 
+    [data-theme="dark"] .playground__preview-header {
+      border-bottom-color: var(--color-outline);
+    }
+
     .playground__preview-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-size: 0.8rem;
       font-weight: 600;
-      color: var(--color-on-surface-dim);
+      color: var(--color-on-surface-variant);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
     }
 
     .playground__preview-hint {
       font-size: 0.75rem;
-      color: var(--color-on-surface-faint);
+      color: var(--color-on-surface-variant);
+      opacity: 0.6;
+    }
+
+    .playground__renderer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: none;
+    }
+
+    .playground__renderer-badge--sceneview {
+      background: rgba(0, 91, 193, 0.1);
+      color: var(--color-primary);
+    }
+
+    [data-theme="dark"] .playground__renderer-badge--sceneview {
+      background: rgba(121, 192, 255, 0.1);
     }
 
     .playground__model-wrap {
@@ -294,78 +411,55 @@
       justify-content: center;
       position: relative;
       background: radial-gradient(ellipse at 50% 40%,
-        rgba(138, 180, 248, 0.08) 0%,
-        rgba(187, 134, 252, 0.04) 40%,
-        var(--color-surface-dim) 80%);
-    }
-
-    [data-theme="light"] .playground__model-wrap {
-      background: radial-gradient(ellipse at 50% 40%,
-        rgba(26, 115, 232, 0.06) 0%,
-        rgba(108, 92, 231, 0.03) 40%,
-        var(--color-surface-dim) 80%);
+        var(--color-surface-container) 0%,
+        var(--color-surface-container-low) 80%);
     }
 
     .playground__model-wrap canvas {
       width: 100%;
       height: 100%;
-      --poster-color: transparent;
       display: block;
-    }
-
-    .playground__model-wrap canvas {
       cursor: grab;
     }
 
-    .playground__renderer-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: var(--radius-xs);
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      margin-left: 8px;
+    .playground__model-wrap canvas:active {
+      cursor: grabbing;
     }
 
-    .playground__renderer-badge--sceneview {
-      background: rgba(26,115,232,0.12);
-      color: var(--color-primary);
-    }
-
-    .playground__renderer-badge--modelviewer {
-      background: rgba(108,92,231,0.12);
-      color: #6c5ce7;
-    }
-
-    /* Description panel */
+    /* --- Description panel --- */
     .playground__description {
-      padding: var(--space-md) var(--space-lg);
+      padding: 16px 24px;
       background: var(--color-surface-container);
       border-top: 1px solid var(--color-outline);
       flex-shrink: 0;
     }
 
-    .playground__description h3 {
+    .playground__description-title {
       font-size: 0.9rem;
       font-weight: 700;
+      color: var(--color-on-surface);
       margin-bottom: 4px;
     }
 
-    .playground__description p {
+    .playground__description-text {
       font-size: 0.8rem;
-      color: var(--color-on-surface-dim);
+      color: var(--color-on-surface-variant);
       line-height: 1.5;
     }
 
-    /* Copy feedback */
-    .playground__btn--copied {
-      border-color: #34d399 !important;
-      color: #34d399 !important;
-      background: rgba(52, 211, 153, 0.08) !important;
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .playground__toolbar {
+        padding: 12px 24px;
+      }
+
+      .playground__toolbar-left {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
     }
 
-    /* ===== RESPONSIVE ===== */
-    @media (max-width: 900px) {
+    @media (max-width: 768px) {
       .playground__split {
         grid-template-columns: 1fr;
         grid-template-rows: 1fr 1fr;
@@ -375,16 +469,18 @@
         border-right: none;
         border-bottom: 1px solid var(--color-outline);
       }
+
+      .playground__toolbar {
+        padding: 10px 16px;
+        gap: 10px;
+      }
     }
 
     @media (max-width: 600px) {
-      .playground__toolbar {
-        padding: var(--space-sm) var(--space-md);
-        gap: var(--space-sm);
-      }
-
       .playground__toolbar-left {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
       }
 
       .playground__toolbar-right {
@@ -392,16 +488,34 @@
         justify-content: flex-end;
       }
 
+      .playground__select {
+        width: 100%;
+      }
+
       .playground__code {
         font-size: 0.78rem;
-        padding: var(--space-md);
-        padding-left: 50px;
+        padding: 16px 16px 16px 50px;
       }
 
       .playground__line-numbers {
         width: 36px;
         font-size: 0.78rem;
         padding-right: 6px;
+        padding-top: 16px;
+      }
+
+      .playground__description {
+        padding: 12px 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .playground__btn span:not(.material-symbols-outlined) {
+        display: none;
+      }
+
+      .playground__btn {
+        padding: 8px 10px;
       }
     }
   </style>
@@ -411,26 +525,18 @@
   <!-- ===== NAVIGATION ===== -->
   <nav class="nav" id="nav">
     <div class="nav__container">
-      <a href="/" class="nav__logo">
-        <svg class="nav__logo-icon" viewBox="0 0 32 32" width="32" height="32" fill="none">
-          <rect width="32" height="32" rx="8" fill="currentColor"/>
-          <path d="M8 22V10l8-4 8 4v12l-8 4-8-4z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M8 10l8 4 8-4M16 14v12" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-        <span class="nav__logo-text">SceneView</span>
-      </a>
+      <div class="nav__brand">SceneView SDK</div>
 
       <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
 
       <div class="nav__links" id="navLinks">
-        <a href="/showcase.html" class="nav__link">Showcase</a>
-        <a href="/playground.html" class="nav__link" style="color:var(--color-primary);font-weight:600">Playground</a>
-        <a href="/docs.html" class="nav__link">Docs</a>
+        <a href="/" class="nav__link">Home</a>
         <a href="/#features" class="nav__link">Features</a>
-        <a href="https://github.com/sceneview/sceneview" class="nav__link" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://discord.gg/sceneview" class="nav__link" target="_blank" rel="noopener">Discord</a>
+        <a href="/showcase.html" class="nav__link">Showcase</a>
+        <a href="/playground.html" class="nav__link nav__link--active">Playground</a>
+        <a href="https://sceneview.github.io/docs/" class="nav__link" target="_blank" rel="noopener">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -438,6 +544,15 @@
           <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
           </svg>
+        </button>
+      </div>
+
+      <div class="nav__actions">
+        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View source code">
+          <span class="material-symbols-outlined">code</span>
+        </a>
+        <button class="nav__hamburger nav__hamburger--mobile" id="hamburgerMobile" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
         </button>
       </div>
     </div>
@@ -455,11 +570,7 @@
           <option value="custom-geometry">Custom Geometry</option>
           <option value="animation">Animation</option>
         </select>
-        <span class="playground__label" style="margin-left:16px">Renderer</span>
-        <select class="playground__select" id="rendererSelect">
-          <option value="sceneview">SceneView (Filament.js WASM)</option>
-        </select>
-        <span class="playground__label" style="margin-left:16px">Model</span>
+        <span class="playground__label">Model</span>
         <select class="playground__select" id="modelSelect">
           <optgroup label="Featured">
             <option value="DamagedHelmet">Damaged Helmet</option>
@@ -503,22 +614,16 @@
       </div>
       <div class="playground__toolbar-right">
         <button class="playground__btn" id="shareBtn" title="Share this scene (copy URL)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
+          <span class="material-symbols-outlined">share</span>
           <span id="shareLabel">Share</span>
         </button>
         <button class="playground__btn" id="copyBtn" title="Copy code to clipboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-          </svg>
+          <span class="material-symbols-outlined">content_copy</span>
           <span id="copyLabel">Copy code</span>
         </button>
         <a class="playground__btn playground__btn--primary" id="claudeLink" href="https://claude.ai/new" target="_blank" rel="noopener" title="Open in Claude with this code as context">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-          </svg>
-          Open in Claude
+          <span class="material-symbols-outlined">chat</span>
+          <span>Open in Claude</span>
         </a>
       </div>
     </div>
@@ -528,7 +633,10 @@
       <!-- Left: Code editor -->
       <div class="playground__editor">
         <div class="playground__editor-header">
-          <span class="playground__editor-tab" id="editorTab">MainActivity.kt</span>
+          <span class="playground__editor-tab">
+            <span class="material-symbols-outlined">description</span>
+            <span id="editorTab">MainActivity.kt</span>
+          </span>
           <span class="playground__editor-lang" id="editorLang">Kotlin</span>
         </div>
         <div class="playground__code-wrap">
@@ -540,58 +648,63 @@
       <!-- Right: 3D Preview -->
       <div class="playground__preview">
         <div class="playground__preview-header">
-          <span class="playground__preview-label">3D Preview<span id="rendererBadge" class="playground__renderer-badge playground__renderer-badge--sceneview">SceneView</span></span>
+          <span class="playground__preview-label">
+            <span class="material-symbols-outlined" style="font-size:16px">view_in_ar</span>
+            3D Preview
+            <span id="rendererBadge" class="playground__renderer-badge playground__renderer-badge--sceneview">SceneView</span>
+          </span>
           <span class="playground__preview-hint">Drag to rotate, scroll to zoom</span>
         </div>
         <div class="playground__model-wrap">
           <canvas id="previewCanvas" aria-label="3D model preview (SceneView Web / Filament.js)"></canvas>
-          <!-- All rendering handled by SceneView (Filament.js WASM) -->
         </div>
         <div class="playground__description" id="description">
-          <h3 id="descTitle">Model Viewer</h3>
-          <p id="descText">A basic 3D scene with a glTF model, HDR environment lighting, orbit camera controls, and shadows. This is the simplest way to display a 3D model in your app.</p>
+          <h3 class="playground__description-title" id="descTitle">Model Viewer</h3>
+          <p class="playground__description-text" id="descText">A basic 3D scene with a glTF model, HDR environment lighting, orbit camera controls, and shadows. This is the simplest way to display a 3D model in your app.</p>
         </div>
       </div>
     </div>
   </main>
 
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="footer__container">
+      <div class="footer__grid">
+        <div class="footer__brand-col">
+          <div class="footer__brand-name">SceneView SDK</div>
+          <p class="footer__brand-desc">The architectural logic for building high-performance 3D spatial experiences across all modern platforms.</p>
+          <div class="footer__copyright">&copy; 2026 SceneView SDK. Architectural Logic.</div>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Documentation</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://sceneview.github.io/docs/" target="_blank" rel="noopener">Examples</a></li>
+            <li><a href="/showcase.html">Showcase</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Community</h4>
+          <ul class="footer__col-list">
+            <li><a href="https://github.com/sceneview/sceneview" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://discord.gg/sceneview" target="_blank" rel="noopener">Discord</a></li>
+            <li><a href="https://twitter.com/nicoadams_" target="_blank" rel="noopener">Twitter</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__col-title">Legal</h4>
+          <ul class="footer__col-list">
+            <li><a href="/privacy.html">Privacy</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">Terms</a></li>
+            <li><a href="https://github.com/sceneview/sceneview/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+
   <script>
-    // ===== THEME =====
-    (function initTheme() {
-      var saved = localStorage.getItem('sceneview-theme');
-      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      var theme = saved || (prefersDark ? 'dark' : 'light');
-      document.documentElement.setAttribute('data-theme', theme);
-    })();
-
-    document.getElementById('themeToggle').addEventListener('click', function () {
-      var current = document.documentElement.getAttribute('data-theme');
-      var next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('sceneview-theme', next);
-    });
-
-    // ===== HAMBURGER =====
-    var hamburger = document.getElementById('hamburger');
-    var navLinks = document.getElementById('navLinks');
-    var overlay = document.createElement('div');
-    overlay.className = 'nav-overlay';
-    document.body.appendChild(overlay);
-
-    function toggleMenu() {
-      hamburger.classList.toggle('active');
-      navLinks.classList.toggle('open');
-      overlay.classList.toggle('active');
-      document.body.style.overflow = navLinks.classList.contains('open') ? 'hidden' : '';
-    }
-    hamburger.addEventListener('click', toggleMenu);
-    overlay.addEventListener('click', toggleMenu);
-    navLinks.querySelectorAll('.nav__link').forEach(function (link) {
-      link.addEventListener('click', function () {
-        if (navLinks.classList.contains('open')) toggleMenu();
-      });
-    });
-
     // ===== CODE EXAMPLES =====
     var examples = {
       'model-viewer': {
@@ -887,16 +1000,14 @@ fun AnimationScreen() {\n\
     var claudeLink = document.getElementById('claudeLink');
 
     function syntaxHighlight(code) {
-      // Escape HTML first
       var html = code
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
-      // Apply syntax highlighting
       // Comments
       html = html.replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
-      // Annotations (@Composable, etc.)
+      // Annotations
       html = html.replace(/(@\w+)/g, '<span class="ann">$1</span>');
       // Strings
       html = html.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
@@ -906,7 +1017,7 @@ fun AnimationScreen() {\n\
       html = html.replace(/\b(package|import|fun|val|var|if|else|let|by|remember|is|return)\b/g, '<span class="kw">$1</span>');
       // Compose / SceneView types
       html = html.replace(/\b(Scene|ARScene|ModelNode|AnchorNode|CubeNode|SphereNode|CylinderNode|Box|Row|Column|Text|Button|FilledTonalButton|Modifier|Composable|mutableStateOf|mutableIntStateOf)\b/g, '<span class="fn">$1</span>');
-      // Function calls (word followed by parenthesis)
+      // Function calls
       html = html.replace(/\b(rememberEngine|rememberModelLoader|rememberModelInstance|rememberEnvironmentLoader|rememberEnvironment|rememberCameraNode|rememberCameraManipulator|rememberMaterialLoader|fillMaxSize|position|lookAt|playAnimation|stopAnimation|createAnchor|createModelInstance|addChildNode|padding|align|spacedBy|onClick|takeIf)\b/g, '<span class="fn">$1</span>');
 
       return html;
@@ -1008,7 +1119,7 @@ fun AnimationScreen() {\n\
       });
     });
 
-    // Share button — creates URL with scene config params
+    // Share button
     var shareBtn = document.getElementById('shareBtn');
     var shareLabel = document.getElementById('shareLabel');
     if (shareBtn) {
