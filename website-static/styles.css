@@ -151,9 +151,9 @@ ul { list-style: none; }
 /* ===== SCROLL REVEAL ===== */
 .reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity var(--duration-long) var(--ease-expressive),
-              transform var(--duration-long) var(--ease-spring);
+  transform: translateY(16px);
+  transition: opacity 0.5s ease-out,
+              transform 0.5s ease-out;
 }
 
 .reveal.revealed {

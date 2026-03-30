@@ -84,15 +84,46 @@ document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
 (function() {
   var reveals = document.querySelectorAll('.reveal');
   if (!reveals.length) return;
-  var observer = new IntersectionObserver(function(entries) {
-    entries.forEach(function(entry) {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('revealed');
-        observer.unobserve(entry.target);
+
+  // Immediately reveal elements already in or above the viewport
+  function revealVisible() {
+    reveals.forEach(function(el) {
+      var rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 100) {
+        el.classList.add('revealed');
       }
     });
-  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-  reveals.forEach(function(el) { observer.observe(el); });
+  }
+  revealVisible();
+
+  // Observer for elements entering viewport during scroll
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.01, rootMargin: '0px 0px 200px 0px' });
+    reveals.forEach(function(el) {
+      if (!el.classList.contains('revealed')) {
+        observer.observe(el);
+      }
+    });
+  }
+
+  // Scroll fallback — reveal any still-hidden elements on scroll
+  var scrollTimer;
+  window.addEventListener('scroll', function() {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(revealVisible, 50);
+  }, { passive: true });
+
+  // Safety net — reveal everything after 3s regardless
+  setTimeout(function() {
+    reveals.forEach(function(el) { el.classList.add('revealed'); });
+  }, 3000);
 })();
 
 // ===== NAV SCROLL EFFECT =====
