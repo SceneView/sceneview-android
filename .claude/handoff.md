@@ -4,10 +4,59 @@
 
 ## Last Session Summary
 
-**Date:** 30 mars 2026 (session 13)
+**Date:** 30 mars 2026 (session 14)
 **Branch:** main
 
-## WHAT WAS DONE THIS SESSION (session 13)
+## WHAT WAS DONE THIS SESSION (session 14)
+
+### 1. All secondary pages redesigned with Stitch M3 design system ✅
+- **showcase.html**: 6-section demo gallery (E-Commerce, AR, Automotive, Education, Luxury, Multi-Platform) with 3D viewers, device mockups, code snippets, category filter badges
+- **playground.html**: Split-pane code editor + live 3D preview, toolbar with example/model selectors, share/copy/Claude buttons, syntax highlighting
+- **claude-3d.html**: AI + 3D demos with Claude Desktop window mockup, conversation bubbles, 4 example cards, How It Works steps, CTA
+- **web.html**: SceneView Web docs with live Filament.js demo, feature cards, install methods (CDN/npm/ESM), API reference, browser compatibility
+- **platforms-showcase.html**: 9-platform grid (Android/iOS/macOS/visionOS/Web/TV/Desktop/Flutter/React Native) with status badges, architecture diagram, comparison table
+- **docs.html**: Documentation hub with card grid (Quick Start, API Reference, Code Recipes, Tutorials)
+- **privacy.html**: Clean typography privacy policy with proper heading hierarchy
+
+### 2. Shared infrastructure updates
+- **script.js**: Added scroll reveal IntersectionObserver (was missing — elements with `.reveal` class were invisible)
+- All pages share: consistent nav/footer from index.html, dark mode default, Material Symbols Outlined, CSS custom properties only, responsive breakpoints
+
+### 3. Deployment
+- All files deployed to sceneview.github.io (pushed to main)
+- Source committed and pushed to sceneview/sceneview main
+- CSS variable audit: all 38 vars used across pages are defined in styles.css
+
+### 4. Android demo theme — M3 Expressive ✅
+- New **Color.kt**: Full M3 color scheme from Stitch source #005bc1
+  - Light: primary #005BC1, tertiary #6446CD
+  - Dark: primary #A4C1FF, tertiary #D2A8FF (GitHub-dark inspired)
+- New **Type.kt**: M3 Expressive typography scale
+- New **Shape.kt**: M3 dynamic shapes (8/12/16/28/32dp radius)
+- Updated **Theme.kt**: uses Color/Type/Shape + MaterialExpressiveTheme + MotionScheme.expressive()
+- Updated **colors.xml** (light + night): aligned with Stitch tokens
+- BUILD SUCCESSFUL verified
+
+### 5. iOS demo theme — Apple HIG ✅
+- New **Theme.swift**: centralized SceneView theme for SwiftUI
+  - Brand colors matching Stitch primary (#005bc1 → #a4c1ff)
+  - Tertiary (#6446cd → #d2a8ff), status colors
+  - Light/dark adaptive Color extension
+  - Card and status badge view modifiers
+- Updated **AccentColor**: #005bc1 with dark variant
+- Updated tint from `.blue` to `SceneViewTheme.primary`
+
+### 6. MkDocs docs CSS ✅
+- Updated **extra.css**: primary #1a73e8 → #005bc1
+- Added proper dark slate scheme with #a4c1ff primary
+- Gradient: #005bc1/#6446cd (matching Stitch)
+
+### 7. DESIGN.md updated ✅
+- Primary: #1a73e8 → #005bc1 (Stitch source of truth)
+- All gradient tokens updated to match
+
+## Previous sessions
+- Session 13: Website landing page full redesign via Stitch, Visual QA complete
 
 ### 1. Website full redesign via Google Stitch (Phase 1 — Website ✅)
 - Created Stitch design system from DESIGN.md tokens (primary #1a73e8, secondary #5b3cc4, tertiary #d97757)
@@ -74,14 +123,14 @@
 Everything visual must be redesigned using Google Stitch as the design tool.
 Stitch generates the design → Claude applies it in code. NO manual CSS/UI writing.
 
-1. ~~**Website** (sceneview.github.io) — Full redesign via Stitch~~ ✅ DONE (session 13)
-   - index.html fully redesigned, QA'd (desktop/mobile/light/dark)
-   - **TODO:** Deploy to sceneview.github.io (separate repo), redesign other pages (showcase, claude-3d)
-2. **Android demo app** — Theme via Stitch (M3 Expressive)
-   - Color.kt, Theme.kt, Shape.kt, Type.kt
-3. **iOS demo app** — Theme via Stitch (Liquid Glass / Apple HIG)
-   - All SwiftUI views (19 views, no centralized theme currently)
-4. **Docs MkDocs** — CSS via Stitch
+1. ~~**Website** (sceneview.github.io) — Full redesign via Stitch~~ ✅ DONE (session 13+14)
+   - index.html fully redesigned, QA'd (desktop/mobile/light/dark) — session 13
+   - All 7 secondary pages redesigned and deployed — session 14
+2. ~~**Android demo app** — Theme via Stitch (M3 Expressive)~~ ✅ DONE (session 14)
+   - Color.kt, Theme.kt, Shape.kt, Type.kt — all created with Stitch #005bc1
+3. ~~**iOS demo app** — Theme via Stitch (Liquid Glass / Apple HIG)~~ ✅ DONE (session 14)
+   - Theme.swift + AccentColor updated, tint aligned
+4. ~~**Docs MkDocs** — CSS via Stitch~~ ✅ DONE (session 14)
 5. **All other demos** — web-demo, tv-demo, etc.
 6. **Store assets** — Screenshots with new design
 
