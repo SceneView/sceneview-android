@@ -10,6 +10,11 @@
  *   sv.createImage({ url: "photo.jpg", position: [1, 1, 0] });
  *   sv.createVideo({ url: "clip.mp4", position: [-1, 1, 0] });
  *
+ * Quality, Bloom, and Lighting:
+ *   sv.setQuality("high");
+ *   sv.setBloom(true);
+ *   sv.addLight({ type: "point", position: [2, 3, 0], color: [1, 0.9, 0.8] });
+ *
  * Powered by Filament.js v1.70.1 (Google's PBR renderer, WASM).
  * https://sceneview.github.io
  *
@@ -483,6 +488,111 @@
     setBackgroundColor(r, g, b, a) {
       this._renderer.setClearOptions({ clearColor: [r, g, b, a !== undefined ? a : 1], clear: true });
       return this;
+    }
+
+    // ---------------------------------------------------------------
+    // Quality, Bloom, and Lighting controls
+    // ---------------------------------------------------------------
+
+    /**
+     * Set rendering quality level.
+     *
+     * @param {string} level - 'low', 'medium', or 'high' (default: 'medium')
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setQuality(level) {
+      try {
+        if (level === 'low') {
+          this._view.setAmbientOcclusionOptions({ enabled: false });
+          this._view.setAntiAliasing(Filament.View$AntiAliasing.NONE);
+        } else if (level === 'high') {
+          this._view.setAmbientOcclusionOptions({
+            enabled: true, radius: 0.4, bias: 0.0003, intensity: 1.2, quality: 2
+          });
+          this._view.setAntiAliasing(Filament.View$AntiAliasing.FXAA);
+        } else { // medium (default)
+          this._view.setAmbientOcclusionOptions({
+            enabled: true, radius: 0.3, bias: 0.0005, intensity: 1.0, quality: 1
+          });
+          this._view.setAntiAliasing(Filament.View$AntiAliasing.FXAA);
+        }
+      } catch (e) { console.warn('SceneView: setQuality not supported', e); }
+      return this;
+    }
+
+    /**
+     * Enable or configure bloom post-processing effect.
+     *
+     * @param {Object|boolean} options - true for defaults, false to disable,
+     *   or { strength, resolution, threshold, levels }
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setBloom(options) {
+      try {
+        if (options === false) {
+          this._view.setBloomOptions({ enabled: false });
+        } else {
+          var opts = (options === true || options === undefined) ? {} : options;
+          this._view.setBloomOptions({
+            enabled: true,
+            strength: opts.strength !== undefined ? opts.strength : 0.1,
+            resolution: opts.resolution !== undefined ? opts.resolution : 360,
+            threshold: opts.threshold !== undefined ? opts.threshold : true,
+            levels: opts.levels !== undefined ? opts.levels : 6
+          });
+        }
+      } catch (e) { console.warn('SceneView: setBloom not supported', e); }
+      return this;
+    }
+
+    /**
+     * Add a custom light to the scene.
+     *
+     * @param {Object} options
+     * @param {string} [options.type='directional'] - 'directional', 'point', or 'spot'
+     * @param {number[]} [options.color=[1,1,1]] - RGB color [0-1]
+     * @param {number} [options.intensity=100000] - Light intensity in lux
+     * @param {number[]} [options.direction=[0,-1,0]] - Direction for directional/spot lights
+     * @param {number[]} [options.position=[0,2,0]] - Position for point/spot lights
+     * @param {number} [options.falloff=10] - Falloff radius for point/spot lights
+     * @returns {number} Entity handle (use with removeNode to delete)
+     */
+    addLight(options) {
+      options = options || {};
+      var type = options.type || 'directional';
+      var color = options.color || [1, 1, 1];
+      var intensity = options.intensity !== undefined ? options.intensity : 100000;
+      var direction = options.direction || [0, -1, 0];
+      var position = options.position || [0, 2, 0];
+      var falloff = options.falloff !== undefined ? options.falloff : 10;
+
+      var entity = Filament.EntityManager.get().create();
+      var lightType;
+
+      if (type === 'point') {
+        lightType = Filament.LightManager$Type.POINT;
+      } else if (type === 'spot') {
+        lightType = Filament.LightManager$Type.SPOT;
+      } else {
+        lightType = Filament.LightManager$Type.DIRECTIONAL;
+      }
+
+      var builder = Filament.LightManager.Builder(lightType)
+        .color(color)
+        .intensity(intensity)
+        .direction(direction);
+
+      if (type === 'point' || type === 'spot') {
+        builder.falloff(falloff);
+        // Position point/spot lights via transform
+        var tm = this._engine.getTransformManager();
+        var inst = tm.getInstance(entity);
+        tm.setTransform(inst, Filament.mat4.translation(position));
+      }
+
+      builder.build(this._engine, entity);
+      this._scene.addEntity(entity);
+      return entity;
     }
 
     // ---------------------------------------------------------------
@@ -1508,7 +1618,7 @@
   }
 
   global.SceneView = {
-    version: '1.4.0',
+    version: '1.5.0',
     create: create,
     modelViewer: modelViewer
   };
