@@ -603,6 +603,8 @@ Scene {
 
 `ARSceneScope` extends `SceneScope` with AR-specific composables. All `SceneScope` nodes (ModelNode, CubeNode, etc.) are also available.
 
+**⚠️ Important nesting rule:** AR composables (`AnchorNode`, `CloudAnchorNode`, `AugmentedImageNode`, etc.) can only be declared at the `ARScene { }` root level — they are NOT available inside `Node { content }` or other node's `content` blocks. To nest models under an anchor, use `AnchorNode(anchor) { ModelNode(...) }` — the `content` block of `AnchorNode` provides a regular `NodeScope`.
+
 ### AnchorNode — pin to real world
 ```kotlin
 @Composable fun AnchorNode(
@@ -1741,7 +1743,7 @@ let data = SceneSnapshot.pngData(image) // or jpegData(image, quality: 0.9)
 
 | Concept | Android (Compose) | Apple (SwiftUI) |
 |---|---|---|
-| 3D scene | `Scene { }` | `SceneView { root in }` |
+| 3D scene | `Scene { }` | `SceneView { root in }` or `SceneView(@NodeBuilder) { ... }` |
 | AR scene | `ARScene { }` | `ARSceneView(planeDetection:onTapOnPlane:)` |
 | Load model | `rememberModelInstance(loader, "m.glb")` | `ModelNode.load("m.usdz")` |
 | Load remote model | `rememberModelInstance(loader, "https://…/m.glb")` | `ModelNode.load(from: URL(string: "https://…/m.usdz")!)` |
@@ -1758,7 +1760,11 @@ let data = SceneSnapshot.pngData(image) // or jpegData(image, quality: 0.9)
 | Video | `VideoNode(player)` | `VideoNode.load("video.mp4")` |
 | Anchor | `AnchorNode(anchor) { }` | `AnchorNode.world(position:)` |
 | Material | `materialLoader.createColorInstance(Color.Red)` | `.pbr(color:metallic:roughness:)` |
-| Tap | `onGestureListener(onSingleTapConfirmed = ...)` | `.onEntityTapped { }` |
+| Tap | `onGestureListener(onSingleTapConfirmed = ...)` | `.onEntityTapped { }` / `NodeGesture.onTap(entity)` |
+| Drag | `onGestureListener(onMoveBegin = ...)` | `NodeGesture.onDrag(entity) { translation in }` |
+| Secondary camera | `SecondaryCamera(apply = { })` | `CameraNode()` |
+| Billboard | `BillboardNode(text)` | `BillboardNode(text:fontSize:color:)` |
+| Reflection probe | `ReflectionProbeNode(scene, env)` | `ReflectionProbeNode.box(size:)` |
 | Renderer | Filament | RealityKit |
 | AR framework | ARCore | ARKit |
 | Model format | glTF/GLB | USDZ / Reality |
