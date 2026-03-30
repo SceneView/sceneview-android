@@ -575,14 +575,15 @@ Scene {
 }
 ```
 
-### CameraNode — secondary camera
+### SecondaryCamera — secondary camera (formerly CameraNode)
 ```kotlin
-@Composable fun CameraNode(
+@Composable fun SecondaryCamera(
     apply: CameraNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
 ```
 **Note:** Does NOT become the active rendering camera. The main camera is set via `Scene(cameraNode = ...)`.
+`CameraNode()` composable is deprecated — use `SecondaryCamera()` instead.
 
 ### ReflectionProbeNode — local IBL override
 ```kotlin
