@@ -28,8 +28,18 @@ import SceneViewSwift
 ## SceneView (3D)
 
 ```swift
+// Declarative (recommended — v3.6.0+)
+SceneView {
+    GeometryNode.cube(size: 0.3, color: .red)
+        .position(.init(x: -1, y: 0, z: -2))
+    GeometryNode.sphere(radius: 0.2, color: .blue)
+        .position(.init(x: 1, y: 0, z: -2))
+}
+.environment(.studio)
+.cameraControls(.orbit)
+
+// Imperative (still supported)
 SceneView { root in
-    // Add entities as children of root
     root.addChild(model.entity)
 }
 .environment(.studio)              // IBL lighting preset
@@ -187,6 +197,23 @@ SceneView { root in
     .centered()
     root.addChild(label.entity)
 }
+```
+
+### Per-entity gestures (v3.6.0+)
+
+```swift
+// Fluent API on Entity
+let cube = GeometryNode.cube(size: 0.3, color: .blue)
+cube.entity
+    .onTap { print("Tapped!") }
+    .onDrag { translation in cube.position += translation }
+    .onScale { factor in cube.scale *= .init(repeating: factor) }
+    .onRotate { angle in /* handle rotation */ }
+
+// Or via static NodeGesture methods
+NodeGesture.onTap(entity) { print("Tapped!") }
+NodeGesture.onLongPress(entity) { print("Long pressed!") }
+NodeGesture.removeAll(from: entity)  // cleanup
 ```
 
 ---

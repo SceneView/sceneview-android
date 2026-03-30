@@ -105,7 +105,7 @@ ARScene(
 | `PlaneNode` | `size: Size`, `materialInstance` |
 | `LightNode` | `type: LightManager.Type`, `apply = { intensity(); color(); castShadows() }` |
 | `ImageNode` | `imageFileLocation` / `imageResId` / `bitmap`, `size` |
-| `VideoNode` | `player: MediaPlayer`, `chromaKeyColor`, `size` |
+| `VideoNode` | `videoPath` (simple) / `player: MediaPlayer` (advanced), `chromaKeyColor`, `size` |
 | `ViewNode` | `windowManager`, content = `@Composable` |
 | `TextNode` | `text`, `fontSize`, `textColor`, `backgroundColor`, `widthMeters` |
 | `BillboardNode` | `bitmap`, `widthMeters`, `heightMeters` |
@@ -117,7 +117,7 @@ ARScene(
 | `PhysicsNode` | `node`, `mass`, `restitution`, `linearVelocity`, `floorY`, `radius` |
 | `MeshNode` | `primitiveType`, `vertexBuffer`, `indexBuffer`, `materialInstance` |
 | `Node` | `position`, `rotation`, `scale` + child content |
-| `CameraNode` | (via `rememberCameraNode`) |
+| `SecondaryCamera` | `apply` — non-active camera (formerly `CameraNode`) |
 
 ---
 
