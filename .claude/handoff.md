@@ -179,12 +179,20 @@ Stitch generates the design → Claude applies it in code. NO manual CSS/UI writ
 4. ~~**Docs MkDocs** — CSS via Stitch~~ ✅ DONE (session 14)
 5. ~~**All other demos** — web-demo, tv-demo, desktop, flutter, react-native~~ ✅ DONE (session 15)
    - common/Theme.kt, desktop-demo, flutter-demo, react-native-demo, web-demo — all updated to Stitch #005bc1
-6. **Store assets** — Screenshots with new design
+6. ~~**Store assets**~~ ✅ MOSTLY DONE (session 15)
+   - OG image, apple-touch-icon, favicon, feature graphic, app-icon-1024, npm-icon all created
+   - App screenshots pending (need emulator GUI or physical device — can't capture Filament SurfaceView headless)
 
 ### Phase 2 — Post-redesign
 - v3.6.0 roadmap: API simplification
-- sceneview.js enhancements (setQuality, setBloom, addLight)
-- iOS: verify SceneViewSwift fixes compile in Xcode
+- ~~sceneview.js enhancements (setQuality, setBloom, addLight)~~ ✅ DONE (session 15)
+  - sceneview.js bumped to v1.5.0
+  - setQuality('low'|'medium'|'high') — AO + anti-aliasing control
+  - setBloom(true|false|{strength, resolution, threshold, levels}) — post-processing
+  - addLight({type, color, intensity, direction, position, falloff}) — custom lights
+  - llms.txt updated with full sceneview.js API surface
+  - Deployed to sceneview.github.io
+- iOS: verify SceneViewSwift fixes compile in Xcode (needs full Xcode, not just CLI tools)
 
 ## RULES REMINDER
 - **STITCH MANDATORY** — ALL design/UI work goes through Google Stitch MCP. NEVER write CSS/theme by hand.
