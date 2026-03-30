@@ -63,7 +63,7 @@ jobs:
     name: Build & Upload iOS to TestFlight
     needs: check
     if: needs.check.outputs.ios_ready == 'true'
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
     defaults:
       run:
@@ -75,9 +75,10 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer 2>/dev/null \
-            || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer 2>/dev/null \
-            || sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer 2>/dev/null \
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.1.1.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer 2>/dev/null \
             || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
@@ -195,7 +196,7 @@ jobs:
     name: Build & Upload macOS to App Store
     needs: check
     if: needs.check.outputs.macos_ready == 'true'
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
     defaults:
       run:
@@ -207,9 +208,10 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer 2>/dev/null \
-            || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer 2>/dev/null \
-            || sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer 2>/dev/null \
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.1.1.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer 2>/dev/null \
             || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
