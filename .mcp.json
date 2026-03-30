@@ -1,11 +1,8 @@
 {
   "mcpServers": {
     "stitch": {
-      "command": "npx",
-      "args": ["@_davideast/stitch-mcp", "proxy"],
-      "env": {
-        "STITCH_API_KEY": "${STITCH_API_KEY}"
-      }
+      "command": "/Users/thomasgorisse/.claude/stitch-wrapper.sh",
+      "args": []
     }
   }
 }
