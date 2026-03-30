@@ -383,8 +383,13 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
+        val prevGeometry = remember { arrayOf(size, center) }
         SideEffect {
-            node.updateGeometry(center = center, size = size)
+            if (prevGeometry[0] != size || prevGeometry[1] != center) {
+                node.updateGeometry(center = center, size = size)
+                prevGeometry[0] = size
+                prevGeometry[1] = center
+            }
             node.position = position
             node.rotation = rotation
             node.scale = scale
@@ -431,8 +436,15 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
+        val prevGeometry = remember { arrayOf<Any>(radius, center, stacks, slices) }
         SideEffect {
-            node.updateGeometry(radius = radius, center = center, stacks = stacks, slices = slices)
+            if (prevGeometry[0] != radius || prevGeometry[1] != center ||
+                prevGeometry[2] != stacks || prevGeometry[3] != slices
+            ) {
+                node.updateGeometry(radius = radius, center = center, stacks = stacks, slices = slices)
+                prevGeometry[0] = radius; prevGeometry[1] = center
+                prevGeometry[2] = stacks; prevGeometry[3] = slices
+            }
             node.position = position
             node.rotation = rotation
             node.scale = scale
@@ -479,13 +491,17 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
+        val prevGeometry = remember { arrayOf<Any>(radius, height, center, sideCount) }
         SideEffect {
-            node.updateGeometry(
-                radius = radius,
-                height = height,
-                center = center,
-                sideCount = sideCount
-            )
+            if (prevGeometry[0] != radius || prevGeometry[1] != height ||
+                prevGeometry[2] != center || prevGeometry[3] != sideCount
+            ) {
+                node.updateGeometry(
+                    radius = radius, height = height, center = center, sideCount = sideCount
+                )
+                prevGeometry[0] = radius; prevGeometry[1] = height
+                prevGeometry[2] = center; prevGeometry[3] = sideCount
+            }
             node.position = position
             node.rotation = rotation
             node.scale = scale
@@ -532,8 +548,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
+        val prevGeometry = remember { arrayOf<Any>(size, center, normal) }
         SideEffect {
-            node.updateGeometry(size = size, center = center, normal = normal)
+            if (prevGeometry[0] != size || prevGeometry[1] != center || prevGeometry[2] != normal) {
+                node.updateGeometry(size = size, center = center, normal = normal)
+                prevGeometry[0] = size; prevGeometry[1] = center; prevGeometry[2] = normal
+            }
             node.position = position
             node.rotation = rotation
             node.scale = scale
@@ -883,8 +903,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
+        val prevGeometry = remember { arrayOf<Any>(start, end) }
         SideEffect {
-            node.updateGeometry(start = start, end = end)
+            if (prevGeometry[0] != start || prevGeometry[1] != end) {
+                node.updateGeometry(start = start, end = end)
+                prevGeometry[0] = start; prevGeometry[1] = end
+            }
             node.position = position
             node.rotation = rotation
             node.scale = scale
@@ -936,8 +960,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
+        val prevGeometry = remember { arrayOf<Any>(points, closed) }
         SideEffect {
-            node.updateGeometry(points = points, closed = closed)
+            if (prevGeometry[0] != points || prevGeometry[1] != closed) {
+                node.updateGeometry(points = points, closed = closed)
+                prevGeometry[0] = points; prevGeometry[1] = closed
+            }
             node.position = position
             node.rotation = rotation
             node.scale = scale
@@ -1103,15 +1131,26 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
+        val prevGeometry = remember {
+            arrayOf<Any?>(polygonPath, polygonHoles, delaunayPoints, normal, uvScale, color)
+        }
         SideEffect {
-            node.updateGeometry(
-                polygonPath = polygonPath,
-                polygonHoles = polygonHoles,
-                delaunayPoints = delaunayPoints,
-                normal = normal,
-                uvScale = uvScale,
-                color = color
-            )
+            if (prevGeometry[0] != polygonPath || prevGeometry[1] != polygonHoles ||
+                prevGeometry[2] != delaunayPoints || prevGeometry[3] != normal ||
+                prevGeometry[4] != uvScale || prevGeometry[5] != color
+            ) {
+                node.updateGeometry(
+                    polygonPath = polygonPath,
+                    polygonHoles = polygonHoles,
+                    delaunayPoints = delaunayPoints,
+                    normal = normal,
+                    uvScale = uvScale,
+                    color = color
+                )
+                prevGeometry[0] = polygonPath; prevGeometry[1] = polygonHoles
+                prevGeometry[2] = delaunayPoints; prevGeometry[3] = normal
+                prevGeometry[4] = uvScale; prevGeometry[5] = color
+            }
             node.position = position
             node.rotation = rotation
             node.scale = scale
