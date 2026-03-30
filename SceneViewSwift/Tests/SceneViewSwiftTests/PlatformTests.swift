@@ -240,7 +240,7 @@ final class PlatformTests: XCTestCase {
     func testDynamicSkyNodeChaining() {
         let node = DynamicSkyNode.noon()
             .position(SIMD3<Float>(0, 5, 0))
-        XCTAssertEqual(node.position.y, 5.0, accuracy: 0.001)
+        XCTAssertEqual(node.entity.position.y, 5.0, accuracy: 0.001)
     }
 
     // MARK: - Entity names

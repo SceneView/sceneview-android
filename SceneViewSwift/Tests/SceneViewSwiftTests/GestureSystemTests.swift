@@ -87,7 +87,7 @@ final class GestureSystemTests: XCTestCase {
         var receivedTranslation: SIMD3<Float>?
         NodeGesture.onDrag(entity) { t in receivedTranslation = t }
         NodeGesture.dispatchDrag(on: entity, translation: [1, 2, 3])
-        XCTAssertEqual(receivedTranslation?.x, 1.0, accuracy: 0.001)
+        XCTAssertEqual(receivedTranslation?.x ?? 0, 1.0, accuracy: 0.001)
     }
 
     @MainActor
@@ -99,7 +99,7 @@ final class GestureSystemTests: XCTestCase {
         var receivedScale: Float?
         NodeGesture.onScale(entity) { s in receivedScale = s }
         NodeGesture.dispatchScale(on: entity, magnification: 2.0)
-        XCTAssertEqual(receivedScale, 2.0, accuracy: 0.001)
+        XCTAssertEqual(receivedScale ?? 0, 2.0, accuracy: 0.001)
     }
 
     // MARK: - Removal

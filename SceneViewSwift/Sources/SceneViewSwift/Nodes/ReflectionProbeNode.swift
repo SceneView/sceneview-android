@@ -196,7 +196,7 @@ extension ReflectionProbeNode {
     /// ```
     @MainActor
     public static func loadEnvironment(_ name: String) async throws -> EnvironmentResource {
-        try await EnvironmentResource.load(named: name)
+        try await EnvironmentResource(named: name)
     }
 
 }

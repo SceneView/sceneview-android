@@ -122,14 +122,14 @@ final class LightNodeTests: XCTestCase {
             .shadowMaximumDistance(20.0)
         let directional = light.entity as! DirectionalLight
         XCTAssertNotNil(directional.shadow)
-        XCTAssertEqual(directional.shadow?.maximumDistance, 20.0, accuracy: 0.001)
+        XCTAssertEqual(directional.shadow?.maximumDistance ?? 0, 20.0, accuracy: 0.001)
     }
 
     func testShadowMaximumDistanceUpdatesExisting() {
         let light = LightNode.directional(castsShadow: true)
             .shadowMaximumDistance(15.0)
         let directional = light.entity as! DirectionalLight
-        XCTAssertEqual(directional.shadow?.maximumDistance, 15.0, accuracy: 0.001)
+        XCTAssertEqual(directional.shadow?.maximumDistance ?? 0, 15.0, accuracy: 0.001)
     }
 
     // MARK: - Attenuation
@@ -167,7 +167,7 @@ final class LightNodeTests: XCTestCase {
         XCTAssertNotNil(light.entity)
         let directional = light.entity as! DirectionalLight
         XCTAssertNotNil(directional.shadow)
-        XCTAssertEqual(directional.shadow?.maximumDistance, 12.0, accuracy: 0.001)
+        XCTAssertEqual(directional.shadow?.maximumDistance ?? 0, 12.0, accuracy: 0.001)
     }
 
     // MARK: - Shadow on non-directional lights

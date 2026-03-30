@@ -70,7 +70,7 @@ public struct ModelNode: @unchecked Sendable {
         _ path: String,
         enableCollision: Bool = true
     ) async throws -> ModelNode {
-        let loadedEntity = try await Entity.load(named: path)
+        let loadedEntity = try await Entity(named: path)
         let modelEntity = loadedEntity as? ModelEntity ?? {
             let me = ModelEntity()
             me.addChild(loadedEntity)
@@ -97,7 +97,7 @@ public struct ModelNode: @unchecked Sendable {
         contentsOf url: URL,
         enableCollision: Bool = true
     ) async throws -> ModelNode {
-        let loadedEntity = try await Entity.load(contentsOf: url)
+        let loadedEntity = try await Entity(contentsOf: url)
         let modelEntity = loadedEntity as? ModelEntity ?? {
             let me = ModelEntity()
             me.addChild(loadedEntity)
