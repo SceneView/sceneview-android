@@ -32,6 +32,17 @@
 
 - All builds pass: `sceneview`, `arsceneview`, `android-demo`
 
+**Batch 4 — Transform consistency for remaining nodes + Swift declarative:**
+  - ImageNode (all 3 overloads): position/rotation/scale
+  - BillboardNode: position/scale
+  - TextNode: position/scale
+  - VideoNode: position/rotation/scale
+  - ModelNode: doc warning about scaleToUnits overriding scale
+  - HitResultNode: improved llms.txt docs with recommended pattern
+  - **Swift `SceneView(@NodeBuilder)`**: new declarative init matching Android's `Scene { }`
+  - iOS + macOS build clean
+  - Committed `79c216bd` + `37a7d154`
+
 ### 2. SceneViewSwift Xcode verification ✅
 - **iOS build**: BUILD SUCCEEDED (Xcode 26.3, iOS 26.2 SDK) — zero warnings, zero errors
 - **macOS build**: BUILD SUCCEEDED — zero warnings, zero errors
