@@ -99,9 +99,21 @@ class SceneViewExampleApp extends StatelessWidget {
     return MaterialApp(
       title: 'SceneView Flutter Demo',
       theme: ThemeData(
-        colorSchemeSeed: Colors.deepPurple,
+        colorScheme: ColorScheme.dark(
+          primary: const Color(0xFFA4C1FF),
+          onPrimary: const Color(0xFF002F65),
+          primaryContainer: const Color(0xFF00458F),
+          onPrimaryContainer: const Color(0xFFD4E3FF),
+          secondary: const Color(0xFFBDC7DC),
+          onSecondary: const Color(0xFF273141),
+          tertiary: const Color(0xFFD2A8FF),
+          onTertiary: const Color(0xFF37009B),
+          surface: const Color(0xFF111318),
+          onSurface: const Color(0xFFE2E2E9),
+          error: const Color(0xFFFFB4AB),
+          onError: const Color(0xFF690005),
+        ),
         useMaterial3: true,
-        brightness: Brightness.dark,
       ),
       home: const ModelViewerPage(),
     );
@@ -225,7 +237,7 @@ class _ModelViewerPageState extends State<ModelViewerPage> {
     _controller.addGeometry(const GeometryNode(
       type: 'cube',
       size: 0.5,
-      color: 0xFF6750A4,
+      color: 0xFF005BC1,
     ));
   }
 }

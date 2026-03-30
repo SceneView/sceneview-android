@@ -163,7 +163,7 @@ export default function App() {
           <Switch
             value={arMode}
             onValueChange={setArMode}
-            trackColor={{ false: '#555', true: '#4a90d9' }}
+            trackColor={{ false: '#555', true: '#005bc1' }}
             thumbColor="#fff"
           />
           <Text style={styles.toggleLabel}>AR</Text>
@@ -235,7 +235,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#111318',
   },
   header: {
     flexDirection: 'row',
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   picker: {
     paddingVertical: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#333',
+    borderTopColor: '#434750',
   },
   pickerContent: {
     paddingHorizontal: 12,
@@ -276,16 +276,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#2a2a4e',
+    backgroundColor: '#1d2027',
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#434750',
   },
   chipSelected: {
-    backgroundColor: '#4a90d9',
-    borderColor: '#4a90d9',
+    backgroundColor: '#005bc1',
+    borderColor: '#005bc1',
   },
   chipText: {
-    color: '#aaa',
+    color: '#c3c6cf',
     fontSize: 14,
     fontWeight: '500',
   },

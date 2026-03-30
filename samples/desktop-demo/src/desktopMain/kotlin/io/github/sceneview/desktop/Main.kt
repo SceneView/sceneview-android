@@ -41,19 +41,19 @@ import kotlin.math.sin
  * To run: ./gradlew :samples:desktop-demo:run
  */
 
-// SceneView brand colors
-private val SceneViewBlue = Color(0xFF2196F3)
-private val SceneViewDarkBlue = Color(0xFF1565C0)
+// SceneView brand colors (Stitch M3 design system)
+private val SceneViewBlue = Color(0xFFA4C1FF)       // dark mode primary
+private val SceneViewDarkBlue = Color(0xFF005BC1)    // brand blue
 private val SceneViewSurface = Color(0xFF0D1117)
 private val SceneViewSurfaceVariant = Color(0xFF161B22)
 
 private val SceneViewColorScheme = darkColorScheme(
-    primary = SceneViewBlue,
-    primaryContainer = SceneViewDarkBlue,
+    primary = Color(0xFFA4C1FF),
+    primaryContainer = Color(0xFF00458F),
     surface = SceneViewSurface,
     surfaceVariant = SceneViewSurfaceVariant,
     background = SceneViewSurface,
-    onPrimary = Color.White,
+    onPrimary = Color(0xFF002F65),
     onSurface = Color.White,
     onBackground = Color.White,
 )
@@ -339,8 +339,8 @@ private fun DrawScope.drawSoftware3DScene(angleX: Float, angleY: Float) {
 
     // Draw filled faces with transparency
     val faces = listOf(
-        listOf(0, 1, 2, 3) to Color(0x302196F3), // front - blue
-        listOf(4, 5, 6, 7) to Color(0x301565C0), // back - dark blue
+        listOf(0, 1, 2, 3) to Color(0x30A4C1FF), // front - blue
+        listOf(4, 5, 6, 7) to Color(0x30005BC1), // back - dark blue
         listOf(0, 1, 5, 4) to Color(0x3000BCD4), // bottom - cyan
         listOf(2, 3, 7, 6) to Color(0x3000BCD4), // top - cyan
         listOf(0, 3, 7, 4) to Color(0x304CAF50), // left - green
@@ -359,7 +359,7 @@ private fun DrawScope.drawSoftware3DScene(angleX: Float, angleY: Float) {
     // Draw edges
     edges.forEach { (a, b) ->
         drawLine(
-            color = Color(0xFF2196F3),
+            color = Color(0xFFA4C1FF),
             start = projected[a],
             end = projected[b],
             strokeWidth = 2f
@@ -368,7 +368,7 @@ private fun DrawScope.drawSoftware3DScene(angleX: Float, angleY: Float) {
 
     // Draw vertices
     projected.forEach { p ->
-        drawCircle(Color(0xFF64B5F6), 4f, p)
+        drawCircle(Color(0xFFD4E3FF), 4f, p)
     }
 
     // Axes
@@ -397,7 +397,7 @@ private fun DrawScope.drawWireframeScene(angle: Float) {
 
     shapes.forEachIndexed { index, (offsetX, offsetY, _) ->
         val color = when (index) {
-            0 -> Color(0xFF2196F3)
+            0 -> Color(0xFFA4C1FF)
             1 -> Color(0xFF4CAF50)
             else -> Color(0xFFFF9800)
         }
