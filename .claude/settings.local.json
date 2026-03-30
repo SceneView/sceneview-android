@@ -20,7 +20,15 @@
       "mcp__claude-code__Grep",
       "mcp__claude-code__Agent",
       "mcp__scheduled-tasks__list_scheduled_tasks",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "mcp__stitch__list_screens",
+      "mcp__stitch__generate_screen_from_text",
+      "mcp__stitch__generate_variants",
+      "mcp__stitch__create_project",
+      "mcp__stitch__apply_design_system",
+      "mcp__stitch__list_design_systems",
+      "mcp__claude-code__Bash",
+      "mcp__claude-code__ToolSearch"
     ]
   }
 }

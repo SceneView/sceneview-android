@@ -6,16 +6,16 @@
 // ─── Platform Roadmap ─────────────────────────────────────────────────────────
 export const PLATFORM_ROADMAP = `# SceneView Multi-Platform Roadmap
 
-## Current Status (v3.5.2)
+## Current Status (v3.6.0)
 
 | Platform | Status | Artifact | Renderer |
 |----------|--------|----------|----------|
-| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.5.2\` | Filament |
-| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.5.2\` | Filament + ARCore |
-| **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.5.2"\` | RealityKit + ARKit |
+| **Android (Compose)** | Stable | \`io.github.sceneview:sceneview:3.6.0\` | Filament |
+| **Android (AR)** | Stable | \`io.github.sceneview:arsceneview:3.6.0\` | Filament + ARCore |
+| **iOS (SwiftUI)** | Alpha | SceneViewSwift SPM \`from: "3.6.0"\` | RealityKit + ARKit |
 | **macOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
 | **visionOS (SwiftUI)** | Alpha | SceneViewSwift SPM (in Package.swift) | RealityKit |
-| **KMP Core** | Stable | \`io.github.sceneview:sceneview-core:3.5.2\` | N/A (shared logic) |
+| **KMP Core** | Stable | \`io.github.sceneview:sceneview-core:3.6.0\` | N/A (shared logic) |
 
 ## Architecture: Native Renderers per Platform
 
@@ -338,7 +338,7 @@ export const AR_SETUP_GUIDE = `# SceneView AR — Complete Setup Guide (Android 
 ## 1. SPM Dependency
 
 \`\`\`swift
-.package(url: "https://github.com/sceneview/sceneview", from: "3.5.2")
+.package(url: "https://github.com/sceneview/sceneview", from: "3.6.0")
 \`\`\`
 
 ## 2. Info.plist — Camera Permission
@@ -423,7 +423,7 @@ ARSceneView(
 \`\`\`kotlin
 // build.gradle.kts (app module)
 dependencies {
-    implementation("io.github.sceneview:arsceneview:3.5.2")
+    implementation("io.github.sceneview:arsceneview:3.6.0")
     // arsceneview includes sceneview transitively — no need to add both
 }
 \`\`\`

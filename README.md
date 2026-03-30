@@ -11,8 +11,8 @@ Same concepts, same simplicity — Android, iOS, Web, Desktop, TV, Flutter, Reac
 [![iOS / macOS / visionOS](https://img.shields.io/github/v/release/sceneview/sceneview?label=Swift&logo=swift&color=f05138)](https://github.com/sceneview/sceneview-swift)
 [![sceneview.js](https://img.shields.io/npm/v/sceneview-web?label=sceneview.js&logo=javascript&color=f7df1e)](https://www.npmjs.com/package/sceneview-web)
 [![MCP Server](https://img.shields.io/npm/v/sceneview-mcp?label=MCP&logo=anthropic&color=d97706)](https://www.npmjs.com/package/sceneview-mcp)
-[![Flutter](https://img.shields.io/badge/Flutter-3.5.2-02569B?logo=flutter)](https://github.com/sceneview/sceneview/tree/main/flutter)
-[![React Native](https://img.shields.io/badge/React%20Native-3.5.2-61DAFB?logo=react)](https://github.com/sceneview/sceneview/tree/main/react-native)
+[![Flutter](https://img.shields.io/badge/Flutter-3.6.0-02569B?logo=flutter)](https://github.com/sceneview/sceneview/tree/main/flutter)
+[![React Native](https://img.shields.io/badge/React%20Native-3.6.0-61DAFB?logo=react)](https://github.com/sceneview/sceneview/tree/main/react-native)
 
 <!-- Status -->
 [![CI](https://img.shields.io/github/actions/workflow/status/sceneview/sceneview/ci.yml?branch=main&label=CI&logo=github)](https://github.com/sceneview/sceneview/actions/workflows/ci.yml)
@@ -46,7 +46,7 @@ SceneView(environment: .studio) {
 
 ```html
 <!-- Web — one script tag -->
-<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.6.0/sceneview.js"></script>
 <script> SceneView.modelViewer("canvas", "model.glb") </script>
 ```
 
@@ -80,25 +80,25 @@ No engine boilerplate. No lifecycle callbacks. The runtime handles everything.
 **Android** (3D + AR):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview:3.5.2")     // 3D
-    implementation("io.github.sceneview:arsceneview:3.5.2")   // AR (includes 3D)
+    implementation("io.github.sceneview:sceneview:3.6.0")     // 3D
+    implementation("io.github.sceneview:arsceneview:3.6.0")   // AR (includes 3D)
 }
 ```
 
 **iOS / macOS / visionOS** (Swift Package Manager):
 ```
-https://github.com/sceneview/sceneview-swift.git  (from: 3.5.2)
+https://github.com/sceneview/sceneview-swift.git  (from: 3.6.0)
 ```
 
 **Web** (sceneview.js — one line):
 ```html
-<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.6.0/sceneview.js"></script>
 ```
 
 **Web** (Kotlin/JS):
 ```kotlin
 dependencies {
-    implementation("io.github.sceneview:sceneview-web:3.5.2")
+    implementation("io.github.sceneview:sceneview-web:3.6.0")
 }
 ```
 
@@ -219,7 +219,7 @@ ARSceneView(planeDetection: .horizontal) { position, arView in
 }
 ```
 
-**Install:** `https://github.com/sceneview/sceneview-swift.git` (SPM, from 3.5.2)
+**Install:** `https://github.com/sceneview/sceneview-swift.git` (SPM, from 3.6.0)
 
 ---
 
@@ -229,7 +229,7 @@ The lightest way to add 3D to any website. One script tag, one function call.
 ~25 KB library powered by Filament.js WASM — the same engine behind Android SceneView.
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sceneview-web@3.6.0/sceneview.js"></script>
 <script> SceneView.modelViewer("canvas", "model.glb") </script>
 ```
 

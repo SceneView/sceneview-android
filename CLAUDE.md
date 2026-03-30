@@ -39,8 +39,8 @@ To set up: `npm install @google/stitch-sdk`, then add the Stitch MCP server in C
 
 ## When writing any SceneView code
 
-- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.5.2`)
-- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.5.2`)
+- Use `Scene { }` for 3D-only scenes (`io.github.sceneview:sceneview:3.6.0`)
+- Use `ARScene { }` for augmented reality (`io.github.sceneview:arsceneview:3.6.0`)
 - Declare nodes as composables inside the trailing content block — not imperatively
 - Load models with `rememberModelInstance(modelLoader, "models/file.glb")` — returns `null`
   while loading, always handle the null case
@@ -144,9 +144,9 @@ Never say "everything is good" without verifying published packages.
 ### Current state (last updated: 2026-03-30)
 
 - **Active branch**: `main`
-- **Latest release**: v3.5.2 (GitHub Release + Maven Central + npm — ALL PUBLISHED)
+- **Latest release**: v3.6.0 (GitHub Release + Maven Central + npm — ALL PUBLISHED)
 - **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests), 9 MCPs total
-- **sceneview-web**: v3.5.2 on npm (Kotlin/JS + Filament.js)
+- **sceneview-web**: v3.6.0 on npm (Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
 - **Website**: sceneview.github.io
 

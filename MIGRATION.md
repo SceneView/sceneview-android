@@ -14,8 +14,8 @@ implementation("io.github.sceneview:sceneview:2.3.0")
 implementation("io.github.sceneview:arsceneview:2.3.0")
 
 // After
-implementation("io.github.sceneview:sceneview:3.5.2")
-implementation("io.github.sceneview:arsceneview:3.5.2")
+implementation("io.github.sceneview:sceneview:3.6.0")
+implementation("io.github.sceneview:arsceneview:3.6.0")
 ```
 
 ---
@@ -229,7 +229,7 @@ the imports continue to work. No action required.
 
 | Change | Action |
 |---|---|
-| Bump dependency to `3.5.2` | Update `build.gradle` |
+| Bump dependency to `3.6.0` | Update `build.gradle` |
 | Remove `childNodes = rememberNodes { }` | Move node declarations into `Scene { }` |
 | Replace `add(ModelNode(...))` | Use `ModelNode(...)` composable directly |
 | Replace `addChildNode(...)` | Use nested `NodeScope` content lambda |
@@ -290,7 +290,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 ---
 
-# v3.3.x → v3.5.2
+# v3.3.x → v3.6.0
 
 ## Dependency bump (non-breaking)
 
@@ -300,8 +300,8 @@ implementation("io.github.sceneview:sceneview:3.3.0")
 implementation("io.github.sceneview:arsceneview:3.3.0")
 
 // After
-implementation("io.github.sceneview:sceneview:3.5.2")
-implementation("io.github.sceneview:arsceneview:3.5.2")
+implementation("io.github.sceneview:sceneview:3.6.0")
+implementation("io.github.sceneview:arsceneview:3.6.0")
 ```
 
 No API changes — this is a maintenance release with Filament 1.70.0 compatibility fixes,

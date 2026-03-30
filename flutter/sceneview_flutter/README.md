@@ -13,7 +13,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  sceneview_flutter: ^3.5.2
+  sceneview_flutter: ^3.6.0
 ```
 
 ### Android

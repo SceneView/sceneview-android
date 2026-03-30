@@ -13,10 +13,10 @@ SceneView uses **native renderers per platform** for the best performance and to
 
 | Platform | Renderer | Framework | Module | Status |
 |---|---|---|---|---|
-| **Android** | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable (v3.5.2) |
-| **iOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.5.2) |
-| **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.5.2) |
-| **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.5.2) |
+| **Android** | Filament | Jetpack Compose | `sceneview` / `arsceneview` | Stable (v3.6.0) |
+| **iOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.0) |
+| **macOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.0) |
+| **visionOS** | RealityKit | SwiftUI | `SceneViewSwift` | Alpha (v3.6.0) |
 | **Web** | Filament.js (WASM) | Kotlin/JS | `sceneview-web` | Alpha |
 | **Desktop** | Software wireframe (placeholder) | Compose Desktop | `samples/desktop-demo` | Placeholder (not SceneView) |
 | **Android TV** | Filament | Compose TV | `sceneview` | Alpha |
@@ -32,7 +32,7 @@ The primary platform. SceneView wraps Google Filament (PBR rendering) and ARCore
 - **3D**: `Scene { }` composable with 26+ node types
 - **AR**: `ARScene { }` with plane detection, image tracking, face mesh, cloud anchors, geospatial
 - **Min SDK**: 24 (Android 7.0)
-- **Install**: `implementation("io.github.sceneview:sceneview:3.5.2")`
+- **Install**: `implementation("io.github.sceneview:sceneview:3.6.0")`
 
 [:octicons-arrow-right-24: Android Quickstart](quickstart.md)
 
@@ -45,7 +45,7 @@ SceneViewSwift provides a native SwiftUI library powered by RealityKit and ARKit
 - **3D**: `SceneView { }` with ModelNode, GeometryNode, LightNode, and more
 - **AR**: `ARSceneView()` with plane detection and tap-to-place (iOS only)
 - **Min versions**: iOS 17+, macOS 14+, visionOS 1+
-- **Install**: `.package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.5.2")`
+- **Install**: `.package(url: "https://github.com/sceneview/sceneview-swift.git", from: "3.6.0")`
 
 [:octicons-arrow-right-24: Apple Quickstart](quickstart-ios.md)
 

@@ -6,7 +6,7 @@ Last updated: 2026-03-27
 
 | # | Package | npm | Version | Category |
 |---|---------|-----|---------|----------|
-| 1 | sceneview-mcp | `sceneview-mcp` | 3.5.2 | Development / 3D & AR |
+| 1 | sceneview-mcp | `sceneview-mcp` | 3.6.0 | Development / 3D & AR |
 | 2 | french-admin-mcp | `french-admin-mcp` | 2.1.3 | Productivity / Administration |
 | 3 | interior-design-3d-mcp | `interior-design-3d-mcp` | 1.0.0 | Design / 3D Visualization |
 | 4 | architecture-mcp | `architecture-mcp` | 2.0.3 | Design / Architecture |

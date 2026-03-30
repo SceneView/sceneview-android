@@ -54,7 +54,7 @@ Ask your AI assistant:
 - "Create a dental scan viewer with orthodontic treatment stage timeline"
 - "List free 3D models for cardiac anatomy education"
 
-Every tool returns complete, compilable Kotlin code using SceneView 3.5.2 with proper:
+Every tool returns complete, compilable Kotlin code using SceneView 3.6.0 with proper:
 - Gradle dependencies
 - SceneView composable setup (engine, modelLoader, collisionSystem)
 - Null-safe model loading
@@ -68,8 +68,8 @@ This software generates code for 3D visualization. It is **not** a medical devic
 
 ## Dependencies
 
-- [SceneView](https://github.com/sceneview/sceneview) 3.5.2 — 3D/AR rendering
-- [ARSceneView](https://github.com/sceneview/sceneview) 3.5.2 — AR features
+- [SceneView](https://github.com/sceneview/sceneview) 3.6.0 — 3D/AR rendering
+- [ARSceneView](https://github.com/sceneview/sceneview) 3.6.0 — AR features
 - [MCP SDK](https://github.com/modelcontextprotocol/sdk) — Model Context Protocol
 
 ## License

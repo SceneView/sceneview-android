@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.5.2 — Comprehensive quality audit, SwiftUI fixes, website migration (2026-03-30)
+## 3.6.0 — Comprehensive quality audit, SwiftUI fixes, website migration (2026-03-30)
 
 ### SceneViewSwift
 - Fixed SceneSnapshot visionOS compilation (ARView unavailable)
@@ -22,7 +22,7 @@
 - All 10 workflows verified green
 
 ### Version alignment
-- Updated 100+ files from 3.5.0/3.5.1 to 3.5.2
+- Updated 100+ files from 3.5.0/3.5.1 to 3.6.0
 - All satellite MCPs (automotive, gaming, healthcare, interior) aligned
 
 ---

@@ -22,8 +22,8 @@ android {
 
 dependencies {
     // SceneView — latest on Maven Central
-    implementation("io.github.sceneview:sceneview:3.5.2")
-    implementation("io.github.sceneview:arsceneview:3.5.2")
+    implementation("io.github.sceneview:sceneview:3.6.0")
+    implementation("io.github.sceneview:arsceneview:3.6.0")
 
     // React Native
     implementation("com.facebook.react:react-android")
