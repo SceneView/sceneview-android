@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # ── 1. Copy static website (marketing site — root) ─────────────────
       - name: Assemble site root from static HTML
