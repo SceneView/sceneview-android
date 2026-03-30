@@ -18,8 +18,10 @@ See `DESIGN.md` for the full palette (light + dark mode). Key values:
 
 | Name | Hex | Usage |
 |---|---|---|
-| Primary | #1a73e8 | Website primary, links, accents |
-| Primary (dark) | #8ab4f8 | Dark mode primary |
+| Primary | #005bc1 | Website primary, links, accents |
+| Primary (dark) | #a4c1ff | Dark mode primary |
+| Tertiary | #6446cd | Gradients, accents |
+| Tertiary (dark) | #d2a8ff | Dark mode tertiary |
 | Brand Dark Blue | #1565C0 | Logo, gradients |
 | Brand Light Blue | #64B5F6 | Logo, highlights |
 | Surface Dark | #0D1117 | Dark mode background |
@@ -31,25 +33,25 @@ See `DESIGN.md` for the full palette (light + dark mode). Key values:
 
 See `DESIGN.md` for full font scale, weights, and letter spacing.
 
-## Store Assets Needed
+## Store Assets Status
 
 ### Google Play Store
-- [ ] Feature graphic (1024x500) — blue gradient + 3D cube + "SceneView" text
-- [ ] Icon (512x512) — adaptive icon with blue cube
-- [ ] Screenshots (phone, tablet, TV) — demo app running
-- [ ] Short description: "3D & AR SDK for Android — Jetpack Compose, Filament, ARCore"
-- [ ] Full description with features list
+- [x] Feature graphic (1024x500) — `branding/feature-graphic.svg`
+- [x] Icon — adaptive icon with blue cube (`samples/android-demo/.../ic_launcher_foreground.xml`)
+- [ ] Screenshots (phone, tablet, TV) — demo app running on emulator
+- [x] Short description: "3D & AR SDK for Android — Jetpack Compose, Filament, ARCore"
+- [x] Full description with features list
 
 ### Apple App Store
-- [ ] App icon (1024x1024) — blue cube on blue gradient
-- [ ] Screenshots (iPhone, iPad) — iOS demo app running
+- [ ] App icon (1024x1024) — generate from apple-touch-icon.svg at higher res
+- [ ] Screenshots (iPhone, iPad) — iOS demo app running on simulator
 - [ ] App preview video (optional)
-- [ ] Description matching Play Store
+- [x] Description matching Play Store
 
 ### npm
 - [ ] Package icon for sceneview-mcp and sceneview.js
 
 ### Website
-- [ ] Favicon (blue cube) — 32x32, 16x16
-- [ ] OG image (1200x630) — blue gradient + cube + tagline
-- [ ] Apple touch icon (180x180)
+- [x] Favicon (blue cube) — `website-static/favicon.svg` (Stitch #005bc1 palette)
+- [x] OG image (1200x630) — `website-static/og-image.svg`
+- [x] Apple touch icon (180x180) — `website-static/apple-touch-icon.svg`
