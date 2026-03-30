@@ -71,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Select Xcode
         run: |
@@ -114,7 +114,7 @@ jobs:
           echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> $GITHUB_ENV
 
       - name: Cache Swift Package dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: samples/ios-demo/SourcePackages
           key: spm-${{ runner.os }}-${{ hashFiles('samples/ios-demo/SceneViewDemo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
@@ -203,7 +203,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Select Xcode
         run: |
@@ -246,7 +246,7 @@ jobs:
           echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> $GITHUB_ENV
 
       - name: Cache Swift Package dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: samples/ios-demo/SourcePackages
           key: spm-macos-${{ runner.os }}-${{ hashFiles('samples/ios-demo/SceneViewDemo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
