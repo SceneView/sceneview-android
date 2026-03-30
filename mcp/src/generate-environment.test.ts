@@ -22,9 +22,9 @@ describe("generateEnvironmentCode", () => {
     expect(result).toBeNull();
   });
 
-  it("generated code contains Scene composable for Android", () => {
+  it("generated code contains SceneView composable for Android", () => {
     const result = generateEnvironmentCode("studio-lighting", "android");
-    expect(result!.code).toContain("Scene(");
+    expect(result!.code).toContain("SceneView(");
   });
 
   it("formatEnvironmentCode produces markdown", () => {

@@ -40,7 +40,7 @@ fun HDREnvironmentScreen() {
 
     val modelInstance = rememberModelInstance(modelLoader, "models/helmet.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -81,7 +81,7 @@ fun DynamicSkyScreen() {
     var sunAngle by remember { mutableFloatStateOf(45f) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             modelLoader = modelLoader,
@@ -148,7 +148,7 @@ fun StudioLightingScreen() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/product.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -219,7 +219,7 @@ fun OutdoorLightingScreen() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/car.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -276,7 +276,7 @@ fun NightSceneScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/scene.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -337,7 +337,7 @@ fun ARLightingScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/furniture.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,

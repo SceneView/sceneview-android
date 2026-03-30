@@ -22,7 +22,7 @@ const API_EXPLANATIONS: Record<string, APIExplanation> = {
     signature: "@Composable fun rememberEngine(): Engine",
     platform: "Android",
     example: `val engine = rememberEngine()
-Scene(engine = engine, modifier = Modifier.fillMaxSize()) {
+SceneView(engine = engine, modifier = Modifier.fillMaxSize()) {
     // Your 3D content
 }`,
     commonMistakes: [
@@ -31,7 +31,7 @@ Scene(engine = engine, modifier = Modifier.fillMaxSize()) {
       "Using Engine.create() in a composable — use rememberEngine() instead for lifecycle safety.",
     ],
     tips: [
-      "Create the engine at the top-level composable and pass it down to all Scene composables.",
+      "Create the engine at the top-level composable and pass it down to all SceneView composables.",
       "The engine is the most expensive resource in SceneView — reuse it everywhere.",
     ],
     relatedAPIs: ["rememberModelLoader()", "rememberEnvironmentLoader()", "rememberMaterialLoader()"],
@@ -46,7 +46,7 @@ Scene(engine = engine, modifier = Modifier.fillMaxSize()) {
 val modelLoader = rememberModelLoader(engine)
 val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
 
-Scene(engine = engine) {
+SceneView(engine = engine) {
     modelInstance?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
     }
@@ -117,17 +117,17 @@ Scene(engine = engine) {
       "For outdoor scenes, use Type.SUN with ~110,000 lux intensity.",
       "Each shadow-casting light adds a GPU render pass. Limit to 1-2 on mobile.",
     ],
-    relatedAPIs: ["Scene()", "rememberMainLightNode()", "DynamicSkyNode()"],
+    relatedAPIs: ["SceneView()", "rememberMainLightNode()", "DynamicSkyNode()"],
   },
 
   arscene: {
-    name: "ARScene()",
+    name: "ARSceneView()",
     summary: "Composable that renders an augmented reality view with camera feed, plane detection, and light estimation.",
-    signature: "@Composable fun ARScene(modifier: Modifier, engine: Engine, modelLoader: ModelLoader? = null, planeRenderer: Boolean = true, sessionConfiguration: (Session, Config) -> Unit = { _, _ -> }, onTouchEvent: (MotionEvent, HitResult?) -> Boolean = { _, _ -> false }, content: @Composable ARSceneScope.() -> Unit)",
+    signature: "@Composable fun ARSceneView(modifier: Modifier, engine: Engine, modelLoader: ModelLoader? = null, planeRenderer: Boolean = true, sessionConfiguration: (Session, Config) -> Unit = { _, _ -> }, onTouchEvent: (MotionEvent, HitResult?) -> Boolean = { _, _ -> false }, content: @Composable ARSceneScope.() -> Unit)",
     platform: "Android",
     example: `var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-ARScene(
+ARSceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -160,18 +160,18 @@ ARScene(
       "ENVIRONMENTAL_HDR is the most realistic lighting mode for AR objects.",
       "Use isEditable = true on ModelNode for pinch-to-scale after placement.",
     ],
-    relatedAPIs: ["Scene()", "AnchorNode()", "HitResultNode()", "rememberModelInstance()"],
+    relatedAPIs: ["SceneView()", "AnchorNode()", "HitResultNode()", "rememberModelInstance()"],
   },
 
   scene: {
-    name: "Scene()",
+    name: "SceneView()",
     summary: "Composable that renders a 3D viewport with Filament. The main entry point for 3D rendering in SceneView.",
-    signature: "@Composable fun Scene(modifier: Modifier, engine: Engine, modelLoader: ModelLoader? = null, environment: Environment? = null, cameraManipulator: CameraManipulator? = null, mainLightNode: LightNode? = null, onFrame: (Long) -> Unit = {}, content: @Composable SceneScope.() -> Unit)",
+    signature: "@Composable fun SceneView(modifier: Modifier, engine: Engine, modelLoader: ModelLoader? = null, environment: Environment? = null, cameraManipulator: CameraManipulator? = null, mainLightNode: LightNode? = null, onFrame: (Long) -> Unit = {}, content: @Composable SceneScope.() -> Unit)",
     platform: "Android",
     example: `val engine = rememberEngine()
 val modelLoader = rememberModelLoader(engine)
 
-Scene(
+SceneView(
     modifier = Modifier.fillMaxSize(),
     engine = engine,
     modelLoader = modelLoader,
@@ -180,9 +180,9 @@ Scene(
     // Declare nodes as composables here
 }`,
     commonMistakes: [
-      "Missing Modifier.fillMaxSize() — Scene may have zero size and be invisible.",
+      "Missing Modifier.fillMaxSize() — SceneView may have zero size and be invisible.",
       "Missing engine parameter — required in SceneView 3.0+.",
-      "Creating nodes imperatively instead of declaratively — use composable DSL inside Scene { }.",
+      "Creating nodes imperatively instead of declaratively — use composable DSL inside SceneView { }.",
     ],
     tips: [
       "Add cameraManipulator for orbit controls (drag to rotate, pinch to zoom).",
@@ -190,7 +190,7 @@ Scene(
       "Use mainLightNode for the primary light source.",
       "onFrame callback runs every frame on the main thread — safe for Filament calls.",
     ],
-    relatedAPIs: ["ARScene()", "rememberEngine()", "ModelNode()", "LightNode()"],
+    relatedAPIs: ["ARSceneView()", "rememberEngine()", "ModelNode()", "LightNode()"],
   },
 
   anchornode: {
@@ -214,7 +214,7 @@ Scene(
       "Nest child nodes inside AnchorNode's content block — they inherit the anchor's position.",
       "For persistent anchors across sessions, use CloudAnchorNode.",
     ],
-    relatedAPIs: ["ARScene()", "HitResultNode()", "ModelNode()"],
+    relatedAPIs: ["ARSceneView()", "HitResultNode()", "ModelNode()"],
   },
 };
 

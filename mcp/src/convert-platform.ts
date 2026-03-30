@@ -31,16 +31,16 @@ interface ConversionRule {
 
 const CONVERSION_RULES: ConversionRule[] = [
   {
-    pattern: /\bScene\s*\(/g,
+    pattern: /\bSceneView\s*\(/g,
     androidToIos: "SceneView {",
-    iosToAndroid: "Scene(",
-    description: "Scene composable → SceneView SwiftUI view",
+    iosToAndroid: "SceneView(",
+    description: "SceneView composable → SceneView SwiftUI view",
   },
   {
-    pattern: /\bARScene\s*\(/g,
+    pattern: /\bARSceneView\s*\(/g,
     androidToIos: "ARSceneView(",
-    iosToAndroid: "ARScene(",
-    description: "ARScene composable → ARSceneView SwiftUI view",
+    iosToAndroid: "ARSceneView(",
+    description: "ARSceneView composable → ARSceneView SwiftUI view",
   },
   {
     pattern: /rememberModelInstance\s*\(\s*modelLoader\s*,\s*"([^"]+)\.glb"\s*\)/g,
@@ -120,8 +120,8 @@ export function convertIosToAndroid(code: string): ConversionResult {
 
   // iOS → Android specific replacements
   const iosPatterns: Array<{ pattern: RegExp; replacement: string; description: string }> = [
-    { pattern: /SceneView\s*\{/g, replacement: "Scene(engine = engine) {", description: "SceneView → Scene with engine" },
-    { pattern: /ARSceneView\s*\(/g, replacement: "ARScene(engine = engine, ", description: "ARSceneView → ARScene with engine" },
+    { pattern: /SceneView\s*\{/g, replacement: "SceneView(engine = engine) {", description: "SceneView → SceneView with engine" },
+    { pattern: /ARSceneView\s*\(/g, replacement: "ARSceneView(engine = engine, ", description: "ARSceneView → ARSceneView with engine" },
     { pattern: /try\s+await\s+ModelNode\.load\s*\(\s*"([^"]+)\.usdz"\s*\)/g, replacement: 'rememberModelInstance(modelLoader, "$1.glb")', description: "ModelNode.load → rememberModelInstance, USDZ → GLB" },
     { pattern: /import\s+SwiftUI/g, replacement: "// SwiftUI → Jetpack Compose", description: "Import replacement" },
     { pattern: /import\s+SceneViewSwift/g, replacement: "import io.github.sceneview.*", description: "Import replacement" },
@@ -165,7 +165,7 @@ fun MultiplatformARScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/${modelName}.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -201,7 +201,7 @@ fun MultiplatformSceneScreen() {
     val environmentLoader = rememberEnvironmentLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/${modelName}.glb")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,

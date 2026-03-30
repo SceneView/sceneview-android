@@ -38,7 +38,7 @@ fun GravityDropScene() {
     val groundY = 0f
     val bounceFactor = 0.6f
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -141,7 +141,7 @@ fun CollisionDetectionScene() {
     var isColliding by remember { mutableStateOf(false) }
     val speed = 1.5f
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -218,7 +218,7 @@ fun SpringPhysicsScene() {
     // Toggle target on tap
     var raised by remember { mutableStateOf(false) }
 
-    Scene(
+    SceneView(
         modifier = Modifier
             .fillMaxSize()
             .clickable {
@@ -282,7 +282,7 @@ fun ProjectileScene() {
     val gravity = -9.81f
 
     // Launch on tap
-    Scene(
+    SceneView(
         modifier = Modifier
             .fillMaxSize()
             .clickable {
@@ -374,7 +374,7 @@ fun RagdollScene() {
     val gravity = -9.81f
     val damping = 0.98f
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         onFrame = { _ ->
@@ -463,7 +463,7 @@ fun RigidBodyScene() {
 
     val gravity = -9.81f
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         onFrame = { _ ->

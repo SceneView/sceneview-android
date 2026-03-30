@@ -52,7 +52,7 @@ fun My3DScreen() {
     val modelLoader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -140,7 +140,7 @@ fun MyARScreen() {
 
     val modelInstance = rememberModelInstance(modelLoader, "models/robot.glb")
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -745,7 +745,7 @@ fun TVModelViewer() {
                 }
             }
     ) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader

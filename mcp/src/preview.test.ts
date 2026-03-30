@@ -21,7 +21,7 @@ describe("buildPreviewUrl", () => {
 
   it("uses default model when only code snippet is provided", () => {
     const result = buildPreviewUrl({
-      codeSnippet: 'Scene(engine = engine) { ModelNode(...) }',
+      codeSnippet: 'SceneView(engine = engine) { ModelNode(...) }',
     });
     expect(result.previewUrl).toContain("model=");
     expect(result.previewUrl).toContain("DamagedHelmet.glb");
@@ -33,7 +33,7 @@ describe("buildPreviewUrl", () => {
   it("includes both model and code when both are provided", () => {
     const result = buildPreviewUrl({
       modelUrl: "https://example.com/car.glb",
-      codeSnippet: 'Scene(engine = engine) { }',
+      codeSnippet: 'SceneView(engine = engine) { }',
     });
     expect(result.previewUrl).toContain("model=https%3A%2F%2Fexample.com%2Fcar.glb");
     expect(result.previewUrl).toContain("code=");
@@ -109,7 +109,7 @@ describe("validatePreviewInput", () => {
   });
 
   it("returns null for valid code snippet only", () => {
-    expect(validatePreviewInput(undefined, "Scene(engine) { }")).toBeNull();
+    expect(validatePreviewInput(undefined, "SceneView(engine) { }")).toBeNull();
   });
 
   it("returns error for non-HTTP URL", () => {

@@ -19,7 +19,7 @@ describe("getPlatformSetup", () => {
     const result = getPlatformSetup("android", "3d");
     expect(result).toContain("io.github.sceneview:sceneview:3.6.0");
     expect(result).toContain("rememberEngine");
-    expect(result).toContain("Scene(");
+    expect(result).toContain("SceneView(");
   });
 
   it("returns Android AR setup with manifest and permissions", () => {

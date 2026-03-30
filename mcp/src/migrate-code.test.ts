@@ -2,18 +2,16 @@ import { describe, it, expect } from "vitest";
 import { migrateCode, formatMigrationResult } from "./migrate-code.js";
 
 describe("migrateCode", () => {
-  it("renames SceneView() to Scene()", () => {
+  it("does not change SceneView() (already correct 3.0 name)", () => {
     const result = migrateCode(`SceneView(modifier = Modifier.fillMaxSize())`);
-    expect(result.migratedCode).toContain("Scene(");
-    expect(result.migratedCode).not.toContain("SceneView(");
-    expect(result.changes.length).toBeGreaterThan(0);
-    expect(result.changes[0].rule).toBe("rename-sceneview-to-scene");
+    expect(result.migratedCode).toContain("SceneView(");
+    expect(result.changes).toHaveLength(0);
   });
 
-  it("renames ArSceneView() to ARScene()", () => {
+  it("renames ArSceneView() to ARSceneView()", () => {
     const result = migrateCode(`ArSceneView(modifier = Modifier.fillMaxSize())`);
-    expect(result.migratedCode).toContain("ARScene(");
-    expect(result.changes.some((c) => c.rule === "rename-arsceneview-to-arscene")).toBe(true);
+    expect(result.migratedCode).toContain("ARSceneView(");
+    expect(result.changes.some((c) => c.rule === "rename-arsceneview-capitalization")).toBe(true);
   });
 
   it("replaces loadModelAsync with rememberModelInstance", () => {
@@ -76,7 +74,7 @@ describe("migrateCode", () => {
   it("marks ArFragment as removed", () => {
     const result = migrateCode(`val fragment = ArFragment()`);
     expect(result.migratedCode).toContain("ArFragment removed");
-    expect(result.migratedCode).toContain("ARScene");
+    expect(result.migratedCode).toContain("ARSceneView");
   });
 
   it("replaces setRenderable with comment", () => {
@@ -106,7 +104,7 @@ launch(Dispatchers.IO) {
   it("returns no changes for 3.x code", () => {
     const code = `
 val engine = rememberEngine()
-Scene(engine = engine) {
+SceneView(engine = engine) {
     rememberModelInstance(modelLoader, "models/chair.glb")?.let { instance ->
         ModelNode(modelInstance = instance, scaleToUnits = 1.0f)
     }
@@ -125,35 +123,35 @@ Scene(engine = engine) {
     const code = `
 import com.google.ar.sceneform.Node
 val engine = Engine.create()
-SceneView(modifier = Modifier.fillMaxSize())
+ArSceneView(modifier = Modifier.fillMaxSize())
 modelLoader.loadModelAsync("models/chair.glb")
 `;
     const result = migrateCode(code);
     expect(result.changes.length).toBeGreaterThanOrEqual(4);
     expect(result.migratedCode).toContain("io.github.sceneview");
     expect(result.migratedCode).toContain("rememberEngine");
-    expect(result.migratedCode).toContain("Scene(");
+    expect(result.migratedCode).toContain("ARSceneView(");
     expect(result.migratedCode).toContain("rememberModelInstance");
   });
 });
 
 describe("formatMigrationResult", () => {
   it("reports no changes for clean code", () => {
-    const result = migrateCode(`Scene(engine = engine) { }`);
+    const result = migrateCode(`SceneView(engine = engine) { }`);
     const formatted = formatMigrationResult(result);
     expect(formatted).toContain("No 2.x patterns detected");
   });
 
   it("includes migrated code block", () => {
-    const result = migrateCode(`SceneView(modifier = Modifier.fillMaxSize())`);
+    const result = migrateCode(`ArSceneView(modifier = Modifier.fillMaxSize())`);
     const formatted = formatMigrationResult(result);
     expect(formatted).toContain("```kotlin");
-    expect(formatted).toContain("Scene(");
+    expect(formatted).toContain("ARSceneView(");
     expect(formatted).toContain("Changes Applied");
   });
 
   it("includes migration checklist", () => {
-    const result = migrateCode(`SceneView(modifier = Modifier.fillMaxSize())`);
+    const result = migrateCode(`ArSceneView(modifier = Modifier.fillMaxSize())`);
     const formatted = formatMigrationResult(result);
     expect(formatted).toContain("Migration Checklist");
     expect(formatted).toContain("rememberEngine");

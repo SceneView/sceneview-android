@@ -42,7 +42,7 @@ describe("explainAPI", () => {
   it("formatAPIExplanation produces markdown", () => {
     const result = explainAPI("Scene")!;
     const text = formatAPIExplanation(result);
-    expect(text).toContain("## Scene()");
+    expect(text).toContain("## SceneView()");
     expect(text).toContain("### Signature");
     expect(text).toContain("### Example");
     expect(text).toContain("### Common Mistakes");
