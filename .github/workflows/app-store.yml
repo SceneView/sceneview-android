@@ -191,13 +191,14 @@ jobs:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
-          pip3 install PyJWT requests --quiet
+          python3 -m venv $RUNNER_TEMP/asc-venv
+          $RUNNER_TEMP/asc-venv/bin/pip install PyJWT requests --quiet
 
           # Wait for Apple to process the build
           echo "Waiting 120s for Apple to process the build..."
           sleep 120
 
-          python3 << 'PYEOF'
+          $RUNNER_TEMP/asc-venv/bin/python3 << 'PYEOF'
           import os, json, time, jwt, requests
 
           KEY_ID = os.environ["ASC_KEY_ID"]
