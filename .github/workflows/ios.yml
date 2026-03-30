@@ -26,7 +26,7 @@ permissions:
 jobs:
   build:
     name: Build & Test (iOS)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
 
     steps:
@@ -34,8 +34,10 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer 2>/dev/null \
-            || sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer 2>/dev/null \
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.1.1.app/Contents/Developer 2>/dev/null \
+            || sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer 2>/dev/null \
             || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           echo "Using Xcode: $(xcode-select -p)"
           xcodebuild -version
