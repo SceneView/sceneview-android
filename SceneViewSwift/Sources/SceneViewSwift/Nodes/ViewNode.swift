@@ -1,7 +1,9 @@
 #if os(iOS) || os(visionOS) || os(macOS)
 import SwiftUI
 import RealityKit
-#if canImport(UIKit)
+#if os(macOS)
+import AppKit
+#else
 import UIKit
 #endif
 

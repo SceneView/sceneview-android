@@ -1,6 +1,11 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 /// A node that always faces the camera (billboard behavior).
 ///

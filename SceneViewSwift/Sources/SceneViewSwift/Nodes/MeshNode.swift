@@ -1,6 +1,11 @@
 #if os(iOS) || os(macOS) || os(visionOS)
 import RealityKit
 import Foundation
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 /// Custom mesh node for creating geometry from raw vertex data.
 ///
