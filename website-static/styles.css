@@ -67,45 +67,45 @@
   --duration-long: 700ms;
 }
 
-/* ===== DARK MODE ===== */
+/* ===== DARK MODE — GitHub-dark inspired, high contrast ===== */
 [data-theme="dark"] {
-  --color-primary: #8db3ff;
-  --color-primary-dim: #6d9bef;
-  --color-secondary: #a0c4ff;
-  --color-tertiary: #beaeff;
-  --color-on-surface: #f3f4f6;
-  --color-on-surface-variant: #9ca3af;
-  --color-on-primary: #002658;
-  --color-surface: #0D1117;
-  --color-surface-container-lowest: #161B22;
-  --color-surface-container-low: #161c2c;
-  --color-surface-container: #1c2333;
-  --color-surface-container-high: #222d3f;
-  --color-surface-container-highest: #2a3346;
-  --color-primary-container: #003a7f;
-  --color-secondary-container: #003e7e;
-  --color-tertiary-container: #431cac;
-  --color-on-primary-container: #a4c1ff;
-  --color-on-secondary-container: #d6e3ff;
-  --color-on-tertiary-container: #beaeff;
-  --color-outline: #2a3346;
-  --color-outline-variant: #3d4f6a;
-  --color-inverse-surface: #f9f9ff;
-  --color-primary-fixed-dim: #8db3ff;
-  --color-surface-dim: #161B22;
-  --color-inverse-on-surface: #4c5f85;
+  --color-primary: #79c0ff;
+  --color-primary-dim: #58a6ff;
+  --color-secondary: #a5d6ff;
+  --color-tertiary: #d2a8ff;
+  --color-on-surface: #f0f6fc;
+  --color-on-surface-variant: #c9d1d9;
+  --color-on-primary: #001d3d;
+  --color-surface: #0d1117;
+  --color-surface-container-lowest: #161b22;
+  --color-surface-container-low: #1c2128;
+  --color-surface-container: #21262d;
+  --color-surface-container-high: #282e36;
+  --color-surface-container-highest: #30363d;
+  --color-primary-container: #0d419d;
+  --color-secondary-container: #0a3069;
+  --color-tertiary-container: #5a32a3;
+  --color-on-primary-container: #a5d6ff;
+  --color-on-secondary-container: #d2e5ff;
+  --color-on-tertiary-container: #d2a8ff;
+  --color-outline: #30363d;
+  --color-outline-variant: #484f58;
+  --color-inverse-surface: #f0f6fc;
+  --color-primary-fixed-dim: #79c0ff;
+  --color-surface-dim: #161b22;
+  --color-inverse-on-surface: #484f58;
 
-  --color-status-stable: #4ade80;
-  --color-status-beta: #60a5fa;
-  --color-status-alpha: #a78bfa;
-  --color-status-soon: #6b7280;
+  --color-status-stable: #56d364;
+  --color-status-beta: #58a6ff;
+  --color-status-alpha: #bc8cff;
+  --color-status-soon: #8b949e;
 
-  --gradient-hero: linear-gradient(135deg, #003a7f 0%, #431cac 100%);
+  --gradient-hero: linear-gradient(135deg, #0d419d 0%, #5a32a3 100%);
 
-  --shadow-card: 0px 12px 32px rgba(0, 0, 0, 0.3);
-  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0px 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(48, 54, 61, 0.5);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5);
 
-  --glass-nav-bg: rgba(13, 17, 23, 0.85);
+  --glass-nav-bg: rgba(13, 17, 23, 0.90);
 }
 
 /* ===== RESET ===== */
@@ -294,7 +294,7 @@ ul { list-style: none; }
 .hero {
   position: relative;
   background: var(--gradient-hero);
-  color: var(--color-on-primary);
+  color: #ffffff;
   overflow: hidden;
   min-height: 700px;
   display: flex;
