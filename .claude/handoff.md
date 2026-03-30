@@ -7,6 +7,23 @@
 **Date:** 30 mars 2026 (session 18)
 **Branch:** main
 
+## v4.0.0 Roadmap — PLANNED
+
+### Merge sceneview + arsceneview → single `sceneview` module
+- **Goal**: One artifact `io.github.sceneview:sceneview` with both 3D and AR
+- **Why**: Simpler DX, aligns with iOS (single SceneViewSwift package), AI-friendly (one dep)
+- **Plan**:
+  1. Move `arsceneview/src/` into `sceneview/src/main/java/.../ar/`
+  2. ARCore as `implementation` dep (already optional at runtime via `checkAvailability()`)
+  3. Keep `arsceneview/` as empty redirect module (`api(project(":sceneview"))`) for Maven compat
+  4. Single import: `io.github.sceneview:sceneview:4.0.0` gives both `SceneView {}` and `ARSceneView {}`
+  5. Update all docs, llms.txt, samples, MCP, website, README
+  6. Migration guide: "replace `arsceneview:3.x` with `sceneview:4.0.0`"
+- **Breaking changes**: Maven coordinates only — API stays identical
+- **Other 4.0.0 candidates**: TBD (collect before starting)
+
+---
+
 ## WHAT WAS DONE THIS SESSION (session 18)
 
 ### 1. v3.6.0 Release — FULLY PUBLISHED ✅
