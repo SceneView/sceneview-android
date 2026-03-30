@@ -88,6 +88,7 @@
       <div class="nav__links" id="navLinks">
         <a href="#features" class="nav__link">Features</a>
         <a href="#platforms" class="nav__link">Platforms</a>
+        <a href="#demos" class="nav__link">Demos</a>
         <a href="https://sceneview.github.io/docs/" class="nav__link nav__link--active" target="_blank" rel="noopener">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -130,7 +131,7 @@
             <span>Android</span>
           </div>
           <div class="hero__platform">
-            <span class="material-symbols-outlined">ios</span>
+            <span class="material-symbols-outlined">phone_iphone</span>
             <span>iOS</span>
           </div>
           <div class="hero__platform">
@@ -153,6 +154,123 @@
           </div>
           <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
           <div id="hero-badge" class="hero__badge">Rendered live by SceneView Web (Filament.js WASM)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STATS ===== -->
+  <section class="stats" id="stats">
+    <div class="stats__container">
+      <div class="stats__grid reveal">
+        <div class="stat">
+          <div class="stat__number">9</div>
+          <div class="stat__label">Platforms</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">26+</div>
+          <div class="stat__label">Node types</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">5</div>
+          <div class="stat__label">Lines for 3D</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">60fps</div>
+          <div class="stat__label">PBR on mobile</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">32</div>
+          <div class="stat__label">MCP AI tools</div>
+        </div>
+        <div class="stat">
+          <div class="stat__number">~3MB</div>
+          <div class="stat__label">APK overhead</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== INSTALL ===== -->
+  <section class="install" id="install">
+    <div class="install__container">
+      <h2 class="install__title reveal">Get started in seconds</h2>
+      <p class="install__subtitle reveal">Pick your platform, paste one line, and you are running 3D.</p>
+
+      <div class="tabs reveal" data-tabs="install">
+        <div class="tabs__nav">
+          <button class="tabs__btn tabs__btn--active" data-tab="android">Android</button>
+          <button class="tabs__btn" data-tab="ios">iOS</button>
+          <button class="tabs__btn" data-tab="web">Web</button>
+          <button class="tabs__btn" data-tab="flutter">Flutter</button>
+          <button class="tabs__btn" data-tab="reactnative">React Native</button>
+          <button class="tabs__btn" data-tab="claude-mcp">Claude / MCP</button>
+          <button class="tabs__btn" data-tab="desktop">Desktop</button>
+        </div>
+        <div class="tabs__panels">
+          <div class="tabs__panel tabs__panel--active" data-panel="android">
+            <pre class="code-block"><code><span class="syn-green">// build.gradle.kts</span>
+<span class="syn-purple">dependencies</span> {
+    <span class="syn-green">// 3D only</span>
+    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:sceneview:3.5.2"</span>)
+    <span class="syn-green">// 3D + AR</span>
+    <span class="syn-blue">implementation</span>(<span class="syn-green-light">"io.github.sceneview:arsceneview:3.5.2"</span>)
+}</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="ios">
+            <pre class="code-block"><code><span class="syn-green">// Swift Package Manager</span>
+<span class="syn-green">// Add in Xcode: File &rarr; Add Package Dependencies</span>
+
+<span class="syn-green-light">"https://github.com/sceneview/sceneview-swift"</span>
+<span class="syn-green">// Version: 3.5.2</span>
+
+<span class="syn-purple">import</span> SceneViewSwift</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="web">
+            <pre class="code-block"><code><span class="syn-green">// One line in your HTML:</span>
+<span class="syn-purple">&lt;script</span> <span class="syn-blue">src</span>=<span class="syn-green-light">"https://cdn.jsdelivr.net/npm/sceneview-web@3.5.2/sceneview.js"</span><span class="syn-purple">&gt;&lt;/script&gt;</span>
+
+<span class="syn-green">// Then use the API:</span>
+<span class="syn-blue">SceneView</span>.<span class="syn-blue">modelViewer</span>(<span class="syn-green-light">"canvas"</span>, <span class="syn-green-light">"model.glb"</span>)</code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="flutter">
+            <pre class="code-block"><code><span class="syn-green"># pubspec.yaml (coming soon on pub.dev)</span>
+<span class="syn-purple">dependencies</span>:
+  <span class="syn-blue">sceneview_flutter</span>:
+    <span class="syn-purple">git</span>:
+      <span class="syn-blue">url</span>: <span class="syn-green-light">https://github.com/sceneview/sceneview</span>
+      <span class="syn-blue">path</span>: <span class="syn-green-light">flutter</span></code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="reactnative">
+            <pre class="code-block"><code><span class="syn-green">// package.json</span>
+<span class="syn-green-light">"dependencies"</span>: {
+  <span class="syn-green-light">"react-native-sceneview"</span>: <span class="syn-green-light">"github:sceneview/sceneview#react-native"</span>
+}
+
+<span class="syn-green">// Then run:</span>
+<span class="syn-purple">npm</span> install
+<span class="syn-purple">npx</span> pod-install <span class="syn-green">// iOS only</span></code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="claude-mcp">
+            <pre class="code-block"><code><span class="syn-green">// Claude Desktop &mdash; add to claude_desktop_config.json</span>
+{
+  <span class="syn-green-light">"mcpServers"</span>: {
+    <span class="syn-green-light">"sceneview"</span>: {
+      <span class="syn-green-light">"command"</span>: <span class="syn-green-light">"npx"</span>,
+      <span class="syn-green-light">"args"</span>: [<span class="syn-green-light">"sceneview-mcp"</span>]
+    }
+  }
+}
+
+<span class="syn-green">// Claude Code &mdash; run from terminal</span>
+<span class="syn-purple">claude</span> mcp add sceneview -- <span class="syn-blue">npx</span> <span class="syn-green-light">sceneview-mcp</span></code></pre>
+          </div>
+          <div class="tabs__panel" data-panel="desktop">
+            <pre class="code-block"><code><span class="syn-green">// Compose Desktop (alpha &mdash; software renderer)</span>
+<span class="syn-purple">git</span> clone <span class="syn-green-light">https://github.com/sceneview/sceneview</span>
+<span class="syn-purple">cd</span> sceneview/samples/desktop-demo
+<span class="syn-purple">./gradlew</span> run</code></pre>
+          </div>
         </div>
       </div>
     </div>
@@ -269,6 +387,186 @@
 .edgesIgnoringSafeArea(.all)</code></pre>
           </div>
         </div>
+        <!-- JavaScript Card -->
+        <div class="code-card code-card--js">
+          <div class="code-card__header">
+            <span class="code-card__lang">JavaScript (Web)</span>
+            <div class="code-card__dots">
+              <span class="code-card__dot code-card__dot--red"></span>
+              <span class="code-card__dot code-card__dot--yellow"></span>
+              <span class="code-card__dot code-card__dot--green"></span>
+            </div>
+          </div>
+          <div class="code-card__body">
+            <pre><code><span class="syn-green">// One line in your HTML:</span>
+<span class="syn-purple">&lt;script</span> <span class="syn-blue">src</span>=<span class="syn-green-light">"sceneview.js"</span><span class="syn-purple">&gt;&lt;/script&gt;</span>
+
+<span class="syn-green">// Render a 3D model:</span>
+<span class="syn-blue">SceneView</span>.<span class="syn-blue">modelViewer</span>(<span class="syn-green-light">"canvas"</span>, <span class="syn-green-light">"model.glb"</span>, {
+  backgroundColor: [<span class="syn-orange">0.05</span>, <span class="syn-orange">0.05</span>, <span class="syn-orange">0.08</span>, <span class="syn-orange">1</span>],
+  lightIntensity: <span class="syn-orange">150000</span>,
+  fov: <span class="syn-orange">35</span>
+})</code></pre>
+          </div>
+        </div>
+        <!-- Claude AI Card -->
+        <div class="code-card code-card--claude">
+          <div class="code-card__header">
+            <span class="code-card__lang">Claude (AI)</span>
+            <div class="code-card__dots">
+              <span class="code-card__dot code-card__dot--red"></span>
+              <span class="code-card__dot code-card__dot--yellow"></span>
+              <span class="code-card__dot code-card__dot--green"></span>
+            </div>
+          </div>
+          <div class="code-card__body">
+            <pre><code><span class="syn-green">// Ask Claude with SceneView MCP:</span>
+
+<span class="syn-green-light">"Build me an AR app that lets users
+ place 3D furniture in their room"</span>
+
+<span class="syn-green">// Claude generates correct, working code</span>
+<span class="syn-green">// with SceneView on the first try.</span>
+
+<span class="syn-green">// Setup:</span>
+<span class="syn-purple">claude</span> mcp add sceneview -- <span class="syn-blue">npx</span> <span class="syn-green-light">sceneview-mcp</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AI / MCP ===== -->
+  <section class="ai-section" id="ai">
+    <div class="ai-section__container">
+      <div class="ai-section__inner">
+        <div class="ai-section__content reveal">
+          <div class="ai-section__badge">AI-first SDK</div>
+          <h2 class="ai-section__title">Built for AI assistants</h2>
+          <p class="ai-section__text">SceneView is the first 3D SDK designed so AI assistants generate correct, working code on the first try. MCP integration gives Claude, Cursor, and Windsurf full access to the API reference, samples, and best practices.</p>
+          <pre class="code-block"><code><span class="syn-green">// Claude Code</span>
+<span class="syn-purple">claude</span> mcp add sceneview -- <span class="syn-blue">npx</span> <span class="syn-green-light">sceneview-mcp</span></code></pre>
+          <div class="ai-section__actions">
+            <a href="https://www.npmjs.com/package/sceneview-mcp" class="ai-section__btn" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined">package_2</span>
+              sceneview-mcp on npm
+            </a>
+          </div>
+        </div>
+        <div class="ai-section__graphic reveal">
+          <div class="terminal-mockup">
+            <div class="terminal-mockup__titlebar">
+              <div class="terminal-mockup__dots">
+                <span class="terminal-mockup__dot terminal-mockup__dot--red"></span>
+                <span class="terminal-mockup__dot terminal-mockup__dot--yellow"></span>
+                <span class="terminal-mockup__dot terminal-mockup__dot--green"></span>
+              </div>
+              <span class="terminal-mockup__title">Claude Code &mdash; SceneView Project</span>
+            </div>
+            <div class="terminal-mockup__body">
+              <div class="terminal-mockup__msg">
+                <span class="terminal-mockup__user">You</span>
+                <span>Build me a 3D product viewer with AR try-on for shoes</span>
+              </div>
+              <div class="terminal-mockup__msg">
+                <span class="terminal-mockup__ai">Claude</span>
+                <div>
+                  <p class="terminal-mockup__status">Using SceneView MCP to generate your app...</p>
+                  <div class="terminal-mockup__code">
+                    <p class="terminal-mockup__file">// MainActivity.kt</p>
+                    <p class="terminal-mockup__line"><span class="terminal-mockup__kw">ARScene</span>(</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;planeRenderer = <span class="terminal-mockup__val">true</span>,</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;onTapAR = { hitResult <span class="terminal-mockup__kw">-&gt;</span></p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="terminal-mockup__fn">AnchorNode</span>(hitResult) {</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="terminal-mockup__fn">ModelNode</span>(<span class="terminal-mockup__str">"shoe.glb"</span>)</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;&nbsp;&nbsp;}</p>
+                    <p class="terminal-mockup__line">&nbsp;&nbsp;}</p>
+                    <p class="terminal-mockup__line">)</p>
+                  </div>
+                  <p class="terminal-mockup__success">&#10003; App compiles and runs. Point camera at floor, tap to place shoe.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== USE CASES ===== -->
+  <section class="use-cases" id="use-cases">
+    <div class="use-cases__container">
+      <h2 class="use-cases__title reveal">Built for real products</h2>
+      <p class="use-cases__subtitle reveal">Interact with these 3D models &mdash; orbit, zoom, rotate. Powered by SceneView Web (Filament.js).</p>
+
+      <div class="use-cases__grid">
+        <!-- E-commerce -->
+        <div class="use-case reveal">
+          <div class="use-case__viewer">
+            <canvas class="sv-lazy-canvas" data-model="models/platforms/MaterialsVariantsShoe.glb" aria-label="3D sneaker product viewer"></canvas>
+            <div class="use-case__badge">Drag to orbit</div>
+          </div>
+          <div class="use-case__info">
+            <div class="use-case__label">E-commerce</div>
+            <h3 class="use-case__name">3D Product Viewer</h3>
+            <p class="use-case__text">Replace flat product photos with interactive 3D. Customers orbit, zoom, and inspect every angle. AR lets them place products in their space &mdash; boosting conversion by up to 94%.</p>
+            <pre class="use-case__code"><code>Scene {
+  ModelNode("sneaker.glb")
+}</code></pre>
+          </div>
+        </div>
+
+        <!-- Furniture AR -->
+        <div class="use-case use-case--reverse reveal">
+          <div class="use-case__viewer">
+            <canvas class="sv-lazy-canvas" data-model="models/platforms/SheenChair.glb" aria-label="3D chair for AR furniture placement"></canvas>
+            <div class="use-case__badge">Drag to orbit</div>
+          </div>
+          <div class="use-case__info">
+            <div class="use-case__label">Furniture &amp; AR</div>
+            <h3 class="use-case__name">AR Room Staging</h3>
+            <p class="use-case__text">Let customers place furniture in their real room using AR. Anchor 3D models to detected surfaces with a single tap. Accurate scale, real-time shadows.</p>
+            <pre class="use-case__code"><code>ARScene {
+  AnchorNode {
+    ModelNode("chair.glb")
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <!-- Luxury product -->
+        <div class="use-case reveal">
+          <div class="use-case__viewer">
+            <canvas class="sv-lazy-canvas" data-model="models/platforms/DishWithOlives.glb" aria-label="Iridescent luxury product detail"></canvas>
+            <div class="use-case__badge">Drag to orbit</div>
+          </div>
+          <div class="use-case__info">
+            <div class="use-case__label">Luxury &amp; Detail</div>
+            <h3 class="use-case__name">PBR Material Showcase</h3>
+            <p class="use-case__text">Physically-based rendering with iridescence, sheen, and clearcoat. Filament renders materials indistinguishable from photography &mdash; perfect for luxury goods and collectibles.</p>
+            <pre class="use-case__code"><code>Scene {
+  ModelNode("product.glb",
+    autoAnimate = true)
+}</code></pre>
+          </div>
+        </div>
+
+        <!-- Animated character -->
+        <div class="use-case use-case--reverse reveal">
+          <div class="use-case__viewer">
+            <canvas class="sv-lazy-canvas" data-model="models/platforms/Fox.glb" aria-label="Animated 3D fox character"></canvas>
+            <div class="use-case__badge">Drag to orbit</div>
+          </div>
+          <div class="use-case__info">
+            <div class="use-case__label">Gaming &amp; Entertainment</div>
+            <h3 class="use-case__name">Animated Characters</h3>
+            <p class="use-case__text">Skeletal animation, blend shapes, physics simulation. Build character-driven experiences with Compose state management. No game engine required.</p>
+            <pre class="use-case__code"><code>Scene {
+  ModelNode("fox.glb",
+    autoAnimate = true)
+}</code></pre>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -314,6 +612,128 @@
     </div>
   </section>
 
+  <!-- ===== COMPARISON TABLE ===== -->
+  <section class="comparison" id="comparison">
+    <div class="comparison__container">
+      <h2 class="comparison__title reveal">How SceneView compares</h2>
+      <p class="comparison__subtitle reveal">The lightweight alternative to heavy game engines for 3D in native apps.</p>
+      <div class="comparison__wrapper reveal">
+        <table class="comparison__table">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="comparison__highlight">SceneView</th>
+              <th>Unity</th>
+              <th>ARCore SDK</th>
+              <th>RealityKit SDK</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="comparison__label">Setup time</td>
+              <td class="comparison__highlight"><strong>2 min</strong> (1 dependency)</td>
+              <td>30+ min (install editor)</td>
+              <td>15 min (manual setup)</td>
+              <td>10 min (Xcode only)</td>
+            </tr>
+            <tr>
+              <td class="comparison__label">APK size impact</td>
+              <td class="comparison__highlight"><strong>~3 MB</strong></td>
+              <td>~30 MB+</td>
+              <td>~5 MB</td>
+              <td>N/A (iOS only)</td>
+            </tr>
+            <tr>
+              <td class="comparison__label">Compose / SwiftUI</td>
+              <td class="comparison__highlight"><strong>Native</strong> (first-class)</td>
+              <td>None (separate engine)</td>
+              <td>Partial (wrapper)</td>
+              <td>SwiftUI native</td>
+            </tr>
+            <tr>
+              <td class="comparison__label">Learning curve</td>
+              <td class="comparison__highlight"><strong>Low</strong> (Compose patterns)</td>
+              <td>High (C#, editor, ECS)</td>
+              <td>Medium (imperative)</td>
+              <td>Medium (Swift only)</td>
+            </tr>
+            <tr>
+              <td class="comparison__label">AI code generation</td>
+              <td class="comparison__highlight"><strong>32 MCP tools</strong></td>
+              <td>No MCP</td>
+              <td>No MCP</td>
+              <td>No MCP</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TESTIMONIALS ===== -->
+  <section class="testimonials" id="testimonials">
+    <div class="testimonials__container">
+      <h2 class="testimonials__title reveal">What developers say</h2>
+      <p class="testimonials__subtitle reveal">Production teams building real apps with SceneView.</p>
+
+      <div class="testimonials__grid">
+        <div class="testimonial-card reveal">
+          <div class="testimonial-card__stars">
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+          </div>
+          <blockquote class="testimonial-card__quote">"We replaced our entire custom OpenGL pipeline with SceneView in two days. The Compose integration is seamless &mdash; our 3D product viewer now shares state with the rest of the UI naturally."</blockquote>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">MK</div>
+            <div>
+              <div class="testimonial-card__name">M. Kowalski</div>
+              <div class="testimonial-card__role">Senior Android Developer</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card reveal">
+          <div class="testimonial-card__stars">
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+          </div>
+          <blockquote class="testimonial-card__quote">"SceneViewSwift gave us AR on iOS without fighting RealityKit boilerplate. The SwiftUI-native API means our designers can read the code and understand what each node does."</blockquote>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">SL</div>
+            <div>
+              <div class="testimonial-card__name">S. Larsson</div>
+              <div class="testimonial-card__role">iOS Lead, AR Studio</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card reveal">
+          <div class="testimonial-card__stars">
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+            <span class="material-symbols-outlined">star</span>
+          </div>
+          <blockquote class="testimonial-card__quote">"As a startup, we needed 3D without the 30 MB Unity tax. SceneView added only 3 MB to our APK and we shipped AR try-on in a week. The MCP integration with Claude is a game changer."</blockquote>
+          <div class="testimonial-card__author">
+            <div class="testimonial-card__avatar">RP</div>
+            <div>
+              <div class="testimonial-card__name">R. Patel</div>
+              <div class="testimonial-card__role">Startup CTO</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== BUILT WITH SCENEVIEW ===== -->
   <section class="showcase" id="showcase">
     <div class="showcase__container">
@@ -348,6 +768,110 @@
           <h4 class="showcase-card__title">Spatial Commerce</h4>
           <p class="showcase-card__text">Native "Try-before-you-buy" AR experiences for retail.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== DEMOS ===== -->
+  <section class="demos" id="demos">
+    <div class="demos__container">
+      <h2 class="demos__title reveal">Try it live</h2>
+      <p class="demos__subtitle reveal">Interactive demos running in your browser &mdash; powered by Filament.js WASM.</p>
+
+      <div class="demos__grid">
+        <a href="/playground.html" class="demo-card demo-card--featured reveal">
+          <div class="demo-card__badge">Interactive</div>
+          <h3 class="demo-card__title">3D Playground</h3>
+          <p class="demo-card__text">Write code and see it render live. Orbit, zoom, switch models.</p>
+          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
+        </a>
+        <a href="/showcase.html" class="demo-card reveal">
+          <div class="demo-card__badge demo-card__badge--showcase">Showcase</div>
+          <h3 class="demo-card__title">Project Showcase</h3>
+          <p class="demo-card__text">Gallery of real-world apps and use cases built with SceneView.</p>
+          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
+        </a>
+        <a href="/geometry-demo.html" class="demo-card reveal">
+          <div class="demo-card__badge demo-card__badge--geo">Geometry</div>
+          <h3 class="demo-card__title">Procedural Geometry</h3>
+          <p class="demo-card__text">Generate shapes, buildings, and scenes at runtime with Filament.</p>
+          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
+        </a>
+        <a href="https://sceneview.github.io/docs/" class="demo-card reveal" target="_blank" rel="noopener">
+          <div class="demo-card__badge demo-card__badge--docs">Docs</div>
+          <h3 class="demo-card__title">Documentation</h3>
+          <p class="demo-card__text">Quick start guides, API reference, tutorials for every platform.</p>
+          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SAMPLES ===== -->
+  <section class="samples" id="samples">
+    <div class="samples__container">
+      <h2 class="samples__title reveal">Sample apps</h2>
+      <p class="samples__subtitle reveal">Explore working demos across every supported platform.</p>
+
+      <div class="samples__grid">
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo" class="sample-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined sample-card__icon">android</span>
+          <div class="sample-card__badge">Android</div>
+          <h3 class="sample-card__name">SceneView Demo</h3>
+          <p class="sample-card__text">Play Store demo, 4-tab Material 3 Expressive, 14 samples</p>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/ios-demo" class="sample-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined sample-card__icon">phone_iphone</span>
+          <div class="sample-card__badge sample-card__badge--ios">iOS</div>
+          <h3 class="sample-card__name">iOS Demo</h3>
+          <p class="sample-card__text">SwiftUI 3-tab app for App Store, 3D + AR</p>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/web-demo" class="sample-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined sample-card__icon">language</span>
+          <div class="sample-card__badge sample-card__badge--web">Web</div>
+          <h3 class="sample-card__name">Web Demo</h3>
+          <p class="sample-card__text">Browser-based 3D with Filament.js (WASM) + WebXR</p>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-tv-demo" class="sample-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined sample-card__icon">tv</span>
+          <div class="sample-card__badge sample-card__badge--tv">TV</div>
+          <h3 class="sample-card__name">TV Model Viewer</h3>
+          <p class="sample-card__text">Android TV, D-pad controls, auto-rotation</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== GET INVOLVED ===== -->
+  <section class="get-involved" id="get-involved">
+    <div class="get-involved__container">
+      <h2 class="get-involved__title reveal">Get involved</h2>
+      <p class="get-involved__subtitle reveal">SceneView is open source and community-driven.</p>
+
+      <div class="get-involved__grid">
+        <a href="https://github.com/sceneview/sceneview" class="involved-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined involved-card__icon">star</span>
+          <h3 class="involved-card__name">Star on GitHub</h3>
+          <p class="involved-card__text">Show your support and help others discover SceneView.</p>
+        </a>
+
+        <a href="https://discord.gg/sceneview" class="involved-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined involved-card__icon">forum</span>
+          <h3 class="involved-card__name">Join Discord</h3>
+          <p class="involved-card__text">Chat with developers, get help, share your projects.</p>
+        </a>
+
+        <a href="https://github.com/sponsors/sceneview" class="involved-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined involved-card__icon">favorite</span>
+          <h3 class="involved-card__name">Sponsor</h3>
+          <p class="involved-card__text">Support development on GitHub Sponsors, Open Collective, or Polar.</p>
+        </a>
+
+        <a href="https://github.com/sceneview/sceneview/blob/main/CONTRIBUTING.md" class="involved-card reveal" target="_blank" rel="noopener">
+          <span class="material-symbols-outlined involved-card__icon">group_add</span>
+          <h3 class="involved-card__name">Contribute</h3>
+          <p class="involved-card__text">Fix bugs, add features, improve docs. All contributions welcome.</p>
+        </a>
       </div>
     </div>
   </section>
@@ -453,6 +977,57 @@
       if (loader) loader.style.display = 'none';
       // Keep fallback image visible
     });
+  })();
+  </script>
+
+  <!-- Lazy-load 3D viewers with IntersectionObserver -->
+  <script>
+  (function() {
+    var lazyCanvases = document.querySelectorAll('.sv-lazy-canvas');
+    if (!lazyCanvases.length) return;
+
+    function getThemeBg() {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      return isDark ? [0.09, 0.09, 0.13, 1.0] : [0.94, 0.95, 0.96, 1.0];
+    }
+
+    var loaded = new Set();
+    var viewers = [];
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting && !loaded.has(entry.target)) {
+          loaded.add(entry.target);
+          var canvas = entry.target;
+          var model = canvas.getAttribute('data-model');
+          if (!model) return;
+          SceneView.modelViewer(canvas, model, {
+            backgroundColor: getThemeBg(),
+            lightIntensity: 120000,
+            fov: 38
+          }).then(function(v) {
+            canvas.style.opacity = '1';
+            viewers.push(v);
+          }).catch(function(e) { console.warn('Lazy 3D load error:', e); });
+        }
+      });
+    }, { rootMargin: '200px' });
+
+    lazyCanvases.forEach(function(c) {
+      c.style.width = '100%';
+      c.style.height = '100%';
+      c.style.display = 'block';
+      c.style.opacity = '0';
+      c.style.transition = 'opacity 0.6s ease';
+      c.style.cursor = 'grab';
+      observer.observe(c);
+    });
+
+    // Update background on theme change
+    new MutationObserver(function() {
+      var bg = getThemeBg();
+      viewers.forEach(function(v) { v.setBackgroundColor(bg[0], bg[1], bg[2], bg[3]); });
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   })();
   </script>
 
