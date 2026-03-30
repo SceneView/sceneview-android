@@ -1,9 +1,153 @@
 ---
-title: Migration Guide — SceneView 2.x to 3.x
-description: "Step-by-step migration guide from SceneView 2.x (View-based) to 3.x (Compose-native). Covers every breaking change with before/after code examples."
+title: Migration Guide
+description: "Migration guides for SceneView: 3.5.x to 3.6.0 API simplification, and 2.x to 3.x full rewrite."
 ---
 
 # Migration Guide
+
+---
+
+## SceneView 3.5.x to 3.6.0
+
+SceneView 3.6.0 simplifies the API surface so that AI assistants and developers can write correct
+code on the first try. All changes use `@Deprecated(replaceWith = ...)` — the Kotlin compiler will
+auto-suggest fixes via IDE quick actions.
+
+### 1. `CameraNode` composable renamed to `SecondaryCamera`
+
+The `CameraNode { }` composable inside `Scene { }` creates a non-active camera — it does NOT
+become the scene's rendering camera. The name was misleading, so it's renamed to `SecondaryCamera`.
+
+```kotlin
+// Before
+Scene(cameraNode = rememberCameraNode(engine)) {
+    CameraNode { /* secondary camera — name was confusing */ }
+}
+
+// After (3.6.0)
+Scene(cameraNode = rememberCameraNode(engine)) {
+    SecondaryCamera { /* clearly named as non-primary */ }
+}
+```
+
+The scene's active camera is still set via `Scene(cameraNode = rememberCameraNode(engine))` —
+this has NOT changed.
+
+### 2. All geometry nodes now have uniform transform params
+
+Every geometry composable (`CubeNode`, `SphereNode`, `CylinderNode`, `PlaneNode`, `LineNode`,
+`PathNode`) now accepts the same `position`, `rotation`, `scale` trio. Previously, some were missing.
+
+```kotlin
+// Before — SphereNode had no rotation or scale
+SphereNode(radius = 0.2f, materialInstance = mat)
+
+// After (3.6.0) — all geometry nodes have the full trio
+SphereNode(
+    radius = 0.2f,
+    materialInstance = mat,
+    position = Position(x = 1f),
+    rotation = Rotation(y = 45f),
+    scale = Scale(2f)
+)
+```
+
+### 3. `LightNode` — explicit params instead of dual lambdas
+
+`LightNode` now exposes `intensity`, `direction`, and `position` as direct parameters instead of
+requiring two separate `apply` / `nodeApply` lambdas.
+
+```kotlin
+// Before
+LightNode(
+    type = LightManager.Type.DIRECTIONAL,
+    apply = { intensity(100_000f); direction(0f, -1f, 0f) },
+    nodeApply = { position = Position(0f, 5f, 0f) }
+)
+
+// After (3.6.0)
+LightNode(
+    type = LightManager.Type.DIRECTIONAL,
+    intensity = 100_000f,
+    direction = Direction(0f, -1f, 0f),
+    position = Position(0f, 5f, 0f)
+)
+```
+
+### 4. `VideoNode` — convenience overload with asset path
+
+New overload that handles `MediaPlayer` lifecycle automatically:
+
+```kotlin
+// Before — manual MediaPlayer setup
+val player = rememberMediaPlayer(context, assetFileLocation = "videos/promo.mp4")
+Scene {
+    player?.let { VideoNode(player = it, position = Position(z = -2f)) }
+}
+
+// After (3.6.0) — one-liner
+Scene {
+    VideoNode(videoPath = "videos/promo.mp4", position = Position(z = -2f))
+}
+```
+
+### 5. New composables: `ShapeNode` and `PhysicsNode`
+
+Both are now available directly in the `Scene { }` DSL:
+
+```kotlin
+Scene {
+    ShapeNode(
+        polygonPath = listOf(Position2(0f, 0f), Position2(1f, 0f), Position2(0.5f, 1f)),
+        color = Color(0xFF2196F3.toInt())
+    )
+    PhysicsNode(gravity = -9.81f, floorY = 0f) {
+        SphereNode(radius = 0.1f, materialInstance = mat)
+    }
+}
+```
+
+### 6. Swift: Declarative `SceneView` with `@NodeBuilder`
+
+SwiftUI `SceneView` now supports a declarative builder matching Android's `Scene { }`:
+
+```swift
+// Before — imperative
+SceneView { root in
+    root.addChild(cube.entity)
+    root.addChild(sphere.entity)
+}
+
+// After (3.6.0) — declarative
+SceneView {
+    GeometryNode.cube(size: 0.3, color: .red)
+        .position(.init(x: -1, y: 0, z: -2))
+    GeometryNode.sphere(radius: 0.2, color: .blue)
+        .position(.init(x: 1, y: 0, z: -2))
+}
+```
+
+### 7. Swift: `NodeGesture` automatic cleanup
+
+`NodeGesture` now tracks entities with weak references and automatically purges stale handlers.
+Entity fluent extensions are available for cleaner syntax:
+
+```swift
+// Before — static calls only
+NodeGesture.onTap(entity) { print("Tapped!") }
+
+// After (3.6.0) — fluent chaining
+entity.onTap { print("Tapped!") }
+       .onDrag { translation in entity.position += translation }
+```
+
+---
+
+## SceneView 2.x to 3.x
+
+SceneView 3.0 is a ground-up rewrite around Jetpack Compose. The core concepts are the same
+(Filament engine, ARCore session, node graph), but the API is fully Compose-native. This guide
+walks through every breaking change with before/after examples.
 
 SceneView 3.0 is a ground-up rewrite around Jetpack Compose. The core concepts are the same
 (Filament engine, ARCore session, node graph), but the API is fully Compose-native. This guide
