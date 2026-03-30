@@ -44,7 +44,7 @@ document.querySelectorAll('.tabs').forEach(function (tabGroup) {
 });
 
 // ===== MOBILE HAMBURGER =====
-var hamburger = document.getElementById('hamburger');
+var hamburger = document.getElementById('hamburgerMobile') || document.getElementById('hamburger');
 var navLinks = document.getElementById('navLinks');
 
 if (hamburger && navLinks) {
