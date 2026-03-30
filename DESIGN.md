@@ -14,6 +14,33 @@
 
 ---
 
+## Design Philosophy
+
+### Material 3 Expressive
+
+Material 3 Expressive principles guide all interactive surfaces and motion:
+
+- **Bold colors:** Use primary and gradient tokens with high saturation for hero elements; avoid washed-out or neutral-only palettes.
+- **Variable typography:** Scale headings expressively with `clamp()` — hero text should feel large and confident; body text stays readable and compact.
+- **Spring animations:** Interactive elements (buttons, cards, nav items) use spring-based easing (`ease-spring`) for physical, bouncy feedback.
+- **Dynamic shapes:** Corners vary by component role — small utility elements use `radius-xs` (8px), prominent cards use `radius-lg` (28px), pills use `radius-full`.
+
+### Liquid Glass Accents
+
+Glassmorphism adds depth and layering to surfaces that float over content (nav, modals, cards on hero backgrounds):
+
+- **Mechanism:** `backdrop-filter: blur()` + semi-transparent background + subtle border
+- **Restraint:** Apply only to overlapping or floating surfaces — not every card. Overuse flattens the effect.
+- **Dark mode:** Reduce opacity further in dark mode; glass should whisper, not shout.
+
+### Professional Developer SDK Aesthetic
+
+- **Clarity over decoration:** Every design choice must serve legibility of code, APIs, and documentation.
+- **AI-optimized:** Consistent tokens and patterns so AI agents can generate correct UI on the first try.
+- **Neutral confidence:** The palette is blue-dominant and professional — no playful pastels or consumer-app softness.
+
+---
+
 ## Colors
 
 ### Primary
@@ -149,13 +176,16 @@ Base unit: **8px**
 
 ## Border Radius
 
-| Token | Value | Usage |
-|---|---|---|
-| `radius-xs` | 8px | Small elements, icon containers |
-| `radius-sm` | 12px | Code blocks, inputs, badges |
-| `radius-md` | 16px | Buttons, medium cards |
-| `radius-lg` | 28px | Prominent cards, showcase items |
-| `radius-full` | 9999px | Pills, avatars, fully rounded |
+M3 Expressive shape scale — corner radius communicates component weight and prominence.
+
+| Token | Value | M3 Scale | Usage |
+|---|---|---|---|
+| `radius-xs` | 8px | XS | Small elements, icon containers, chips |
+| `radius-sm` | 12px | S | Code blocks, inputs, badges, tooltips |
+| `radius-md` | 16px | M | Buttons, medium cards, dialogs |
+| `radius-lg` | 24px | L | Section cards, bottom sheets |
+| `radius-xl` | 28px | XL | Prominent cards, showcase items, hero panels |
+| `radius-full` | 9999px | Full | Pills, avatars, FAB, fully rounded elements |
 
 ---
 
@@ -187,7 +217,8 @@ Base unit: **8px**
 
 | Token | Value | Usage |
 |---|---|---|
-| `ease-expressive` | cubic-bezier(0.2, 0, 0, 1) | All transitions |
+| `ease-spring` | cubic-bezier(0.34, 1.56, 0.64, 1) | Bouncy interactions — buttons, cards, spring hover |
+| `ease-expressive` | cubic-bezier(0.2, 0, 0, 1) | Smooth transitions — page changes, reveals, drawers |
 
 ### Duration
 
@@ -199,9 +230,41 @@ Base unit: **8px**
 
 ### Patterns
 
-- **Hover lift:** `translateY(-2px)` with shadow increase
-- **Scroll reveal:** `translateY(24px) opacity(0)` to `translateY(0) opacity(1)` over `duration-long`
-- **Reduced motion:** Respect `prefers-reduced-motion: reduce`
+- **Spring hover:** `translateY(-4px)` with `ease-spring` easing and shadow increase — feels physically responsive
+- **Standard hover lift:** `translateY(-2px)` with `ease-expressive` — subtler, for secondary elements
+- **Scroll reveal:** `translateY(24px) opacity(0)` to `translateY(0) opacity(1)` over `duration-long` with `ease-expressive`
+- **Button press:** `scale(0.97)` on active/mousedown with `ease-spring`, releases back with overshoot
+- **Reduced motion:** Respect `prefers-reduced-motion: reduce` — disable `translateY` and `scale`, keep opacity fades
+
+---
+
+## Liquid Glass
+
+Glassmorphism layer system for surfaces that float over content. Apply with restraint.
+
+### Light Mode
+
+| Component | Background | Backdrop Filter | Border |
+|---|---|---|---|
+| **Nav glass** | rgba(255,255,255,0.72) | blur(20px) | 1px solid rgba(255,255,255,0.08) |
+| **Card glass** | rgba(255,255,255,0.60) | blur(16px) | 1px solid rgba(255,255,255,0.06) |
+| **Button glass** | rgba(255,255,255,0.08) | blur(12px) | none |
+
+### Dark Mode
+
+| Component | Background | Backdrop Filter | Border |
+|---|---|---|---|
+| **Nav glass** | rgba(255,255,255,0.05) | blur(20px) | 1px solid rgba(255,255,255,0.08) |
+| **Card glass** | rgba(255,255,255,0.03) | blur(16px) | 1px solid rgba(255,255,255,0.06) |
+| **Button glass** | rgba(255,255,255,0.08) | blur(12px) | none |
+
+### Usage Rules
+
+- Nav glass replaces the solid `surface` background when the nav scrolls over hero/image content.
+- Card glass applies to cards placed directly on gradient hero sections or image backgrounds — not on flat `surface-dim`.
+- Button glass is for secondary ghost-style CTAs on dark/image backgrounds only.
+- Always add `will-change: backdrop-filter` for performance on animated glass elements.
+- Fallback for browsers without `backdrop-filter` support: use the solid `surface` or `surface-container` token.
 
 ---
 
