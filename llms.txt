@@ -648,30 +648,39 @@ ARScene(
 ```
 
 ### HitResultNode — surface cursor (2 overloads)
+
+**Recommended — screen-coordinate hit test** (most common for placement cursors):
 ```kotlin
-// Screen-coordinate hit test
 @Composable fun HitResultNode(
-    xPx: Float,
-    yPx: Float,
+    xPx: Float,                         // screen X in pixels (use viewWidth / 2f for center)
+    yPx: Float,                         // screen Y in pixels (use viewHeight / 2f for center)
     planeTypes: Set<Plane.Type> = Plane.Type.entries.toSet(),
     point: Boolean = true,
     depthPoint: Boolean = true,
     instantPlacementPoint: Boolean = true,
-    trackingStates: Set<TrackingState> = setOf(TrackingState.TRACKING),
-    pointOrientationModes: Set<Point.OrientationMode> = setOf(Point.OrientationMode.ESTIMATED_SURFACE_NORMAL),
-    planePoseInPolygon: Boolean = true,
-    minCameraDistance: Pair<Camera, Float>? = null,
-    predicate: ((HitResult) -> Boolean)? = null,
+    // ... other filters with sensible defaults ...
     apply: HitResultNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
+```
 
-// Custom hit test
+**Custom hit test** (full control):
+```kotlin
 @Composable fun HitResultNode(
     hitTest: HitResultNode.(Frame) -> HitResult?,
     apply: HitResultNode.() -> Unit = {},
     content: (@Composable NodeScope.() -> Unit)? = null
 )
+```
+
+Typical center-screen placement cursor:
+```kotlin
+ARScene(modifier = Modifier.fillMaxSize()) {
+    // Place a cursor at screen center — follows detected surfaces
+    HitResultNode(xPx = viewWidth / 2f, yPx = viewHeight / 2f) {
+        CubeNode(size = Size(0.05f))  // small indicator cube
+    }
+}
 ```
 
 ### AugmentedImageNode — image tracking

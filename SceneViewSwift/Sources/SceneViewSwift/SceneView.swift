@@ -33,12 +33,33 @@ public struct SceneView: View {
     var enableAutoRotate: Bool = false
     var autoRotateSpeed: Float = 0.3
 
-    /// Creates a 3D scene with declarative content.
+    /// Creates a 3D scene with imperative content setup.
     ///
     /// - Parameter content: A closure that populates the scene. Receives a root
     ///   entity — add your content as children of this entity.
     public init(_ content: @escaping (Entity) -> Void) {
         self.content = content
+    }
+
+    /// Creates a 3D scene with declarative content using `@NodeBuilder`.
+    ///
+    /// Mirrors the Android `Scene { }` composable pattern — declare nodes inline:
+    ///
+    /// ```swift
+    /// SceneView {
+    ///     GeometryNode.cube(size: 0.3, color: .red)
+    ///         .position(.init(x: -1, y: 0, z: -2))
+    ///     GeometryNode.sphere(radius: 0.2, color: .blue)
+    ///         .position(.init(x: 1, y: 0, z: -2))
+    ///     LightNode.directional(intensity: 1000)
+    /// }
+    /// ```
+    public init(@NodeBuilder content: @escaping () -> [Entity]) {
+        self.content = { root in
+            for entity in content() {
+                root.addChild(entity)
+            }
+        }
     }
 
     public var body: some View {
