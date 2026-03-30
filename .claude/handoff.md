@@ -42,6 +42,16 @@
 - CTA terminal confirmed dark in both light and dark modes
 - All scroll reveal sections visible and animated correctly
 
+### 5. Store assets and branding update ✅
+- **og-image.svg** (1200x630): Blue-purple gradient, SceneView title, tagline, platform chips, version badge, cube logo
+- **apple-touch-icon.svg** (180x180): Gradient background with isometric cube
+- **feature-graphic.svg** (1024x500): Play Store feature graphic with cube + text + feature chips
+- **favicon.svg**: Colors updated from #1A73E8 → #005BC1 Stitch palette
+- **ic_launcher_foreground.xml**: Android adaptive icon colors updated to Stitch palette (#003A7D/#3D7FD9/#A4C1FF)
+- **All 8 HTML pages**: og:image → og-image.svg, apple-touch-icon link added, og:image dimensions
+- **branding/README.md**: Colors updated, asset checklist updated with completed items
+- Deployed to sceneview.github.io
+
 ## Previous session (session 14)
 
 ### 1. All secondary pages redesigned with Stitch M3 design system ✅
