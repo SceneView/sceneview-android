@@ -17,6 +17,31 @@
 - Deployed to sceneview.github.io and pushed
 - Visual QA verified: hero, nav, showcase cards, meta tags all correct
 
+### 2. All remaining demo themes updated to Stitch M3 (#005bc1) ✅
+- **samples/common/Theme.kt**: Full rewrite from purple #6639A6 to blue #005BC1 Stitch palette (light primary #005BC1, dark primary #A4C1FF)
+- **samples/desktop-demo/Main.kt**: SceneViewBlue → #A4C1FF, wireframe edges/vertices/faces updated to Stitch blue
+- **samples/flutter-demo/main.dart**: `Colors.deepPurple` → explicit `ColorScheme.dark(primary: Color(0xFFA4C1FF))`, cube color → #005BC1
+- **samples/react-native-demo/App.tsx**: All 8 style colors updated (container bg #111318, chip selected #005bc1, etc.)
+- **samples/web-demo/index.html**: CSS vars `--sv-blue: #1a73e8` → `#005bc1`, surfaces to GitHub-dark, AR button gradient to tertiary
+- All Android builds verified: `compileDebugKotlin` and `compileKotlinDesktop` BUILD SUCCESSFUL
+
+### 3. Critical website bug fixes ✅
+- **CTA terminal white background in dark mode**: `var(--color-inverse-surface)` resolved to `#f0f6fc` in dark mode → hardcoded `#0d1117` (always dark)
+- **Scroll reveal invisible sections (CRITICAL)**: IntersectionObserver with threshold:0.1 and rootMargin:-40px caused `.reveal` elements to stay invisible when fast-scrolling. Fixed with:
+  - Immediate reveal on load for elements already in viewport
+  - threshold:0.01, rootMargin:+200px
+  - scroll event fallback (50ms debounce)
+  - 3s safety timeout
+  - Softer animation: `translateY(16px)`, `0.5s ease-out`
+- **Inline script duplication**: 4 HTML files (index.html, docs.html, privacy.html, web.html) had inline `<script>` blocks with old buggy observer → all replaced with fixed version
+- **script.js**: Complete rewrite of scroll reveal section
+
+### 4. Full visual QA on live site ✅
+- All 8 pages verified in dark mode: index, showcase, playground, claude-3d, platforms-showcase, web, docs, privacy
+- Light mode full scroll-through on index.html: hero, features, code, platforms, comparison, testimonials, showcase, CTA — all verified
+- CTA terminal confirmed dark in both light and dark modes
+- All scroll reveal sections visible and animated correctly
+
 ## Previous session (session 14)
 
 ### 1. All secondary pages redesigned with Stitch M3 design system ✅
@@ -133,15 +158,17 @@
 Everything visual must be redesigned using Google Stitch as the design tool.
 Stitch generates the design → Claude applies it in code. NO manual CSS/UI writing.
 
-1. ~~**Website** (sceneview.github.io) — Full redesign via Stitch~~ ✅ DONE (session 13+14)
+1. ~~**Website** (sceneview.github.io) — Full redesign via Stitch~~ ✅ DONE (session 13+14+15)
    - index.html fully redesigned, QA'd (desktop/mobile/light/dark) — session 13
    - All 7 secondary pages redesigned and deployed — session 14
+   - Bug fixes (scroll reveal, CTA terminal) + full live QA — session 15
 2. ~~**Android demo app** — Theme via Stitch (M3 Expressive)~~ ✅ DONE (session 14)
    - Color.kt, Theme.kt, Shape.kt, Type.kt — all created with Stitch #005bc1
 3. ~~**iOS demo app** — Theme via Stitch (Liquid Glass / Apple HIG)~~ ✅ DONE (session 14)
    - Theme.swift + AccentColor updated, tint aligned
 4. ~~**Docs MkDocs** — CSS via Stitch~~ ✅ DONE (session 14)
-5. **All other demos** — web-demo, tv-demo, etc.
+5. ~~**All other demos** — web-demo, tv-demo, desktop, flutter, react-native~~ ✅ DONE (session 15)
+   - common/Theme.kt, desktop-demo, flutter-demo, react-native-demo, web-demo — all updated to Stitch #005bc1
 6. **Store assets** — Screenshots with new design
 
 ### Phase 2 — Post-redesign
