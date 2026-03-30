@@ -186,6 +186,92 @@ jobs:
             -authenticationKeyID $APP_STORE_CONNECT_API_KEY_ID \
             -authenticationKeyIssuerID $APP_STORE_CONNECT_API_ISSUER_ID
 
+      - name: Submit build for App Store review
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          pip3 install PyJWT requests --quiet
+
+          # Wait for Apple to process the build
+          echo "Waiting 120s for Apple to process the build..."
+          sleep 120
+
+          python3 << 'PYEOF'
+          import os, json, time, jwt, requests
+
+          KEY_ID = os.environ["ASC_KEY_ID"]
+          ISSUER_ID = os.environ["ASC_ISSUER_ID"]
+          BUNDLE_ID = "io.github.sceneview.demo"
+
+          key_path = os.path.expanduser(f"~/.private_keys/AuthKey_{KEY_ID}.p8")
+          with open(key_path) as f:
+              private_key = f.read()
+
+          token = jwt.encode(
+              {"iss": ISSUER_ID, "iat": int(time.time()), "exp": int(time.time()) + 1200, "aud": "appstoreconnect-v1"},
+              private_key,
+              algorithm="ES256",
+              headers={"kid": KEY_ID}
+          )
+          headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+          BASE = "https://api.appstoreconnect.apple.com/v1"
+
+          # 1. Find the app
+          r = requests.get(f"{BASE}/apps?filter[bundleId]={BUNDLE_ID}", headers=headers)
+          r.raise_for_status()
+          app_id = r.json()["data"][0]["id"]
+          print(f"App ID: {app_id}")
+
+          # 2. Get the latest valid build
+          r = requests.get(f"{BASE}/builds?filter[app]={app_id}&sort=-uploadedDate&limit=1&filter[processingState]=VALID", headers=headers)
+          builds = r.json().get("data", [])
+          if not builds:
+              print("No valid build found yet — still processing. Skipping submission.")
+              exit(0)
+          build_id = builds[0]["id"]
+          build_version = builds[0]["attributes"]["version"]
+          print(f"Latest build: {build_version} (ID: {build_id})")
+
+          # 3. Get or create the app store version
+          r = requests.get(f"{BASE}/apps/{app_id}/appStoreVersions?filter[appStoreState]=PREPARE_FOR_SUBMISSION,READY_FOR_REVIEW", headers=headers)
+          versions = r.json().get("data", [])
+          if versions:
+              version_id = versions[0]["id"]
+              print(f"Using existing version: {version_id}")
+          else:
+              payload = {
+                  "data": {
+                      "type": "appStoreVersions",
+                      "attributes": {"platform": "IOS", "versionString": "1.0"},
+                      "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}
+                  }
+              }
+              r = requests.post(f"{BASE}/appStoreVersions", headers=headers, json=payload)
+              r.raise_for_status()
+              version_id = r.json()["data"]["id"]
+              print(f"Created new version: {version_id}")
+
+          # 4. Attach the build to the version
+          payload = {"data": {"type": "builds", "id": build_id}}
+          r = requests.patch(f"{BASE}/appStoreVersions/{version_id}/relationships/build", headers=headers, json=payload)
+          print(f"Build attached: {r.status_code}")
+
+          # 5. Submit for review
+          payload = {
+              "data": {
+                  "type": "appStoreVersionSubmissions",
+                  "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}}}
+              }
+          }
+          r = requests.post(f"{BASE}/appStoreVersionSubmissions", headers=headers, json=payload)
+          if r.status_code in (200, 201):
+              print("Successfully submitted for App Store review!")
+          else:
+              print(f"Submission response: {r.status_code} - {r.text[:500]}")
+          PYEOF
+        continue-on-error: true
+
       - name: Clean up keychain and keys
         if: always()
         run: |
