@@ -88,8 +88,8 @@ final class CameraControlsExtendedTests: XCTestCase {
     func testWithAzimuthLimits() {
         let controls = CameraControls()
             .withAzimuthLimits(min: -1.0, max: 1.0)
-        XCTAssertEqual(controls.minAzimuth, -1.0, accuracy: 0.001)
-        XCTAssertEqual(controls.maxAzimuth, 1.0, accuracy: 0.001)
+        XCTAssertEqual(controls.minAzimuth ?? 0, -1.0, accuracy: 0.001)
+        XCTAssertEqual(controls.maxAzimuth ?? 0, 1.0, accuracy: 0.001)
     }
 
     func testWithElevationLimits() {

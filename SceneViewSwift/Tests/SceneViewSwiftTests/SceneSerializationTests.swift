@@ -138,8 +138,8 @@ final class SceneSerializationTests: XCTestCase {
 
         let childSnapshot = decoded.nodes.first(where: { $0.name == "Child" })
         XCTAssertNotNil(childSnapshot)
-        XCTAssertEqual(childSnapshot?.position.x, 3.0, accuracy: 0.001)
-        XCTAssertEqual(childSnapshot?.scale.x, 2.0, accuracy: 0.001)
+        XCTAssertEqual(childSnapshot?.position.x ?? 0, 3.0, accuracy: 0.001)
+        XCTAssertEqual(childSnapshot?.scale.x ?? 0, 2.0, accuracy: 0.001)
     }
 
     func testEncodeDecodeStringRoundTrip() throws {

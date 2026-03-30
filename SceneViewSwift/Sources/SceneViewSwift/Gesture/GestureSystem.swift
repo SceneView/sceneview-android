@@ -40,6 +40,16 @@ public enum NodeGesture {
     @MainActor
     private static var longPressHandlers: [ObjectIdentifier: () -> Void] = [:]
 
+    /// Weak references to registered entities for automatic cleanup.
+    @MainActor
+    private static var registeredEntities: [ObjectIdentifier: WeakEntity] = [:]
+
+    /// Wrapper for weak entity reference.
+    private final class WeakEntity {
+        weak var entity: Entity?
+        init(_ entity: Entity) { self.entity = entity }
+    }
+
     // MARK: - Registration
 
     /// Registers a tap handler for an entity.
@@ -52,6 +62,7 @@ public enum NodeGesture {
     @MainActor
     public static func onTap(_ entity: Entity, handler: @escaping () -> Void) {
         ensureCollision(entity)
+        trackEntity(entity)
         tapHandlers[ObjectIdentifier(entity)] = handler
     }
 
@@ -63,6 +74,7 @@ public enum NodeGesture {
     @MainActor
     public static func onDrag(_ entity: Entity, handler: @escaping (SIMD3<Float>) -> Void) {
         ensureCollision(entity)
+        trackEntity(entity)
         dragHandlers[ObjectIdentifier(entity)] = handler
     }
 
@@ -74,6 +86,7 @@ public enum NodeGesture {
     @MainActor
     public static func onScale(_ entity: Entity, handler: @escaping (Float) -> Void) {
         ensureCollision(entity)
+        trackEntity(entity)
         scaleHandlers[ObjectIdentifier(entity)] = handler
     }
 
@@ -85,6 +98,7 @@ public enum NodeGesture {
     @MainActor
     public static func onRotate(_ entity: Entity, handler: @escaping (Float) -> Void) {
         ensureCollision(entity)
+        trackEntity(entity)
         rotateHandlers[ObjectIdentifier(entity)] = handler
     }
 
@@ -96,6 +110,7 @@ public enum NodeGesture {
     @MainActor
     public static func onLongPress(_ entity: Entity, handler: @escaping () -> Void) {
         ensureCollision(entity)
+        trackEntity(entity)
         longPressHandlers[ObjectIdentifier(entity)] = handler
     }
 
@@ -110,6 +125,7 @@ public enum NodeGesture {
         scaleHandlers.removeValue(forKey: id)
         rotateHandlers.removeValue(forKey: id)
         longPressHandlers.removeValue(forKey: id)
+        registeredEntities.removeValue(forKey: id)
     }
 
     /// Removes all registered gesture handlers.
@@ -120,6 +136,7 @@ public enum NodeGesture {
         scaleHandlers.removeAll()
         rotateHandlers.removeAll()
         longPressHandlers.removeAll()
+        registeredEntities.removeAll()
     }
 
     // MARK: - Dispatch (called by scene implementation)
@@ -167,12 +184,92 @@ public enum NodeGesture {
 
     // MARK: - Private helpers
 
+    /// Removes handlers for entities that have been deallocated.
+    ///
+    /// Called automatically during handler registration. Can also be called
+    /// manually to reclaim memory in long-running scenes.
+    @MainActor
+    public static func purgeStaleHandlers() {
+        let staleIds = registeredEntities.filter { $0.value.entity == nil }.map { $0.key }
+        for id in staleIds {
+            tapHandlers.removeValue(forKey: id)
+            dragHandlers.removeValue(forKey: id)
+            scaleHandlers.removeValue(forKey: id)
+            rotateHandlers.removeValue(forKey: id)
+            longPressHandlers.removeValue(forKey: id)
+            registeredEntities.removeValue(forKey: id)
+        }
+    }
+
     private static func ensureCollision(_ entity: Entity) {
         if entity.components[CollisionComponent.self] == nil {
             if let modelEntity = entity as? ModelEntity {
                 modelEntity.generateCollisionShapes(recursive: true)
             }
         }
+    }
+
+    /// Tracks the entity for automatic stale handler cleanup.
+    @MainActor
+    private static func trackEntity(_ entity: Entity) {
+        let id = ObjectIdentifier(entity)
+        if registeredEntities[id] == nil {
+            registeredEntities[id] = WeakEntity(entity)
+        }
+        // Opportunistic cleanup: purge stale entries periodically
+        if registeredEntities.count > 10 {
+            purgeStaleHandlers()
+        }
+    }
+}
+
+// MARK: - Entity convenience extensions
+
+extension Entity {
+    /// Registers a tap handler on this entity. Returns self for chaining.
+    ///
+    /// ```swift
+    /// let cube = GeometryNode.cube(size: 0.3, color: .blue)
+    ///     .entity
+    ///     .onTap { print("Tapped!") }
+    /// ```
+    @MainActor
+    @discardableResult
+    public func onTap(_ handler: @escaping () -> Void) -> Entity {
+        NodeGesture.onTap(self, handler: handler)
+        return self
+    }
+
+    /// Registers a drag handler on this entity. Returns self for chaining.
+    @MainActor
+    @discardableResult
+    public func onDrag(_ handler: @escaping (SIMD3<Float>) -> Void) -> Entity {
+        NodeGesture.onDrag(self, handler: handler)
+        return self
+    }
+
+    /// Registers a scale handler on this entity. Returns self for chaining.
+    @MainActor
+    @discardableResult
+    public func onScale(_ handler: @escaping (Float) -> Void) -> Entity {
+        NodeGesture.onScale(self, handler: handler)
+        return self
+    }
+
+    /// Registers a rotation handler on this entity. Returns self for chaining.
+    @MainActor
+    @discardableResult
+    public func onRotate(_ handler: @escaping (Float) -> Void) -> Entity {
+        NodeGesture.onRotate(self, handler: handler)
+        return self
+    }
+
+    /// Registers a long press handler on this entity. Returns self for chaining.
+    @MainActor
+    @discardableResult
+    public func onLongPress(_ handler: @escaping () -> Void) -> Entity {
+        NodeGesture.onLongPress(self, handler: handler)
+        return self
     }
 }
 

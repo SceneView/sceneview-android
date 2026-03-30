@@ -183,7 +183,11 @@ public struct LightNode: Sendable {
                     depthBias: 5.0
                 )
             } else {
-                directional.shadow?.maximumDistance = distance
+                // Re-create shadow with new distance to avoid deprecated property setter
+                directional.shadow = DirectionalLightComponent.Shadow(
+                    maximumDistance: distance,
+                    depthBias: directional.shadow?.depthBias ?? 5.0
+                )
             }
         }
         return self
