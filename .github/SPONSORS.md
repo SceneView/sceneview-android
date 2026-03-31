@@ -11,10 +11,9 @@ and keeping the SDK up to date across all 9 platforms.
 
 | Tier | Price | Benefits |
 |------|-------|----------|
-| **Supporter** | $5/mo | Name in SPONSORS.md, sponsor badge |
-| **Pro Developer** | $15/mo | + Priority issues, roadmap voting, private Discord |
-| **Team** | $50/mo | + Logo on README and website, 1 priority bug fix/month |
-| **Enterprise** | $200/mo | + Logo on hero section, monthly support call, priority features |
+| **Backer** | $10/mo | Name on GitHub sponsors list and website, fund device testing and CI |
+| **Sponsor** | $50/mo | Logo on GitHub README, website, and docs, priority issue support |
+| **Gold Sponsor** | $200/mo | Prominent logo placement everywhere, direct maintainer access, priority features |
 
 ### How to sponsor
 
@@ -30,21 +29,21 @@ Polar lets you fund specific features via issue funding.
 
 ---
 
-## Enterprise Sponsors
+## Gold Sponsors
 
-> Logo on website hero, monthly support call, priority feature requests
+> Prominent logo placement, direct maintainer access, priority features
 
-<!-- Enterprise sponsor logos here -->
+<!-- Gold sponsor logos here -->
 
-*Become the first enterprise sponsor — [get in touch](https://github.com/sponsors/sceneview)*
+*Become the first Gold Sponsor — [get in touch](https://opencollective.com/sceneview/contribute/gold-sponsor)*
 
-## Team Sponsors
+## Sponsors
 
-> Logo on README and website, 1 priority bug fix/month, pre-release access
+> Logo on GitHub README, website, and documentation
 
-<!-- Team sponsor logos here -->
+<!-- Sponsor logos here -->
 
-*No team sponsors yet — [become one!](https://github.com/sponsors/sceneview)*
+*No sponsors yet — [become one!](https://opencollective.com/sceneview/contribute/sponsor)*
 
 ## Backers
 
