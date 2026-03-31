@@ -4,8 +4,23 @@
 
 ## Last Session Summary
 
-**Date:** 31 mars 2026 (session 20-21)
+**Date:** 31 mars 2026 (session 20-22)
 **Branch:** main
+
+## WHAT WAS DONE THIS SESSION (session 22)
+
+### Massive asset cleanup across all platforms
+- **Android demo**: Deleted 19 unused GLB models (~116 MB) — only 31 referenced models remain (86 MB vs 202 MB)
+  - Removed: animated_astronaut, animated_bee, animated_cat, animated_dog, animated_hummingbird, animated_pterodactyl, animated_shark, animated_toon_horse, animated_trex, animated_tropical_fish, choco_bunny, damask_chair, dish_with_olives, khronos_iridescent_dish, khronos_sheen_chair, khronos_toy_car, monstera_plant, mushroom_potion, shiba
+  - All 10 HDR environments kept (all referenced in ExploreScreen + SamplesScreen)
+- **Website**: Deleted 7 orphan demo pages + 22 exclusively-used GLB models (~228 MB)
+  - Pages removed: sceneview-web-demo, sceneview-demo, garden-demo, live-demo, architecture-demo, wrapper-test, filament-pure-test
+  - Platform models: 411 MB → 178 MB
+- **Total savings this session**: ~344 MB of unused assets removed
+- **All pushed**: main repo + sceneview.github.io
+- **QA verified**: playground, showcase, platforms-showcase — zero errors
+
+---
 
 ## WHAT WAS DONE THIS SESSION (session 21)
 
