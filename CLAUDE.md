@@ -141,7 +141,7 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-30)
+### Current state (last updated: 2026-03-31, session 21)
 
 - **Active branch**: `main`
 - **Latest release**: v3.6.0 (GitHub Release + Maven Central + npm — ALL PUBLISHED)
@@ -149,6 +149,8 @@ Never say "everything is good" without verifying published packages.
 - **sceneview-web**: v3.6.0 on npm (Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
 - **Website**: sceneview.github.io
+- **Playground**: QA complete — 3 bug fixes, 23 curated models, accessibility fixes, mobile nav, published
+- **Open Collective**: description/tiers updated, assets still need updating
 
 For full session history, see memory file `project_session_history.md`.
 For current priorities and next steps, see `.claude/handoff.md`.
