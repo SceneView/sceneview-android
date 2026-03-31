@@ -70,3 +70,16 @@ branding/SPONSOR_TIERS.md
 
 # ── Large media (binaries, not source) ────────────────────
 /video/
+
+# ── Shared asset catalog (downloaded via tools/download-assets.sh) ──
+assets/models/
+assets/environments/
+assets/textures/
+
+# ── Platform demo assets (copied via .claude/scripts/sync-assets.sh) ──
+samples/android-demo/src/main/assets/models/
+samples/android-demo/src/main/assets/environments/
+samples/android-tv-demo/src/main/assets/
+samples/flutter-demo/models/
+samples/react-native-demo/assets/models/
+samples/react-native-demo/ios/Models/
