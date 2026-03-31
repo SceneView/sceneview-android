@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.6.0 — Comprehensive quality audit, SwiftUI fixes, website migration (2026-03-30)
+## 3.6.0 — Comprehensive quality audit, SwiftUI fixes, website migration (2026-03-31)
 
 ### SceneViewSwift
 - Fixed SceneSnapshot visionOS compilation (ARView unavailable)
@@ -14,7 +14,24 @@
 - Rewrote sceneview-demo.html to use SceneView.modelViewer() API
 - Fixed 3 demo pages crashing from non-existent API calls
 - Fixed model paths in claude-3d.html
-- Deleted 3 dead demo pages
+- Deleted 5 dead demo pages + fixed sitemap.xml
+- Added 404.html page for GitHub Pages
+- Fixed og:image/twitter:image meta tags (SVG → PNG) across all 8 pages
+- Fixed sceneview.js version mismatch (runtime 1.5.0 → 3.6.0)
+- Fixed IBL path (relative → absolute) for embed/preview subdirectory pages
+- Improved synthetic IBL fallback lighting for Claude Artifacts
+
+### Branding
+- Generated 22 PNG exports from SVG sources (logo, app icon, favicon, social, npm, store)
+- Created favicon.ico (multi-resolution)
+- Updated Open Collective: logo, cover, tiers (Backer $10, Sponsor $50, Gold $200), 10 tags
+
+### AI Integration
+- Added Claude Artifacts section to llms.txt (HTML template, CDN URLs, 26 models)
+- Updated MCP tool count: 22 → 26 tools, 2360 tests across 98 suites
+
+### Dependencies
+- Bumped Filament 1.70.0 → 1.70.1
 
 ### CI/CD
 - Fixed maintenance.yml (Filament version grep, graceful fallback)
