@@ -4,8 +4,51 @@
 
 ## Last Session Summary
 
-**Date:** 31 mars 2026 (session 20-22)
+**Date:** 31 mars 2026 (session 20-23)
 **Branch:** main
+
+## WHAT WAS DONE THIS SESSION (session 23)
+
+### Branding & PNG exports
+- **22 PNG exports generated** from SVG sources using rsvg-convert:
+  - Logo: 128, 256, 512, 1024 (light + dark)
+  - App icon: 192, 256, 512, 1024
+  - Favicon: 16, 32, 48, 192, 512 + favicon.ico
+  - npm icon: 128, 256
+  - Social: og-image 1200x630
+  - Store: feature-graphic 1024x500
+- **favicon.ico** generated (multi-resolution ICO)
+- All exports in `branding/exports/` organized by category
+
+### Website meta tags fixed
+- **og:image** changed from SVG → PNG across all 8 pages (social platforms don't support SVG)
+- **apple-touch-icon** changed from SVG → PNG
+- **favicon.ico** fallback added alongside SVG favicon
+- All changes synced to sceneview.github.io
+
+### Open Collective assets updated
+- Logo uploaded (logo-512.png)
+- Cover/banner uploaded (og-image-1200x630.png)
+
+### Claude Artifacts integration
+- **llms.txt** updated with full Claude Artifacts section:
+  - HTML template for artifact creation
+  - CDN URLs (sceneview.github.io/js/)
+  - Complete list of 26 available GLB models
+  - Advanced scene creation examples
+
+### Cleanup
+- 2 orphan pages deleted (filament-demo.html, sceneview-3d-chart.html)
+- Filament bumped 1.70.0 → 1.70.1 (closes #762)
+- Source ↔ github.io 100% synchronized
+
+### Commits pushed
+1. `96125ab7` — PNG branding exports + meta tag fixes
+2. `01b1e1dc` — Claude Artifacts section in llms.txt
+3. `3a7eb1db` — Remove orphan demo pages
+4. `4f1062f9` — Bump Filament 1.70.0 → 1.70.1
+
+---
 
 ## WHAT WAS DONE THIS SESSION (session 22)
 
