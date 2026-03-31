@@ -4,8 +4,36 @@
 
 ## Last Session Summary
 
-**Date:** 31 mars 2026 (session 20-23)
+**Date:** 31 mars 2026 (session 20-24)
 **Branch:** main
+
+## WHAT WAS DONE THIS SESSION (session 24)
+
+### Sitemap + 404 page
+- **sitemap.xml** rewritten: removed 4 stale entries, added 3 missing pages, updated dates
+- **404.html** created: gradient design, nav links to home/docs/showcase
+- Both synced to sceneview.github.io
+
+### Open Collective tiers refonte
+- **Deleted** "Say Thank you!" tier (unnecessary)
+- **Backer** updated: $5→$10/mo, improved description (GitHub + website + device testing)
+- **Sponsor** updated: $100→$50/mo, added docs + priority support
+- **Gold Sponsor** created: $200/mo, premium placement, direct maintainer access
+- **Tags** expanded: 5→10 (added kotlin, swift, jetpack compose, swiftui, arcore)
+
+### Documentation fixes
+- **MCP tool count**: 22→26 across README, mcp/README, registry guide
+- **MCP test count**: 858→2360 in mcp/README badge + text
+- **MCP test suites**: 22→98 in mcp/README
+- **CHANGELOG.md** expanded with full session 23+24 work
+
+### Commits pushed
+1. `101cf25b` — Fix sitemap.xml
+2. `21611cca` — Add 404.html
+3. `dec36979` — Update MCP tool/test counts
+4. `135cd211` — Update CHANGELOG.md
+
+---
 
 ## WHAT WAS DONE THIS SESSION (session 23)
 
