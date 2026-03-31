@@ -40,7 +40,7 @@ Last updated: 2026-03-27
 
 **1. sceneview-mcp**
 - Name: `SceneView MCP`
-- Description: `MCP server for 3D & AR SDK code generation — Android (Jetpack Compose, Filament) and iOS (SwiftUI, RealityKit). 22 tools for model loading, AR scenes, animations, and geometry.`
+- Description: `MCP server for 3D & AR SDK code generation — Android (Jetpack Compose, Filament) and iOS (SwiftUI, RealityKit). 26 tools for model loading, AR scenes, animations, and geometry.`
 - Link: `https://github.com/sceneview/sceneview`
 - Category: `Development`
 
@@ -200,7 +200,7 @@ Use this format per issue:
 **URL:** https://github.com/sceneview/sceneview
 **Website:** https://sceneview.github.io
 
-**Description:** MCP server for SceneView — cross-platform 3D & AR SDK. 22 tools for generating correct Jetpack Compose 3D scenes, AR experiences, model loading, animations, geometry, and iOS SwiftUI/RealityKit code.
+**Description:** MCP server for SceneView — cross-platform 3D & AR SDK. 26 tools for generating correct Jetpack Compose 3D scenes, AR experiences, model loading, animations, geometry, and iOS SwiftUI/RealityKit code.
 
 **Category:** Development
 **Tags:** 3d, ar, android, ios, jetpack-compose, swiftui, filament, realitykit, arcore, arkit, sdk

@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/sceneview-mcp?color=6c35aa)](https://www.npmjs.com/package/sceneview-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/sceneview-mcp?color=blue)](https://www.npmjs.com/package/sceneview-mcp)
-[![Tests](https://img.shields.io/badge/tests-858%20passing-brightgreen)](#quality)
+[![Tests](https://img.shields.io/badge/tests-2360%20passing-brightgreen)](#quality)
 [![MCP](https://img.shields.io/badge/MCP-v1.12-blue)](https://modelcontextprotocol.io/)
 [![Registry](https://img.shields.io/badge/MCP%20Registry-listed-blueviolet)](https://registry.modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
@@ -12,7 +12,7 @@
 
 The official [Model Context Protocol](https://modelcontextprotocol.io/) server for **[SceneView](https://sceneview.github.io)** -- the cross-platform 3D & AR SDK for Android (Jetpack Compose + Filament), iOS/macOS/visionOS (SwiftUI + RealityKit), and Web (Filament.js + WebXR).
 
-Connect it to Claude, Cursor, Windsurf, or any MCP client. The assistant gets 22 specialized tools, 33 compilable code samples, a full API reference, and a code validator -- so it writes correct, working 3D/AR code on the first try.
+Connect it to Claude, Cursor, Windsurf, or any MCP client. The assistant gets 26 specialized tools, 33 compilable code samples, a full API reference, and a code validator -- so it writes correct, working 3D/AR code on the first try.
 
 > **Disclaimer:** Generated code is provided "as is" without warranty. Always review before production use. See [TERMS.md](./TERMS.md) and [PRIVACY.md](./PRIVACY.md).
 
@@ -84,7 +84,7 @@ Same JSON config as above. The server communicates via **stdio** using the stand
 
 ## What you get
 
-### 22 tools
+### 26 tools
 
 | Tool | What it does |
 |---|---|
@@ -166,7 +166,7 @@ The assistant calls `render_3d_preview` and returns an interactive link to a bro
 
 ## Quality
 
-The MCP server is tested with **858 unit tests** across 22 test suites covering:
+The MCP server is tested with **2360 unit tests** across 98 test suites covering:
 
 - Every tool response (correct output, error handling, edge cases)
 - All 33 code samples (compilable structure, correct imports, no deprecated APIs)
@@ -176,7 +176,7 @@ The MCP server is tested with **858 unit tests** across 22 test suites covering:
 
 ```
  Test Files  22 passed (22)
-      Tests  858 passed (858)
+      Tests  2360 passed (2360)
    Duration  624ms
 ```
 
@@ -228,7 +228,7 @@ The only network call is to the GitHub API (for known issues). All other tools w
 cd mcp
 npm install
 npm run prepare  # Copy llms.txt + build TypeScript
-npm test         # 858 tests
+npm test         # 2360 tests
 npm run dev      # Start with tsx (hot reload)
 ```
 
@@ -237,7 +237,7 @@ npm run dev      # Start with tsx (hot reload)
 ```
 mcp/
   src/
-    index.ts          # MCP server entry point (22 tools, 2 resources)
+    index.ts          # MCP server entry point (26 tools, 2 resources)
     samples.ts         # 33 compilable code samples (Kotlin + Swift)
     validator.ts       # Code validator (15+ rules, Kotlin + Swift)
     node-reference.ts  # Node type parser (extracts from llms.txt)
@@ -254,7 +254,7 @@ mcp/
 1. Fork the repository
 2. Create a feature branch
 3. Add tests for new tools or rules
-4. Run `npm test` -- all 858+ tests must pass
+4. Run `npm test` -- all 2360+ tests must pass
 5. Submit a pull request
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full guide.
