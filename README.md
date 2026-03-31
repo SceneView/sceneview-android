@@ -248,7 +248,7 @@ The lightest way to add 3D to any website. One script tag, one function call.
 
 SceneView is **AI-first** — designed so AI assistants generate correct, compilable 3D/AR code on the first try.
 
-The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **22 specialized tools**, **33 compilable samples**, a full API reference, and a code validator.
+The official [MCP server](./mcp/) gives Claude, Cursor, Windsurf, and any MCP client **26 specialized tools**, **33 compilable samples**, a full API reference, and a code validator.
 
 ```bash
 # Claude Code — one command
