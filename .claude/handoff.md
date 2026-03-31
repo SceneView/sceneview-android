@@ -42,11 +42,33 @@
 - Filament bumped 1.70.0 → 1.70.1 (closes #762)
 - Source ↔ github.io 100% synchronized
 
+### sceneview.js fixes
+- **Version mismatch** fixed: runtime property was "1.5.0" → now "3.6.0"
+- **IBL path** fixed: relative → absolute for embed/preview pages
+- **Synthetic IBL fallback** improved: brighter studio-style lighting for Claude Artifacts
+- **sceneview-web README** version fixed: 1.5.0 → 3.6.0
+- **llms.txt** version fixed: sceneview.js v1.5.0 → v3.6.0
+
+### QA verification — ALL pages tested
+- 9+ pages QA (index, showcase, playground, docs, geometry-demo, privacy, go/, embed/, preview/)
+- 0 broken internal links (110 checked)
+- 0 missing resources (25 JS/CSS/assets checked)
+- MkDocs docs: 0 stale versions, 0 broken links, 0 TODOs
+- MCP tests: 2360/2360 pass (98 test files)
+- KMP core JS tests: pass
+- Dependabot: 0 alerts open, 16 fixed
+- CI: all green
+
 ### Commits pushed
 1. `96125ab7` — PNG branding exports + meta tag fixes
 2. `01b1e1dc` — Claude Artifacts section in llms.txt
 3. `3a7eb1db` — Remove orphan demo pages
 4. `4f1062f9` — Bump Filament 1.70.0 → 1.70.1
+5. `b1bdebae` — Session state update
+6. `0d668324` — MCP test count 1204 → 2360
+7. `f720b2b2` — sceneview.js fixes (version, IBL, fallback)
+8. `65c4eff2` — llms.txt version fix
+9. `0d6d49bd` — sceneview-web README version fix
 
 ---
 
