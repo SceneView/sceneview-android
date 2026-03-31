@@ -1880,7 +1880,7 @@ ferrari_f40.glb
 | visionOS | RealityKit | SwiftUI | via SceneViewSwift | Alpha |
 | Web | Filament.js + WebXR | Kotlin/JS | `samples/web-demo` | Alpha |
 
-SceneView Web (sceneview.js v1.5.0) — JavaScript API:
+SceneView Web (sceneview.js v3.6.0) — JavaScript API:
   SceneView.modelViewer(canvas, url, options?) → Promise<instance>
   SceneView.create(canvas, options?) → Promise<instance>
   instance.loadModel(url) → Promise<instance>
