@@ -1537,7 +1537,7 @@
     scene.addEntity(back);
 
     // --- IBL: load real KTX if available, fallback to synthetic SH ---
-    var iblUrl = options.iblUrl || 'environments/neutral_ibl.ktx';
+    var iblUrl = options.iblUrl || '/environments/neutral_ibl.ktx';
     fetch(iblUrl)
       .then(function(r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1570,19 +1570,20 @@
   /** Fallback IBL from spherical harmonics when KTX not available */
   function _applySyntheticIBL(engine, scene) {
     try {
+      // Studio-style IBL: warm key light from above-right, cool fill from left
       var ibl = Filament.IndirectLight.Builder()
         .irradiance(3, [
-           0.65,  0.65,  0.70,
-           0.10,  0.10,  0.12,
-           0.15,  0.15,  0.18,
-          -0.02, -0.02, -0.01,
-           0.04,  0.04,  0.05,
-           0.08,  0.08,  0.10,
-           0.01,  0.01,  0.01,
-          -0.02, -0.02, -0.02,
-           0.03,  0.03,  0.03
+           1.20,  1.15,  1.10,   // L00  — bright neutral ambient
+           0.25,  0.22,  0.18,   // L1-1 — warm fill from right
+           0.35,  0.33,  0.30,   // L10  — top light (key)
+          -0.08, -0.06, -0.04,   // L11  — slight side bias
+           0.10,  0.10,  0.12,   // L2-2 — cool accent
+           0.15,  0.14,  0.12,   // L2-1 — ground bounce
+           0.02,  0.02,  0.02,   // L20  — minimal
+          -0.04, -0.04, -0.03,   // L21
+           0.06,  0.06,  0.05    // L22
         ])
-        .intensity(35000)
+        .intensity(45000)
         .build(engine);
       scene.setIndirectLight(ibl);
       console.log('SceneView: Using synthetic SH IBL');
@@ -1618,7 +1619,7 @@
   }
 
   global.SceneView = {
-    version: '1.5.0',
+    version: '3.6.0',
     create: create,
     modelViewer: modelViewer
   };
