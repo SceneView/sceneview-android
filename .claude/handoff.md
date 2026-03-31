@@ -4,8 +4,26 @@
 
 ## Last Session Summary
 
-**Date:** 31 mars 2026 (session 20)
+**Date:** 31 mars 2026 (session 20-21)
 **Branch:** main
+
+## WHAT WAS DONE THIS SESSION (session 21)
+
+### Playground QA + polish
+- **3 critical bugs fixed** in playground.html:
+  1. Syntax highlighting regex conflict — `"cm">` visible in JS/Swift code → placeholder-based `safeHighlight()` system
+  2. Line numbers wrapping — missing `white-space: pre` + font-size mismatch → CSS fix
+  3. Filament crash on model switch — `dispose()` called before materials released → reuse instance via `loadModel()`
+- **Model curation**: 28 → 23 quality models in 6 optgroups (Featured, Luxury, Interior, Automotive, Characters, Showcase)
+  - Removed 11 broken/ugly: PhoenixBird, RetroPiano, nintendo_switch, BoomBox, Porsche911, CyberpunkCar, tesla_cybertruck, AnimatedDragon, AnimatedCat, FantasyBook, MushroomPotion, GlassVaseFlowers
+  - Added 6 hidden gems: AntiqueCamera, WaterBottle, IridescenceLamp, DamaskChair, Duck, SunglassesKhronos
+- **14 unused GLB files deleted** (~75 Mo): AnimatedBee, AnimatedCat, AnimatedDog, AnimatedHummingbird, AnimatedPterodactyl, AnimatedShark, AnimatedTropicalFish, BrainStem, CandleHolder, ChocoBunny, LeatherSofa, MushroomPotion, Plant, RedCar
+- **Exhaustive QA**: 23 models × 13 examples × 3 platforms = all combinations verified
+- **All interactions tested**: Copy, Share, Claude link, platform tabs, sidebar nav, search, model select, 3D controls (rotate, bloom, bg)
+- **Responsive tested**: mobile (375px), tablet (768px), desktop — all layouts correct
+- **Dark/light mode tested**: both themes render correctly
+
+---
 
 ## WHAT WAS DONE THIS SESSION (session 20)
 

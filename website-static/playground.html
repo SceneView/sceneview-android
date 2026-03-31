@@ -555,12 +555,13 @@
       padding: 16px 0;
       text-align: right;
       font-family: var(--pg-font-mono);
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       line-height: 1.7;
       color: var(--pg-code-line);
       user-select: none;
       pointer-events: none;
       padding-right: 12px;
+      white-space: pre;
     }
 
     .pg__code-pre {
@@ -1013,42 +1014,37 @@
               <select class="pg__model-select" id="modelSelect">
                 <optgroup label="Featured">
                   <option value="DamagedHelmet">Damaged Helmet</option>
-                  <option value="Fox">Fox</option>
+                  <option value="Duck">Rubber Duck</option>
                   <option value="Avocado">Avocado</option>
-                  <option value="Lantern">Lantern</option>
+                  <option value="Fox">Fox</option>
                   <option value="Shiba">Shiba</option>
                 </optgroup>
-                <optgroup label="Vehicles">
-                  <option value="Porsche911">Porsche 911</option>
-                  <option value="CarConcept">Car Concept</option>
-                  <option value="ferrari_f40">Ferrari F40</option>
-                  <option value="tesla_cybertruck">Cybertruck</option>
-                  <option value="CyberpunkCar">Cyberpunk Car</option>
+                <optgroup label="Luxury & Fashion">
+                  <option value="SunglassesKhronos">Sunglasses</option>
+                  <option value="ChronographWatch">Watch</option>
+                  <option value="Sneaker">Sneaker</option>
+                  <option value="WaterBottle">Water Bottle</option>
                 </optgroup>
-                <optgroup label="Animated">
-                  <option value="AnimatedAstronaut">Astronaut</option>
-                  <option value="AnimatedDragon">Dragon</option>
-                  <option value="AnimatedCat">Cat</option>
-                  <option value="AnimatedTrex">T-Rex</option>
-                  <option value="PhoenixBird">Phoenix</option>
-                </optgroup>
-                <optgroup label="Furniture">
+                <optgroup label="Interior">
                   <option value="SheenChair">Sheen Chair</option>
+                  <option value="DamaskChair">Damask Chair</option>
                   <option value="VelvetSofa">Velvet Sofa</option>
                   <option value="BarnLamp">Barn Lamp</option>
-                  <option value="RetroPiano">Retro Piano</option>
-                </optgroup>
-                <optgroup label="Objects">
-                  <option value="Sneaker">Sneaker</option>
-                  <option value="ChronographWatch">Watch</option>
-                  <option value="GameBoyClassic">Game Boy</option>
-                  <option value="FantasyBook">Fantasy Book</option>
-                  <option value="MushroomPotion">Mushroom Potion</option>
-                  <option value="nintendo_switch">Nintendo Switch</option>
-                </optgroup>
-                <optgroup label="Nature">
-                  <option value="GlassVaseFlowers">Glass Vase</option>
+                  <option value="IridescenceLamp">Iridescence Lamp</option>
+                  <option value="Lantern">Lantern</option>
                   <option value="MonsteraPlant">Monstera Plant</option>
+                </optgroup>
+                <optgroup label="Automotive">
+                  <option value="CarConcept">Car Concept</option>
+                  <option value="ferrari_f40">Ferrari F40</option>
+                </optgroup>
+                <optgroup label="Characters">
+                  <option value="AnimatedAstronaut">Astronaut</option>
+                  <option value="AnimatedTrex">T-Rex</option>
+                </optgroup>
+                <optgroup label="Showcase">
+                  <option value="AntiqueCamera">Antique Camera</option>
+                  <option value="GameBoyClassic">Game Boy</option>
                   <option value="MosquitoInAmber">Mosquito in Amber</option>
                 </optgroup>
               </select>
@@ -1407,39 +1403,75 @@
     // ====================================================================
     //  SYNTAX HIGHLIGHTING
     // ====================================================================
-    function highlightKotlin(code) {
+    // Placeholder-based highlighter: extract comments & strings first to avoid
+    // regex conflicts (string regex matching HTML class attributes from prior spans).
+    function safeHighlight(code, opts) {
       var h = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      h = h.replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
-      h = h.replace(/(@\w+)/g, '<span class="ann">$1</span>');
-      h = h.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
-      h = h.replace(/\b(\d+(?:_\d+)*(?:\.\d+)?f?)\b/g, '<span class="num">$1</span>');
-      h = h.replace(/\b(package|import|fun|val|var|if|else|let|by|remember|is|return|for|in|true|false|null)\b/g, '<span class="kw">$1</span>');
-      h = h.replace(/\b(SceneView|ARSceneView|ModelNode|AnchorNode|CubeNode|SphereNode|CylinderNode|LightNode|PhysicsNode|ShapeNode|Box|Row|Column|Text|Button|FilledTonalButton|Modifier|Composable|mutableStateOf|mutableIntStateOf|mutableStateListOf|Position|Rotation|Color)\b/g, '<span class="type">$1</span>');
-      h = h.replace(/\b(rememberEngine|rememberModelLoader|rememberModelInstance|rememberEnvironmentLoader|rememberEnvironment|rememberCameraNode|rememberCameraManipulator|rememberMaterialLoader|fillMaxSize|position|lookAt|playAnimation|stopAnimation|createAnchor|addChildNode|padding|align|spacedBy|castShadows|takeIf|apply)\b/g, '<span class="fn">$1</span>');
+      var placeholders = [];
+      function ph(match, cls) {
+        var idx = placeholders.length;
+        placeholders.push('<span class="' + cls + '">' + match + '</span>');
+        return '\x00PH' + idx + '\x00';
+      }
+      // Extract comments first (greedy per-line)
+      h = h.replace(/(\/\/.*)/g, function(m) { return ph(m, 'cm'); });
+      // Extract strings
+      h = h.replace(/("(?:[^"\\]|\\.)*")/g, function(m) { return ph(m, 'str'); });
+      // Extract annotations if needed
+      if (opts.annotations) {
+        h = h.replace(/(@\w+)/g, function(m) { return ph(m, 'ann'); });
+      }
+      // Numbers
+      if (opts.numRe) {
+        h = h.replace(opts.numRe, '<span class="num">$1</span>');
+      }
+      // Keywords
+      if (opts.kwRe) {
+        h = h.replace(opts.kwRe, '<span class="kw">$1</span>');
+      }
+      // Types
+      if (opts.typeRe) {
+        h = h.replace(opts.typeRe, '<span class="type">$1</span>');
+      }
+      // Functions
+      if (opts.fnRe) {
+        h = h.replace(opts.fnRe, '<span class="fn">$1</span>');
+      }
+      // Restore placeholders
+      placeholders.forEach(function(val, i) {
+        h = h.replace('\x00PH' + i + '\x00', val);
+      });
       return h;
+    }
+
+    function highlightKotlin(code) {
+      return safeHighlight(code, {
+        annotations: true,
+        numRe: /\b(\d+(?:_\d+)*(?:\.\d+)?f?)\b/g,
+        kwRe: /\b(package|import|fun|val|var|if|else|let|by|remember|is|return|for|in|true|false|null)\b/g,
+        typeRe: /\b(SceneView|ARSceneView|ModelNode|AnchorNode|CubeNode|SphereNode|CylinderNode|LightNode|PhysicsNode|ShapeNode|Box|Row|Column|Text|Button|FilledTonalButton|Modifier|Composable|mutableStateOf|mutableIntStateOf|mutableStateListOf|Position|Rotation|Color)\b/g,
+        fnRe: /\b(rememberEngine|rememberModelLoader|rememberModelInstance|rememberEnvironmentLoader|rememberEnvironment|rememberCameraNode|rememberCameraManipulator|rememberMaterialLoader|fillMaxSize|position|lookAt|playAnimation|stopAnimation|createAnchor|addChildNode|padding|align|spacedBy|castShadows|takeIf|apply)\b/g
+      });
     }
 
     function highlightSwift(code) {
-      var h = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      h = h.replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
-      h = h.replace(/(@\w+)/g, '<span class="ann">$1</span>');
-      h = h.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
-      h = h.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
-      h = h.replace(/\b(import|struct|var|let|func|if|else|return|true|false|nil|guard|some|self|private)\b/g, '<span class="kw">$1</span>');
-      h = h.replace(/\b(View|SceneView|ARSceneView|ModelNode|GeometryNode|AnchorNode|DirectionalLightNode|Body|State|HStack|VStack|ZStack|Button|Text|ForEach|SimpleMaterial|ARFaceTrackingConfiguration|ARAnchor|Float)\b/g, '<span class="type">$1</span>');
-      h = h.replace(/\b(body|scaleToFit|cameraOrbit|environment|position|scale|color|onTapAR|onFaceUpdate|playAnimation|planeDetection|physicsBody|collision|material|buttonStyle|toggle|padding)\b/g, '<span class="fn">$1</span>');
-      return h;
+      return safeHighlight(code, {
+        annotations: true,
+        numRe: /\b(\d+(?:\.\d+)?)\b/g,
+        kwRe: /\b(import|struct|var|let|func|if|else|return|true|false|nil|guard|some|self|private)\b/g,
+        typeRe: /\b(View|SceneView|ARSceneView|ModelNode|GeometryNode|AnchorNode|DirectionalLightNode|Body|State|HStack|VStack|ZStack|Button|Text|ForEach|SimpleMaterial|ARFaceTrackingConfiguration|ARAnchor|Float)\b/g,
+        fnRe: /\b(body|scaleToFit|cameraOrbit|environment|position|scale|color|onTapAR|onFaceUpdate|playAnimation|planeDetection|physicsBody|collision|material|buttonStyle|toggle|padding)\b/g
+      });
     }
 
     function highlightJS(code) {
-      var h = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      h = h.replace(/(\/\/.*)/g, '<span class="cm">$1</span>');
-      h = h.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
-      h = h.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
-      h = h.replace(/\b(const|let|var|function|async|await|if|else|return|true|false|null|new)\b/g, '<span class="kw">$1</span>');
-      h = h.replace(/\b(SceneView|Promise)\b/g, '<span class="type">$1</span>');
-      h = h.replace(/\b(modelViewer|create|loadModel|loadEnvironment|enableCameraControls|fitToModels|setBloom|setQuality|setMetallic|setRoughness|setColor|setPosition|setScale|setTransform|addLight|addEventListener|requestSession|requestHitTestSource|getResults|all)\b/g, '<span class="fn">$1</span>');
-      return h;
+      return safeHighlight(code, {
+        annotations: false,
+        numRe: /\b(\d+(?:\.\d+)?)\b/g,
+        kwRe: /\b(const|let|var|function|async|await|if|else|return|true|false|null|new)\b/g,
+        typeRe: /\b(SceneView|Promise)\b/g,
+        fnRe: /\b(modelViewer|create|loadModel|loadEnvironment|enableCameraControls|fitToModels|setBloom|setQuality|setMetallic|setRoughness|setColor|setPosition|setScale|setTransform|addLight|addEventListener|requestSession|requestHitTestSource|getResults|all)\b/g
+      });
     }
 
     function highlight(code, lang) {
@@ -1574,10 +1606,14 @@
         console.warn('SceneView not loaded');
         return;
       }
+      // Reuse existing instance — just swap the model
       if (sceneViewInstance) {
-        try { sceneViewInstance.dispose(); } catch(e) {}
-        sceneViewInstance = null;
+        sceneViewInstance.loadModel(modelUrl).catch(function(e) {
+          console.warn('SceneView loadModel error:', e);
+        });
+        return;
       }
+      // First init — create the viewer
       SceneView.modelViewer('previewCanvas', modelUrl, {
         backgroundColor: getBgColor(),
         autoRotate: autoRotate
@@ -1589,6 +1625,17 @@
       }).catch(function(e) {
         console.warn('SceneView init error:', e);
       });
+    }
+
+    function updatePreviewSettings() {
+      if (!sceneViewInstance) return;
+      var bg = getBgColor();
+      if (sceneViewInstance.setBackgroundColor) {
+        sceneViewInstance.setBackgroundColor(bg[0], bg[1], bg[2], bg[3]);
+      }
+      if (sceneViewInstance.setAutoRotate) {
+        sceneViewInstance.setAutoRotate(autoRotate);
+      }
     }
 
     modelSelect.addEventListener('change', function() {
@@ -1609,8 +1656,7 @@
     ctrlRotate.addEventListener('click', function() {
       autoRotate = !autoRotate;
       ctrlRotate.classList.toggle('pg__ctrl-btn--active', autoRotate);
-      // Re-init to apply
-      initSceneView(getModelUrl(modelSelect.value));
+      updatePreviewSettings();
     });
 
     ctrlBloom.addEventListener('click', function() {
@@ -1624,8 +1670,7 @@
     ctrlBg.addEventListener('click', function() {
       darkBg = !darkBg;
       ctrlBg.classList.toggle('pg__ctrl-btn--active', !darkBg);
-      // Re-init to apply bg
-      initSceneView(getModelUrl(modelSelect.value));
+      updatePreviewSettings();
     });
 
     // ====================================================================
