@@ -4,9 +4,9 @@
 
 | Version | Support Level          |
 | ------- | ---------------------- |
-| 3.2.x   | Fully supported        |
-| 3.1.x   | Security fixes only    |
-| < 3.1   | Not supported          |
+| 3.6.x   | Fully supported        |
+| 3.5.x   | Security fixes only    |
+| < 3.5   | Not supported          |
 
 ## Reporting a Vulnerability
 
