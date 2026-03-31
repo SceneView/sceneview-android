@@ -541,6 +541,7 @@
       overflow: auto;
       background: var(--pg-code-bg);
       position: relative;
+      display: flex;
     }
 
     .pg__code-area::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -548,11 +549,12 @@
     .pg__code-area::-webkit-scrollbar-thumb { background: var(--pg-code-line); border-radius: 3px; }
 
     .pg__line-nums {
-      position: absolute;
-      top: 0;
+      position: sticky;
       left: 0;
+      top: 0;
       width: 48px;
-      padding: 16px 0;
+      min-width: 48px;
+      padding: 16px 12px 16px 0;
       text-align: right;
       font-family: var(--pg-font-mono);
       font-size: 0.8rem;
@@ -560,13 +562,14 @@
       color: var(--pg-code-line);
       user-select: none;
       pointer-events: none;
-      padding-right: 12px;
       white-space: pre;
+      background: var(--pg-code-bg);
+      z-index: 1;
     }
 
     .pg__code-pre {
       display: block;
-      padding: 16px 20px 16px 60px;
+      padding: 16px 20px 16px 12px;
       font-family: var(--pg-font-mono);
       font-size: 0.8rem;
       line-height: 1.7;
@@ -860,6 +863,35 @@
       }
     }
 
+    .pg__mobile-examples {
+      display: none;
+    }
+
+    @media (max-width: 1024px) {
+      .pg__mobile-examples {
+        display: block;
+        padding: 4px 8px;
+        border: 1px solid var(--color-outline, #777b84);
+        border-radius: var(--pg-radius-sm);
+        background: var(--color-surface-container, #ecedf6);
+        color: var(--color-on-surface, #2e333a);
+        font-size: 0.75rem;
+        font-family: var(--font-body, 'Inter', sans-serif);
+        max-width: 160px;
+      }
+
+      [data-theme="dark"] .pg__mobile-examples {
+        background: #21262d;
+        color: #f0f6fc;
+        border-color: #484f58;
+      }
+
+      .pg__breadcrumb-name,
+      .pg__breadcrumb-sep {
+        display: none;
+      }
+    }
+
     @media (max-width: 768px) {
       .pg__sidebar {
         display: none;
@@ -950,11 +982,12 @@
         <span class="pg__title">Playground</span>
         <span class="pg__breadcrumb-sep">/</span>
         <span class="pg__breadcrumb-name" id="pgBreadcrumb">Model Viewer</span>
+        <select class="pg__mobile-examples" id="mobileExampleSelect" aria-label="Select example"></select>
       </div>
       <div class="pg__header-center">
-        <button class="pg__platform-pill pg__platform-pill--active" data-platform="android">Android</button>
-        <button class="pg__platform-pill" data-platform="ios">iOS</button>
-        <button class="pg__platform-pill" data-platform="web">Web</button>
+        <button class="pg__platform-pill pg__platform-pill--active" data-platform="android" aria-pressed="true">Android</button>
+        <button class="pg__platform-pill" data-platform="ios" aria-pressed="false">iOS</button>
+        <button class="pg__platform-pill" data-platform="web" aria-pressed="false">Web</button>
       </div>
       <div class="pg__header-right">
         <button class="pg__action-btn" id="copyBtn" title="Copy code">
@@ -980,7 +1013,7 @@
         <div class="pg__search">
           <div class="pg__search-wrap">
             <span class="material-symbols-outlined pg__search-icon">search</span>
-            <input type="text" class="pg__search-input" id="searchInput" placeholder="Search examples..." autocomplete="off">
+            <input type="text" class="pg__search-input" id="searchInput" placeholder="Search examples..." autocomplete="off" aria-label="Search examples">
           </div>
         </div>
         <div class="pg__examples" id="exampleList"></div>
@@ -1396,6 +1429,7 @@
     var orbitHint = $('orbitHint');
     var searchInput = $('searchInput');
     var exampleList = $('exampleList');
+    var mobileExampleSelect = $('mobileExampleSelect');
     var ctrlRotate = $('ctrlRotate');
     var ctrlBloom = $('ctrlBloom');
     var ctrlBg = $('ctrlBg');
@@ -1498,7 +1532,7 @@
         if (items.length === 0) return;
 
         html += '<div class="pg__category" data-cat="' + cat.id + '">';
-        html += '<div class="pg__category-header" onclick="this.parentElement.classList.toggle(\'pg__category--collapsed\')">';
+        html += '<div class="pg__category-header" role="button" tabindex="0" onclick="this.parentElement.classList.toggle(\'pg__category--collapsed\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.parentElement.classList.toggle(\'pg__category--collapsed\')}">';
         html += '<span class="material-symbols-outlined">expand_more</span>';
         html += cat.label;
         html += '<span class="pg__category-count">' + items.length + '</span>';
@@ -1506,7 +1540,7 @@
         html += '<div class="pg__category-items">';
         items.forEach(function(item) {
           var active = item.key === currentExample ? ' pg__item--active' : '';
-          html += '<div class="pg__item' + active + '" data-key="' + item.key + '">';
+          html += '<div class="pg__item' + active + '" data-key="' + item.key + '" role="button" tabindex="0">';
           html += '<span class="material-symbols-outlined pg__item-icon">' + item.ex.icon + '</span>';
           html += '<span class="pg__item-name">' + item.ex.title + '</span>';
           html += '<span class="pg__item-badge pg__item-badge--' + item.ex.level + '" title="' + item.ex.level + '"></span>';
@@ -1517,12 +1551,31 @@
 
       exampleList.innerHTML = html;
 
-      // Bind click
+      // Bind click + keyboard
       exampleList.querySelectorAll('.pg__item').forEach(function(el) {
-        el.addEventListener('click', function() {
-          loadExample(el.getAttribute('data-key'));
+        function activate() { loadExample(el.getAttribute('data-key')); }
+        el.addEventListener('click', activate);
+        el.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
         });
       });
+
+      // Populate mobile example select
+      var selHtml = '';
+      CATEGORIES.forEach(function(cat) {
+        var catItems = [];
+        Object.keys(EXAMPLES).forEach(function(key) {
+          if (EXAMPLES[key].category === cat.id) catItems.push({ key: key, title: EXAMPLES[key].title });
+        });
+        if (catItems.length === 0) return;
+        selHtml += '<optgroup label="' + cat.label + '">';
+        catItems.forEach(function(item) {
+          var sel = item.key === currentExample ? ' selected' : '';
+          selHtml += '<option value="' + item.key + '"' + sel + '>' + item.title + '</option>';
+        });
+        selHtml += '</optgroup>';
+      });
+      mobileExampleSelect.innerHTML = selHtml;
     }
 
     // ====================================================================
@@ -1567,6 +1620,9 @@
       exampleList.querySelectorAll('.pg__item').forEach(function(el) {
         el.classList.toggle('pg__item--active', el.getAttribute('data-key') === key);
       });
+
+      // Sync mobile select
+      mobileExampleSelect.value = key;
     }
 
     // ====================================================================
@@ -1576,8 +1632,10 @@
       pill.addEventListener('click', function() {
         document.querySelectorAll('.pg__platform-pill').forEach(function(p) {
           p.classList.remove('pg__platform-pill--active');
+          p.setAttribute('aria-pressed', 'false');
         });
         pill.classList.add('pg__platform-pill--active');
+        pill.setAttribute('aria-pressed', 'true');
         currentPlatform = pill.getAttribute('data-platform');
         loadExample(currentExample);
       });
@@ -1676,18 +1734,40 @@
     // ====================================================================
     //  COPY / SHARE
     // ====================================================================
+    function copyToClipboard(text, btn, label, originalText) {
+      var done = function() {
+        btn.classList.add('pg__action-btn--copied');
+        label.textContent = 'Copied!';
+        setTimeout(function() {
+          btn.classList.remove('pg__action-btn--copied');
+          label.textContent = originalText;
+        }, 2000);
+      };
+      var fail = function() {
+        label.textContent = 'Failed';
+        setTimeout(function() { label.textContent = originalText; }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(fail);
+      } else {
+        // Fallback for non-HTTPS
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (e) { fail(); }
+        document.body.removeChild(ta);
+      }
+    }
+
     copyBtn.addEventListener('click', function() {
       var ex = EXAMPLES[currentExample];
       if (!ex) return;
       var platData = ex[currentPlatform] || ex.android;
-      navigator.clipboard.writeText(platData.code).then(function() {
-        copyBtn.classList.add('pg__action-btn--copied');
-        copyLabel.textContent = 'Copied!';
-        setTimeout(function() {
-          copyBtn.classList.remove('pg__action-btn--copied');
-          copyLabel.textContent = 'Copy';
-        }, 2000);
-      });
+      copyToClipboard(platData.code, copyBtn, copyLabel, 'Copy');
     });
 
     shareBtn.addEventListener('click', function() {
@@ -1696,14 +1776,7 @@
       params.set('platform', currentPlatform);
       params.set('model', modelSelect.value);
       var url = window.location.origin + window.location.pathname + '?' + params.toString();
-      navigator.clipboard.writeText(url).then(function() {
-        shareBtn.classList.add('pg__action-btn--copied');
-        shareLabel.textContent = 'Copied!';
-        setTimeout(function() {
-          shareBtn.classList.remove('pg__action-btn--copied');
-          shareLabel.textContent = 'Share';
-        }, 2000);
-      });
+      copyToClipboard(url, shareBtn, shareLabel, 'Share');
     });
 
     // ====================================================================
@@ -1711,6 +1784,10 @@
     // ====================================================================
     searchInput.addEventListener('input', function() {
       renderSidebar(this.value);
+    });
+
+    mobileExampleSelect.addEventListener('change', function() {
+      loadExample(this.value);
     });
 
     // ====================================================================
