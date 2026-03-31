@@ -145,7 +145,7 @@ Never say "everything is good" without verifying published packages.
 
 - **Active branch**: `main`
 - **Latest release**: v3.6.0 (GitHub Release + Maven Central + npm — ALL PUBLISHED)
-- **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 1204 tests), 9 MCPs total
+- **MCP servers**: sceneview-mcp 3.5.4 on npm (32 tools, 2360 tests), 9 MCPs total
 - **sceneview-web**: v3.6.0 on npm (Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
 - **Website**: sceneview.github.io — PNG meta tags, favicon.ico, all orphans cleaned, 26 models
