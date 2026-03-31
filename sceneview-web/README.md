@@ -29,7 +29,7 @@ SceneView.create(
 )
 ```
 
-## JavaScript API (sceneview.js v1.5.0)
+## JavaScript API (sceneview.js v3.6.0)
 
 For browser usage without Kotlin, use `sceneview.js` directly:
 
