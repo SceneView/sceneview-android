@@ -854,6 +854,13 @@
     }
 
     /* ===== RESPONSIVE ===== */
+    @media (max-width: 1200px) {
+      .pg__header-center {
+        max-width: 340px;
+        flex-wrap: nowrap;
+      }
+    }
+
     @media (max-width: 1024px) {
       .pg__sidebar {
         width: 220px;
@@ -934,6 +941,189 @@
         display: none;
       }
     }
+
+    /* ===== CONTROL BUTTON TOOLTIPS ===== */
+    .pg__ctrl-btn {
+      position: relative;
+    }
+
+    .pg__ctrl-tooltip {
+      display: none;
+      position: absolute;
+      right: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 4px 10px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      white-space: nowrap;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .pg__ctrl-btn:hover .pg__ctrl-tooltip {
+      display: block;
+    }
+
+    /* Control separator */
+    .pg__ctrl-sep {
+      width: 24px;
+      height: 1px;
+      background: var(--color-outline-variant, #aeb2bc);
+      margin: 4px auto;
+      opacity: 0.4;
+    }
+
+    /* Camera manipulator dropdown */
+    .pg__ctrl-dropdown-wrap {
+      position: relative;
+    }
+
+    .pg__ctrl-dropdown {
+      display: none;
+      position: absolute;
+      right: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: var(--pg-radius-md);
+      box-shadow: var(--pg-shadow-float);
+      overflow: hidden;
+      z-index: 20;
+      min-width: 140px;
+    }
+
+    [data-theme="dark"] .pg__ctrl-dropdown {
+      background: rgba(33, 38, 45, 0.95);
+    }
+
+    .pg__ctrl-dropdown-wrap.pg__ctrl-dropdown--open .pg__ctrl-dropdown {
+      display: block;
+    }
+
+    .pg__ctrl-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--color-on-surface, #2e333a);
+      font-family: var(--font-body, 'Inter', sans-serif);
+      transition: background var(--pg-transition);
+    }
+
+    .pg__ctrl-dropdown-item:hover {
+      background: var(--color-surface-container-high, #e5e8f1);
+    }
+
+    [data-theme="dark"] .pg__ctrl-dropdown-item {
+      color: #c9d1d9;
+    }
+
+    [data-theme="dark"] .pg__ctrl-dropdown-item:hover {
+      background: rgba(121, 192, 255, 0.08);
+    }
+
+    .pg__ctrl-dropdown-item--active {
+      color: var(--color-primary, #005bc1);
+      font-weight: 600;
+    }
+
+    [data-theme="dark"] .pg__ctrl-dropdown-item--active {
+      color: #79c0ff;
+    }
+
+    /* ===== AI BUTTON GROUP ===== */
+    .pg__ai-group {
+      display: inline-flex;
+      align-items: center;
+      position: relative;
+    }
+
+    .pg__ai-more-btn {
+      padding: 6px 6px;
+      border-radius: 0 var(--pg-radius-sm) var(--pg-radius-sm) 0;
+      margin-left: -1px;
+      background: #c4622e;
+      color: #fff;
+    }
+
+    .pg__ai-more-btn:hover {
+      background: #b55520;
+      color: #fff;
+    }
+
+    .pg__action-btn--claude {
+      border-radius: var(--pg-radius-sm) 0 0 var(--pg-radius-sm);
+    }
+
+    .pg__ai-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: var(--pg-radius-md);
+      box-shadow: var(--pg-shadow-float);
+      overflow: hidden;
+      z-index: 30;
+      min-width: 200px;
+    }
+
+    [data-theme="dark"] .pg__ai-dropdown {
+      background: rgba(33, 38, 45, 0.95);
+    }
+
+    .pg__ai-group.pg__ai-dropdown--open .pg__ai-dropdown {
+      display: block;
+    }
+
+    .pg__ai-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--color-on-surface, #2e333a);
+      text-decoration: none;
+      transition: background var(--pg-transition);
+    }
+
+    .pg__ai-option:hover {
+      background: var(--color-surface-container-high, #e5e8f1);
+    }
+
+    [data-theme="dark"] .pg__ai-option {
+      color: #c9d1d9;
+    }
+
+    [data-theme="dark"] .pg__ai-option:hover {
+      background: rgba(121, 192, 255, 0.08);
+    }
+
+    /* ===== PLATFORM PILLS OVERFLOW ===== */
+    .pg__header-center {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .pg__header-center::-webkit-scrollbar {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -952,7 +1142,7 @@
         <a href="/#features" class="nav__link">Features</a>
         <a href="/showcase.html" class="nav__link">Showcase</a>
         <a href="/playground.html" class="nav__link nav__link--active">Playground</a>
-        <a href="https://sceneview.github.io/docs/" class="nav__link" target="_blank" rel="noopener">Docs</a>
+        <a href="/docs.html" class="nav__link" target="_blank" rel="noopener">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -989,6 +1179,10 @@
         <button class="pg__platform-pill pg__platform-pill--active" data-platform="android" aria-pressed="true">Android</button>
         <button class="pg__platform-pill" data-platform="ios" aria-pressed="false">iOS</button>
         <button class="pg__platform-pill" data-platform="web" aria-pressed="false">Web</button>
+        <button class="pg__platform-pill" data-platform="flutter" aria-pressed="false">Flutter</button>
+        <button class="pg__platform-pill" data-platform="reactnative" aria-pressed="false">React Native</button>
+        <button class="pg__platform-pill" data-platform="desktop" aria-pressed="false">Desktop</button>
+        <button class="pg__platform-pill" data-platform="claude" aria-pressed="false">MCP / Claude</button>
       </div>
       <div class="pg__header-right">
         <button class="pg__action-btn" id="copyBtn" title="Copy code">
@@ -999,10 +1193,29 @@
           <span class="material-symbols-outlined">share</span>
           <span id="shareLabel">Share</span>
         </button>
-        <a class="pg__action-btn pg__action-btn--claude" id="claudeLink" href="https://claude.ai/new" target="_blank" rel="noopener" title="Open in Claude">
-          <span class="material-symbols-outlined">chat</span>
-          <span>Claude</span>
-        </a>
+        <div class="pg__ai-group" id="aiGroup">
+          <a class="pg__action-btn pg__action-btn--claude" id="claudeLink" href="https://claude.ai/new" target="_blank" rel="noopener" title="Open in Claude">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.1 2.96l-4.44 11.87L7.22 2.96H2L9.8 21.04h3.6L21.2 2.96h-5.1z"/></svg>
+            <span>Open in Claude</span>
+          </a>
+          <button class="pg__action-btn pg__ai-more-btn" id="aiMoreBtn" title="More AI tools" aria-haspopup="true" aria-expanded="false">
+            <span class="material-symbols-outlined" style="font-size:14px">expand_more</span>
+          </button>
+          <div class="pg__ai-dropdown" id="aiDropdown">
+            <a class="pg__ai-option" id="aiCursor" href="#" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined" style="font-size:16px">terminal</span>
+              Open in Cursor
+            </a>
+            <a class="pg__ai-option" id="aiWindsurf" href="#" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined" style="font-size:16px">air</span>
+              Open in Windsurf
+            </a>
+            <a class="pg__ai-option" id="aiCopilot" href="#" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined" style="font-size:16px">smart_toy</span>
+              Open in GitHub Copilot
+            </a>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1086,15 +1299,36 @@
             <div class="pg__canvas-wrap">
               <canvas id="previewCanvas" aria-label="3D preview powered by SceneView / Filament.js"></canvas>
               <div class="pg__controls">
-                <button class="pg__ctrl-btn pg__ctrl-btn--active" id="ctrlRotate" title="Auto-rotate">
+                <button class="pg__ctrl-btn pg__ctrl-btn--active" id="ctrlRotate" title="Auto-rotate" data-label="Rotate: ON">
                   <span class="material-symbols-outlined">360</span>
+                  <span class="pg__ctrl-tooltip">Rotate: ON</span>
                 </button>
-                <button class="pg__ctrl-btn" id="ctrlBloom" title="Bloom">
+                <button class="pg__ctrl-btn" id="ctrlBloom" title="Bloom" data-label="Bloom: OFF">
                   <span class="material-symbols-outlined">blur_on</span>
+                  <span class="pg__ctrl-tooltip">Bloom: OFF</span>
                 </button>
-                <button class="pg__ctrl-btn" id="ctrlBg" title="Toggle background">
+                <button class="pg__ctrl-btn" id="ctrlBg" title="Toggle background" data-label="Background">
                   <span class="material-symbols-outlined">contrast</span>
+                  <span class="pg__ctrl-tooltip">Background</span>
                 </button>
+                <div class="pg__ctrl-sep"></div>
+                <div class="pg__ctrl-dropdown-wrap" id="cameraManipWrap">
+                  <button class="pg__ctrl-btn" id="ctrlCamera" title="Camera manipulator" data-label="Camera: Orbit">
+                    <span class="material-symbols-outlined">3d_rotation</span>
+                    <span class="pg__ctrl-tooltip">Orbit</span>
+                  </button>
+                  <div class="pg__ctrl-dropdown" id="cameraDropdown">
+                    <button class="pg__ctrl-dropdown-item pg__ctrl-dropdown-item--active" data-camera="orbit">
+                      <span class="material-symbols-outlined" style="font-size:16px">3d_rotation</span> Orbit
+                    </button>
+                    <button class="pg__ctrl-dropdown-item" data-camera="freeflight">
+                      <span class="material-symbols-outlined" style="font-size:16px">flight</span> Free Flight
+                    </button>
+                    <button class="pg__ctrl-dropdown-item" data-camera="map">
+                      <span class="material-symbols-outlined" style="font-size:16px">map</span> Map
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="pg__orbit-hint" id="orbitHint">Drag to orbit &middot; Scroll to zoom</div>
             </div>
@@ -1107,7 +1341,7 @@
             <span class="pg__bottom-text" id="descText">A basic 3D model viewer with orbit controls and environment lighting.</span>
           </div>
           <div class="pg__bottom-tags" id="descTags"></div>
-          <a class="pg__bottom-link" href="https://sceneview.github.io/docs/" target="_blank" rel="noopener">View docs &rarr;</a>
+          <a class="pg__bottom-link" href="/docs.html" target="_blank" rel="noopener">View docs &rarr;</a>
         </div>
       </div>
 
@@ -1142,6 +1376,22 @@
         web: {
           file: 'model-viewer.js', lang: 'JavaScript',
           code: '// SceneView Web — Model Viewer\nconst viewer = await SceneView.modelViewer(\n    "canvas",\n    "models/helmet.glb",\n    {\n        autoRotate: true,\n        cameraDistance: 4.0,\n        backgroundColor: [0.07, 0.07, 0.11, 1.0]\n    }\n);\n\n// Optional: load environment for PBR reflections\nawait viewer.loadEnvironment("envs/neutral.ktx");\n\n// Orbit controls are enabled by default\n// Drag to rotate, scroll to zoom, right-drag to pan'
+        },
+        flutter: {
+          file: 'model_viewer.dart', lang: 'Dart',
+          code: 'import \'package:flutter/material.dart\';\nimport \'package:sceneview_flutter/sceneview_flutter.dart\';\n\nclass ModelViewerPage extends StatelessWidget {\n  const ModelViewerPage({super.key});\n\n  @override\n  Widget build(BuildContext context) {\n    return Scaffold(\n      body: SceneView(\n        model: \"models/helmet.glb\",\n        environment: \"envs/sky.hdr\",\n        cameraOrbit: const CameraOrbit(\n          distance: 4.0,\n        ),\n        autoRotate: true,\n      ),\n    );\n  }\n}'
+        },
+        reactnative: {
+          file: 'ModelViewer.tsx', lang: 'TypeScript',
+          code: 'import React from \'react\';\nimport { SceneView } from \'react-native-sceneview\';\n\nexport function ModelViewer() {\n  return (\n    <SceneView\n      model=\"models/helmet.glb\"\n      environment=\"envs/sky.hdr\"\n      cameraDistance={4.0}\n      autoRotate\n      style={{ flex: 1 }}\n    />\n  );\n}'
+        },
+        desktop: {
+          file: 'ModelViewerScreen.kt', lang: 'Kotlin',
+          code: '// Desktop support is a wireframe placeholder.\n// Filament JNI is not yet available for\n// Compose Desktop (JVM/AWT).\n//\n// The desktop sample uses Compose Canvas\n// for wireframe rendering only.\n//\n// For production desktop 3D, consider:\n// - SceneView Web in an embedded browser\n// - Native Filament C++ with JNI bindings\n// - Vulkan/OpenGL direct integration\n\n// Wireframe placeholder:\nimport androidx.compose.foundation.Canvas\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.runtime.Composable\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.geometry.Offset\nimport androidx.compose.ui.graphics.Color\n\n@Composable\nfun ModelViewerScreen() {\n    Canvas(modifier = Modifier.fillMaxSize()) {\n        // Wireframe cube placeholder\n        drawLine(Color.Blue, Offset(100f, 100f), Offset(300f, 100f))\n        drawLine(Color.Blue, Offset(300f, 100f), Offset(300f, 300f))\n        drawLine(Color.Blue, Offset(300f, 300f), Offset(100f, 300f))\n        drawLine(Color.Blue, Offset(100f, 300f), Offset(100f, 100f))\n    }\n}'
+        },
+        claude: {
+          file: 'prompt.md', lang: 'Markdown',
+          code: '# MCP / Claude — Model Viewer\n\n## Prompt to Claude:\n\n> Build me a 3D model viewer Android app\n> using SceneView. Load a GLB model with\n> environment lighting and orbit camera.\n\n## Claude will generate:\n\n```kotlin\nSceneView(\n    modifier = Modifier.fillMaxSize(),\n    engine = engine,\n    environment = rememberEnvironment(\n        envLoader, \"envs/sky.hdr\"\n    ),\n    cameraManipulator = rememberCameraManipulator()\n) {\n    rememberModelInstance(\n        modelLoader, \"models/helmet.glb\"\n    )?.let { ModelNode(modelInstance = it) }\n}\n```\n\n## SceneView MCP Tools:\n- `create_scene` — scaffold a new 3D scene\n- `add_model` — add a GLB/USDZ model node\n- `configure_camera` — set orbit/freeflight\n- `set_environment` — load HDR lighting'
         }
       },
       'environment-setup': {
@@ -1509,9 +1759,49 @@
       });
     }
 
+    function highlightDart(code) {
+      return safeHighlight(code, {
+        annotations: true,
+        numRe: /\b(\d+(?:\.\d+)?)\b/g,
+        kwRe: /\b(import|class|extends|const|final|var|void|return|if|else|true|false|null|this|super|override|static|new)\b/g,
+        typeRe: /\b(Widget|BuildContext|StatelessWidget|StatefulWidget|State|Scaffold|SceneView|CameraOrbit|Key|MaterialApp|Text|Container|Column|Row)\b/g,
+        fnRe: /\b(build|setState|dispose|initState)\b/g
+      });
+    }
+
+    function highlightTS(code) {
+      return safeHighlight(code, {
+        annotations: false,
+        numRe: /\b(\d+(?:\.\d+)?)\b/g,
+        kwRe: /\b(import|export|function|const|let|var|return|from|if|else|true|false|null|async|await|interface|type)\b/g,
+        typeRe: /\b(React|SceneView|View|StyleSheet)\b/g,
+        fnRe: /\b(useState|useEffect|useRef|useCallback)\b/g
+      });
+    }
+
+    function highlightMarkdown(code) {
+      var h = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      // Headers
+      h = h.replace(/^(#{1,3}\s.*)$/gm, '<span class="kw">$1</span>');
+      // Bold
+      h = h.replace(/(\*\*[^*]+\*\*)/g, '<span class="type">$1</span>');
+      // Code blocks
+      h = h.replace(/(```[\s\S]*?```)/g, '<span class="str">$1</span>');
+      // Inline code
+      h = h.replace(/(`[^`]+`)/g, '<span class="fn">$1</span>');
+      // Blockquotes
+      h = h.replace(/^(&gt;\s.*)$/gm, '<span class="cm">$1</span>');
+      // List items starting with -
+      h = h.replace(/^(\s*-\s)/gm, '<span class="ann">$1</span>');
+      return h;
+    }
+
     function highlight(code, lang) {
       if (lang === 'Kotlin') return highlightKotlin(code);
       if (lang === 'Swift') return highlightSwift(code);
+      if (lang === 'Dart') return highlightDart(code);
+      if (lang === 'TypeScript') return highlightTS(code);
+      if (lang === 'Markdown') return highlightMarkdown(code);
       return highlightJS(code);
     }
 
@@ -1582,12 +1872,42 @@
     // ====================================================================
     //  LOAD EXAMPLE
     // ====================================================================
+    // Fallback code generators for platforms without explicit snippets
+    function generateFallback(platform, ex) {
+      var title = ex.title;
+      if (platform === 'flutter') {
+        return {
+          file: title.replace(/\s+/g, '') + '.dart', lang: 'Dart',
+          code: '// Flutter — ' + title + '\n//\n// SceneView Flutter uses PlatformView to bridge\n// to native SceneView (Android) and\n// SceneViewSwift (iOS) renderers.\n//\nimport \'package:flutter/material.dart\';\nimport \'package:sceneview_flutter/sceneview_flutter.dart\';\n\nclass ' + title.replace(/\s+/g, '') + 'Page extends StatelessWidget {\n  const ' + title.replace(/\s+/g, '') + 'Page({super.key});\n\n  @override\n  Widget build(BuildContext context) {\n    return const Scaffold(\n      body: SceneView(\n        // Configure scene properties here\n        model: \"models/helmet.glb\",\n        autoRotate: true,\n      ),\n    );\n  }\n}'
+        };
+      }
+      if (platform === 'reactnative') {
+        return {
+          file: title.replace(/\s+/g, '') + '.tsx', lang: 'TypeScript',
+          code: '// React Native — ' + title + '\n//\n// SceneView React Native uses Fabric components\n// bridging to native SceneView renderers.\n//\nimport React from \'react\';\nimport { SceneView } from \'react-native-sceneview\';\n\nexport function ' + title.replace(/\s+/g, '') + '() {\n  return (\n    <SceneView\n      model=\"models/helmet.glb\"\n      autoRotate\n      style={{ flex: 1 }}\n    />\n  );\n}'
+        };
+      }
+      if (platform === 'desktop') {
+        return {
+          file: title.replace(/\s+/g, '') + '.kt', lang: 'Kotlin',
+          code: '// Desktop — ' + title + '\n//\n// Compose Desktop support is a wireframe\n// placeholder. Filament JNI is not yet\n// available for JVM/AWT targets.\n//\n// For production desktop 3D:\n// - Use SceneView Web in embedded browser\n// - Native Filament C++ with JNI bindings\n// - Vulkan/OpenGL direct integration\n//\n// The desktop sample app demonstrates\n// D-pad navigation and basic wireframe\n// rendering via Compose Canvas.'
+        };
+      }
+      if (platform === 'claude') {
+        return {
+          file: 'prompt.md', lang: 'Markdown',
+          code: '# MCP / Claude — ' + title + '\n\n## Prompt to Claude:\n\n> Help me implement \"' + title + '\" using SceneView.\n> Use the SceneView SDK for Android with\n> Jetpack Compose.\n\n## SceneView MCP Server:\n\nThe sceneview-mcp server provides 26 tools\nfor AI-assisted 3D/AR development:\n\n- `create_scene` — scaffold a project\n- `add_model` — add 3D model nodes\n- `configure_camera` — camera setup\n- `set_environment` — HDR lighting\n- `add_ar_plane_detection` — AR features\n\n## Install MCP:\n```bash\nnpx sceneview-mcp\n```\n\nOr add to claude_desktop_config.json:\n```json\n{\n  \"mcpServers\": {\n    \"sceneview\": {\n      \"command\": \"npx\",\n      \"args\": [\"sceneview-mcp\"]\n    }\n  }\n}\n```'
+        };
+      }
+      return ex.android;
+    }
+
     function loadExample(key) {
       var ex = EXAMPLES[key];
       if (!ex) return;
       currentExample = key;
 
-      var platData = ex[currentPlatform] || ex.android;
+      var platData = ex[currentPlatform] || generateFallback(currentPlatform, ex);
       var code = platData.code;
       var lang = platData.lang;
 
@@ -1624,6 +1944,9 @@
 
       // Sync mobile select
       mobileExampleSelect.value = key;
+
+      // Update AI tool links
+      updateAILinks();
     }
 
     // ====================================================================
@@ -1715,12 +2038,14 @@
     ctrlRotate.addEventListener('click', function() {
       autoRotate = !autoRotate;
       ctrlRotate.classList.toggle('pg__ctrl-btn--active', autoRotate);
+      ctrlRotate.querySelector('.pg__ctrl-tooltip').textContent = 'Rotate: ' + (autoRotate ? 'ON' : 'OFF');
       updatePreviewSettings();
     });
 
     ctrlBloom.addEventListener('click', function() {
       bloomEnabled = !bloomEnabled;
       ctrlBloom.classList.toggle('pg__ctrl-btn--active', bloomEnabled);
+      ctrlBloom.querySelector('.pg__ctrl-tooltip').textContent = 'Bloom: ' + (bloomEnabled ? 'ON' : 'OFF');
       if (sceneViewInstance && sceneViewInstance.setBloom) {
         sceneViewInstance.setBloom(bloomEnabled ? { strength: 0.2, resolution: 512 } : false);
       }
@@ -1729,8 +2054,85 @@
     ctrlBg.addEventListener('click', function() {
       darkBg = !darkBg;
       ctrlBg.classList.toggle('pg__ctrl-btn--active', !darkBg);
+      ctrlBg.querySelector('.pg__ctrl-tooltip').textContent = darkBg ? 'Dark BG' : 'Light BG';
       updatePreviewSettings();
     });
+
+    // ====================================================================
+    //  CAMERA MANIPULATOR DROPDOWN
+    // ====================================================================
+    var ctrlCamera = $('ctrlCamera');
+    var cameraManipWrap = $('cameraManipWrap');
+    var cameraDropdown = $('cameraDropdown');
+    var currentCamera = 'orbit';
+
+    ctrlCamera.addEventListener('click', function(e) {
+      e.stopPropagation();
+      cameraManipWrap.classList.toggle('pg__ctrl-dropdown--open');
+    });
+
+    cameraDropdown.querySelectorAll('.pg__ctrl-dropdown-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        e.stopPropagation();
+        currentCamera = item.getAttribute('data-camera');
+        cameraDropdown.querySelectorAll('.pg__ctrl-dropdown-item').forEach(function(i) {
+          i.classList.remove('pg__ctrl-dropdown-item--active');
+        });
+        item.classList.add('pg__ctrl-dropdown-item--active');
+        cameraManipWrap.classList.remove('pg__ctrl-dropdown--open');
+        // Update tooltip
+        var label = item.textContent.trim();
+        ctrlCamera.querySelector('.pg__ctrl-tooltip').textContent = label;
+        ctrlCamera.setAttribute('data-label', 'Camera: ' + label);
+        // Apply camera type if SceneView supports it
+        if (sceneViewInstance && sceneViewInstance.setCameraManipulator) {
+          sceneViewInstance.setCameraManipulator(currentCamera);
+        }
+      });
+    });
+
+    // Close camera dropdown on outside click
+    document.addEventListener('click', function() {
+      cameraManipWrap.classList.remove('pg__ctrl-dropdown--open');
+    });
+
+    // ====================================================================
+    //  AI TOOLS DROPDOWN
+    // ====================================================================
+    var aiMoreBtn = $('aiMoreBtn');
+    var aiGroup = $('aiGroup');
+
+    aiMoreBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      aiGroup.classList.toggle('pg__ai-dropdown--open');
+      aiMoreBtn.setAttribute('aria-expanded', aiGroup.classList.contains('pg__ai-dropdown--open'));
+    });
+
+    document.addEventListener('click', function() {
+      aiGroup.classList.remove('pg__ai-dropdown--open');
+      aiMoreBtn.setAttribute('aria-expanded', 'false');
+    });
+
+    // Update AI links with code context
+    function updateAILinks() {
+      var ex = EXAMPLES[currentExample];
+      if (!ex) return;
+      var platData = ex[currentPlatform] || generateFallback(currentPlatform, ex);
+      var code = platData.code;
+      var prompt = encodeURIComponent('Help me build a SceneView ' + currentPlatform + ' app. Here is the code:\n\n' + code);
+      // Cursor uses cursor://
+      var cursorEl = $('aiCursor');
+      cursorEl.href = 'https://cursor.com';
+      cursorEl.title = 'Copy code and open in Cursor';
+      // Windsurf
+      var windsurfEl = $('aiWindsurf');
+      windsurfEl.href = 'https://codeium.com/windsurf';
+      windsurfEl.title = 'Copy code and open in Windsurf';
+      // Copilot
+      var copilotEl = $('aiCopilot');
+      copilotEl.href = 'https://github.com/features/copilot';
+      copilotEl.title = 'Copy code and open in GitHub Copilot';
+    }
 
     // ====================================================================
     //  COPY / SHARE
@@ -1767,7 +2169,7 @@
     copyBtn.addEventListener('click', function() {
       var ex = EXAMPLES[currentExample];
       if (!ex) return;
-      var platData = ex[currentPlatform] || ex.android;
+      var platData = ex[currentPlatform] || generateFallback(currentPlatform, ex);
       copyToClipboard(platData.code, copyBtn, copyLabel, 'Copy');
     });
 
@@ -1800,7 +2202,7 @@
       var plat = params.get('platform');
       var model = params.get('model');
 
-      if (plat && ['android', 'ios', 'web'].indexOf(plat) !== -1) {
+      if (plat && ['android', 'ios', 'web', 'flutter', 'reactnative', 'desktop', 'claude'].indexOf(plat) !== -1) {
         currentPlatform = plat;
         document.querySelectorAll('.pg__platform-pill').forEach(function(p) {
           p.classList.toggle('pg__platform-pill--active', p.getAttribute('data-platform') === plat);
