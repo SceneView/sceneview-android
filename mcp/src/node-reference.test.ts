@@ -33,12 +33,12 @@ describe("parseNodeSections", () => {
     expect(SECTIONS.has("lightnode")).toBe(true);
   });
 
-  it("contains Scene", () => {
-    expect(SECTIONS.has("scene")).toBe(true);
+  it("contains SceneView", () => {
+    expect(SECTIONS.has("sceneview")).toBe(true);
   });
 
-  it("contains ARScene", () => {
-    expect(SECTIONS.has("arscene")).toBe(true);
+  it("contains ARSceneView", () => {
+    expect(SECTIONS.has("arsceneview")).toBe(true);
   });
 
   it("contains AnchorNode", () => {
@@ -77,9 +77,9 @@ describe("findNodeSection", () => {
     expect(findNodeSection(SECTIONS, "MODELNODE")).toBeDefined();
   });
 
-  it("finds ARScene case-insensitively", () => {
-    expect(findNodeSection(SECTIONS, "ARScene")).toBeDefined();
-    expect(findNodeSection(SECTIONS, "arscene")).toBeDefined();
+  it("finds ARSceneView case-insensitively", () => {
+    expect(findNodeSection(SECTIONS, "ARSceneView")).toBeDefined();
+    expect(findNodeSection(SECTIONS, "arsceneview")).toBeDefined();
   });
 
   it("returns undefined for an unknown type", () => {
@@ -110,8 +110,8 @@ describe("listNodeTypes", () => {
     const types = listNodeTypes(SECTIONS);
     expect(types).toContain("ModelNode");
     expect(types).toContain("LightNode");
-    expect(types).toContain("Scene");
-    expect(types).toContain("ARScene");
+    expect(types).toContain("SceneView");
+    expect(types).toContain("ARSceneView");
     expect(types).toContain("AnchorNode");
   });
 
