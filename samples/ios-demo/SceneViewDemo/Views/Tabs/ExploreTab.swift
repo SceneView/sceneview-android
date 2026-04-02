@@ -68,7 +68,7 @@ struct ExploreTab: View {
     @State private var autoRotate = true
     @State private var showViewer = false
     @State private var searchText = ""
-    private var favoritesManager = FavoritesManager.shared
+    private let favoritesManager = FavoritesManager.shared
 
     private var filteredModels: [ModelItem] {
         var models: [ModelItem]
@@ -260,7 +260,11 @@ struct ModelViewerScreen: View {
     @State private var errorMessage: String?
     @State private var selectedEnvironment: SceneEnvironment = .studio
     @State private var showShareSheet = false
-    private var favoritesManager = FavoritesManager.shared
+    private let favoritesManager = FavoritesManager.shared
+
+    init(model: ModelItem) {
+        self.model = model
+    }
 
     var body: some View {
         ZStack {
