@@ -1,0 +1,64 @@
+name: Deploy Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website-static/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-website
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          path: main
+
+      - name: Checkout sceneview.github.io
+        uses: actions/checkout@v4
+        with:
+          repository: sceneview/sceneview.github.io
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: pages
+
+      - name: Sync website files
+        run: |
+          # Copy all website-static files to pages repo
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='models/' \
+            --exclude='environments/' \
+            --exclude='assets/' \
+            --exclude='js/' \
+            --exclude='materials/' \
+            --exclude='embed/' \
+            --exclude='preview/' \
+            --exclude='go/' \
+            --exclude='badges/' \
+            --exclude='*.png' \
+            --exclude='*.svg' \
+            --exclude='*.ico' \
+            --exclude='sceneview-web.js' \
+            main/website-static/ pages/
+
+      - name: Push to GitHub Pages
+        run: |
+          cd pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to deploy"
+          else
+            git commit -m "Auto-deploy website from sceneview/sceneview@${GITHUB_SHA::7}"
+            git push
+          fi
