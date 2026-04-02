@@ -1,0 +1,481 @@
+#if os(iOS) || os(macOS) || os(visionOS)
+import RealityKit
+import Foundation
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
+
+/// A node that renders a 2D polygon extruded or triangulated into 3D geometry.
+///
+/// Mirrors SceneView Android's `ShapeNode` -- creates flat or extruded shapes
+/// from a list of 2D polygon points using RealityKit's `MeshResource`.
+///
+/// Use this for custom 2D outlines, floor plans, logos, or any arbitrary
+/// planar shape that is not covered by the built-in primitives in
+/// ``GeometryNode``.
+///
+/// ```swift
+/// // A triangle on the XZ plane
+/// let triangle = ShapeNode(
+///     points: [
+///         SIMD2<Float>(0, 0.5),
+///         SIMD2<Float>(-0.5, -0.5),
+///         SIMD2<Float>(0.5, -0.5)
+///     ],
+///     color: .systemYellow
+/// )
+/// content.addChild(triangle.entity)
+///
+/// // An extruded L-shape
+/// let lShape = ShapeNode(
+///     points: [
+///         SIMD2<Float>(0, 0),
+///         SIMD2<Float>(0.5, 0),
+///         SIMD2<Float>(0.5, 0.2),
+///         SIMD2<Float>(0.2, 0.2),
+///         SIMD2<Float>(0.2, 0.8),
+///         SIMD2<Float>(0, 0.8)
+///     ],
+///     extrusionDepth: 0.1,
+///     color: .blue
+/// )
+/// content.addChild(lShape.entity)
+/// ```
+public struct ShapeNode: Sendable {
+    /// The underlying RealityKit entity.
+    public let entity: ModelEntity
+
+    /// The 2D polygon points that define this shape.
+    public let points: [SIMD2<Float>]
+
+    /// World-space position.
+    public var position: SIMD3<Float> {
+        get { entity.position }
+        nonmutating set { entity.position = newValue }
+    }
+
+    /// Orientation as a quaternion.
+    public var rotation: simd_quatf {
+        get { entity.orientation }
+        nonmutating set { entity.orientation = newValue }
+    }
+
+    /// Scale factor.
+    public var scale: SIMD3<Float> {
+        get { entity.scale }
+        nonmutating set { entity.scale = newValue }
+    }
+
+    // MARK: - Initializers
+
+    /// Creates a flat or extruded shape from a polygon defined by 2D points.
+    ///
+    /// The polygon is triangulated using an ear-clipping algorithm and rendered
+    /// on the XZ plane (Y-up). If `extrusionDepth` is greater than zero, the
+    /// shape is extruded along the Y axis to create a solid.
+    ///
+    /// - Parameters:
+    ///   - points: Ordered 2D vertices of the polygon (minimum 3).
+    ///     The polygon is automatically closed (last point connects to first).
+    ///   - extrusionDepth: Thickness along the Y axis in meters. 0 produces a
+    ///     flat shape. Default 0.
+    ///   - color: Material color. Default white.
+    ///   - isMetallic: Whether the material is metallic. Default false.
+    public init(
+        points: [SIMD2<Float>],
+        extrusionDepth: Float = 0,
+        color: SimpleMaterial.Color = .white,
+        isMetallic: Bool = false
+    ) {
+        self.points = points
+
+        let material = SimpleMaterial(color: color, isMetallic: isMetallic)
+
+        if points.count < 3 {
+            // Degenerate polygon -- return an empty entity
+            let mesh = MeshResource.generatePlane(width: 0.001, depth: 0.001)
+            self.entity = ModelEntity(mesh: mesh, materials: [material])
+            return
+        }
+
+        if extrusionDepth > 0 {
+            // Extruded shape: build 3D positions from the 2D polygon
+            let mesh = ShapeNode.buildExtrudedMesh(points: points, depth: extrusionDepth)
+            if let mesh = mesh {
+                self.entity = ModelEntity(mesh: mesh, materials: [material])
+            } else {
+                // Fallback to flat if extrusion fails
+                let flatMesh = ShapeNode.buildFlatMesh(points: points)
+                self.entity = ModelEntity(
+                    mesh: flatMesh ?? MeshResource.generatePlane(width: 0.001, depth: 0.001),
+                    materials: [material]
+                )
+            }
+        } else {
+            // Flat shape on the XZ plane
+            let mesh = ShapeNode.buildFlatMesh(points: points)
+            self.entity = ModelEntity(
+                mesh: mesh ?? MeshResource.generatePlane(width: 0.001, depth: 0.001),
+                materials: [material]
+            )
+        }
+
+        entity.generateCollisionShapes(recursive: false)
+    }
+
+    /// Creates a shape with a ``GeometryMaterial``.
+    ///
+    /// - Parameters:
+    ///   - points: Ordered 2D vertices of the polygon (minimum 3).
+    ///   - extrusionDepth: Thickness along the Y axis. Default 0.
+    ///   - material: Material to apply.
+    public init(
+        points: [SIMD2<Float>],
+        extrusionDepth: Float = 0,
+        material: GeometryMaterial
+    ) {
+        self.points = points
+
+        if points.count < 3 {
+            let mesh = MeshResource.generatePlane(width: 0.001, depth: 0.001)
+            self.entity = ModelEntity(mesh: mesh, materials: [material.rkMaterial])
+            return
+        }
+
+        if extrusionDepth > 0 {
+            let mesh = ShapeNode.buildExtrudedMesh(points: points, depth: extrusionDepth)
+            self.entity = ModelEntity(
+                mesh: mesh ?? MeshResource.generatePlane(width: 0.001, depth: 0.001),
+                materials: [material.rkMaterial]
+            )
+        } else {
+            let mesh = ShapeNode.buildFlatMesh(points: points)
+            self.entity = ModelEntity(
+                mesh: mesh ?? MeshResource.generatePlane(width: 0.001, depth: 0.001),
+                materials: [material.rkMaterial]
+            )
+        }
+
+        entity.generateCollisionShapes(recursive: false)
+    }
+
+    // MARK: - Preset shapes
+
+    /// Creates a regular polygon (e.g. pentagon, hexagon, octagon).
+    ///
+    /// - Parameters:
+    ///   - sides: Number of sides (minimum 3).
+    ///   - radius: Circumscribed radius in meters.
+    ///   - extrusionDepth: Extrusion depth. Default 0 (flat).
+    ///   - color: Material color.
+    /// - Returns: A `ShapeNode` with the regular polygon.
+    public static func regularPolygon(
+        sides: Int,
+        radius: Float = 0.5,
+        extrusionDepth: Float = 0,
+        color: SimpleMaterial.Color = .white
+    ) -> ShapeNode {
+        let n = max(sides, 3)
+        var pts: [SIMD2<Float>] = []
+        for i in 0..<n {
+            let angle = Float(i) / Float(n) * 2 * .pi - .pi / 2
+            pts.append(SIMD2<Float>(radius * cos(angle), radius * sin(angle)))
+        }
+        return ShapeNode(points: pts, extrusionDepth: extrusionDepth, color: color)
+    }
+
+    /// Creates a star shape.
+    ///
+    /// - Parameters:
+    ///   - pointCount: Number of star points. Default 5.
+    ///   - outerRadius: Outer radius in meters.
+    ///   - innerRadius: Inner radius in meters.
+    ///   - extrusionDepth: Extrusion depth. Default 0 (flat).
+    ///   - color: Material color.
+    /// - Returns: A `ShapeNode` with the star shape.
+    public static func star(
+        pointCount: Int = 5,
+        outerRadius: Float = 0.5,
+        innerRadius: Float = 0.2,
+        extrusionDepth: Float = 0,
+        color: SimpleMaterial.Color = .yellow
+    ) -> ShapeNode {
+        let n = max(pointCount, 3)
+        var pts: [SIMD2<Float>] = []
+        for i in 0..<(n * 2) {
+            let angle = Float(i) / Float(n * 2) * 2 * .pi - .pi / 2
+            let r = i % 2 == 0 ? outerRadius : innerRadius
+            pts.append(SIMD2<Float>(r * cos(angle), r * sin(angle)))
+        }
+        return ShapeNode(points: pts, extrusionDepth: extrusionDepth, color: color)
+    }
+
+    // MARK: - Transform helpers
+
+    /// Returns self positioned at the given coordinates.
+    @discardableResult
+    public func position(_ position: SIMD3<Float>) -> ShapeNode {
+        entity.position = position
+        return self
+    }
+
+    /// Returns self scaled uniformly.
+    @discardableResult
+    public func scale(_ uniform: Float) -> ShapeNode {
+        entity.scale = .init(repeating: uniform)
+        return self
+    }
+
+    /// Returns self scaled per-axis.
+    @discardableResult
+    public func scale(_ scale: SIMD3<Float>) -> ShapeNode {
+        entity.scale = scale
+        return self
+    }
+
+    /// Returns self rotated by the given quaternion.
+    @discardableResult
+    public func rotation(_ rotation: simd_quatf) -> ShapeNode {
+        entity.orientation = rotation
+        return self
+    }
+
+    /// Returns self rotated by angle around axis.
+    @discardableResult
+    public func rotation(angle: Float, axis: SIMD3<Float>) -> ShapeNode {
+        entity.orientation = simd_quatf(angle: angle, axis: axis)
+        return self
+    }
+
+    /// Returns self with a grounding shadow.
+    @discardableResult
+    public func withGroundingShadow() -> ShapeNode {
+        #if os(iOS) || os(visionOS) || os(macOS)
+        if #available(iOS 18.0, visionOS 2.0, *) {
+            entity.components.set(GroundingShadowComponent(castsShadow: true))
+        }
+        #endif
+        return self
+    }
+
+    // MARK: - Mesh generation
+
+    /// Builds a flat triangulated mesh from a 2D polygon on the XZ plane.
+    private static func buildFlatMesh(points: [SIMD2<Float>]) -> MeshResource? {
+        guard points.count >= 3 else { return nil }
+
+        let indices = earClipTriangulate(points)
+        guard !indices.isEmpty else { return nil }
+
+        // Convert 2D points to 3D on the XZ plane (Y = 0)
+        let positions = points.map { SIMD3<Float>($0.x, 0, $0.y) }
+        let normals = [SIMD3<Float>](repeating: SIMD3<Float>(0, 1, 0), count: positions.count)
+
+        // Compute UV coordinates from bounding box
+        let minX = points.map(\.x).min() ?? 0
+        let maxX = points.map(\.x).max() ?? 1
+        let minY = points.map(\.y).min() ?? 0
+        let maxY = points.map(\.y).max() ?? 1
+        let rangeX = max(maxX - minX, 1e-6)
+        let rangeY = max(maxY - minY, 1e-6)
+        let uvs = points.map { SIMD2<Float>(($0.x - minX) / rangeX, ($0.y - minY) / rangeY) }
+
+        var descriptor = MeshDescriptor(name: "ShapeNode_Flat")
+        descriptor.positions = MeshBuffers.Positions(positions)
+        descriptor.normals = MeshBuffers.Normals(normals)
+        descriptor.textureCoordinates = MeshBuffers.TextureCoordinates(uvs)
+        descriptor.primitives = .triangles(indices)
+
+        return try? MeshResource.generate(from: [descriptor])
+    }
+
+    /// Builds an extruded mesh from a 2D polygon.
+    private static func buildExtrudedMesh(points: [SIMD2<Float>], depth: Float) -> MeshResource? {
+        guard points.count >= 3 else { return nil }
+
+        let topIndices = earClipTriangulate(points)
+        guard !topIndices.isEmpty else { return nil }
+
+        let halfDepth = depth / 2
+        var positions: [SIMD3<Float>] = []
+        var normals: [SIMD3<Float>] = []
+        var uvs: [SIMD2<Float>] = []
+        var indices: [UInt32] = []
+
+        // Top face
+        let topOffset = UInt32(positions.count)
+        for p in points {
+            positions.append(SIMD3<Float>(p.x, halfDepth, p.y))
+            normals.append(SIMD3<Float>(0, 1, 0))
+            uvs.append(p)
+        }
+        for idx in topIndices {
+            indices.append(topOffset + idx)
+        }
+
+        // Bottom face (reversed winding)
+        let bottomOffset = UInt32(positions.count)
+        for p in points {
+            positions.append(SIMD3<Float>(p.x, -halfDepth, p.y))
+            normals.append(SIMD3<Float>(0, -1, 0))
+            uvs.append(p)
+        }
+        for i in stride(from: 0, to: topIndices.count, by: 3) {
+            indices.append(bottomOffset + topIndices[i + 2])
+            indices.append(bottomOffset + topIndices[i + 1])
+            indices.append(bottomOffset + topIndices[i])
+        }
+
+        // Side faces
+        let n = points.count
+        for i in 0..<n {
+            let j = (i + 1) % n
+            let p0 = points[i]
+            let p1 = points[j]
+
+            let edge = SIMD2<Float>(p1.x - p0.x, p1.y - p0.y)
+            let edgeLen = max(sqrt(edge.x * edge.x + edge.y * edge.y), 1e-6)
+            let normal3 = SIMD3<Float>(edge.y / edgeLen, 0, -edge.x / edgeLen)
+
+            let sideOffset = UInt32(positions.count)
+
+            // Four vertices per side quad
+            positions.append(SIMD3<Float>(p0.x, halfDepth, p0.y))
+            positions.append(SIMD3<Float>(p1.x, halfDepth, p1.y))
+            positions.append(SIMD3<Float>(p1.x, -halfDepth, p1.y))
+            positions.append(SIMD3<Float>(p0.x, -halfDepth, p0.y))
+
+            for _ in 0..<4 { normals.append(normal3) }
+            uvs.append(SIMD2<Float>(0, 1))
+            uvs.append(SIMD2<Float>(1, 1))
+            uvs.append(SIMD2<Float>(1, 0))
+            uvs.append(SIMD2<Float>(0, 0))
+
+            // Two triangles per quad
+            indices.append(sideOffset)
+            indices.append(sideOffset + 1)
+            indices.append(sideOffset + 2)
+            indices.append(sideOffset)
+            indices.append(sideOffset + 2)
+            indices.append(sideOffset + 3)
+        }
+
+        var descriptor = MeshDescriptor(name: "ShapeNode_Extruded")
+        descriptor.positions = MeshBuffers.Positions(positions)
+        descriptor.normals = MeshBuffers.Normals(normals)
+        descriptor.textureCoordinates = MeshBuffers.TextureCoordinates(uvs)
+        descriptor.primitives = .triangles(indices)
+
+        return try? MeshResource.generate(from: [descriptor])
+    }
+
+    // MARK: - Ear-clipping triangulation
+
+    /// Simple ear-clipping triangulation for a 2D polygon.
+    ///
+    /// Returns triangle indices into the original points array.
+    /// Handles simple convex and concave polygons without holes.
+    private static func earClipTriangulate(_ polygon: [SIMD2<Float>]) -> [UInt32] {
+        guard polygon.count >= 3 else { return [] }
+
+        // Ensure counter-clockwise winding
+        var pts = polygon
+        if signedArea(pts) < 0 {
+            pts.reverse()
+        }
+
+        var remaining = Array(0..<pts.count)
+        var triangles: [UInt32] = []
+
+        // Map from reordered indices back to original
+        let originalIndices: [UInt32]
+        if signedArea(polygon) < 0 {
+            originalIndices = (0..<UInt32(polygon.count)).reversed().map { $0 }
+        } else {
+            originalIndices = (0..<UInt32(polygon.count)).map { $0 }
+        }
+
+        var maxIterations = remaining.count * remaining.count
+        while remaining.count > 2 && maxIterations > 0 {
+            maxIterations -= 1
+            var earFound = false
+
+            for i in 0..<remaining.count {
+                let prev = remaining[(i + remaining.count - 1) % remaining.count]
+                let curr = remaining[i]
+                let next = remaining[(i + 1) % remaining.count]
+
+                let a = pts[prev]
+                let b = pts[curr]
+                let c = pts[next]
+
+                // Check if this is a convex vertex
+                if cross2D(a, b, c) <= 0 { continue }
+
+                // Check that no other vertex is inside this triangle
+                var isEar = true
+                for j in 0..<remaining.count {
+                    let idx = remaining[j]
+                    if idx == prev || idx == curr || idx == next { continue }
+                    if pointInTriangle(pts[idx], a, b, c) {
+                        isEar = false
+                        break
+                    }
+                }
+
+                if isEar {
+                    triangles.append(originalIndices[prev])
+                    triangles.append(originalIndices[curr])
+                    triangles.append(originalIndices[next])
+                    remaining.remove(at: i)
+                    earFound = true
+                    break
+                }
+            }
+
+            if !earFound { break }
+        }
+
+        return triangles
+    }
+
+    /// Signed area of a 2D polygon. Positive = CCW, negative = CW.
+    private static func signedArea(_ pts: [SIMD2<Float>]) -> Float {
+        var area: Float = 0
+        let n = pts.count
+        for i in 0..<n {
+            let j = (i + 1) % n
+            area += pts[i].x * pts[j].y
+            area -= pts[j].x * pts[i].y
+        }
+        return area / 2
+    }
+
+    /// 2D cross product of vectors (b-a) and (c-a).
+    private static func cross2D(
+        _ a: SIMD2<Float>,
+        _ b: SIMD2<Float>,
+        _ c: SIMD2<Float>
+    ) -> Float {
+        (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+    }
+
+    /// Whether a point is inside a triangle (using barycentric coordinates).
+    private static func pointInTriangle(
+        _ p: SIMD2<Float>,
+        _ a: SIMD2<Float>,
+        _ b: SIMD2<Float>,
+        _ c: SIMD2<Float>
+    ) -> Bool {
+        let d1 = cross2D(a, b, p)
+        let d2 = cross2D(b, c, p)
+        let d3 = cross2D(c, a, p)
+        let hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0)
+        let hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0)
+        return !(hasNeg && hasPos)
+    }
+}
+
+#endif // os(iOS) || os(macOS) || os(visionOS)
