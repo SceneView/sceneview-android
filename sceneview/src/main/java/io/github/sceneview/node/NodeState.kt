@@ -9,8 +9,7 @@ import io.github.sceneview.math.Scale
  *
  * Useful for ViewModel-driven UI or for saving/restoring node configuration.
  * Create from a live node with [Node.toState] and apply back with [Node.applyState].
- */
-/**
+ *
  * @property position   Local-space position of the node (relative to parent).
  * @property quaternion Orientation as a unit quaternion.
  * @property scale      Uniform or non-uniform scale.
