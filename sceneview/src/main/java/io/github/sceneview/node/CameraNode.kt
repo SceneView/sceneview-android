@@ -148,9 +148,11 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
     )
     fun hitTest(ray: Ray): List<HitResult> {
         val cs = collisionSystem ?: return emptyList()
+        val o = ray.getOrigin()
+        val d = ray.getDirection()
         return cs.hitTest(MathRay(
-            origin = Float3(ray.origin.x, ray.origin.y, ray.origin.z),
-            direction = Float3(ray.direction.x, ray.direction.y, ray.direction.z)
+            origin = Float3(o.x, o.y, o.z),
+            direction = Float3(d.x, d.y, d.z)
         ))
     }
 
