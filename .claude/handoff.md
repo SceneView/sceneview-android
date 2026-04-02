@@ -44,12 +44,32 @@
 9. `083b8e21` + `b7da8863` — Auto-deploy workflow + cleanup
 10. GitHub Pages config: changed from "GitHub Actions" to "Deploy from branch"
 
-### Scheduled
-- `playground-preview-rework` — 3h AM: example-specific preview scenes (geometry primitives, AR placeholders)
+### Additional commits (continued)
+11. `baa250b0` — Playground preview rework (geometry primitives, AR placeholders)
+12. `082045ab` — Fix compilation errors (CameraNode Ray, ARScene ViewNode import)
+13. `448b7032` — Fix NodeState orphan KDoc
+14. `c5c99d5b` — Add 68 JVM unit tests for sceneview
+15. `71f0c27a` — Update mcp/llms.txt + remove orphan JS
+16. 4 PRs merged from hannesa2 (#775-#778): build fix, gitignore, CI, Gradle verify
+17. `0ea9fb37` — Fix Play Store bundle (remove duplicate assets)
+18. `9c448f41` — Track android-demo-assets in git (gitignore fix, 259MB assets)
+
+### Scheduled tasks (tonight 3h-4h)
+- `mcp-version-bump` — MCP 3.5.5→3.6.0
+- `ci-fix-web-blocking` — CI hardening + ROADMAP + CODEOWNERS
+- `tests-arsceneview` — Unit tests for AR module
+- `tests-sceneview-core` — Increase KMP core coverage 30%→60%
+- `publish-flutter-rn` — Prepare Flutter/RN for publication
+
+### Recurring tasks
+- `daily-github-triage` — lun-ven 9h24 (issues + PRs)
+- `quality-check` — every 6h
+- `mcp-maintenance` — weekly Mon/Thu
+- `discover-3d-assets` — weekly Mon/Thu
 
 ### Known issues
-- Playground preview doesn't reflect example code for non-model examples (scheduled fix above)
 - GitHub Pages CDN can be slow to propagate (10+ min sometimes)
+- Play Store build #58 in progress (should pass with tracked assets)
 
 ---
 
