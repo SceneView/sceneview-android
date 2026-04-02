@@ -59,6 +59,7 @@
 		E10000000000000000000006 /* autumn_field.hdr in Resources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000006 /* autumn_field.hdr */; };
 		C10000000000000000000001 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000001 /* HapticManager.swift */; };
 		C10000000000000000000002 /* DemoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000002 /* DemoItem.swift */; };
+		C10000000000000000000030 /* FavoritesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000030 /* FavoritesManager.swift */; };
 		C10000000000000000000003 /* ExploreTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000003 /* ExploreTab.swift */; };
 		C10000000000000000000004 /* ARTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000004 /* ARTab.swift */; };
 		C10000000000000000000005 /* SamplesTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20000000000000000000005 /* SamplesTab.swift */; };
@@ -87,6 +88,7 @@
 		A20000010000000000000010 /* SceneViewDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SceneViewDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C20000000000000000000001 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		C20000000000000000000002 /* DemoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoItem.swift; sourceTree = "<group>"; };
+		C20000000000000000000030 /* FavoritesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesManager.swift; sourceTree = "<group>"; };
 		C20000000000000000000003 /* ExploreTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreTab.swift; sourceTree = "<group>"; };
 		C20000000000000000000004 /* ARTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARTab.swift; sourceTree = "<group>"; };
 		C20000000000000000000005 /* SamplesTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamplesTab.swift; sourceTree = "<group>"; };
@@ -292,6 +294,7 @@
 			children = (
 				C20000000000000000000001 /* HapticManager.swift */,
 				C20000000000000000000002 /* DemoItem.swift */,
+				C20000000000000000000030 /* FavoritesManager.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -408,6 +411,7 @@
 				A10000010000000000000001 /* SceneViewDemoApp.swift in Sources */,
 				C10000000000000000000001 /* HapticManager.swift in Sources */,
 				C10000000000000000000002 /* DemoItem.swift in Sources */,
+				C10000000000000000000030 /* FavoritesManager.swift in Sources */,
 				C10000000000000000000003 /* ExploreTab.swift in Sources */,
 				C10000000000000000000004 /* ARTab.swift in Sources */,
 				C10000000000000000000005 /* SamplesTab.swift in Sources */,
@@ -553,8 +557,8 @@
 				DEVELOPMENT_TEAM = 5G3DZ3TH45;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SceneViewDemo/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SceneView;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_CFBundleDisplayName = "3D & AR Explorer";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -587,8 +591,8 @@
 				DEVELOPMENT_TEAM = 5G3DZ3TH45;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SceneViewDemo/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SceneView;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
+				INFOPLIST_KEY_CFBundleDisplayName = "3D & AR Explorer";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

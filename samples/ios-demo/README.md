@@ -1,13 +1,16 @@
-# SceneView iOS Demo
+# 3D & AR Explorer
 
-SwiftUI demo app for iOS, demonstrating SceneViewSwift capabilities.
+SwiftUI app for iOS and macOS — browse 3D models, view them in augmented reality, save favorites, and share screenshots.
 
 ## Features
 
-- 3-tab SwiftUI interface (3D, AR, Samples)
-- 3D model viewer with RealityKit rendering
-- AR plane detection and tap-to-place
-- Multiple sample scenes
+- 4-tab SwiftUI interface (Explore, AR View, Scenes, About)
+- Model gallery with categories: Vehicles, Creatures, Objects, Scenes
+- Favorites system (mark and filter favorite models)
+- AR placement: choose a model, tap a surface, place it in your space
+- Screenshot sharing from both 3D viewer and AR mode
+- Environment presets for different lighting setups
+- 14 interactive 3D scene presets
 
 ## Run
 
