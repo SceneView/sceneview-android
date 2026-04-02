@@ -4,7 +4,7 @@
 
 ## Last Session Summary
 
-**Date:** 2 avril 2026 (session 25)
+**Date:** 2-3 avril 2026 (session 25 — 55 commits)
 **Branch:** main
 
 ## WHAT WAS DONE THIS SESSION (session 25)
@@ -67,9 +67,31 @@
 - `mcp-maintenance` — weekly Mon/Thu
 - `discover-3d-assets` — weekly Mon/Thu
 
+### Additional commits (late session)
+19. `08d60dc0` — Fix iOS build (private init access level)
+20. `727d7cf3` — MCP 3.6.0 + CI hardening + CODEOWNERS + ROADMAP
+21. `6e70c3f5` — Flutter + React Native packages prepared
+22. `099e0996` — Tests arsceneview (15) + sceneview-core (63)
+23. `f74e41e` — Android rebrand "3D & AR Explorer"
+24. `b126679f` — iOS repositionnement complet (galerie, favoris, partage)
+25. `b4fb7739` — Quality gates (pre-push-check.sh, CLAUDE.md rules)
+26. `e7c7d872` — v4.0 stability plan
+27. `890d23dc` — Migration guide v4 + 175 Android tests
+28. `31868b79` — Stability audit (all PASS) + 8 MCP regressions fixed
+
+### Stores
+- Play Store: ✅ "3D & AR Explorer" LIVE (build #59)
+- App Store: ✅ Build #79 SUCCESS, submitted for Apple review (~24-48h)
+
+### v4.0 Roadmap
+- Plan: `.claude/plans/v4.0-quality-plan.md`
+- Migration guide: `docs/docs/migration-v4.md`
+- Criteria: ALL platforms stable, zero bugs, everything works end-to-end
+- Module merge (sceneview + arsceneview → sceneview-android) after stability confirmed
+
 ### Known issues
-- GitHub Pages CDN can be slow to propagate (10+ min sometimes)
-- Play Store build #58 in progress (should pass with tracked assets)
+- GitHub Pages CDN can be slow (10+ min)
+- KMP iOS sim tests: local gradle cache corrupt (not a real bug, `rm -rf` fixes it)
 
 ---
 
