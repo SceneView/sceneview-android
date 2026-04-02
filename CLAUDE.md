@@ -141,15 +141,17 @@ Every Claude Code session MUST read this section first to stay in sync.
 **NOTE FOR OTHER SESSIONS:** Always run `/sync-check` at the start and end of every session.
 Never say "everything is good" without verifying published packages.
 
-### Current state (last updated: 2026-03-31, session 24)
+### Current state (last updated: 2026-04-02, session 25)
 
 - **Active branch**: `main`
 - **Latest release**: v3.6.0 (GitHub Release + Maven Central + npm — ALL PUBLISHED)
-- **MCP servers**: sceneview-mcp 3.5.5 on npm (26 tools, 2360 tests), 9 MCPs total
+- **Android rewrite**: SceneRenderer, NodeGestureDelegate/AnimationDelegate/State, ARPermissionHandler
+- **Demo app**: Material 3 Expressive, 4 tabs, 40 models, 19 sample demos
+- **MCP servers**: sceneview-mcp 3.5.4 on npm (26 tools, 2360 tests), 9 MCPs total
 - **sceneview-web**: v3.6.0 on npm (Kotlin/JS + Filament.js)
 - **GitHub orgs**: `sceneview`, `sceneview-tools`, `mcp-tools-lab`
-- **Website**: sceneview.github.io — PNG meta tags, favicon.ico, all orphans cleaned, 26 models
-- **Playground**: QA complete — 13 examples, 3 platforms, 23 models, accessibility, mobile nav, published
+- **Website**: redesigned — 8 sections on index, showcase rewritten, playground enhanced (7 platforms, camera manipulator, Open in Claude), docs 404 fixed
+- **Playground**: 13 examples, 7 platforms, 23 models, camera manipulator, Open in Claude + AI dropdown
 - **Branding**: 22 PNG exports generated, organized in branding/exports/
 - **Open Collective**: logo + cover + tiers (Backer $10, Sponsor $50, Gold $200) + 10 tags
 - **Claude Artifacts**: documented in llms.txt with CDN templates + 26 model URLs
