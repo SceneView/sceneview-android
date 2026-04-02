@@ -21,7 +21,7 @@
 
 ---
 
-## Next: v3.6.0
+## Next: v3.7.0
 
 ### API simplification
 - [ ] Merge sceneview + arsceneview into single dependency (one `implementation` line)

@@ -93,16 +93,18 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Build all web & desktop targets
-        # continue-on-error because web/desktop samples are stubs; real failures still surface
-        continue-on-error: true
+      - name: Build web targets
         run: |
           ./gradlew \
             :sceneview-core:jsMainClasses \
             :sceneview-web:jsMainClasses \
             :samples:web-demo:compileKotlinJs \
-            :samples:desktop-demo:compileKotlinDesktop \
             --stacktrace
+
+      - name: Build desktop targets
+        # continue-on-error: desktop is a Compose Canvas placeholder, not a real Filament target
+        continue-on-error: true
+        run: ./gradlew :samples:desktop-demo:compileKotlinDesktop --stacktrace
 
       - name: JS tests (informational)
         continue-on-error: true
