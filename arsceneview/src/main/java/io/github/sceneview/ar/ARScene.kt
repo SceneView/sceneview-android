@@ -68,6 +68,7 @@ import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
+import io.github.sceneview.node.ViewNode
 import io.github.sceneview.node.ViewNode.WindowManager
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
