@@ -6,6 +6,17 @@ import io.github.sceneview.ar.node.ARCameraNode
 import io.github.sceneview.createEnvironment
 import io.github.sceneview.loaders.MaterialLoader
 
+// ── AR-specific factory functions ────────────────────────────────────────────────────────────────
+//
+// Only factories that depend on ARCore types live here. Filament-only factories (including
+// createARView) are in SceneFactories.kt in the base `sceneview` module.
+// Corresponding remember* hooks are in ARScene.kt.
+//
+// TODO(module-unification): When arsceneview merges into sceneview, these factories move to
+//  `sceneview/src/.../ar/ARFactories.kt` as a sub-package. ARCore becomes a `compileOnly`
+//  dependency so apps without AR don't pull it in. The remember* hooks in ARScene.kt follow.
+//
+
 /**
  * Creates an [ARCameraNode] with default AR-appropriate exposure settings.
  *

@@ -7,8 +7,8 @@ import androidx.compose.ui.unit.dp
 /**
  * SceneView M3 Expressive Shape System
  *
- * Dynamic shapes from DESIGN.md:
- * - ExtraSmall (8dp): utility elements, chips
+ * Radius tokens from DESIGN.md:
+ * - ExtraSmall (8dp): chips, utility elements
  * - Small (12dp): buttons, text fields
  * - Medium (16dp): cards, dialogs
  * - Large (28dp): prominent cards, bottom sheets

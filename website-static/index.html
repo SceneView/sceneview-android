@@ -83,7 +83,23 @@
   <!-- ===== NAVIGATION ===== -->
   <nav class="nav" id="nav">
     <div class="nav__container">
-      <div class="nav__brand">SceneView SDK</div>
+      <a href="/" class="nav__brand" aria-label="SceneView SDK — home">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="28" height="28" aria-hidden="true" style="flex-shrink:0">
+          <defs>
+            <linearGradient id="navTopGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8AB4F8"/><stop offset="100%" stop-color="#42A5F5"/></linearGradient>
+            <linearGradient id="navRightGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4A90D9"/><stop offset="100%" stop-color="#1A73E8"/></linearGradient>
+            <linearGradient id="navLeftGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#1A73E8"/><stop offset="100%" stop-color="#0D47A1"/></linearGradient>
+          </defs>
+          <polygon points="256,272 122,194 122,340 256,418" fill="url(#navLeftGrad)"/>
+          <polygon points="256,272 390,194 390,340 256,418" fill="url(#navRightGrad)"/>
+          <polygon points="256,126 390,204 256,282 122,204" fill="url(#navTopGrad)"/>
+          <polyline points="96,120 96,82 134,82" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="416,120 416,82 378,82" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="96,392 96,430 134,430" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="416,392 416,430 378,430" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>SceneView SDK</span>
+      </a>
 
       <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
         <span></span><span></span><span></span>
@@ -105,8 +121,10 @@
       </div>
 
       <div class="nav__actions">
-        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View source code">
-          <span class="material-symbols-outlined">code</span>
+        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View on GitHub">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
         </a>
         <button class="nav__hamburger nav__hamburger--mobile" id="hamburgerMobile" aria-label="Toggle menu">
           <span></span><span></span><span></span>
@@ -148,6 +166,22 @@
             <span class="material-symbols-outlined">visibility</span>
             <span>visionOS</span>
           </div>
+          <div class="hero__platform">
+            <span class="material-symbols-outlined">desktop_windows</span>
+            <span>Desktop</span>
+          </div>
+          <div class="hero__platform">
+            <span class="material-symbols-outlined">tv</span>
+            <span>TV</span>
+          </div>
+          <div class="hero__platform">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" style="opacity:.85"><path d="M14.314 0L2.3 9.56l2.93 2.5L18.97 4.22l-4.656-4.22zm-4.628 4.22L0 12.01l2.3 1.97 9.686-8.28-2.3-1.48zM18.97 4.22l-4.656 4.22L21.7 14l2.3-1.97-5.03-7.81zM9.686 8.44L0 17.99 2.3 21.5l12.014-9.56-4.628-3.5zm4.628 3.5L2.3 21.5l12.014-2.5L21.7 14l-7.386-2.06z"/></svg>
+            <span>Flutter</span>
+          </div>
+          <div class="hero__platform">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" style="opacity:.85"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.14 4.313c.975 0 1.928.184 2.832.518L9.837 9.966A4.52 4.52 0 0 0 8.3 13.155v3.04L5.54 14.438V9.9c0-3.067 2.948-5.587 6.6-5.587zm6.027 2.26c1.59 1.17 2.633 2.927 2.633 4.903v5.126l-2.76-1.76v-3.04a4.52 4.52 0 0 0-1.537-3.189L11.368 3.49a7.674 7.674 0 0 1 .772-.04c2.303 0 4.394.84 6.027 2.123zM8.3 14.635l2.76 1.758v3.04c0 1.26.694 2.363 1.73 2.961L17.924 17.3a4.517 4.517 0 0 0 .376-.358v.033l2.76 1.758c-.967 1.795-2.876 3.017-5.087 3.017-3.186 0-5.773-2.32-5.773-5.183v-1.932zm3.56 2.267l5.135-3.27a4.494 4.494 0 0 0 .4-1.777v-.055l-2.76-1.758v3.04c0 .676-.193 1.308-.524 1.842L11.86 16.9z"/></svg>
+            <span>React Native</span>
+          </div>
         </div>
       </div>
       <div class="hero__visual">
@@ -158,8 +192,52 @@
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" style="animation:spin 1.2s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="50 20"/></svg>
             <span>Loading 3D engine&hellip;</span>
           </div>
-          <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+          <style>
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .hero__drag-hint {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(8px);
+      color: rgba(255,255,255,0.75);
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.6s ease;
+      z-index: 10;
+      white-space: nowrap;
+    }
+    .hero__drag-hint.is-hidden { opacity: 0; }
+    .nav__brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+    }
+    .nav__brand:hover { opacity: 0.85; }
+    .cta__btn { display: inline-flex; align-items: center; gap: 8px; }
+  </style>
           <div id="hero-badge" class="hero__badge">Rendered live by SceneView Web (Filament.js WASM)</div>
+          <div id="hero-drag-hint" class="hero__drag-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 3l3 3-3 3M9 21l-3-3 3-3"/>
+              <path d="M18 6H9a4 4 0 0 0-4 4v1M6 18h9a4 4 0 0 0 4-4v-1"/>
+            </svg>
+            <span>Drag to rotate</span>
+          </div>
         </div>
       </div>
     </div>
@@ -289,49 +367,306 @@
         <h2 class="features__title">Powerful from day one.</h2>
         <div class="features__accent-bar"></div>
       </div>
-      <div class="features__grid">
-        <div class="feature-card reveal">
-          <div class="feature-card__icon feature-card__icon--primary-container">
-            <span class="material-symbols-outlined">schema</span>
+      <div class="features__visual-grid">
+
+        <!-- Declarative 3D -->
+        <div class="feature-visual reveal">
+          <div class="feature-visual__illustration feature-visual__illustration--code">
+            <svg viewBox="0 0 480 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <!-- Code editor side -->
+              <rect x="12" y="12" width="220" height="256" rx="12" fill="#0f172a"/>
+              <rect x="12" y="12" width="220" height="32" rx="12" fill="#1e293b"/>
+              <circle cx="30" cy="28" r="5" fill="#ef4444" opacity=".5"/>
+              <circle cx="44" cy="28" r="5" fill="#eab308" opacity=".5"/>
+              <circle cx="58" cy="28" r="5" fill="#22c55e" opacity=".5"/>
+              <text x="24" y="64" fill="#c084fc" font-family="monospace" font-size="10" font-weight="600">Scene</text>
+              <text x="54" y="64" fill="#94a3b8" font-family="monospace" font-size="10">{</text>
+              <text x="36" y="80" fill="#d2a8ff" font-family="monospace" font-size="10">ModelNode</text>
+              <text x="100" y="80" fill="#86efac" font-family="monospace" font-size="10">("car.glb"</text>
+              <text x="160" y="80" fill="#94a3b8" font-family="monospace" font-size="10">)</text>
+              <text x="36" y="96" fill="#d2a8ff" font-family="monospace" font-size="10">LightNode</text>
+              <text x="100" y="96" fill="#94a3b8" font-family="monospace" font-size="10">(type = Sun)</text>
+              <text x="36" y="112" fill="#d2a8ff" font-family="monospace" font-size="10">CameraNode</text>
+              <text x="108" y="112" fill="#94a3b8" font-family="monospace" font-size="10">()</text>
+              <text x="24" y="128" fill="#94a3b8" font-family="monospace" font-size="10">}</text>
+              <!-- Arrow -->
+              <path d="M244 140 L260 140" stroke="var(--color-primary)" stroke-width="2" stroke-dasharray="4 3"/>
+              <polygon points="260,135 272,140 260,145" fill="var(--color-primary)"/>
+              <!-- 3D render side -->
+              <rect x="280" y="32" width="188" height="216" rx="16" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1"/>
+              <!-- Simplified 3D cube/car shape -->
+              <g transform="translate(330,100)">
+                <polygon points="44,0 88,25 88,75 44,100 0,75 0,25" fill="var(--color-primary)" opacity=".15"/>
+                <polygon points="44,0 88,25 44,50 0,25" fill="var(--color-primary)" opacity=".3"/>
+                <polygon points="88,25 88,75 44,100 44,50" fill="var(--color-primary)" opacity=".2"/>
+                <polygon points="0,25 44,50 44,100 0,75" fill="var(--color-primary)" opacity=".25"/>
+              </g>
+              <text x="374" y="232" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="9" text-anchor="middle" opacity=".6">60fps PBR</text>
+            </svg>
           </div>
-          <h3 class="feature-card__title">Declarative 3D</h3>
-          <p class="feature-card__text">Define your scene hierarchy with state-driven UI patterns that feel natural to modern framework developers.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-card__icon feature-card__icon--secondary-container">
-            <span class="material-symbols-outlined">view_in_ar</span>
+          <div class="feature-visual__content">
+            <h3 class="feature-visual__title">Declarative 3D</h3>
+            <p class="feature-visual__text">Write scenes like UI. Compose-style state management, reactive updates, and a node tree that mirrors your mental model.</p>
           </div>
-          <h3 class="feature-card__title">AR Ready</h3>
-          <p class="feature-card__text">Built-in support for ARCore and ARKit. Simple anchors, tracking, and lighting estimation out of the box.</p>
         </div>
-        <div class="feature-card reveal">
-          <div class="feature-card__icon feature-card__icon--tertiary-container">
-            <span class="material-symbols-outlined">smart_toy</span>
+
+        <!-- AR Ready -->
+        <div class="feature-visual reveal">
+          <div class="feature-visual__illustration feature-visual__illustration--ar">
+            <svg viewBox="0 0 480 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <!-- Phone outline -->
+              <rect x="140" y="10" width="200" height="260" rx="24" fill="var(--color-surface-container-low)" stroke="var(--color-outline-variant)" stroke-width="2"/>
+              <rect x="152" y="36" width="176" height="208" rx="4" fill="var(--color-surface-container)"/>
+              <!-- Camera lens -->
+              <circle cx="240" cy="24" r="4" fill="var(--color-outline-variant)"/>
+              <!-- AR plane grid -->
+              <g opacity=".3" stroke="var(--color-primary)" stroke-width=".5">
+                <line x1="160" y1="200" x2="320" y2="200"/>
+                <line x1="168" y1="210" x2="312" y2="210"/>
+                <line x1="176" y1="220" x2="304" y2="220"/>
+                <line x1="184" y1="230" x2="296" y2="230"/>
+                <line x1="200" y1="190" x2="200" y2="236"/>
+                <line x1="230" y1="190" x2="218" y2="236"/>
+                <line x1="260" y1="190" x2="262" y2="236"/>
+                <line x1="290" y1="190" x2="282" y2="236"/>
+              </g>
+              <!-- 3D object on AR plane -->
+              <g transform="translate(215,145)">
+                <polygon points="25,0 50,15 50,45 25,60 0,45 0,15" fill="var(--color-primary)" opacity=".6"/>
+                <polygon points="25,0 50,15 25,30 0,15" fill="var(--color-primary)" opacity=".85"/>
+                <polygon points="50,15 50,45 25,60 25,30" fill="var(--color-primary)" opacity=".5"/>
+                <polygon points="0,15 25,30 25,60 0,45" fill="var(--color-primary)" opacity=".7"/>
+              </g>
+              <!-- AR crosshair -->
+              <circle cx="240" cy="175" r="20" stroke="var(--color-primary)" stroke-width="1.5" fill="none" stroke-dasharray="6 4" opacity=".5"/>
+              <line x1="240" y1="160" x2="240" y2="168" stroke="var(--color-primary)" stroke-width="1.5" opacity=".5"/>
+              <line x1="240" y1="182" x2="240" y2="190" stroke="var(--color-primary)" stroke-width="1.5" opacity=".5"/>
+              <line x1="225" y1="175" x2="233" y2="175" stroke="var(--color-primary)" stroke-width="1.5" opacity=".5"/>
+              <line x1="247" y1="175" x2="255" y2="175" stroke="var(--color-primary)" stroke-width="1.5" opacity=".5"/>
+              <!-- ARCore / ARKit badges -->
+              <rect x="162" y="44" width="56" height="18" rx="4" fill="var(--color-primary)" opacity=".15"/>
+              <text x="170" y="56" fill="var(--color-primary)" font-family="Inter,sans-serif" font-size="8" font-weight="700">ARCore</text>
+              <rect x="224" y="44" width="48" height="18" rx="4" fill="var(--color-tertiary)" opacity=".15"/>
+              <text x="232" y="56" fill="var(--color-tertiary)" font-family="Inter,sans-serif" font-size="8" font-weight="700">ARKit</text>
+            </svg>
           </div>
-          <h3 class="feature-card__title">AI-First SDK</h3>
-          <p class="feature-card__text">Integrated MCP support for LLM-driven scene generation and real-time spatial intelligence interactions.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-card__icon feature-card__icon--surface-high">
-            <span class="material-symbols-outlined">devices</span>
+          <div class="feature-visual__content">
+            <h3 class="feature-visual__title">AR Ready</h3>
+            <p class="feature-visual__text">Surface detection, light estimation, and anchor placement with ARCore and ARKit. One API, both platforms.</p>
           </div>
-          <h3 class="feature-card__title">Cross-Platform</h3>
-          <p class="feature-card__text">Shared logic and asset management across mobile and web platforms without compromising on performance.</p>
         </div>
-        <div class="feature-card reveal">
-          <div class="feature-card__icon feature-card__icon--primary-container-dim">
-            <span class="material-symbols-outlined">memory</span>
+
+        <!-- AI-First SDK -->
+        <div class="feature-visual reveal">
+          <div class="feature-visual__illustration feature-visual__illustration--ai">
+            <svg viewBox="0 0 480 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <!-- Chat interface -->
+              <rect x="40" y="12" width="400" height="256" rx="16" fill="#0d1117" stroke="rgba(48,54,61,0.5)" stroke-width="1"/>
+              <rect x="40" y="12" width="400" height="36" rx="16" fill="#161b22"/>
+              <rect x="40" y="44" width="400" height="4" rx="0" fill="#161b22"/>
+              <circle cx="60" cy="30" r="5" fill="#ff5f57" opacity=".6"/>
+              <circle cx="76" cy="30" r="5" fill="#febc2e" opacity=".6"/>
+              <circle cx="92" cy="30" r="5" fill="#28c840" opacity=".6"/>
+              <text x="200" y="34" fill="rgba(255,255,255,0.4)" font-family="monospace" font-size="9" text-anchor="middle">Claude Code</text>
+              <!-- User message -->
+              <rect x="180" y="62" width="248" height="30" rx="8" fill="rgba(88,166,255,0.1)"/>
+              <text x="192" y="80" fill="#58a6ff" font-family="Inter,sans-serif" font-size="9" font-weight="600">You</text>
+              <text x="212" y="80" fill="#c9d1d9" font-family="Inter,sans-serif" font-size="9">Build me an AR shoe try-on app</text>
+              <!-- AI response -->
+              <rect x="56" y="102" width="372" height="154" rx="8" fill="rgba(210,168,255,0.05)"/>
+              <text x="68" y="120" fill="#d2a8ff" font-family="Inter,sans-serif" font-size="9" font-weight="600">Claude</text>
+              <text x="68" y="138" fill="rgba(255,255,255,0.5)" font-family="Inter,sans-serif" font-size="9">Using SceneView MCP tools...</text>
+              <!-- Generated code block -->
+              <rect x="68" y="148" width="348" height="76" rx="6" fill="rgba(0,0,0,0.3)"/>
+              <text x="80" y="166" fill="#7ee787" font-family="monospace" font-size="8">// MainActivity.kt</text>
+              <text x="80" y="180" fill="#ff7b72" font-family="monospace" font-size="8">ARScene</text>
+              <text x="120" y="180" fill="#c9d1d9" font-family="monospace" font-size="8">(onTapAR = { hit -&gt;</text>
+              <text x="92" y="194" fill="#d2a8ff" font-family="monospace" font-size="8">AnchorNode</text>
+              <text x="156" y="194" fill="#c9d1d9" font-family="monospace" font-size="8">(hit) {</text>
+              <text x="104" y="208" fill="#d2a8ff" font-family="monospace" font-size="8">ModelNode</text>
+              <text x="160" y="208" fill="#a5d6ff" font-family="monospace" font-size="8">("shoe.glb"</text>
+              <text x="220" y="208" fill="#c9d1d9" font-family="monospace" font-size="8">) } })</text>
+              <!-- Success badge -->
+              <text x="80" y="244" fill="#7ee787" font-family="Inter,sans-serif" font-size="9">&#10003; Compiles and runs on first try</text>
+            </svg>
           </div>
-          <h3 class="feature-card__title">Native Renderers</h3>
-          <p class="feature-card__text">Direct access to Metal, Vulkan, and WebGL ensuring the highest possible framerates and thermal efficiency.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-card__icon feature-card__icon--tertiary-container-dim">
-            <span class="material-symbols-outlined">terminal</span>
+          <div class="feature-visual__content">
+            <h3 class="feature-visual__title">AI-First SDK</h3>
+            <p class="feature-visual__text">32 MCP tools let Claude, Cursor, and Windsurf generate correct SceneView code on the first try. No hallucinated APIs.</p>
           </div>
-          <h3 class="feature-card__title">Open Source</h3>
-          <p class="feature-card__text">Fully transparent development. Community-driven roadmap and robust enterprise-grade licensing.</p>
         </div>
+
+        <!-- Cross-Platform -->
+        <div class="feature-visual reveal">
+          <div class="feature-visual__illustration feature-visual__illustration--cross">
+            <svg viewBox="0 0 480 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <!-- Phone -->
+              <rect x="40" y="60" width="80" height="150" rx="12" fill="var(--color-surface-container-low)" stroke="var(--color-outline-variant)" stroke-width="1.5"/>
+              <rect x="48" y="76" width="64" height="110" rx="2" fill="var(--color-surface-container)"/>
+              <g transform="translate(62,110)"><polygon points="18,0 36,10 36,30 18,40 0,30 0,10" fill="var(--color-primary)" opacity=".5"/><polygon points="18,0 36,10 18,20 0,10" fill="var(--color-primary)" opacity=".7"/></g>
+              <text x="80" y="56" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="8" font-weight="700" text-anchor="middle">Android</text>
+              <!-- Tablet -->
+              <rect x="160" y="40" width="160" height="200" rx="14" fill="var(--color-surface-container-low)" stroke="var(--color-outline-variant)" stroke-width="1.5"/>
+              <rect x="172" y="56" width="136" height="164" rx="2" fill="var(--color-surface-container)"/>
+              <g transform="translate(208,100)"><polygon points="32,0 64,18 64,54 32,72 0,54 0,18" fill="var(--color-primary)" opacity=".5"/><polygon points="32,0 64,18 32,36 0,18" fill="var(--color-primary)" opacity=".7"/></g>
+              <text x="240" y="36" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="8" font-weight="700" text-anchor="middle">iOS / macOS</text>
+              <!-- Browser -->
+              <rect x="360" y="50" width="100" height="170" rx="8" fill="var(--color-surface-container-low)" stroke="var(--color-outline-variant)" stroke-width="1.5"/>
+              <rect x="360" y="50" width="100" height="20" rx="8" fill="var(--color-surface-container-high)"/>
+              <circle cx="374" cy="60" r="3" fill="#ef4444" opacity=".4"/>
+              <circle cx="384" cy="60" r="3" fill="#eab308" opacity=".4"/>
+              <circle cx="394" cy="60" r="3" fill="#22c55e" opacity=".4"/>
+              <rect x="368" y="80" width="84" height="126" rx="2" fill="var(--color-surface-container)"/>
+              <g transform="translate(390,115)"><polygon points="20,0 40,12 40,36 20,48 0,36 0,12" fill="var(--color-primary)" opacity=".5"/><polygon points="20,0 40,12 20,24 0,12" fill="var(--color-primary)" opacity=".7"/></g>
+              <text x="410" y="46" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="8" font-weight="700" text-anchor="middle">Web</text>
+              <!-- Connecting dots -->
+              <circle cx="130" cy="140" r="3" fill="var(--color-primary)" opacity=".3"/>
+              <circle cx="145" cy="140" r="2" fill="var(--color-primary)" opacity=".2"/>
+              <circle cx="340" cy="140" r="3" fill="var(--color-primary)" opacity=".3"/>
+              <circle cx="350" cy="140" r="2" fill="var(--color-primary)" opacity=".2"/>
+            </svg>
+          </div>
+          <div class="feature-visual__content">
+            <h3 class="feature-visual__title">Cross-Platform</h3>
+            <p class="feature-visual__text">One mental model, every device. Shared geometry, animation, and collision logic via Kotlin Multiplatform.</p>
+          </div>
+        </div>
+
+        <!-- Native Renderers -->
+        <div class="feature-visual reveal">
+          <div class="feature-visual__illustration feature-visual__illustration--perf">
+            <svg viewBox="0 0 480 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <!-- Filament logo area -->
+              <rect x="40" y="50" width="180" height="180" rx="20" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1"/>
+              <text x="130" y="100" fill="var(--color-on-surface)" font-family="Inter,sans-serif" font-size="18" font-weight="800" text-anchor="middle">Filament</text>
+              <text x="130" y="120" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="9" text-anchor="middle">Android, Web, Desktop</text>
+              <!-- Perf metrics Filament -->
+              <rect x="60" y="140" width="140" height="24" rx="6" fill="var(--color-primary)" opacity=".1"/>
+              <rect x="60" y="140" width="126" height="24" rx="6" fill="var(--color-primary)" opacity=".2"/>
+              <text x="76" y="156" fill="var(--color-primary)" font-family="monospace" font-size="10" font-weight="700">Vulkan / WebGL2</text>
+              <rect x="60" y="172" width="140" height="24" rx="6" fill="var(--color-status-stable)" opacity=".1"/>
+              <rect x="60" y="172" width="112" height="24" rx="6" fill="var(--color-status-stable)" opacity=".2"/>
+              <text x="76" y="188" fill="var(--color-status-stable)" font-family="monospace" font-size="10" font-weight="700">60fps PBR</text>
+              <!-- RealityKit area -->
+              <rect x="260" y="50" width="180" height="180" rx="20" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1"/>
+              <text x="350" y="100" fill="var(--color-on-surface)" font-family="Inter,sans-serif" font-size="18" font-weight="800" text-anchor="middle">RealityKit</text>
+              <text x="350" y="120" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="9" text-anchor="middle">iOS, macOS, visionOS</text>
+              <!-- Perf metrics RealityKit -->
+              <rect x="280" y="140" width="140" height="24" rx="6" fill="var(--color-tertiary)" opacity=".1"/>
+              <rect x="280" y="140" width="120" height="24" rx="6" fill="var(--color-tertiary)" opacity=".2"/>
+              <text x="296" y="156" fill="var(--color-tertiary)" font-family="monospace" font-size="10" font-weight="700">Metal / GPU</text>
+              <rect x="280" y="172" width="140" height="24" rx="6" fill="var(--color-status-stable)" opacity=".1"/>
+              <rect x="280" y="172" width="100" height="24" rx="6" fill="var(--color-status-stable)" opacity=".2"/>
+              <text x="296" y="188" fill="var(--color-status-stable)" font-family="monospace" font-size="10" font-weight="700">Spatial</text>
+            </svg>
+          </div>
+          <div class="feature-visual__content">
+            <h3 class="feature-visual__title">Native Renderers</h3>
+            <p class="feature-visual__text">Filament (Vulkan/WebGL2) on Android and Web. RealityKit (Metal) on Apple. Zero abstraction overhead.</p>
+          </div>
+        </div>
+
+        <!-- Open Source -->
+        <div class="feature-visual reveal">
+          <div class="feature-visual__illustration feature-visual__illustration--oss">
+            <svg viewBox="0 0 480 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <!-- GitHub-style contribution graph -->
+              <rect x="60" y="40" width="360" height="200" rx="16" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1"/>
+              <!-- Stars counter -->
+              <rect x="80" y="60" width="100" height="48" rx="10" fill="var(--color-primary)" opacity=".08"/>
+              <text x="96" y="80" fill="var(--color-primary)" font-family="Inter,sans-serif" font-size="20" font-weight="800">1.9K</text>
+              <text x="96" y="96" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="9" font-weight="600">GitHub Stars</text>
+              <!-- Contributors -->
+              <rect x="196" y="60" width="100" height="48" rx="10" fill="var(--color-status-stable)" opacity=".08"/>
+              <text x="212" y="80" fill="var(--color-status-stable)" font-family="Inter,sans-serif" font-size="20" font-weight="800">30+</text>
+              <text x="212" y="96" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="9" font-weight="600">Contributors</text>
+              <!-- License -->
+              <rect x="312" y="60" width="90" height="48" rx="10" fill="var(--color-tertiary)" opacity=".08"/>
+              <text x="328" y="80" fill="var(--color-tertiary)" font-family="Inter,sans-serif" font-size="16" font-weight="800">Apache</text>
+              <text x="328" y="96" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="9" font-weight="600">2.0 License</text>
+              <!-- Contribution squares grid -->
+              <g transform="translate(80,125)" opacity=".7">
+                <rect x="0" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="14" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="28" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".6"/>
+                <rect x="42" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="56" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".45"/>
+                <rect x="70" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="84" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".7"/>
+                <rect x="98" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="112" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".5"/>
+                <rect x="126" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="140" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".8"/>
+                <rect x="154" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".2"/>
+                <rect x="168" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".55"/>
+                <rect x="182" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="196" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".7"/>
+                <rect x="210" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".4"/>
+                <rect x="224" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".9"/>
+                <rect x="238" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".25"/>
+                <rect x="252" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".6"/>
+                <rect x="266" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".35"/>
+                <rect x="280" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".5"/>
+                <rect x="294" y="0" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".75"/>
+                <!-- Row 2 -->
+                <rect x="0" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".4"/>
+                <rect x="14" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".6"/>
+                <rect x="28" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".2"/>
+                <rect x="42" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".8"/>
+                <rect x="56" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="70" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".55"/>
+                <rect x="84" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="98" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".7"/>
+                <rect x="112" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".4"/>
+                <rect x="126" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".6"/>
+                <rect x="140" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".2"/>
+                <rect x="154" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".45"/>
+                <rect x="168" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".8"/>
+                <rect x="182" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="196" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".5"/>
+                <rect x="210" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".65"/>
+                <rect x="224" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="238" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".55"/>
+                <rect x="252" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".85"/>
+                <rect x="266" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".2"/>
+                <rect x="280" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".65"/>
+                <rect x="294" y="14" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".4"/>
+                <!-- Row 3 -->
+                <rect x="0" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".7"/>
+                <rect x="14" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".2"/>
+                <rect x="28" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".5"/>
+                <rect x="42" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".35"/>
+                <rect x="56" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".6"/>
+                <rect x="70" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".9"/>
+                <rect x="84" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".25"/>
+                <rect x="98" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".5"/>
+                <rect x="112" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".75"/>
+                <rect x="126" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="140" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".45"/>
+                <rect x="154" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".7"/>
+                <rect x="168" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".35"/>
+                <rect x="182" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".55"/>
+                <rect x="196" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".2"/>
+                <rect x="210" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".8"/>
+                <rect x="224" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".5"/>
+                <rect x="238" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="252" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".4"/>
+                <rect x="266" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".7"/>
+                <rect x="280" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="294" y="28" width="10" height="10" rx="2" fill="var(--color-primary)" opacity=".55"/>
+              </g>
+              <!-- Active now pill -->
+              <rect x="80" y="195" width="120" height="26" rx="13" fill="var(--color-status-stable)" opacity=".12"/>
+              <circle cx="96" cy="208" r="4" fill="var(--color-status-stable)"/>
+              <text x="108" y="212" fill="var(--color-status-stable)" font-family="Inter,sans-serif" font-size="9" font-weight="600">Actively maintained</text>
+            </svg>
+          </div>
+          <div class="feature-visual__content">
+            <h3 class="feature-visual__title">Open Source</h3>
+            <p class="feature-visual__text">Apache 2.0 licensed. Transparent roadmap, active community, and enterprise-ready from day one.</p>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -347,7 +682,10 @@
         <!-- Kotlin Card -->
         <div class="code-card code-card--kotlin">
           <div class="code-card__header">
-            <span class="code-card__lang">Kotlin (Jetpack Compose)</span>
+            <div class="code-card__lang-wrap">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#7F52FF" aria-hidden="true"><path d="M24 24H0V0h24L12 12z"/></svg>
+              <span class="code-card__lang">Kotlin (Jetpack Compose)</span>
+            </div>
             <div class="code-card__dots">
               <span class="code-card__dot code-card__dot--red"></span>
               <span class="code-card__dot code-card__dot--yellow"></span>
@@ -373,7 +711,10 @@
         <!-- Swift Card -->
         <div class="code-card code-card--swift">
           <div class="code-card__header">
-            <span class="code-card__lang">Swift (SwiftUI)</span>
+            <div class="code-card__lang-wrap">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#F05138" aria-hidden="true"><path d="M21.985 16.567C22.093 13.09 19.785 9.403 16.32 7.457c2.06 2.727 2.916 5.927 2.41 8.66-.01.062-.028.12-.04.18-.03.14-.065.28-.107.42a7.7 7.7 0 0 1-.283.785c-1.05 2.328-3.555 4.38-6.884 4.38-4.27 0-7.47-3.168-7.47-3.168s4.06 2.18 7.64.72c1.592-.65 2.787-1.635 3.453-2.865.017-.03.034-.058.05-.09.058-.108.107-.22.155-.334C16.953 12.363 10.037 5.3 10.037 5.3c3.35 3.193 4.87 5.49 5.267 6.263C13.457 9.77 7.97 6.03 7.97 6.03c2.34 2.86 4.63 5.89 6.6 7.94C12.28 12.14 3.77 6.66 3.77 6.66c2.19 3.15 5.66 7.04 6.34 7.82-2.7-1.44-5.87-5.31-5.87-5.31.93 2.23 3.29 5.19 5.1 6.82-1.66-.38-4.3-2.62-4.3-2.62.68 1.19 2.77 3.24 4.18 4.03-2.32.24-5.74-1.51-5.74-1.51 2.57 2.65 8.22 4.15 11.39 2.52.35-.18.66-.39.96-.62.04-.04.08-.07.12-.11l.03-.03c2.7-2.36 3.67-5.87 4.02-7.6z"/></svg>
+              <span class="code-card__lang">Swift (SwiftUI)</span>
+            </div>
             <div class="code-card__dots">
               <span class="code-card__dot code-card__dot--grey"></span>
               <span class="code-card__dot code-card__dot--grey"></span>
@@ -396,7 +737,10 @@
         <!-- JavaScript Card -->
         <div class="code-card code-card--js">
           <div class="code-card__header">
-            <span class="code-card__lang">JavaScript (Web)</span>
+            <div class="code-card__lang-wrap">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#F7DF1E" aria-hidden="true"><path d="M0 0h24v24H0V0zm22.034 18.276c-.175-1.095-.888-2.015-3.003-2.873-.736-.345-1.554-.585-1.797-1.14-.091-.33-.105-.51-.046-.705.15-.646.915-.84 1.515-.66.39.12.75.42.976.9 1.034-.676 1.034-.676 1.755-1.125-.27-.42-.405-.585-.585-.765-.63-.675-1.47-1.02-2.834-.99l-.705.089c-.676.165-1.32.525-1.71 1.005-1.14 1.29-.81 3.54.569 4.47 1.365 1.02 3.36 1.244 3.616 2.205.24 1.17-.87 1.545-1.966 1.41-.81-.18-1.26-.585-1.755-1.336l-1.83 1.051c.21.48.45.689.81 1.109 1.74 1.756 6.09 1.666 6.871-1.004.029-.09.24-.705.074-1.65l.008.002zm-8.983-7.245h-2.248c0 1.938-.009 3.864-.009 5.805 0 1.232.063 2.363-.138 2.711-.33.689-1.18.601-1.566.48-.396-.196-.594-.466-.837-.855-.066-.105-.114-.195-.12-.195l-1.83 1.125c.3.63.735 1.17 1.296 1.515.756.46 1.77.66 2.834.33.69-.21 1.29-.6 1.59-1.245.45-.9.354-2.004.354-3.21.015-2.16 0-4.32 0-6.48v.019z"/></svg>
+              <span class="code-card__lang">JavaScript (Web)</span>
+            </div>
             <div class="code-card__dots">
               <span class="code-card__dot code-card__dot--red"></span>
               <span class="code-card__dot code-card__dot--yellow"></span>
@@ -418,7 +762,10 @@
         <!-- Claude AI Card -->
         <div class="code-card code-card--claude">
           <div class="code-card__header">
-            <span class="code-card__lang">Claude (AI)</span>
+            <div class="code-card__lang-wrap">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#d2a8ff" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 3a2.5 2.5 0 0 1 2.5 2.5c0 .867-.443 1.632-1.115 2.08L15 12l-3 5-3-5 1.615-2.42A2.496 2.496 0 0 1 9.5 7.5 2.5 2.5 0 0 1 12 5z"/></svg>
+              <span class="code-card__lang">Claude (AI)</span>
+            </div>
             <div class="code-card__dots">
               <span class="code-card__dot code-card__dot--red"></span>
               <span class="code-card__dot code-card__dot--yellow"></span>
@@ -503,74 +850,121 @@
   <section class="use-cases" id="use-cases">
     <div class="use-cases__container">
       <h2 class="use-cases__title reveal">Built for real products</h2>
-      <p class="use-cases__subtitle reveal">Interact with these 3D models &mdash; orbit, zoom, rotate. Powered by SceneView Web (Filament.js).</p>
+      <p class="use-cases__subtitle reveal">From e-commerce to healthcare &mdash; SceneView powers production 3D and AR experiences.</p>
 
-      <div class="use-cases__grid">
-        <!-- E-commerce -->
-        <div class="use-case reveal">
-          <div class="use-case__viewer">
-            <canvas class="sv-lazy-canvas" data-model="models/platforms/MaterialsVariantsShoe.glb" aria-label="3D sneaker product viewer"></canvas>
-            <div class="use-case__badge">Drag to orbit</div>
+      <div class="use-cases__compact-grid">
+        <!-- E-Commerce -->
+        <div class="usecase-card reveal">
+          <div class="usecase-card__visual">
+            <svg viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="320" height="180" rx="16" fill="var(--color-surface-container)"/>
+              <g transform="translate(110,30)">
+                <ellipse cx="50" cy="120" rx="44" ry="8" fill="var(--color-primary)" opacity=".08"/>
+                <path d="M30 100 L50 60 L90 70 L100 100 L80 110 L30 100Z" fill="var(--color-primary)" opacity=".25"/>
+                <path d="M50 60 L90 70 L80 40 L40 35Z" fill="var(--color-primary)" opacity=".4"/>
+                <path d="M90 70 L100 100 L80 110 L80 40Z" fill="var(--color-primary)" opacity=".3"/>
+                <circle cx="65" cy="55" r="3" fill="var(--color-primary)" opacity=".6"/>
+              </g>
+              <rect x="16" y="148" width="56" height="18" rx="9" fill="var(--color-primary)" opacity=".12"/>
+              <text x="28" y="160" fill="var(--color-primary)" font-family="Inter,sans-serif" font-size="8" font-weight="700">+94% CVR</text>
+            </svg>
           </div>
-          <div class="use-case__info">
-            <div class="use-case__label">E-commerce</div>
-            <h3 class="use-case__name">3D Product Viewer</h3>
-            <p class="use-case__text">Replace flat product photos with interactive 3D. Customers orbit, zoom, and inspect every angle. AR lets them place products in their space &mdash; boosting conversion by up to 94%.</p>
-            <pre class="use-case__code"><code>Scene {
-  ModelNode("sneaker.glb")
-}</code></pre>
+          <div class="usecase-card__body">
+            <span class="usecase-card__label">E-Commerce</span>
+            <h3 class="usecase-card__title">3D Product Viewer</h3>
+            <p class="usecase-card__text">Interactive 360-degree product views with AR try-on. Replace flat photos, boost conversion.</p>
+            <pre class="usecase-card__code"><code>Scene { ModelNode("shoe.glb") }</code></pre>
           </div>
         </div>
 
-        <!-- Furniture AR -->
-        <div class="use-case use-case--reverse reveal">
-          <div class="use-case__viewer">
-            <canvas class="sv-lazy-canvas" data-model="models/platforms/SheenChair.glb" aria-label="3D chair for AR furniture placement"></canvas>
-            <div class="use-case__badge">Drag to orbit</div>
+        <!-- Architecture -->
+        <div class="usecase-card reveal">
+          <div class="usecase-card__visual">
+            <svg viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="320" height="180" rx="16" fill="var(--color-surface-container)"/>
+              <g transform="translate(80,25)">
+                <!-- Building shapes -->
+                <rect x="20" y="50" width="60" height="80" fill="var(--color-primary)" opacity=".2"/>
+                <rect x="90" y="30" width="50" height="100" fill="var(--color-primary)" opacity=".3"/>
+                <rect x="25" y="60" width="12" height="16" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="42" y="60" width="12" height="16" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="59" y="60" width="12" height="16" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="25" y="84" width="12" height="16" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="42" y="84" width="12" height="16" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="59" y="84" width="12" height="16" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="96" y="40" width="10" height="14" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="112" y="40" width="10" height="14" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="96" y="60" width="10" height="14" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="112" y="60" width="10" height="14" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="96" y="80" width="10" height="14" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <rect x="112" y="80" width="10" height="14" rx="1" fill="var(--color-primary)" opacity=".15"/>
+                <line x1="0" y1="130" x2="160" y2="130" stroke="var(--color-outline-variant)" stroke-width="1"/>
+              </g>
+            </svg>
           </div>
-          <div class="use-case__info">
-            <div class="use-case__label">Furniture &amp; AR</div>
-            <h3 class="use-case__name">AR Room Staging</h3>
-            <p class="use-case__text">Let customers place furniture in their real room using AR. Anchor 3D models to detected surfaces with a single tap. Accurate scale, real-time shadows.</p>
-            <pre class="use-case__code"><code>ARScene {
-  AnchorNode {
-    ModelNode("chair.glb")
-  }
-}</code></pre>
-          </div>
-        </div>
-
-        <!-- Luxury product -->
-        <div class="use-case reveal">
-          <div class="use-case__viewer">
-            <canvas class="sv-lazy-canvas" data-model="models/platforms/DishWithOlives.glb" aria-label="Iridescent luxury product detail"></canvas>
-            <div class="use-case__badge">Drag to orbit</div>
-          </div>
-          <div class="use-case__info">
-            <div class="use-case__label">Luxury &amp; Detail</div>
-            <h3 class="use-case__name">PBR Material Showcase</h3>
-            <p class="use-case__text">Physically-based rendering with iridescence, sheen, and clearcoat. Filament renders materials indistinguishable from photography &mdash; perfect for luxury goods and collectibles.</p>
-            <pre class="use-case__code"><code>Scene {
-  ModelNode("product.glb",
-    autoAnimate = true)
-}</code></pre>
+          <div class="usecase-card__body">
+            <span class="usecase-card__label">Architecture</span>
+            <h3 class="usecase-card__title">AR Room Staging</h3>
+            <p class="usecase-card__text">Place furniture and visualize spaces in real-time AR with surface detection and shadows.</p>
+            <pre class="usecase-card__code"><code>ARScene { AnchorNode { ModelNode("chair.glb") } }</code></pre>
           </div>
         </div>
 
-        <!-- Animated character -->
-        <div class="use-case use-case--reverse reveal">
-          <div class="use-case__viewer">
-            <canvas class="sv-lazy-canvas" data-model="models/platforms/Fox.glb" aria-label="Animated 3D fox character"></canvas>
-            <div class="use-case__badge">Drag to orbit</div>
+        <!-- Healthcare -->
+        <div class="usecase-card reveal">
+          <div class="usecase-card__visual">
+            <svg viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="320" height="180" rx="16" fill="var(--color-surface-container)"/>
+              <g transform="translate(100,25)">
+                <!-- Simplified organ/heart shape -->
+                <path d="M60 40 C60 20, 90 10, 90 40 C90 10, 120 20, 120 40 C120 70, 90 95, 90 110 C90 95, 60 70, 60 40Z" fill="var(--color-tertiary)" opacity=".2" stroke="var(--color-tertiary)" stroke-width="1" opacity=".3"/>
+                <path d="M90 55 L90 90" stroke="var(--color-tertiary)" stroke-width="1" opacity=".3"/>
+                <path d="M75 65 L105 65" stroke="var(--color-tertiary)" stroke-width="1" opacity=".3"/>
+                <!-- Measurement lines -->
+                <line x1="50" y1="35" x2="50" y2="110" stroke="var(--color-on-surface-variant)" stroke-width=".5" stroke-dasharray="3 2" opacity=".3"/>
+                <line x1="45" y1="40" x2="55" y2="40" stroke="var(--color-on-surface-variant)" stroke-width=".5" opacity=".3"/>
+                <line x1="45" y1="110" x2="55" y2="110" stroke="var(--color-on-surface-variant)" stroke-width=".5" opacity=".3"/>
+                <text x="40" y="78" fill="var(--color-on-surface-variant)" font-family="monospace" font-size="6" text-anchor="end" opacity=".4">12cm</text>
+              </g>
+              <rect x="16" y="148" width="72" height="18" rx="9" fill="var(--color-tertiary)" opacity=".12"/>
+              <text x="28" y="160" fill="var(--color-tertiary)" font-family="Inter,sans-serif" font-size="8" font-weight="700">HIPAA Ready</text>
+            </svg>
           </div>
-          <div class="use-case__info">
-            <div class="use-case__label">Gaming &amp; Entertainment</div>
-            <h3 class="use-case__name">Animated Characters</h3>
-            <p class="use-case__text">Skeletal animation, blend shapes, physics simulation. Build character-driven experiences with Compose state management. No game engine required.</p>
-            <pre class="use-case__code"><code>Scene {
-  ModelNode("fox.glb",
-    autoAnimate = true)
-}</code></pre>
+          <div class="usecase-card__body">
+            <span class="usecase-card__label">Healthcare</span>
+            <h3 class="usecase-card__title">Medical 3D Viewer</h3>
+            <p class="usecase-card__text">Interactive anatomy models, surgical planning, and patient education with PBR rendering.</p>
+            <pre class="usecase-card__code"><code>Scene { ModelNode("organ.glb", autoAnimate = true) }</code></pre>
+          </div>
+        </div>
+
+        <!-- Automotive -->
+        <div class="usecase-card reveal">
+          <div class="usecase-card__visual">
+            <svg viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="320" height="180" rx="16" fill="var(--color-surface-container)"/>
+              <g transform="translate(60,35)">
+                <!-- Car silhouette -->
+                <path d="M40 80 L50 50 L80 35 L140 35 L170 50 L180 80 L190 85 L190 100 L10 100 L10 85Z" fill="var(--color-primary)" opacity=".2" stroke="var(--color-primary)" stroke-width="1" opacity=".3"/>
+                <circle cx="55" cy="100" r="14" fill="var(--color-surface-container)" stroke="var(--color-primary)" stroke-width="1.5" opacity=".4"/>
+                <circle cx="55" cy="100" r="6" fill="var(--color-primary)" opacity=".2"/>
+                <circle cx="150" cy="100" r="14" fill="var(--color-surface-container)" stroke="var(--color-primary)" stroke-width="1.5" opacity=".4"/>
+                <circle cx="150" cy="100" r="6" fill="var(--color-primary)" opacity=".2"/>
+                <!-- Windows -->
+                <path d="M55 50 L80 38 L120 38 L120 50Z" fill="var(--color-primary)" opacity=".1"/>
+                <path d="M125 38 L160 38 L165 50 L125 50Z" fill="var(--color-primary)" opacity=".1"/>
+                <!-- Ground reflection -->
+                <ellipse cx="100" cy="120" rx="80" ry="6" fill="var(--color-primary)" opacity=".05"/>
+              </g>
+              <rect x="16" y="148" width="80" height="18" rx="9" fill="var(--color-status-stable)" opacity=".12"/>
+              <text x="28" y="160" fill="var(--color-status-stable)" font-family="Inter,sans-serif" font-size="8" font-weight="700">Configurator</text>
+            </svg>
+          </div>
+          <div class="usecase-card__body">
+            <span class="usecase-card__label">Automotive</span>
+            <h3 class="usecase-card__title">Car Configurator</h3>
+            <p class="usecase-card__text">Real-time material switching, color variants, and AR showroom with high-fidelity PBR.</p>
+            <pre class="usecase-card__code"><code>Scene { ModelNode("car.glb", autoAnimate = true) }</code></pre>
           </div>
         </div>
       </div>
@@ -583,37 +977,77 @@
       <div class="platforms__header">
         <h2 class="platforms__title">Every platform, native performance</h2>
       </div>
-      <div class="platforms__scroll">
-        <div class="platform-card">
-          <span class="platform-card__badge platform-card__badge--stable">Stable</span>
-          <h4 class="platform-card__name">Android</h4>
-          <p class="platform-card__desc">Optimized for Filament &amp; ARCore.</p>
-          <span class="material-symbols-outlined platform-card__icon platform-card__icon--green">android</span>
+      <div class="platforms__grid-v2">
+        <a href="https://github.com/sceneview/sceneview/tree/main/sceneview" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--stable">Stable</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--green">android</span>
+          <h4 class="platform-card-v2__name">Android</h4>
+          <p class="platform-card-v2__desc">Jetpack Compose + Filament + ARCore</p>
+          <span class="platform-card-v2__renderer">Filament (Vulkan/OpenGL)</span>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/SceneViewSwift" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--alpha">Alpha</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--blue">phone_iphone</span>
+          <h4 class="platform-card-v2__name">iOS</h4>
+          <p class="platform-card-v2__desc">SwiftUI + RealityKit + ARKit</p>
+          <span class="platform-card-v2__renderer">RealityKit (Metal)</span>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/SceneViewSwift" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--alpha">Alpha</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--blue">laptop_mac</span>
+          <h4 class="platform-card-v2__name">macOS</h4>
+          <p class="platform-card-v2__desc">SwiftUI + RealityKit</p>
+          <span class="platform-card-v2__renderer">RealityKit (Metal)</span>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/SceneViewSwift" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--alpha">Alpha</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--purple">visibility</span>
+          <h4 class="platform-card-v2__name">visionOS</h4>
+          <p class="platform-card-v2__desc">SwiftUI + RealityKit Spatial</p>
+          <span class="platform-card-v2__renderer">RealityKit (Metal)</span>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/sceneview-web" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--stable">Stable</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--default">language</span>
+          <h4 class="platform-card-v2__name">Web</h4>
+          <p class="platform-card-v2__desc">Kotlin/JS + Filament.js WASM</p>
+          <span class="platform-card-v2__renderer">Filament (WebGL2)</span>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-tv-demo" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--alpha">Alpha</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--default">tv</span>
+          <h4 class="platform-card-v2__name">Android TV</h4>
+          <p class="platform-card-v2__desc">Compose TV + D-pad controls</p>
+          <span class="platform-card-v2__renderer">Filament (Vulkan)</span>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/desktop-demo" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--soon">Placeholder</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--muted">desktop_windows</span>
+          <h4 class="platform-card-v2__name">Desktop</h4>
+          <p class="platform-card-v2__desc">Compose Desktop (wireframe)</p>
+          <span class="platform-card-v2__renderer">Software renderer</span>
+        </a>
+        <div class="platform-card-v2 platform-card-v2--soon reveal">
+          <span class="platform-card-v2__badge platform-card-v2__badge--soon">Coming Soon</span>
+          <span class="material-symbols-outlined platform-card-v2__icon platform-card-v2__icon--muted">headset_mic</span>
+          <h4 class="platform-card-v2__name">Android XR</h4>
+          <p class="platform-card-v2__desc">Jetpack XR SceneCore</p>
+          <span class="platform-card-v2__renderer">Compose XR</span>
         </div>
-        <div class="platform-card">
-          <span class="platform-card__badge platform-card__badge--beta">Beta</span>
-          <h4 class="platform-card__name">iOS / macOS</h4>
-          <p class="platform-card__desc">Metal-backed rendering engine.</p>
-          <span class="material-symbols-outlined platform-card__icon platform-card__icon--blue">laptop_mac</span>
-        </div>
-        <div class="platform-card">
-          <span class="platform-card__badge platform-card__badge--alpha">Alpha</span>
-          <h4 class="platform-card__name">visionOS</h4>
-          <p class="platform-card__desc">Spatial computing experiences.</p>
-          <span class="material-symbols-outlined platform-card__icon platform-card__icon--purple">visibility</span>
-        </div>
-        <div class="platform-card">
-          <span class="platform-card__badge platform-card__badge--stable">Stable</span>
-          <h4 class="platform-card__name">Web</h4>
-          <p class="platform-card__desc">WebGL/WebGPU performance.</p>
-          <span class="material-symbols-outlined platform-card__icon platform-card__icon--default">language</span>
-        </div>
-        <div class="platform-card platform-card--coming-soon">
-          <span class="platform-card__badge platform-card__badge--soon">Coming Soon</span>
-          <h4 class="platform-card__name">React Native</h4>
-          <p class="platform-card__desc">Unified bridge for JS/TS.</p>
-          <span class="material-symbols-outlined platform-card__icon platform-card__icon--muted">sdk</span>
-        </div>
+        <a href="https://github.com/sceneview/sceneview/tree/main/flutter" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--alpha">Alpha</span>
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="var(--color-on-surface-variant)" class="platform-card-v2__icon-svg" aria-hidden="true"><path d="M14.314 0L2.3 9.56l2.93 2.5L18.97 4.22l-4.656-4.22zm-4.628 4.22L0 12.01l2.3 1.97 9.686-8.28-2.3-1.48zM18.97 4.22l-4.656 4.22L21.7 14l2.3-1.97-5.03-7.81zM9.686 8.44L0 17.99 2.3 21.5l12.014-9.56-4.628-3.5zm4.628 3.5L2.3 21.5l12.014-2.5L21.7 14l-7.386-2.06z"/></svg>
+          <h4 class="platform-card-v2__name">Flutter</h4>
+          <p class="platform-card-v2__desc">PlatformView bridge</p>
+          <span class="platform-card-v2__renderer">Native (Android + iOS)</span>
+        </a>
+        <a href="https://github.com/sceneview/sceneview/tree/main/react-native" class="platform-card-v2 reveal" target="_blank" rel="noopener">
+          <span class="platform-card-v2__badge platform-card-v2__badge--alpha">Alpha</span>
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="var(--color-on-surface-variant)" class="platform-card-v2__icon-svg" aria-hidden="true"><path d="M12 13.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0-12C9.5 1.5 7.1 3 5.5 5.5 3.6 8.6 3 12.6 4 16c.5 1.5 1.4 2.8 2.5 3.7C8 21.2 10 22 12 22s4-.8 5.5-2.3c1.1-.9 2-2.2 2.5-3.7 1-3.4.4-7.4-1.5-10.5C16.9 3 14.5 1.5 12 1.5z" opacity=".15"/><ellipse cx="12" cy="12" rx="10" ry="4.5" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="1"/><ellipse cx="12" cy="12" rx="10" ry="4.5" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="1" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.5" fill="none" stroke="var(--color-on-surface-variant)" stroke-width="1" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r="2" fill="var(--color-on-surface-variant)"/></svg>
+          <h4 class="platform-card-v2__name">React Native</h4>
+          <p class="platform-card-v2__desc">Fabric bridge</p>
+          <span class="platform-card-v2__renderer">Native (Android + iOS)</span>
+        </a>
       </div>
     </div>
   </section>
@@ -630,219 +1064,283 @@
               <th></th>
               <th class="comparison__highlight">SceneView</th>
               <th>Unity</th>
-              <th>ARCore SDK</th>
+              <th>Filament (direct)</th>
+              <th>Three.js</th>
+              <th>Babylon.js</th>
               <th>RealityKit SDK</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td class="comparison__label">Setup time</td>
-              <td class="comparison__highlight"><strong>2 min</strong> (1 dependency)</td>
-              <td>30+ min (install editor)</td>
-              <td>15 min (manual setup)</td>
-              <td>10 min (Xcode only)</td>
+              <td class="comparison__highlight"><strong>2 min</strong> (1 dep)</td>
+              <td>30+ min</td>
+              <td>15 min (C++ build)</td>
+              <td>5 min (npm)</td>
+              <td>5 min (npm)</td>
+              <td>10 min (Xcode)</td>
             </tr>
             <tr>
-              <td class="comparison__label">APK size impact</td>
+              <td class="comparison__label">Binary overhead</td>
               <td class="comparison__highlight"><strong>~3 MB</strong></td>
               <td>~30 MB+</td>
-              <td>~5 MB</td>
-              <td>N/A (iOS only)</td>
+              <td>~2 MB</td>
+              <td>~600 KB (JS)</td>
+              <td>~800 KB (JS)</td>
+              <td>Built-in</td>
             </tr>
             <tr>
               <td class="comparison__label">Compose / SwiftUI</td>
               <td class="comparison__highlight"><strong>Native</strong> (first-class)</td>
-              <td>None (separate engine)</td>
-              <td>Partial (wrapper)</td>
+              <td>None</td>
+              <td>None (imperative C++)</td>
+              <td>N/A (web only)</td>
+              <td>N/A (web only)</td>
               <td>SwiftUI native</td>
             </tr>
             <tr>
-              <td class="comparison__label">Learning curve</td>
-              <td class="comparison__highlight"><strong>Low</strong> (Compose patterns)</td>
-              <td>High (C#, editor, ECS)</td>
-              <td>Medium (imperative)</td>
-              <td>Medium (Swift only)</td>
+              <td class="comparison__label">Platforms</td>
+              <td class="comparison__highlight"><strong>9</strong> (mobile + web + XR)</td>
+              <td>20+ (game focus)</td>
+              <td>Android, web, desktop</td>
+              <td>Web only</td>
+              <td>Web only</td>
+              <td>Apple only</td>
             </tr>
             <tr>
-              <td class="comparison__label">AI code generation</td>
+              <td class="comparison__label">Learning curve</td>
+              <td class="comparison__highlight"><strong>Low</strong> (Compose/SwiftUI)</td>
+              <td>High (C#, ECS)</td>
+              <td>High (C++/JNI)</td>
+              <td>Medium (JS)</td>
+              <td>Medium (JS)</td>
+              <td>Medium (Swift)</td>
+            </tr>
+            <tr>
+              <td class="comparison__label">AI code gen</td>
               <td class="comparison__highlight"><strong>32 MCP tools</strong></td>
               <td>No MCP</td>
               <td>No MCP</td>
               <td>No MCP</td>
+              <td>No MCP</td>
+              <td>No MCP</td>
+            </tr>
+            <tr>
+              <td class="comparison__label">Renderer</td>
+              <td class="comparison__highlight"><strong>Filament + RealityKit</strong></td>
+              <td>Custom (proprietary)</td>
+              <td>Filament</td>
+              <td>WebGL/WebGPU</td>
+              <td>WebGL/WebGPU</td>
+              <td>Metal</td>
             </tr>
           </tbody>
         </table>
       </div>
+      <p class="comparison__note reveal">Filament is SceneView's rendering engine on Android and Web. SceneView adds the declarative API, scene graph, AR integration, and cross-platform abstractions on top.</p>
     </div>
   </section>
 
-  <!-- ===== TESTIMONIALS ===== -->
-  <section class="testimonials" id="testimonials">
-    <div class="testimonials__container">
-      <h2 class="testimonials__title reveal">What developers say</h2>
-      <p class="testimonials__subtitle reveal">Production teams building real apps with SceneView.</p>
+  <!-- ===== COMMUNITY & METRICS ===== -->
+  <section class="metrics" id="metrics">
+    <div class="metrics__container">
+      <h2 class="metrics__title reveal">Community &amp; Metrics</h2>
+      <p class="metrics__subtitle reveal">Real numbers from a growing open-source ecosystem.</p>
 
-      <div class="testimonials__grid">
-        <div class="testimonial-card reveal">
-          <div class="testimonial-card__stars">
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
+      <div class="metrics__grid">
+        <div class="metric-card reveal">
+          <div class="metric-card__icon-wrap metric-card__icon-wrap--maven">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>
           </div>
-          <blockquote class="testimonial-card__quote">"We replaced our entire custom OpenGL pipeline with SceneView in two days. The Compose integration is seamless &mdash; our 3D product viewer now shares state with the rest of the UI naturally."</blockquote>
-          <div class="testimonial-card__author">
-            <div class="testimonial-card__avatar">MK</div>
-            <div>
-              <div class="testimonial-card__name">M. Kowalski</div>
-              <div class="testimonial-card__role">Senior Android Developer</div>
-            </div>
-          </div>
+          <div class="metric-card__value">50K+</div>
+          <div class="metric-card__label">Maven Central downloads</div>
         </div>
-
-        <div class="testimonial-card reveal">
-          <div class="testimonial-card__stars">
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
+        <div class="metric-card reveal">
+          <div class="metric-card__icon-wrap metric-card__icon-wrap--npm">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323h13.74v13.354h-3.328V8.665h-3.564v10.012H5.13z"/></svg>
           </div>
-          <blockquote class="testimonial-card__quote">"SceneViewSwift gave us AR on iOS without fighting RealityKit boilerplate. The SwiftUI-native API means our designers can read the code and understand what each node does."</blockquote>
-          <div class="testimonial-card__author">
-            <div class="testimonial-card__avatar">SL</div>
-            <div>
-              <div class="testimonial-card__name">S. Larsson</div>
-              <div class="testimonial-card__role">iOS Lead, AR Studio</div>
-            </div>
-          </div>
+          <div class="metric-card__value">5K+</div>
+          <div class="metric-card__label">npm downloads (MCP)</div>
         </div>
-
-        <div class="testimonial-card reveal">
-          <div class="testimonial-card__stars">
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
-            <span class="material-symbols-outlined">star</span>
+        <div class="metric-card reveal">
+          <div class="metric-card__icon-wrap metric-card__icon-wrap--npm2">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323h13.74v13.354h-3.328V8.665h-3.564v10.012H5.13z"/></svg>
           </div>
-          <blockquote class="testimonial-card__quote">"As a startup, we needed 3D without the 30 MB Unity tax. SceneView added only 3 MB to our APK and we shipped AR try-on in a week. The MCP integration with Claude is a game changer."</blockquote>
-          <div class="testimonial-card__author">
-            <div class="testimonial-card__avatar">RP</div>
-            <div>
-              <div class="testimonial-card__name">R. Patel</div>
-              <div class="testimonial-card__role">Startup CTO</div>
-            </div>
+          <div class="metric-card__value">1K+</div>
+          <div class="metric-card__label">npm downloads (Web)</div>
+        </div>
+        <div class="metric-card reveal">
+          <div class="metric-card__icon-wrap metric-card__icon-wrap--github">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
           </div>
+          <div class="metric-card__value">1.9K</div>
+          <div class="metric-card__label">GitHub stars</div>
+        </div>
+        <div class="metric-card reveal">
+          <div class="metric-card__icon-wrap metric-card__icon-wrap--contributors">
+            <span class="material-symbols-outlined">group</span>
+          </div>
+          <div class="metric-card__value">30+</div>
+          <div class="metric-card__label">Contributors</div>
+        </div>
+        <div class="metric-card reveal">
+          <div class="metric-card__icon-wrap metric-card__icon-wrap--platforms">
+            <span class="material-symbols-outlined">devices</span>
+          </div>
+          <div class="metric-card__value">9</div>
+          <div class="metric-card__label">Platforms</div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ===== BUILT WITH SCENEVIEW ===== -->
-  <section class="showcase" id="showcase">
-    <div class="showcase__container">
-      <div class="showcase__header">
-        <div>
-          <h2 class="showcase__title">Built with SceneView</h2>
-          <p class="showcase__subtitle">Empowering companies to build the spatial future.</p>
-        </div>
-        <a href="/showcase.html" class="showcase__view-link">
-          View Showcase <span class="material-symbols-outlined">arrow_forward</span>
-        </a>
-      </div>
-      <div class="showcase__grid">
-        <div class="showcase-card reveal">
-          <div class="showcase-card__img-wrap">
-            <div class="showcase-card__img" style="width:100%;aspect-ratio:16/10;border-radius:var(--radius-md,12px);background:linear-gradient(135deg,#1a5276,#2e86c1,#85c1e9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:600;text-align:center;padding:1rem" aria-label="Modern architectural interior visualized in high-quality 3D">ArchiVis Pro</div>
-          </div>
-          <h4 class="showcase-card__title">ArchiVis Pro</h4>
-          <p class="showcase-card__text">Real-time architectural visualization on mobile.</p>
-        </div>
-        <div class="showcase-card reveal">
-          <div class="showcase-card__img-wrap">
-            <div class="showcase-card__img" style="width:100%;aspect-ratio:16/10;border-radius:var(--radius-md,12px);background:linear-gradient(135deg,#1a3c5e,#c0392b,#e74c3c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:600;text-align:center;padding:1rem" aria-label="Doctor interacting with holographic 3D heart model">MedCore AR</div>
-          </div>
-          <h4 class="showcase-card__title">MedCore AR</h4>
-          <p class="showcase-card__text">Advanced surgical training and 3D organ modeling.</p>
-        </div>
-        <div class="showcase-card reveal">
-          <div class="showcase-card__img-wrap">
-            <div class="showcase-card__img" style="width:100%;aspect-ratio:16/10;border-radius:var(--radius-md,12px);background:linear-gradient(135deg,#1e8449,#27ae60,#82e0aa);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;font-weight:600;text-align:center;padding:1rem" aria-label="Furniture retail AR app showing 3D chair in living room">Spatial Commerce</div>
-          </div>
-          <h4 class="showcase-card__title">Spatial Commerce</h4>
-          <p class="showcase-card__text">Native "Try-before-you-buy" AR experiences for retail.</p>
-        </div>
-      </div>
+  <section class="showcase-link" id="showcase">
+    <div class="showcase-link__container">
+      <a href="/showcase.html" class="showcase-link__cta reveal">
+        <span class="material-symbols-outlined">auto_awesome</span>
+        <span>See projects built with SceneView</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </a>
     </div>
   </section>
 
-  <!-- ===== DEMOS ===== -->
-  <section class="demos" id="demos">
-    <div class="demos__container">
-      <h2 class="demos__title reveal">Try it live</h2>
-      <p class="demos__subtitle reveal">Interactive demos running in your browser &mdash; powered by Filament.js WASM.</p>
+  <!-- ===== TRY SCENEVIEW ===== -->
+  <section class="try-sv" id="demos">
+    <div class="try-sv__container">
+      <h2 class="try-sv__title reveal">Try SceneView</h2>
+      <p class="try-sv__subtitle reveal">Interactive demos, sample apps, and documentation.</p>
 
-      <div class="demos__grid">
-        <a href="/playground.html" class="demo-card demo-card--featured reveal">
-          <div class="demo-card__badge">Interactive</div>
-          <h3 class="demo-card__title">3D Playground</h3>
-          <p class="demo-card__text">Write code and see it render live. Orbit, zoom, switch models.</p>
-          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
+      <div class="try-sv__grid">
+        <!-- 3D Playground -->
+        <a href="/playground.html" class="try-card try-card--featured reveal">
+          <div class="try-card__visual">
+            <svg viewBox="0 0 280 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="280" height="140" rx="12" fill="#0f172a"/>
+              <rect width="280" height="24" rx="12" fill="#1e293b"/>
+              <rect y="20" width="280" height="4" fill="#1e293b"/>
+              <circle cx="14" cy="12" r="4" fill="#ef4444" opacity=".5"/>
+              <circle cx="26" cy="12" r="4" fill="#eab308" opacity=".5"/>
+              <circle cx="38" cy="12" r="4" fill="#22c55e" opacity=".5"/>
+              <!-- Code lines -->
+              <rect x="12" y="36" width="60" height="6" rx="2" fill="#c084fc" opacity=".4"/>
+              <rect x="12" y="48" width="90" height="6" rx="2" fill="#86efac" opacity=".3"/>
+              <rect x="12" y="60" width="70" height="6" rx="2" fill="#60a5fa" opacity=".3"/>
+              <rect x="12" y="72" width="50" height="6" rx="2" fill="#94a3b8" opacity=".2"/>
+              <!-- Preview pane -->
+              <rect x="140" y="30" width="130" height="100" rx="4" fill="rgba(255,255,255,0.03)"/>
+              <g transform="translate(175,50)"><polygon points="30,0 60,17 60,51 30,68 0,51 0,17" fill="#79c0ff" opacity=".3"/><polygon points="30,0 60,17 30,34 0,17" fill="#79c0ff" opacity=".5"/></g>
+            </svg>
+          </div>
+          <div class="try-card__body">
+            <span class="try-card__badge">Interactive</span>
+            <h3 class="try-card__title">3D Playground</h3>
+            <p class="try-card__text">Write code, see it render live. Orbit, zoom, switch models.</p>
+          </div>
+          <span class="material-symbols-outlined try-card__arrow">arrow_forward</span>
         </a>
-        <a href="/showcase.html" class="demo-card reveal">
-          <div class="demo-card__badge demo-card__badge--showcase">Showcase</div>
-          <h3 class="demo-card__title">Project Showcase</h3>
-          <p class="demo-card__text">Gallery of real-world apps and use cases built with SceneView.</p>
-          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
-        </a>
-        <a href="/geometry-demo.html" class="demo-card reveal">
-          <div class="demo-card__badge demo-card__badge--geo">Geometry</div>
-          <h3 class="demo-card__title">Procedural Geometry</h3>
-          <p class="demo-card__text">Generate shapes, buildings, and scenes at runtime with Filament.</p>
-          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
-        </a>
-        <a href="https://sceneview.github.io/docs/" class="demo-card reveal" target="_blank" rel="noopener">
-          <div class="demo-card__badge demo-card__badge--docs">Docs</div>
-          <h3 class="demo-card__title">Documentation</h3>
-          <p class="demo-card__text">Quick start guides, API reference, tutorials for every platform.</p>
-          <span class="material-symbols-outlined demo-card__arrow">arrow_forward</span>
-        </a>
-      </div>
-    </div>
-  </section>
 
-  <!-- ===== SAMPLES ===== -->
-  <section class="samples" id="samples">
-    <div class="samples__container">
-      <h2 class="samples__title reveal">Sample apps</h2>
-      <p class="samples__subtitle reveal">Explore working demos across every supported platform.</p>
+        <!-- Android Demo -->
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo" class="try-card reveal" target="_blank" rel="noopener">
+          <div class="try-card__visual">
+            <svg viewBox="0 0 280 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="280" height="140" rx="12" fill="var(--color-surface-container)"/>
+              <g transform="translate(90,15)">
+                <rect x="10" y="10" width="80" height="100" rx="12" fill="var(--color-surface-container-low)" stroke="var(--color-outline-variant)" stroke-width="1"/>
+                <rect x="18" y="28" width="64" height="64" rx="2" fill="var(--color-surface-container-high)"/>
+                <g transform="translate(34,42)"><polygon points="16,0 32,9 32,27 16,36 0,27 0,9" fill="var(--color-status-stable)" opacity=".4"/><polygon points="16,0 32,9 16,18 0,9" fill="var(--color-status-stable)" opacity=".6"/></g>
+              </g>
+              <!-- Play Store badge -->
+              <rect x="16" y="108" width="72" height="20" rx="4" fill="var(--color-status-stable)" opacity=".12"/>
+              <text x="28" y="122" fill="var(--color-status-stable)" font-family="Inter,sans-serif" font-size="8" font-weight="700">Play Store</text>
+              <!-- GitHub badge -->
+              <rect x="96" y="108" width="56" height="20" rx="4" fill="var(--color-on-surface-variant)" opacity=".08"/>
+              <text x="108" y="122" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="8" font-weight="600">GitHub</text>
+            </svg>
+          </div>
+          <div class="try-card__body">
+            <span class="try-card__badge try-card__badge--android">Android</span>
+            <h3 class="try-card__title">Android Demo</h3>
+            <p class="try-card__text">Material 3 Expressive, 4 tabs, 14 demos</p>
+          </div>
+          <span class="material-symbols-outlined try-card__arrow">arrow_forward</span>
+        </a>
 
-      <div class="samples__grid">
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo" class="sample-card reveal" target="_blank" rel="noopener">
-          <span class="material-symbols-outlined sample-card__icon">android</span>
-          <div class="sample-card__badge">Android</div>
-          <h3 class="sample-card__name">SceneView Demo</h3>
-          <p class="sample-card__text">Play Store demo, 4-tab Material 3 Expressive, 14 samples</p>
+        <!-- iOS Demo -->
+        <a href="https://github.com/sceneview/sceneview/tree/main/samples/ios-demo" class="try-card reveal" target="_blank" rel="noopener">
+          <div class="try-card__visual">
+            <svg viewBox="0 0 280 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="280" height="140" rx="12" fill="var(--color-surface-container)"/>
+              <g transform="translate(90,15)">
+                <rect x="10" y="10" width="80" height="100" rx="16" fill="var(--color-surface-container-low)" stroke="var(--color-outline-variant)" stroke-width="1"/>
+                <rect x="18" y="28" width="64" height="64" rx="2" fill="var(--color-surface-container-high)"/>
+                <g transform="translate(34,42)"><polygon points="16,0 32,9 32,27 16,36 0,27 0,9" fill="var(--color-status-beta)" opacity=".4"/><polygon points="16,0 32,9 16,18 0,9" fill="var(--color-status-beta)" opacity=".6"/></g>
+                <rect x="35" y="6" width="30" height="4" rx="2" fill="var(--color-outline-variant)" opacity=".3"/>
+              </g>
+              <!-- App Store badge -->
+              <rect x="16" y="108" width="68" height="20" rx="4" fill="var(--color-status-beta)" opacity=".12"/>
+              <text x="28" y="122" fill="var(--color-status-beta)" font-family="Inter,sans-serif" font-size="8" font-weight="700">App Store</text>
+              <!-- GitHub badge -->
+              <rect x="92" y="108" width="56" height="20" rx="4" fill="var(--color-on-surface-variant)" opacity=".08"/>
+              <text x="104" y="122" fill="var(--color-on-surface-variant)" font-family="Inter,sans-serif" font-size="8" font-weight="600">GitHub</text>
+            </svg>
+          </div>
+          <div class="try-card__body">
+            <span class="try-card__badge try-card__badge--ios">iOS</span>
+            <h3 class="try-card__title">iOS Demo</h3>
+            <p class="try-card__text">SwiftUI 3-tab app, 3D + AR samples</p>
+          </div>
+          <span class="material-symbols-outlined try-card__arrow">arrow_forward</span>
         </a>
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/ios-demo" class="sample-card reveal" target="_blank" rel="noopener">
-          <span class="material-symbols-outlined sample-card__icon">phone_iphone</span>
-          <div class="sample-card__badge sample-card__badge--ios">iOS</div>
-          <h3 class="sample-card__name">iOS Demo</h3>
-          <p class="sample-card__text">SwiftUI 3-tab app for App Store, 3D + AR</p>
+
+        <!-- Web Demo -->
+        <a href="/playground.html" class="try-card reveal">
+          <div class="try-card__visual">
+            <svg viewBox="0 0 280 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="280" height="140" rx="12" fill="var(--color-surface-container)"/>
+              <g transform="translate(40,20)">
+                <rect width="200" height="100" rx="6" fill="var(--color-surface-container-low)" stroke="var(--color-outline-variant)" stroke-width="1"/>
+                <rect width="200" height="18" rx="6" fill="var(--color-surface-container-high)"/>
+                <rect y="16" width="200" height="2" fill="var(--color-surface-container-high)"/>
+                <circle cx="12" cy="9" r="3" fill="#ef4444" opacity=".3"/>
+                <circle cx="22" cy="9" r="3" fill="#eab308" opacity=".3"/>
+                <circle cx="32" cy="9" r="3" fill="#22c55e" opacity=".3"/>
+                <rect x="44" y="5" width="80" height="8" rx="4" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width=".5"/>
+                <g transform="translate(66,40)"><polygon points="34,0 68,20 68,60 34,80 0,60 0,20" fill="var(--color-primary)" opacity=".3"/><polygon points="34,0 68,20 34,40 0,20" fill="var(--color-primary)" opacity=".5"/></g>
+              </g>
+              <rect x="16" y="108" width="90" height="20" rx="4" fill="var(--color-primary)" opacity=".12"/>
+              <text x="28" y="122" fill="var(--color-primary)" font-family="Inter,sans-serif" font-size="8" font-weight="700">Try in Browser</text>
+            </svg>
+          </div>
+          <div class="try-card__body">
+            <span class="try-card__badge try-card__badge--web">Web</span>
+            <h3 class="try-card__title">Web Demo</h3>
+            <p class="try-card__text">Filament.js WASM + WebXR in the browser</p>
+          </div>
+          <span class="material-symbols-outlined try-card__arrow">arrow_forward</span>
         </a>
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/web-demo" class="sample-card reveal" target="_blank" rel="noopener">
-          <span class="material-symbols-outlined sample-card__icon">language</span>
-          <div class="sample-card__badge sample-card__badge--web">Web</div>
-          <h3 class="sample-card__name">Web Demo</h3>
-          <p class="sample-card__text">Browser-based 3D with Filament.js (WASM) + WebXR</p>
-        </a>
-        <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-tv-demo" class="sample-card reveal" target="_blank" rel="noopener">
-          <span class="material-symbols-outlined sample-card__icon">tv</span>
-          <div class="sample-card__badge sample-card__badge--tv">TV</div>
-          <h3 class="sample-card__name">TV Model Viewer</h3>
-          <p class="sample-card__text">Android TV, D-pad controls, auto-rotation</p>
+
+        <!-- Procedural Geometry -->
+        <a href="/geometry-demo.html" class="try-card reveal">
+          <div class="try-card__visual">
+            <svg viewBox="0 0 280 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="280" height="140" rx="12" fill="var(--color-surface-container)"/>
+              <!-- Geometric shapes -->
+              <g transform="translate(30,25)">
+                <polygon points="30,0 60,52 0,52" fill="var(--color-tertiary)" opacity=".2" stroke="var(--color-tertiary)" stroke-width="1" opacity=".3"/>
+                <rect x="80" y="12" width="40" height="40" fill="var(--color-primary)" opacity=".2" stroke="var(--color-primary)" stroke-width="1" opacity=".3"/>
+                <circle cx="180" cy="32" r="24" fill="var(--color-status-stable)" opacity=".15" stroke="var(--color-status-stable)" stroke-width="1" opacity=".25"/>
+                <polygon points="130,70 165,55 200,70 200,100 165,115 130,100" fill="var(--color-secondary)" opacity=".15" stroke="var(--color-secondary)" stroke-width="1" opacity=".25"/>
+                <rect x="20" y="70" width="60" height="40" rx="20" fill="var(--color-primary)" opacity=".12" stroke="var(--color-primary)" stroke-width="1" opacity=".2"/>
+              </g>
+            </svg>
+          </div>
+          <div class="try-card__body">
+            <span class="try-card__badge try-card__badge--geo">Geometry</span>
+            <h3 class="try-card__title">Procedural Geometry</h3>
+            <p class="try-card__text">Runtime shapes, buildings, and scenes</p>
+          </div>
+          <span class="material-symbols-outlined try-card__arrow">arrow_forward</span>
         </a>
       </div>
     </div>
@@ -890,8 +1388,18 @@
         <div class="cta__left">
           <h2 class="cta__title">Start building in 5 minutes</h2>
           <div class="cta__actions">
-            <a href="https://sceneview.github.io/docs/" class="cta__btn cta__btn--white" target="_blank" rel="noopener">Read Documentation</a>
-            <a href="https://discord.gg/sceneview" class="cta__btn cta__btn--glass" target="_blank" rel="noopener">Join Discord</a>
+            <a href="claude://settings/mcp?url=npx%20sceneview-mcp" class="cta__btn cta__btn--white">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" style="flex-shrink:0"><circle cx="12" cy="12" r="10" fill="rgba(0,0,0,0.12)"/><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 14.5l-5-3 5-3v6z"/></svg>
+              Open in Claude
+            </a>
+            <a href="https://sceneview.github.io/docs/" class="cta__btn cta__btn--glass" target="_blank" rel="noopener">
+              <span class="material-symbols-outlined" style="font-size:18px">menu_book</span>
+              Docs
+            </a>
+            <a href="https://discord.gg/sceneview" class="cta__btn cta__btn--glass" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" style="flex-shrink:0"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+              Discord
+            </a>
           </div>
         </div>
         <div class="cta__right">
@@ -961,6 +1469,24 @@
   </footer>
 
   <script src="script.js"></script>
+
+  <!-- Hero drag hint auto-hide -->
+  <script>
+  (function() {
+    var hint = document.getElementById('hero-drag-hint');
+    var canvas = document.getElementById('hero-canvas');
+    if (!hint || !canvas) return;
+    function hideHint() {
+      hint.classList.add('is-hidden');
+      canvas.removeEventListener('mousedown', hideHint);
+      canvas.removeEventListener('touchstart', hideHint);
+    }
+    canvas.addEventListener('mousedown', hideHint, { passive: true });
+    canvas.addEventListener('touchstart', hideHint, { passive: true });
+    // Also hide after 5s automatically
+    setTimeout(function() { hint.classList.add('is-hidden'); }, 5000);
+  })();
+  </script>
 
   <!-- Hero 3D renderer -->
   <script>

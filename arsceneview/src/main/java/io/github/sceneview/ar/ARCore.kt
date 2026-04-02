@@ -1,19 +1,7 @@
 package io.github.sceneview.ar
 
-import android.Manifest
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
-import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.google.ar.core.ArCoreApk
 import com.google.ar.core.ArCoreApk.Availability
 import com.google.ar.core.Config
 import com.google.ar.core.Session
@@ -21,22 +9,27 @@ import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.arcore.ARSession
 
 /**
- * ### Assumed distance in meters from the device camera to the surface on which user will try to
- * place models
+ * Assumed distance in meters from the device camera to the surface on which the user will
+ * try to place models.
  *
  * This value affects the apparent scale of objects while the tracking method of the Instant
- * Placement point is SCREENSPACE_WITH_APPROXIMATE_DISTANCE. Values in the [0.2, 2.0] meter range
- * are a good choice for most AR experiences. Use lower values for AR experiences where users are
- * expected to place objects on surfaces close to the camera. Use larger values for experiences
- * where the user will likely be standing and trying to place an object on the ground or floor in
- * front of them.
+ * Placement point is `SCREENSPACE_WITH_APPROXIMATE_DISTANCE`. Values in the [0.2, 2.0] meter
+ * range are a good choice for most AR experiences.
  */
 const val kDefaultHitTestInstantDistance = 2.0f
 
 /**
- * Manages an ARCore Session using the Android Lifecycle API. Before starting a Session, this class
- * requests installation of Google Play Services for AR if it's not installed or not up to date and
- * asks the user for required permissions if necessary.
+ * Manages an ARCore [Session] lifecycle.
+ *
+ * Before starting a session this class checks camera permission and ARCore availability
+ * through an [ARPermissionHandler], which decouples the permission logic from
+ * [android.app.Activity] and makes the class testable with a mock handler.
+ *
+ * @param onSessionCreated     Called once when the [Session] is created.
+ * @param onSessionResumed     Called each time the session resumes.
+ * @param onSessionPaused      Called each time the session pauses.
+ * @param onArSessionFailed    Called when session creation or resume fails.
+ * @param onSessionConfigChanged Called when the session configuration changes.
  */
 class ARCore(
     val onSessionCreated: (session: Session) -> Unit,
@@ -46,53 +39,39 @@ class ARCore(
     val onSessionConfigChanged: (session: Session, config: Config) -> Unit
 ) {
 
-    /**
-     * ### Enable/Disable the auto camera permission check
-     */
+    /** Enable/disable the automatic camera permission check. */
     var checkCameraPermission = true
 
-    /**
-     * Enable/Disable Google Play Services for AR availability check, auto install and update
-     */
+    /** Enable/disable Google Play Services for AR availability check, auto-install and update. */
     var checkAvailability = true
 
     lateinit var features: Set<Session.Feature>
-    lateinit var cameraPermissionLauncher: ActivityResultLauncher<String>
-    private var cameraPermissionRequested = false
-    lateinit var appSettingsLauncher: ActivityResultLauncher<Intent>
 
+    /** The permission handler used for camera and ARCore availability checks. */
+    var permissionHandler: ARPermissionHandler? = null
+
+    private var cameraPermissionRequested = false
     private var appSettingsRequested = false
     private var installRequested = false
+
     internal var session: ARSession? = null
         private set
 
-    fun create(context: Context, activity: ComponentActivity?, features: Set<Session.Feature>) {
+    /**
+     * Initializes the ARCore session lifecycle.
+     *
+     * @param context  Android context for session creation.
+     * @param handler  Permission handler for camera permission and ARCore install checks.
+     *                 Pass `null` to skip all permission checks (useful for tests or
+     *                 contexts where the camera permission is guaranteed).
+     * @param features ARCore session features to enable.
+     */
+    fun create(context: Context, handler: ARPermissionHandler?, features: Set<Session.Feature>) {
         this.features = features
-        // Must be called before on resume
-        if (activity != null) {
-            cameraPermissionLauncher = activity.activityResultRegistry.register(
-                "sceneview_camera_permission",
-                ActivityResultContracts.RequestPermission()
-            ) { isGranted ->
-                if (!isGranted) {
-                    if (!ActivityCompat.shouldShowRequestPermissionRationale(
-                            activity,
-                            Manifest.permission.CAMERA
-                        )
-                    ) {
-                        appSettingsRequested = true
-                        showCameraPermissionSettings(activity)
-                    }
-                }
-            }
-            appSettingsLauncher = activity.activityResultRegistry.register(
-                "sceneview_app_settings",
-                ActivityResultContracts.StartActivityForResult()
-            ) {
-                appSettingsRequested = false
-            }
-            // If no activity, no permission check
-            if (checkPermissionAndInstall(activity)) {
+        this.permissionHandler = handler
+
+        if (handler != null) {
+            if (checkPermissionAndInstall(handler)) {
                 createSession(context)
             }
         } else {
@@ -100,24 +79,32 @@ class ARCore(
         }
     }
 
-    fun resume(context: Context, activity: ComponentActivity?) {
+    /**
+     * Resumes the ARCore session, creating it first if necessary.
+     *
+     * @param context Android context for session creation.
+     * @param handler Permission handler, or `null` to skip permission checks.
+     */
+    fun resume(context: Context, handler: ARPermissionHandler?) {
         if (session == null) {
-            // If no activity, no permission check
-            if (activity == null || checkPermissionAndInstall(activity)) {
-                // Create a session if Google Play Services for AR is installed and up to
-                // date.
+            if (handler == null || checkPermissionAndInstall(handler)) {
                 createSession(context)
             }
         }
         session?.resume()
     }
 
+    /** Pauses the current ARCore session. */
     fun pause() {
         session?.pause()
     }
 
+    /**
+     * Creates the ARCore session.
+     *
+     * @param context Android context.
+     */
     fun createSession(context: Context) {
-        // Create a session if Google Play Services for AR is installed and up to date.
         try {
             session = ARSession(
                 context,
@@ -131,31 +118,32 @@ class ARCore(
         }
     }
 
-    fun checkPermissionAndInstall(activity: ComponentActivity): Boolean {
-        // Camera Permission
-        if (checkCameraPermission && !cameraPermissionRequested &&
-            !checkCameraPermission(activity, cameraPermissionLauncher)
-        ) {
+    /**
+     * Checks camera permission and ARCore installation, requesting them if needed.
+     *
+     * @param handler The permission handler to delegate checks to.
+     * @return `true` if all checks pass and the session can be created.
+     */
+    fun checkPermissionAndInstall(handler: ARPermissionHandler): Boolean {
+        // Camera permission
+        if (checkCameraPermission && !cameraPermissionRequested && !handler.hasCameraPermission()) {
+            handler.requestCameraPermission { granted ->
+                if (!granted && handler.shouldShowPermissionRationale()) {
+                    appSettingsRequested = true
+                    handler.openAppSettings()
+                }
+            }
             cameraPermissionRequested = true
         } else if (!appSettingsRequested) {
-            // In case of Camera permission previously denied, the allow popup won't show but
-            // the onResume will be called anyway.
-            // So if we launch the app settings screen, the onResume will be called twice.
-            // In order to avoid multiple session creation failing because camera permission is
-            // still not granted, we check if the app settings screen is displayed.
-            // In last case, if the camera permission is still not granted a SecurityException
-            // will be thrown when trying to create session.
             try {
-                // ARCore install and update if camera permission is granted.
-                // For now, ARCore session will throw an exception if the camera is not
-                // accessible (ARCore cannot be used without camera.
-                // Request installation if necessary
                 if (checkAvailability && !installRequested &&
-                    !checkInstall(activity, installRequested)
+                    handler.checkARCoreAvailability() != Availability.SUPPORTED_INSTALLED
                 ) {
-                    // Session will be created if everything is ok on next onResume(), so we
-                    // return for now
-                    installRequested = true
+                    if (handler.requestARCoreInstall(!installRequested)) {
+                        installRequested = true
+                    } else {
+                        return true
+                    }
                 } else {
                     return true
                 }
@@ -167,7 +155,7 @@ class ARCore(
     }
 
     /**
-     * ### Explicitly close the ARCore session to release native resources.
+     * Explicitly closes the ARCore session to release native resources.
      *
      * Review the API reference for important considerations before calling close() in apps with
      * more complicated lifecycle requirements: [Session.close]
@@ -182,74 +170,47 @@ class ARCore(
         }
     }
 
+    /** Forwards an exception to the [onArSessionFailed] callback. */
     fun onException(exception: Exception) {
         onArSessionFailed(exception)
     }
 
-    /** Check to see we have the necessary permissions for this app.  */
-    fun hasCameraPermission(context: Context) = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.CAMERA
-    ) == PackageManager.PERMISSION_GRANTED
+    // ── Deprecated compatibility overloads ────────────────────────────────────────────────────────
 
-    fun checkCameraPermission(
-        context: Context,
-        permissionLauncher: ActivityResultLauncher<String>
-    ): Boolean {
-        return if (!hasCameraPermission(context)) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-            false
-        } else {
-            true
+    /**
+     * @deprecated Use [create] with an [ARPermissionHandler] instead.
+     */
+    @Deprecated(
+        "Use create(context, handler, features) instead",
+        ReplaceWith("create(context, (context as? androidx.activity.ComponentActivity)?.let { ActivityARPermissionHandler(it) }, features)")
+    )
+    fun create(context: Context, features: Set<Session.Feature>) {
+        val handler = (context as? androidx.activity.ComponentActivity)?.let {
+            ActivityARPermissionHandler(it)
         }
-    }
-
-    fun showCameraPermissionSettings(activity: ComponentActivity) {
-        // Permission denied with checking "Do not ask again".
-        Toast.makeText(
-            activity,
-            activity.getString(R.string.sceneview_camera_permission_required),
-            Toast.LENGTH_LONG
-        ).show()
-        // Launch Application Setting to grant permission
-        appSettingsLauncher.launch(Intent().apply {
-            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-            data = Uri.fromParts("package", activity.packageName, null)
-        })
+        create(context, handler, features)
     }
 
     /**
-     * Checks if ARCore is already installed or attempts to request an install otherwise.
-     *
-     * @param activity The current activity which will be paused if we request an install
-     * @param installRequested Should be true the first time this is called, and false when we
-     * resume from the previous install attempt
-     * @throws UnavailableDeviceNotCompatibleException if the device does not support ARCore
-     * @return true if ARCore is already installed
+     * @deprecated Use [resume] with an [ARPermissionHandler] instead.
      */
-    fun checkInstall(activity: ComponentActivity, installRequested: Boolean): Boolean {
-        // Request installation if necessary
-        return isInstalled(activity) || !install(activity, installRequested)
-    }
-
-    /** Check to see we have the necessary permissions for this app. */
-    fun isInstalled(context: Context) =
-        ArCoreApk.getInstance().checkAvailability(context) == Availability.SUPPORTED_INSTALLED
-
-    /**
-     * Returns true if we attempted to request an install.
-     *
-     * @throws UnavailableUserActionRequiredException if the user needs to take an action (e.g. install ARCore)
-     * @throws UnavailableDeviceNotCompatibleException if the device does not support ARCore
-     */
-    fun install(activity: ComponentActivity, installRequested: Boolean): Boolean {
-        return ArCoreApk.getInstance().requestInstall(
-            activity,
-            !installRequested
-        ) == ArCoreApk.InstallStatus.INSTALL_REQUESTED
+    @Deprecated(
+        "Use resume(context, handler) instead",
+        ReplaceWith("resume(context, (context as? androidx.activity.ComponentActivity)?.let { ActivityARPermissionHandler(it) })")
+    )
+    fun resume(context: Context) {
+        val handler = (context as? androidx.activity.ComponentActivity)?.let {
+            ActivityARPermissionHandler(it)
+        }
+        resume(context, handler)
     }
 }
 
+/**
+ * Returns a human-readable description of the given [TrackingFailureReason].
+ *
+ * @param context Android context for string resource resolution.
+ */
 @Suppress("REDUNDANT_ELSE_IN_WHEN")
 fun TrackingFailureReason.getDescription(context: Context) = when (this) {
     TrackingFailureReason.NONE -> ""
@@ -261,7 +222,6 @@ fun TrackingFailureReason.getDescription(context: Context) = when (this) {
             R.string.sceneview_insufficient_light_android_s_message
         }
     )
-
     TrackingFailureReason.EXCESSIVE_MOTION -> context.getString(R.string.sceneview_excessive_motion_message)
     TrackingFailureReason.INSUFFICIENT_FEATURES -> context.getString(R.string.sceneview_insufficient_features_message)
     TrackingFailureReason.CAMERA_UNAVAILABLE -> context.getString(R.string.sceneview_camera_unavailable_message)

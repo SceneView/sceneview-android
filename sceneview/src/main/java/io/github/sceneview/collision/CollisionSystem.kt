@@ -7,11 +7,16 @@ import io.github.sceneview.math.toCollisionRay
 import io.github.sceneview.utils.motionEventToRay
 import io.github.sceneview.utils.screenToRay
 import io.github.sceneview.utils.viewToRay
-import java.util.function.BiConsumer
-import java.util.function.Consumer
-import java.util.function.Supplier
 
-// Legacy collision system — scheduled for Kotlin-Math migration in 3.3.0 (see ROADMAP.md)
+/**
+ * Manages hit-testing and collision queries against all registered [Collider]s in a scene.
+ *
+ * Each [Node][io.github.sceneview.node.Node] with a collision shape registers a [Collider] here.
+ * The system supports ray-based hit testing from screen coordinates, normalized view coordinates,
+ * or arbitrary rays, as well as shape-vs-shape intersection queries.
+ *
+ * @param view The Filament [View] whose camera projection is used for screen-to-ray conversion.
+ */
 class CollisionSystem(var view: View) {
 
     private val colliders = mutableListOf<Collider>()
@@ -22,61 +27,6 @@ class CollisionSystem(var view: View) {
 
     fun removeCollider(collider: Collider) {
         colliders.remove(collider)
-    }
-
-    @Deprecated(message = "Use hitTest", replaceWith = ReplaceWith("hitTest(ray)"))
-    fun raycast(ray: Ray, resultHit: RayHit): Collider? {
-        resultHit.reset()
-        var result: Collider? = null
-        val tempResult = RayHit()
-        for (collider in colliders) {
-            val collisionShape = collider.getTransformedShape() ?: continue
-            if (collisionShape.rayIntersection(ray, tempResult)) {
-                if (tempResult.getDistance() < resultHit.getDistance()) {
-                    resultHit.set(tempResult)
-                    result = collider
-                }
-            }
-        }
-        return result
-    }
-
-    @Deprecated(message = "Use hitTest", replaceWith = ReplaceWith("hitTest(ray)"))
-    fun <T : RayHit?> raycastAll(
-        ray: Ray,
-        resultBuffer: ArrayList<T>,
-        processResult: BiConsumer<T, Collider>?,
-        allocateResult: Supplier<T>
-    ): Int {
-        val tempResult = RayHit()
-        var hitCount = 0
-
-        // Check the ray against all the colliders.
-        for (collider in colliders) {
-            val collisionShape = collider.getTransformedShape() ?: continue
-            if (collisionShape.rayIntersection(ray, tempResult)) {
-                hitCount++
-                var result: T? = null
-                if (resultBuffer.size >= hitCount) {
-                    result = resultBuffer[hitCount - 1]
-                } else {
-                    result = allocateResult.get()
-                    resultBuffer.add(result)
-                }
-                result!!.reset()
-                result.set(tempResult)
-                processResult?.accept(result, collider)
-            }
-        }
-
-        // Reset extra hits in the buffer.
-        for (i in hitCount until resultBuffer.size) {
-            resultBuffer[i]!!.reset()
-        }
-
-        // Sort the hits by distance.
-        resultBuffer.sortWith(compareBy { it?.getDistance() })
-        return hitCount
     }
 
     /**
@@ -152,23 +102,43 @@ class CollisionSystem(var view: View) {
         return null
     }
 
-    fun intersectsAll(collider: Collider, processResult: Consumer<Collider>) {
+    /**
+     * Finds all colliders that intersect with [collider] and invokes [onIntersection] for each.
+     */
+    fun intersectsAll(collider: Collider, onIntersection: (Collider) -> Unit) {
         val collisionShape = collider.getTransformedShape() ?: return
         for (otherCollider in colliders) {
-            if (otherCollider == collider) {
-                continue
-            }
+            if (otherCollider == collider) continue
             val otherCollisionShape = otherCollider.getTransformedShape() ?: continue
             if (collisionShape.shapeIntersection(otherCollisionShape)) {
-                processResult.accept(otherCollider)
+                onIntersection(otherCollider)
             }
         }
     }
 
-    fun destroy() {
+    // ── Deprecated compatibility overloads ─────────────────────────────────────────────────────────
+
+    /**
+     * @deprecated Use the Kotlin lambda version [intersectsAll] instead.
+     */
+    @Deprecated("Use the Kotlin lambda version", ReplaceWith("intersectsAll(collider) { processResult.accept(it) }"))
+    fun intersectsAll(collider: Collider, processResult: java.util.function.Consumer<Collider>) {
+        intersectsAll(collider) { processResult.accept(it) }
     }
 
-    companion object {
-        private val TAG = CollisionSystem::class.java.simpleName
+    /**
+     * @deprecated Use [hitTest] instead.
+     */
+    @Deprecated("Use hitTest(ray) instead", ReplaceWith("hitTest(ray).firstOrNull()"))
+    fun raycast(ray: dev.romainguy.kotlin.math.Ray): HitResult? = hitTest(ray).firstOrNull()
+
+    /**
+     * @deprecated Use [hitTest] instead.
+     */
+    @Deprecated("Use hitTest(ray) instead", ReplaceWith("hitTest(ray)"))
+    fun raycastAll(ray: dev.romainguy.kotlin.math.Ray): List<HitResult> = hitTest(ray)
+
+    fun destroy() {
+        colliders.clear()
     }
 }

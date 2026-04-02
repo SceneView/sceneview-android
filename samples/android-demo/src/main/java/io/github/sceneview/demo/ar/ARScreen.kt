@@ -2,6 +2,10 @@
 
 package io.github.sceneview.demo.ar
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -62,19 +66,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.sceneview.demo.R
+import androidx.core.content.ContextCompat
 import com.google.ar.core.Anchor
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
-import com.google.ar.core.Plane
 import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.arcore.createAnchorOrNull
-import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.ar.arcore.isValid
 import io.github.sceneview.ar.getDescription
 import io.github.sceneview.ar.rememberARCameraNode
+import io.github.sceneview.demo.R
 import io.github.sceneview.rememberCollisionSystem
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
@@ -82,12 +85,9 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
 import io.github.sceneview.rememberView
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
+
+// ── Data ──────────────────────────────────────────────────────────────────────
 
 private data class ARModel(
     val label: String,
@@ -105,13 +105,17 @@ private val arModels = listOf(
     ARModel("Seal", "models/seal_statuette.glb", 0.3f, 0.1f..0.6f),
 )
 
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 @Composable
 fun ARScreen() {
     val context = LocalContext.current
+
+    // Check ARCore availability
     val arAvailability = remember {
         try {
             ArCoreApk.getInstance().checkAvailability(context)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE
         }
     }
@@ -122,7 +126,7 @@ fun ARScreen() {
     }
 
     // Camera permission gate
-    var cameraPermissionGranted by remember {
+    var cameraGranted by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
                     PackageManager.PERMISSION_GRANTED
@@ -130,25 +134,30 @@ fun ARScreen() {
     }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> cameraPermissionGranted = granted }
+    ) { granted -> cameraGranted = granted }
 
     LaunchedEffect(Unit) {
-        if (!cameraPermissionGranted) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        }
+        if (!cameraGranted) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    if (!cameraPermissionGranted) {
-        CameraPermissionScreen(onRequestPermission = {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        })
+    if (!cameraGranted) {
+        CameraPermissionScreen(
+            onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+        )
         return
     }
 
+    // AR content
+    ARContent()
+}
+
+@Composable
+private fun ARContent() {
     val arSceneDescription = stringResource(R.string.cd_ar_scene)
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .semantics { contentDescription = arSceneDescription }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = arSceneDescription }
     ) {
         val engine = rememberEngine()
         val modelLoader = rememberModelLoader(engine)
@@ -165,14 +174,16 @@ fun ARScreen() {
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetFile)
 
-        val clearAnchor = { anchor?.detach(); anchor = null }
+        val clearAnchor = {
+            anchor?.detach()
+            anchor = null
+        }
 
-        // Detach anchor when composable leaves composition
         DisposableEffect(Unit) {
             onDispose { anchor?.detach() }
         }
 
-        // Show gesture hints briefly after the model is placed
+        // Show gesture hints briefly after placement
         LaunchedEffect(anchor) {
             if (anchor != null) {
                 showGestureHint = true
@@ -199,9 +210,7 @@ fun ARScreen() {
                 config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
             },
             onTrackingFailureChanged = { trackingFailureReason = it },
-            onSessionUpdated = { _, updatedFrame ->
-                frame = updatedFrame
-            },
+            onSessionUpdated = { _, updatedFrame -> frame = updatedFrame },
             onGestureListener = rememberOnGestureListener(
                 onSingleTapConfirmed = { motionEvent, node ->
                     if (node == null) {
@@ -227,7 +236,7 @@ fun ARScreen() {
             }
         }
 
-        // Scanning reticle — visible while searching for a surface
+        // Scanning reticle
         AnimatedVisibility(
             visible = anchor == null,
             modifier = Modifier.align(Alignment.Center),
@@ -237,7 +246,7 @@ fun ARScreen() {
             ScanningReticle()
         }
 
-        // Status pill — top center
+        // Status pill
         AnimatedContent(
             modifier = Modifier
                 .statusBarsPadding()
@@ -252,7 +261,7 @@ fun ARScreen() {
             if (text.isNotBlank()) {
                 Surface(
                     color = Color.Black.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(50),
+                    shape = RoundedCornerShape(50)
                 ) {
                     Text(
                         text = text,
@@ -265,7 +274,7 @@ fun ARScreen() {
             }
         }
 
-        // Gesture hint — appears briefly after placement
+        // Gesture hint after placement
         AnimatedVisibility(
             visible = showGestureHint,
             modifier = Modifier
@@ -290,7 +299,7 @@ fun ARScreen() {
             }
         }
 
-        // Bottom bar — model picker + remove button
+        // Bottom bar: model picker + remove
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -300,7 +309,6 @@ fun ARScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Remove button
             AnimatedVisibility(visible = anchor != null) {
                 OutlinedButton(
                     onClick = { clearAnchor() },
@@ -315,14 +323,13 @@ fun ARScreen() {
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        "  " + stringResource(R.string.ar_remove),
+                        "  ${stringResource(R.string.ar_remove)}",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            // Model picker chips
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -362,6 +369,8 @@ fun ARScreen() {
         }
     }
 }
+
+// ── Scanning Reticle ──────────────────────────────────────────────────────────
 
 @Composable
 private fun ScanningReticle(modifier: Modifier = Modifier) {
@@ -406,6 +415,8 @@ private fun ScanningReticle(modifier: Modifier = Modifier) {
         drawCircle(color = Color.White.copy(alpha = 0.9f), radius = 3.dp.toPx())
     }
 }
+
+// ── Fallback Screens ──────────────────────────────────────────────────────────
 
 @Composable
 private fun ARNotAvailableScreen() {
