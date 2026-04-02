@@ -3,7 +3,7 @@
     <string name="app_name">SceneView</string>
 
     <!-- Navigation -->
-    <string name="tab_3d">3D</string>
+    <string name="tab_3d">Explore</string>
     <string name="tab_ar">AR</string>
     <string name="tab_samples">Samples</string>
     <string name="tab_about">About</string>

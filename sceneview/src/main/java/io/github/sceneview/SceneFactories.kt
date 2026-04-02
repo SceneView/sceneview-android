@@ -78,6 +78,10 @@ fun createView(engine: Engine): View = engine.createView().apply {
 /**
  * Creates a [View] tuned for AR (ARScene).
  *
+ * **Note:** This factory lives in the `sceneview` module (not `arsceneview`) because it only
+ * depends on Filament — no ARCore types are involved. The `arsceneview` module calls it via
+ * [rememberARView]. This avoids duplicating Filament View configuration across modules.
+ *
  * The key difference from [createView] is the tone mapper: AR uses [ToneMapper.Linear] (identity)
  * instead of [ToneMapper.Filmic].
  *

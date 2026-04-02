@@ -5,9 +5,7 @@ import androidx.compose.ui.graphics.Color
 /**
  * SceneView M3 Expressive Color System
  *
- * Generated from Stitch design system with source color #005bc1.
- * Aligned with website tokens (styles.css) for brand consistency.
- *
+ * Generated from source color #005bc1 (SceneView blue).
  * Light: primary #005bc1, tertiary #6446cd
  * Dark: primary #a4c1ff (GitHub-dark inspired), tertiary #d2a8ff
  */
@@ -51,7 +49,7 @@ val md_theme_light_outlineVariant = Color(0xFFC3C6CF)
 val md_theme_light_inverseSurface = Color(0xFF2F3036)
 val md_theme_light_inverseOnSurface = Color(0xFFF0F0F7)
 
-// ===== Dark Scheme (GitHub-dark inspired) =====
+// ===== Dark Scheme =====
 val md_theme_dark_primary = Color(0xFFA4C1FF)
 val md_theme_dark_onPrimary = Color(0xFF002F64)
 val md_theme_dark_primaryContainer = Color(0xFF00448D)
@@ -91,14 +89,5 @@ val md_theme_dark_inverseSurface = Color(0xFFE2E2E9)
 val md_theme_dark_inverseOnSurface = Color(0xFF2F3036)
 
 // ===== Brand Colors =====
-/** SceneView primary blue — light mode */
 val SceneViewBlue = md_theme_light_primary
-
-/** SceneView primary blue — dark mode */
 val SceneViewBlueDark = md_theme_dark_primary
-
-// ===== Status Colors =====
-val StatusStable = Color(0xFF16A34A)
-val StatusBeta = Color(0xFF2563EB)
-val StatusAlpha = Color(0xFF7C3AED)
-val StatusSoon = Color(0xFF6B7280)

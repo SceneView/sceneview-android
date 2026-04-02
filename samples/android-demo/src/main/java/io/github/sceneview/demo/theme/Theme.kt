@@ -15,14 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * SceneView Demo Theme — Material 3 Expressive
+ * SceneView Demo Theme -- Material 3 Expressive
  *
- * Color system from Stitch design system (source: #005bc1).
- * Typography: M3 Expressive scale with Inter-weight equivalents.
- * Shapes: M3 Expressive with DESIGN.md radius tokens (8/12/16/28/32dp).
- * Motion: Expressive spring animations.
- *
- * On Android 12+, dynamic color (Material You) overrides the palette
+ * Source color: #005bc1 (SceneView blue).
+ * On Android 12+ dynamic color (Material You) overrides the palette
  * while preserving SceneView brand colors as fallback.
  */
 

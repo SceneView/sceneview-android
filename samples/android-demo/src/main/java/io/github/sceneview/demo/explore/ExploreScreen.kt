@@ -2,12 +2,8 @@
 
 package io.github.sceneview.demo.explore
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -23,7 +19,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,14 +27,14 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -54,15 +49,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.sceneview.SceneView
-import io.github.sceneview.demo.R
-import io.github.sceneview.animation.Transition.animateRotation
 import dev.romainguy.kotlin.math.Float3
+import io.github.sceneview.SceneView
+import io.github.sceneview.animation.Transition.animateRotation
+import io.github.sceneview.demo.R
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
@@ -72,8 +68,8 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNode
 import io.github.sceneview.rememberOnGestureListener
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.graphics.StrokeCap
+
+// ── Data ──────────────────────────────────────────────────────────────────────
 
 private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
 
@@ -86,7 +82,7 @@ private data class ExploreModel(
 
 private data class ExploreEnvironment(val label: String, val assetPath: String)
 
-private val exploreEnvironments = listOf(
+private val environments = listOf(
     ExploreEnvironment("Night", "environments/rooftop_night_2k.hdr"),
     ExploreEnvironment("Studio", "environments/studio_2k.hdr"),
     ExploreEnvironment("Warm", "environments/studio_warm_2k.hdr"),
@@ -95,7 +91,7 @@ private val exploreEnvironments = listOf(
     ExploreEnvironment("Autumn", "environments/autumn_field_2k.hdr"),
 )
 
-private val exploreModels = listOf(
+private val models = listOf(
     ExploreModel("Toy Car", "models/toy_car.glb", 0.8f, 3.0f),
     ExploreModel("Red Car", "models/red_car.glb", 1.0f, 3.5f),
     ExploreModel("Game Boy", "models/game_boy_classic.glb", 0.7f, 2.5f),
@@ -138,20 +134,24 @@ private val exploreModels = listOf(
     ExploreModel("BMW M3 E30", "$CDN/bmw_m3_e30.glb", 0.6f, 4.0f),
 )
 
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 @Composable
 fun ExploreScreen() {
-    var selectedIndex by remember { mutableIntStateOf(0) }
+    var selectedModelIndex by remember { mutableIntStateOf(0) }
     var selectedEnvIndex by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(true) }
-    val selectedModel = exploreModels[selectedIndex]
-    val selectedEnv = exploreEnvironments[selectedEnvIndex]
+
+    val selectedModel = models[selectedModelIndex]
+    val selectedEnv = environments[selectedEnvIndex]
 
     val sceneDescription = stringResource(R.string.cd_3d_scene)
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .semantics { contentDescription = sceneDescription }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = sceneDescription }
     ) {
-        // ── Full-screen 3D Scene ───────────────────────────────────────────
+        // ── 3D Scene ──────────────────────────────────────────────────────
         val engine = rememberEngine()
         val modelLoader = rememberModelLoader(engine)
         val environmentLoader = rememberEnvironmentLoader(engine)
@@ -168,16 +168,14 @@ fun ExploreScreen() {
         val cameraRotation by cameraTransition.animateRotation(
             initialValue = Float3(y = 0.0f),
             targetValue = Float3(y = 360.0f),
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 12_000)
-            )
+            animationSpec = infiniteRepeatable(animation = tween(durationMillis = 12_000))
         )
 
         val modelInstance = rememberModelInstance(modelLoader, selectedModel.assetPath)
         val environment = key(selectedEnv.assetPath) {
             rememberEnvironment(environmentLoader) {
                 environmentLoader.createHDREnvironment(selectedEnv.assetPath)
-                ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
+                    ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
             }
         }
 
@@ -200,9 +198,7 @@ fun ExploreScreen() {
                 cameraNode.lookAt(centerNode)
             },
             onGestureListener = rememberOnGestureListener(
-                onDoubleTap = { _, node ->
-                    node?.apply { scale *= 1.5f }
-                }
+                onDoubleTap = { _, node -> node?.apply { scale *= 1.5f } }
             )
         ) {
             modelInstance?.let { instance ->
@@ -215,7 +211,7 @@ fun ExploreScreen() {
             }
         }
 
-        // ── Loading indicator — visible while model loads ─────────────────
+        // ── Loading indicator ─────────────────────────────────────────────
         if (modelInstance == null) {
             val loadingDescription = stringResource(R.string.cd_loading_model)
             Box(
@@ -233,17 +229,14 @@ fun ExploreScreen() {
             }
         }
 
-        // ── Top gradient overlay with title ────────────────────────────────
+        // ── Top gradient with title ───────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(160.dp)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.5f),
-                            Color.Transparent
-                        )
+                        colors = listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent)
                     )
                 )
                 .statusBarsPadding()
@@ -276,24 +269,21 @@ fun ExploreScreen() {
             }
         }
 
-        // ── Bottom overlay: model picker + hint ────────────────────────────
+        // ── Bottom overlay: controls ──────────────────────────────────────
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.6f)
-                        )
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
                     )
                 )
                 .navigationBarsPadding()
                 .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Animation controls — only shown for animated models
+            // Animation play/pause
             if (animationCount > 0) {
                 val animName = remember(modelInstance, animationCount) {
                     modelInstance?.animator?.getAnimationName(0) ?: ""
@@ -312,7 +302,8 @@ fun ExploreScreen() {
                     ) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) stringResource(R.string.explore_pause) else stringResource(R.string.explore_play),
+                            contentDescription = if (isPlaying) stringResource(R.string.explore_pause)
+                            else stringResource(R.string.explore_play),
                             tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
@@ -326,7 +317,7 @@ fun ExploreScreen() {
                     }
                     if (animationCount > 1) {
                         Text(
-                            text = "\u00B7 " + stringResource(R.string.explore_animation_count, animationCount),
+                            text = "\u00B7 ${stringResource(R.string.explore_animation_count, animationCount)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.5f)
                         )
@@ -355,7 +346,7 @@ fun ExploreScreen() {
                 )
             }
 
-            // Environment picker chips
+            // Environment chips
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -373,7 +364,7 @@ fun ExploreScreen() {
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    exploreEnvironments.forEachIndexed { index, env ->
+                    environments.forEachIndexed { index, env ->
                         FilterChip(
                             selected = index == selectedEnvIndex,
                             onClick = { selectedEnvIndex = index },
@@ -381,7 +372,8 @@ fun ExploreScreen() {
                                 Text(
                                     env.label,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = if (index == selectedEnvIndex) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (index == selectedEnvIndex) FontWeight.Bold
+                                    else FontWeight.Normal
                                 )
                             },
                             shape = RoundedCornerShape(50),
@@ -396,19 +388,20 @@ fun ExploreScreen() {
                 }
             }
 
-            // Model picker chips
+            // Model chips
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                exploreModels.forEachIndexed { index, model ->
+                models.forEachIndexed { index, model ->
                     FilterChip(
-                        selected = index == selectedIndex,
-                        onClick = { selectedIndex = index },
+                        selected = index == selectedModelIndex,
+                        onClick = { selectedModelIndex = index },
                         label = {
                             Text(
                                 model.label,
-                                fontWeight = if (index == selectedIndex) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (index == selectedModelIndex) FontWeight.Bold
+                                else FontWeight.Normal
                             )
                         },
                         shape = RoundedCornerShape(50),

@@ -10,14 +10,10 @@ import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.Scene
 import com.google.android.filament.TransformManager
-import dev.romainguy.kotlin.math.Float2
-import dev.romainguy.kotlin.math.Float3
 import dev.romainguy.kotlin.math.Quaternion
-import dev.romainguy.kotlin.math.degrees
 import dev.romainguy.kotlin.math.inverse
 import dev.romainguy.kotlin.math.lookAt
 import dev.romainguy.kotlin.math.lookTowards
-import dev.romainguy.kotlin.math.transform
 import io.github.sceneview.Entity
 import io.github.sceneview.EntityInstance
 import io.github.sceneview.FilamentEntity
@@ -40,16 +36,12 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.math.Scale
 import io.github.sceneview.math.Transform
-import io.github.sceneview.math.equals
 import io.github.sceneview.math.quaternion
-import io.github.sceneview.math.slerp
 import io.github.sceneview.math.times
 import io.github.sceneview.math.toMatrix
 import io.github.sceneview.math.toQuaternion
 import io.github.sceneview.safeDestroyEntity
 import io.github.sceneview.safeDestroyTransformable
-import io.github.sceneview.utils.intervalSeconds
-import kotlin.reflect.KProperty1
 
 /**
  * A Node represents a transformation within the scene graph's hierarchy.
@@ -58,6 +50,10 @@ import kotlin.reflect.KProperty1
  *
  * Each node can have an arbitrary number of child nodes and one parent. The parent may be
  * another node, or the scene.
+ *
+ * Gesture handling is delegated to [gestureDelegate] and smooth animation to
+ * [animationDelegate]. The node itself retains transform management, parent/child
+ * relationships, collision, visibility and scene lifecycle.
  *
  * ------- +y ----- -z
  *
@@ -84,11 +80,19 @@ open class Node(
     ScaleGestureDetector.OnScaleListener,
     TransformProvider {
 
+    // ---- Delegates ----
+
+    /** Handles all gesture detection and callback logic. */
+    val gestureDelegate = NodeGestureDelegate(this)
+
+    /** Handles smooth transform interpolation. */
+    val animationDelegate = NodeAnimationDelegate(this)
+
+    // ---- Identity & flags ----
+
     var isHittable: Boolean = true
 
-    /**
-     * ### Define your own custom name
-     */
+    /** Define your own custom name. */
     open var name: String? = null
 
     /**
@@ -133,14 +137,26 @@ open class Node(
             }
         }
 
-    var isSmoothTransformEnabled = false
+    // ---- Smooth animation aliases (delegated) ----
+
+    var isSmoothTransformEnabled
+        get() = animationDelegate.isSmoothTransformEnabled
+        set(value) { animationDelegate.isSmoothTransformEnabled = value }
 
     /**
      * The smooth position, rotation and scale speed.
      *
      * This value is used by [smoothTransform]
      */
-    var smoothTransformSpeed = 5.0f
+    var smoothTransformSpeed
+        get() = animationDelegate.smoothTransformSpeed
+        set(value) { animationDelegate.smoothTransformSpeed = value }
+
+    var smoothTransform: Transform?
+        get() = animationDelegate.smoothTransform
+        set(value) { animationDelegate.smoothTransform = value }
+
+    // ---- Transform ----
 
     /**
      * Position to locate within the coordinate system the parent.
@@ -309,7 +325,7 @@ open class Node(
             transform = parent?.getLocalTransform(value) ?: value
         }
 
-    var smoothTransform: Transform? = null
+    // ---- Parent / children ----
 
     var parentEntity: Entity?
         get() = transformManager.getParentOrNull(transformInstance)
@@ -375,6 +391,8 @@ open class Node(
             }
         }
 
+    // ---- Collision ----
+
     var collisionSystem: CollisionSystem? = null
         set(value) {
             if (field != value) {
@@ -382,51 +400,6 @@ open class Node(
                 collider?.setAttachedCollisionSystem(value)
             }
         }
-
-    var editingTransforms = setOf<KProperty1<Node, Any>>()
-        set(value) {
-            if (field != value) {
-                field = value
-                onEditingChanged?.invoke(value)
-            }
-        }
-
-    /**
-     * Transform from the world coordinate system to the coordinate system of this node.
-     */
-    val worldToLocal: Transform get() = inverse(worldTransform)
-
-    var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
-    var onSmoothEnd: ((node: Node) -> Unit)? = null
-    var onAddedToScene: ((scene: Scene) -> Unit)? = null
-    var onRemovedFromScene: ((scene: Scene) -> Unit)? = null
-
-    var onTouch: ((e: MotionEvent, hitResult: HitResult) -> Boolean)? = null
-    var onDown: ((e: MotionEvent) -> Boolean)? = null
-    var onShowPress: ((e: MotionEvent) -> Unit)? = null
-    var onSingleTapUp: ((e: MotionEvent) -> Boolean)? = null
-    var onScroll: ((e1: MotionEvent?, e2: MotionEvent, distance: Float2) -> Boolean)? = null
-    var onLongPress: ((e: MotionEvent) -> Unit)? = null
-    var onFling: ((e1: MotionEvent?, e2: MotionEvent, velocity: Float2) -> Boolean)? = null
-    var onSingleTapConfirmed: ((e: MotionEvent) -> Boolean)? = null
-    var onDoubleTap: ((e: MotionEvent) -> Boolean)? = null
-    var onDoubleTapEvent: ((e: MotionEvent) -> Boolean)? = null
-    var onContextClick: ((e: MotionEvent) -> Boolean)? = null
-    var onMoveBegin: ((detector: MoveGestureDetector, e: MotionEvent) -> Boolean)? = null
-    var onMove: ((detector: MoveGestureDetector, e: MotionEvent, worldPosition: Position) -> Boolean)? =
-        null
-    var onMoveEnd: ((detector: MoveGestureDetector, e: MotionEvent) -> Unit)? = null
-    var onRotateBegin: ((detector: RotateGestureDetector, e: MotionEvent) -> Boolean)? = null
-    var onRotate: ((detector: RotateGestureDetector, e: MotionEvent, rotationDelta: Quaternion) -> Boolean)? =
-        null
-    var onRotateEnd: ((detector: RotateGestureDetector, e: MotionEvent) -> Unit)? = null
-    var onScaleBegin: ((detector: ScaleGestureDetector, e: MotionEvent) -> Boolean)? = null
-    var onScale: ((detector: ScaleGestureDetector, e: MotionEvent, scaleFactor: Float) -> Boolean)? =
-        null
-    var onScaleEnd: ((detector: ScaleGestureDetector, e: MotionEvent) -> Unit)? = null
-
-    var onEditingChanged: ((editingTransforms: Set<KProperty1<Node, Any>?>) -> Unit)? =
-        null
 
     var collider: Collider? = null
         set(value) {
@@ -463,6 +436,91 @@ open class Node(
             onTransformChanged()
         }
 
+    // ---- Gesture callback aliases (backward compatibility) ----
+    // These delegate to gestureDelegate so existing code like `node.onTouch = { ... }` still works.
+
+    var onTouch
+        get() = gestureDelegate.onTouch
+        set(value) { gestureDelegate.onTouch = value }
+    var onDown
+        get() = gestureDelegate.onDown
+        set(value) { gestureDelegate.onDown = value }
+    var onShowPress
+        get() = gestureDelegate.onShowPress
+        set(value) { gestureDelegate.onShowPress = value }
+    var onSingleTapUp
+        get() = gestureDelegate.onSingleTapUp
+        set(value) { gestureDelegate.onSingleTapUp = value }
+    var onScroll
+        get() = gestureDelegate.onScroll
+        set(value) { gestureDelegate.onScroll = value }
+    var onLongPress
+        get() = gestureDelegate.onLongPress
+        set(value) { gestureDelegate.onLongPress = value }
+    var onFling
+        get() = gestureDelegate.onFling
+        set(value) { gestureDelegate.onFling = value }
+    var onSingleTapConfirmed
+        get() = gestureDelegate.onSingleTapConfirmed
+        set(value) { gestureDelegate.onSingleTapConfirmed = value }
+    var onDoubleTap
+        get() = gestureDelegate.onDoubleTap
+        set(value) { gestureDelegate.onDoubleTap = value }
+    var onDoubleTapEvent
+        get() = gestureDelegate.onDoubleTapEvent
+        set(value) { gestureDelegate.onDoubleTapEvent = value }
+    var onContextClick
+        get() = gestureDelegate.onContextClick
+        set(value) { gestureDelegate.onContextClick = value }
+    var onMoveBegin
+        get() = gestureDelegate.onMoveBegin
+        set(value) { gestureDelegate.onMoveBegin = value }
+    var onMove
+        get() = gestureDelegate.onMove
+        set(value) { gestureDelegate.onMove = value }
+    var onMoveEnd
+        get() = gestureDelegate.onMoveEnd
+        set(value) { gestureDelegate.onMoveEnd = value }
+    var onRotateBegin
+        get() = gestureDelegate.onRotateBegin
+        set(value) { gestureDelegate.onRotateBegin = value }
+    var onRotate
+        get() = gestureDelegate.onRotate
+        set(value) { gestureDelegate.onRotate = value }
+    var onRotateEnd
+        get() = gestureDelegate.onRotateEnd
+        set(value) { gestureDelegate.onRotateEnd = value }
+    var onScaleBegin
+        get() = gestureDelegate.onScaleBegin
+        set(value) { gestureDelegate.onScaleBegin = value }
+    var onScale
+        get() = gestureDelegate.onScale
+        set(value) { gestureDelegate.onScale = value }
+    var onScaleEnd
+        get() = gestureDelegate.onScaleEnd
+        set(value) { gestureDelegate.onScaleEnd = value }
+    var onEditingChanged
+        get() = gestureDelegate.onEditingChanged
+        set(value) { gestureDelegate.onEditingChanged = value }
+    var editingTransforms
+        get() = gestureDelegate.editingTransforms
+        set(value) { gestureDelegate.editingTransforms = value }
+
+    var onSmoothEnd
+        get() = animationDelegate.onSmoothEnd
+        set(value) { animationDelegate.onSmoothEnd = value }
+
+    // ---- Scene lifecycle callbacks ----
+
+    var onFrame: ((frameTimeNanos: Long) -> Unit)? = null
+    var onAddedToScene: ((scene: Scene) -> Unit)? = null
+    var onRemovedFromScene: ((scene: Scene) -> Unit)? = null
+
+    // ---- Derived transforms ----
+
+    /** Transform from the world coordinate system to the coordinate system of this node. */
+    val worldToLocal: Transform get() = inverse(worldTransform)
+
     val transformManager get() = engine.transformManager
     val transformInstance get() = transformManager.getInstance(entity)
 
@@ -470,13 +528,13 @@ open class Node(
     internal val onChildAdded = mutableListOf<(child: Node) -> Unit>()
     internal val onChildRemoved = mutableListOf<(child: Node) -> Unit>()
 
-    private var lastFrameTimeNanos: Long? = null
-
     init {
         if (!transformManager.hasComponent(entity)) {
             transformManager.create(entity)
         }
     }
+
+    // ---- Coordinate conversion ----
 
     /**
      * Converts a position in the world-space to a local-space of this node.
@@ -529,57 +587,15 @@ open class Node(
     fun getWorldRotation(rotation: Rotation) =
         getWorldQuaternion(Quaternion.fromEuler(rotation)).toEulerAngles()
 
-    /**
-     * Converts a scale in the world-space to a local-space of this node.
-     *
-     * @param worldScale the transform in world-space to convert.
-     * @return a new scale that represents the world scale in local-space.
-     */
-//    fun getLocalScale(worldScale: Scale) = scale(worldToLocal) * worldScale
-//    fun getLocalScale(worldScale: Scale) = (worldToLocal * scale(worldScale)).scale
     fun getLocalScale(worldScale: Scale) = worldToLocal * worldScale
-
-    /**
-     * Converts a scale in the local-space of this node to world-space.
-     *
-     * @param scale the scale in local-space to convert.
-     * @return a new scale that represents the local scale in world-space.
-     */
-//    fun getWorldScale(scale: Scale) = (worldTransform * scale(scale)).scale
-//    fun getWorldScale(scale: Scale) = scale(worldTransform) * scale
     fun getWorldScale(scale: Scale) = worldTransform * scale
 
-    /**
-     * Converts a node transform in the world-space to a local-space of this node.
-     *
-     * @param node the node in world-space to convert.
-     * @return a new transform that represents the world transform in local-space.
-     */
     fun getLocalTransform(node: Node) = getLocalTransform(node.worldTransform)
-
-    /**
-     * Converts a transform in the world-space to a local-space of this node.
-     *
-     * @param worldTransform the transform in world-space to convert.
-     * @return a new transform that represents the world transform in local-space.
-     */
     fun getLocalTransform(worldTransform: Transform) = worldToLocal * worldTransform
-
-    /**
-     * Converts a node transform in the local-space of this node to world-space.
-     *
-     * @param node the node in local-space to convert.
-     * @return a new transform that represents the local transform in world-space.
-     */
     fun getWorldTransform(node: Node) = getWorldTransform(node.transform)
-
-    /**
-     * Converts a transform in the local-space of this node to world-space.
-     *
-     * @param localTransform the transform in local-space to convert.
-     * @return a new transform that represents the local transform in world-space.
-     */
     fun getWorldTransform(localTransform: Transform) = worldTransform * localTransform
+
+    // ---- Transform mutation ----
 
     /**
      * The node scale.
@@ -738,7 +754,6 @@ open class Node(
     ) = worldTransform(
         quaternion = lookTowards(
             eye = worldPosition,
-//            forward = -lookDirection,
             forward = lookDirection,
             up = upDirection
         ).toQuaternion(),
@@ -746,11 +761,15 @@ open class Node(
         smoothSpeed = smoothSpeed
     )
 
+    // ---- Children management ----
+
     fun addChildNode(node: Node) = apply { childNodes += node }
     fun addChildNodes(nodes: Set<Node>) = apply { childNodes += nodes }
     fun removeChildNode(node: Node) = apply { childNodes -= node }
     fun removeChildNodes(nodes: Set<Node>) = apply { childNodes = childNodes - nodes }
     fun clearChildNodes() = apply { childNodes = setOf() }
+
+    // ---- ObjectAnimator helpers ----
 
     fun animatePositions(vararg positions: Position): ObjectAnimator =
         NodeAnimator.ofPosition(this, *positions)
@@ -766,6 +785,8 @@ open class Node(
 
     fun animateTransforms(vararg transforms: Transform): AnimatorSet =
         NodeAnimator.ofTransform(this, *transforms)
+
+    // ---- Collision tests ----
 
     /**
      * Tests to see if this node collision shape overlaps the collision shape of any other nodes in
@@ -798,32 +819,20 @@ open class Node(
         }
     }
 
+    // ---- Per-frame lifecycle ----
+
     open fun onFrame(frameTimeNanos: Long) {
-        smoothTransform?.let { smoothTransform ->
-            if (smoothTransform != transform) {
-                val slerpTransform = slerp(
-                    start = transform,
-                    end = smoothTransform,
-                    deltaSeconds = frameTimeNanos.intervalSeconds(lastFrameTimeNanos),
-                    speed = smoothTransformSpeed
-                )
-                if (!slerpTransform.equals(this.transform, delta = 0.001f)) {
-                    this.transform = slerpTransform
-                } else {
-                    this.transform = smoothTransform
-                    this.smoothTransform = null
-                    onSmoothEnd?.invoke(this)
-                }
-            } else {
-                this.smoothTransform = null
-            }
-        }
+        // Smooth transform interpolation
+        animationDelegate.onFrame(frameTimeNanos)
+
+        // Propagate to children
         childNodes.forEach { it.onFrame(frameTimeNanos) }
 
+        // User callback
         onFrame?.invoke(frameTimeNanos)
-
-        lastFrameTimeNanos = frameTimeNanos
     }
+
+    // ---- Transform change notifications ----
 
     /**
      * The transformation (position, rotation or scale) of the [Node] has changed.
@@ -833,14 +842,6 @@ open class Node(
      */
     open fun onTransformChanged() {
         onWorldTransformChanged()
-    }
-
-    open fun onAddedToScene(scene: Scene) {
-        onAddedToScene?.invoke(scene)
-    }
-
-    open fun onRemovedFromScene(scene: Scene) {
-        onRemovedFromScene?.invoke(scene)
     }
 
     /**
@@ -854,168 +855,90 @@ open class Node(
         childNodes.forEach { it.onWorldTransformChanged() }
     }
 
+    // ---- Scene lifecycle ----
 
-    open fun onTouchEvent(e: MotionEvent, hitResult: HitResult) =
-        onTouch?.invoke(e, hitResult) ?: false
-
-    override fun onDown(e: MotionEvent) = onDown?.invoke(e) ?: false
-    override fun onShowPress(e: MotionEvent) {
-        onShowPress?.invoke(e)
+    open fun onAddedToScene(scene: Scene) {
+        onAddedToScene?.invoke(scene)
     }
 
-    override fun onSingleTapUp(e: MotionEvent) = onSingleTapUp?.invoke(e) ?: false
+    open fun onRemovedFromScene(scene: Scene) {
+        onRemovedFromScene?.invoke(scene)
+    }
+
+    // ---- Gesture interface implementations (delegate to gestureDelegate) ----
+
+    open fun onTouchEvent(e: MotionEvent, hitResult: HitResult) =
+        gestureDelegate.onTouchEvent(e, hitResult)
+
+    override fun onDown(e: MotionEvent) = gestureDelegate.onDown(e)
+    override fun onShowPress(e: MotionEvent) = gestureDelegate.onShowPress(e)
+    override fun onSingleTapUp(e: MotionEvent) = gestureDelegate.onSingleTapUp(e)
     override fun onScroll(
         e1: MotionEvent?,
         e2: MotionEvent,
         distanceX: Float,
         distanceY: Float
-    ) = onScroll?.invoke(e1, e2, Float2(distanceX, distanceY)) ?: false
+    ) = gestureDelegate.onScroll(e1, e2, distanceX, distanceY)
 
-    override fun onLongPress(e: MotionEvent) {
-        onLongPress?.invoke(e)
-    }
-
+    override fun onLongPress(e: MotionEvent) = gestureDelegate.onLongPress(e)
     override fun onFling(
         e1: MotionEvent?,
         e2: MotionEvent,
         velocityX: Float,
         velocityY: Float
-    ) = onFling?.invoke(e1, e2, Float2(velocityX, velocityY)) ?: false
+    ) = gestureDelegate.onFling(e1, e2, velocityX, velocityY)
 
-    override fun onSingleTapConfirmed(e: MotionEvent) = onSingleTapConfirmed?.invoke(e) ?: false
-    override fun onDoubleTap(e: MotionEvent) = onDoubleTap?.invoke(e) ?: false
-    override fun onDoubleTapEvent(e: MotionEvent) = onDoubleTapEvent?.invoke(e) ?: false
-    override fun onContextClick(e: MotionEvent) = onContextClick?.invoke(e) ?: false
+    override fun onSingleTapConfirmed(e: MotionEvent) = gestureDelegate.onSingleTapConfirmed(e)
+    override fun onDoubleTap(e: MotionEvent) = gestureDelegate.onDoubleTap(e)
+    override fun onDoubleTapEvent(e: MotionEvent) = gestureDelegate.onDoubleTapEvent(e)
+    override fun onContextClick(e: MotionEvent) = gestureDelegate.onContextClick(e)
 
-    override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent): Boolean {
-        return if (isPositionEditable && onMoveBegin?.invoke(detector, e) != false) {
-            editingTransforms = editingTransforms + Node::position
-            true
-        } else {
-            parent?.onMoveBegin(detector, e) ?: false
-        }
-    }
+    override fun onMoveBegin(detector: MoveGestureDetector, e: MotionEvent) =
+        gestureDelegate.onMoveBegin(detector, e)
 
-    override fun onMove(detector: MoveGestureDetector, e: MotionEvent): Boolean {
-        return if (isPositionEditable) {
-            // Find the hit test location in the parent to place the child at the
-            // corresponding location
-            collisionSystem?.hitTest(e)?.firstOrNull { it.node == parent }?.let {
-                onMove(detector, e, it.getWorldPosition())
-            } ?: false
-        } else {
-            parent?.onMove(detector, e) ?: false
-        }
-    }
+    override fun onMove(detector: MoveGestureDetector, e: MotionEvent) =
+        gestureDelegate.onMove(detector, e)
 
     open fun onMove(
         detector: MoveGestureDetector,
         e: MotionEvent,
         worldPosition: Position
-    ): Boolean {
-        return if (onMove?.invoke(detector, e, worldPosition) != false) {
-            this.worldPosition = worldPosition
-            true
-        } else {
-            false
-        }
-    }
+    ) = gestureDelegate.onMove(detector, e, worldPosition)
 
-    override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) {
-        if (isPositionEditable) {
-            editingTransforms = editingTransforms - Node::position
-        } else {
-            parent?.onMoveEnd(detector, e)
-        }
-    }
+    override fun onMoveEnd(detector: MoveGestureDetector, e: MotionEvent) =
+        gestureDelegate.onMoveEnd(detector, e)
 
-    override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent): Boolean {
-        return if (isRotationEditable && onRotateBegin?.invoke(detector, e) != false) {
-            editingTransforms = editingTransforms + Node::quaternion
-            true
-        } else {
-            parent?.onRotateBegin(detector, e) ?: false
-        }
-    }
+    override fun onRotateBegin(detector: RotateGestureDetector, e: MotionEvent) =
+        gestureDelegate.onRotateBegin(detector, e)
 
-    override fun onRotate(detector: RotateGestureDetector, e: MotionEvent): Boolean {
-        return if (isRotationEditable) {
-            val deltaRadians = detector.currentAngle - detector.lastAngle
-            onRotate(
-                detector, e,
-                rotationDelta = Quaternion.fromAxisAngle(Float3(y = 1.0f), degrees(-deltaRadians))
-            )
-        } else {
-            parent?.onRotate(detector, e) ?: false
-        }
-    }
+    override fun onRotate(detector: RotateGestureDetector, e: MotionEvent) =
+        gestureDelegate.onRotate(detector, e)
 
     open fun onRotate(
         detector: RotateGestureDetector,
         e: MotionEvent,
         rotationDelta: Quaternion
-    ): Boolean {
-        return if (onRotate?.invoke(detector, e, rotationDelta) != false) {
-            quaternion *= rotationDelta
-            true
-        } else {
-            false
-        }
-    }
+    ) = gestureDelegate.onRotate(detector, e, rotationDelta)
 
-    override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) {
-        if (isRotationEditable) {
-            editingTransforms = editingTransforms - Node::quaternion
-        } else {
-            parent?.onRotateEnd(detector, e)
-        }
-    }
+    override fun onRotateEnd(detector: RotateGestureDetector, e: MotionEvent) =
+        gestureDelegate.onRotateEnd(detector, e)
 
-    override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent): Boolean {
-        return if (isScaleEditable && onScaleBegin?.invoke(detector, e) != false) {
-            true
-        } else {
-            parent?.onScaleBegin(detector, e) ?: false
-        }
-    }
+    override fun onScaleBegin(detector: ScaleGestureDetector, e: MotionEvent) =
+        gestureDelegate.onScaleBegin(detector, e)
 
-    override fun onScale(detector: ScaleGestureDetector, e: MotionEvent): Boolean {
-        return if (isScaleEditable) {
-            editingTransforms = editingTransforms + Node::scale
-            onScale(detector, e, detector.scaleFactor)
-        } else {
-            parent?.onScale(detector, e) ?: false
-        }
-    }
+    override fun onScale(detector: ScaleGestureDetector, e: MotionEvent) =
+        gestureDelegate.onScale(detector, e)
 
-    open fun onScale(detector: ScaleGestureDetector, e: MotionEvent, scaleFactor: Float): Boolean {
-        return if (onScale?.invoke(detector, e, scaleFactor) != false) {
-            val damped = 1f + (scaleFactor - 1f) * scaleGestureSensitivity
-            val newScale = scale * damped
-            if (newScale.x in editableScaleRange &&
-                newScale.y in editableScaleRange &&
-                newScale.z in editableScaleRange
-            ) {
-                scale = newScale
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
+    open fun onScale(detector: ScaleGestureDetector, e: MotionEvent, scaleFactor: Float) =
+        gestureDelegate.onScale(detector, e, scaleFactor)
 
-    override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) {
-        if (isScaleEditable) {
-            editingTransforms = editingTransforms - Node::scale
-        } else {
-            parent?.onScaleEnd(detector, e)
-        }
-    }
+    override fun onScaleEnd(detector: ScaleGestureDetector, e: MotionEvent) =
+        gestureDelegate.onScaleEnd(detector, e)
+
+    // ---- Visibility ----
 
     /**
-     * Updates the children visibility
+     * Updates the children visibility.
      *
      * @see RenderableNode.updateVisibility
      */
@@ -1025,10 +948,14 @@ open class Node(
         }
     }
 
+    // ---- Collision bridge ----
+
     // Bridge for legacy collision system; returns world transform as a collision Matrix.
     override fun getTransformationMatrix(): Matrix {
         return worldTransform.toMatrix()
     }
+
+    // ---- Destroy ----
 
     /**
      * Detach and destroy the node and all its children.

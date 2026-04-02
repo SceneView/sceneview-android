@@ -29,9 +29,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import io.github.sceneview.demo.about.AboutScreen
 import io.github.sceneview.demo.theme.SceneViewDemoTheme
 
-@Preview(showSystemUi = true, name = "App - 3D Tab")
+@Preview(showSystemUi = true, name = "App - Explore Tab")
 @Composable
-private fun App3DPreview() {
+private fun AppExplorePreview() {
     SceneViewDemoTheme(dynamicColor = false) {
         NavigationShellPreview(selectedTab = 0)
     }
@@ -45,7 +45,11 @@ private fun AppAboutPreview() {
     }
 }
 
-@Preview(showSystemUi = true, name = "App - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showSystemUi = true,
+    name = "App - Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun AppDarkPreview() {
     SceneViewDemoTheme(darkTheme = true, dynamicColor = false) {
@@ -57,10 +61,10 @@ private fun AppDarkPreview() {
 private fun NavigationShellPreview(selectedTab: Int) {
     var selected by remember { mutableIntStateOf(selectedTab) }
     val tabs = listOf(
-        Triple("3D", Icons.Default.ViewInAr, "3D"),
-        Triple("AR", Icons.Default.CameraAlt, "AR"),
-        Triple("Samples", Icons.Default.GridView, "Samples"),
-        Triple("About", Icons.Default.Info, "About")
+        Triple("Explore", Icons.Default.ViewInAr, "explore"),
+        Triple("AR", Icons.Default.CameraAlt, "ar"),
+        Triple("Samples", Icons.Default.GridView, "samples"),
+        Triple("About", Icons.Default.Info, "about")
     )
 
     Scaffold(
@@ -95,17 +99,17 @@ private fun NavigationShellPreview(selectedTab: Int) {
         ) {
             when (selected) {
                 0 -> Text(
-                    "3D Scene\n(Filament — not available in preview)",
+                    "3D Scene\n(Filament -- not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 1 -> Text(
-                    "AR Scene\n(ARCore — not available in preview)",
+                    "AR Scene\n(ARCore -- not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 2 -> Text(
-                    "Samples Grid\n(3D scenes — not available in preview)",
+                    "Samples Grid\n(3D scenes -- not available in preview)",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

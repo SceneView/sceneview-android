@@ -1,3 +1,11 @@
+// TODO(module-unification): ARSceneScope should eventually move into the `sceneview` module as
+//  `io.github.sceneview.ar.ARSceneScope`. ARCore would become a `compileOnly` dependency of
+//  `sceneview`, and this class would only be instantiated when ARCore is on the runtime classpath.
+//  Merge points:
+//  - ARSceneScope extends SceneScope — no code duplication, only AR-specific composables here
+//  - NodeLifecycle is already reused from SceneScope (no override needed)
+//  - AR node imports (AnchorNodeImpl, etc.) would move to a `sceneview/ar/node/` sub-package
+
 package io.github.sceneview.ar
 
 import androidx.compose.runtime.Composable
@@ -65,12 +73,17 @@ import io.github.sceneview.ar.node.TrackableNode as TrackableNodeImpl
  * at the top level of `ARScene { }`. Inside a nested [NodeScope] (the `content` block of any
  * node), only the base [SceneScope] composables are in scope.
  *
+ * **Naming convention:** Composable functions in this scope (e.g. `AnchorNode`, `TrackableNode`)
+ * share their names with the underlying imperative node classes. Import aliases (`AnchorNodeImpl`,
+ * etc.) are used internally to disambiguate. The composable is the primary API surface.
+ *
  * @param engine            The Filament [Engine] shared with the parent [ARScene].
  * @param modelLoader       [ModelLoader] for loading glTF/GLB models.
  * @param materialLoader    [MaterialLoader] for creating material instances.
  * @param environmentLoader [EnvironmentLoader] for loading HDR environments.
  * @param _nodes            Internal SnapshotStateList backing the scene's root node list.
  */
+@Suppress("FunctionName") // Composable functions follow PascalCase (Compose convention)
 @SceneDsl
 class ARSceneScope internal constructor(
     engine: Engine,
