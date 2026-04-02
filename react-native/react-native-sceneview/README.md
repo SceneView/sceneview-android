@@ -1,8 +1,21 @@
 # react-native-sceneview
 
-React Native bindings for [SceneView](https://github.com/sceneview/sceneview) -- 3D and AR scenes powered by Filament (Android) and RealityKit (iOS).
+[![npm version](https://img.shields.io/npm/v/react-native-sceneview.svg)](https://www.npmjs.com/package/react-native-sceneview)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub](https://img.shields.io/badge/GitHub-sceneview%2Fsceneview-black)](https://github.com/sceneview/sceneview)
 
-> **Status:** Alpha -- 3D model loading works on both platforms. AR scene is functional on Android.
+React Native bindings for [SceneView](https://sceneview.github.io) — 3D and AR scenes powered by Filament (Android) and RealityKit (iOS).
+
+> **Status:** Alpha — 3D model loading works on both platforms. AR scene is functional on Android.
+
+## Features
+
+- Load and display 3D models (GLB/GLTF) using native renderers
+- AR scenes with plane detection — ARCore (Android) and ARKit (iOS)
+- HDR environment lighting
+- Orbit camera controls
+- TypeScript types for all props and events
+- Fallback message on unsupported platforms (web, etc.)
 
 ## Installation
 
@@ -16,21 +29,22 @@ npm install react-native-sceneview
 cd ios && pod install
 ```
 
-Requires iOS 17+ and Xcode 15+. The host app must also add `SceneViewSwift` via Swift Package Manager.
+Requires iOS 17+ and Xcode 15+. The host app must also add `SceneViewSwift` via Swift Package Manager:
+- URL: `https://github.com/sceneview/SceneViewSwift`
+- Version: `3.6.0`
 
 ### Android
 
-Add the SceneView Maven repository to your project-level `build.gradle`:
+Requires `minSdk 24`. SceneView is published to Maven Central — no extra repository needed:
 
 ```groovy
-allprojects {
-    repositories {
-        mavenCentral()
+// android/app/build.gradle
+android {
+    defaultConfig {
+        minSdkVersion 24
     }
 }
 ```
-
-Requires `minSdk 24`.
 
 ## Usage
 
@@ -41,10 +55,10 @@ import { SceneView } from 'react-native-sceneview';
 
 <SceneView
   style={{ flex: 1 }}
-  environment="environments/studio.hdr"
-  modelNodes={[{ src: 'models/robot.glb' }]}
+  environment="environments/studio_small.hdr"
+  modelNodes={[{ src: 'models/damaged_helmet.glb', position: [0, 0, -2] }]}
   cameraOrbit
-/>;
+/>
 ```
 
 ### AR Scene
@@ -56,21 +70,41 @@ import { ARSceneView } from 'react-native-sceneview';
   style={{ flex: 1 }}
   planeDetection
   modelNodes={[{ src: 'models/chair.glb', position: [0, 0, -1] }]}
-/>;
+/>
 ```
 
-### Props
+### Props — SceneView
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `style` | `ViewStyle` | -- | Standard React Native style |
-| `environment` | `string` | -- | HDR environment asset path |
-| `modelNodes` | `ModelNode[]` | `[]` | Models to render |
-| `cameraOrbit` | `boolean` | `true` | Enable orbit camera controls |
-| `onTap` | `(event) => void` | -- | Tap callback (event pending) |
-| `planeDetection` | `boolean` | `true` | AR: enable plane detection |
-| `depthOcclusion` | `boolean` | `false` | AR: enable depth occlusion |
-| `instantPlacement` | `boolean` | `false` | AR: enable instant placement |
+| Prop             | Type            | Default | Description                              |
+|------------------|-----------------|---------|------------------------------------------|
+| `style`          | `ViewStyle`     | —       | Standard React Native style              |
+| `environment`    | `string`        | —       | HDR environment asset path               |
+| `modelNodes`     | `ModelNode[]`   | `[]`    | Models to render                         |
+| `geometryNodes`  | `GeometryNode[]`| `[]`    | Geometry nodes (forward-compatible)      |
+| `lightNodes`     | `LightNode[]`   | `[]`    | Light nodes (forward-compatible)         |
+| `cameraOrbit`    | `boolean`       | `true`  | Enable orbit camera controls             |
+| `onTap`          | `function`      | —       | Tap callback (event pending)             |
+
+### Props — ARSceneView (extends SceneView)
+
+| Prop                | Type       | Default | Description                               |
+|---------------------|------------|---------|-------------------------------------------|
+| `planeDetection`    | `boolean`  | `true`  | Enable plane detection                    |
+| `depthOcclusion`    | `boolean`  | `false` | Enable depth occlusion (Depth API/LiDAR)  |
+| `instantPlacement`  | `boolean`  | `false` | Enable instant placement                  |
+| `onPlaneDetected`   | `function` | —       | Callback when a new plane is detected     |
+
+### ModelNode interface
+
+```ts
+interface ModelNode {
+  src: string;                             // Asset path or URL to GLB/GLTF
+  position?: [number, number, number];     // World-space [x, y, z]
+  rotation?: [number, number, number];     // Euler degrees [x, y, z]
+  scale?: number | [number, number, number]; // Uniform or per-axis scale
+  animation?: string;                      // Animation name to auto-play
+}
+```
 
 ## Architecture
 
@@ -81,23 +115,25 @@ React Native JS
 requireNativeComponent('RNSceneView' / 'RNARSceneView')
     |
     +---> Android: ViewManager -> ComposeView -> Scene { } / ARScene { }
-    |                              (Filament)
+    |                              (Filament, SceneView SDK 3.6.0)
     |
     +---> iOS: RCTViewManager -> UIHostingController -> SceneView / ARSceneView
-                                  (RealityKit)
+                                  (RealityKit, SceneViewSwift 3.6.0)
 ```
 
-- **Android** bridges to the Jetpack Compose `Scene`/`ARScene` composables via `ComposeView`
-- **iOS** bridges to SceneViewSwift's SwiftUI views via `UIHostingController`
-- Props are mapped from React Native's bridge types to native view parameters
+Props are mapped from the React Native bridge to native view parameters on each platform.
 
 ## Limitations
 
 - Geometry and light node props are defined in types but not yet rendered natively
 - `onTap` and `onPlaneDetected` event callbacks are declared but events are not yet dispatched
 - Scale prop on `ModelNode` is parsed as a uniform float (per-axis array not yet supported)
-- Unsupported platforms (web, etc.) show a fallback message
+- Only Android and iOS are supported; other platforms render a fallback message
+
+## Contributing
+
+See [CONTRIBUTING.md](https://github.com/sceneview/sceneview/blob/main/.github/CONTRIBUTING.md).
 
 ## License
 
-Apache-2.0
+Apache-2.0 — see [LICENSE](LICENSE) for details.
