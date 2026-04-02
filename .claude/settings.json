@@ -12,6 +12,15 @@
             "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -f \"$ROOT/gradle.properties\" ] && V=$(grep \"^VERSION_NAME=\" \"$ROOT/gradle.properties\" | cut -d= -f2); for f in sceneview/gradle.properties arsceneview/gradle.properties sceneview-core/gradle.properties; do [ -f \"$ROOT/$f\" ] && FV=$(grep \"^VERSION_NAME=\" \"$ROOT/$f\" | cut -d= -f2) && [ \"$FV\" != \"$V\" ] && echo \"VERSION MISMATCH: $f has $FV but root has $V\" && exit 1; done; exit 0'"
           }
         ]
+      },
+      {
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'PRE-PUSH QUALITY GATE: Before pushing, ensure you have verified: 1) Android compiles (sceneview + arsceneview), 2) Unit tests pass, 3) Bundle builds if store-affecting, 4) Website JS valid if website changed. Run: bash .claude/scripts/pre-push-check.sh'"
+          }
+        ]
       }
     ],
     "PostToolUse": [

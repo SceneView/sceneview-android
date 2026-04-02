@@ -12,6 +12,27 @@ complete, working code on the first try.
 read the docs and generate correct code for this?" If not, simplify the API or improve
 the documentation until it can.
 
+## QUALITY RULES (MANDATORY — every session, every commit)
+
+**ZERO TOLERANCE for bugs reaching the user.** Every change must be verified before push.
+
+### Before EVERY push to main:
+1. **Compile check**: `./gradlew :sceneview:compileReleaseKotlin :arsceneview:compileReleaseKotlin`
+2. **Unit tests**: `./gradlew :sceneview:test :arsceneview:testDebugUnitTest`
+3. **Bundle build** (if store-affecting): `./gradlew :samples:android-demo:bundleRelease`
+4. **Website JS** (if website changed): `node -c website-static/js/sceneview.js`
+5. **Full gate**: `bash .claude/scripts/pre-push-check.sh`
+
+### Rules:
+- NEVER push code that doesn't compile
+- NEVER push without running tests
+- NEVER modify website JS without validating syntax
+- NEVER deploy to stores without verifying the bundle builds locally first
+- When an agent modifies code, ALWAYS verify compilation before committing
+- If a review finds blockers, fix them ALL before pushing — no exceptions
+
+### Quality plan: `.claude/plans/v4.0-quality-plan.md`
+
 ## About
 
 SceneView provides 3D and AR as declarative UI for Android (Jetpack Compose, Filament,
