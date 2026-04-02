@@ -35,6 +35,21 @@
 ### Commits
 1. `b88a3915` — Refactor Android architecture + redesign website + new demo app
 2. `67d37c54` — Redesign Showcase, fix Playground, fix Docs 404
+3. `dd821343` — Fix AR demo tone mapper + NodeState KDoc
+4. `315ba731` — Fix ARPermissionHandler recomposition leak
+5. `93ce50ec` — Fix Playground preview sync + curate models + add environments
+6. `2c421c8d` — Fix Playground race condition + camera manipulator API
+7. `c10b79ca` — Fix crash MaterialInstance on back press (#773)
+8. `907fd02e` — Bump Compose BOM + Dokka
+9. `083b8e21` + `b7da8863` — Auto-deploy workflow + cleanup
+10. GitHub Pages config: changed from "GitHub Actions" to "Deploy from branch"
+
+### Scheduled
+- `playground-preview-rework` — 3h AM: example-specific preview scenes (geometry primitives, AR placeholders)
+
+### Known issues
+- Playground preview doesn't reflect example code for non-model examples (scheduled fix above)
+- GitHub Pages CDN can be slow to propagate (10+ min sometimes)
 
 ---
 
