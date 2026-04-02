@@ -35,12 +35,9 @@ jobs:
       - run: chmod +x ./gradlew
       - uses: gradle/actions/wrapper-validation@v5
 
-      - name: Compile sceneview + arsceneview
+      - name: Assemble all
         run: |
-          ./gradlew \
-            :sceneview:compileDebugKotlin \
-            :arsceneview:compileDebugKotlin \
-            --stacktrace
+          ./gradlew assembleDebug \
 
       - name: Unit tests
         run: |
