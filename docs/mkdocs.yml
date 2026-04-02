@@ -92,7 +92,8 @@ nav:
   - Community: community.md
   - Contribute: contributing.md
   - Changelog: changelog.md
-  - Migration: migration.md
+  - Migration (v3 → v4): migration-v4.md
+  - Migration (v2 → v3): migration.md
 
 plugins:
   - search
