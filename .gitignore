@@ -4,6 +4,7 @@
 Thumbs.db
 Desktop.ini
 /.idea
+.kotlin
 
 # ── Claude Code ───────────────────────────────────────────
 .claude/settings.json
