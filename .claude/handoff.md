@@ -4,8 +4,39 @@
 
 ## Last Session Summary
 
-**Date:** 31 mars 2026 (session 20-24)
+**Date:** 2 avril 2026 (session 25)
 **Branch:** main
+
+## WHAT WAS DONE THIS SESSION (session 25)
+
+### Android Full Rewrite (5 sprints)
+- **SceneRenderer.kt** created — shared render loop (eliminates Scene/ARScene duplication)
+- **NodeGestureDelegate.kt** — extracted 18 gesture callbacks from Node god class
+- **NodeAnimationDelegate.kt** — extracted smooth transform logic
+- **NodeState.kt** — immutable data class for ViewModel patterns
+- **ARPermissionHandler.kt** — decoupled ARCore from ComponentActivity (testable)
+- **SceneScope.kt** — 7 geometry nodes refactored (prevGeometry → SideEffect + comparison)
+- **ModelLoader.kt** — fixed memory leak (uncommented releaseSourceData)
+- **CollisionSystem.kt** — cleaned legacy Java (removed evaluators, modernized API)
+- All deprecated APIs preserved for backward compatibility
+- Review score: 4.5/5, 0 blockers
+
+### Demo Android (Material 3 Expressive)
+- 13 files rewritten from scratch
+- 4 tabs: Explore (40 models, 6 environments), AR (tap-to-place), Samples (19 demos), About
+- Dynamic Color, edge-to-edge, NavHost with transitions
+
+### Website Redesign
+- **index.html**: Nav (logo + GitHub icon), hero (8 platforms, drag hint), 8 sections redesigned
+- **showcase.html**: Complete rewrite (sample apps with store badges, platform gallery, try-it-live)
+- **playground.html**: 7 platform tabs, camera manipulator dropdown, "Open in Claude" + AI dropdown
+- **Docs 404 fix**: redirect page + nav links updated across 8 HTML files
+
+### Commits
+1. `b88a3915` — Refactor Android architecture + redesign website + new demo app
+2. `67d37c54` — Redesign Showcase, fix Playground, fix Docs 404
+
+---
 
 ## WHAT WAS DONE THIS SESSION (session 24)
 
