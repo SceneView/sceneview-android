@@ -73,11 +73,12 @@ branding/SPONSOR_TIERS.md
 /video/
 
 # ── Shared asset catalog (downloaded via tools/download-assets.sh) ──
-assets/models/
-assets/environments/
-assets/textures/
+/assets/models/
+/assets/environments/
+/assets/textures/
 
 # ── Platform demo assets (copied via .claude/scripts/sync-assets.sh) ──
+# Note: android-demo-assets is NOT ignored (Play Asset Delivery, must be in git)
 samples/android-tv-demo/src/main/assets/
 samples/flutter-demo/models/
 samples/react-native-demo/assets/models/
