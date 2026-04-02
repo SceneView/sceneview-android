@@ -1534,6 +1534,294 @@
       }
       render();
     }
+
+    // ---------------------------------------------------------------
+    // Scene management & geometry primitives
+    // ---------------------------------------------------------------
+
+    /**
+     * Remove all renderable entities (models, primitives) from the scene.
+     * Lights and camera are preserved.
+     */
+    clearScene() {
+      // Remove loaded glTF asset
+      if (this._asset) {
+        try {
+          this._asset.getRenderableEntities().forEach(function(e) { this._scene.remove(e); }.bind(this));
+          this._scene.remove(this._asset.getRoot());
+        } catch (e) { /* ignore */ }
+        this._asset = null;
+      }
+      // Remove manually added primitive assets
+      if (this._primitiveAssets) {
+        var self = this;
+        this._primitiveAssets.forEach(function(pa) {
+          try {
+            pa.getRenderableEntities().forEach(function(e) { self._scene.remove(e); });
+            self._scene.remove(pa.getRoot());
+          } catch (e) { /* ignore */ }
+        });
+        this._primitiveAssets = [];
+      }
+      // Remove media nodes
+      if (this._mediaNodes && this._mediaNodes.size > 0) {
+        var self = this;
+        this._mediaNodes.forEach(function(info, entity) {
+          try { self._scene.remove(entity); } catch (e) { /* ignore */ }
+        });
+        this._mediaNodes.clear();
+      }
+    }
+
+    /**
+     * Create a colored box primitive and add it to the scene.
+     *
+     * @param {number[]} center - [x, y, z] position
+     * @param {number[]} size - [w, h, d] dimensions
+     * @param {number[]} color - [r, g, b, a] color (0-1)
+     * @returns {Object|null} The glTF asset, or null on failure
+     */
+    createBox(center, size, color) {
+      var hw = (size[0] || 1) / 2;
+      var hh = (size[1] || 1) / 2;
+      var hd = (size[2] || 1) / 2;
+      // 24 vertices (4 per face, for proper normals)
+      var positions = new Float32Array([
+        // Front (+Z)
+        -hw,-hh, hd,  hw,-hh, hd,  hw, hh, hd, -hw, hh, hd,
+        // Back (-Z)
+         hw,-hh,-hd, -hw,-hh,-hd, -hw, hh,-hd,  hw, hh,-hd,
+        // Top (+Y)
+        -hw, hh, hd,  hw, hh, hd,  hw, hh,-hd, -hw, hh,-hd,
+        // Bottom (-Y)
+        -hw,-hh,-hd,  hw,-hh,-hd,  hw,-hh, hd, -hw,-hh, hd,
+        // Right (+X)
+         hw,-hh, hd,  hw,-hh,-hd,  hw, hh,-hd,  hw, hh, hd,
+        // Left (-X)
+        -hw,-hh,-hd, -hw,-hh, hd, -hw, hh, hd, -hw, hh,-hd
+      ]);
+      var normals = new Float32Array([
+        0,0,1, 0,0,1, 0,0,1, 0,0,1,
+        0,0,-1, 0,0,-1, 0,0,-1, 0,0,-1,
+        0,1,0, 0,1,0, 0,1,0, 0,1,0,
+        0,-1,0, 0,-1,0, 0,-1,0, 0,-1,0,
+        1,0,0, 1,0,0, 1,0,0, 1,0,0,
+        -1,0,0, -1,0,0, -1,0,0, -1,0,0
+      ]);
+      var indices = new Uint16Array([
+        0,1,2, 0,2,3,     4,5,6, 4,6,7,
+        8,9,10, 8,10,11,  12,13,14, 12,14,15,
+        16,17,18, 16,18,19, 20,21,22, 20,22,23
+      ]);
+      return this._addPrimitiveGLB(center, positions, normals, indices, color, 'box',
+        [-hw,-hh,-hd], [hw,hh,hd]);
+    }
+
+    /**
+     * Create a colored sphere primitive and add it to the scene.
+     *
+     * @param {number[]} center - [x, y, z] position
+     * @param {number} radius - sphere radius
+     * @param {number[]} color - [r, g, b, a] color (0-1)
+     * @returns {Object|null} The glTF asset, or null on failure
+     */
+    createSphere(center, radius, color) {
+      var r = radius || 0.5;
+      var stacks = 16, slices = 24;
+      var verts = [];
+      var norms = [];
+      var idxArr = [];
+
+      for (var i = 0; i <= stacks; i++) {
+        var phi = Math.PI * i / stacks;
+        var sinP = Math.sin(phi), cosP = Math.cos(phi);
+        for (var j = 0; j <= slices; j++) {
+          var theta = 2 * Math.PI * j / slices;
+          var sinT = Math.sin(theta), cosT = Math.cos(theta);
+          var nx = sinP * cosT, ny = cosP, nz = sinP * sinT;
+          verts.push(nx * r, ny * r, nz * r);
+          norms.push(nx, ny, nz);
+        }
+      }
+      for (var i = 0; i < stacks; i++) {
+        for (var j = 0; j < slices; j++) {
+          var a = i * (slices + 1) + j;
+          var b = a + slices + 1;
+          idxArr.push(a, b, a + 1, a + 1, b, b + 1);
+        }
+      }
+      return this._addPrimitiveGLB(center, new Float32Array(verts), new Float32Array(norms),
+        new Uint16Array(idxArr), color, 'sphere', [-r,-r,-r], [r,r,r]);
+    }
+
+    /**
+     * Create a colored cylinder primitive and add it to the scene.
+     *
+     * @param {number[]} center - [x, y, z] position
+     * @param {number} radius - cylinder radius
+     * @param {number} height - cylinder height
+     * @param {number[]} color - [r, g, b, a] color (0-1)
+     * @returns {Object|null} The glTF asset, or null on failure
+     */
+    createCylinder(center, radius, height, color) {
+      var r = radius || 0.5;
+      var h = height || 1;
+      var hh = h / 2;
+      var segs = 24;
+      var verts = [];
+      var norms = [];
+      var idxArr = [];
+      var vi = 0;
+
+      // Side faces
+      for (var i = 0; i <= segs; i++) {
+        var a = 2 * Math.PI * i / segs;
+        var nx = Math.cos(a), nz = Math.sin(a);
+        verts.push(nx * r, -hh, nz * r); norms.push(nx, 0, nz);
+        verts.push(nx * r,  hh, nz * r); norms.push(nx, 0, nz);
+      }
+      for (var i = 0; i < segs; i++) {
+        var b = i * 2;
+        idxArr.push(b, b + 1, b + 3, b, b + 3, b + 2);
+      }
+      vi = (segs + 1) * 2;
+
+      // Top cap
+      var topCenter = vi;
+      verts.push(0, hh, 0); norms.push(0, 1, 0); vi++;
+      for (var i = 0; i <= segs; i++) {
+        var a = 2 * Math.PI * i / segs;
+        verts.push(Math.cos(a) * r, hh, Math.sin(a) * r); norms.push(0, 1, 0);
+      }
+      for (var i = 0; i < segs; i++) {
+        idxArr.push(topCenter, topCenter + 1 + i, topCenter + 2 + i);
+      }
+      vi += segs + 1;
+
+      // Bottom cap
+      var botCenter = vi;
+      verts.push(0, -hh, 0); norms.push(0, -1, 0); vi++;
+      for (var i = 0; i <= segs; i++) {
+        var a = 2 * Math.PI * i / segs;
+        verts.push(Math.cos(a) * r, -hh, Math.sin(a) * r); norms.push(0, -1, 0);
+      }
+      for (var i = 0; i < segs; i++) {
+        idxArr.push(botCenter, botCenter + 2 + i, botCenter + 1 + i);
+      }
+
+      return this._addPrimitiveGLB(center, new Float32Array(verts), new Float32Array(norms),
+        new Uint16Array(idxArr), color, 'cylinder', [-r,-hh,-r], [r,hh,r]);
+    }
+
+    /**
+     * Build a minimal GLB from geometry data, load it via gltfio, and add to scene.
+     * @private
+     */
+    _addPrimitiveGLB(center, positions, normals, indices, color, name, bboxMin, bboxMax) {
+      if (!this._primitiveAssets) this._primitiveAssets = [];
+      color = color || [0.8, 0.8, 0.8, 1.0];
+      center = center || [0, 0, 0];
+
+      // Build glTF JSON
+      var posBytes = positions.byteLength;
+      var normBytes = normals.byteLength;
+      var idxBytes = indices.byteLength;
+      var vertCount = positions.length / 3;
+      var idxCount = indices.length;
+
+      var gltf = {
+        asset: { version: "2.0", generator: "SceneView.js" },
+        scene: 0,
+        scenes: [{ nodes: [0] }],
+        nodes: [{ mesh: 0, name: name, translation: center }],
+        meshes: [{
+          primitives: [{
+            attributes: { POSITION: 0, NORMAL: 1 },
+            indices: 2,
+            material: 0,
+            mode: 4
+          }]
+        }],
+        materials: [{
+          name: name + '_mat',
+          pbrMetallicRoughness: {
+            baseColorFactor: [color[0], color[1], color[2], color[3] !== undefined ? color[3] : 1],
+            metallicFactor: 0.1,
+            roughnessFactor: 0.6
+          },
+          doubleSided: false
+        }],
+        accessors: [
+          { bufferView: 0, componentType: 5126, count: vertCount, type: "VEC3",
+            min: [bboxMin[0], bboxMin[1], bboxMin[2]], max: [bboxMax[0], bboxMax[1], bboxMax[2]] },
+          { bufferView: 1, componentType: 5126, count: vertCount, type: "VEC3" },
+          { bufferView: 2, componentType: 5123, count: idxCount, type: "SCALAR" }
+        ],
+        bufferViews: [
+          { buffer: 0, byteOffset: 0, byteLength: posBytes, target: 34962 },
+          { buffer: 0, byteOffset: posBytes, byteLength: normBytes, target: 34962 },
+          { buffer: 0, byteOffset: posBytes + normBytes, byteLength: idxBytes, target: 34963 }
+        ],
+        buffers: [{ byteLength: 0 }]
+      };
+
+      var binLength = posBytes + normBytes + idxBytes;
+      var binPad = (4 - (binLength % 4)) % 4;
+      var binLengthAligned = binLength + binPad;
+      gltf.buffers[0].byteLength = binLengthAligned;
+
+      var jsonStr = JSON.stringify(gltf);
+      while (jsonStr.length % 4 !== 0) jsonStr += ' ';
+      var jsonLength = jsonStr.length;
+      var totalLength = 12 + 8 + jsonLength + 8 + binLengthAligned;
+
+      var glb = new ArrayBuffer(totalLength);
+      var view = new DataView(glb);
+      var offset = 0;
+
+      // GLB header
+      view.setUint32(offset, 0x46546C67, true); offset += 4;
+      view.setUint32(offset, 2, true); offset += 4;
+      view.setUint32(offset, totalLength, true); offset += 4;
+
+      // JSON chunk
+      view.setUint32(offset, jsonLength, true); offset += 4;
+      view.setUint32(offset, 0x4E4F534A, true); offset += 4;
+      for (var i = 0; i < jsonStr.length; i++) {
+        view.setUint8(offset++, jsonStr.charCodeAt(i));
+      }
+
+      // BIN chunk
+      view.setUint32(offset, binLengthAligned, true); offset += 4;
+      view.setUint32(offset, 0x004E4942, true); offset += 4;
+
+      new Uint8Array(glb, offset, posBytes).set(new Uint8Array(positions.buffer));
+      offset += posBytes;
+      new Uint8Array(glb, offset, normBytes).set(new Uint8Array(normals.buffer));
+      offset += normBytes;
+      new Uint8Array(glb, offset, idxBytes).set(new Uint8Array(indices.buffer));
+      offset += idxBytes;
+      for (var p = 0; p < binPad; p++) view.setUint8(offset++, 0);
+
+      // Load via gltfio
+      var glbData = new Uint8Array(glb);
+      var fakeUrl = '_prim_' + name + '_' + Date.now();
+      Filament.assets = Filament.assets || {};
+      Filament.assets[fakeUrl] = glbData;
+
+      try {
+        var asset = this._loader.createAsset(glbData);
+        if (!asset) { console.warn('SceneView: Failed to create primitive asset'); return null; }
+        asset.loadResources();
+        this._scene.addEntity(asset.getRoot());
+        this._scene.addEntities(asset.getRenderableEntities());
+        this._primitiveAssets.push(asset);
+        return asset;
+      } catch (e) {
+        console.warn('SceneView: createPrimitive error', e);
+        return null;
+      }
+    }
   }
 
   // Singleton guard — prevent multiple engine creations on same canvas

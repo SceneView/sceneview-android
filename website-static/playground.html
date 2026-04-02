@@ -699,6 +699,53 @@
       cursor: grabbing;
     }
 
+    /* AR placeholder overlay */
+    .pg__ar-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: var(--pg-canvas-bg);
+      color: var(--color-on-surface-variant, #5b5f68);
+      z-index: 4;
+    }
+
+    .pg__ar-placeholder svg {
+      opacity: 0.6;
+    }
+
+    .pg__ar-placeholder-text {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin: 0;
+      color: var(--color-on-surface-variant, #5b5f68);
+    }
+
+    [data-theme="dark"] .pg__ar-placeholder-text {
+      color: #8b949e;
+    }
+
+    .pg__ar-placeholder-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 20px;
+      border-radius: var(--pg-radius-pill);
+      background: var(--color-primary, #005bc1);
+      color: var(--color-on-primary, #fff);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background var(--pg-transition);
+    }
+
+    .pg__ar-placeholder-link:hover {
+      background: var(--color-primary-dim, #0050ab);
+    }
+
     /* Floating controls strip */
     .pg__controls {
       position: absolute;
@@ -1290,6 +1337,33 @@
             </div>
             <div class="pg__canvas-wrap">
               <canvas id="previewCanvas" aria-label="3D preview powered by SceneView / Filament.js"></canvas>
+              <div class="pg__ar-placeholder" id="arPlaceholder" style="display:none">
+                <svg width="120" height="180" viewBox="0 0 120 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="10" y="5" width="100" height="170" rx="16" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.25" stroke-width="2"/>
+                  <rect x="20" y="25" width="80" height="120" rx="4" fill="currentColor" fill-opacity="0.04" stroke="currentColor" stroke-opacity="0.12" stroke-width="1"/>
+                  <circle cx="60" cy="160" r="8" fill="currentColor" fill-opacity="0.1" stroke="currentColor" stroke-opacity="0.2" stroke-width="1.5"/>
+                  <!-- AR grid overlay -->
+                  <line x1="25" y1="110" x2="95" y2="110" stroke="currentColor" stroke-opacity="0.15" stroke-width="0.5" stroke-dasharray="4 3"/>
+                  <line x1="30" y1="120" x2="90" y2="120" stroke="currentColor" stroke-opacity="0.1" stroke-width="0.5" stroke-dasharray="4 3"/>
+                  <line x1="35" y1="130" x2="85" y2="130" stroke="currentColor" stroke-opacity="0.07" stroke-width="0.5" stroke-dasharray="4 3"/>
+                  <!-- AR cube -->
+                  <g transform="translate(48, 60)" stroke="var(--color-primary, #005bc1)" stroke-width="1.5" fill="none" opacity="0.7">
+                    <path d="M12 0 L24 7 L24 21 L12 28 L0 21 L0 7 Z"/>
+                    <line x1="12" y1="0" x2="12" y2="14"/>
+                    <line x1="0" y1="7" x2="12" y2="14"/>
+                    <line x1="24" y1="7" x2="12" y2="14"/>
+                  </g>
+                  <!-- AR reticle dots -->
+                  <circle cx="60" cy="100" r="2" fill="var(--color-primary, #005bc1)" opacity="0.5"/>
+                  <circle cx="50" cy="95" r="1" fill="var(--color-primary, #005bc1)" opacity="0.3"/>
+                  <circle cx="70" cy="95" r="1" fill="var(--color-primary, #005bc1)" opacity="0.3"/>
+                </svg>
+                <p class="pg__ar-placeholder-text">AR features require a physical device</p>
+                <a class="pg__ar-placeholder-link" href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo" target="_blank" rel="noopener">
+                  Try on Android
+                  <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">arrow_forward</span>
+                </a>
+              </div>
               <div class="pg__controls">
                 <button class="pg__ctrl-btn pg__ctrl-btn--active" id="ctrlRotate" title="Auto-rotate" data-label="Rotate: ON">
                   <span class="material-symbols-outlined">360</span>
@@ -1376,6 +1450,7 @@
         icon: 'view_in_ar',
         level: 'beginner',
         tags: ['3D', 'Compose', 'Beginner'],
+        previewType: 'model',
         defaultModel: 'DamagedHelmet',
         description: 'A basic 3D model viewer with orbit controls and environment lighting.',
         android: {
@@ -1413,6 +1488,7 @@
         icon: 'landscape',
         level: 'beginner',
         tags: ['3D', 'Lighting', 'Beginner'],
+        previewType: 'model',
         defaultModel: 'SheenChair',
         description: 'Configure HDR environment lighting with indirect light and skybox.',
         android: {
@@ -1434,6 +1510,7 @@
         icon: 'videocam',
         level: 'beginner',
         tags: ['3D', 'Camera', 'Beginner'],
+        previewType: 'model',
         defaultModel: 'AntiqueCamera',
         description: 'Orbit camera with customizable distance, zoom limits, and smooth damping.',
         android: {
@@ -1455,6 +1532,7 @@
         icon: 'light_mode',
         level: 'intermediate',
         tags: ['3D', 'Lighting', 'Intermediate'],
+        previewType: 'model',
         defaultModel: 'DamagedHelmet',
         description: 'Add directional, point, and spot lights with shadows and color control.',
         android: {
@@ -1476,6 +1554,7 @@
         icon: 'pin_drop',
         level: 'intermediate',
         tags: ['AR', 'Compose', 'Intermediate'],
+        previewType: 'ar-placeholder',
         defaultModel: 'SheenChair',
         description: 'Tap-to-place 3D models on detected surfaces using ARCore plane detection.',
         android: {
@@ -1497,6 +1576,7 @@
         icon: 'face',
         level: 'advanced',
         tags: ['AR', 'Face', 'Advanced'],
+        previewType: 'ar-placeholder',
         defaultModel: 'DamagedHelmet',
         description: 'Track face landmarks and apply augmented overlays with ARCore Augmented Faces.',
         android: {
@@ -1517,6 +1597,7 @@
         title: 'Spatial Anchors',
         icon: 'anchor',
         level: 'advanced',
+        previewType: 'ar-placeholder',
         tags: ['AR', 'Spatial', 'Advanced'],
         defaultModel: 'Lantern',
         description: 'Persist AR content across sessions with Cloud Anchors or local persistence.',
@@ -1539,6 +1620,7 @@
         icon: 'category',
         level: 'beginner',
         tags: ['3D', 'Geometry', 'Beginner'],
+        previewType: 'geometry',
         defaultModel: 'GameBoyClassic',
         description: 'Create cubes, spheres, cylinders, and planes as composable geometry nodes.',
         android: {
@@ -1560,6 +1642,7 @@
         icon: 'animation',
         level: 'intermediate',
         tags: ['3D', 'Animation', 'Intermediate'],
+        previewType: 'model',
         defaultModel: 'AnimatedAstronaut',
         description: 'Play, pause, and switch between glTF model animations with playback controls.',
         android: {
@@ -1581,6 +1664,7 @@
         icon: 'vibration',
         level: 'intermediate',
         tags: ['3D', 'Physics', 'Intermediate'],
+        previewType: 'physics',
         defaultModel: 'SheenChair',
         description: 'Smooth, natural-feeling animations using spring dynamics for position, rotation, and scale.',
         android: {
@@ -1602,6 +1686,7 @@
         icon: 'texture',
         level: 'intermediate',
         tags: ['3D', 'Materials', 'Intermediate'],
+        previewType: 'model',
         defaultModel: 'DamagedHelmet',
         description: 'Physically-based rendering materials with metallic, roughness, and emission control.',
         android: {
@@ -1623,6 +1708,7 @@
         icon: 'layers',
         level: 'advanced',
         tags: ['3D', 'Advanced', 'Compose'],
+        previewType: 'model',
         defaultModel: 'IridescenceLamp',
         description: 'Compose multiple models, lights, and cameras into a single rich 3D scene.',
         android: {
@@ -1644,6 +1730,7 @@
         icon: 'auto_awesome',
         level: 'advanced',
         tags: ['3D', 'Effects', 'Advanced'],
+        previewType: 'model',
         defaultModel: 'DamagedHelmet',
         description: 'Enable bloom, ambient occlusion, and anti-aliasing for cinematic-quality rendering.',
         android: {
@@ -1672,6 +1759,22 @@
       { id: 'materials',       label: 'Materials',        icon: 'texture' },
       { id: 'advanced',        label: 'Advanced',         icon: 'auto_awesome' }
     ];
+
+    // ====================================================================
+    //  PREVIEW SCENES — geometry & physics custom preview builders
+    // ====================================================================
+    var PREVIEW_SCENES = {
+      'primitives': function(sv) {
+        sv.clearScene();
+        sv.createBox([-2, 0.5, 0], [1, 1, 1], [0.9, 0.2, 0.2, 1]);
+        sv.createSphere([0, 0.6, 0], 0.6, [0.2, 0.4, 0.9, 1]);
+        sv.createCylinder([2, 0.75, 0], 0.4, 1.2, [0.2, 0.8, 0.3, 1]);
+        // Frame the scene to show all three primitives
+        sv._orbitTarget = [0, 0.5, 0];
+        sv._orbitRadius = 6;
+        sv._orbitHeight = 1.5;
+      }
+    };
 
     // ====================================================================
     //  STATE
@@ -1712,6 +1815,7 @@
     var claudeLink = $('claudeLink');
     var modelSelect = $('modelSelect');
     var previewCanvas = $('previewCanvas');
+    var arPlaceholder = $('arPlaceholder');
     var orbitHint = $('orbitHint');
     var searchInput = $('searchInput');
     var exampleList = $('exampleList');
@@ -1980,10 +2084,42 @@
       // Sync mobile select
       mobileExampleSelect.value = key;
 
-      // Update 3D preview model to match the example
-      if (ex.defaultModel) {
-        modelSelect.value = ex.defaultModel;
-        initSceneView(getModelUrl(ex.defaultModel));
+      // Update 3D preview based on previewType
+      var ptype = ex.previewType || 'model';
+
+      if (ptype === 'ar-placeholder') {
+        // Hide canvas, show AR placeholder
+        previewCanvas.style.display = 'none';
+        arPlaceholder.style.display = '';
+        if (ex.defaultModel) modelSelect.value = ex.defaultModel;
+      } else {
+        // Ensure canvas is visible and AR placeholder is hidden
+        previewCanvas.style.display = '';
+        arPlaceholder.style.display = 'none';
+
+        if (ptype === 'geometry' && PREVIEW_SCENES[key] && sceneViewInstance) {
+          // Geometry: run custom scene builder
+          PREVIEW_SCENES[key](sceneViewInstance);
+          if (ex.defaultModel) modelSelect.value = ex.defaultModel;
+        } else if (ptype === 'geometry' && PREVIEW_SCENES[key] && !sceneViewInstance) {
+          // Need to init first, then build geometry
+          if (ex.defaultModel) modelSelect.value = ex.defaultModel;
+          initSceneView(getModelUrl(ex.defaultModel || 'DamagedHelmet'));
+          // After init, run the geometry scene builder
+          var sceneKey = key;
+          var waitForInit = setInterval(function() {
+            if (sceneViewInstance) {
+              clearInterval(waitForInit);
+              PREVIEW_SCENES[sceneKey](sceneViewInstance);
+            }
+          }, 100);
+        } else {
+          // Default: load model (covers 'model' and 'physics')
+          if (ex.defaultModel) {
+            modelSelect.value = ex.defaultModel;
+            initSceneView(getModelUrl(ex.defaultModel));
+          }
+        }
       }
 
       // Update AI tool links
