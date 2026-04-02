@@ -1,36 +1,29 @@
-SceneView Demo est l'application compagnon officielle du SDK SceneView Android — le moyen le plus simple d'ajouter la 3D et la Réalité Augmentée à vos apps Android avec Jetpack Compose.
+3D & AR Explorer vous permet de découvrir et d'interagir avec des modèles 3D époustouflants — et de les intégrer dans votre monde réel grâce à la réalité augmentée.
 
 🌐 EXPLORATEUR 3D
-Plongez dans un rendu 3D temps réel époustouflant avec des modèles interactifs :
-• Orbite, pincement pour zoomer, double-tap pour interagir
-• Éclairage HDR (6 environnements) pour des matériaux PBR photoréalistes
+Plongez dans un rendu 3D temps réel avec une galerie de modèles interactifs :
+• Orbite, pincement pour zoomer, double-tap pour inspecter chaque détail
+• Éclairage HDR pour des matériaux photoréalistes
 • Modèles animés avec rendu physique
-• Basculez entre 14 modèles : voiture, casque, lampe, masque, robot animé, et plus
+• 14 modèles haute qualité : voiture, casque, lampe, masque, robot animé, et plus
 
-🎯 AR — RÉALITÉ AUGMENTÉE
+🎯 RÉALITÉ AUGMENTÉE
 Placez des modèles 3D dans votre monde réel :
 • Tapez sur une surface plate pour ancrer un modèle
 • Glissez pour déplacer, pincez pour redimensionner, pivotez pour tourner
-• Occlusion de profondeur et estimation de l'éclairage ambiant
-• Choisissez parmi 6 modèles AR
+• L'occlusion de profondeur intègre les modèles naturellement dans votre environnement
+• Estimation de l'éclairage pour des ombres réalistes
 
-🧪 SAMPLES — 14 DÉMOS DE FONCTIONNALITÉS
-Explorez chaque fonctionnalité SceneView avec des démos interactives :
-• Visionneuse de modèles, nœuds géométriques, animations
-• Ciel dynamique, éclairage, contrôles caméra
-• Post-traitement (SSAO, FXAA, tone mapping)
-• Brouillard volumétrique, textes 3D, chemins en ligne
-• Simulation physique, détection d'images, probes de réflexion
-• Préréglages de caméras glTF
+✨ EXPLOREZ PLUS
+Découvrez 14 expériences interactives : ciels dynamiques, brouillard volumétrique, simulations physiques, effets de post-traitement, détection d'images, et plus encore. Tout fonctionne en direct sur votre appareil.
 
-✨ DESIGN MATERIAL 3 EXPRESSIF
+🎨 DESIGN MATERIAL 3 EXPRESSIF
 Construit avec les derniers composants Material 3 Expressif :
 • Thème dynamique avec couleurs système (Android 12+)
-• Animations physiques à base de ressorts partout
+• Animations physiques à base de ressorts
 • Formes arrondies et mouvement expressif
 
 📦 TOUJOURS À JOUR
 Support de mise à jour intégré pour rester sur la dernière version.
 
-SceneView Demo est open source et fait partie du projet SceneView :
-https://github.com/sceneview/sceneview
+Open source : https://github.com/sceneview/sceneview

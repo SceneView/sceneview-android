@@ -1,37 +1,23 @@
-SceneView Demo is the official companion app for the SceneView Android SDK — the easiest way to add 3D and Augmented Reality to your Android apps using Jetpack Compose.
+3D & AR Explorer lets you discover and interact with stunning 3D models — and bring them into your real world using augmented reality.
 
 🌐 3D EXPLORER
-Dive into stunning real-time 3D rendering with interactive models:
-• Orbit, pinch-to-zoom, and double-tap to interact
-• HDR environment lighting (6 environments) for photorealistic PBR materials
+Dive into real-time 3D rendering with an interactive model gallery:
+• Orbit, pinch-to-zoom, and double-tap to inspect every detail
+• HDR environment lighting for photorealistic materials
 • Animated models with physics-based rendering
-• Switch between 14 showcase models: toy car, helmet, lamp, mask, animated robot, and more
+• 14 high-quality models: toy car, helmet, lamp, mask, animated robot, and more
 
-🎯 AR — AUGMENTED REALITY
+🎯 AUGMENTED REALITY
 Place 3D models in your real world:
 • Tap any flat surface to anchor a model
 • Drag to move, pinch to scale, twist to rotate
-• Depth occlusion and environmental light estimation
-• Choose from 6 AR models
+• Depth occlusion blends models naturally with your environment
+• Environmental light estimation for realistic shadows
 
-🧪 SAMPLES — 14 FEATURE DEMOS
-Browse every feature in SceneView with live interactive demos:
-• Model Viewer — load and render glTF/GLB models
-• Geometry Nodes — procedural cube, sphere, cylinder
-• Animations — play, pause, and cycle through model animations
-• Dynamic Sky — time-of-day atmospheric scattering
-• Lighting — point, directional, spot lights with shadows
-• Camera Controls — orbit, pan, zoom
-• Post-Processing — bloom, SSAO, FXAA, tone mapping
-• Fog — height-based volumetric atmospheric fog
-• Text Labels — 3D text with billboard facing
-• Line Paths — 3D polylines and Lissajous curves
-• Physics — rigid body simulation with bouncing balls
-• Image Detection — ARCore image recognition with 3D overlay
-• Reflection Probes — local cubemap reflections
-• glTF Cameras — switch between multiple camera presets
+✨ DISCOVER MORE
+Explore 14 interactive showcases — dynamic skies, volumetric fog, physics simulations, post-processing effects, image detection, and more. Everything runs live on your device.
 
-✨ MATERIAL 3 EXPRESSIVE DESIGN
+🎨 MATERIAL 3 EXPRESSIVE DESIGN
 Built with the latest Material 3 Expressive components:
 • Dynamic color theming (Android 12+)
 • Spring-based physics animations throughout
@@ -40,7 +26,4 @@ Built with the latest Material 3 Expressive components:
 📦 ALWAYS UP TO DATE
 Built-in update support ensures you're always running the latest version.
 
-SceneView Demo is open source and part of the SceneView project:
-https://github.com/sceneview/sceneview
-
-Whether you're evaluating SceneView for a new project, debugging rendering issues, or looking for code examples — this app has you covered.
+Open source: https://github.com/sceneview/sceneview
