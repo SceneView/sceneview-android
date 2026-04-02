@@ -1,24 +1,43 @@
 # sceneview_flutter
 
-Flutter plugin for [SceneView](https://github.com/sceneview/sceneview) -- 3D and AR scenes using native renderers.
+[![pub.dev](https://img.shields.io/pub/v/sceneview_flutter.svg)](https://pub.dev/packages/sceneview_flutter)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub](https://img.shields.io/badge/GitHub-sceneview%2Fsceneview-black)](https://github.com/sceneview/sceneview)
 
-| Platform | Renderer | Status |
-|----------|----------|--------|
-| Android  | Filament (via Jetpack Compose) | Alpha -- 3D model loading works |
-| iOS      | RealityKit (via SceneViewSwift) | Alpha -- 3D model loading works |
+Flutter plugin for [SceneView](https://sceneview.github.io) — 3D and AR scenes using native renderers.
 
-## Setup
+| Platform | Renderer                          | Status                          |
+|----------|-----------------------------------|---------------------------------|
+| Android  | Filament (via Jetpack Compose)    | Alpha — 3D model loading works  |
+| iOS      | RealityKit (via SceneViewSwift)   | Alpha — 3D model loading works  |
 
-Add the dependency:
+## Features
+
+- Load and display 3D models (GLB/GLTF) using native renderers
+- AR scenes with plane detection on Android (ARCore) and iOS (ARKit)
+- HDR environment lighting
+- Orbit camera controls (touch gestures)
+- `SceneViewController` for imperative commands
+- Geometry and light node APIs (forward-looking — not yet rendered natively)
+
+## Installation
+
+Add the dependency to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   sceneview_flutter: ^3.6.0
 ```
 
-### Android
+Then run:
 
-Minimum SDK 24. Add to `android/app/build.gradle`:
+```sh
+flutter pub get
+```
+
+### Android setup
+
+Minimum SDK 24. In `android/app/build.gradle`:
 
 ```groovy
 android {
@@ -28,15 +47,17 @@ android {
 }
 ```
 
-### iOS
+### iOS setup
 
-Minimum iOS 17. Set in `ios/Podfile`:
+Minimum iOS 17. In `ios/Podfile`:
 
 ```ruby
 platform :ios, '17.0'
 ```
 
-The host app must also add `SceneViewSwift` via Swift Package Manager in Xcode.
+The host app must also add `SceneViewSwift` via Swift Package Manager in Xcode:
+- URL: `https://github.com/sceneview/SceneViewSwift`
+- Version: `3.6.0`
 
 ## Usage
 
@@ -50,8 +71,8 @@ final controller = SceneViewController();
 SceneView(
   controller: controller,
   onViewCreated: () {
-    controller.loadModel(ModelNode(modelPath: 'models/helmet.glb'));
     controller.setEnvironment('environments/studio_small.hdr');
+    controller.loadModel(const ModelNode(modelPath: 'models/damaged_helmet.glb'));
   },
 )
 ```
@@ -59,24 +80,39 @@ SceneView(
 ### AR Scene
 
 ```dart
+import 'package:sceneview_flutter/sceneview_flutter.dart';
+
+final controller = SceneViewController();
+
 ARSceneView(
   controller: controller,
   planeDetection: true,
   onViewCreated: () {
-    controller.loadModel(ModelNode(modelPath: 'models/andy.glb'));
+    controller.loadModel(const ModelNode(modelPath: 'models/andy.glb'));
   },
 )
 ```
 
 ### Controller API
 
-| Method | Description |
-|--------|-------------|
-| `loadModel(ModelNode)` | Load a glTF/GLB model |
-| `clearScene()` | Remove all models |
-| `setEnvironment(path)` | Set HDR environment for lighting |
-| `addGeometry(GeometryNode)` | Placeholder -- acknowledged, not yet rendered |
-| `addLight(LightNode)` | Placeholder -- scene uses defaults |
+| Method                        | Description                                              |
+|-------------------------------|----------------------------------------------------------|
+| `loadModel(ModelNode)`        | Load a glTF/GLB model into the scene                     |
+| `clearScene()`                | Remove all models from the scene                         |
+| `setEnvironment(String path)` | Set HDR environment for image-based lighting             |
+| `addGeometry(GeometryNode)`   | Add a geometry node (placeholder — not yet rendered)     |
+| `addLight(LightNode)`         | Add a light node (placeholder — scene uses defaults)     |
+| `isAttached`                  | Whether the controller is attached to a live view        |
+
+### ModelNode properties
+
+| Property    | Type     | Default | Description                         |
+|-------------|----------|---------|-------------------------------------|
+| `modelPath` | `String` | —       | Asset path or URL to GLB/GLTF file  |
+| `x`         | `double` | `0.0`   | X position in world space           |
+| `y`         | `double` | `0.0`   | Y position in world space           |
+| `z`         | `double` | `0.0`   | Z position in world space           |
+| `scale`     | `double` | `1.0`   | Uniform scale factor                |
 
 ## Architecture
 
@@ -84,20 +120,25 @@ ARSceneView(
 Flutter (Dart)
   |
   +-- PlatformView -----> Android: ComposeView + Scene { }
-  |                        (Filament renderer)
+  |                        (Filament renderer, SceneView SDK 3.6.0)
   |
   +-- PlatformView -----> iOS: UIHostingController + SceneViewSwift
-                           (RealityKit renderer)
+                           (RealityKit renderer, SceneViewSwift 3.6.0)
 ```
 
-Method channels handle commands (loadModel, clearScene, setEnvironment) between Dart and native code.
+Method channels bridge Dart commands (`loadModel`, `clearScene`, `setEnvironment`) to native implementations.
 
 ## Limitations
 
 - Geometry and light nodes are not yet rendered natively (API exists for forward compatibility)
 - AR tap-to-place is not yet implemented
-- No event callbacks from native to Dart yet (onTap, onModelLoaded)
+- No event callbacks from native to Dart yet (`onTap`, `onModelLoaded`)
+- Only Android and iOS are supported; other platforms show a fallback message
+
+## Contributing
+
+See [CONTRIBUTING.md](https://github.com/sceneview/sceneview/blob/main/.github/CONTRIBUTING.md).
 
 ## License
 
-Apache-2.0
+Apache-2.0 — see [LICENSE](LICENSE) for details.

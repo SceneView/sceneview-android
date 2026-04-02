@@ -1,3 +1,10 @@
+## 3.6.0
+
+- Update SceneView dependency to 3.6.0 (Filament 1.70.1)
+- Add `repository`, `issue_tracker`, and `topics` to pubspec.yaml for pub.dev discoverability
+- Improve README with badges, detailed setup instructions, full controller API table, and architecture diagram
+- Add LICENSE file (Apache-2.0)
+
 ## 3.5.0
 
 - Update SceneView dependency to 3.5.0

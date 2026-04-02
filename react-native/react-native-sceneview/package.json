@@ -31,7 +31,16 @@
     "arcore",
     "arkit"
   ],
-  "repository": "https://github.com/sceneview/sceneview",
+  "author": "SceneView Contributors",
+  "homepage": "https://sceneview.github.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sceneview/sceneview.git",
+    "directory": "react-native/react-native-sceneview"
+  },
+  "bugs": {
+    "url": "https://github.com/sceneview/sceneview/issues"
+  },
   "license": "Apache-2.0",
   "peerDependencies": {
     "react": ">=18.0.0",
