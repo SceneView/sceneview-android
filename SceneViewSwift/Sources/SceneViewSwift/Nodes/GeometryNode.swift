@@ -246,7 +246,7 @@ public struct GeometryNode: Sendable {
 ///     roughness: 0.3
 /// )
 /// ```
-public enum GeometryMaterial: Sendable {
+public enum GeometryMaterial: @unchecked Sendable {
     /// Simple non-metallic material.
     case simple(color: SimpleMaterial.Color)
 
@@ -279,6 +279,18 @@ public enum GeometryMaterial: Sendable {
     /// Unlit material with a texture (no lighting response).
     case unlitTextured(texture: TextureResource, tint: SimpleMaterial.Color = .white)
 
+    /// A pre-built RealityKit material (e.g. from ``CustomMaterial`` factories).
+    ///
+    /// Use with ``CustomMaterial`` factory methods:
+    /// ```swift
+    /// let glassMat = CustomMaterial.glass(tint: .cyan)
+    /// let sphere = GeometryNode.sphere(
+    ///     radius: 0.3,
+    ///     material: .custom(glassMat)
+    /// )
+    /// ```
+    case custom(any RealityKit.Material)
+
     var rkMaterial: any RealityKit.Material {
         switch self {
         case .simple(let color):
@@ -308,6 +320,9 @@ public enum GeometryMaterial: Sendable {
             var mat = UnlitMaterial()
             mat.color = .init(tint: tint, texture: .init(texture))
             return mat
+
+        case .custom(let material):
+            return material
         }
     }
 }

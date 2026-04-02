@@ -130,4 +130,12 @@ extension VideoNode: EntityProvider {
     public var sceneEntity: Entity { entity }
 }
 
+extension ShapeNode: EntityProvider {
+    public var sceneEntity: Entity { entity }
+}
+
+extension ViewNode: EntityProvider {
+    public var sceneEntity: Entity { entity }
+}
+
 #endif // os(iOS) || os(macOS) || os(visionOS)

@@ -2,8 +2,8 @@
 
 3D and AR scenes in SwiftUI, powered by RealityKit. The Apple companion to [SceneView for Android](https://github.com/sceneview/sceneview).
 
-![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
-![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
+![iOS 18+](https://img.shields.io/badge/iOS-18%2B-blue)
+![macOS 15+](https://img.shields.io/badge/macOS-15%2B-blue)
 ![visionOS 1+](https://img.shields.io/badge/visionOS-1%2B-blue)
 
 ## Installation
@@ -133,6 +133,7 @@ let title = TextNode(text: "SceneView", fontSize: 0.08, depth: 0.02)
 | `ModelNode` | USDZ model loading with animations and collision |
 | `GeometryNode` | Procedural shapes (cube, sphere, cylinder, cone, plane) |
 | `MeshNode` | Custom mesh geometry from raw vertex data |
+| `ShapeNode` | 2D polygon shapes (flat or extruded) with ear-clipping triangulation |
 | `TextNode` | 3D extruded text with centering |
 | `BillboardNode` | Always-faces-camera wrapper |
 | `LineNode` | Line segments and axis gizmos |
@@ -165,6 +166,7 @@ let title = TextNode(text: "SceneView", fontSize: 0.08, depth: 0.02)
 | `rememberModelInstance` | `ModelNode.load()` |
 | `CubeNode` | `GeometryNode.cube()` |
 | `SphereNode` | `GeometryNode.sphere()` |
+| `ShapeNode` | `ShapeNode(points:)` |
 | `LightNode(apply = { })` | `LightNode.directional()` |
 | `rememberEnvironment` | `.environment(.studio)` |
 | `CameraManipulator` | `CameraControls` |
