@@ -406,6 +406,7 @@
       this._dampingFactor = 0.95;
       this._wantsAutoRotate = true; // Remember initial preference for resume after drag
       this._autoRotateTimer = null;
+      this._cameraMode = 'orbit'; // 'orbit', 'map', or 'freelook'
 
       // Media node tracking
       this._mediaNodes = new Map(); // entity -> { type, asset, texture, ... }
@@ -484,6 +485,22 @@
 
     setAutoRotate(enabled) { this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this; }
     setCameraDistance(d) { this._orbitRadius = d; return this; }
+
+    /**
+     * Set camera manipulator type.
+     *
+     * @param {string} type - 'orbit' (default), 'map' (top-down), or 'freelook'
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setCameraManipulator(type) {
+      this._cameraMode = type || 'orbit';
+      if (type === 'map') {
+        // Top-down view: look straight down from above
+        this._orbitHeight = this._orbitTarget[1] + this._orbitRadius;
+        this._angle = 0;
+      }
+      return this;
+    }
 
     /**
      * Load a KTX IBL environment for PBR lighting.
@@ -1357,6 +1374,7 @@
       this._billboards.clear();
 
       if (this._resizeObserver) this._resizeObserver.disconnect();
+      _activeCanvases.delete(this._canvas);
       try { Filament.Engine.destroy(this._engine); } catch (e) { /* already destroyed */ }
     }
 
@@ -1475,11 +1493,31 @@
         var t = self._orbitTarget;
         var r = self._orbitRadius;
         var h = self._orbitHeight;
-        self._camera.lookAt(
-          [t[0] + Math.sin(self._angle) * r, h, t[2] + Math.cos(self._angle) * r],
-          t,
-          [0, 1, 0]
-        );
+        var mode = self._cameraMode || 'orbit';
+        if (mode === 'map') {
+          // Top-down: camera above target, looking straight down
+          self._camera.lookAt(
+            [t[0], t[1] + r * 2, t[2]],
+            t,
+            [0, 0, -1]
+          );
+        } else if (mode === 'freelook') {
+          // Freelook: camera at orbit position but height responds to vertical drag
+          var camX = t[0] + Math.sin(self._angle) * r * 0.5;
+          var camZ = t[2] + Math.cos(self._angle) * r * 0.5;
+          self._camera.lookAt(
+            [camX, h, camZ],
+            [camX + Math.sin(self._angle + Math.PI), h, camZ + Math.cos(self._angle + Math.PI)],
+            [0, 1, 0]
+          );
+        } else {
+          // Default orbit
+          self._camera.lookAt(
+            [t[0] + Math.sin(self._angle) * r, h, t[2] + Math.cos(self._angle) * r],
+            t,
+            [0, 1, 0]
+          );
+        }
 
         self._engine.execute();
         try {
