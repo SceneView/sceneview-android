@@ -1,4 +1,4 @@
-name: Deploy Demo to App Store
+name: Deploy iOS App to App Store
 
 # PREREQUISITES (manual actions):
 # 1. Create an iOS Distribution certificate in Apple Developer portal

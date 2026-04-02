@@ -1,7 +1,7 @@
 #if os(iOS)
 import UIKit
 
-/// Centralized haptic feedback for the demo app.
+/// Centralized haptic feedback for the app.
 @MainActor
 enum HapticManager {
     /// Light tap -- used for button presses and selections.
