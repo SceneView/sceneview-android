@@ -115,6 +115,9 @@ dependencies {
     implementation libs.fuel.android
     implementation libs.fuel.coroutines
 
+    // Unit tests (JVM)
+    testImplementation 'junit:junit:4.13.2'
+
     // Instrumented tests
     androidTestImplementation libs.androidx.test.junit
     androidTestImplementation libs.androidx.test.runner
