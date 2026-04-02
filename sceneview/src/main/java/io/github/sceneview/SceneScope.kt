@@ -1,3 +1,8 @@
+// TODO(module-unification): SceneScope is the base class for both 3D and AR scopes.
+//  When arsceneview merges into sceneview, ARSceneScope will live alongside this file in the
+//  `ar/` sub-package. The class hierarchy (SceneScope -> ARSceneScope -> NodeScope) is already
+//  designed for this: no code duplication, NodeLifecycle is the shared extension point.
+
 package io.github.sceneview
 
 import android.content.Context
@@ -8,6 +13,7 @@ import androidx.annotation.RestrictTo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.platform.LocalContext
@@ -89,12 +95,19 @@ annotation class SceneDsl
  * }
  * ```
  *
+ * **Naming convention:** Composable functions in this scope (e.g. `ModelNode`, `CubeNode`) share
+ * their names with the underlying imperative node classes they wrap (e.g. `io.github.sceneview.node.ModelNode`).
+ * This is intentional — the composable is the primary API surface and internally creates/manages
+ * the imperative node instance. Import aliases (`ModelNodeImpl`, `CubeNodeImpl`, etc.) are used
+ * internally to disambiguate.
+ *
  * @param engine            The Filament [Engine] shared with the parent [Scene].
  * @param modelLoader       [ModelLoader] for loading glTF/GLB models.
  * @param materialLoader    [MaterialLoader] for creating material instances.
  * @param environmentLoader [EnvironmentLoader] for loading HDR/KTX environments.
  * @param _nodes            Internal SnapshotStateList backing the scene's root node list.
  */
+@Suppress("FunctionName") // Composable functions follow PascalCase (Compose convention)
 @SceneDsl
 open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constructor(
     val engine: Engine,
@@ -400,12 +413,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
-        val prevGeometry = remember { arrayOf(size, center) }
+        val prevCubeGeometry = remember { mutableStateOf(listOf<Any?>(size, center)) }
         SideEffect {
-            if (prevGeometry[0] != size || prevGeometry[1] != center) {
+            val current = listOf<Any?>(size, center)
+            if (current != prevCubeGeometry.value) {
                 node.updateGeometry(center = center, size = size)
-                prevGeometry[0] = size
-                prevGeometry[1] = center
+                prevCubeGeometry.value = current
             }
             node.position = position
             node.rotation = rotation
@@ -453,14 +466,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
-        val prevGeometry = remember { arrayOf<Any>(radius, center, stacks, slices) }
+        val prevSphereGeometry = remember { mutableStateOf(listOf<Any?>(radius, center, stacks, slices)) }
         SideEffect {
-            if (prevGeometry[0] != radius || prevGeometry[1] != center ||
-                prevGeometry[2] != stacks || prevGeometry[3] != slices
-            ) {
+            val current = listOf<Any?>(radius, center, stacks, slices)
+            if (current != prevSphereGeometry.value) {
                 node.updateGeometry(radius = radius, center = center, stacks = stacks, slices = slices)
-                prevGeometry[0] = radius; prevGeometry[1] = center
-                prevGeometry[2] = stacks; prevGeometry[3] = slices
+                prevSphereGeometry.value = current
             }
             node.position = position
             node.rotation = rotation
@@ -508,16 +519,14 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
-        val prevGeometry = remember { arrayOf<Any>(radius, height, center, sideCount) }
+        val prevCylinderGeometry = remember { mutableStateOf(listOf<Any?>(radius, height, center, sideCount)) }
         SideEffect {
-            if (prevGeometry[0] != radius || prevGeometry[1] != height ||
-                prevGeometry[2] != center || prevGeometry[3] != sideCount
-            ) {
+            val current = listOf<Any?>(radius, height, center, sideCount)
+            if (current != prevCylinderGeometry.value) {
                 node.updateGeometry(
                     radius = radius, height = height, center = center, sideCount = sideCount
                 )
-                prevGeometry[0] = radius; prevGeometry[1] = height
-                prevGeometry[2] = center; prevGeometry[3] = sideCount
+                prevCylinderGeometry.value = current
             }
             node.position = position
             node.rotation = rotation
@@ -565,11 +574,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
-        val prevGeometry = remember { arrayOf<Any>(size, center, normal) }
+        val prevPlaneGeometry = remember { mutableStateOf(listOf<Any?>(size, center, normal)) }
         SideEffect {
-            if (prevGeometry[0] != size || prevGeometry[1] != center || prevGeometry[2] != normal) {
+            val current = listOf<Any?>(size, center, normal)
+            if (current != prevPlaneGeometry.value) {
                 node.updateGeometry(size = size, center = center, normal = normal)
-                prevGeometry[0] = size; prevGeometry[1] = center; prevGeometry[2] = normal
+                prevPlaneGeometry.value = current
             }
             node.position = position
             node.rotation = rotation
@@ -1016,11 +1026,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
-        val prevGeometry = remember { arrayOf<Any>(start, end) }
+        val prevLineGeometry = remember { mutableStateOf(listOf<Any?>(start, end)) }
         SideEffect {
-            if (prevGeometry[0] != start || prevGeometry[1] != end) {
+            val current = listOf<Any?>(start, end)
+            if (current != prevLineGeometry.value) {
                 node.updateGeometry(start = start, end = end)
-                prevGeometry[0] = start; prevGeometry[1] = end
+                prevLineGeometry.value = current
             }
             node.position = position
             node.rotation = rotation
@@ -1073,11 +1084,12 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
-        val prevGeometry = remember { arrayOf<Any>(points, closed) }
+        val prevPathGeometry = remember { mutableStateOf(listOf<Any?>(points, closed)) }
         SideEffect {
-            if (prevGeometry[0] != points || prevGeometry[1] != closed) {
+            val current = listOf<Any?>(points, closed)
+            if (current != prevPathGeometry.value) {
                 node.updateGeometry(points = points, closed = closed)
-                prevGeometry[0] = points; prevGeometry[1] = closed
+                prevPathGeometry.value = current
             }
             node.position = position
             node.rotation = rotation
@@ -1244,14 +1256,10 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                 materialInstance = materialInstance
             ).apply(apply)
         }
-        val prevGeometry = remember {
-            arrayOf<Any?>(polygonPath, polygonHoles, delaunayPoints, normal, uvScale, color)
-        }
+        val prevShapeGeometry = remember { mutableStateOf(listOf<Any?>(polygonPath, polygonHoles, delaunayPoints, normal, uvScale, color)) }
         SideEffect {
-            if (prevGeometry[0] != polygonPath || prevGeometry[1] != polygonHoles ||
-                prevGeometry[2] != delaunayPoints || prevGeometry[3] != normal ||
-                prevGeometry[4] != uvScale || prevGeometry[5] != color
-            ) {
+            val current = listOf<Any?>(polygonPath, polygonHoles, delaunayPoints, normal, uvScale, color)
+            if (current != prevShapeGeometry.value) {
                 node.updateGeometry(
                     polygonPath = polygonPath,
                     polygonHoles = polygonHoles,
@@ -1260,9 +1268,7 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
                     uvScale = uvScale,
                     color = color
                 )
-                prevGeometry[0] = polygonPath; prevGeometry[1] = polygonHoles
-                prevGeometry[2] = delaunayPoints; prevGeometry[3] = normal
-                prevGeometry[4] = uvScale; prevGeometry[5] = color
+                prevShapeGeometry.value = current
             }
             node.position = position
             node.rotation = rotation
@@ -1339,6 +1345,10 @@ open class SceneScope @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constru
      *
      * Attaches [node] to this scope's container on entry and detaches/destroys it on exit.
      * Also runs any nested [content] inside a [NodeScope] receiver.
+     *
+     * **Extension point:** subclasses (e.g. [io.github.sceneview.ar.ARSceneScope]) should call this
+     * method from their own node composables to get automatic lifecycle management. The [attach] and
+     * [detach] methods can be overridden to customize how nodes are added/removed (see [NodeScope]).
      */
     @Composable
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)

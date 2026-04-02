@@ -6,6 +6,8 @@ import com.google.android.filament.Camera.Projection
 import com.google.android.filament.Engine
 import com.google.android.filament.EntityManager
 import com.google.android.filament.View
+import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.Ray as MathRay
 import io.github.sceneview.Entity
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.collision.MathHelper
@@ -146,11 +148,10 @@ open class CameraNode(engine: Engine, entity: Entity) : Node(engine, entity), Ca
     )
     fun hitTest(ray: Ray): List<HitResult> {
         val cs = collisionSystem ?: return emptyList()
-        return arrayListOf<HitResult>().apply {
-            cs.raycastAll(ray, this, { resultPick, collider ->
-                resultPick.node = collider.node
-            }, { HitResult() })
-        }.toList()
+        return cs.hitTest(MathRay(
+            origin = Float3(ray.origin.x, ray.origin.y, ray.origin.z),
+            direction = Float3(ray.direction.x, ray.direction.y, ray.direction.z)
+        ))
     }
 
     @Deprecated(

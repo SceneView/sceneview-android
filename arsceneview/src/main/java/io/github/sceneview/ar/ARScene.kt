@@ -1,16 +1,23 @@
+// TODO(module-unification): ARScene should eventually live in the `sceneview` module as
+//  `io.github.sceneview.ar.ARScene`. The `arsceneview` module would be removed and its contents
+//  merged into `sceneview` under an `ar/` sub-package. ARCore would be declared as a `compileOnly`
+//  dependency so that apps using only 3D (no AR) don't pull ARCore into their APK.
+//
+//  Migration checklist:
+//  1. Move ar/ package contents into sceneview/src/main/java/io/github/sceneview/ar/
+//  2. Change ARCore from `api` to `compileOnly` in sceneview/build.gradle
+//  3. Guard ARCore usage with runtime classpath checks (Class.forName or similar)
+//  4. Update build.gradle consumers: replace `arsceneview` dependency with `sceneview`
+//  5. Update llms.txt and docs to reflect single-module architecture
+
 package io.github.sceneview.ar
 
 import android.content.Context.WINDOW_SERVICE
-import android.graphics.PixelFormat
-import android.graphics.SurfaceTexture
 import android.util.Size
 import android.view.MotionEvent
-import android.view.Surface
-import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.WindowManager as AndroidWindowManager
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -35,21 +42,16 @@ import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
-import com.google.android.filament.SwapChain
 import com.google.android.filament.View
-import com.google.android.filament.Viewport
-import com.google.android.filament.android.DisplayHelper
-import com.google.ar.core.Camera
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
-import com.google.ar.core.TrackingState
 import io.github.sceneview.SceneNodeManager
+import io.github.sceneview.SceneRenderer
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.ar.arcore.configure
-import io.github.sceneview.ar.arcore.getUpdatedTrackables
 import io.github.sceneview.ar.arcore.isTracking
 import io.github.sceneview.ar.camera.ARCameraStream
 import io.github.sceneview.ar.light.LightEstimator
@@ -61,7 +63,6 @@ import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
 import io.github.sceneview.gesture.CameraGestureDetector
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.drainFramePipeline
 import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.loaders.MaterialLoader
 import io.github.sceneview.loaders.ModelLoader
@@ -155,7 +156,9 @@ import java.util.concurrent.atomic.AtomicReference
  * @param onTrackingFailureChanged Called when the camera [TrackingFailureReason] changes.
  * @param onGestureListener        Gesture callbacks — tap, double-tap, drag, pinch, etc.
  * @param onTouchEvent             Raw touch event callback with optional hit result.
- * @param activity                 Host [ComponentActivity] (auto-resolved from [LocalContext]).
+ * @param permissionHandler        [ARPermissionHandler] for camera permission and ARCore install
+ *                                 checks. Auto-created from the host [ComponentActivity][androidx.activity.ComponentActivity]
+ *                                 when available. Pass `null` to skip permission checks.
  * @param lifecycle                Lifecycle that binds the AR session resume/pause cycle.
  * @param content                  Declare AR scene content using the [ARSceneScope] composable DSL.
  */
@@ -273,7 +276,9 @@ fun ARSceneView(
      */
     onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
     onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
-    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
+    permissionHandler: ARPermissionHandler? = (LocalContext.current as? androidx.activity.ComponentActivity)?.let {
+        ActivityARPermissionHandler(it)
+    },
     lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
     /**
      * DSL block for declaring AR nodes via [ARSceneScope].
@@ -359,10 +364,10 @@ fun ARSceneView(
     }
 
     DisposableEffect(lifecycle) {
-        arCore.create(context, activity, sessionFeatures)
+        arCore.create(context, permissionHandler, sessionFeatures)
 
         val observer = object : DefaultLifecycleObserver {
-            override fun onResume(owner: LifecycleOwner) { arCore.resume(context, activity) }
+            override fun onResume(owner: LifecycleOwner) { arCore.resume(context, permissionHandler) }
             override fun onPause(owner: LifecycleOwner) { arCore.pause() }
         }
         lifecycle.addObserver(observer)
@@ -454,12 +459,10 @@ fun ARSceneView(
         onDispose { lifecycle.removeObserver(observer) }
     }
 
-    // ── Shared surface state ──────────────────────────────────────────────────────────────────────
+    // ── Gesture detection ────────────────────────────────────────────────────────────────────────
 
-    val swapChainRef = remember { AtomicReference<SwapChain?>(null) }
     val gestureDetector = remember(context) { GestureDetector(context = context, listener = null) }
     val cameraGestureDetectorRef = remember { AtomicReference<CameraGestureDetector?>(null) }
-    val displayHelper = remember(context) { DisplayHelper(context) }
 
     SideEffect { gestureDetector.listener = onGestureListener }
 
@@ -473,6 +476,43 @@ fun ARSceneView(
         }
     }
 
+    // ── SceneRenderer — encapsulates surface lifecycle + swap chain + frame pipeline ─────────────
+
+    @Suppress("DEPRECATION")
+    val display = remember(context) {
+        (context.getSystemService(WINDOW_SERVICE) as AndroidWindowManager).defaultDisplay
+    }
+
+    val sceneRenderer = remember(engine, view, renderer) {
+        SceneRenderer(engine, view, renderer)
+    }
+
+    // Wire resize and surface callbacks — AR needs additional display geometry + plane renderer.
+    SideEffect {
+        sceneRenderer.onSurfaceResized = { width, height ->
+            cameraNode.updateProjection()
+            arCore.session?.setDisplayGeometry(display.rotation, width, height)
+            arPlaneRenderer.viewSize = Size(width, height)
+        }
+        sceneRenderer.onSurfaceReady = { viewHeight ->
+            if (cameraGestureDetectorRef.get() == null) {
+                cameraGestureDetectorRef.set(
+                    CameraGestureDetector(
+                        viewHeight = viewHeight,
+                        cameraManipulator = null  // AR mode — no orbit camera
+                    )
+                )
+            }
+        }
+        sceneRenderer.onSurfaceDestroyed = {
+            cameraGestureDetectorRef.set(null)
+        }
+    }
+
+    DisposableEffect(sceneRenderer) {
+        onDispose { sceneRenderer.destroy() }
+    }
+
     // ── Render loop ───────────────────────────────────────────────────────────────────────────────
 
     LaunchedEffect(engine, renderer, view, scene) {
@@ -482,49 +522,44 @@ fun ARSceneView(
                 continue
             }
             withFrameNanos { frameTimeNanos ->
-                val sc = swapChainRef.get() ?: return@withFrameNanos
+                sceneRenderer.renderFrame(frameTimeNanos) {
+                    view.isFrontFaceWindingInverted = isFrontFaceWindingInvertedRef.get()
 
-                view.isFrontFaceWindingInverted = isFrontFaceWindingInvertedRef.get()
+                    val childNodes = childNodesRef.get()
 
-                val childNodes = childNodesRef.get()
-
-                // AR frame update.
-                arCore.session?.let { session ->
-                    try {
-                        session.updateOrNull()?.let { frame ->
-                            onARFrame(
-                                engine = engine,
-                                scene = scene,
-                                view = view,
-                                cameraNode = cameraNode,
-                                cameraStream = cameraStreamRef.get(),
-                                lightEstimator = lightEstimator,
-                                mainLightNode = mainLightNode,
-                                environment = environment,
-                                arPlaneRenderer = arPlaneRenderer,
-                                childNodes = childNodes,
-                                prevTrackingFailureRef = prevTrackingFailureRef,
-                                onTrackingFailureChangedRef = onTrackingFailureChangedRef,
-                                onSessionUpdatedRef = onSessionUpdatedRef,
-                                session = session,
-                                frame = frame
+                    // AR frame update — feed ARCore data into camera, lights, planes.
+                    arCore.session?.let { session ->
+                        try {
+                            session.updateOrNull()?.let { frame ->
+                                onARFrame(
+                                    engine = engine,
+                                    scene = scene,
+                                    view = view,
+                                    cameraNode = cameraNode,
+                                    cameraStream = cameraStreamRef.get(),
+                                    lightEstimator = lightEstimator,
+                                    mainLightNode = mainLightNode,
+                                    environment = environment,
+                                    arPlaneRenderer = arPlaneRenderer,
+                                    childNodes = childNodes,
+                                    prevTrackingFailureRef = prevTrackingFailureRef,
+                                    onTrackingFailureChangedRef = onTrackingFailureChangedRef,
+                                    onSessionUpdatedRef = onSessionUpdatedRef,
+                                    session = session,
+                                    frame = frame
+                                )
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e(
+                                "SceneView",
+                                "ARCore session update failed",
+                                e
                             )
                         }
-                    } catch (e: Exception) {
-                        android.util.Log.e(
-                            "SceneView",
-                            "ARCore session update failed",
-                            e
-                        )
                     }
-                }
 
-                modelLoader.updateLoad()
-                childNodes.forEach { it.onFrame(frameTimeNanos) }
-
-                if (renderer.beginFrame(sc, frameTimeNanos)) {
-                    renderer.render(view)
-                    renderer.endFrame()
+                    modelLoader.updateLoad()
+                    childNodes.forEach { it.onFrame(frameTimeNanos) }
                 }
             }
         }
@@ -532,54 +567,12 @@ fun ARSceneView(
 
     // ── Surface view ──────────────────────────────────────────────────────────────────────────────
 
-    @Suppress("DEPRECATION")
-    val display = remember(context) {
-        (context.getSystemService(WINDOW_SERVICE) as AndroidWindowManager).defaultDisplay
-    }
-
-    fun applyARResize(width: Int, height: Int) {
-        view.viewport = Viewport(0, 0, width, height)
-        cameraNode.updateProjection()
-        arCore.session?.setDisplayGeometry(display.rotation, width, height)
-        arPlaneRenderer.viewSize = Size(width, height)
-    }
-
     when (surfaceType) {
         SurfaceType.Surface -> AndroidView(
             modifier = modifier,
             factory = { ctx ->
                 SurfaceView(ctx).also { sv ->
-                    if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
-                    sv.holder.addCallback(object : SurfaceHolder.Callback {
-                        override fun surfaceCreated(holder: SurfaceHolder) {}
-
-                        override fun surfaceChanged(
-                            holder: SurfaceHolder, format: Int, width: Int, height: Int
-                        ) {
-                            if (swapChainRef.get() == null) {
-                                swapChainRef.set(engine.createSwapChain(holder.surface))
-                                displayHelper.attach(renderer, display)
-                                cameraGestureDetectorRef.set(
-                                    CameraGestureDetector(
-                                        viewHeight = { sv.height },
-                                        cameraManipulator = null
-                                    )
-                                )
-                            }
-                            applyARResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun surfaceDestroyed(holder: SurfaceHolder) {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                        }
-                    })
-                    sv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                    sceneRenderer.attachToSurfaceView(sv, isOpaque, ctx, display, touchDispatcher)
                 }
             },
             update = {}
@@ -589,47 +582,7 @@ fun ARSceneView(
             modifier = modifier,
             factory = { ctx ->
                 TextureView(ctx).also { tv ->
-                    tv.isOpaque = isOpaque
-                    var textureSurface: Surface? = null
-                    tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                        override fun onSurfaceTextureAvailable(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            textureSurface = Surface(st)
-                            swapChainRef.set(engine.createSwapChain(textureSurface!!))
-                            displayHelper.attach(renderer, display)
-                            cameraGestureDetectorRef.set(
-                                CameraGestureDetector(
-                                    viewHeight = { tv.height },
-                                    cameraManipulator = null
-                                )
-                            )
-                            applyARResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureSizeChanged(
-                            st: SurfaceTexture, width: Int, height: Int
-                        ) {
-                            applyARResize(width, height)
-                            engine.drainFramePipeline()
-                        }
-
-                        override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                            cameraGestureDetectorRef.set(null)
-                            swapChainRef.getAndSet(null)?.let {
-                                runCatching { engine.destroySwapChain(it) }
-                            }
-                            engine.flushAndWait()
-                            displayHelper.detach()
-                            textureSurface?.release()
-                            textureSurface = null
-                            return true
-                        }
-
-                        override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
-                    }
-                    tv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                    sceneRenderer.attachToTextureView(tv, isOpaque, ctx, display, touchDispatcher)
                 }
             },
             update = {}
@@ -651,55 +604,6 @@ fun ARSceneView(
         scope.content()
     }
 }
-
-/**
- * Renamed to [ARSceneView] for cross-platform consistency with the Apple SDK.
- */
-@Deprecated(
-    message = "Renamed to ARSceneView for cross-platform consistency.",
-    replaceWith = ReplaceWith("ARSceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, sessionFeatures, sessionCameraConfig, sessionConfiguration, planeRenderer, cameraStream, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem, viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed, onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, activity, lifecycle, content)")
-)
-@Composable
-fun ARScene(
-    modifier: Modifier = Modifier,
-    surfaceType: SurfaceType = SurfaceType.Surface,
-    engine: Engine = rememberEngine(),
-    modelLoader: ModelLoader = rememberModelLoader(engine),
-    materialLoader: MaterialLoader = rememberMaterialLoader(engine),
-    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
-    sessionFeatures: Set<Session.Feature> = setOf(),
-    sessionCameraConfig: ((Session) -> CameraConfig)? = null,
-    sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
-    planeRenderer: Boolean = true,
-    cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
-    view: View = rememberARView(engine),
-    isOpaque: Boolean = true,
-    renderer: Renderer = rememberRenderer(engine),
-    scene: Scene = rememberScene(engine),
-    environment: Environment = rememberAREnvironment(engine),
-    mainLightNode: LightNode? = rememberMainLightNode(engine),
-    cameraNode: ARCameraNode = rememberARCameraNode(engine),
-    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
-    viewNodeWindowManager: WindowManager? = null,
-    onSessionCreated: ((session: Session) -> Unit)? = null,
-    onSessionResumed: ((session: Session) -> Unit)? = null,
-    onSessionPaused: ((session: Session) -> Unit)? = null,
-    onSessionFailed: ((exception: Exception) -> Unit)? = null,
-    onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
-    onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
-    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
-    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
-    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
-    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
-    content: (@Composable ARSceneScope.() -> Unit)? = null
-) = ARSceneView(
-    modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader,
-    sessionFeatures, sessionCameraConfig, sessionConfiguration, planeRenderer, cameraStream,
-    view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem,
-    viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed,
-    onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, activity,
-    lifecycle, content
-)
 
 // ── AR frame update helpers ───────────────────────────────────────────────────────────────────────
 
@@ -854,3 +758,77 @@ private fun ARScenePreview(modifier: Modifier) {
             .background(Color.DarkGray)
     )
 }
+
+/**
+ * @deprecated Use [ARSceneView] instead. This function is a direct alias provided for backward
+ * compatibility with code written against earlier SceneView versions.
+ */
+@Deprecated("Use ARSceneView instead", ReplaceWith("ARSceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, sessionFeatures, sessionCameraConfig, sessionConfiguration, planeRenderer, cameraStream, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem, viewNodeWindowManager, onSessionCreated, onSessionResumed, onSessionPaused, onSessionFailed, onSessionUpdated, onTrackingFailureChanged, onGestureListener, onTouchEvent, permissionHandler, lifecycle, content)"))
+@Composable
+fun ARScene(
+    modifier: Modifier = Modifier,
+    surfaceType: SurfaceType = SurfaceType.Surface,
+    engine: Engine = rememberEngine(),
+    modelLoader: ModelLoader = rememberModelLoader(engine),
+    materialLoader: MaterialLoader = rememberMaterialLoader(engine),
+    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
+    sessionFeatures: Set<Session.Feature> = setOf(),
+    sessionCameraConfig: ((Session) -> CameraConfig)? = null,
+    sessionConfiguration: ((session: Session, Config) -> Unit)? = null,
+    planeRenderer: Boolean = true,
+    cameraStream: ARCameraStream? = rememberARCameraStream(materialLoader),
+    view: View = rememberARView(engine),
+    isOpaque: Boolean = true,
+    renderer: Renderer = rememberRenderer(engine),
+    scene: Scene = rememberScene(engine),
+    environment: Environment = rememberAREnvironment(engine),
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    cameraNode: ARCameraNode = rememberARCameraNode(engine),
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    viewNodeWindowManager: ViewNode.WindowManager? = null,
+    onSessionCreated: ((session: Session) -> Unit)? = null,
+    onSessionResumed: ((session: Session) -> Unit)? = null,
+    onSessionPaused: ((session: Session) -> Unit)? = null,
+    onSessionFailed: ((exception: Exception) -> Unit)? = null,
+    onSessionUpdated: ((session: Session, frame: Frame) -> Unit)? = null,
+    onTrackingFailureChanged: ((trackingFailureReason: TrackingFailureReason?) -> Unit)? = null,
+    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
+    permissionHandler: ARPermissionHandler? = (LocalContext.current as? androidx.activity.ComponentActivity)?.let {
+        ActivityARPermissionHandler(it)
+    },
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
+    content: (@Composable ARSceneScope.() -> Unit)? = null
+) = ARSceneView(
+    modifier = modifier,
+    surfaceType = surfaceType,
+    engine = engine,
+    modelLoader = modelLoader,
+    materialLoader = materialLoader,
+    environmentLoader = environmentLoader,
+    sessionFeatures = sessionFeatures,
+    sessionCameraConfig = sessionCameraConfig,
+    sessionConfiguration = sessionConfiguration,
+    planeRenderer = planeRenderer,
+    cameraStream = cameraStream,
+    view = view,
+    isOpaque = isOpaque,
+    renderer = renderer,
+    scene = scene,
+    environment = environment,
+    mainLightNode = mainLightNode,
+    cameraNode = cameraNode,
+    collisionSystem = collisionSystem,
+    viewNodeWindowManager = viewNodeWindowManager,
+    onSessionCreated = onSessionCreated,
+    onSessionResumed = onSessionResumed,
+    onSessionPaused = onSessionPaused,
+    onSessionFailed = onSessionFailed,
+    onSessionUpdated = onSessionUpdated,
+    onTrackingFailureChanged = onTrackingFailureChanged,
+    onGestureListener = onGestureListener,
+    onTouchEvent = onTouchEvent,
+    permissionHandler = permissionHandler,
+    lifecycle = lifecycle,
+    content = content
+)
