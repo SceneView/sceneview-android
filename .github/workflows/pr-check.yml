@@ -33,6 +33,7 @@ jobs:
           cache: gradle
 
       - run: chmod +x ./gradlew
+      - uses: gradle/actions/wrapper-validation@v5
 
       - name: Compile sceneview + arsceneview
         run: |
