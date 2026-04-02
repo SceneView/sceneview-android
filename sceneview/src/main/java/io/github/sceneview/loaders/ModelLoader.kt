@@ -47,23 +47,28 @@ class ModelLoader(
     val progress get() = resourceLoader.asyncGetLoadProgress()
 
     /**
-     * Creates a [Model] from the contents of a GLB or GLTF Buffer.
+     * Creates a [Model] from the contents of a GLB or GLTF [Buffer].
      *
-     * Don't forget to call [FilamentAsset.releaseSourceData] to free the glTF hierarchy as it is no
-     * longer needed (but Not before any call to [AssetLoader.createInstance])
-     *
-     * @param resourceResolver Only used for GLTF file. Return a GLTF resource buffer from a
-     * relative file location. The given callback is triggered for each requested resource.
-     *
+     * @param buffer             The binary glTF/GLB data.
+     * @param releaseSourceData  When `true` (default), calls [FilamentAsset.releaseSourceData]
+     *                           after resource loading to free the glTF hierarchy. Set to `false`
+     *                           if you need to call [createInstance] on this model later.
+     * @param resourceResolver   Resolves GLTF external resource file names to buffers.
+     * @return The loaded [Model].
+     * @throws IllegalArgumentException if the buffer cannot be parsed.
      * @see AssetLoader.createAsset
      */
     fun createModel(
         buffer: Buffer,
+        releaseSourceData: Boolean = true,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
     ): Model = (assetLoader.createAsset(buffer)
         ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")).also { model ->
         models += model
         loadResources(model, resourceResolver)
+        if (releaseSourceData) {
+            model.releaseSourceData()
+        }
     }
 
     /**
@@ -73,10 +78,11 @@ class ModelLoader(
      */
     fun createModel(
         assetFileLocation: String,
+        releaseSourceData: Boolean = true,
         resourceResolver: (resourceFileName: String) -> Buffer? = { resourceFile ->
             context.assets.readBuffer(getFolderPath(assetFileLocation, resourceFile))
         }
-    ): Model = createModel(context.assets.readBuffer(assetFileLocation), resourceResolver)
+    ): Model = createModel(context.assets.readBuffer(assetFileLocation), releaseSourceData, resourceResolver)
 
     /**
      * Creates a [Model] from the contents of a GLB or GLTF raw file.
@@ -85,20 +91,22 @@ class ModelLoader(
      */
     fun createModel(
         @RawRes rawResId: Int,
+        releaseSourceData: Boolean = true,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): Model = createModel(context.resources.readBuffer(rawResId), resourceResolver)
+    ): Model = createModel(context.resources.readBuffer(rawResId), releaseSourceData, resourceResolver)
 
     /**
-     * Creates a [Model] from the contents of a GLB or GLTF asset file.
+     * Creates a [Model] from the contents of a GLB or GLTF file.
      *
      * @see createModel
      */
     fun createModel(
         file: File,
+        releaseSourceData: Boolean = true,
         resourceResolver: (resourceFileName: String) -> Buffer? = { resourceFile ->
             File(file.parent, resourceFile).readBuffer()
         }
-    ): Model = createModel(file.readBuffer(), resourceResolver)
+    ): Model = createModel(file.readBuffer(), releaseSourceData, resourceResolver)
 
     /**
      * Loads a [Model] from the contents of a GLB or GLTF file.
@@ -148,20 +156,21 @@ class ModelLoader(
     }
 
     /**
-     * Creates a [Model] from the contents of a GLB or GLTF Buffer.
+     * Creates a single [ModelInstance] from the contents of a GLB or GLTF [Buffer].
+     *
+     * Source data is released immediately since the model will not be re-instantiated.
      *
      * @see createModel
      */
     fun createModelInstance(
         buffer: Buffer,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): ModelInstance = createModel(buffer, resourceResolver).also {
-        // Release model since it will not be re-instantiated
-//        it.releaseSourceData()
-    }.instance
+    ): ModelInstance = createModel(buffer, releaseSourceData = true, resourceResolver).instance
 
     /**
-     * Creates a [Model] from the contents of a GLB or GLTF asset file and get its default instance.
+     * Creates a single [ModelInstance] from the contents of a GLB or GLTF asset file.
+     *
+     * Source data is released immediately since the model will not be re-instantiated.
      *
      * @see createModel
      */
@@ -170,26 +179,24 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = {
             context.assets.readBuffer(getFolderPath(assetFileLocation, it))
         }
-    ): ModelInstance = createModel(assetFileLocation, resourceResolver).also {
-        // Release model since it will not be re-instantiated
-//        it.releaseSourceData()
-    }.instance
+    ): ModelInstance = createModel(assetFileLocation, releaseSourceData = true, resourceResolver).instance
 
     /**
-     * Creates a [Model] from the contents of a GLB or GLTF raw file and get its default instance.
+     * Creates a single [ModelInstance] from the contents of a GLB or GLTF raw resource.
+     *
+     * Source data is released immediately since the model will not be re-instantiated.
      *
      * @see createModel
      */
     fun createModelInstance(
         @RawRes rawResId: Int,
         resourceResolver: (resourceFileName: String) -> Buffer? = { null }
-    ): ModelInstance = createModel(rawResId, resourceResolver).also {
-        // Release model since it will not be re-instantiated
-//        it.releaseSourceData()
-    }.instance
+    ): ModelInstance = createModel(rawResId, releaseSourceData = true, resourceResolver).instance
 
     /**
-     * Creates a [Model] from the contents of a GLB or GLTF raw file and get its default instance.
+     * Creates a single [ModelInstance] from the contents of a GLB or GLTF file.
+     *
+     * Source data is released immediately since the model will not be re-instantiated.
      *
      * @see createModel
      */
@@ -198,19 +205,12 @@ class ModelLoader(
         resourceResolver: (resourceFileName: String) -> Buffer? = { resourceFile ->
             File(file.parent, resourceFile).readBuffer()
         }
-    ): ModelInstance = createModel(file, resourceResolver).also {
-        // Release model since it will not be re-instantiated
-//        it.releaseSourceData()
-    }.instance
+    ): ModelInstance = createModel(file, releaseSourceData = true, resourceResolver).instance
 
     /**
-     * Loads a [Model] from the contents of a GLB or GLTF file  and get its default instance.
+     * Loads a single [ModelInstance] from the contents of a GLB or GLTF file.
      *
-     * @param fileLocation the .glb or .gltf file location:
-     * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
+     * Source data is released immediately since the model will not be re-instantiated.
      *
      * @see loadModel
      */
@@ -218,18 +218,13 @@ class ModelLoader(
         fileLocation: String,
         resourceResolver: (resourceFileName: String) -> String = { getFolderPath(fileLocation, it) }
     ): ModelInstance? = loadModel(fileLocation, resourceResolver)?.also {
-        // Release model since it will not be re-instantiated
-//        it.releaseSourceData()
+        it.releaseSourceData()
     }?.instance
 
     /**
-     * Loads a [Model] from the contents of a GLB or GLTF file within a self owned coroutine scope
+     * Loads a single [ModelInstance] asynchronously from the contents of a GLB or GLTF file.
      *
-     * @param fileLocation the .glb or .gltf file location:
-     * - A relative asset file location *models/mymodel.glb*
-     * - An android resource from the res folder *context.getResourceUri(R.raw.mymodel)*
-     * - A File path *Uri.fromFile(myModelFile).path*
-     * - An http or https url *https://mydomain.com/mymodel.glb*
+     * Source data is released immediately since the model will not be re-instantiated.
      *
      * @see loadModel
      */
@@ -240,8 +235,7 @@ class ModelLoader(
         },
         onResult: (ModelInstance?) -> Unit
     ): Job = loadModelAsync(fileLocation, resourceResolver) {
-        // Release model since it will not be re-instantiated
-//        it?.releaseSourceData()
+        it?.releaseSourceData()
         onResult.invoke(it?.instance)
     }
 
@@ -267,8 +261,7 @@ class ModelLoader(
                 ?: throw IllegalArgumentException("Failed to parse glTF model from buffer")).also { model ->
                 models += model
                 loadResources(model, resourceResolver)
-                // Release model since it will not be re-instantiated
-//                model.releaseSourceData()
+                model.releaseSourceData()
             }
         }.filterNotNull()
 

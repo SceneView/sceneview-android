@@ -9,11 +9,10 @@ import androidx.compose.ui.unit.sp
 /**
  * SceneView M3 Expressive Typography
  *
- * Uses system default (Inter on Pixel, San Francisco on iOS via KMP).
+ * Uses system default font (Inter on Pixel, Roboto elsewhere).
  * Expressive weight/size scale matches DESIGN.md tokens.
  */
 val SceneViewTypography = Typography(
-    // Display
     displayLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.ExtraBold,
@@ -35,8 +34,6 @@ val SceneViewTypography = Typography(
         lineHeight = 44.sp,
         letterSpacing = 0.sp
     ),
-
-    // Headline
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
@@ -58,8 +55,6 @@ val SceneViewTypography = Typography(
         lineHeight = 32.sp,
         letterSpacing = 0.sp
     ),
-
-    // Title
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
@@ -81,8 +76,6 @@ val SceneViewTypography = Typography(
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
-
-    // Body
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
@@ -104,8 +97,6 @@ val SceneViewTypography = Typography(
         lineHeight = 16.sp,
         letterSpacing = 0.4.sp
     ),
-
-    // Label
     labelLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,

@@ -2,10 +2,8 @@ package io.github.sceneview
 
 import android.content.Context
 import android.content.Context.WINDOW_SERVICE
-import android.graphics.PixelFormat
 import android.opengl.EGLContext
 import android.view.MotionEvent
-import android.view.Surface
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.WindowManager
@@ -34,14 +32,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.filament.Engine
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.MaterialInstance
-import com.google.android.filament.RenderableManager
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
-import com.google.android.filament.SwapChain
 import com.google.android.filament.View
-import com.google.android.filament.Viewport
-import com.google.android.filament.android.DisplayHelper
-import com.google.android.filament.android.UiHelper
 import io.github.sceneview.collision.CollisionSystem
 import io.github.sceneview.collision.HitResult
 import io.github.sceneview.environment.Environment
@@ -303,10 +296,8 @@ fun SceneView(
         onDispose { lifecycle.removeObserver(observer) }
     }
 
-    // ── Shared surface + rendering state ─────────────────────────────────────────────────────────
+    // ── Gesture detection ────────────────────────────────────────────────────────────────────────
 
-    // Swap chain is set when the surface is ready and cleared when it is destroyed.
-    val swapChainRef = remember { AtomicReference<SwapChain?>(null) }
     val lastFrameTimeNanosRef = remember { AtomicLong(0L) }
     val gestureDetector = remember(context) { GestureDetector(context = context, listener = null) }
     val cameraGestureDetectorRef = remember { AtomicReference<CameraGestureDetector?>(null) }
@@ -316,7 +307,7 @@ fun SceneView(
         cameraGestureDetectorRef.get()?.cameraManipulator = cameraManipulator
     }
 
-    // Common touch dispatcher — wired to both SurfaceView and TextureView via setOnTouchListener.
+    // Common touch dispatcher — wired to both SurfaceView and TextureView via SceneRenderer.
     val touchDispatcher: (MotionEvent) -> Unit = { event ->
         val hitResult = collisionSystem.hitTest(event).firstOrNull { it.node.isTouchable }
         if (onTouchEvent?.invoke(event, hitResult) != true &&
@@ -327,14 +318,40 @@ fun SceneView(
         }
     }
 
-    // DisplayHelper for frame pacing — one per composition.
-    val displayHelper = remember(context) { DisplayHelper(context) }
+    // ── SceneRenderer — encapsulates surface lifecycle + swap chain + frame pipeline ─────────────
 
-    // Helper to apply a viewport resize.
-    fun applyResize(width: Int, height: Int) {
-        view.viewport = Viewport(0, 0, width, height)
-        cameraManipulator?.setViewport(width, height)
-        cameraNode.updateProjection()
+    @Suppress("DEPRECATION")
+    val display = remember(context) {
+        (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
+    }
+
+    val sceneRenderer = remember(engine, view, renderer) {
+        SceneRenderer(engine, view, renderer)
+    }
+
+    // Wire resize and surface callbacks.
+    SideEffect {
+        sceneRenderer.onSurfaceResized = { width, height ->
+            cameraManipulator?.setViewport(width, height)
+            cameraNode.updateProjection()
+        }
+        sceneRenderer.onSurfaceReady = { viewHeight ->
+            if (cameraGestureDetectorRef.get() == null) {
+                cameraGestureDetectorRef.set(
+                    CameraGestureDetector(
+                        viewHeight = viewHeight,
+                        cameraManipulator = cameraManipulator
+                    )
+                )
+            }
+        }
+        sceneRenderer.onSurfaceDestroyed = {
+            cameraGestureDetectorRef.set(null)
+        }
+    }
+
+    DisposableEffect(sceneRenderer) {
+        onDispose { sceneRenderer.destroy() }
     }
 
     // ── Render loop ───────────────────────────────────────────────────────────────────────────────
@@ -346,22 +363,17 @@ fun SceneView(
                 continue
             }
             withFrameNanos { frameTimeNanos ->
-                val sc = swapChainRef.get() ?: return@withFrameNanos
+                sceneRenderer.renderFrame(frameTimeNanos) {
+                    modelLoader.updateLoad()
+                    childNodesRef.get().forEach { it.onFrame(frameTimeNanos) }
 
-                modelLoader.updateLoad()
-                childNodesRef.get().forEach { it.onFrame(frameTimeNanos) }
+                    cameraManipulator?.let { manipulator ->
+                        val lastTime = lastFrameTimeNanosRef.get().takeIf { it != 0L }
+                        manipulator.update(frameTimeNanos.intervalSeconds(lastTime).toFloat())
+                        cameraNode.transform = manipulator.getTransform()
+                    }
 
-                cameraManipulator?.let { manipulator ->
-                    val lastTime = lastFrameTimeNanosRef.get().takeIf { it != 0L }
-                    manipulator.update(frameTimeNanos.intervalSeconds(lastTime).toFloat())
-                    cameraNode.transform = manipulator.getTransform()
-                }
-
-                onFrame?.invoke(frameTimeNanos)
-
-                if (renderer.beginFrame(sc, frameTimeNanos)) {
-                    renderer.render(view)
-                    renderer.endFrame()
+                    onFrame?.invoke(frameTimeNanos)
                 }
 
                 lastFrameTimeNanosRef.set(frameTimeNanos)
@@ -371,60 +383,12 @@ fun SceneView(
 
     // ── Surface view ──────────────────────────────────────────────────────────────────────────────
 
-    @Suppress("DEPRECATION")
-    val display = remember(context) {
-        (context.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay
-    }
-
-    // UiHelper manages swap chain creation/destruction and handles surface lifecycle more robustly
-    // than a bare SurfaceHolder.Callback (fixes rendering on Feature Level 1 / OpenGL ES emulators).
-    val uiHelperRef = remember { AtomicReference<UiHelper?>(null) }
-    DisposableEffect(engine) {
-        onDispose { uiHelperRef.getAndSet(null)?.detach() }
-    }
-
-    // Shared RendererCallback — wired to whichever surface type is active.
-    fun makeRendererCallback(viewHeight: () -> Int) = object : UiHelper.RendererCallback {
-        override fun onNativeWindowChanged(surface: Surface) {
-            val uiHelper = uiHelperRef.get() ?: return
-            swapChainRef.getAndSet(
-                engine.createSwapChain(surface, uiHelper.swapChainFlags)
-            )?.let { engine.destroySwapChain(it) }
-            displayHelper.attach(renderer, display)
-            if (cameraGestureDetectorRef.get() == null) {
-                cameraGestureDetectorRef.set(
-                    CameraGestureDetector(
-                        viewHeight = viewHeight,
-                        cameraManipulator = cameraManipulator
-                    )
-                )
-            }
-        }
-
-        override fun onDetachedFromSurface() {
-            cameraGestureDetectorRef.set(null)
-            swapChainRef.getAndSet(null)?.let { engine.destroySwapChain(it) }
-            engine.flushAndWait()
-            displayHelper.detach()
-        }
-
-        override fun onResized(width: Int, height: Int) {
-            applyResize(width, height)
-            engine.drainFramePipeline()
-        }
-    }
-
     when (surfaceType) {
         SurfaceType.Surface -> AndroidView(
             modifier = modifier,
             factory = { ctx ->
                 SurfaceView(ctx).also { sv ->
-                    if (!isOpaque) sv.holder.setFormat(PixelFormat.TRANSLUCENT)
-                    val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
-                    uiHelper.renderCallback = makeRendererCallback { sv.height }
-                    uiHelper.attachTo(sv)
-                    uiHelperRef.set(uiHelper)
-                    sv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                    sceneRenderer.attachToSurfaceView(sv, isOpaque, ctx, display, touchDispatcher)
                 }
             },
             update = {}
@@ -434,12 +398,7 @@ fun SceneView(
             modifier = modifier,
             factory = { ctx ->
                 TextureView(ctx).also { tv ->
-                    tv.isOpaque = isOpaque
-                    val uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
-                    uiHelper.renderCallback = makeRendererCallback { tv.height }
-                    uiHelper.attachTo(tv)
-                    uiHelperRef.set(uiHelper)
-                    tv.setOnTouchListener { _, event -> touchDispatcher(event); true }
+                    sceneRenderer.attachToTextureView(tv, isOpaque, ctx, display, touchDispatcher)
                 }
             },
             update = {}
@@ -462,46 +421,6 @@ fun SceneView(
         scope.content()
     }
 }
-
-/**
- * Renamed to [SceneView] for cross-platform consistency with the Apple SDK.
- */
-@Deprecated(
-    message = "Renamed to SceneView for cross-platform consistency.",
-    replaceWith = ReplaceWith("SceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem, cameraManipulator, viewNodeWindowManager, onGestureListener, onTouchEvent, activity, lifecycle, onFrame, content)")
-)
-@Composable
-fun Scene(
-    modifier: Modifier = Modifier,
-    surfaceType: SurfaceType = SurfaceType.Surface,
-    engine: Engine = rememberEngine(),
-    modelLoader: ModelLoader = rememberModelLoader(engine),
-    materialLoader: MaterialLoader = rememberMaterialLoader(engine),
-    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
-    view: View = rememberView(engine),
-    isOpaque: Boolean = true,
-    renderer: Renderer = rememberRenderer(engine),
-    scene: Scene = rememberScene(engine),
-    environment: Environment = rememberEnvironment(environmentLoader, isOpaque = isOpaque),
-    mainLightNode: LightNode? = rememberMainLightNode(engine),
-    cameraNode: CameraNode = rememberCameraNode(engine),
-    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
-    cameraManipulator: CameraGestureDetector.CameraManipulator? = rememberCameraManipulator(
-        cameraNode.worldPosition
-    ),
-    viewNodeWindowManager: ViewNode.WindowManager? = null,
-    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
-    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
-    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
-    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
-    onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
-    content: (@Composable SceneScope.() -> Unit)? = null
-) = SceneView(
-    modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader,
-    view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode,
-    collisionSystem, cameraManipulator, viewNodeWindowManager, onGestureListener,
-    onTouchEvent, activity, lifecycle, onFrame, content
-)
 
 // ── Async resource helpers ────────────────────────────────────────────────────────────────────────
 
@@ -1179,3 +1098,59 @@ private fun ScenePreview(modifier: Modifier) {
             .background(Color.DarkGray)
     )
 }
+
+/**
+ * @deprecated Use [SceneView] instead. This function is a direct alias provided for backward
+ * compatibility with code written against earlier SceneView versions.
+ */
+@Deprecated("Use SceneView instead", ReplaceWith("SceneView(modifier, surfaceType, engine, modelLoader, materialLoader, environmentLoader, view, isOpaque, renderer, scene, environment, mainLightNode, cameraNode, collisionSystem, cameraManipulator, viewNodeWindowManager, onGestureListener, onTouchEvent, activity, lifecycle, onFrame, content)"))
+@Composable
+fun Scene(
+    modifier: Modifier = Modifier,
+    surfaceType: SurfaceType = SurfaceType.Surface,
+    engine: Engine = rememberEngine(),
+    modelLoader: ModelLoader = rememberModelLoader(engine),
+    materialLoader: MaterialLoader = rememberMaterialLoader(engine),
+    environmentLoader: EnvironmentLoader = rememberEnvironmentLoader(engine),
+    view: View = rememberView(engine),
+    isOpaque: Boolean = true,
+    renderer: Renderer = rememberRenderer(engine),
+    scene: Scene = rememberScene(engine),
+    environment: Environment = rememberEnvironment(environmentLoader, isOpaque = isOpaque),
+    mainLightNode: LightNode? = rememberMainLightNode(engine),
+    cameraNode: CameraNode = rememberCameraNode(engine),
+    collisionSystem: CollisionSystem = rememberCollisionSystem(view),
+    cameraManipulator: CameraGestureDetector.CameraManipulator? = rememberCameraManipulator(
+        cameraNode.worldPosition
+    ),
+    viewNodeWindowManager: ViewNode.WindowManager? = null,
+    onGestureListener: GestureDetector.OnGestureListener? = rememberOnGestureListener(),
+    onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
+    activity: ComponentActivity? = LocalContext.current as? ComponentActivity,
+    lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle,
+    onFrame: ((frameTimeNanos: Long) -> Unit)? = null,
+    content: (@Composable SceneScope.() -> Unit)? = null
+) = SceneView(
+    modifier = modifier,
+    surfaceType = surfaceType,
+    engine = engine,
+    modelLoader = modelLoader,
+    materialLoader = materialLoader,
+    environmentLoader = environmentLoader,
+    view = view,
+    isOpaque = isOpaque,
+    renderer = renderer,
+    scene = scene,
+    environment = environment,
+    mainLightNode = mainLightNode,
+    cameraNode = cameraNode,
+    collisionSystem = collisionSystem,
+    cameraManipulator = cameraManipulator,
+    viewNodeWindowManager = viewNodeWindowManager,
+    onGestureListener = onGestureListener,
+    onTouchEvent = onTouchEvent,
+    activity = activity,
+    lifecycle = lifecycle,
+    onFrame = onFrame,
+    content = content
+)
