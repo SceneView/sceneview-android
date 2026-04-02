@@ -37,7 +37,7 @@ jobs:
 
       - name: Assemble all
         run: |
-          ./gradlew assembleDebug \
+          ./gradlew assembleDebug --stacktrace
 
       - name: Unit tests
         run: |
