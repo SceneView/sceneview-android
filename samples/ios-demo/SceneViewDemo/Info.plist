@@ -11,7 +11,7 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleDisplayName</key>
-	<string>SceneView</string>
+	<string>3D &amp; AR Explorer</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
@@ -36,9 +36,9 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>SceneView uses the camera to overlay 3D objects onto the real world in augmented reality.</string>
+	<string>3D &amp; AR Explorer uses the camera to place 3D objects in your real-world space using augmented reality.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>SceneView uses motion sensors to track device orientation for augmented reality.</string>
+	<string>3D &amp; AR Explorer uses motion sensors to track your device orientation for augmented reality.</string>
 	<key>UIRequiresFullScreen</key>
 	<false/>
 	<key>UILaunchScreen</key>
@@ -46,7 +46,7 @@
 	<key>UISupportsDocumentBrowser</key>
 	<false/>
 	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.developer-tools</string>
+	<string>public.app-category.entertainment</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
