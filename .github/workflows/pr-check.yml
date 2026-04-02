@@ -34,12 +34,9 @@ jobs:
 
       - run: chmod +x ./gradlew
 
-      - name: Compile sceneview + arsceneview
+      - name: Assemble all
         run: |
-          ./gradlew \
-            :sceneview:compileDebugKotlin \
-            :arsceneview:compileDebugKotlin \
-            --stacktrace
+          ./gradlew assembleDebug \
 
       - name: Unit tests
         run: |
