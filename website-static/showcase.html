@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Showcase — SceneView 3D & AR SDK</title>
-  <meta name="description" content="Interactive showcase of SceneView capabilities: e-commerce product viewers, AR furniture preview, automotive configurators, medical visualization, and multi-platform 3D.">
+  <meta name="description" content="See SceneView in action: interactive demos, downloadable sample apps for Android, iOS, Web, and TV. Explore 3D and AR across every platform.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://sceneview.github.io/showcase.html">
   <meta property="og:title" content="Showcase — SceneView 3D & AR SDK">
-  <meta property="og:description" content="Interactive showcase: e-commerce, AR furniture, automotive configurators, medical visualization, multi-platform 3D.">
+  <meta property="og:description" content="Interactive demos and downloadable sample apps for Android, iOS, Web, and TV. Explore SceneView 3D and AR across every platform.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://sceneview.github.io/showcase.html">
   <meta property="og:image" content="https://sceneview.github.io/og-image.png">
@@ -17,81 +17,64 @@
   <meta property="og:image:alt" content="SceneView 3D &amp; AR SDK showcase">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Showcase — SceneView 3D &amp; AR SDK">
-  <meta name="twitter:description" content="Interactive showcase: e-commerce, AR furniture, automotive configurators, medical visualization, multi-platform 3D.">
+  <meta name="twitter:description" content="Interactive demos and downloadable sample apps. Explore SceneView across every platform.">
   <meta name="twitter:image" content="https://sceneview.github.io/og-image.png">
   <meta name="theme-color" content="#005bc1">
   <meta property="og:site_name" content="SceneView">
   <meta property="og:locale" content="en_US">
 
-  <!-- Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": "SceneView Showcase",
-    "description": "Interactive showcase of SceneView 3D & AR SDK capabilities across industries and platforms.",
+    "description": "Interactive demos and downloadable sample apps for Android, iOS, Web, and TV.",
     "url": "https://sceneview.github.io/showcase.html",
-    "isPartOf": {
-      "@type": "WebSite",
-      "name": "SceneView",
-      "url": "https://sceneview.github.io/"
-    }
+    "isPartOf": { "@type": "WebSite", "name": "SceneView", "url": "https://sceneview.github.io/" }
   }
   </script>
 
-  <!-- Preconnect hints -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <!-- Preload critical resources -->
   <link rel="preload" href="styles.css" as="style">
-  <link rel="preload" href="js/filament/filament.js" as="script">
-  <link rel="preload" href="js/sceneview.js?v=3.6.0" as="script">
-
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-
-  <!-- Filament.js v1.70.1 WASM engine (required by SceneView Web) -->
-  <script src="js/filament/filament.js"></script>
-  <!-- SceneView Web library -->
-  <script src="js/sceneview.js?v=3.6.0"></script>
-
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
 
   <style>
-    /* ===== SHOWCASE HERO ===== */
-    .showcase-hero {
+    /* ===== SHOWCASE PAGE STYLES ===== */
+
+    /* Hero */
+    .sc-hero {
       position: relative;
-      padding-top: calc(var(--nav-height) + 80px);
-      padding-bottom: 80px;
+      padding: calc(var(--nav-height) + 80px) 0 80px;
       text-align: center;
       overflow: hidden;
     }
 
-    .showcase-hero::before {
+    .sc-hero::before {
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(0, 91, 193, 0.08) 0%, transparent 70%);
+      background: radial-gradient(ellipse 80% 50% at 50% 30%, rgba(0, 91, 193, 0.08) 0%, transparent 70%);
       pointer-events: none;
     }
 
-    [data-theme="dark"] .showcase-hero::before {
-      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(13, 65, 157, 0.15) 0%, transparent 70%);
+    [data-theme="dark"] .sc-hero::before {
+      background: radial-gradient(ellipse 80% 50% at 50% 30%, rgba(13, 65, 157, 0.18) 0%, transparent 70%);
     }
 
-    .showcase-hero__container {
+    .sc-hero__container {
       max-width: var(--container-max);
       margin: 0 auto;
       padding: 0 var(--container-padding);
     }
 
-    .showcase-hero__title {
-      font-size: clamp(2.5rem, 6vw, 4rem);
+    .sc-hero__title {
+      font-size: clamp(2.5rem, 6vw, 3.75rem);
       font-weight: 800;
       letter-spacing: -0.03em;
       line-height: 1.1;
@@ -102,139 +85,43 @@
       margin-bottom: 16px;
     }
 
-    .showcase-hero__sub {
-      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+    .sc-hero__sub {
+      font-size: clamp(1.05rem, 2.5vw, 1.25rem);
       color: var(--color-on-surface-variant);
-      max-width: 640px;
-      margin: 0 auto 48px;
+      max-width: 600px;
+      margin: 0 auto;
       line-height: 1.7;
     }
 
-    /* ===== STATS ROW ===== */
-    .showcase-stats {
-      display: flex;
-      justify-content: center;
-      gap: 64px;
-      flex-wrap: wrap;
+    /* Sections */
+    .sc-section {
+      padding: 80px 0;
     }
 
-    .showcase-stats__item {
-      text-align: center;
-    }
-
-    .showcase-stats__number {
-      font-size: 2.5rem;
-      font-weight: 800;
-      color: var(--color-primary);
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-
-    .showcase-stats__label {
-      font-size: 0.85rem;
-      color: var(--color-on-surface-variant);
-      font-weight: 500;
-    }
-
-    /* ===== FILTER BADGES ===== */
-    .showcase-filters {
-      max-width: var(--container-max);
-      margin: 0 auto;
-      padding: 32px var(--container-padding) 0;
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .showcase-filters__badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 18px;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: transform var(--duration-short) var(--ease-spring),
-                  box-shadow var(--duration-short);
-    }
-
-    .showcase-filters__badge:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-card);
-    }
-
-    .showcase-filters__badge--ecommerce { background: rgba(52,168,83,0.12); color: #34a853; }
-    .showcase-filters__badge--ar { background: rgba(234,67,53,0.12); color: #ea4335; }
-    .showcase-filters__badge--auto { background: rgba(251,188,4,0.12); color: #c8960a; }
-    .showcase-filters__badge--medical { background: rgba(66,133,244,0.12); color: #4285f4; }
-    .showcase-filters__badge--luxury { background: rgba(171,71,188,0.12); color: #ab47bc; }
-    .showcase-filters__badge--multi { background: rgba(0, 91, 193, 0.12); color: var(--color-primary); }
-
-    [data-theme="dark"] .showcase-filters__badge--ecommerce { background: rgba(52,168,83,0.18); color: #81c995; }
-    [data-theme="dark"] .showcase-filters__badge--ar { background: rgba(234,67,53,0.18); color: #f28b82; }
-    [data-theme="dark"] .showcase-filters__badge--auto { background: rgba(251,188,4,0.18); color: #fdd663; }
-    [data-theme="dark"] .showcase-filters__badge--medical { background: rgba(66,133,244,0.18); color: #8ab4f8; }
-    [data-theme="dark"] .showcase-filters__badge--luxury { background: rgba(171,71,188,0.18); color: #d59fe8; }
-    [data-theme="dark"] .showcase-filters__badge--multi { background: rgba(121,192,255,0.12); color: var(--color-primary); }
-
-    /* ===== SHOWCASE SECTIONS ===== */
-    .showcase-section {
-      padding: 96px 0;
-      position: relative;
-    }
-
-    .showcase-section:nth-child(even) {
+    .sc-section--alt {
       background: var(--color-surface-dim);
     }
 
-    .showcase-section__container {
+    .sc-container {
       max-width: var(--container-max);
       margin: 0 auto;
       padding: 0 var(--container-padding);
     }
 
-    .showcase-section__header {
+    .sc-section__header {
       text-align: center;
-      margin-bottom: 56px;
+      margin-bottom: 48px;
     }
 
-    .showcase-section__badge {
-      display: inline-block;
-      padding: 4px 14px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 12px;
-    }
-
-    .showcase-section__badge--ecommerce { background: rgba(52,168,83,0.12); color: #34a853; }
-    .showcase-section__badge--ar { background: rgba(234,67,53,0.12); color: #ea4335; }
-    .showcase-section__badge--auto { background: rgba(251,188,4,0.12); color: #c8960a; }
-    .showcase-section__badge--medical { background: rgba(66,133,244,0.12); color: #4285f4; }
-    .showcase-section__badge--luxury { background: rgba(171,71,188,0.12); color: #ab47bc; }
-    .showcase-section__badge--multi { background: rgba(0, 91, 193, 0.12); color: var(--color-primary); }
-
-    [data-theme="dark"] .showcase-section__badge--ecommerce { background: rgba(52,168,83,0.2); color: #81c995; }
-    [data-theme="dark"] .showcase-section__badge--ar { background: rgba(234,67,53,0.2); color: #f28b82; }
-    [data-theme="dark"] .showcase-section__badge--auto { background: rgba(251,188,4,0.2); color: #fdd663; }
-    [data-theme="dark"] .showcase-section__badge--medical { background: rgba(66,133,244,0.2); color: #8ab4f8; }
-    [data-theme="dark"] .showcase-section__badge--luxury { background: rgba(171,71,188,0.2); color: #d59fe8; }
-    [data-theme="dark"] .showcase-section__badge--multi { background: rgba(121,192,255,0.15); color: var(--color-primary); }
-
-    .showcase-section__title {
-      font-size: clamp(1.75rem, 4vw, 2.5rem);
+    .sc-section__title {
+      font-size: clamp(1.75rem, 4vw, 2.25rem);
       font-weight: 800;
       letter-spacing: -0.025em;
       color: var(--color-on-surface);
       margin-bottom: 8px;
     }
 
-    .showcase-section__subtitle {
+    .sc-section__sub {
       font-size: 1.05rem;
       color: var(--color-on-surface-variant);
       max-width: 560px;
@@ -242,768 +129,286 @@
       line-height: 1.7;
     }
 
-    /* ===== DEMO LAYOUT ===== */
-    .showcase-demo {
+    /* ===== APP CARDS (Sample Apps) ===== */
+    .sc-apps-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 64px;
-      align-items: center;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
     }
 
-    .showcase-demo--reverse {
-      direction: rtl;
-    }
-
-    .showcase-demo--reverse > * {
-      direction: ltr;
-    }
-
-    /* ===== DEVICE FRAMES ===== */
-    .showcase-device {
-      position: relative;
-      border-radius: 36px;
-      background: #000;
-      padding: 12px;
-      box-shadow: 0 25px 80px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.15);
-      max-width: 380px;
-      margin: 0 auto;
-      aspect-ratio: 9 / 18;
-      overflow: hidden;
-    }
-
-    .showcase-device--wide {
-      max-width: 520px;
-      aspect-ratio: 4 / 3;
-      border-radius: 20px;
-    }
-
-    .showcase-device__screen {
+    .sc-app-card {
+      background: var(--color-surface-container-lowest);
+      border: 1px solid var(--color-outline);
       border-radius: 24px;
       overflow: hidden;
-      width: 100%;
-      height: 100%;
-      position: relative;
-      background: var(--color-surface-dim);
-    }
-
-    .showcase-device--wide .showcase-device__screen {
-      border-radius: 12px;
-    }
-
-    .showcase-device__notch {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 28px;
-      background: #000;
-      border-radius: 0 0 16px 16px;
-      z-index: 10;
-    }
-
-    .showcase-device canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* ===== DEMO INFO PANEL ===== */
-    .showcase-info {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .showcase-info__title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--color-on-surface);
-    }
-
-    .showcase-info__desc {
-      color: var(--color-on-surface-variant);
-      line-height: 1.7;
-      font-size: 1rem;
-    }
-
-    /* ===== FEATURE PILLS ===== */
-    .showcase-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .showcase-pills__item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      background: var(--color-secondary-container);
-      color: var(--color-on-secondary-container);
-      border: 1px solid var(--color-outline-variant);
-    }
-
-    .showcase-pills__item .material-symbols-outlined {
-      font-size: 16px;
-    }
-
-    /* ===== CODE BLOCKS ===== */
-    .showcase-code {
-      background: var(--color-surface-container-lowest);
-      border: 1px solid var(--color-outline);
-      border-radius: 12px;
-      padding: 16px 20px;
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      line-height: 1.7;
-      color: var(--color-on-surface);
-      overflow-x: auto;
-      white-space: pre;
-    }
-
-    .showcase-code .kw { color: var(--color-tertiary); }
-    .showcase-code .fn { color: var(--color-primary); }
-    .showcase-code .str { color: var(--color-status-stable); }
-    .showcase-code .cm { color: var(--color-on-surface-variant); font-style: italic; }
-
-    /* ===== ECOMMERCE APP UI ===== */
-    .showcase-ecom {
-      position: relative;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .showcase-ecom__top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 36px 16px 8px;
-      z-index: 5;
-      position: relative;
-    }
-
-    .showcase-ecom__top-icon {
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(8px);
-      display: flex; align-items: center; justify-content: center;
-    }
-
-    .showcase-ecom__viewer {
-      flex: 1;
-      position: relative;
-    }
-
-    .showcase-ecom__viewer canvas {
-      width: 100%; height: 100%; display: block;
-    }
-
-    .showcase-ecom__bottom {
-      background: var(--color-surface-container);
-      border-radius: 24px 24px 0 0;
-      padding: 20px 16px 16px;
-      z-index: 5;
-      position: relative;
-    }
-
-    .showcase-ecom__name {
-      font-weight: 700;
-      font-size: 1rem;
-      color: var(--color-on-surface);
-      margin-bottom: 2px;
-    }
-
-    .showcase-ecom__rating {
-      font-size: 0.7rem;
-      color: var(--color-on-surface-variant);
-      margin-bottom: 6px;
-    }
-
-    .showcase-ecom__price {
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--color-primary);
-      margin-bottom: 10px;
-    }
-
-    .showcase-ecom__swatches {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .showcase-swatch {
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: border-color var(--duration-short);
-    }
-
-    .showcase-swatch--active {
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 2px var(--color-primary);
-    }
-
-    .showcase-ecom__cart-btn {
-      width: 100%;
-      padding: 12px;
-      border-radius: 12px;
-      background: var(--color-primary);
-      color: var(--color-on-primary);
-      font-weight: 600;
-      font-size: 0.9rem;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: background var(--duration-short), transform var(--duration-short) var(--ease-spring);
-    }
-
-    .showcase-ecom__cart-btn:hover {
-      transform: scale(1.02);
-    }
-
-    /* ===== AR SCENE UI ===== */
-    .showcase-ar {
-      position: relative;
-      height: 100%;
-    }
-
-    .showcase-ar canvas {
-      width: 100%; height: 100%; display: block;
-    }
-
-    .showcase-ar__grid {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 40%;
-      background:
-        linear-gradient(to top, rgba(0, 91, 193, 0.08) 0%, transparent 100%),
-        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0, 91, 193, 0.12) 19px, rgba(0, 91, 193, 0.12) 20px),
-        repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(0, 91, 193, 0.12) 19px, rgba(0, 91, 193, 0.12) 20px);
-      pointer-events: none;
-      z-index: 3;
-    }
-
-    [data-theme="dark"] .showcase-ar__grid {
-      background:
-        linear-gradient(to top, rgba(121, 192, 255, 0.06) 0%, transparent 100%),
-        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(121, 192, 255, 0.08) 19px, rgba(121, 192, 255, 0.08) 20px),
-        repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(121, 192, 255, 0.08) 19px, rgba(121, 192, 255, 0.08) 20px);
-    }
-
-    .showcase-ar__badge {
-      position: absolute;
-      top: 40px; left: 16px;
-      background: rgba(234,67,53,0.9);
-      color: #fff;
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      z-index: 5;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      backdrop-filter: blur(6px);
-    }
-
-    .showcase-ar__controls {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      z-index: 5;
-    }
-
-    .showcase-ar__btn {
-      padding: 8px 16px;
-      border-radius: 9999px;
-      background: var(--color-surface-container-lowest);
-      color: var(--color-on-surface);
-      font-size: 0.75rem;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      box-shadow: var(--shadow-card);
-      transition: transform var(--duration-short) var(--ease-spring);
-    }
-
-    .showcase-ar__btn:hover {
-      transform: scale(1.05);
-    }
-
-    .showcase-ar__btn .material-symbols-outlined { font-size: 14px; }
-
-    /* ===== AUTO STUDIO UI ===== */
-    .showcase-auto {
-      position: relative;
-      height: 100%;
-      background: radial-gradient(ellipse at 50% 60%, #1a1a2e 0%, #0a0a0f 100%);
-    }
-
-    .showcase-auto canvas {
-      width: 100%; height: 100%; display: block;
-    }
-
-    .showcase-auto__floor {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 30%;
-      background: linear-gradient(to top, rgba(255,255,255,0.03) 0%, transparent 100%);
-      pointer-events: none;
-    }
-
-    .showcase-auto__label {
-      position: absolute;
-      top: 40px; left: 16px;
-      color: rgba(255,255,255,0.6);
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      z-index: 5;
-    }
-
-    .showcase-auto__controls {
-      position: absolute;
-      bottom: 16px;
-      left: 16px; right: 16px;
-      z-index: 5;
-      display: flex;
-      gap: 6px;
-    }
-
-    .showcase-auto__chip {
-      padding: 6px 12px;
-      border-radius: 9999px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: #e5e7eb;
-      font-size: 0.7rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--duration-short);
-      white-space: nowrap;
-    }
-
-    .showcase-auto__chip--active {
-      background: rgba(251,188,4,0.2);
-      border-color: rgba(251,188,4,0.5);
-      color: #fdd663;
-    }
-
-    /* ===== EDUCATION / MEDICAL UI ===== */
-    .showcase-edu {
-      position: relative;
-      height: 100%;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    }
-
-    .showcase-edu canvas {
-      width: 100%; height: 100%; display: block;
-    }
-
-    .showcase-edu__labels {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      pointer-events: none;
-      z-index: 5;
-    }
-
-    .showcase-edu__label {
-      position: absolute;
-      font-size: 0.6rem;
-      font-weight: 600;
-      color: var(--color-primary-fixed-dim);
-      padding: 3px 8px;
-      background: rgba(13,17,23,0.8);
-      border-radius: 6px;
-      border: 1px solid rgba(121,192,255,0.3);
-      white-space: nowrap;
-      backdrop-filter: blur(4px);
-    }
-
-    .showcase-edu__label::before {
-      content: '';
-      position: absolute;
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--color-primary-fixed-dim);
-      box-shadow: 0 0 6px rgba(121,192,255,0.6);
-    }
-
-    .showcase-edu__label--1 { top: 25%; left: 15%; }
-    .showcase-edu__label--1::before { right: -10px; top: 50%; transform: translateY(-50%); }
-    .showcase-edu__label--2 { top: 40%; right: 12%; }
-    .showcase-edu__label--2::before { left: -10px; top: 50%; transform: translateY(-50%); }
-    .showcase-edu__label--3 { bottom: 30%; left: 20%; }
-    .showcase-edu__label--3::before { right: -10px; top: 50%; transform: translateY(-50%); }
-    .showcase-edu__label--4 { top: 55%; right: 18%; }
-    .showcase-edu__label--4::before { left: -10px; top: 50%; transform: translateY(-50%); }
-
-    .showcase-edu__toolbar {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 4px;
-      z-index: 5;
-      background: rgba(13,17,23,0.85);
-      border-radius: 9999px;
-      padding: 4px;
-      backdrop-filter: blur(8px);
-    }
-
-    .showcase-edu__tool {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(255,255,255,0.5);
-      cursor: pointer;
-      transition: all var(--duration-short);
-    }
-
-    .showcase-edu__tool .material-symbols-outlined { font-size: 16px; }
-
-    .showcase-edu__tool--active {
-      background: rgba(121,192,255,0.2);
-      color: var(--color-primary-fixed-dim);
-    }
-
-    /* ===== LUXURY UI ===== */
-    .showcase-luxury {
-      position: relative;
-      height: 100%;
-      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    }
-
-    .showcase-luxury canvas {
-      width: 100%; height: 100%; display: block;
-    }
-
-    .showcase-luxury__brand {
-      position: absolute;
-      top: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.65rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      color: rgba(255,255,255,0.4);
-      z-index: 5;
-    }
-
-    .showcase-luxury__info {
-      position: absolute;
-      bottom: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      z-index: 5;
-    }
-
-    .showcase-luxury__product-name {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: rgba(255,255,255,0.9);
-      margin-bottom: 2px;
-    }
-
-    .showcase-luxury__product-price {
-      display: block;
-      font-size: 0.7rem;
-      color: rgba(210,168,255,0.8);
-      font-weight: 500;
-    }
-
-    .showcase-luxury__options {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      z-index: 5;
-    }
-
-    .showcase-luxury__opt {
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.2);
-      cursor: pointer;
-      transition: all var(--duration-short);
-    }
-
-    .showcase-luxury__opt--active {
-      border-color: rgba(255,255,255,0.8);
-      box-shadow: 0 0 8px rgba(255,255,255,0.3);
-    }
-
-    /* ===== MULTI-PLATFORM GRID ===== */
-    .showcase-platform-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .showcase-platform-card {
-      background: var(--color-surface-container-lowest);
-      border-radius: 16px;
-      border: 1px solid var(--color-outline);
-      overflow: hidden;
-      box-shadow: var(--shadow-card);
-      transition: transform var(--duration-medium) var(--ease-expressive),
-                  box-shadow var(--duration-medium) var(--ease-expressive);
-    }
-
-    .showcase-platform-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .showcase-platform-card__viewer {
-      aspect-ratio: 1;
-      position: relative;
-      background: var(--color-surface-dim);
-    }
-
-    .showcase-platform-card__viewer canvas {
-      width: 100%; height: 100%;
-    }
-
-    .showcase-platform-card__badge {
-      position: absolute;
-      top: 8px; left: 8px;
-      padding: 3px 8px;
-      border-radius: 9999px;
-      font-size: 0.6rem;
-      font-weight: 600;
-      background: rgba(0,0,0,0.6);
-      color: #fff;
-      z-index: 5;
-      backdrop-filter: blur(4px);
-    }
-
-    .showcase-platform-card__label {
-      padding: 12px;
-      text-align: center;
-    }
-
-    .showcase-platform-card__name {
-      font-weight: 700;
-      font-size: 0.85rem;
-      color: var(--color-on-surface);
-      margin-bottom: 2px;
-    }
-
-    .showcase-platform-card__tech {
-      font-size: 0.7rem;
-      color: var(--color-on-surface-variant);
-    }
-
-    /* ===== CTA SECTION ===== */
-    .showcase-cta {
-      padding: 96px 0;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .showcase-cta::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(0, 91, 193, 0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    [data-theme="dark"] .showcase-cta::before {
-      background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(13, 65, 157, 0.1) 0%, transparent 70%);
-    }
-
-    .showcase-cta__container {
-      max-width: var(--container-max);
-      margin: 0 auto;
-      padding: 0 var(--container-padding);
-    }
-
-    .showcase-cta__title {
-      font-size: clamp(1.75rem, 4vw, 2.5rem);
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: var(--color-on-surface);
-      margin-bottom: 12px;
-    }
-
-    .showcase-cta__sub {
-      color: var(--color-on-surface-variant);
-      font-size: 1.05rem;
-      max-width: 500px;
-      margin: 0 auto 32px;
-      line-height: 1.7;
-    }
-
-    .showcase-cta__actions {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .showcase-cta__btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 700;
-      font-size: 1rem;
-      padding: 14px 28px;
-      border-radius: 9999px;
       transition: transform var(--duration-short) var(--ease-spring),
                   box-shadow var(--duration-short);
     }
 
-    .showcase-cta__btn:active {
-      transform: scale(0.95);
-    }
-
-    .showcase-cta__btn--primary {
-      background: var(--color-primary);
-      color: var(--color-on-primary);
-      box-shadow: var(--shadow-card);
-    }
-
-    .showcase-cta__btn--primary:hover {
-      transform: scale(1.03);
+    .sc-app-card:hover {
+      transform: translateY(-4px);
       box-shadow: var(--shadow-xl);
     }
 
-    .showcase-cta__btn--outline {
-      border: 2px solid var(--color-outline-variant);
+    .sc-app-card__visual {
+      aspect-ratio: 16 / 10;
+      background: var(--color-surface-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sc-app-card__body {
+      padding: 24px;
+    }
+
+    .sc-app-card__top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .sc-app-card__name {
+      font-size: 1.25rem;
+      font-weight: 700;
       color: var(--color-on-surface);
     }
 
-    .showcase-cta__btn--outline:hover {
-      background: var(--color-surface-container);
-      transform: scale(1.03);
+    .sc-app-card__github {
+      color: var(--color-on-surface-variant);
+      transition: color var(--duration-short);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
     }
 
-    .showcase-cta__btn .material-symbols-outlined { font-size: 20px; }
+    .sc-app-card__github:hover {
+      color: var(--color-primary);
+    }
+
+    .sc-app-card__desc {
+      font-size: 0.9rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .sc-app-card__actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Store badges */
+    .sc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      background: #000;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform var(--duration-short) var(--ease-spring),
+                  opacity var(--duration-short);
+      line-height: 1.2;
+    }
+
+    .sc-badge:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+
+    .sc-badge__text-top {
+      font-size: 0.55rem;
+      font-weight: 400;
+      display: block;
+      opacity: 0.85;
+    }
+
+    .sc-badge__text-bottom {
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: block;
+    }
+
+    .sc-badge--browser {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+    }
+
+    /* ===== TRY IT LIVE CARDS ===== */
+    .sc-live-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .sc-live-card {
+      background: var(--color-surface-container-lowest);
+      border: 1px solid var(--color-outline);
+      border-radius: 24px;
+      overflow: hidden;
+      text-decoration: none;
+      transition: transform var(--duration-short) var(--ease-spring),
+                  box-shadow var(--duration-short);
+    }
+
+    .sc-live-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .sc-live-card__visual {
+      aspect-ratio: 16 / 9;
+      background: var(--color-surface-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      position: relative;
+    }
+
+    .sc-live-card__body {
+      padding: 24px;
+    }
+
+    .sc-live-card__name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--color-on-surface);
+      margin-bottom: 6px;
+    }
+
+    .sc-live-card__desc {
+      font-size: 0.9rem;
+      color: var(--color-on-surface-variant);
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .sc-live-card__link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .sc-live-card__link svg {
+      transition: transform var(--duration-short) var(--ease-spring);
+    }
+
+    .sc-live-card:hover .sc-live-card__link svg {
+      transform: translateX(4px);
+    }
+
+    /* ===== PLATFORM GALLERY ===== */
+    .sc-platforms-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .sc-platform-card {
+      background: var(--color-surface-container-lowest);
+      border: 1px solid var(--color-outline);
+      border-radius: 20px;
+      padding: 24px 20px;
+      text-align: center;
+      transition: transform var(--duration-short) var(--ease-spring),
+                  box-shadow var(--duration-short);
+    }
+
+    .sc-platform-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-card);
+    }
+
+    .sc-platform-card__device {
+      width: 100%;
+      height: 120px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sc-platform-card__name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--color-on-surface);
+      margin-bottom: 4px;
+    }
+
+    .sc-platform-card__info {
+      font-size: 0.75rem;
+      color: var(--color-on-surface-variant);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .sc-status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .sc-status--stable { background: rgba(22,163,74,0.12); color: var(--color-status-stable); }
+    .sc-status--alpha { background: rgba(124,58,237,0.12); color: var(--color-status-alpha); }
+    .sc-status--soon { background: rgba(76,95,133,0.12); color: var(--color-status-soon); }
+    .sc-status--placeholder { background: rgba(76,95,133,0.08); color: var(--color-status-soon); }
+
+    /* ===== SVG DEVICE MOCKUPS ===== */
+    .sc-device-svg {
+      max-height: 100%;
+      max-width: 100%;
+    }
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 1024px) {
-      .showcase-demo {
-        gap: 48px;
-      }
-
-      .showcase-platform-grid {
+      .sc-platforms-grid {
         grid-template-columns: repeat(3, 1fr);
       }
     }
 
     @media (max-width: 768px) {
-      .showcase-demo {
+      .sc-apps-grid,
+      .sc-live-grid {
         grid-template-columns: 1fr;
-        gap: 40px;
       }
 
-      .showcase-demo--reverse {
-        direction: ltr;
-      }
-
-      .showcase-device {
-        max-width: 300px;
-      }
-
-      .showcase-device--wide {
-        max-width: 400px;
-      }
-
-      .showcase-platform-grid {
+      .sc-platforms-grid {
         grid-template-columns: repeat(2, 1fr);
       }
 
-      .showcase-stats {
-        gap: 32px;
-      }
-
-      .showcase-section {
-        padding: 64px 0;
-      }
-
-      .showcase-hero {
+      .sc-hero {
         padding-top: calc(var(--nav-height) + 48px);
         padding-bottom: 48px;
       }
-    }
 
-    @media (max-width: 600px) {
-      .showcase-platform-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-
-      .showcase-device {
-        max-width: 260px;
-      }
-
-      .showcase-ecom__bottom {
-        padding: 14px 12px 12px;
-      }
-
-      .showcase-code {
-        font-size: 0.7rem;
-        padding: 12px;
-      }
-
-      .showcase-stats {
-        gap: 24px;
-      }
-
-      .showcase-stats__number {
-        font-size: 2rem;
-      }
-
-      .showcase-filters {
-        gap: 6px;
-      }
-
-      .showcase-filters__badge {
-        padding: 6px 12px;
-        font-size: 0.7rem;
+      .sc-section {
+        padding: 56px 0;
       }
     }
 
     @media (max-width: 480px) {
-      .showcase-platform-grid {
+      .sc-platforms-grid {
         grid-template-columns: 1fr;
-      }
-
-      .showcase-cta__actions {
-        flex-direction: column;
-        align-items: center;
       }
     }
   </style>
@@ -1013,18 +418,33 @@
   <!-- ===== NAVIGATION ===== -->
   <nav class="nav" id="nav">
     <div class="nav__container">
-      <div class="nav__brand">SceneView SDK</div>
+      <a href="/" class="nav__brand" aria-label="SceneView SDK — home">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="28" height="28" aria-hidden="true" style="flex-shrink:0">
+          <defs>
+            <linearGradient id="navTopGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8AB4F8"/><stop offset="100%" stop-color="#42A5F5"/></linearGradient>
+            <linearGradient id="navRightGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4A90D9"/><stop offset="100%" stop-color="#1A73E8"/></linearGradient>
+            <linearGradient id="navLeftGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#1A73E8"/><stop offset="100%" stop-color="#0D47A1"/></linearGradient>
+          </defs>
+          <polygon points="256,272 122,194 122,340 256,418" fill="url(#navLeftGrad)"/>
+          <polygon points="256,272 390,194 390,340 256,418" fill="url(#navRightGrad)"/>
+          <polygon points="256,126 390,204 256,282 122,204" fill="url(#navTopGrad)"/>
+          <polyline points="96,120 96,82 134,82" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="416,120 416,82 378,82" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="96,392 96,430 134,430" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="416,392 416,430 378,430" fill="none" stroke="#1A73E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>SceneView SDK</span>
+      </a>
 
       <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
 
       <div class="nav__links" id="navLinks">
-        <a href="/" class="nav__link">Home</a>
         <a href="/#features" class="nav__link">Features</a>
-        <a href="/#platforms" class="nav__link">Platforms</a>
+        <a href="/showcase.html" class="nav__link nav__link--active">Showcase</a>
         <a href="/playground.html" class="nav__link">Playground</a>
-        <a href="https://sceneview.github.io/docs/" class="nav__link" target="_blank" rel="noopener">Docs</a>
+        <a href="/docs.html" class="nav__link" target="_blank" rel="noopener">Docs</a>
         <button class="nav__theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
           <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -1036,8 +456,10 @@
       </div>
 
       <div class="nav__actions">
-        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View source code">
-          <span class="material-symbols-outlined">code</span>
+        <a href="https://github.com/sceneview/sceneview" class="nav__icon-btn" target="_blank" rel="noopener" aria-label="View on GitHub">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
         </a>
         <button class="nav__hamburger nav__hamburger--mobile" id="hamburgerMobile" aria-label="Toggle menu">
           <span></span><span></span><span></span>
@@ -1047,501 +469,504 @@
   </nav>
 
   <main>
+
   <!-- ===== HERO ===== -->
-  <section class="showcase-hero">
-    <div class="showcase-hero__container">
-      <h1 class="showcase-hero__title reveal">Built with SceneView</h1>
-      <p class="showcase-hero__sub reveal">Interactive 3D experiences across every industry. Drag, rotate, and explore what's possible with a few lines of code.</p>
-
-      <div class="showcase-stats reveal">
-        <div class="showcase-stats__item">
-          <div class="showcase-stats__number">10+</div>
-          <div class="showcase-stats__label">Platforms</div>
-        </div>
-        <div class="showcase-stats__item">
-          <div class="showcase-stats__number">50k+</div>
-          <div class="showcase-stats__label">Downloads</div>
-        </div>
-        <div class="showcase-stats__item">
-          <div class="showcase-stats__number">3.6.0</div>
-          <div class="showcase-stats__label">Latest Release</div>
-        </div>
-        <div class="showcase-stats__item">
-          <div class="showcase-stats__number">9</div>
-          <div class="showcase-stats__label">MCP Servers</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="showcase-filters reveal">
-      <a href="#ecommerce" class="showcase-filters__badge showcase-filters__badge--ecommerce">
-        <span class="material-symbols-outlined" style="font-size:16px">shopping_bag</span> E-Commerce
-      </a>
-      <a href="#furniture" class="showcase-filters__badge showcase-filters__badge--ar">
-        <span class="material-symbols-outlined" style="font-size:16px">view_in_ar</span> Augmented Reality
-      </a>
-      <a href="#automotive" class="showcase-filters__badge showcase-filters__badge--auto">
-        <span class="material-symbols-outlined" style="font-size:16px">directions_car</span> Automotive
-      </a>
-      <a href="#education" class="showcase-filters__badge showcase-filters__badge--medical">
-        <span class="material-symbols-outlined" style="font-size:16px">school</span> Education
-      </a>
-      <a href="#luxury" class="showcase-filters__badge showcase-filters__badge--luxury">
-        <span class="material-symbols-outlined" style="font-size:16px">diamond</span> Luxury
-      </a>
-      <a href="#multiplatform" class="showcase-filters__badge showcase-filters__badge--multi">
-        <span class="material-symbols-outlined" style="font-size:16px">devices</span> Multi-Platform
-      </a>
+  <section class="sc-hero">
+    <div class="sc-hero__container">
+      <h1 class="sc-hero__title">See SceneView in Action</h1>
+      <p class="sc-hero__sub">Interactive demos, downloadable sample apps, and a live playground. Explore 3D and AR across every platform SceneView supports.</p>
     </div>
   </section>
 
-  <!-- ===== 1. E-COMMERCE PRODUCT VIEWER ===== -->
-  <section class="showcase-section" id="ecommerce">
-    <div class="showcase-section__container">
-      <div class="showcase-section__header reveal">
-        <span class="showcase-section__badge showcase-section__badge--ecommerce">E-Commerce</span>
-        <h2 class="showcase-section__title">Product Viewer</h2>
-        <p class="showcase-section__subtitle">Let customers interact with products in 3D before buying. Increase conversions by up to 94%.</p>
+  <!-- ===== SAMPLE APPS ===== -->
+  <section class="sc-section">
+    <div class="sc-container">
+      <div class="sc-section__header">
+        <h2 class="sc-section__title">Sample Apps</h2>
+        <p class="sc-section__sub">Download and run real apps showcasing SceneView on every platform. All open source.</p>
       </div>
 
-      <div class="showcase-demo reveal">
-        <!-- Phone mockup -->
-        <div class="showcase-device">
-          <div class="showcase-device__screen">
-            <div class="showcase-device__notch"></div>
-            <div class="showcase-ecom">
-              <div class="showcase-ecom__top-bar">
-                <div class="showcase-ecom__top-icon">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <div class="sc-apps-grid">
+
+        <!-- Android Demo -->
+        <div class="sc-app-card">
+          <div class="sc-app-card__visual">
+            <!-- Android phone SVG mockup -->
+            <svg class="sc-device-svg" viewBox="0 0 220 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="10" width="200" height="380" rx="28" fill="#1a1a2e" stroke="var(--color-outline-variant)" stroke-width="2"/>
+              <rect x="22" y="44" width="176" height="312" rx="4" fill="var(--color-surface-container-high)"/>
+              <!-- Status bar -->
+              <rect x="22" y="44" width="176" height="24" rx="4" fill="var(--color-surface-container-highest)"/>
+              <circle cx="165" cy="56" r="3" fill="var(--color-status-stable)"/>
+              <rect x="174" y="53" width="16" height="6" rx="2" fill="var(--color-on-surface-variant)" opacity="0.4"/>
+              <!-- Camera notch -->
+              <rect x="80" y="16" width="60" height="20" rx="10" fill="#111"/>
+              <circle cx="110" cy="26" r="5" fill="#222"/>
+              <!-- 3D cube in viewport -->
+              <polygon points="110,120 145,140 145,180 110,200 75,180 75,140" fill="var(--color-primary)" opacity="0.3"/>
+              <polygon points="110,120 145,140 110,160 75,140" fill="var(--color-primary)" opacity="0.5"/>
+              <polygon points="110,160 145,140 145,180 110,200" fill="var(--color-primary)" opacity="0.4"/>
+              <polygon points="110,160 75,140 75,180 110,200" fill="var(--color-primary)" opacity="0.2"/>
+              <!-- Bottom nav -->
+              <rect x="22" y="326" width="176" height="30" fill="var(--color-surface-container-highest)"/>
+              <circle cx="55" cy="341" r="6" fill="var(--color-primary)" opacity="0.5"/>
+              <circle cx="90" cy="341" r="6" fill="var(--color-on-surface-variant)" opacity="0.2"/>
+              <circle cx="125" cy="341" r="6" fill="var(--color-on-surface-variant)" opacity="0.2"/>
+              <circle cx="160" cy="341" r="6" fill="var(--color-on-surface-variant)" opacity="0.2"/>
+              <!-- Label: 3D | AR | Samples | About -->
+              <text x="55" y="350" text-anchor="middle" font-size="5" fill="var(--color-primary)" font-family="Inter, sans-serif" font-weight="600">3D</text>
+              <text x="90" y="350" text-anchor="middle" font-size="5" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.5">AR</text>
+              <text x="125" y="350" text-anchor="middle" font-size="5" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.5">Samples</text>
+              <text x="160" y="350" text-anchor="middle" font-size="5" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.5">About</text>
+              <!-- Home indicator -->
+              <rect x="85" y="368" width="50" height="4" rx="2" fill="var(--color-on-surface-variant)" opacity="0.3"/>
+              <!-- AR grid dots -->
+              <circle cx="80" cy="240" r="2" fill="var(--color-primary)" opacity="0.15"/>
+              <circle cx="100" cy="250" r="2" fill="var(--color-primary)" opacity="0.15"/>
+              <circle cx="120" cy="240" r="2" fill="var(--color-primary)" opacity="0.15"/>
+              <circle cx="140" cy="250" r="2" fill="var(--color-primary)" opacity="0.15"/>
+              <circle cx="80" cy="260" r="2" fill="var(--color-primary)" opacity="0.15"/>
+              <circle cx="120" cy="260" r="2" fill="var(--color-primary)" opacity="0.15"/>
+              <circle cx="100" cy="270" r="2" fill="var(--color-primary)" opacity="0.15"/>
+              <circle cx="140" cy="270" r="2" fill="var(--color-primary)" opacity="0.15"/>
+            </svg>
+          </div>
+          <div class="sc-app-card__body">
+            <div class="sc-app-card__top-row">
+              <span class="sc-app-card__name">Android Demo</span>
+              <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-demo" target="_blank" rel="noopener" class="sc-app-card__github">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                Source
+              </a>
+            </div>
+            <p class="sc-app-card__desc">Material 3 showcase with 4 tabs: 3D viewer, AR placement, 14 interactive samples, and about. Jetpack Compose + Filament.</p>
+            <div class="sc-app-card__actions">
+              <a href="https://play.google.com/store/apps/details?id=io.github.sceneview.demo" class="sc-badge" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.302 1.33-2.302 1.33-1.957-1.957 1.957-1.957zM5.864 3.465l10.937 6.333-2.302 2.302-8.635-8.635z"/></svg>
+                <div>
+                  <span class="sc-badge__text-top">GET IT ON</span>
+                  <span class="sc-badge__text-bottom">Google Play</span>
                 </div>
-                <div class="showcase-ecom__top-icon">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                </div>
-              </div>
-              <div class="showcase-ecom__viewer">
-                <canvas id="showcase-shoe" style="cursor:grab;" aria-label="3D Sneaker rendered by SceneView Web (Filament.js)"></canvas>
-              </div>
-              <div class="showcase-ecom__bottom">
-                <div class="showcase-ecom__name">Air Max Pulse</div>
-                <div class="showcase-ecom__rating">
-                  <span style="color:#fbbc04;">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 4.8 (2,847 reviews)
-                </div>
-                <div class="showcase-ecom__price">$159.99</div>
-                <div class="showcase-ecom__swatches">
-                  <div class="showcase-swatch showcase-swatch--active" style="background:#1f2937;"></div>
-                  <div class="showcase-swatch" style="background:#dc2626;"></div>
-                  <div class="showcase-swatch" style="background:#2563eb;"></div>
-                  <div class="showcase-swatch" style="background:#f5f5f4;border:1px solid #d1d5db;"></div>
-                </div>
-                <button class="showcase-ecom__cart-btn">
-                  <span class="material-symbols-outlined" style="font-size:18px">shopping_cart</span>
-                  Add to Cart
-                </button>
-              </div>
+              </a>
             </div>
           </div>
         </div>
 
-        <!-- Info -->
-        <div class="showcase-info">
-          <h3 class="showcase-info__title">Boost conversions with interactive 3D</h3>
-          <p class="showcase-info__desc">Replace flat product images with fully interactive 3D models. Customers can rotate, zoom, and examine products from every angle. Material variants let them switch colors and finishes in real time.</p>
-          <div class="showcase-pills">
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">visibility</span> 360&deg; View
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">palette</span> Material Variants
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">wb_sunny</span> Shadow & Lighting
-            </span>
+        <!-- iOS Demo -->
+        <div class="sc-app-card">
+          <div class="sc-app-card__visual">
+            <!-- iPhone SVG mockup -->
+            <svg class="sc-device-svg" viewBox="0 0 220 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="10" width="200" height="380" rx="32" fill="#1a1a2e" stroke="var(--color-outline-variant)" stroke-width="2"/>
+              <rect x="22" y="44" width="176" height="312" rx="4" fill="var(--color-surface-container-high)"/>
+              <!-- Dynamic Island -->
+              <rect x="80" y="18" width="60" height="18" rx="9" fill="#111"/>
+              <!-- AR scene with plane detection -->
+              <rect x="22" y="44" width="176" height="200" fill="var(--color-surface-container)" rx="4"/>
+              <!-- Camera viewfinder grid lines -->
+              <line x1="80" y1="44" x2="80" y2="244" stroke="var(--color-primary)" stroke-width="0.5" opacity="0.15"/>
+              <line x1="140" y1="44" x2="140" y2="244" stroke="var(--color-primary)" stroke-width="0.5" opacity="0.15"/>
+              <line x1="22" y1="110" x2="198" y2="110" stroke="var(--color-primary)" stroke-width="0.5" opacity="0.15"/>
+              <line x1="22" y1="178" x2="198" y2="178" stroke="var(--color-primary)" stroke-width="0.5" opacity="0.15"/>
+              <!-- 3D object -->
+              <ellipse cx="110" cy="180" rx="40" ry="10" fill="var(--color-primary)" opacity="0.1"/>
+              <rect x="90" y="120" width="40" height="60" rx="4" fill="var(--color-primary)" opacity="0.35"/>
+              <rect x="90" y="120" width="40" height="15" rx="4" fill="var(--color-primary)" opacity="0.5"/>
+              <!-- Bottom tab bar -->
+              <rect x="22" y="326" width="176" height="30" fill="var(--color-surface-container-highest)"/>
+              <circle cx="65" cy="341" r="6" fill="var(--color-primary)" opacity="0.5"/>
+              <circle cx="110" cy="341" r="6" fill="var(--color-on-surface-variant)" opacity="0.2"/>
+              <circle cx="155" cy="341" r="6" fill="var(--color-on-surface-variant)" opacity="0.2"/>
+              <text x="65" y="350" text-anchor="middle" font-size="5" fill="var(--color-primary)" font-family="Inter, sans-serif" font-weight="600">3D</text>
+              <text x="110" y="350" text-anchor="middle" font-size="5" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.5">AR</text>
+              <text x="155" y="350" text-anchor="middle" font-size="5" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.5">Samples</text>
+              <!-- UI controls row -->
+              <rect x="40" y="260" width="50" height="24" rx="12" fill="var(--color-primary)" opacity="0.2"/>
+              <text x="65" y="276" text-anchor="middle" font-size="7" fill="var(--color-primary)" font-family="Inter, sans-serif" font-weight="600">Place</text>
+              <rect x="100" y="260" width="50" height="24" rx="12" fill="var(--color-outline-variant)" opacity="0.3"/>
+              <text x="125" y="276" text-anchor="middle" font-size="7" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif">Rotate</text>
+              <!-- Home indicator -->
+              <rect x="85" y="368" width="50" height="4" rx="2" fill="var(--color-on-surface-variant)" opacity="0.3"/>
+            </svg>
           </div>
-          <div class="showcase-code"><span class="fn">Scene</span> {
-    <span class="fn">ModelNode</span>(
-        model = <span class="fn">rememberModelInstance</span>(
-            modelLoader, <span class="str">"models/shoe.glb"</span>
-        )
-    )
-}</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== 2. FURNITURE AR PREVIEW ===== -->
-  <section class="showcase-section" id="furniture">
-    <div class="showcase-section__container">
-      <div class="showcase-section__header reveal">
-        <span class="showcase-section__badge showcase-section__badge--ar">Augmented Reality</span>
-        <h2 class="showcase-section__title">Furniture AR Preview</h2>
-        <p class="showcase-section__subtitle">Place furniture in your room with AR. See how it fits before you buy.</p>
-      </div>
-
-      <div class="showcase-demo showcase-demo--reverse reveal">
-        <!-- Phone mockup -->
-        <div class="showcase-device">
-          <div class="showcase-device__screen">
-            <div class="showcase-device__notch"></div>
-            <div class="showcase-ar">
-              <div class="showcase-ar__badge">
-                <span class="material-symbols-outlined" style="font-size:12px">circle</span>
-                AR LIVE
-              </div>
-              <canvas id="showcase-chair" style="cursor:grab;" aria-label="3D Chair rendered by SceneView Web (Filament.js)"></canvas>
-              <div class="showcase-ar__grid"></div>
-              <div class="showcase-ar__controls">
-                <button class="showcase-ar__btn">
-                  <span class="material-symbols-outlined">play_arrow</span> Place
-                </button>
-                <button class="showcase-ar__btn">
-                  <span class="material-symbols-outlined">photo_camera</span> Snap
-                </button>
-                <button class="showcase-ar__btn">
-                  <span class="material-symbols-outlined">open_in_full</span> Scale
-                </button>
-              </div>
+          <div class="sc-app-card__body">
+            <div class="sc-app-card__top-row">
+              <span class="sc-app-card__name">iOS Demo</span>
+              <a href="https://github.com/sceneview/sceneview/tree/main/samples/ios-demo" target="_blank" rel="noopener" class="sc-app-card__github">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                Source
+              </a>
+            </div>
+            <p class="sc-app-card__desc">SwiftUI app with 3 tabs: 3D model viewer, AR scene with placement, and interactive samples. Powered by RealityKit.</p>
+            <div class="sc-app-card__actions">
+              <a href="https://apps.apple.com/app/sceneview/id6740174638" class="sc-badge" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                <div>
+                  <span class="sc-badge__text-top">Download on the</span>
+                  <span class="sc-badge__text-bottom">App Store</span>
+                </div>
+              </a>
             </div>
           </div>
         </div>
 
-        <!-- Info -->
-        <div class="showcase-info">
-          <h3 class="showcase-info__title">Try before you buy, right in your space</h3>
-          <p class="showcase-info__desc">ARCore plane detection places furniture on real surfaces. Customers can walk around, resize, and reposition items. Reduces returns by letting people verify fit and style in their actual room.</p>
-          <div class="showcase-pills">
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">view_in_ar</span> ARCore / ARKit
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">grid_on</span> Plane Detection
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">straighten</span> Real-World Scale
-            </span>
+        <!-- Web Demo -->
+        <div class="sc-app-card">
+          <div class="sc-app-card__visual">
+            <!-- Browser SVG mockup -->
+            <svg class="sc-device-svg" viewBox="0 0 360 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="5" width="350" height="230" rx="12" fill="#1a1a2e" stroke="var(--color-outline-variant)" stroke-width="2"/>
+              <!-- Title bar -->
+              <rect x="5" y="5" width="350" height="32" rx="12" fill="var(--color-surface-container-highest)"/>
+              <rect x="5" y="25" width="350" height="12" fill="var(--color-surface-container-highest)"/>
+              <!-- Traffic lights -->
+              <circle cx="22" cy="21" r="5" fill="#ff5f57"/>
+              <circle cx="38" cy="21" r="5" fill="#febc2e"/>
+              <circle cx="54" cy="21" r="5" fill="#28c840"/>
+              <!-- URL bar -->
+              <rect x="80" y="14" width="200" height="14" rx="7" fill="var(--color-surface-container)" opacity="0.5"/>
+              <text x="180" y="24" text-anchor="middle" font-size="6" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.5">sceneview.github.io/web-demo</text>
+              <!-- Content area -->
+              <rect x="9" y="37" width="342" height="194" fill="var(--color-surface-container)"/>
+              <!-- 3D viewport -->
+              <rect x="20" y="50" width="220" height="170" rx="8" fill="var(--color-surface-container-high)"/>
+              <!-- Wireframe 3D object -->
+              <polygon points="130,90 170,110 170,160 130,180 90,160 90,110" fill="none" stroke="var(--color-primary)" stroke-width="1.5" opacity="0.4"/>
+              <polygon points="130,90 170,110 130,130 90,110" fill="var(--color-primary)" opacity="0.2"/>
+              <line x1="130" y1="130" x2="130" y2="180" stroke="var(--color-primary)" stroke-width="1" opacity="0.3"/>
+              <!-- Sidebar controls -->
+              <rect x="252" y="50" width="96" height="170" rx="8" fill="var(--color-surface-container-high)"/>
+              <rect x="262" y="62" width="76" height="8" rx="4" fill="var(--color-on-surface-variant)" opacity="0.15"/>
+              <rect x="262" y="78" width="76" height="20" rx="4" fill="var(--color-primary)" opacity="0.15"/>
+              <rect x="262" y="106" width="76" height="8" rx="4" fill="var(--color-on-surface-variant)" opacity="0.15"/>
+              <rect x="262" y="122" width="76" height="20" rx="4" fill="var(--color-primary)" opacity="0.15"/>
+              <rect x="262" y="150" width="76" height="8" rx="4" fill="var(--color-on-surface-variant)" opacity="0.15"/>
+              <rect x="262" y="166" width="50" height="20" rx="4" fill="var(--color-primary)" opacity="0.15"/>
+              <!-- WebXR badge -->
+              <rect x="24" y="54" width="40" height="14" rx="7" fill="var(--color-primary)" opacity="0.25"/>
+              <text x="44" y="64" text-anchor="middle" font-size="6" fill="var(--color-primary)" font-family="Inter, sans-serif" font-weight="600">WebXR</text>
+            </svg>
           </div>
-          <div class="showcase-code"><span class="fn">ARScene</span>(
-    sessionConfiguration = <span class="fn">ARSession</span>.<span class="fn">Config</span>(
-        planeDetection = listOf(Plane.Type.Horizontal)
-    )
-) {
-    <span class="fn">AnchorNode</span>(anchor) {
-        <span class="fn">ModelNode</span>(model = chairModel)
-    }
-}</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== 3. AUTOMOTIVE CONFIGURATOR ===== -->
-  <section class="showcase-section" id="automotive">
-    <div class="showcase-section__container">
-      <div class="showcase-section__header reveal">
-        <span class="showcase-section__badge showcase-section__badge--auto">Automotive</span>
-        <h2 class="showcase-section__title">Vehicle Configurator</h2>
-        <p class="showcase-section__subtitle">Stunning studio-quality 3D visualization for automotive experiences.</p>
-      </div>
-
-      <div class="showcase-demo reveal">
-        <!-- Wide device frame -->
-        <div class="showcase-device showcase-device--wide">
-          <div class="showcase-device__screen">
-            <div class="showcase-auto">
-              <div class="showcase-auto__label">Studio Mode</div>
-              <canvas id="showcase-car" style="cursor:grab;" aria-label="3D car rendered by SceneView Web (Filament.js)"></canvas>
-              <div class="showcase-auto__floor"></div>
-              <div class="showcase-auto__controls">
-                <span class="showcase-auto__chip showcase-auto__chip--active">Exterior</span>
-                <span class="showcase-auto__chip">Interior</span>
-                <span class="showcase-auto__chip">Wheels</span>
-                <span class="showcase-auto__chip">Colors</span>
-              </div>
+          <div class="sc-app-card__body">
+            <div class="sc-app-card__top-row">
+              <span class="sc-app-card__name">Web Demo</span>
+              <a href="https://github.com/sceneview/sceneview/tree/main/samples/web-demo" target="_blank" rel="noopener" class="sc-app-card__github">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                Source
+              </a>
+            </div>
+            <p class="sc-app-card__desc">Browser-based 3D viewer with Filament.js (WebAssembly). Supports WebXR for AR and VR experiences right in the browser.</p>
+            <div class="sc-app-card__actions">
+              <a href="https://sceneview.github.io/web-demo/" class="sc-badge sc-badge--browser" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <div>
+                  <span class="sc-badge__text-top">TRY IT</span>
+                  <span class="sc-badge__text-bottom">In Browser</span>
+                </div>
+              </a>
             </div>
           </div>
         </div>
 
-        <!-- Info -->
-        <div class="showcase-info">
-          <h3 class="showcase-info__title">Photorealistic vehicle presentation</h3>
-          <p class="showcase-info__desc">PBR materials deliver showroom-quality rendering. Studio lighting, environment reflections, and real-time shadows make the model indistinguishable from a photo. Perfect for dealership apps and configurators.</p>
-          <div class="showcase-pills">
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">texture</span> PBR Materials
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">light_mode</span> HDR Lighting
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">build</span> Configurator Ready
-            </span>
+        <!-- Android TV Demo -->
+        <div class="sc-app-card">
+          <div class="sc-app-card__visual">
+            <!-- TV SVG mockup -->
+            <svg class="sc-device-svg" viewBox="0 0 360 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- TV body -->
+              <rect x="20" y="10" width="320" height="190" rx="10" fill="#1a1a2e" stroke="var(--color-outline-variant)" stroke-width="2"/>
+              <!-- Screen -->
+              <rect x="30" y="20" width="300" height="170" rx="4" fill="var(--color-surface-container-high)"/>
+              <!-- TV stand -->
+              <rect x="130" y="200" width="100" height="6" rx="3" fill="var(--color-outline-variant)"/>
+              <rect x="155" y="206" width="50" height="20" rx="4" fill="var(--color-outline-variant)" opacity="0.6"/>
+              <!-- 3D model on screen -->
+              <polygon points="180,70 230,95 230,150 180,175 130,150 130,95" fill="var(--color-primary)" opacity="0.25"/>
+              <polygon points="180,70 230,95 180,120 130,95" fill="var(--color-primary)" opacity="0.45"/>
+              <polygon points="180,120 230,95 230,150 180,175" fill="var(--color-primary)" opacity="0.35"/>
+              <polygon points="180,120 130,95 130,150 180,175" fill="var(--color-primary)" opacity="0.15"/>
+              <!-- D-pad hint -->
+              <rect x="40" y="160" width="60" height="20" rx="10" fill="var(--color-surface-container-highest)" opacity="0.6"/>
+              <text x="70" y="174" text-anchor="middle" font-size="7" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.6">D-pad</text>
+              <!-- Model name overlay -->
+              <rect x="240" y="30" width="80" height="16" rx="8" fill="var(--color-primary)" opacity="0.2"/>
+              <text x="280" y="41" text-anchor="middle" font-size="7" fill="var(--color-primary)" font-family="Inter, sans-serif" font-weight="600">Auto-rotate</text>
+            </svg>
           </div>
-          <div class="showcase-code"><span class="fn">Scene</span>(
-    environment = <span class="fn">rememberEnvironment</span>(
-        environmentLoader, <span class="str">"studio_hdr.ktx"</span>
-    )
-) {
-    <span class="fn">ModelNode</span>(model = carModel) {
-        <span class="fn">LightNode</span>(apply = { <span class="fn">intensity</span>(<span class="str">150_000f</span>) })
-    }
-}</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== 4. MEDICAL / EDUCATION ===== -->
-  <section class="showcase-section" id="education">
-    <div class="showcase-section__container">
-      <div class="showcase-section__header reveal">
-        <span class="showcase-section__badge showcase-section__badge--medical">Education</span>
-        <h2 class="showcase-section__title">3D Anatomy Viewer</h2>
-        <p class="showcase-section__subtitle">Interactive 3D models with annotations for immersive learning experiences.</p>
-      </div>
-
-      <div class="showcase-demo showcase-demo--reverse reveal">
-        <!-- Phone mockup -->
-        <div class="showcase-device">
-          <div class="showcase-device__screen">
-            <div class="showcase-device__notch"></div>
-            <div class="showcase-edu">
-              <canvas id="showcase-helmet" style="cursor:grab;" aria-label="3D anatomy viewer rendered by SceneView Web (Filament.js)"></canvas>
-              <div class="showcase-edu__labels">
-                <div class="showcase-edu__label showcase-edu__label--1">Frontal Cortex</div>
-                <div class="showcase-edu__label showcase-edu__label--2">Visor Assembly</div>
-                <div class="showcase-edu__label showcase-edu__label--3">Ventilation</div>
-                <div class="showcase-edu__label showcase-edu__label--4">Comm Module</div>
-              </div>
-              <div class="showcase-edu__toolbar">
-                <div class="showcase-edu__tool showcase-edu__tool--active" title="Rotate">
-                  <span class="material-symbols-outlined">360</span>
-                </div>
-                <div class="showcase-edu__tool" title="Labels">
-                  <span class="material-symbols-outlined">label</span>
-                </div>
-                <div class="showcase-edu__tool" title="Explode">
-                  <span class="material-symbols-outlined">layers</span>
-                </div>
-                <div class="showcase-edu__tool" title="Measure">
-                  <span class="material-symbols-outlined">straighten</span>
-                </div>
-              </div>
+          <div class="sc-app-card__body">
+            <div class="sc-app-card__top-row">
+              <span class="sc-app-card__name">Android TV Demo</span>
+              <a href="https://github.com/sceneview/sceneview/tree/main/samples/android-tv-demo" target="_blank" rel="noopener" class="sc-app-card__github">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                Source
+              </a>
+            </div>
+            <p class="sc-app-card__desc">Optimized for big screens with D-pad navigation, model cycling, and auto-rotation. Built with Compose TV + Filament.</p>
+            <div class="sc-app-card__actions">
+              <span style="font-size: 0.8rem; color: var(--color-on-surface-variant); font-weight: 500;">Sideload from source</span>
             </div>
           </div>
         </div>
 
-        <!-- Info -->
-        <div class="showcase-info">
-          <h3 class="showcase-info__title">Interactive learning with 3D annotations</h3>
-          <p class="showcase-info__desc">Overlay labels, hotspots, and annotations on 3D models for immersive education. Students can rotate, zoom, and explore complex structures. Works for anatomy, engineering, architecture, and scientific visualization.</p>
-          <div class="showcase-pills">
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">label</span> Hotspot Labels
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">zoom_in</span> Zoom to Detail
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">devices</span> Cross-Platform
-            </span>
-          </div>
-          <div class="showcase-code"><span class="fn">Scene</span> {
-    <span class="fn">ModelNode</span>(model = anatomyModel) {
-        <span class="fn">OverlayNode</span>(
-            position = <span class="fn">Float3</span>(<span class="str">0.5f</span>, <span class="str">1.2f</span>, <span class="str">0f</span>),
-            content = { <span class="fn">AnnotationCard</span>(<span class="str">"Frontal Lobe"</span>) }
-        )
-    }
-}</div>
-        </div>
       </div>
     </div>
   </section>
 
-  <!-- ===== 5. LUXURY / WATCH CONFIGURATOR ===== -->
-  <section class="showcase-section" id="luxury">
-    <div class="showcase-section__container">
-      <div class="showcase-section__header reveal">
-        <span class="showcase-section__badge showcase-section__badge--luxury">Luxury</span>
-        <h2 class="showcase-section__title">Premium Product Showcase</h2>
-        <p class="showcase-section__subtitle">High-end rendering for luxury brands. Iridescence, transparency, and studio lighting.</p>
+  <!-- ===== TRY IT LIVE ===== -->
+  <section class="sc-section sc-section--alt">
+    <div class="sc-container">
+      <div class="sc-section__header">
+        <h2 class="sc-section__title">Try it Live</h2>
+        <p class="sc-section__sub">No install needed. Experiment with 3D and procedural geometry directly in your browser.</p>
       </div>
 
-      <div class="showcase-demo reveal">
-        <!-- Phone mockup -->
-        <div class="showcase-device">
-          <div class="showcase-device__screen">
-            <div class="showcase-device__notch"></div>
-            <div class="showcase-luxury">
-              <div class="showcase-luxury__brand">Maison SceneView</div>
-              <canvas id="showcase-lamp" style="cursor:grab;" aria-label="Luxury product rendered by SceneView Web (Filament.js)"></canvas>
-              <div class="showcase-luxury__info">
-                <span class="showcase-luxury__product-name">Iridescence Lamp</span>
-                <span class="showcase-luxury__product-price">Limited Edition</span>
-              </div>
-              <div class="showcase-luxury__options">
-                <div class="showcase-luxury__opt showcase-luxury__opt--active" style="background: linear-gradient(135deg, #e8d5b7, #c4a882);"></div>
-                <div class="showcase-luxury__opt" style="background: linear-gradient(135deg, #2c3e50, #4a6741);"></div>
-                <div class="showcase-luxury__opt" style="background: linear-gradient(135deg, #c0392b, #8e44ad);"></div>
-                <div class="showcase-luxury__opt" style="background: linear-gradient(135deg, #1a1a2e, #16213e);"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="sc-live-grid">
 
-        <!-- Info -->
-        <div class="showcase-info">
-          <h3 class="showcase-info__title">Elevate luxury experiences</h3>
-          <p class="showcase-info__desc">Advanced PBR extensions like iridescence, sheen, and clearcoat deliver the visual fidelity luxury brands demand. Studio-quality environment lighting makes every material shine. Perfect for jewelry, watches, and high-end design.</p>
-          <div class="showcase-pills">
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">auto_awesome</span> Iridescence
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">wb_sunny</span> Studio Lighting
-            </span>
-            <span class="showcase-pills__item">
-              <span class="material-symbols-outlined">blur_on</span> Sheen & Clearcoat
+        <!-- 3D Playground -->
+        <a href="/playground.html" class="sc-live-card">
+          <div class="sc-live-card__visual">
+            <!-- Code editor + 3D preview illustration -->
+            <svg class="sc-device-svg" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Editor panel -->
+              <rect x="10" y="10" width="180" height="180" rx="10" fill="var(--color-surface-container-lowest)" stroke="var(--color-outline)" stroke-width="1"/>
+              <rect x="10" y="10" width="180" height="24" rx="10" fill="var(--color-surface-container-highest)"/>
+              <rect x="10" y="26" width="180" height="8" fill="var(--color-surface-container-highest)"/>
+              <circle cx="24" cy="22" r="4" fill="#ff5f57"/>
+              <circle cx="36" cy="22" r="4" fill="#febc2e"/>
+              <circle cx="48" cy="22" r="4" fill="#28c840"/>
+              <!-- Code lines -->
+              <rect x="22" y="44" width="60" height="6" rx="3" fill="var(--color-tertiary)" opacity="0.4"/>
+              <rect x="22" y="56" width="80" height="6" rx="3" fill="var(--color-primary)" opacity="0.3"/>
+              <rect x="32" y="68" width="100" height="6" rx="3" fill="var(--color-status-stable)" opacity="0.3"/>
+              <rect x="32" y="80" width="70" height="6" rx="3" fill="var(--color-on-surface-variant)" opacity="0.2"/>
+              <rect x="32" y="92" width="120" height="6" rx="3" fill="var(--color-primary)" opacity="0.3"/>
+              <rect x="32" y="104" width="90" height="6" rx="3" fill="var(--color-status-stable)" opacity="0.3"/>
+              <rect x="22" y="116" width="40" height="6" rx="3" fill="var(--color-tertiary)" opacity="0.4"/>
+              <rect x="22" y="128" width="60" height="6" rx="3" fill="var(--color-on-surface-variant)" opacity="0.2"/>
+              <rect x="22" y="140" width="100" height="6" rx="3" fill="var(--color-primary)" opacity="0.3"/>
+              <rect x="22" y="152" width="50" height="6" rx="3" fill="var(--color-tertiary)" opacity="0.4"/>
+              <!-- Divider -->
+              <line x1="200" y1="20" x2="200" y2="180" stroke="var(--color-outline)" stroke-width="1" opacity="0.5"/>
+              <!-- 3D preview panel -->
+              <rect x="210" y="10" width="180" height="180" rx="10" fill="var(--color-surface-container-high)" stroke="var(--color-outline)" stroke-width="1"/>
+              <!-- 3D object in preview -->
+              <polygon points="300,55 345,80 345,130 300,155 255,130 255,80" fill="var(--color-primary)" opacity="0.15"/>
+              <polygon points="300,55 345,80 300,105 255,80" fill="var(--color-primary)" opacity="0.35"/>
+              <polygon points="300,105 345,80 345,130 300,155" fill="var(--color-primary)" opacity="0.25"/>
+              <polygon points="300,105 255,80 255,130 300,155" fill="var(--color-primary)" opacity="0.1"/>
+              <!-- Play button overlay -->
+              <circle cx="300" cy="105" r="18" fill="var(--color-primary)" opacity="0.15"/>
+              <polygon points="294,95 312,105 294,115" fill="var(--color-primary)" opacity="0.5"/>
+              <!-- "LIVE" badge -->
+              <rect x="360" y="14" width="26" height="12" rx="6" fill="var(--color-status-stable)" opacity="0.2"/>
+              <text x="373" y="23" text-anchor="middle" font-size="6" fill="var(--color-status-stable)" font-family="Inter, sans-serif" font-weight="700">LIVE</text>
+            </svg>
+          </div>
+          <div class="sc-live-card__body">
+            <h3 class="sc-live-card__name">3D Playground</h3>
+            <p class="sc-live-card__desc">Write Kotlin-style code on the left, see the 3D scene update live on the right. 13 examples, 3 platforms, 23 preloaded models.</p>
+            <span class="sc-live-card__link">
+              Open Playground
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M7.5 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
           </div>
-          <div class="showcase-code"><span class="fn">Scene</span>(
-    environment = <span class="fn">rememberEnvironment</span>(
-        environmentLoader, <span class="str">"studio_soft.ktx"</span>
-    )
-) {
-    <span class="fn">ModelNode</span>(model = luxuryModel)
-    <span class="cm">// Iridescence, sheen, clearcoat</span>
-    <span class="cm">// handled automatically by glTF PBR</span>
-}</div>
-        </div>
+        </a>
+
+        <!-- Procedural Geometry -->
+        <a href="/playground.html#geometry" class="sc-live-card">
+          <div class="sc-live-card__visual">
+            <!-- Geometric shapes illustration -->
+            <svg class="sc-device-svg" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Background grid -->
+              <defs>
+                <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--color-outline)" stroke-width="0.3" opacity="0.3"/>
+                </pattern>
+              </defs>
+              <rect x="10" y="10" width="380" height="180" rx="12" fill="var(--color-surface-container-high)" stroke="var(--color-outline)" stroke-width="1"/>
+              <rect x="14" y="14" width="372" height="172" rx="8" fill="url(#gridPattern)"/>
+              <!-- Cube -->
+              <polygon points="80,60 120,45 120,85 80,100 40,85 40,45" fill="none" stroke="var(--color-primary)" stroke-width="1.5"/>
+              <polygon points="80,60 120,45 80,30 40,45" fill="var(--color-primary)" opacity="0.2"/>
+              <line x1="80" y1="60" x2="80" y2="100" stroke="var(--color-primary)" stroke-width="1" opacity="0.4"/>
+              <!-- Sphere -->
+              <circle cx="180" cy="100" r="35" fill="none" stroke="var(--color-tertiary)" stroke-width="1.5"/>
+              <ellipse cx="180" cy="100" rx="35" ry="12" fill="none" stroke="var(--color-tertiary)" stroke-width="0.8" opacity="0.4"/>
+              <ellipse cx="180" cy="100" rx="12" ry="35" fill="none" stroke="var(--color-tertiary)" stroke-width="0.8" opacity="0.4"/>
+              <circle cx="180" cy="100" r="35" fill="var(--color-tertiary)" opacity="0.08"/>
+              <!-- Cylinder -->
+              <ellipse cx="280" cy="70" rx="30" ry="10" fill="none" stroke="var(--color-status-stable)" stroke-width="1.5"/>
+              <line x1="250" y1="70" x2="250" y2="130" stroke="var(--color-status-stable)" stroke-width="1.5"/>
+              <line x1="310" y1="70" x2="310" y2="130" stroke="var(--color-status-stable)" stroke-width="1.5"/>
+              <ellipse cx="280" cy="130" rx="30" ry="10" fill="none" stroke="var(--color-status-stable)" stroke-width="1.5"/>
+              <ellipse cx="280" cy="130" rx="30" ry="10" fill="var(--color-status-stable)" opacity="0.08"/>
+              <!-- Torus / ring -->
+              <ellipse cx="370" cy="100" rx="25" ry="30" fill="none" stroke="var(--color-primary)" stroke-width="1.5" opacity="0.5"/>
+              <ellipse cx="370" cy="100" rx="12" ry="15" fill="var(--color-surface-container-high)"/>
+              <ellipse cx="370" cy="100" rx="12" ry="15" fill="none" stroke="var(--color-primary)" stroke-width="1" opacity="0.3"/>
+              <!-- Labels -->
+              <text x="80" y="120" text-anchor="middle" font-size="8" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.6">Cube</text>
+              <text x="180" y="150" text-anchor="middle" font-size="8" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.6">Sphere</text>
+              <text x="280" y="156" text-anchor="middle" font-size="8" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.6">Cylinder</text>
+              <text x="370" y="148" text-anchor="middle" font-size="8" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.6">Torus</text>
+            </svg>
+          </div>
+          <div class="sc-live-card__body">
+            <h3 class="sc-live-card__name">Procedural Geometry</h3>
+            <p class="sc-live-card__desc">Generate cubes, spheres, cylinders, planes, paths, and custom shapes at runtime using the KMP geometry API.</p>
+            <span class="sc-live-card__link">
+              Explore Shapes
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M7.5 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </div>
+        </a>
+
       </div>
     </div>
   </section>
 
-  <!-- ===== 6. MULTI-PLATFORM GRID ===== -->
-  <section class="showcase-section" id="multiplatform">
-    <div class="showcase-section__container">
-      <div class="showcase-section__header reveal">
-        <span class="showcase-section__badge showcase-section__badge--multi">Multi-Platform</span>
-        <h2 class="showcase-section__title">One SDK, Every Screen</h2>
-        <p class="showcase-section__subtitle">The same 3D content rendered natively on every device and platform.</p>
+  <!-- ===== PLATFORM GALLERY ===== -->
+  <section class="sc-section">
+    <div class="sc-container">
+      <div class="sc-section__header">
+        <h2 class="sc-section__title">Platform Gallery</h2>
+        <p class="sc-section__sub">One SDK, every screen. SceneView runs natively on each platform with the best renderer available.</p>
       </div>
 
-      <div class="showcase-platform-grid reveal">
+      <div class="sc-platforms-grid">
+
         <!-- Android Phone -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">Android</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/DamagedHelmet.glb" aria-label="Android 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 60 110" fill="none"><rect x="2" y="2" width="56" height="106" rx="8" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="6" y="14" width="48" height="82" fill="var(--color-surface-container-high)"/><rect x="20" y="5" width="20" height="6" rx="3" fill="var(--color-outline-variant)" opacity="0.4"/><rect x="20" y="100" width="20" height="3" rx="1.5" fill="var(--color-outline-variant)" opacity="0.3"/><polygon points="30,35 42,42 42,56 30,63 18,56 18,42" fill="var(--color-primary)" opacity="0.3"/><polygon points="30,35 42,42 30,49 18,42" fill="var(--color-primary)" opacity="0.5"/></svg>
           </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">Android Phone</div>
-            <div class="showcase-platform-card__tech">Jetpack Compose + Filament</div>
-          </div>
+          <div class="sc-platform-card__name">Android Phone</div>
+          <div class="sc-platform-card__info">Compose + Filament</div>
+          <span class="sc-status sc-status--stable">Stable</span>
         </div>
 
-        <!-- iPhone -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">iOS</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/MaterialsVariantsShoe.glb" aria-label="iOS 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
+        <!-- Android Tablet -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 100 75" fill="none"><rect x="2" y="2" width="96" height="71" rx="8" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="6" y="8" width="88" height="57" fill="var(--color-surface-container-high)"/><circle cx="50" cy="4.5" r="1.5" fill="var(--color-outline-variant)" opacity="0.4"/><polygon points="50,25 62,32 62,46 50,53 38,46 38,32" fill="var(--color-primary)" opacity="0.3"/><polygon points="50,25 62,32 50,39 38,32" fill="var(--color-primary)" opacity="0.5"/></svg>
           </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">iPhone</div>
-            <div class="showcase-platform-card__tech">SwiftUI + RealityKit</div>
-          </div>
-        </div>
-
-        <!-- iPad -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">iPadOS</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/SheenChair.glb" aria-label="iPad 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
-          </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">iPad</div>
-            <div class="showcase-platform-card__tech">SwiftUI + RealityKit</div>
-          </div>
-        </div>
-
-        <!-- Vision Pro -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">visionOS</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/MosquitoInAmber.glb" aria-label="Vision Pro 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
-          </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">Apple Vision Pro</div>
-            <div class="showcase-platform-card__tech">SwiftUI + RealityKit</div>
-          </div>
+          <div class="sc-platform-card__name">Android Tablet</div>
+          <div class="sc-platform-card__info">Compose + Filament</div>
+          <span class="sc-status sc-status--stable">Stable</span>
         </div>
 
         <!-- Android TV -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">TV</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/CarConcept.glb" aria-label="Android TV 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 110 80" fill="none"><rect x="5" y="2" width="100" height="60" rx="4" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="9" y="6" width="92" height="52" fill="var(--color-surface-container-high)"/><rect x="35" y="62" width="40" height="3" rx="1.5" fill="var(--color-outline-variant)"/><rect x="45" y="65" width="20" height="12" rx="2" fill="var(--color-outline-variant)" opacity="0.5"/><polygon points="55,20 70,28 70,44 55,52 40,44 40,28" fill="var(--color-primary)" opacity="0.3"/><polygon points="55,20 70,28 55,36 40,28" fill="var(--color-primary)" opacity="0.5"/></svg>
           </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">Android TV</div>
-            <div class="showcase-platform-card__tech">Compose TV + Filament</div>
-          </div>
+          <div class="sc-platform-card__name">Android TV</div>
+          <div class="sc-platform-card__info">Compose TV + Filament</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
         </div>
 
-        <!-- Web -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">Web</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/GameBoyClassic.glb" aria-label="Web 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
+        <!-- Android XR -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 110 60" fill="none"><rect x="5" y="12" width="100" height="36" rx="18" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><circle cx="38" cy="30" r="12" fill="var(--color-surface-container-high)" stroke="var(--color-outline-variant)" stroke-width="1"/><circle cx="72" cy="30" r="12" fill="var(--color-surface-container-high)" stroke="var(--color-outline-variant)" stroke-width="1"/><circle cx="38" cy="30" r="5" fill="var(--color-primary)" opacity="0.25"/><circle cx="72" cy="30" r="5" fill="var(--color-primary)" opacity="0.25"/><line x1="0" y1="30" x2="5" y2="30" stroke="var(--color-outline-variant)" stroke-width="1.5"/><line x1="105" y1="30" x2="110" y2="30" stroke="var(--color-outline-variant)" stroke-width="1.5"/></svg>
           </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">Web Browser</div>
-            <div class="showcase-platform-card__tech">Kotlin/JS + Filament.js</div>
+          <div class="sc-platform-card__name">Android XR</div>
+          <div class="sc-platform-card__info">Compose XR + SceneCore</div>
+          <span class="sc-status sc-status--soon">Coming Soon</span>
+        </div>
+
+        <!-- iPhone -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 60 110" fill="none"><rect x="2" y="2" width="56" height="106" rx="10" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="6" y="14" width="48" height="82" fill="var(--color-surface-container-high)"/><rect x="20" y="5" width="20" height="6" rx="3" fill="var(--color-outline-variant)" opacity="0.5"/><rect x="20" y="100" width="20" height="3" rx="1.5" fill="var(--color-outline-variant)" opacity="0.3"/><polygon points="30,35 42,42 42,56 30,63 18,56 18,42" fill="var(--color-tertiary)" opacity="0.3"/><polygon points="30,35 42,42 30,49 18,42" fill="var(--color-tertiary)" opacity="0.5"/></svg>
           </div>
+          <div class="sc-platform-card__name">iPhone</div>
+          <div class="sc-platform-card__info">SwiftUI + RealityKit</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
+        </div>
+
+        <!-- iPad -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 100 75" fill="none"><rect x="2" y="2" width="96" height="71" rx="8" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="6" y="8" width="88" height="57" fill="var(--color-surface-container-high)"/><circle cx="50" cy="4.5" r="1.5" fill="var(--color-outline-variant)" opacity="0.4"/><polygon points="50,25 62,32 62,46 50,53 38,46 38,32" fill="var(--color-tertiary)" opacity="0.3"/><polygon points="50,25 62,32 50,39 38,32" fill="var(--color-tertiary)" opacity="0.5"/></svg>
+          </div>
+          <div class="sc-platform-card__name">iPad</div>
+          <div class="sc-platform-card__info">SwiftUI + RealityKit</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
+        </div>
+
+        <!-- Mac -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 110 85" fill="none"><rect x="10" y="2" width="90" height="58" rx="4" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="14" y="6" width="82" height="50" fill="var(--color-surface-container-high)"/><path d="M30 60 L80 60 L90 72 L20 72 Z" fill="var(--color-outline-variant)" opacity="0.4"/><rect x="20" y="72" width="70" height="3" rx="1.5" fill="var(--color-outline-variant)" opacity="0.6"/><polygon points="55,20 67,27 67,41 55,48 43,41 43,27" fill="var(--color-tertiary)" opacity="0.3"/><polygon points="55,20 67,27 55,34 43,27" fill="var(--color-tertiary)" opacity="0.5"/></svg>
+          </div>
+          <div class="sc-platform-card__name">Mac</div>
+          <div class="sc-platform-card__info">SwiftUI + RealityKit</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
+        </div>
+
+        <!-- Apple Vision Pro -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 110 60" fill="none"><path d="M10 20 Q10 10 25 10 L85 10 Q100 10 100 20 L100 40 Q100 50 85 50 L25 50 Q10 50 10 40 Z" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="22" y="18" width="26" height="24" rx="6" fill="var(--color-surface-container-high)" stroke="var(--color-outline-variant)" stroke-width="0.8"/><rect x="62" y="18" width="26" height="24" rx="6" fill="var(--color-surface-container-high)" stroke="var(--color-outline-variant)" stroke-width="0.8"/><circle cx="35" cy="30" r="6" fill="var(--color-tertiary)" opacity="0.2"/><circle cx="75" cy="30" r="6" fill="var(--color-tertiary)" opacity="0.2"/><line x1="3" y1="30" x2="10" y2="30" stroke="var(--color-outline-variant)" stroke-width="1.5" stroke-linecap="round"/><line x1="100" y1="30" x2="107" y2="30" stroke="var(--color-outline-variant)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="sc-platform-card__name">Apple Vision Pro</div>
+          <div class="sc-platform-card__info">SwiftUI + RealityKit</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
+        </div>
+
+        <!-- Web Browser -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 110 75" fill="none"><rect x="5" y="2" width="100" height="71" rx="6" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="5" y="2" width="100" height="16" rx="6" fill="var(--color-surface-container-highest)"/><rect x="5" y="12" width="100" height="6" fill="var(--color-surface-container-highest)"/><circle cx="15" cy="10" r="3" fill="#ff5f57"/><circle cx="25" cy="10" r="3" fill="#febc2e"/><circle cx="35" cy="10" r="3" fill="#28c840"/><rect x="45" y="7" width="50" height="6" rx="3" fill="var(--color-surface-container)" opacity="0.5"/><rect x="9" y="18" width="92" height="51" fill="var(--color-surface-container-high)"/><polygon points="55,30 67,37 67,51 55,58 43,51 43,37" fill="var(--color-primary)" opacity="0.3"/><polygon points="55,30 67,37 55,44 43,37" fill="var(--color-primary)" opacity="0.5"/></svg>
+          </div>
+          <div class="sc-platform-card__name">Web Browser</div>
+          <div class="sc-platform-card__info">Kotlin/JS + Filament.js</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
+        </div>
+
+        <!-- Desktop -->
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 110 85" fill="none"><rect x="10" y="2" width="90" height="58" rx="4" fill="var(--color-surface-container)" stroke="var(--color-outline-variant)" stroke-width="1.5"/><rect x="14" y="6" width="82" height="50" fill="var(--color-surface-container-high)"/><path d="M30 60 L80 60 L90 72 L20 72 Z" fill="var(--color-outline-variant)" opacity="0.4"/><rect x="20" y="72" width="70" height="3" rx="1.5" fill="var(--color-outline-variant)" opacity="0.6"/><rect x="30" y="22" width="50" height="6" rx="3" fill="var(--color-on-surface-variant)" opacity="0.15"/><rect x="30" y="32" width="35" height="6" rx="3" fill="var(--color-on-surface-variant)" opacity="0.1"/><rect x="30" y="42" width="45" height="6" rx="3" fill="var(--color-on-surface-variant)" opacity="0.08"/><text x="55" y="40" text-anchor="middle" font-size="7" fill="var(--color-on-surface-variant)" font-family="Inter, sans-serif" opacity="0.3">Wireframe</text></svg>
+          </div>
+          <div class="sc-platform-card__name">Desktop</div>
+          <div class="sc-platform-card__info">Compose Desktop</div>
+          <span class="sc-status sc-status--placeholder">Placeholder</span>
         </div>
 
         <!-- Flutter -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">Flutter</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/ChronographWatch.glb" aria-label="Flutter 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 80 80" fill="none">
+              <!-- Flutter bird logo stylized -->
+              <polygon points="20,40 40,20 50,20 30,40 50,60 40,60" fill="var(--color-primary)" opacity="0.4"/>
+              <polygon points="30,40 50,20 60,20 40,40 60,60 50,60" fill="var(--color-primary)" opacity="0.6"/>
+              <polygon points="40,40 60,20 60,30 45,45" fill="var(--color-primary)" opacity="0.3"/>
+              <polygon points="40,40 60,60 60,50 45,45" fill="var(--color-primary)" opacity="0.3"/>
+            </svg>
           </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">Flutter</div>
-            <div class="showcase-platform-card__tech">PlatformView Bridge</div>
-          </div>
+          <div class="sc-platform-card__name">Flutter</div>
+          <div class="sc-platform-card__info">PlatformView bridge</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
         </div>
 
         <!-- React Native -->
-        <div class="showcase-platform-card">
-          <div class="showcase-platform-card__viewer">
-            <div class="showcase-platform-card__badge">React Native</div>
-            <canvas class="sv-showcase-canvas" data-model="models/platforms/AntiqueCamera.glb" aria-label="React Native 3D viewer" style="width:100%;height:100%;display:block;cursor:grab"></canvas>
+        <div class="sc-platform-card">
+          <div class="sc-platform-card__device">
+            <svg class="sc-device-svg" viewBox="0 0 80 80" fill="none">
+              <!-- React atom logo stylized -->
+              <circle cx="40" cy="40" r="5" fill="var(--color-primary)" opacity="0.6"/>
+              <ellipse cx="40" cy="40" rx="28" ry="10" fill="none" stroke="var(--color-primary)" stroke-width="1.5" opacity="0.4"/>
+              <ellipse cx="40" cy="40" rx="28" ry="10" fill="none" stroke="var(--color-primary)" stroke-width="1.5" opacity="0.4" transform="rotate(60, 40, 40)"/>
+              <ellipse cx="40" cy="40" rx="28" ry="10" fill="none" stroke="var(--color-primary)" stroke-width="1.5" opacity="0.4" transform="rotate(120, 40, 40)"/>
+            </svg>
           </div>
-          <div class="showcase-platform-card__label">
-            <div class="showcase-platform-card__name">React Native</div>
-            <div class="showcase-platform-card__tech">Fabric Bridge</div>
-          </div>
+          <div class="sc-platform-card__name">React Native</div>
+          <div class="sc-platform-card__info">Fabric bridge</div>
+          <span class="sc-status sc-status--alpha">Alpha</span>
         </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ===== CTA ===== -->
-  <section class="showcase-cta">
-    <div class="showcase-cta__container">
-      <h2 class="showcase-cta__title reveal">Ready to build?</h2>
-      <p class="showcase-cta__sub reveal">Add 3D and AR to your app in minutes. Open source, free forever.</p>
-      <div class="showcase-cta__actions reveal">
-        <a href="https://github.com/sceneview/sceneview#install" class="showcase-cta__btn showcase-cta__btn--primary" target="_blank" rel="noopener">
-          <span class="material-symbols-outlined">rocket_launch</span> Get Started
-        </a>
-        <a href="https://github.com/sceneview/sceneview" class="showcase-cta__btn showcase-cta__btn--outline" target="_blank" rel="noopener">
-          <span class="material-symbols-outlined">code</span> View on GitHub
-        </a>
-        <a href="/playground.html" class="showcase-cta__btn showcase-cta__btn--outline">
-          <span class="material-symbols-outlined">sports_esports</span> Open Playground
-        </a>
       </div>
     </div>
   </section>
@@ -1560,7 +985,7 @@
         <div class="footer__col">
           <h4 class="footer__col-title">Documentation</h4>
           <ul class="footer__col-list">
-            <li><a href="https://sceneview.github.io/docs/" target="_blank" rel="noopener">Examples</a></li>
+            <li><a href="/docs.html" target="_blank" rel="noopener">Examples</a></li>
             <li><a href="/showcase.html">Showcase</a></li>
           </ul>
         </div>
@@ -1585,61 +1010,5 @@
   </footer>
 
   <script src="script.js"></script>
-
-  <!-- SceneView Web — initialize all showcase 3D viewers with lazy loading -->
-  <script>
-  (function() {
-    // Initialize existing id-based canvases
-    var models = [
-      { id: 'showcase-shoe',   model: 'models/platforms/MaterialsVariantsShoe.glb', bg: [0.97, 0.97, 0.98, 1] },
-      { id: 'showcase-chair',  model: 'models/platforms/SheenChair.glb',            bg: [0.91, 0.92, 0.93, 1] },
-      { id: 'showcase-car',    model: 'models/platforms/ToyCar.glb',                bg: [0.10, 0.10, 0.12, 1] },
-      { id: 'showcase-helmet', model: 'models/platforms/DamagedHelmet.glb',         bg: [0.06, 0.09, 0.17, 1] },
-      { id: 'showcase-lamp',   model: 'models/platforms/IridescenceLamp.glb',       bg: [0.10, 0.10, 0.18, 1] }
-    ];
-
-    if (typeof SceneView === 'undefined') return;
-
-    models.forEach(function(cfg) {
-      var canvas = document.getElementById(cfg.id);
-      if (!canvas) return;
-      SceneView.modelViewer(cfg.id, cfg.model, {
-        backgroundColor: cfg.bg
-      }).catch(function(e) {
-        console.warn('SceneView showcase [' + cfg.id + ']:', e.message || e);
-      });
-    });
-
-    // Lazy-load platform grid canvases
-    function getThemeBg() {
-      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      return isDark ? [0.09, 0.09, 0.13, 1.0] : [0.94, 0.95, 0.96, 1.0];
-    }
-    var lazyCanvases = document.querySelectorAll('.sv-showcase-canvas');
-    if (!lazyCanvases.length) return;
-    var loaded = new Set();
-    var viewers = [];
-    var observer = new IntersectionObserver(function(entries) {
-      entries.forEach(function(entry) {
-        if (entry.isIntersecting && !loaded.has(entry.target)) {
-          loaded.add(entry.target);
-          var c = entry.target;
-          var model = c.getAttribute('data-model');
-          if (!model) return;
-          SceneView.modelViewer(c, model, {
-            backgroundColor: getThemeBg(),
-            lightIntensity: 120000,
-            fov: 38
-          }).then(function(v) { viewers.push(v); }).catch(function(e) { console.warn('Lazy load:', e); });
-        }
-      });
-    }, { rootMargin: '300px' });
-    lazyCanvases.forEach(function(c) { observer.observe(c); });
-    new MutationObserver(function() {
-      var bg = getThemeBg();
-      viewers.forEach(function(v) { v.setBackgroundColor(bg[0], bg[1], bg[2], bg[3]); });
-    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  })();
-  </script>
 </body>
 </html>
