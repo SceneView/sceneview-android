@@ -11,7 +11,7 @@ import io.github.sceneview.math.Scale
  * Create from a live node with [Node.toState] and apply back with [Node.applyState].
  */
 /**
- * @property position   World-space position of the node.
+ * @property position   Local-space position of the node (relative to parent).
  * @property quaternion Orientation as a unit quaternion.
  * @property scale      Uniform or non-uniform scale.
  * @property isVisible  Whether the node (and its children) is rendered.
