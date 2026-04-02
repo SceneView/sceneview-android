@@ -183,22 +183,4 @@ public enum CustomMaterial {
     }
 }
 
-// MARK: - GeometryMaterial extension for custom materials
-
-extension GeometryMaterial {
-    /// Creates a geometry material from a custom RealityKit material.
-    ///
-    /// Use with ``CustomMaterial`` factory methods:
-    /// ```swift
-    /// let glassMat = CustomMaterial.glass(tint: .cyan)
-    /// let sphere = GeometryNode.sphere(
-    ///     radius: 0.3,
-    ///     material: .custom(glassMat)
-    /// )
-    /// ```
-    public static func custom(_ material: any RealityKit.Material) -> GeometryMaterial {
-        .simple(color: .white) // Fallback — actual material is applied via entity
-    }
-}
-
 #endif // os(iOS) || os(macOS) || os(visionOS)

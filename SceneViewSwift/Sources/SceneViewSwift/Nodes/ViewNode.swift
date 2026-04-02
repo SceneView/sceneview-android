@@ -121,4 +121,4 @@ public struct ViewNode<Content: View>: @unchecked Sendable {
     }
 }
 
-#endif // os(iOS) || os(visionOS)
+#endif // os(iOS) || os(visionOS) || os(macOS)
