@@ -65,10 +65,10 @@ export const COMMON_ISSUES = [
     },
     {
         id: "scene-missing-engine",
-        title: "Scene composable crashes — missing engine parameter",
-        symptom: "Compilation error or runtime crash because `Scene(...)` doesn't have an engine.",
-        cause: "In SceneView 3.0, the engine is explicit. `Scene()` requires `engine = rememberEngine()`.",
-        solution: "Add `val engine = rememberEngine()` and pass it: `Scene(engine = engine, modifier = Modifier.fillMaxSize())`.",
+        title: "SceneView composable crashes — missing engine parameter",
+        symptom: "Compilation error or runtime crash because `SceneView(...)` doesn't have an engine.",
+        cause: "In SceneView 3.0, the engine is explicit. `SceneView()` requires `engine = rememberEngine()`.",
+        solution: "Add `val engine = rememberEngine()` and pass it: `SceneView(engine = engine, modifier = Modifier.fillMaxSize())`.",
         category: "api-misuse",
     },
     {
@@ -76,7 +76,7 @@ export const COMMON_ISSUES = [
         title: "Out of memory with multiple Engine instances",
         symptom: "App uses excessive memory, eventually crashes with OOM. GPU memory grows continuously.",
         cause: "Each `Engine.create()` or `rememberEngine()` allocates GPU resources. Multiple engines in different composables waste GPU memory.",
-        solution: "Use a single `rememberEngine()` at the top level and pass it down to all Scene composables. Never create more than one Engine per app.",
+        solution: "Use a single `rememberEngine()` at the top level and pass it down to all SceneView composables. Never create more than one Engine per app.",
         category: "performance",
     },
     {

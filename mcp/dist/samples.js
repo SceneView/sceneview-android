@@ -12,7 +12,7 @@ fun ModelViewerScreen() {
     val modelLoader = rememberModelLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -47,7 +47,7 @@ fun ARModelViewerScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -92,7 +92,7 @@ fun AugmentedImageScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/rabbit.glb")
     var augmentedImages by remember { mutableStateOf<Map<String, AugmentedImage>>(emptyMap()) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -134,7 +134,7 @@ fun CloudAnchorScreen() {
     var session by remember { mutableStateOf<Session?>(null) }
     var cloudAnchorNode by remember { mutableStateOf<CloudAnchorNode?>(null) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -164,7 +164,7 @@ fun PointCloudScreen() {
     val modelLoader = rememberModelLoader(engine)
     var pointCount by remember { mutableIntStateOf(0) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -205,7 +205,7 @@ fun ARFaceMeshScreen() {
         )
     }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -242,7 +242,7 @@ fun GltfCameraScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/scene_with_cameras.glb")
     val cameraNode = rememberCameraNode(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -272,7 +272,7 @@ fun CameraManipulatorScreen() {
         position = Position(z = 4f)
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -325,7 +325,7 @@ fun CameraAnimationScreen() {
     }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             modelLoader = modelLoader,
@@ -364,7 +364,7 @@ fun AutopilotScreen() {
     var speed by remember { mutableFloatStateOf(60f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -464,7 +464,7 @@ fun PhysicsDemoScreen() {
     }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             cameraManipulator = rememberCameraManipulator(
@@ -537,7 +537,7 @@ fun DynamicSkyScreen() {
     }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             modelLoader = modelLoader,
@@ -627,7 +627,7 @@ fun LinePathScreen() {
     }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             cameraManipulator = rememberCameraManipulator(
@@ -692,7 +692,7 @@ fun TextLabelsScreen() {
         Planet("Venus", Color(1f, 0.8f, 0.3f), 1.5f)
     )
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         cameraManipulator = rememberCameraManipulator(
@@ -747,7 +747,7 @@ fun ReflectionProbeScreen() {
         environmentLoader.createHDREnvironment("environments/studio.hdr") ?: createEnvironment(environmentLoader)
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -780,7 +780,7 @@ fun PostProcessingScreen() {
     val view = rememberView(engine)
     var bloomStrength by remember { mutableFloatStateOf(0.1f) }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -818,7 +818,7 @@ fun VideoTextureScreen() {
     DisposableEffect(Unit) { onDispose { player.release() } }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine
         ) {
@@ -858,7 +858,7 @@ fun MultiModelScreen() {
     val materialLoader = rememberMaterialLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -926,7 +926,7 @@ fun GestureInteractionScreen() {
     var infoText by remember { mutableStateOf("Tap a model to select it") }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scene(
+        SceneView(
             modifier = Modifier.fillMaxSize(),
             engine = engine,
             modelLoader = modelLoader,
@@ -988,7 +988,7 @@ fun EnvironmentLightingScreen() {
     val materialLoader = rememberMaterialLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -1056,7 +1056,7 @@ fun ProceduralGeometryScreen() {
     val materialLoader = rememberMaterialLoader(engine)
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         cameraManipulator = rememberCameraManipulator(
@@ -1137,7 +1137,7 @@ fun ComposeUI3DScreen() {
     val windowManager = rememberViewNodeManager()
     var clickCount by remember { mutableIntStateOf(0) }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -1198,7 +1198,7 @@ fun NodeHierarchyScreen() {
         }
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         cameraManipulator = rememberCameraManipulator(
@@ -1684,7 +1684,7 @@ fun ImageNodeScreen() {
     val engine = rememberEngine()
     val environmentLoader = rememberEnvironmentLoader(engine)
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         cameraManipulator = rememberCameraManipulator(
@@ -1760,7 +1760,7 @@ fun BillboardSpriteScreen() {
         }
     }
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,
@@ -1811,7 +1811,7 @@ fun AnimationStateScreen() {
     var currentAnim by remember { mutableStateOf("Idle") }
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             modelLoader = modelLoader,
@@ -1893,7 +1893,7 @@ fun SpringAnimationScreen() {
     )
 
     Column {
-        Scene(
+        SceneView(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             engine = engine,
             cameraManipulator = rememberCameraManipulator(
@@ -1969,7 +1969,7 @@ fun ARSurfaceCursorScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
     var placedAnchors by remember { mutableStateOf(listOf<Anchor>()) }
 
-    ARScene(
+    ARSceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader,

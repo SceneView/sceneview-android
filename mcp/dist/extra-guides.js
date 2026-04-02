@@ -31,7 +31,7 @@ fun CustomMaterialScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -62,7 +62,7 @@ fun TexturedModelScreen() {
     val materialLoader = rememberMaterialLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/object.glb")
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -123,7 +123,7 @@ SceneView Android loads a default neutral IBL automatically. For custom environm
 val engine = rememberEngine()
 val environmentLoader = rememberEnvironmentLoader(engine)
 
-Scene(
+SceneView(
     engine = engine,
     environment = environmentLoader.createHDREnvironment("environments/studio_2k.hdr")!!
 ) {
@@ -156,7 +156,7 @@ fun TappableModelScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/button.glb")
     var tapped by remember { mutableStateOf(false) }
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -188,7 +188,7 @@ fun ARTapToPlaceScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
 
-    ARScene(
+    ARSceneView(
         engine = engine,
         sessionConfiguration = { session, config ->
             config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
