@@ -4,72 +4,29 @@ import RealityKit
 import ARKit
 import SceneViewSwift
 
-/// AR tab with plane detection, tap-to-place, multiple shapes, and gesture controls.
+/// AR tab — place 3D models in your real-world space.
+///
+/// Users can pick a model from the gallery, tap a surface to place it,
+/// then resize and rotate using gestures. Includes screenshot sharing.
 struct ARTab: View {
-    @State private var placedObjects: [PlacedObject] = []
-    @State private var selectedShape: ARShape = .cube
-    @State private var showShapePicker = false
+    @State private var placedCount = 0
+    @State private var selectedModelIndex = 0
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var showModelPicker = false
 
-    struct PlacedObject: Identifiable {
-        let id = UUID()
-        let shape: ARShape
-        let position: SIMD3<Float>
-    }
-
-    enum ARShape: String, CaseIterable {
-        case cube = "Cube"
-        case sphere = "Sphere"
-        case cylinder = "Cylinder"
-        case cone = "Cone"
-
-        var icon: String {
-            switch self {
-            case .cube: return "cube.fill"
-            case .sphere: return "globe"
-            case .cylinder: return "cylinder.fill"
-            case .cone: return "cone.fill"
-            }
-        }
-
-        var color: UIColor {
-            switch self {
-            case .cube: return .systemBlue
-            case .sphere: return .systemRed
-            case .cylinder: return .systemGreen
-            case .cone: return .systemOrange
-            }
-        }
-
-        func makeNode() -> GeometryNode {
-            switch self {
-            case .cube:
-                return GeometryNode.cube(
-                    size: 0.08,
-                    material: .pbr(color: color, metallic: 0.5, roughness: 0.3),
-                    cornerRadius: 0.005
-                ).withGroundingShadow()
-            case .sphere:
-                return GeometryNode.sphere(
-                    radius: 0.05,
-                    material: .pbr(color: color, metallic: 0.7, roughness: 0.2)
-                ).withGroundingShadow()
-            case .cylinder:
-                return GeometryNode.cylinder(
-                    radius: 0.04,
-                    height: 0.1,
-                    color: color
-                ).withGroundingShadow()
-            case .cone:
-                return GeometryNode.cone(
-                    height: 0.1,
-                    radius: 0.05,
-                    color: color
-                ).withGroundingShadow()
-            }
-        }
-    }
+    private let arModels: [(name: String, icon: String, asset: String, scale: Float)] = [
+        ("Game Boy", "gamecontroller.fill", "game_boy_classic", 0.15),
+        ("Red Car", "car.fill", "red_car", 0.2),
+        ("Dragon", "flame.fill", "animated_dragon", 0.12),
+        ("Butterfly", "leaf.fill", "animated_butterfly", 0.15),
+        ("Piano", "pianokeys", "retro_piano", 0.12),
+        ("Nike Jordan", "shoe.fill", "nike_air_jordan", 0.15),
+        ("Phoenix", "bird.fill", "phoenix_bird", 0.15),
+        ("Fantasy Book", "book.fill", "fantasy_book", 0.12),
+        ("PS5 Controller", "gamecontroller.fill", "ps5_dualsense", 0.15),
+        ("Tree Scene", "tree.fill", "tree_scene", 0.1),
+    ]
 
     var body: some View {
         NavigationStack {
@@ -84,21 +41,19 @@ struct ARTab: View {
                 VStack {
                     statusPill
                     Spacer()
-                    bottomControls
+                    modelSelector
                 }
             }
-            .navigationTitle("AR")
+            .navigationTitle("AR View")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
-                        placedObjects.removeAll()
-                        HapticManager.lightTap()
+                        shareARScreenshot()
                     } label: {
-                        Image(systemName: "trash")
+                        Image(systemName: "square.and.arrow.up")
                     }
-                    .disabled(placedObjects.isEmpty)
-                    .accessibilityLabel("Clear all placed objects")
+                    .accessibilityLabel("Share AR screenshot")
                 }
             }
             .alert("AR Error", isPresented: $showError) {
@@ -118,15 +73,25 @@ struct ARTab: View {
             showPlaneOverlay: true,
             showCoachingOverlay: true,
             onTapOnPlane: { position, arView in
-                let shape = selectedShape
-                let node = shape.makeNode()
+                let selected = arModels[selectedModelIndex]
 
-                let anchor = AnchorNode.world(position: position)
-                anchor.add(node.entity)
-                arView.scene.addAnchor(anchor.entity)
+                Task {
+                    do {
+                        let modelNode = try await ModelNode.load(selected.asset)
+                        _ = modelNode.scaleToUnits(selected.scale)
 
-                placedObjects.append(PlacedObject(shape: shape, position: position))
-                HapticManager.mediumTap()
+                        let anchor = AnchorNode.world(position: position)
+                        anchor.add(modelNode.entity)
+                        arView.scene.addAnchor(anchor.entity)
+
+                        placedCount += 1
+                        HapticManager.mediumTap()
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        showError = true
+                        HapticManager.error()
+                    }
+                }
             }
         )
     }
@@ -142,9 +107,10 @@ struct ARTab: View {
                 .accessibilityHidden(true)
             Text("AR requires a physical device")
                 .font(.headline)
-            Text("Run on iPhone or iPad to test AR features.")
+            Text("Run on iPhone or iPad to place 3D models in your space.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
@@ -154,10 +120,10 @@ struct ARTab: View {
 
     private var statusPill: some View {
         Group {
-            if placedObjects.isEmpty {
-                Text("Point at a surface and tap to place \(selectedShape.rawValue.lowercased())")
+            if placedCount == 0 {
+                Text("Point at a surface, then tap to place \(arModels[selectedModelIndex].name)")
             } else {
-                Text("\(placedObjects.count) object\(placedObjects.count == 1 ? "" : "s") placed")
+                Text("\(placedCount) object\(placedCount == 1 ? "" : "s") placed \u{2014} tap to add more")
             }
         }
         .font(.caption)
@@ -167,46 +133,78 @@ struct ARTab: View {
         .background(.ultraThinMaterial)
         .clipShape(Capsule())
         .padding(.top, 8)
-        .accessibilityLabel(
-            placedObjects.isEmpty
-                ? "Point at a surface and tap to place an object"
-                : "\(placedObjects.count) \(placedObjects.count == 1 ? "object" : "objects") placed in the scene"
-        )
     }
 
-    // MARK: - Bottom controls
+    // MARK: - Model selector
 
-    private var bottomControls: some View {
-        HStack(spacing: 12) {
-            ForEach(ARShape.allCases, id: \.self) { shape in
-                Button {
-                    selectedShape = shape
-                    HapticManager.selectionChanged()
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: shape.icon)
-                            .font(.title3)
-                        Text(shape.rawValue)
-                            .font(.caption2)
+    private var modelSelector: some View {
+        VStack(spacing: 8) {
+            Text("Choose a model to place in your space")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(Array(arModels.enumerated()), id: \.offset) { index, model in
+                        Button {
+                            selectedModelIndex = index
+                            HapticManager.selectionChanged()
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: model.icon)
+                                    .font(.title3)
+                                Text(model.name)
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                            }
+                            .frame(minWidth: 72)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 6)
+                            .background(
+                                index == selectedModelIndex
+                                    ? AnyShapeStyle(.blue)
+                                    : AnyShapeStyle(.white.opacity(0.15))
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .foregroundStyle(.white)
+                        }
+                        .accessibilityLabel("Place \(model.name)")
+                        .accessibilityAddTraits(index == selectedModelIndex ? .isSelected : [])
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(
-                        selectedShape == shape
-                            ? AnyShapeStyle(.blue)
-                            : AnyShapeStyle(.white.opacity(0.15))
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .foregroundStyle(.white)
                 }
-                .accessibilityLabel("Place \(shape.rawValue)")
-                .accessibilityAddTraits(selectedShape == shape ? .isSelected : [])
+                .padding(.horizontal, 4)
             }
         }
         .padding()
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .padding()
+    }
+
+    // MARK: - Share
+
+    @MainActor
+    private func shareARScreenshot() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else { return }
+
+        let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
+        let image = renderer.image { ctx in
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+
+        let activityVC = UIActivityViewController(
+            activityItems: [image, "Check out what I placed in my space with 3D & AR Explorer!"],
+            applicationActivities: nil
+        )
+
+        if let presenter = window.rootViewController {
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = presenter.view
+                popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: 40, width: 0, height: 0)
+            }
+            presenter.present(activityVC, animated: true)
+        }
     }
 }
 #endif

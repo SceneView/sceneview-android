@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Represents a single demo entry in the Samples tab.
+/// Represents a single scene entry in the Scenes tab.
 struct DemoItem: Identifiable {
     let id = UUID()
     let title: String
@@ -24,7 +24,7 @@ struct DemoItem: Identifiable {
     }
 }
 
-/// Demo categories for grouping in the Samples list.
+/// Scene categories for grouping.
 enum DemoCategory: String, CaseIterable, Comparable {
     case geometry = "Geometry"
     case content = "Content"

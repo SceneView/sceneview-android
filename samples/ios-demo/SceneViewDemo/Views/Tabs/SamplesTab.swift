@@ -1,39 +1,39 @@
 import SwiftUI
 import SceneViewSwift
 
-/// The samples catalog tab -- lists all demos grouped by category.
+/// Scenes tab -- curated preset scenes grouped by category.
 struct SamplesTab: View {
-    private let demos: [DemoItem] = Self.allDemos()
+    private let scenes: [DemoItem] = Self.allScenes()
 
     var body: some View {
         NavigationStack {
             List {
-                let grouped = Dictionary(grouping: demos) { $0.category }
+                let grouped = Dictionary(grouping: scenes) { $0.category }
                 let sortedCategories = grouped.keys.sorted()
                 ForEach(sortedCategories, id: \.self) { category in
                     Section(category.rawValue) {
-                        ForEach(grouped[category]!) { demo in
+                        ForEach(grouped[category]!) { scene in
                             NavigationLink {
-                                demo.destination
-                                    .navigationTitle(demo.title)
+                                scene.destination
+                                    .navigationTitle(scene.title)
                                     #if os(iOS)
                                     .navigationBarTitleDisplayMode(.inline)
                                     #endif
                             } label: {
-                                DemoRow(demo: demo)
+                                SceneRow(scene: scene)
                             }
-                            .accessibilityLabel("\(demo.title): \(demo.subtitle)")
+                            .accessibilityLabel("\(scene.title): \(scene.subtitle)")
                         }
                     }
                 }
             }
-            .navigationTitle("Samples")
+            .navigationTitle("Scenes")
         }
     }
 
-    // MARK: - Demo catalog
+    // MARK: - Scene catalog
 
-    private static func allDemos() -> [DemoItem] {
+    private static func allScenes() -> [DemoItem] {
         [
             // Geometry
             DemoItem(title: "All Shapes", icon: "cube.fill", subtitle: "Cube, sphere, cylinder, cone, plane", category: .geometry) {
@@ -80,7 +80,7 @@ struct SamplesTab: View {
             DemoItem(title: "Orbit Camera", icon: "camera.fill", subtitle: "Interactive orbit with grid reference", category: .advanced) {
                 OrbitCameraDemo()
             },
-            DemoItem(title: "Auto Rotate", icon: "rotate.3d.fill", subtitle: "Continuous rotation showcase", category: .advanced) {
+            DemoItem(title: "Auto Rotate", icon: "rotate.3d.fill", subtitle: "Continuous rotation animation", category: .advanced) {
                 AutoRotateDemo()
             },
             DemoItem(title: "Scene Gallery", icon: "square.grid.3x3.fill", subtitle: "Multiple shapes in one scene", category: .advanced) {
@@ -90,22 +90,22 @@ struct SamplesTab: View {
     }
 }
 
-// MARK: - Demo row view
+// MARK: - Scene row view
 
-private struct DemoRow: View {
-    let demo: DemoItem
+private struct SceneRow: View {
+    let scene: DemoItem
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: demo.icon)
+            Image(systemName: scene.icon)
                 .font(.title2)
                 .foregroundStyle(.blue)
                 .frame(width: 40, height: 40)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(demo.title)
+                Text(scene.title)
                     .font(.headline)
-                Text(demo.subtitle)
+                Text(scene.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
