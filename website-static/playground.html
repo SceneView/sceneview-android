@@ -1261,25 +1261,19 @@
               <select class="pg__model-select" id="modelSelect">
                 <optgroup label="Featured">
                   <option value="DamagedHelmet">Damaged Helmet</option>
-                  <option value="Duck">Rubber Duck</option>
-                  <option value="Avocado">Avocado</option>
-                  <option value="Fox">Fox</option>
-                  <option value="Shiba">Shiba</option>
+                  <option value="MosquitoInAmber">Mosquito in Amber</option>
+                  <option value="AntiqueCamera">Antique Camera</option>
                 </optgroup>
                 <optgroup label="Luxury & Fashion">
-                  <option value="SunglassesKhronos">Sunglasses</option>
                   <option value="ChronographWatch">Watch</option>
                   <option value="Sneaker">Sneaker</option>
                   <option value="WaterBottle">Water Bottle</option>
                 </optgroup>
                 <optgroup label="Interior">
                   <option value="SheenChair">Sheen Chair</option>
-                  <option value="DamaskChair">Damask Chair</option>
                   <option value="VelvetSofa">Velvet Sofa</option>
-                  <option value="BarnLamp">Barn Lamp</option>
                   <option value="IridescenceLamp">Iridescence Lamp</option>
                   <option value="Lantern">Lantern</option>
-                  <option value="MonsteraPlant">Monstera Plant</option>
                 </optgroup>
                 <optgroup label="Automotive">
                   <option value="CarConcept">Car Concept</option>
@@ -1289,10 +1283,8 @@
                   <option value="AnimatedAstronaut">Astronaut</option>
                   <option value="AnimatedTrex">T-Rex</option>
                 </optgroup>
-                <optgroup label="Showcase">
-                  <option value="AntiqueCamera">Antique Camera</option>
+                <optgroup label="Retro">
                   <option value="GameBoyClassic">Game Boy</option>
-                  <option value="MosquitoInAmber">Mosquito in Amber</option>
                 </optgroup>
               </select>
             </div>
@@ -1311,6 +1303,26 @@
                   <span class="material-symbols-outlined">contrast</span>
                   <span class="pg__ctrl-tooltip">Background</span>
                 </button>
+                <div class="pg__ctrl-dropdown-wrap" id="envWrap">
+                  <button class="pg__ctrl-btn" id="ctrlEnv" title="Environment lighting" data-label="Environment: Studio">
+                    <span class="material-symbols-outlined">wb_iridescent</span>
+                    <span class="pg__ctrl-tooltip">Studio</span>
+                  </button>
+                  <div class="pg__ctrl-dropdown" id="envDropdown">
+                    <button class="pg__ctrl-dropdown-item pg__ctrl-dropdown-item--active" data-env="neutral">
+                      <span class="material-symbols-outlined" style="font-size:16px">wb_iridescent</span> Studio
+                    </button>
+                    <button class="pg__ctrl-dropdown-item" data-env="warm">
+                      <span class="material-symbols-outlined" style="font-size:16px">wb_sunny</span> Warm
+                    </button>
+                    <button class="pg__ctrl-dropdown-item" data-env="cool">
+                      <span class="material-symbols-outlined" style="font-size:16px">ac_unit</span> Cool
+                    </button>
+                    <button class="pg__ctrl-dropdown-item" data-env="dramatic">
+                      <span class="material-symbols-outlined" style="font-size:16px">thunderstorm</span> Dramatic
+                    </button>
+                  </div>
+                </div>
                 <div class="pg__ctrl-sep"></div>
                 <div class="pg__ctrl-dropdown-wrap" id="cameraManipWrap">
                   <button class="pg__ctrl-btn" id="ctrlCamera" title="Camera manipulator" data-label="Camera: Orbit">
@@ -1364,6 +1376,7 @@
         icon: 'view_in_ar',
         level: 'beginner',
         tags: ['3D', 'Compose', 'Beginner'],
+        defaultModel: 'DamagedHelmet',
         description: 'A basic 3D model viewer with orbit controls and environment lighting.',
         android: {
           file: 'ModelViewerScreen.kt', lang: 'Kotlin',
@@ -1400,6 +1413,7 @@
         icon: 'landscape',
         level: 'beginner',
         tags: ['3D', 'Lighting', 'Beginner'],
+        defaultModel: 'SheenChair',
         description: 'Configure HDR environment lighting with indirect light and skybox.',
         android: {
           file: 'EnvironmentScreen.kt', lang: 'Kotlin',
@@ -1420,6 +1434,7 @@
         icon: 'videocam',
         level: 'beginner',
         tags: ['3D', 'Camera', 'Beginner'],
+        defaultModel: 'AntiqueCamera',
         description: 'Orbit camera with customizable distance, zoom limits, and smooth damping.',
         android: {
           file: 'CameraScreen.kt', lang: 'Kotlin',
@@ -1440,6 +1455,7 @@
         icon: 'light_mode',
         level: 'intermediate',
         tags: ['3D', 'Lighting', 'Intermediate'],
+        defaultModel: 'DamagedHelmet',
         description: 'Add directional, point, and spot lights with shadows and color control.',
         android: {
           file: 'LightingScreen.kt', lang: 'Kotlin',
@@ -1460,6 +1476,7 @@
         icon: 'pin_drop',
         level: 'intermediate',
         tags: ['AR', 'Compose', 'Intermediate'],
+        defaultModel: 'SheenChair',
         description: 'Tap-to-place 3D models on detected surfaces using ARCore plane detection.',
         android: {
           file: 'ARPlacementScreen.kt', lang: 'Kotlin',
@@ -1480,6 +1497,7 @@
         icon: 'face',
         level: 'advanced',
         tags: ['AR', 'Face', 'Advanced'],
+        defaultModel: 'DamagedHelmet',
         description: 'Track face landmarks and apply augmented overlays with ARCore Augmented Faces.',
         android: {
           file: 'FaceTrackingScreen.kt', lang: 'Kotlin',
@@ -1500,6 +1518,7 @@
         icon: 'anchor',
         level: 'advanced',
         tags: ['AR', 'Spatial', 'Advanced'],
+        defaultModel: 'Lantern',
         description: 'Persist AR content across sessions with Cloud Anchors or local persistence.',
         android: {
           file: 'SpatialAnchorsScreen.kt', lang: 'Kotlin',
@@ -1520,6 +1539,7 @@
         icon: 'category',
         level: 'beginner',
         tags: ['3D', 'Geometry', 'Beginner'],
+        defaultModel: 'GameBoyClassic',
         description: 'Create cubes, spheres, cylinders, and planes as composable geometry nodes.',
         android: {
           file: 'PrimitivesScreen.kt', lang: 'Kotlin',
@@ -1540,6 +1560,7 @@
         icon: 'animation',
         level: 'intermediate',
         tags: ['3D', 'Animation', 'Intermediate'],
+        defaultModel: 'AnimatedAstronaut',
         description: 'Play, pause, and switch between glTF model animations with playback controls.',
         android: {
           file: 'AnimationScreen.kt', lang: 'Kotlin',
@@ -1560,6 +1581,7 @@
         icon: 'vibration',
         level: 'intermediate',
         tags: ['3D', 'Physics', 'Intermediate'],
+        defaultModel: 'SheenChair',
         description: 'Smooth, natural-feeling animations using spring dynamics for position, rotation, and scale.',
         android: {
           file: 'SpringPhysicsScreen.kt', lang: 'Kotlin',
@@ -1580,6 +1602,7 @@
         icon: 'texture',
         level: 'intermediate',
         tags: ['3D', 'Materials', 'Intermediate'],
+        defaultModel: 'DamagedHelmet',
         description: 'Physically-based rendering materials with metallic, roughness, and emission control.',
         android: {
           file: 'PBRScreen.kt', lang: 'Kotlin',
@@ -1600,6 +1623,7 @@
         icon: 'layers',
         level: 'advanced',
         tags: ['3D', 'Advanced', 'Compose'],
+        defaultModel: 'IridescenceLamp',
         description: 'Compose multiple models, lights, and cameras into a single rich 3D scene.',
         android: {
           file: 'MultiModelScreen.kt', lang: 'Kotlin',
@@ -1620,6 +1644,7 @@
         icon: 'auto_awesome',
         level: 'advanced',
         tags: ['3D', 'Effects', 'Advanced'],
+        defaultModel: 'DamagedHelmet',
         description: 'Enable bloom, ambient occlusion, and anti-aliasing for cinematic-quality rendering.',
         android: {
           file: 'PostProcessingScreen.kt', lang: 'Kotlin',
@@ -1657,6 +1682,16 @@
     var bloomEnabled = false;
     var darkBg = true;
     var sceneViewInstance = null;
+    var currentCamera = 'orbit';
+    var currentEnv = 'neutral';
+
+    // Environment presets: 'neutral' uses KTX IBL, others use synthetic SH lighting
+    var ENV_PRESETS = {
+      'neutral':  { label: 'Studio',   icon: 'wb_iridescent' },
+      'warm':     { label: 'Warm',     icon: 'wb_sunny' },
+      'cool':     { label: 'Cool',     icon: 'ac_unit' },
+      'dramatic': { label: 'Dramatic', icon: 'thunderstorm' }
+    };
 
     // ====================================================================
     //  DOM REFS
@@ -1945,6 +1980,12 @@
       // Sync mobile select
       mobileExampleSelect.value = key;
 
+      // Update 3D preview model to match the example
+      if (ex.defaultModel) {
+        modelSelect.value = ex.defaultModel;
+        initSceneView(getModelUrl(ex.defaultModel));
+      }
+
       // Update AI tool links
       updateAILinks();
     }
@@ -1988,9 +2029,11 @@
         console.warn('SceneView not loaded');
         return;
       }
-      // Reuse existing instance — just swap the model
+      // Reuse existing instance — just swap the model and re-apply settings
       if (sceneViewInstance) {
-        sceneViewInstance.loadModel(modelUrl).catch(function(e) {
+        sceneViewInstance.loadModel(modelUrl).then(function() {
+          updatePreviewSettings();
+        }).catch(function(e) {
           console.warn('SceneView loadModel error:', e);
         });
         return;
@@ -2001,9 +2044,8 @@
         autoRotate: autoRotate
       }).then(function(inst) {
         sceneViewInstance = inst;
-        if (bloomEnabled && inst.setBloom) {
-          inst.setBloom({ strength: 0.2, resolution: 512 });
-        }
+        // Apply all current settings to the new instance
+        updatePreviewSettings();
       }).catch(function(e) {
         console.warn('SceneView init error:', e);
       });
@@ -2017,6 +2059,12 @@
       }
       if (sceneViewInstance.setAutoRotate) {
         sceneViewInstance.setAutoRotate(autoRotate);
+      }
+      if (sceneViewInstance.setBloom) {
+        sceneViewInstance.setBloom(bloomEnabled ? { strength: 0.2, resolution: 512 } : false);
+      }
+      if (sceneViewInstance.setCameraManipulator && currentCamera) {
+        sceneViewInstance.setCameraManipulator(currentCamera);
       }
     }
 
@@ -2064,7 +2112,6 @@
     var ctrlCamera = $('ctrlCamera');
     var cameraManipWrap = $('cameraManipWrap');
     var cameraDropdown = $('cameraDropdown');
-    var currentCamera = 'orbit';
 
     ctrlCamera.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -2091,9 +2138,84 @@
       });
     });
 
-    // Close camera dropdown on outside click
+    // ====================================================================
+    //  ENVIRONMENT DROPDOWN
+    // ====================================================================
+    var ctrlEnv = $('ctrlEnv');
+    var envWrap = $('envWrap');
+    var envDropdown = $('envDropdown');
+
+    // SH lighting presets (9 bands x 3 RGB)
+    var ENV_SH = {
+      warm: [
+         1.40,  1.20,  0.95,
+         0.35,  0.28,  0.18,
+         0.40,  0.35,  0.28,
+        -0.06, -0.04, -0.02,
+         0.12,  0.10,  0.06,
+         0.20,  0.16,  0.10,
+         0.02,  0.02,  0.01,
+        -0.03, -0.02, -0.01,
+         0.08,  0.06,  0.04
+      ],
+      cool: [
+         0.95,  1.05,  1.30,
+        -0.10, -0.05,  0.05,
+         0.30,  0.32,  0.38,
+         0.08,  0.10,  0.14,
+         0.06,  0.08,  0.14,
+         0.10,  0.12,  0.18,
+         0.02,  0.02,  0.03,
+        -0.04, -0.04, -0.05,
+         0.04,  0.05,  0.08
+      ],
+      dramatic: [
+         0.60,  0.55,  0.50,
+         0.50,  0.40,  0.30,
+         0.65,  0.55,  0.45,
+        -0.20, -0.18, -0.15,
+         0.15,  0.12,  0.08,
+         0.08,  0.06,  0.04,
+         0.04,  0.03,  0.02,
+        -0.10, -0.08, -0.06,
+         0.12,  0.10,  0.06
+      ]
+    };
+
+    ctrlEnv.addEventListener('click', function(e) {
+      e.stopPropagation();
+      envWrap.classList.toggle('pg__ctrl-dropdown--open');
+    });
+
+    envDropdown.querySelectorAll('.pg__ctrl-dropdown-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var envKey = item.getAttribute('data-env');
+        currentEnv = envKey;
+        envDropdown.querySelectorAll('.pg__ctrl-dropdown-item').forEach(function(i) {
+          i.classList.remove('pg__ctrl-dropdown-item--active');
+        });
+        item.classList.add('pg__ctrl-dropdown-item--active');
+        envWrap.classList.remove('pg__ctrl-dropdown--open');
+        // Update tooltip
+        var label = ENV_PRESETS[envKey] ? ENV_PRESETS[envKey].label : envKey;
+        ctrlEnv.querySelector('.pg__ctrl-tooltip').textContent = label;
+        ctrlEnv.setAttribute('data-label', 'Environment: ' + label);
+        // Apply environment
+        if (sceneViewInstance) {
+          if (envKey === 'neutral') {
+            sceneViewInstance.loadEnvironment('environments/neutral_ibl.ktx');
+          } else if (ENV_SH[envKey]) {
+            sceneViewInstance.setEnvironmentSH(ENV_SH[envKey]);
+          }
+        }
+      });
+    });
+
+    // Close dropdowns on outside click
     document.addEventListener('click', function() {
       cameraManipWrap.classList.remove('pg__ctrl-dropdown--open');
+      envWrap.classList.remove('pg__ctrl-dropdown--open');
     });
 
     // ====================================================================

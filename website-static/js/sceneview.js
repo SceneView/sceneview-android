@@ -485,6 +485,53 @@
     setAutoRotate(enabled) { this._autoRotate = enabled; this._wantsAutoRotate = enabled; return this; }
     setCameraDistance(d) { this._orbitRadius = d; return this; }
 
+    /**
+     * Load a KTX IBL environment for PBR lighting.
+     *
+     * @param {string} url - URL to a KTX IBL file
+     * @param {number} [intensity=40000] - Light intensity
+     * @returns {Promise<SceneViewInstance>} this (for chaining)
+     */
+    loadEnvironment(url, intensity) {
+      var self = this;
+      return fetch(url)
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.arrayBuffer().then(function(ab) { return new Uint8Array(ab); });
+        })
+        .then(function(buffer) {
+          try {
+            var ibl = self._engine.createIblFromKtx1(buffer);
+            ibl.setIntensity(intensity || 40000);
+            self._scene.setIndirectLight(ibl);
+            console.log('SceneView: Environment loaded (' + Math.round(buffer.length / 1024) + 'KB)');
+          } catch (e) {
+            console.warn('SceneView: loadEnvironment failed', e);
+          }
+          return self;
+        });
+    }
+
+    /**
+     * Set environment lighting from spherical harmonics coefficients.
+     *
+     * @param {number[]} bands - 27 SH coefficients (9 bands x RGB)
+     * @param {number} [intensity=45000] - Light intensity
+     * @returns {SceneViewInstance} this (for chaining)
+     */
+    setEnvironmentSH(bands, intensity) {
+      try {
+        var ibl = Filament.IndirectLight.Builder()
+          .irradiance(3, bands)
+          .intensity(intensity || 45000)
+          .build(this._engine);
+        this._scene.setIndirectLight(ibl);
+      } catch (e) {
+        console.warn('SceneView: setEnvironmentSH failed', e);
+      }
+      return this;
+    }
+
     setBackgroundColor(r, g, b, a) {
       this._renderer.setClearOptions({ clearColor: [r, g, b, a !== undefined ? a : 1], clear: true });
       return this;
