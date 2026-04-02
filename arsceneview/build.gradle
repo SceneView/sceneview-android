@@ -102,6 +102,9 @@ dependencies {
 
     // ARCore
     api libs.arcore
+
+    // Unit tests (JVM — no device required)
+    testImplementation 'junit:junit:4.13.2'
 }
 
 apply plugin: "com.vanniktech.maven.publish"
