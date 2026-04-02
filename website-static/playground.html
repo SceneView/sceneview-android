@@ -2024,22 +2024,36 @@
       }
     }
 
+    var _initPending = null; // Serializes init/loadModel calls
+
     function initSceneView(modelUrl) {
       if (typeof SceneView === 'undefined') {
         console.warn('SceneView not loaded');
         return;
       }
+
+      // If an init or load is already in progress, chain after it
+      if (_initPending) {
+        _initPending = _initPending.then(function() {
+          return _doInitOrLoad(modelUrl);
+        });
+        return;
+      }
+
+      _initPending = _doInitOrLoad(modelUrl);
+    }
+
+    function _doInitOrLoad(modelUrl) {
       // Reuse existing instance — just swap the model and re-apply settings
       if (sceneViewInstance) {
-        sceneViewInstance.loadModel(modelUrl).then(function() {
+        return sceneViewInstance.loadModel(modelUrl).then(function() {
           updatePreviewSettings();
         }).catch(function(e) {
           console.warn('SceneView loadModel error:', e);
         });
-        return;
       }
       // First init — create the viewer
-      SceneView.modelViewer('previewCanvas', modelUrl, {
+      return SceneView.modelViewer('previewCanvas', modelUrl, {
         backgroundColor: getBgColor(),
         autoRotate: autoRotate
       }).then(function(inst) {
@@ -2072,8 +2086,8 @@
       initSceneView(getModelUrl(this.value));
     });
 
-    // Init
-    initSceneView(getModelUrl(modelSelect.value));
+    // Note: initial initSceneView() call is handled by the URL state
+    // restore block below, which calls loadExample() -> initSceneView().
 
     // Orbit hint — fade after 4s
     setTimeout(function() {
