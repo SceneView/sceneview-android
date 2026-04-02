@@ -59,7 +59,7 @@ const DEBUG_GUIDES = {
    - Try \`centerOrigin = Position(0f, 0f, 0f)\` on ModelNode.
    - Or move camera: \`cameraNode = rememberCameraNode(engine) { lookAt(Position(0f, 1f, 3f), Position(0f, 0f, 0f)) }\`
 
-6. **Is the Scene composable actually visible?**
+6. **Is the SceneView composable actually visible?**
    - Check Modifier: \`Modifier.fillMaxSize()\` — not \`Modifier.size(0.dp)\` or hidden behind another composable.
 
 7. **Is the GLB file valid?**
@@ -78,7 +78,7 @@ fun DebugModelViewer() {
     val modelInstance = rememberModelInstance(modelLoader, "models/YOUR_FILE.glb")
     Log.d("SceneView", "Model loaded: \${modelInstance != null}")
 
-    Scene(
+    SceneView(
         modifier = Modifier.fillMaxSize(),
         engine = engine,
         modelLoader = modelLoader
@@ -241,7 +241,7 @@ fun DebugModelViewer() {
 
 1. **Enable FPS overlay:**
    \`\`\`kotlin
-   Scene(
+   SceneView(
        engine = engine,
        // Check frame time in onFrame callback
        onFrame = { frameTimeNanos ->
@@ -265,7 +265,7 @@ fun DebugModelViewer() {
 | Too many draw calls | Merge meshes in 3D editor (1 material = 1 draw call) |
 | Per-frame allocations | Reuse objects in \`onFrame\`, avoid creating Position/Rotation each frame |
 | Multiple engines | Use single \`rememberEngine()\`, never create multiple |
-| Post-processing enabled | Disable if not needed: \`Scene(postProcessing = false)\` |
+| Post-processing enabled | Disable if not needed: \`SceneView(postProcessing = false)\` |
 | Shadow-casting lights | Each shadow light = extra depth pass. Limit to 1-2. |
 
 #### High Memory (>500MB)
@@ -361,7 +361,7 @@ rm -rf .gradle
 
 1. **Camera permission not granted** — most common cause.
    - Check logcat for permission denial.
-   - Request permission before showing ARScene.
+   - Request permission before showing ARSceneView.
 
 2. **ARCore not initialized** — takes 1-2 seconds.
    - Show a loading overlay until first frame.
@@ -382,7 +382,7 @@ rm -rf .gradle
    - Check logcat for "Environment not found" messages.
    - Test without environment first.
 
-4. **Scene composable has zero size** — \`Modifier.fillMaxSize()\` missing.
+4. **SceneView composable has zero size** — \`Modifier.fillMaxSize()\` missing.
 
 5. **OpenGL ES version** — Filament requires OpenGL ES 3.0+.
    - Check: \`GLES30.glGetString(GLES30.GL_VERSION)\`
@@ -391,12 +391,12 @@ rm -rf .gradle
 ### Diagnostic Code
 
 \`\`\`kotlin
-Scene(
+SceneView(
     modifier = Modifier
         .fillMaxSize()
-        .background(Color.Red), // Should see red if Scene has zero size
+        .background(Color.Red), // Should see red if SceneView has zero size
     engine = engine,
-    onFrame = { Log.d("SV", "Frame rendered") } // If not logged, Scene isn't rendering
+    onFrame = { Log.d("SV", "Frame rendered") } // If not logged, SceneView isn't rendering
 ) {
     // Minimal visible content
     CubeNode(engine = engine, size = 1.0f)
@@ -423,15 +423,15 @@ Scene(
 
 ### Flat / No Shadows
 
-- Shadows disabled by default in \`Scene\` (enabled in \`ARScene\`).
-- Enable: \`Scene(view = rememberView(engine).also { it.setShadowingEnabled(true) })\`
+- Shadows disabled by default in \`SceneView\` (enabled in \`ARSceneView\`).
+- Enable: \`SceneView(view = rememberView(engine).also { it.setShadowingEnabled(true) })\`
 - Light must have \`castShadows(true)\` in its \`apply\` block.
 
 ### Environment / IBL Not Working
 
 \`\`\`kotlin
 val environmentLoader = rememberEnvironmentLoader(engine)
-Scene(
+SceneView(
     environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/sky_2k.hdr")
             ?: createEnvironment(environmentLoader)
@@ -472,9 +472,9 @@ Scene(
 
 ### Camera Orbit Not Working
 
-- Default Scene has orbit camera. If overridden:
+- Default SceneView has orbit camera. If overridden:
   \`\`\`kotlin
-  Scene(
+  SceneView(
       cameraManipulator = rememberCameraManipulator()  // Enables orbit
   )
   \`\`\`
@@ -602,7 +602,7 @@ Scene(
 
 2. **Animator not being updated** — animations require frame-by-frame updates.
    \`\`\`kotlin
-   Scene(
+   SceneView(
        onFrame = { frameTimeNanos ->
            modelInstance?.animator?.let { animator ->
                if (animator.animationCount > 0) {

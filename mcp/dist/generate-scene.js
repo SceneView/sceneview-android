@@ -300,7 +300,7 @@ export function generateScene(description) {
     if (isAR) {
         lines.push("    var anchor by remember { mutableStateOf<Anchor?>(null) }");
         lines.push("");
-        lines.push("    ARScene(");
+        lines.push("    ARSceneView(");
         lines.push("        modifier = Modifier.fillMaxSize(),");
         lines.push("        engine = engine,");
         if (hasModel)
@@ -320,7 +320,7 @@ export function generateScene(description) {
         lines.push("            AnchorNode(anchor = a) {");
     }
     else {
-        lines.push("    Scene(");
+        lines.push("    SceneView(");
         lines.push("        modifier = Modifier.fillMaxSize(),");
         lines.push("        engine = engine,");
         if (hasModel)
@@ -483,7 +483,7 @@ export function formatGeneratedScene(result) {
     const parts = [];
     parts.push(`## Generated Scene\n`);
     parts.push(`**Description:** "${result.description}"`);
-    parts.push(`**Mode:** ${result.isAR ? "AR (ARScene)" : "3D (Scene)"}`);
+    parts.push(`**Mode:** ${result.isAR ? "AR (ARSceneView)" : "3D (SceneView)"}`);
     parts.push(`**Elements:** ${result.elements.length} nodes\n`);
     parts.push(`### Dependency\n`);
     parts.push("```kotlin");

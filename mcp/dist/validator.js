@@ -180,8 +180,7 @@ const RULES = [
         check(code, lines) {
             const issues = [];
             const renames = [
-                [/\bSceneView\s*\(/, "`SceneView(…)` → renamed to `Scene(…)` in 3.0"],
-                [/\bArSceneView\s*\(/, "`ArSceneView(…)` → renamed to `ARScene(…)` in 3.0"],
+                [/\bArSceneView\s*\(/, "`ArSceneView(…)` → renamed to `ARSceneView(…)` in 3.0"],
                 [/\bPlacementNode\b/, "`PlacementNode` removed → use `AnchorNode` + `HitResultNode` in 3.0"],
                 [/\bTransformableNode\b/, "`TransformableNode` removed → set `isEditable = true` on `ModelNode` in 3.0"],
                 [/\bViewRenderable\b/, "`ViewRenderable` removed → use `ViewNode` with a `@Composable` content lambda in 3.0"],
@@ -211,7 +210,7 @@ const RULES = [
                     issues.push({
                         severity: "error",
                         rule: "api/fog-node-missing-view",
-                        message: "`FogNode` requires a `view` parameter — the same Filament View passed to `Scene(view = view)`. Create one with `val view = rememberView(engine)` and pass it to both `Scene` and `FogNode`.",
+                        message: "`FogNode` requires a `view` parameter — the same Filament View passed to `SceneView(view = view)`. Create one with `val view = rememberView(engine)` and pass it to both `SceneView` and `FogNode`.",
                         line,
                     });
                 }
@@ -274,11 +273,11 @@ const RULES = [
             if (!code.includes("DynamicSkyNode"))
                 return issues;
             // If DynamicSkyNode appears but Scene { } doesn't, it's likely wrong
-            if (!code.includes("Scene(") && !code.includes("Scene {")) {
+            if (!code.includes("SceneView(") && !code.includes("SceneView {")) {
                 findLines(lines, /DynamicSkyNode\s*\(/).forEach((line) => issues.push({
                     severity: "warning",
                     rule: "api/dynamic-sky-outside-scene",
-                    message: "`DynamicSkyNode` is a `SceneScope` extension composable — it must be declared inside a `Scene { }` content block, not at the top level.",
+                    message: "`DynamicSkyNode` is a `SceneScope` extension composable — it must be declared inside a `SceneView { }` content block, not at the top level.",
                     line,
                 }));
             }
@@ -306,7 +305,7 @@ const RULES = [
         severity: "warning",
         check(code, lines) {
             const issues = [];
-            if (!code.includes("Scene(") && !code.includes("Scene {"))
+            if (!code.includes("SceneView(") && !code.includes("SceneView {"))
                 return issues;
             findLines(lines, /\bnode\w*\.destroy\(\)|\.\bdestroy\(\)/).forEach((line) => {
                 const lineContent = lines[line - 1];
@@ -404,14 +403,14 @@ const RULES = [
         severity: "info",
         check(code, lines) {
             const issues = [];
-            const sceneLines = findLines(lines, /\b(AR)?Scene\s*\(/);
+            const sceneLines = findLines(lines, /\b(AR)?SceneView\s*\(/);
             sceneLines.forEach((line) => {
                 const block = lines.slice(line - 1, line + 5).join("\n");
                 if (!block.includes("fillMaxSize") && !block.includes("size") && !block.includes("height") && !block.includes("width")) {
                     issues.push({
                         severity: "info",
                         rule: "api/scene-zero-size",
-                        message: "`Scene` / `ARScene` may have zero size without a `Modifier`. Add `modifier = Modifier.fillMaxSize()` to ensure the 3D view is visible.",
+                        message: "`SceneView` / `ARSceneView` may have zero size without a `Modifier`. Add `modifier = Modifier.fillMaxSize()` to ensure the 3D view is visible.",
                         line,
                     });
                 }
@@ -425,8 +424,8 @@ const RULES = [
         severity: "error",
         check(code, lines) {
             const issues = [];
-            // Scene( or ARScene( without engine = somewhere nearby
-            const sceneCallLines = findLines(lines, /\b(AR)?Scene\s*\(/);
+            // SceneView( or ARSceneView( without engine = somewhere nearby
+            const sceneCallLines = findLines(lines, /\b(AR)?SceneView\s*\(/);
             sceneCallLines.forEach((line) => {
                 // Look at the next 10 lines for engine =
                 const block = lines.slice(line - 1, line + 10).join("\n");
@@ -434,7 +433,7 @@ const RULES = [
                     issues.push({
                         severity: "error",
                         rule: "api/scene-missing-engine",
-                        message: "`Scene` / `ARScene` requires an `engine` parameter. Create one with `val engine = rememberEngine()` and pass it: `Scene(engine = engine, …)`.",
+                        message: "`SceneView` / `ARSceneView` requires an `engine` parameter. Create one with `val engine = rememberEngine()` and pass it: `SceneView(engine = engine, …)`.",
                         line,
                     });
                 }

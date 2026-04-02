@@ -17,7 +17,7 @@ fun AnimatedModelScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/character.glb")
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -39,7 +39,7 @@ fun ManualAnimationScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/robot.glb")
 
-    Scene(
+    SceneView(
         engine = engine,
         onFrame = { frameTimeNanos ->
             modelInstance?.let { instance ->
@@ -101,7 +101,7 @@ fun SpringAnimatedNode() {
         )
     }
 
-    Scene(
+    SceneView(
         engine = engine,
         onFrame = { _ ->
             springY.target = targetY
@@ -156,7 +156,7 @@ fun PropertyAnimationDemo() {
         label = "rotY"
     )
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -203,7 +203,7 @@ fun SmoothFollowDemo() {
     val smoothPosition = remember { SmoothTransform(smoothTime = 0.3f) }
     var targetPosition by remember { mutableStateOf(Position(0f, 1f, 0f)) }
 
-    Scene(
+    SceneView(
         engine = engine,
         onFrame = { _ ->
             smoothPosition.target = targetPosition
@@ -231,7 +231,7 @@ fun ARAnimatedModel() {
     val modelInstance = rememberModelInstance(modelLoader, "models/dancing_character.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-    ARScene(
+    ARSceneView(
         engine = engine,
         modelLoader = modelLoader,
         planeRenderer = true,
@@ -282,7 +282,7 @@ fun EditableModelScreen() {
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/chair.glb")
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -306,7 +306,7 @@ fun EditableModelScreen() {
 
 ## 2. Custom Gesture Handling with \`onTouchEvent\`
 
-For full control, use the \`onTouchEvent\` callback on \`Scene\` or \`ARScene\`.
+For full control, use the \`onTouchEvent\` callback on \`SceneView\` or \`ARSceneView\`.
 
 \`\`\`kotlin
 @Composable
@@ -316,7 +316,7 @@ fun CustomGestureScreen() {
     val modelInstance = rememberModelInstance(modelLoader, "models/robot.glb")
     var selectedNode by remember { mutableStateOf<ModelNode?>(null) }
 
-    Scene(
+    SceneView(
         engine = engine,
         onTouchEvent = { event, hitResult ->
             when (event.action) {
@@ -359,7 +359,7 @@ fun TapToPlaceAR() {
     val modelInstance = rememberModelInstance(modelLoader, "models/furniture.glb")
     var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-    ARScene(
+    ARSceneView(
         engine = engine,
         modelLoader = modelLoader,
         planeRenderer = true,
@@ -398,7 +398,7 @@ fun DragToRotateScreen() {
     var lastX by remember { mutableFloatStateOf(0f) }
     val sensitivity = 0.5f
 
-    Scene(
+    SceneView(
         engine = engine,
         onTouchEvent = { event, _ ->
             when (event.action) {
@@ -443,7 +443,7 @@ fun PinchToScaleScreen() {
         currentScale = (currentScale * detector.scaleFactor).coerceIn(minScale, maxScale)
     }
 
-    Scene(
+    SceneView(
         engine = engine,
         onTouchEvent = { event, _ ->
             scaleDetector.onTouchEvent(event)
@@ -471,7 +471,7 @@ fun MultiModelSelectionScreen() {
     val table = rememberModelInstance(modelLoader, "models/table.glb")
     var selectedModel by remember { mutableStateOf<String?>(null) }
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         chair?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -510,7 +510,7 @@ fun SurfaceCursorAR() {
     val modelLoader = rememberModelLoader(engine)
     val cursorModel = rememberModelInstance(modelLoader, "models/cursor_ring.glb")
 
-    ARScene(
+    ARSceneView(
         engine = engine,
         modelLoader = modelLoader,
         planeRenderer = true
@@ -560,7 +560,7 @@ fun LODModelDemo() {
     // Filament picks the appropriate LOD automatically based on screen coverage
     val modelInstance = rememberModelInstance(modelLoader, "models/building_lod.glb")
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         modelInstance?.let { instance ->
             ModelNode(
                 modelInstance = instance,
@@ -619,8 +619,8 @@ fun MyApp() {
 
     // Pass engine and modelLoader to all scenes
     NavHost(...) {
-        composable("scene1") { Scene1(engine, modelLoader) }
-        composable("scene2") { Scene2(engine, modelLoader) }
+        composable("scene1") { SceneScreen1(engine, modelLoader) }
+        composable("scene2") { SceneScreen2(engine, modelLoader) }
     }
 }
 
@@ -628,7 +628,7 @@ fun MyApp() {
 @Composable
 fun BadScene() {
     val engine = rememberEngine() // creates new engine each time!
-    Scene(engine = engine) { /* ... */ }
+    SceneView(engine = engine) { /* ... */ }
 }
 \`\`\`
 
@@ -636,7 +636,7 @@ fun BadScene() {
 
 \`\`\`kotlin
 // WRONG — creates new Position every frame
-Scene(
+SceneView(
     engine = engine,
     onFrame = { _ ->
         node.position = Position(x, y, z) // allocation every frame!
@@ -645,7 +645,7 @@ Scene(
 
 // CORRECT — reuse mutable position
 val position = remember { MutablePosition() }
-Scene(
+SceneView(
     engine = engine,
     onFrame = { _ ->
         position.set(x, y, z)
@@ -701,7 +701,7 @@ fun InstancedTreesScene() {
     val modelLoader = rememberModelLoader(engine)
     val treeInstance = rememberModelInstance(modelLoader, "models/tree.glb")
 
-    Scene(engine = engine) {
+    SceneView(engine = engine) {
         // Each ModelNode with the same modelInstance shares GPU mesh data
         // Filament handles instancing internally when using the same asset
         treeInstance?.let { instance ->
@@ -748,7 +748,7 @@ val environment = rememberEnvironment(engine, "environments/sky_2k.hdr")
 
 \`\`\`kotlin
 // Disable post-processing for simpler scenes (saves ~2ms per frame)
-Scene(
+SceneView(
     engine = engine,
     postProcessing = false // skips bloom, SSAO, tone mapping
 ) {

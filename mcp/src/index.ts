@@ -51,7 +51,7 @@ try {
 const NODE_SECTIONS = parseNodeSections(API_DOCS);
 
 const server = new Server(
-  { name: "sceneview-mcp", version: "3.5.4" },
+  { name: "sceneview-mcp", version: "3.5.5" },
   { capabilities: { resources: {}, tools: {} } }
 );
 

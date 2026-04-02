@@ -31,7 +31,7 @@ KMP shares **logic**, not **rendering**. Each platform uses its native renderer.
 
 - **3D rendering** via Google Filament: PBR materials, HDR environments, glTF/GLB models, post-processing.
 - **AR** via ARCore: plane detection, hit testing, anchors, cloud anchors, augmented images, depth, light estimation, point cloud.
-- **Compose-native DSL**: all nodes are \`@Composable\` functions inside \`Scene { }\` or \`ARScene { }\`.
+- **Compose-native DSL**: all nodes are \`@Composable\` functions inside \`SceneView { }\` or \`ARSceneView { }\`.
 - **26+ node types**: ModelNode, LightNode, AnchorNode, CameraNode, TextNode, PathNode, ViewNode, PlaneNode, SphereNode, CylinderNode, CubeNode, DynamicSkyNode, FogNode, ReflectionProbeNode, PhysicsNode, BillboardNode, LineNode, and more.
 
 ## Apple — Alpha (SceneViewSwift)
@@ -88,9 +88,9 @@ const PERFORMANCE_PRACTICES = `## Performance Best Practices
 const ARCHITECTURE_PRACTICES = `## Architecture Best Practices
 
 ### Compose Integration
-- **Treat Scene/ARScene like any Compose layout** — it participates in the Compose lifecycle. Don't fight it with imperative code.
-- **State hoisting** — hoist anchor state, model selection, and UI state to the parent composable. The Scene should be a pure renderer.
-- **ViewModel for business logic** — keep AR session state (anchors, detected images) in a ViewModel. Pass it down to the Scene composable.
+- **Treat SceneView/ARSceneView like any Compose layout** — it participates in the Compose lifecycle. Don't fight it with imperative code.
+- **State hoisting** — hoist anchor state, model selection, and UI state to the parent composable. The SceneView should be a pure renderer.
+- **ViewModel for business logic** — keep AR session state (anchors, detected images) in a ViewModel. Pass it down to the SceneView composable.
 - **Side effects** — use \`LaunchedEffect\` and \`DisposableEffect\` for async operations, not raw coroutines in composables.
 
 ### Project Structure
@@ -104,10 +104,10 @@ app/
     kotlin/
       ui/
         scene/
-          SceneScreen.kt       # Compose screen with Scene { }
+          SceneScreen.kt       # Compose screen with SceneView { }
           SceneViewModel.kt    # State management
         ar/
-          ARScreen.kt          # Compose screen with ARScene { }
+          ARScreen.kt          # Compose screen with ARSceneView { }
           ARViewModel.kt       # Anchor and session state
 \`\`\`
 
@@ -263,7 +263,7 @@ export const TROUBLESHOOTING_GUIDE = `# SceneView Troubleshooting Guide
 - Reduce model polygon count (< 100K triangles)
 - Use KTX2 compressed textures (1024x1024 max)
 - Avoid per-frame allocations in \`onFrame\` callbacks
-- Disable post-processing if not needed: \`Scene(postProcessing = false)\`
+- Disable post-processing if not needed: \`SceneView(postProcessing = false)\`
 - Profile with Android GPU Inspector
 
 ### High Memory Usage
@@ -467,7 +467,7 @@ if (availability.isSupported) { /* show AR */ }
 ## 3. Session Configuration Options
 
 \`\`\`kotlin
-ARScene(
+ARSceneView(
     engine = engine,
     modelLoader = modelLoader,
     sessionConfiguration = { session, config ->
@@ -519,7 +519,7 @@ ARScene(
 \`\`\`kotlin
 var anchor by remember { mutableStateOf<Anchor?>(null) }
 
-ARScene(
+ARSceneView(
     engine = engine,
     modelLoader = modelLoader,
     planeRenderer = true,
@@ -546,7 +546,7 @@ ARScene(
 
 ### Surface Cursor (HitResultNode)
 \`\`\`kotlin
-ARScene(
+ARSceneView(
     engine = engine,
     modelLoader = modelLoader,
     planeRenderer = true
@@ -563,7 +563,7 @@ ARScene(
 \`\`\`kotlin
 var images by remember { mutableStateOf<Map<String, AugmentedImage>>(emptyMap()) }
 
-ARScene(
+ARSceneView(
     engine = engine,
     sessionConfiguration = { session, config ->
         config.addAugmentedImage(session, "poster", posterBitmap)
@@ -584,7 +584,7 @@ ARScene(
 
 ## 5. Permissions
 
-Camera permission must be requested at runtime (Android 6.0+). SceneView does **not** handle this — you must request it before showing ARScene:
+Camera permission must be requested at runtime (Android 6.0+). SceneView does **not** handle this — you must request it before showing ARSceneView:
 
 \`\`\`kotlin
 val cameraPermission = rememberLauncherForActivityResult(
@@ -596,7 +596,7 @@ LaunchedEffect(Unit) {
 }
 
 if (showAR) {
-    ARScene(engine = engine, modelLoader = modelLoader) { /* ... */ }
+    ARSceneView(engine = engine, modelLoader = modelLoader) { /* ... */ }
 }
 \`\`\`
 `;
