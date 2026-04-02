@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SceneView</string>
+    <string name="app_name">3D &amp; AR Explorer</string>
 
     <!-- Navigation -->
     <string name="tab_3d">Explore</string>
@@ -9,8 +9,8 @@
     <string name="tab_about">About</string>
 
     <!-- Explore screen -->
-    <string name="explore_title">SceneView</string>
-    <string name="explore_subtitle">3D &amp; AR for Jetpack Compose</string>
+    <string name="explore_title">3D &amp; AR Explorer</string>
+    <string name="explore_subtitle">Explore stunning 3D models in AR</string>
     <string name="explore_gesture_hint">Pinch to zoom \u00B7 Drag to orbit \u00B7 Double-tap to enlarge</string>
     <string name="explore_pause">Pause animation</string>
     <string name="explore_play">Play animation</string>
@@ -28,8 +28,8 @@
     <string name="ar_remove">Remove</string>
 
     <!-- Samples screen -->
-    <string name="samples_title">Samples</string>
-    <string name="samples_feature_count">%d feature demos</string>
+    <string name="samples_title">Features</string>
+    <string name="samples_feature_count">%d features</string>
     <string name="samples_badge_live">LIVE</string>
     <string name="samples_badge_soon">SOON</string>
     <string name="samples_back">Back</string>
@@ -110,15 +110,15 @@
 
     <!-- About screen -->
     <string name="about_title">About</string>
-    <string name="about_sceneview">SceneView</string>
+    <string name="about_sceneview">3D &amp; AR Explorer</string>
     <string name="about_version">v%s</string>
-    <string name="about_tagline">3D &amp; AR as declarative UI\nfor Android, iOS, Web &amp; more</string>
-    <string name="about_feature_3d_title">3D Scenes</string>
-    <string name="about_feature_3d_desc">Full Jetpack Compose integration with Filament rendering engine. Load glTF/GLB models, procedural geometry, dynamic skies, and more.</string>
+    <string name="about_tagline">Explore stunning 3D models and place them\nin your space with augmented reality</string>
+    <string name="about_feature_3d_title">3D Viewer</string>
+    <string name="about_feature_3d_desc">Browse a curated gallery of high-quality 3D models. Rotate, zoom, and inspect every detail with intuitive touch gestures and HDR lighting.</string>
     <string name="about_feature_ar_title">Augmented Reality</string>
-    <string name="about_feature_ar_desc">ARCore-powered tap-to-place, plane detection, image tracking, depth occlusion, and light estimation.</string>
-    <string name="about_feature_ai_title">AI-First SDK</string>
-    <string name="about_feature_ai_desc">Designed so AI assistants can generate correct 3D/AR code on the first try. Declarative API, comprehensive docs, machine-readable references.</string>
+    <string name="about_feature_ar_desc">Place 3D objects in your real world using your camera. Tap a surface, then drag, pinch, and twist to position your model perfectly.</string>
+    <string name="about_feature_ai_title">Powered by SceneView</string>
+    <string name="about_feature_ai_desc">Built on SceneView — the open-source 3D &amp; AR library for Android, iOS, Web, and more. Explore features and see what\'s possible.</string>
     <string name="about_platforms_title">9 Platforms</string>
     <string name="about_github">GitHub</string>
     <string name="about_docs">Docs</string>

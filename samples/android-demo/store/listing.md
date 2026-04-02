@@ -1,41 +1,32 @@
-# SceneView — Play Store Listing
+# 3D & AR Explorer — Play Store Listing
 
 ## App Title (max 30 characters)
-SceneView: 3D & AR Viewer
+3D & AR Explorer
 
 ## Short Description (max 80 characters)
-Explore 3D models and augmented reality scenes powered by Jetpack Compose.
+Explore stunning 3D models and place them in your space with augmented reality.
 
 ## Full Description (max 4000 characters)
 
-SceneView is the open-source showcase app for the SceneView SDK — the easiest way to add 3D and augmented reality to Android apps using Jetpack Compose.
+3D & AR Explorer lets you discover and interact with stunning 3D models — and bring them into your real world using augmented reality.
 
 EXPLORE 3D MODELS
-Browse a curated gallery of glTF/GLB 3D models rendered in real-time with Google Filament. Rotate, zoom, and inspect models with intuitive touch gestures. Switch between HDR environments to see how lighting affects materials — from studio setups to outdoor scenes.
+Browse a curated gallery of high-quality 3D models rendered in real-time. Rotate, zoom, and inspect every detail with intuitive touch gestures. Switch between HDR environments to see how lighting affects materials — from studio setups to outdoor scenes.
 
 AUGMENTED REALITY
-Place 3D objects in your real world using ARCore. Point your camera at a flat surface, tap to place, then drag, pinch, and twist to position your model perfectly. Supports depth occlusion, light estimation, and instant placement.
+Place 3D objects in your real world using your camera. Point your camera at a flat surface, tap to place, then drag, pinch, and twist to position your model perfectly. Supports depth occlusion and environmental light estimation for a natural look.
 
-INTERACTIVE SAMPLES
-Explore 14 live demos showcasing SceneView capabilities:
-- Model Viewer: Load and render glTF/GLB 3D models
-- Geometry Nodes: Procedural cubes, spheres, and cylinders
-- Animations: Play and control model animations
-- Dynamic Sky: Time-of-day sun with atmospheric scattering
-- Lighting: Point, directional, and spot lights
-- Camera Controls: Orbit, pan, and zoom
+DISCOVER MORE
+Explore 14 interactive showcases:
+- Dynamic Sky: Watch the sky shift from dawn to dusk with atmospheric scattering
+- Volumetric Fog: Height-based atmospheric fog for immersive scenes
+- Physics: Rigid body simulation with bouncing balls
 - Post-Processing: Bloom, SSAO, FXAA, tone mapping
-- Fog: Height-based volumetric atmospheric fog
-- And more: text labels, line paths, physics, image detection
+- Image Detection: ARCore image recognition with 3D overlay
+- And more: geometry, animations, lighting, camera controls, reflection probes
 
 EFFECTS PLAYGROUND
-Experiment with real-time rendering effects. Adjust time of day to watch the sky change from dawn to dusk. Toggle volumetric fog, tune atmospheric haze, and enable screen-space ambient occlusion — all with instant visual feedback.
-
-FOR DEVELOPERS
-SceneView is an AI-first SDK designed so AI assistants can generate correct 3D/AR code on the first try. This app demonstrates every feature of the SDK with live, interactive examples. Tap any sample to see it in action, then copy the code snippet to use in your own app.
-
-MULTI-PLATFORM
-SceneView supports Android (Jetpack Compose + Filament), iOS/macOS/visionOS (SwiftUI + RealityKit), Web (Kotlin/JS + Filament.js), Flutter, and React Native.
+Experiment with real-time rendering effects. Adjust time of day, toggle volumetric fog, tune atmospheric haze, and enable screen-space ambient occlusion — all with instant visual feedback.
 
 Open source under the Apache License 2.0.
 https://github.com/sceneview/sceneview
