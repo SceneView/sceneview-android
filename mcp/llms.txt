@@ -836,10 +836,12 @@ class ModelLoader(engine: Engine, context: Context) {
     fun createModelInstance(buffer: Buffer): ModelInstance
     fun createModelInstance(@RawRes rawResId: Int): ModelInstance
     fun createModelInstance(file: File): ModelInstance
-    fun createModel(assetFileLocation: String): Model
-    fun createModel(buffer: Buffer): Model
-    fun createModel(@RawRes rawResId: Int): Model
-    fun createModel(file: File): Model
+    // releaseSourceData (default true): frees the raw buffer after Filament parses the model.
+    // Set to false only when you need to re-instantiate the same model multiple times.
+    fun createModel(assetFileLocation: String, releaseSourceData: Boolean = true): Model
+    fun createModel(buffer: Buffer, releaseSourceData: Boolean = true): Model
+    fun createModel(@RawRes rawResId: Int, releaseSourceData: Boolean = true): Model
+    fun createModel(file: File, releaseSourceData: Boolean = true): Model
 
     // Async — safe from any thread
     suspend fun loadModel(fileLocation: String): Model?
@@ -1898,3 +1900,123 @@ SceneView Web (sceneview.js v3.6.0) — JavaScript API:
 | Desktop | Software renderer | Compose Desktop | `samples/desktop-demo` | Alpha |
 | Flutter | Filament/RealityKit | PlatformView | `samples/flutter-demo` | Alpha |
 | React Native | Filament/RealityKit | Fabric | `samples/react-native-demo` | Alpha |
+
+---
+
+## Android Advanced APIs
+
+### SceneRenderer
+
+`SceneRenderer` encapsulates the Filament surface lifecycle and render-frame pipeline. Both `SceneView` (3D) and `ARSceneView` (AR) share the same surface management and frame-presentation code through this class.
+
+```kotlin
+class SceneRenderer(engine: Engine, view: View, renderer: Renderer) {
+    val isAttached: Boolean               // true when a swap chain is ready
+    var onSurfaceResized: ((width: Int, height: Int) -> Unit)?
+    var onSurfaceReady: ((viewHeight: () -> Int) -> Unit)?
+    var onSurfaceDestroyed: (() -> Unit)?
+
+    fun attachToSurfaceView(surfaceView: SurfaceView, isOpaque: Boolean, context: Context, display: Display, onTouch: ((MotionEvent) -> Unit)? = null)
+    fun attachToTextureView(textureView: TextureView, isOpaque: Boolean, context: Context, display: Display, onTouch: ((MotionEvent) -> Unit)? = null)
+    fun renderFrame(frameTimeNanos: Long, onBeforeRender: () -> Unit)
+    fun applyResize(width: Int, height: Int)
+    fun destroy()
+}
+```
+
+Typical composable usage:
+```kotlin
+val sceneRenderer = remember(engine, renderer) { SceneRenderer(engine, view, renderer) }
+DisposableEffect(sceneRenderer) { onDispose { sceneRenderer.destroy() } }
+```
+
+### NodeGestureDelegate
+
+`NodeGestureDelegate` handles all gesture detection and callback logic for a `Node`. Gesture callbacks are forwarded through this delegate. Access it directly when you need to batch-configure callbacks or inspect `editingTransforms`:
+
+```kotlin
+// Preferred — set callbacks directly on the node (delegates internally):
+node.onSingleTapConfirmed = { e -> true }
+node.onMove = { detector, e, worldPosition -> true }
+
+// Advanced — access the delegate directly:
+node.gestureDelegate.editingTransforms  // Set<KProperty1<Node, Any>> currently being edited
+node.gestureDelegate.onEditingChanged = { transforms -> /* transforms changed */ }
+```
+
+Available callbacks on `NodeGestureDelegate` (and mirrored on `Node`):
+`onTouch`, `onDown`, `onShowPress`, `onSingleTapUp`, `onScroll`, `onLongPress`, `onFling`,
+`onSingleTapConfirmed`, `onDoubleTap`, `onDoubleTapEvent`, `onContextClick`,
+`onMoveBegin`, `onMove`, `onMoveEnd`,
+`onRotateBegin`, `onRotate`, `onRotateEnd`,
+`onScaleBegin`, `onScale`, `onScaleEnd`,
+`onEditingChanged`, `editingTransforms`.
+
+### NodeAnimationDelegate
+
+`NodeAnimationDelegate` handles smooth (interpolated) transform animation for a `Node`. Access via `node.animationDelegate`:
+
+```kotlin
+// Preferred — use Node property aliases:
+node.isSmoothTransformEnabled = true
+node.smoothTransformSpeed = 5.0f      // higher = faster convergence
+node.smoothTransform = targetTransform
+node.onSmoothEnd = { n -> /* reached target */ }
+
+// Advanced — access the delegate directly:
+node.animationDelegate.smoothTransform = targetTransform
+```
+
+The per-frame interpolation uses slerp. Once the transform reaches the target (within 0.001 tolerance), `onSmoothEnd` fires and the animation clears.
+
+### NodeState
+
+`NodeState` is an immutable snapshot of a `Node`'s observable state. Use it for ViewModel-driven UI or save/restore patterns:
+
+```kotlin
+data class NodeState(
+    val position: Position = Position(),
+    val quaternion: Quaternion = Quaternion(),
+    val scale: Scale = Scale(1f),
+    val isVisible: Boolean = true,
+    val isEditable: Boolean = false,
+    val isTouchable: Boolean = true
+)
+
+// Capture current state
+val state: NodeState = node.toState()
+
+// Restore state
+node.applyState(state)
+```
+
+### ARPermissionHandler
+
+`ARPermissionHandler` abstracts camera permission and ARCore availability checks away from `ComponentActivity`, enabling testability:
+
+```kotlin
+interface ARPermissionHandler {
+    fun hasCameraPermission(): Boolean
+    fun requestCameraPermission(onResult: (granted: Boolean) -> Unit)
+    fun shouldShowPermissionRationale(): Boolean
+    fun openAppSettings()
+    fun checkARCoreAvailability(): ArCoreApk.Availability
+    fun requestARCoreInstall(userRequestedInstall: Boolean): Boolean
+}
+
+// Production implementation backed by ComponentActivity:
+class ActivityARPermissionHandler(activity: ComponentActivity) : ARPermissionHandler
+```
+
+### CollisionSystem — deprecated methods
+
+```kotlin
+// @Deprecated — use hitTest() instead
+@Deprecated collisionSystem.raycast(ray): HitResult?         // → hitTest(ray).firstOrNull()
+@Deprecated collisionSystem.raycastAll(ray): List<HitResult> // → hitTest(ray)
+
+// Preferred API
+collisionSystem.hitTest(motionEvent): List<HitResult>        // screen-space hit test
+collisionSystem.hitTest(viewPosition: Float2): List<HitResult>  // normalized [0..1]
+collisionSystem.hitTest(ray: Ray): List<HitResult>           // explicit ray
+```
