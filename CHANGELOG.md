@@ -1,5 +1,50 @@
 # Changelog
 
+## Unreleased (v3.6.1 or v4.0.0)
+
+### Architecture
+- Extract `SceneRenderer` — shared render loop between SceneView and ARSceneView
+- Decompose `Node` god class into `NodeGestureDelegate`, `NodeAnimationDelegate`, `NodeState`
+- Extract `ARPermissionHandler` interface (testable without Activity)
+- Fix `ModelLoader.releaseSourceData()` memory leak
+- Clean legacy Java collision code
+
+### Quality
+- Add 175 JVM unit tests for sceneview module
+- Add 15 JVM unit tests for arsceneview module
+- Add 63 KMP tests for sceneview-core
+- Add 18 Swift tests for SceneViewSwift (ShapeNode)
+- Fix 8 MCP test regressions
+- Add pre-push quality gate script
+- Stability audit: all platforms PASS
+
+### Demo Apps
+- Rebrand to "3D & AR Explorer" (iOS + Android)
+- iOS: Add model gallery, favorites, share, categorized browsing
+- Android: Material 3 Expressive rewrite, 4 tabs, 40 models
+- Fix Play Store build (duplicate assets in asset pack)
+- Fix App Store build (private init access level)
+- Fix AR camera tone mapper (rememberView → rememberARView)
+
+### Website
+- Redesign 8 sections on homepage
+- Rewrite Showcase page from scratch
+- Playground: 7 platform tabs, camera manipulator, Open in Claude
+- Playground: geometry primitives preview, AR placeholders
+- Fix Docs 404 (redirect page)
+- Auto-deploy GitHub Pages workflow
+
+### Cross-Platform
+- iOS: Add ShapeNode (23/24 Android parity)
+- iOS: Fix GeometryMaterial.custom(), ViewNode platform guard
+- Web: Fix SCENEVIEW_VERSION (1.3.0 → 3.6.0)
+- TV: Fix missing assets (would crash at runtime)
+- MCP: Align version 3.5.5 → 3.6.0
+- Flutter + React Native: Prepare for publication
+- CI: Web builds now blocking, Gradle verification added
+
+---
+
 ## 3.6.0 — Comprehensive quality audit, SwiftUI fixes, website migration (2026-03-31)
 
 ### SceneViewSwift
