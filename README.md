@@ -286,9 +286,9 @@ sceneview-core (Kotlin Multiplatform)
 
 | Sample | Platform | Run |
 |---|---|---|
-| `samples/android-demo` | Android | `./gradlew :samples:android-demo:assembleDebug` |
+| `samples/android-demo` | Android — 3D & AR Explorer | `./gradlew :samples:android-demo:assembleDebug` |
 | `samples/android-tv-demo` | Android TV | `./gradlew :samples:android-tv-demo:assembleDebug` |
-| `samples/ios-demo` | iOS | Open in Xcode |
+| `samples/ios-demo` | iOS — 3D & AR Explorer | Open in Xcode |
 | `samples/web-demo` | Web | `./gradlew :samples:web-demo:jsBrowserRun` |
 | `samples/desktop-demo` | Desktop | `./gradlew :samples:desktop-demo:run` |
 | `samples/flutter-demo` | Flutter | `cd samples/flutter-demo && flutter run` |
