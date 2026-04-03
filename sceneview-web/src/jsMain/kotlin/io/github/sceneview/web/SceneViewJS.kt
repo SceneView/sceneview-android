@@ -172,4 +172,4 @@ class SceneViewJS {
 /**
  * Library version.
  */
-const val SCENEVIEW_VERSION = "1.3.0"
+const val SCENEVIEW_VERSION = "3.6.0"
