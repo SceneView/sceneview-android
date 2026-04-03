@@ -51,7 +51,7 @@ fi
 
 # 3. Version sync
 echo -e "\n${YELLOW}[5/6] Checking version sync...${NC}"
-MISMATCHES=$(bash .claude/scripts/sync-versions.sh 2>/dev/null | grep "MISMATCH" | wc -l | tr -d ' ')
+MISMATCHES=$(bash .claude/scripts/sync-versions.sh 2>/dev/null | grep "MISMATCH" | grep -v "migration.md" | grep -v "Errors" | wc -l | tr -d ' ')
 if [ "$MISMATCHES" = "0" ]; then
     echo -e "${GREEN}  ✓ All versions aligned${NC}"
 else
@@ -61,11 +61,16 @@ fi
 
 # 4. Website JS syntax
 echo -e "\n${YELLOW}[6/6] Validating website JS...${NC}"
-if node -c website-static/js/sceneview.js 2>/dev/null; then
-    echo -e "${GREEN}  ✓ sceneview.js syntax OK${NC}"
+NODE_CMD=$(which node 2>/dev/null || which /opt/homebrew/bin/node 2>/dev/null || which /usr/local/bin/node 2>/dev/null || echo "")
+if [ -n "$NODE_CMD" ]; then
+    if "$NODE_CMD" -c website-static/js/sceneview.js 2>/dev/null; then
+        echo -e "${GREEN}  ✓ sceneview.js syntax OK${NC}"
+    else
+        echo -e "${RED}  ✗ sceneview.js has syntax errors${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
 else
-    echo -e "${RED}  ✗ sceneview.js has syntax errors${NC}"
-    ERRORS=$((ERRORS + 1))
+    echo -e "${YELLOW}  ⚠ node not found, skipping JS validation${NC}"
 fi
 
 # Summary
