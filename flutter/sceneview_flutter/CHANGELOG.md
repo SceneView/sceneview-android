@@ -1,3 +1,11 @@
+## 3.6.1
+
+- Initial public release
+- SceneView widget for Android and iOS
+- ModelNode with GLB model loading
+- Gesture controls (orbit, zoom, pan)
+- Environment and lighting configuration
+
 ## 3.6.0
 
 - Update SceneView dependency to 3.6.0 (Filament 1.70.1)
