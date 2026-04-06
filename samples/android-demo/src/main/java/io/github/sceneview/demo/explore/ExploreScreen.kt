@@ -132,6 +132,14 @@ private val models = listOf(
     ExploreModel("Mercedes AMG", "$CDN/mercedes_a45_amg.glb", 0.5f, 4.0f),
     ExploreModel("Switch", "models/nintendo_switch.glb", 0.8f, 2.5f),
     ExploreModel("BMW M3 E30", "$CDN/bmw_m3_e30.glb", 0.6f, 4.0f),
+    ExploreModel("Koi Fish", "models/koi_fish.glb", 0.5f, 2.5f),
+    ExploreModel("Toon Cat", "models/toon_cat.glb", 0.8f, 2.0f),
+    ExploreModel("Elephant", "models/animated_elephant.glb", 0.4f, 3.0f),
+    ExploreModel("Casio Keyboard", "models/casio_keyboard.glb", 0.6f, 2.5f),
+    ExploreModel("Trumpet", "models/trumpet.glb", 0.7f, 2.0f),
+    ExploreModel("Coffee Cart", "models/coffee_cart.glb", 0.5f, 3.0f),
+    ExploreModel("Night City", "models/night_city.glb", 0.3f, 4.0f),
+    ExploreModel("Kindred", "models/kindred_lol.glb", 0.6f, 3.0f),
 )
 
 // ── Screen ────────────────────────────────────────────────────────────────────

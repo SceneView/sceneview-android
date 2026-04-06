@@ -77,6 +77,31 @@ const _models = [
     path: 'models/bmw_m3_e30.glb',
     icon: Icons.directions_car_filled,
   ),
+  _ModelInfo(
+    name: 'Koi Fish',
+    path: 'models/koi_fish.glb',
+    icon: Icons.set_meal,
+  ),
+  _ModelInfo(
+    name: 'Toon Cat',
+    path: 'models/toon_cat.glb',
+    icon: Icons.pets,
+  ),
+  _ModelInfo(
+    name: 'Elephant',
+    path: 'models/animated_elephant.glb',
+    icon: Icons.pets,
+  ),
+  _ModelInfo(
+    name: 'Trumpet',
+    path: 'models/trumpet.glb',
+    icon: Icons.music_note,
+  ),
+  _ModelInfo(
+    name: 'Night City',
+    path: 'models/night_city.glb',
+    icon: Icons.location_city,
+  ),
 ];
 
 class _ModelInfo {
