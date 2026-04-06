@@ -143,6 +143,46 @@ const MODELS: ModelEntry[] = [
       scale: [0.5, 0.5, 0.5],
     },
   },
+  {
+    label: 'Koi Fish',
+    node: {
+      src: 'models/koi_fish.glb',
+      position: [0, 0, -2.5],
+      scale: [0.5, 0.5, 0.5],
+    },
+  },
+  {
+    label: 'Toon Cat',
+    node: {
+      src: 'models/toon_cat.glb',
+      position: [0, 0, -2],
+      scale: [0.8, 0.8, 0.8],
+    },
+  },
+  {
+    label: 'Elephant',
+    node: {
+      src: 'models/animated_elephant.glb',
+      position: [0, -0.5, -3],
+      scale: [0.4, 0.4, 0.4],
+    },
+  },
+  {
+    label: 'Trumpet',
+    node: {
+      src: 'models/trumpet.glb',
+      position: [0, 0, -2],
+      scale: [0.7, 0.7, 0.7],
+    },
+  },
+  {
+    label: 'Night City',
+    node: {
+      src: 'models/night_city.glb',
+      position: [0, -0.5, -4],
+      scale: [0.3, 0.3, 0.3],
+    },
+  },
 ];
 
 const ENVIRONMENT = 'environments/studio_small.hdr';

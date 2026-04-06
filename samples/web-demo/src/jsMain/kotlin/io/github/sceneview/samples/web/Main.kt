@@ -52,7 +52,15 @@ private val MODELS = linkedMapOf(
     "Cybertruck" to "models/tesla_cybertruck.glb",
     "Mercedes AMG" to "models/mercedes_a45_amg.glb",
     "Switch" to "models/nintendo_switch.glb",
-    "BMW M3 E30" to "models/bmw_m3_e30.glb"
+    "BMW M3 E30" to "models/bmw_m3_e30.glb",
+    "Koi Fish" to "models/koi_fish.glb",
+    "Toon Cat" to "models/toon_cat.glb",
+    "Elephant" to "models/animated_elephant.glb",
+    "Casio Keyboard" to "models/casio_keyboard.glb",
+    "Trumpet" to "models/trumpet.glb",
+    "Coffee Cart" to "models/coffee_cart.glb",
+    "Night City" to "models/night_city.glb",
+    "Kindred" to "models/kindred_lol.glb"
 )
 
 private var currentSceneView: SceneView? = null
