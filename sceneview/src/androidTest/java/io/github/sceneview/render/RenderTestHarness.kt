@@ -7,6 +7,7 @@ import com.google.android.filament.Engine
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
 import com.google.android.filament.SwapChain
+import com.google.android.filament.SwapChainFlags
 import com.google.android.filament.Texture
 import com.google.android.filament.View
 import com.google.android.filament.Viewport
@@ -73,7 +74,7 @@ class RenderTestHarness(
             this.scene = this@RenderTestHarness.scene
         }
         // Headless swap chain (no window surface)
-        swapChain = engine.createSwapChain(width, height, SwapChain.CONFIG_DEFAULT)
+        swapChain = engine.createSwapChain(width, height, SwapChainFlags.CONFIG_DEFAULT)
     }
 
     /**
