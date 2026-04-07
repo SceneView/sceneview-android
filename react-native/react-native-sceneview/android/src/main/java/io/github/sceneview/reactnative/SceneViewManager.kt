@@ -180,6 +180,12 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
         return container
     }
 
+    override fun onDropViewInstance(view: FrameLayout) {
+        // Remove the ComposeView so its Composition is disposed, releasing Filament resources.
+        view.removeAllViews()
+        super.onDropViewInstance(view)
+    }
+
     @ReactProp(name = "environment")
     fun setEnvironment(view: FrameLayout, environment: String?) {
         getState(view).environmentPath.value = environment
@@ -277,7 +283,9 @@ class SceneViewManager : SimpleViewManager<FrameLayout>() {
 data class ModelNodeData(
     val src: String,
     val scale: Float = 1.0f,
-    val animate: Boolean = true
+    val animate: Boolean = true,
+    val position: Position = Position(x = 0f),
+    val rotation: Rotation = Rotation(x = 0f),
 )
 
 data class GeometryNodeData(
