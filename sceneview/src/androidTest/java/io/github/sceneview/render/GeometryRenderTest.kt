@@ -20,6 +20,7 @@ import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.node.SphereNode
 import io.github.sceneview.render.RenderTestHarness.Companion.colorsMatch
 import org.junit.After
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -41,7 +42,7 @@ class GeometryRenderTest {
 
     private lateinit var harness: RenderTestHarness
     private lateinit var materialLoader: MaterialLoader
-    private lateinit var light: LightNode
+    private var light: LightNode? = null
 
     @Before
     fun setup() {
@@ -51,22 +52,25 @@ class GeometryRenderTest {
             materialLoader = MaterialLoader(harness.engine, context)
 
             // Directional light — required for PBR materials to be visible
-            light = LightNode(
+            val l = LightNode(
                 engine = harness.engine,
                 type = LightManager.Type.DIRECTIONAL
             ) {
                 direction(0f, -1f, -1f)
                 intensity(100_000f)
             }
-            harness.scene.addEntity(light.entity)
+            light = l
+            harness.scene.addEntity(l.entity)
         }
     }
 
     @After
     fun teardown() {
         harness.runOnMain {
-            harness.scene.removeEntity(light.entity)
-            light.destroy()
+            light?.let {
+                harness.scene.removeEntity(it.entity)
+                it.destroy()
+            }
             materialLoader.destroy()
         }
         harness.destroy()
@@ -171,6 +175,8 @@ class GeometryRenderTest {
             blueCube.destroy()
         }
 
+        assertNotNull("Red bitmap should have been captured", bitmapRed)
+        assertNotNull("Blue bitmap should have been captured", bitmapBlue)
         val cx = bitmapRed!!.width / 2
         val cy = bitmapRed!!.height / 2
         val redCenter = bitmapRed!!.getPixel(cx, cy)
