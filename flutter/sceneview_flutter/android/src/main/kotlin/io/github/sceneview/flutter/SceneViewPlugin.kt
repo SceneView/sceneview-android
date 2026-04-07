@@ -163,6 +163,11 @@ class SceneViewPlatformView(
 
     override fun dispose() {
         channel.setMethodCallHandler(null)
+        modelNodes.clear()
+        // Detach the ComposeView from any parent and dispose its composition
+        // so that Filament resources (engine, loaders) are released.
+        composeView.disposeComposition()
+        (composeView.parent as? android.view.ViewGroup)?.removeView(composeView)
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
