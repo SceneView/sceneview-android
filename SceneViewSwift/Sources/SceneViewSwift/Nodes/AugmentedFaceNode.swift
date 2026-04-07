@@ -414,6 +414,11 @@ public struct ARFaceSceneView: UIViewRepresentable {
         context.coordinator.onFaceLost = onFaceLost
     }
 
+    public static func dismantleUIView(_ arView: ARView, coordinator: Coordinator) {
+        arView.session.pause()
+        coordinator.arView = nil
+    }
+
     public func makeCoordinator() -> Coordinator {
         Coordinator(
             onFaceDetected: onFaceDetected,

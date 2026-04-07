@@ -151,6 +151,7 @@ class RenderTestHarness(
         runOnMain {
             engine.destroySwapChain(swapChain)
             engine.destroyView(view)
+            scene.skybox?.let { engine.destroySkybox(it) }
             engine.destroyScene(scene)
             engine.destroyRenderer(renderer)
             engine.safeDestroy()
