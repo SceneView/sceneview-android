@@ -27,7 +27,11 @@ typealias FilamentCamera = Camera
 
 interface CameraComponent : Component {
 
-    val camera: FilamentCamera get() = engine.getCameraComponent(entity)!!
+    val camera: FilamentCamera
+        get() = checkNotNull(engine.getCameraComponent(entity)) {
+            "Entity $entity does not have a Camera component. " +
+                    "Only use CameraComponent on entities created with Engine.createCamera()."
+        }
 
     /**
      * Sets the projection matrix from a frustum defined by six planes.

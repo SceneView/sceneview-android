@@ -56,15 +56,6 @@ open class ARCameraStream(
 
     final override val engine: Engine = materialLoader.engine
 
-//    /**
-//     * Changes the coarse-level camera draw ordering
-//     */
-//    var priority: Int = Renderable.RENDER_PRIORITY_LAST
-//        set(value) {
-//            field = value
-//            renderable.setPriority(value)
-//        }
-
     final override val entity = EntityManager.get().create()
 
     /**
@@ -85,7 +76,9 @@ open class ARCameraStream(
     /**
      * We apply the multithreaded actual rendering (Frame) texture
      */
-    var cameraTexture: Texture = cameraTextures[cameraTextureIds[0]]!!
+    var cameraTexture: Texture = checkNotNull(cameraTextures[cameraTextureIds[0]]) {
+            "Camera texture not found for ID ${cameraTextureIds[0]}"
+        }
         set(value) {
             if (field != value) {
                 field = value

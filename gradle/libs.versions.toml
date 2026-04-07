@@ -20,7 +20,7 @@ coroutines = "1.10.2"
 kotlinMath = "1.6.0"
 
 # 3D / AR
-filament = "1.70.1"
+filament = "1.70.2"
 arCore = "1.53.0"
 
 # Networking

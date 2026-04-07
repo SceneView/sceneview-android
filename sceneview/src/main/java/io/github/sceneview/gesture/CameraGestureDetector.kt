@@ -72,7 +72,6 @@ open class CameraGestureDetector(
                     orbitHomePosition?.let { orbitHomePosition(it) }
                     targetPosition?.let { targetPosition(it) }
                 }
-//                .viewport(min(width, 1), min(height, 1))
                 .orbitSpeed(0.005f, 0.005f)
                 .zoomSpeed(0.05f)
                 .build(Manipulator.Mode.ORBIT),
