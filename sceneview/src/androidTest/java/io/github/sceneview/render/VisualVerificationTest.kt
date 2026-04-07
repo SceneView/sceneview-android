@@ -295,12 +295,16 @@ class VisualVerificationTest {
             pointLight.destroy()
         }
 
-        val file = comparator.saveToDisk(bitmap!!, "06_point_light_warm")
+        val bmp = bitmap!!
+        val file = comparator.saveToDisk(bmp, "06_point_light_warm")
+        val nonBg = countNonBackgroundPixels(bmp)
+        val percent = nonBg * 100 / (bmp.width * bmp.height)
         screenshots.add(ScreenshotEntry(
             "06_point_light_warm",
             "White cube lit by warm orange point light from top-right",
-            file, true, "Manual visual inspection"
+            file, percent > 5, "$nonBg non-bg pixels ($percent%)"
         ))
+        assertTrue("Point light scene should render visible pixels ($percent%)", percent > 5)
     }
 
     @Test
