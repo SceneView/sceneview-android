@@ -543,6 +543,7 @@ class SceneViewBuilder(private val sceneView: SceneView) {
     private var cameraConfig: CameraConfig? = null
     private var lightConfig: LightConfig? = null
     private val modelConfigs = mutableListOf<ModelConfig>()
+    private val geometryConfigs = mutableListOf<GeometryConfig>()
     private var iblUrl: String? = null
     private var skyboxUrl: String? = null
     private var cameraControlsEnabled = true
@@ -562,6 +563,11 @@ class SceneViewBuilder(private val sceneView: SceneView) {
     /** Add a glTF/GLB model by URL. */
     fun model(url: String, block: ModelConfig.() -> Unit = {}) {
         modelConfigs.add(ModelConfig(url).apply(block))
+    }
+
+    /** Add a procedural geometry primitive (cube, sphere, cylinder, plane). */
+    fun geometry(block: GeometryConfig.() -> Unit) {
+        geometryConfigs.add(GeometryConfig().apply(block))
     }
 
     /** Set environment lighting from KTX IBL files. */
@@ -629,6 +635,9 @@ class SceneViewBuilder(private val sceneView: SceneView) {
 
         modelConfigs.forEach { config ->
             sceneView.loadModel(config.url, config.onLoaded)
+        }
+        geometryConfigs.forEach { config ->
+            sceneView.addGeometry(config)
         }
         if (cameraControlsEnabled) {
             val cam = cameraConfig
