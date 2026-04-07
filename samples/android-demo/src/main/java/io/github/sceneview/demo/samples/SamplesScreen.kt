@@ -132,6 +132,9 @@ import io.github.sceneview.rememberView
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
+/** CDN base URL for on-demand model loading (no bundled assets). */
+private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
+
 private data class SampleDemo(
     val title: String,
     val subtitle: String,
@@ -413,7 +416,7 @@ private fun ModelViewerDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/toy_car.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/khronos_toy_car.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -491,7 +494,7 @@ private fun AnimationDemo() {
         environmentLoader.createHDREnvironment("environments/sunset_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/animated_robot_mantis.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/animated_robot_mantis.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -528,7 +531,7 @@ private fun AnimationControlDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/fox.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/fox.glb")
 
     var animationSpeed by remember { mutableFloatStateOf(1.0f) }
     var isLooping by remember { mutableStateOf(true) }

@@ -14,6 +14,11 @@ let package = Package(
                 .product(name: "SceneViewSwift", package: "SceneViewSwift")
             ],
             path: "SceneViewDemo"
+        ),
+        .testTarget(
+            name: "SceneViewDemoTests",
+            dependencies: ["SceneViewDemo"],
+            path: "SceneViewDemoTests"
         )
     ]
 )
