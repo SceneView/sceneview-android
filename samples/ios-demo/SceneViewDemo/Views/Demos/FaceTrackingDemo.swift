@@ -87,8 +87,9 @@ struct FaceTrackingDemo: View {
             onFaceUpdated: { faceAnchor, node in
                 node.updateMesh()
                 // Read blend shapes
-                smileValue = (node.blendShape(.mouthSmileLeft) ?? 0 +
-                             (node.blendShape(.mouthSmileRight) ?? 0)) / 2.0
+                let smileL = node.blendShape(.mouthSmileLeft) ?? 0
+                let smileR = node.blendShape(.mouthSmileRight) ?? 0
+                smileValue = (smileL + smileR) / 2.0
                 browValue = (node.blendShape(.browInnerUp) ?? 0)
                 jawValue = (node.blendShape(.jawOpen) ?? 0)
             },
