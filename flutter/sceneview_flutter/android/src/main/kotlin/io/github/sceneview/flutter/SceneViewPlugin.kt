@@ -2,6 +2,8 @@ package io.github.sceneview.flutter
 
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
@@ -140,8 +142,10 @@ class SceneViewPlatformView(
                             apply = {
                                 val nodeName = model.path.substringAfterLast('/').substringBeforeLast('.').ifEmpty { "node_$index" }
                                 onTouch = { _, _ ->
-                                    channel.invokeMethod("onTap", nodeName)
-                                    true
+                                    Handler(Looper.getMainLooper()).post {
+                                        channel.invokeMethod("onTap", nodeName)
+                                    }
+                                    false // don't consume — allow camera gestures
                                 }
                             },
                         )
@@ -251,7 +255,7 @@ class ARSceneViewPlatformView(
                 onSessionUpdated = { _, frame ->
                     val updatedPlanes = frame.getUpdatedPlanes()
                     for (plane in updatedPlanes) {
-                        val planeId = plane.hashCode().toString()
+                        val planeId = System.identityHashCode(plane).toString()
                         if (reportedPlaneIds.add(planeId)) {
                             val planeType = when (plane.type) {
                                 com.google.ar.core.Plane.Type.HORIZONTAL_UPWARD_FACING -> "horizontal_upward"
@@ -259,7 +263,9 @@ class ARSceneViewPlatformView(
                                 com.google.ar.core.Plane.Type.VERTICAL -> "vertical"
                                 else -> "unknown"
                             }
-                            channel.invokeMethod("onPlaneDetected", planeType)
+                            Handler(Looper.getMainLooper()).post {
+                                channel.invokeMethod("onPlaneDetected", planeType)
+                            }
                         }
                     }
                 },
@@ -276,8 +282,10 @@ class ARSceneViewPlatformView(
                             apply = {
                                 val nodeName = model.path.substringAfterLast('/').substringBeforeLast('.').ifEmpty { "node_$index" }
                                 onTouch = { _, _ ->
-                                    channel.invokeMethod("onTap", nodeName)
-                                    true
+                                    Handler(Looper.getMainLooper()).post {
+                                        channel.invokeMethod("onTap", nodeName)
+                                    }
+                                    false // don't consume — allow camera gestures
                                 }
                             },
                         )
