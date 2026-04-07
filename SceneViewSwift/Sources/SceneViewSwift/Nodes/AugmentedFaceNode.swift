@@ -363,6 +363,7 @@ public struct ARFaceSceneView: UIViewRepresentable {
     private var onFaceUpdated: ((ARFaceAnchor, AugmentedFaceNode) -> Void)?
     private var onFaceLost: ((AugmentedFaceNode) -> Void)?
     private var maxFaces: Int
+    private var isWorldTrackingEnabled: Bool
 
     /// Creates a face-tracking AR scene.
     ///
@@ -396,7 +397,7 @@ public struct ARFaceSceneView: UIViewRepresentable {
 
         let config = ARFaceTrackingConfiguration()
         config.maximumNumberOfTrackedFaces = maxFaces
-        if ARFaceTrackingConfiguration.supportsWorldTracking {
+        if isWorldTrackingEnabled && ARFaceTrackingConfiguration.supportsWorldTracking {
             config.isWorldTrackingEnabled = true
         }
 
