@@ -7,10 +7,15 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.google.android.filament.Camera
 import com.google.android.filament.Skybox
 import io.github.sceneview.geometries.Cube
+import io.github.sceneview.geometries.Sphere
 import io.github.sceneview.loaders.MaterialLoader
+import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Size
 import io.github.sceneview.math.colorOf
 import io.github.sceneview.node.CubeNode
+import io.github.sceneview.node.PlaneNode
+import io.github.sceneview.node.SphereNode
 import io.github.sceneview.render.RenderTestHarness.Companion.colorsMatch
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -169,6 +174,156 @@ class GeometryRenderTest {
             "Red and blue cubes should produce different center pixels. " +
                     "Red=${colorStr(redCenter)}, Blue=${colorStr(blueCenter)}",
             !colorsMatch(redCenter, blueCenter, tolerance = 20)
+        )
+    }
+
+    // ── SphereNode renders visible pixels ──────────────────────────────────
+
+    @Test
+    fun sphereNode_rendersNonBlackPixels() {
+        var bitmap: Bitmap? = null
+        harness.runOnMain {
+            harness.scene.skybox = Skybox.Builder()
+                .color(0f, 0f, 0f, 1f)
+                .build(harness.engine)
+
+            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
+            camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
+            camera.lookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+            harness.view.camera = camera
+
+            val greenMaterial = materialLoader.createColorInstance(colorOf(0f, 1f, 0f, 1f))
+            val sphereNode = SphereNode(
+                engine = harness.engine,
+                radius = Sphere.DEFAULT_RADIUS,
+                center = Position(0f, 0f, 0f),
+                materialInstances = listOf(greenMaterial)
+            )
+            harness.scene.addEntity(sphereNode.entity)
+
+            harness.renderFrames(5)
+            bitmap = harness.capturePixels()
+
+            harness.scene.removeEntity(sphereNode.entity)
+            sphereNode.destroy()
+        }
+
+        val bmp = bitmap!!
+        val cx = bmp.width / 2
+        val cy = bmp.height / 2
+        var nonBlackPixels = 0
+        val region = 15
+        for (x in (cx - region) until (cx + region)) {
+            for (y in (cy - region) until (cy + region)) {
+                val pixel = bmp.getPixel(x, y)
+                if (Color.red(pixel) > 10 || Color.green(pixel) > 10 || Color.blue(pixel) > 10) {
+                    nonBlackPixels++
+                }
+            }
+        }
+        assertTrue(
+            "Sphere should render visible pixels at center. Found $nonBlackPixels non-black pixels",
+            nonBlackPixels > 30
+        )
+    }
+
+    // ── PlaneNode renders visible pixels ────────────────────────────────────
+
+    @Test
+    fun planeNode_rendersNonBlackPixels() {
+        var bitmap: Bitmap? = null
+        harness.runOnMain {
+            harness.scene.skybox = Skybox.Builder()
+                .color(0f, 0f, 0f, 1f)
+                .build(harness.engine)
+
+            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
+            camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
+            // Look down at the plane from above
+            camera.lookAt(0.0, 5.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0)
+            harness.view.camera = camera
+
+            val yellowMaterial = materialLoader.createColorInstance(colorOf(1f, 1f, 0f, 1f))
+            val planeNode = PlaneNode(
+                engine = harness.engine,
+                size = Size(2f, 2f),
+                center = Position(0f, 0f, 0f),
+                normal = Direction(0f, 1f, 0f),
+                materialInstances = listOf(yellowMaterial)
+            )
+            harness.scene.addEntity(planeNode.entity)
+
+            harness.renderFrames(5)
+            bitmap = harness.capturePixels()
+
+            harness.scene.removeEntity(planeNode.entity)
+            planeNode.destroy()
+        }
+
+        val bmp = bitmap!!
+        val cx = bmp.width / 2
+        val cy = bmp.height / 2
+        var nonBlackPixels = 0
+        val region = 20
+        for (x in (cx - region) until (cx + region)) {
+            for (y in (cy - region) until (cy + region)) {
+                val pixel = bmp.getPixel(x, y)
+                if (Color.red(pixel) > 10 || Color.green(pixel) > 10 || Color.blue(pixel) > 10) {
+                    nonBlackPixels++
+                }
+            }
+        }
+        assertTrue(
+            "Plane should render visible pixels at center. Found $nonBlackPixels non-black pixels",
+            nonBlackPixels > 30
+        )
+    }
+
+    // ── Golden screenshot comparison ────────────────────────────────────────
+
+    @Test
+    fun cubeNode_goldenComparison_selfConsistent() {
+        // Render the same scene twice and verify the outputs are identical
+        // (within tolerance). This validates the golden comparison pipeline itself.
+        var bitmap1: Bitmap? = null
+        var bitmap2: Bitmap? = null
+
+        harness.runOnMain {
+            harness.scene.skybox = Skybox.Builder()
+                .color(0.2f, 0.2f, 0.2f, 1f)
+                .build(harness.engine)
+
+            val camera = harness.engine.createCamera(harness.engine.entityManager.create())
+            camera.setProjection(45.0, 1.0, 0.1, 100.0, Camera.Fov.VERTICAL)
+            camera.lookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+            harness.view.camera = camera
+
+            val material = materialLoader.createColorInstance(colorOf(0.8f, 0.2f, 0.1f, 1f))
+            val cubeNode = CubeNode(
+                engine = harness.engine,
+                size = Cube.DEFAULT_SIZE,
+                center = Position(0f, 0f, 0f),
+                materialInstances = listOf(material)
+            )
+            harness.scene.addEntity(cubeNode.entity)
+
+            // First render
+            harness.renderFrames(5)
+            bitmap1 = harness.capturePixels()
+
+            // Second render of exact same scene
+            harness.renderFrames(5)
+            bitmap2 = harness.capturePixels()
+
+            harness.scene.removeEntity(cubeNode.entity)
+            cubeNode.destroy()
+        }
+
+        val comparator = GoldenImageComparator(maxChannelDiff = 3, maxDiffPixelsPercent = 0.5f)
+        val result = comparator.compare(bitmap1!!, bitmap2!!)
+        assertTrue(
+            "Same scene rendered twice should produce identical output: ${result.message}",
+            result.passed
         )
     }
 
