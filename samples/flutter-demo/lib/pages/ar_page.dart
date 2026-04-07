@@ -130,7 +130,7 @@ class _ARPageState extends State<ARPage> {
                   ),
                 if (!_sceneReady)
                   Container(
-                    color: theme.colorScheme.surface.withValues(alpha: 0.7),
+                    color: theme.colorScheme.surface.withOpacity(0.7),
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
