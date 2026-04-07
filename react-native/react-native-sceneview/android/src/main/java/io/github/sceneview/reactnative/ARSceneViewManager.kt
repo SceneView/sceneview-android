@@ -105,8 +105,8 @@ class ARSceneViewManager : SimpleViewManager<FrameLayout>() {
                                 scale = geom.scale,
                             )
                             "plane" -> PlaneNode(
-                                size = geom.size?.let { Size(it[0], it[1], it[2]) }
-                                    ?: Size(1f, 1f, 1f),
+                                size = geom.size?.let { Size(it[0], it[1]) }
+                                    ?: Size(1f, 1f),
                                 materialInstance = mat,
                                 position = geom.position,
                                 rotation = geom.rotation,
