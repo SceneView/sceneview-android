@@ -14,6 +14,7 @@ import org.khronos.webgl.DataView
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.Uint16Array
 import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.get
 import org.khronos.webgl.set
 
 /**
@@ -231,7 +232,7 @@ internal object GeometryGLBBuilder {
         gltf.buffers.push(buf)
 
         // Serialize JSON chunk (padded to 4-byte alignment with spaces)
-        var jsonStr = js("JSON.stringify")(gltf) as String
+        var jsonStr: String = JSON.stringify(gltf)
         while (jsonStr.length % 4 != 0) jsonStr += " "
         val jsonLength = jsonStr.length
 
@@ -282,7 +283,7 @@ internal object GeometryGLBBuilder {
 
         // Pad remaining bytes with zeros
         for (p in 0 until binPad) {
-            view.setUint8(offset++, 0)
+            view.setUint8(offset++, 0.toByte())
         }
 
         return glb
