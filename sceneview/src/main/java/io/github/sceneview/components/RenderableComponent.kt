@@ -4,7 +4,6 @@ import androidx.annotation.IntRange
 import com.google.android.filament.Box
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.MaterialInstance
-import com.google.android.filament.MorphTargetBuffer
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.SkinningBuffer
 import com.google.android.filament.VertexBuffer
