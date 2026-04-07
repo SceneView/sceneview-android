@@ -19,7 +19,9 @@ import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
 import io.github.sceneview.Scene
+import io.github.sceneview.ar.arcore.getUpdatedPlanes
 import io.github.sceneview.math.Position
+import Rotation
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberEnvironment
@@ -68,6 +70,7 @@ class SceneViewPlugin : FlutterPlugin, ActivityAware {
 private data class FlutterModelNode(
     val path: String,
     val position: Position = Position(0f, 0f, 0f),
+    val rotation: Rotation = Rotation(0f, 0f, 0f),
     val scale: Float = 1.0f,
     val autoAnimate: Boolean = true
 )
@@ -125,13 +128,22 @@ class SceneViewPlatformView(
                 cameraNode = cameraNode,
                 environment = environment ?: rememberEnvironment(environmentLoader),
             ) {
-                modelNodes.forEach { model ->
+                modelNodes.forEachIndexed { index, model ->
                     val instance = rememberModelInstance(modelLoader, model.path)
                     instance?.let {
                         ModelNode(
                             modelInstance = it,
                             scaleToUnits = model.scale,
                             autoAnimate = model.autoAnimate,
+                            position = model.position,
+                            rotation = model.rotation,
+                            apply = {
+                                val nodeName = model.path.substringAfterLast('/').substringBeforeLast('.').ifEmpty { "node_$index" }
+                                onTouch = { _, _ ->
+                                    channel.invokeMethod("onTap", nodeName)
+                                    true
+                                }
+                            },
                         )
                     }
                 }
@@ -160,10 +172,14 @@ class SceneViewPlatformView(
                 val x = call.argument<Double>("x")?.toFloat() ?: 0f
                 val y = call.argument<Double>("y")?.toFloat() ?: 0f
                 val z = call.argument<Double>("z")?.toFloat() ?: 0f
+                val rotationX = call.argument<Double>("rotationX")?.toFloat() ?: 0f
+                val rotationY = call.argument<Double>("rotationY")?.toFloat() ?: 0f
+                val rotationZ = call.argument<Double>("rotationZ")?.toFloat() ?: 0f
 
                 modelNodes.add(FlutterModelNode(
                     path = modelPath,
                     position = Position(x, y, z),
+                    rotation = Rotation(rotationX, rotationY, rotationZ),
                     scale = scale,
                 ))
                 result.success(null)
@@ -219,6 +235,9 @@ class ARSceneViewPlatformView(
 
     private val modelNodes = mutableStateListOf<FlutterModelNode>()
 
+    // Track which planes have already been reported to avoid duplicate callbacks.
+    private val reportedPlaneIds = mutableSetOf<String>()
+
     private val composeView = ComposeView(context).apply {
         setContent {
             val engine = rememberEngine()
@@ -229,14 +248,38 @@ class ARSceneViewPlatformView(
                 engine = engine,
                 modelLoader = modelLoader,
                 planeRenderer = true,
+                onSessionUpdated = { _, frame ->
+                    val updatedPlanes = frame.getUpdatedPlanes()
+                    for (plane in updatedPlanes) {
+                        val planeId = plane.hashCode().toString()
+                        if (reportedPlaneIds.add(planeId)) {
+                            val planeType = when (plane.type) {
+                                com.google.ar.core.Plane.Type.HORIZONTAL_UPWARD_FACING -> "horizontal_upward"
+                                com.google.ar.core.Plane.Type.HORIZONTAL_DOWNWARD_FACING -> "horizontal_downward"
+                                com.google.ar.core.Plane.Type.VERTICAL -> "vertical"
+                                else -> "unknown"
+                            }
+                            channel.invokeMethod("onPlaneDetected", planeType)
+                        }
+                    }
+                },
             ) {
-                modelNodes.forEach { model ->
+                modelNodes.forEachIndexed { index, model ->
                     val instance = rememberModelInstance(modelLoader, model.path)
                     instance?.let {
                         ModelNode(
                             modelInstance = it,
                             scaleToUnits = model.scale,
                             autoAnimate = model.autoAnimate,
+                            position = model.position,
+                            rotation = model.rotation,
+                            apply = {
+                                val nodeName = model.path.substringAfterLast('/').substringBeforeLast('.').ifEmpty { "node_$index" }
+                                onTouch = { _, _ ->
+                                    channel.invokeMethod("onTap", nodeName)
+                                    true
+                                }
+                            },
                         )
                     }
                 }
@@ -262,7 +305,19 @@ class ARSceneViewPlatformView(
                     return
                 }
                 val scale = call.argument<Double>("scale")?.toFloat() ?: 1.0f
-                modelNodes.add(FlutterModelNode(path = modelPath, scale = scale))
+                val x = call.argument<Double>("x")?.toFloat() ?: 0f
+                val y = call.argument<Double>("y")?.toFloat() ?: 0f
+                val z = call.argument<Double>("z")?.toFloat() ?: 0f
+                val rotationX = call.argument<Double>("rotationX")?.toFloat() ?: 0f
+                val rotationY = call.argument<Double>("rotationY")?.toFloat() ?: 0f
+                val rotationZ = call.argument<Double>("rotationZ")?.toFloat() ?: 0f
+
+                modelNodes.add(FlutterModelNode(
+                    path = modelPath,
+                    position = Position(x, y, z),
+                    rotation = Rotation(rotationX, rotationY, rotationZ),
+                    scale = scale,
+                ))
                 result.success(null)
             }
             "addGeometry" -> {
@@ -273,6 +328,7 @@ class ARSceneViewPlatformView(
             }
             "clearScene" -> {
                 modelNodes.clear()
+                reportedPlaneIds.clear()
                 result.success(null)
             }
             "setEnvironment" -> {

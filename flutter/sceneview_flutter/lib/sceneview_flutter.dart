@@ -33,12 +33,24 @@ class ModelNode {
   /// Uniform scale factor applied to the model.
   final double scale;
 
+  /// X rotation in degrees (Euler angles).
+  final double rotationX;
+
+  /// Y rotation in degrees (Euler angles).
+  final double rotationY;
+
+  /// Z rotation in degrees (Euler angles).
+  final double rotationZ;
+
   const ModelNode({
     required this.modelPath,
     this.x = 0.0,
     this.y = 0.0,
     this.z = 0.0,
     this.scale = 1.0,
+    this.rotationX = 0.0,
+    this.rotationY = 0.0,
+    this.rotationZ = 0.0,
   });
 
   Map<String, dynamic> toMap() => {
@@ -47,6 +59,9 @@ class ModelNode {
         'y': y,
         'z': z,
         'scale': scale,
+        'rotationX': rotationX,
+        'rotationY': rotationY,
+        'rotationZ': rotationZ,
       };
 }
 
@@ -141,19 +156,41 @@ class SceneViewController {
   MethodChannel? _channel;
   bool _disposed = false;
 
+  /// Called when a model node is tapped. Receives the node name/id.
+  void Function(String nodeName)? onTap;
+
+  /// Called when an AR plane is detected. Receives the plane type
+  /// ('horizontal_upward', 'horizontal_downward', 'vertical', or 'unknown').
+  void Function(String planeType)? onPlaneDetected;
+
   /// Whether this controller is attached to a platform view.
   bool get isAttached => _channel != null && !_disposed;
 
   /// Called internally when the platform view is created.
   void attach(int viewId) {
     _channel = MethodChannel('io.github.sceneview.flutter/scene_$viewId');
+    _channel!.setMethodCallHandler(_handleMethodCall);
     _disposed = false;
   }
 
   /// Called internally when the platform view is disposed.
   void dispose() {
+    _channel?.setMethodCallHandler(null);
     _disposed = true;
     _channel = null;
+  }
+
+  Future<dynamic> _handleMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'onTap':
+        final nodeName = call.arguments as String? ?? '';
+        onTap?.call(nodeName);
+        break;
+      case 'onPlaneDetected':
+        final planeType = call.arguments as String? ?? 'unknown';
+        onPlaneDetected?.call(planeType);
+        break;
+    }
   }
 
   /// Load a glTF/GLB model into the scene.
@@ -224,11 +261,15 @@ class SceneView extends StatefulWidget {
   /// Models to load immediately when the view is created.
   final List<ModelNode> initialModels;
 
+  /// Called when a model node is tapped. Receives the node name/id.
+  final void Function(String nodeName)? onTap;
+
   const SceneView({
     super.key,
     this.controller,
     this.onViewCreated,
     this.initialModels = const [],
+    this.onTap,
   });
 
   @override
@@ -240,6 +281,9 @@ class _SceneViewState extends State<SceneView> {
 
   void _onPlatformViewCreated(int id) {
     widget.controller?.attach(id);
+    if (widget.onTap != null) {
+      widget.controller?.onTap = widget.onTap;
+    }
     widget.onViewCreated?.call();
   }
 
@@ -312,11 +356,20 @@ class ARSceneView extends StatefulWidget {
   /// Whether to enable plane detection and rendering.
   final bool planeDetection;
 
+  /// Called when a model node is tapped. Receives the node name/id.
+  final void Function(String nodeName)? onTap;
+
+  /// Called when an AR plane is detected. Receives the plane type
+  /// ('horizontal_upward', 'horizontal_downward', 'vertical', or 'unknown').
+  final void Function(String planeType)? onPlaneDetected;
+
   const ARSceneView({
     super.key,
     this.controller,
     this.onViewCreated,
     this.planeDetection = true,
+    this.onTap,
+    this.onPlaneDetected,
   });
 
   @override
@@ -328,6 +381,12 @@ class _ARSceneViewState extends State<ARSceneView> {
 
   void _onPlatformViewCreated(int id) {
     widget.controller?.attach(id);
+    if (widget.onTap != null) {
+      widget.controller?.onTap = widget.onTap;
+    }
+    if (widget.onPlaneDetected != null) {
+      widget.controller?.onPlaneDetected = widget.onPlaneDetected;
+    }
     widget.onViewCreated?.call();
   }
 
