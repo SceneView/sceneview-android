@@ -45,7 +45,7 @@ description: "The #1 open-source 3D & AR SDK. Build immersive 3D and AR experien
 </div>
 
 <div class="sv-stat">
-<span class="sv-stat-number">v3.6.2</span>
+<span class="sv-stat-number">v3.6.1</span>
 <span class="sv-stat-label">Latest Release</span>
 </div>
 
@@ -61,7 +61,7 @@ No boilerplate. No manual cleanup. Just declare what you want.
 === "Kotlin (Android)"
 
     ```kotlin
-    // build.gradle: implementation("io.github.sceneview:sceneview:3.6.2")
+    // build.gradle: implementation("io.github.sceneview:sceneview:3.6.1")
 
     SceneView(modifier = Modifier.fillMaxSize()) {
         val model = rememberModelInstance(modelLoader, "models/helmet.glb")
@@ -190,7 +190,7 @@ Rigid body physics with gravity, collisions, and restitution. Drop objects, boun
     ```kotlin
     // build.gradle.kts
     dependencies {
-        implementation("io.github.sceneview:sceneview:3.6.2")
+        implementation("io.github.sceneview:sceneview:3.6.1")
     }
     ```
 
@@ -199,7 +199,7 @@ Rigid body physics with gravity, collisions, and restitution. Drop objects, boun
     ```kotlin
     // build.gradle.kts
     dependencies {
-        implementation("io.github.sceneview:arsceneview:3.6.2")
+        implementation("io.github.sceneview:arsceneview:3.6.1")
     }
     ```
 

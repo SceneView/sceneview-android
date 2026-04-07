@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -87,7 +87,7 @@ sealed class Screen(
 ) {
     data object Explore : Screen("explore", R.string.tab_3d, Icons.Default.ViewInAr)
     data object AR : Screen("ar", R.string.tab_ar, Icons.Default.CameraAlt)
-    data object Samples : Screen("samples", R.string.tab_features, Icons.Default.AutoAwesome)
+    data object Samples : Screen("samples", R.string.tab_samples, Icons.Default.GridView)
     data object About : Screen("about", R.string.tab_about, Icons.Default.Info)
 }
 

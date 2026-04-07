@@ -1,6 +1,6 @@
 {
   "name": "sceneview-react-native-demo",
-  "version": "3.6.1",
+  "version": "3.6.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
