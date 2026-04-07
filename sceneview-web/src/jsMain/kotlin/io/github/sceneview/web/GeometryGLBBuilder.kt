@@ -245,7 +245,7 @@ internal object GeometryGLBBuilder {
 
         gltf.buffers = js("[]")
         val buf = js("{}")
-        buf.byteLength = binLengthAligned
+        buf.byteLength = binLength // glTF spec: logical buffer size, not padded chunk size
         gltf.buffers.push(buf)
 
         // Serialize JSON chunk (padded to 4-byte alignment with spaces)

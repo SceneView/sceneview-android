@@ -384,7 +384,6 @@ class SceneView private constructor(
             val asset = loader.createAsset(glbBuffer)
             if (asset != null) {
                 val entities = asset.getEntities()
-                scene.addEntity(asset.getRoot())
                 scene.addEntities(entities)
 
                 val animator = try {
@@ -395,8 +394,14 @@ class SceneView private constructor(
 
                 models.add(LoadedModel(asset, animator))
 
-                // Release source data -- geometry GLBs have no external resources
-                asset.releaseSourceData()
+                // Finalize the asset — loadResources uploads vertex/index buffers to GPU.
+                // Even for self-contained GLBs (no external resources), this step is required.
+                asset.loadResources(
+                    onDone = { asset.releaseSourceData() },
+                    onFetched = null,
+                    basePath = "",
+                    asyncInterval = null
+                )
                 console.log("SceneView: Geometry '${config.geometryType.name.lowercase()}' added")
             } else {
                 console.error("SceneView: Failed to create geometry asset for ${config.geometryType}")
