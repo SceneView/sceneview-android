@@ -30,21 +30,21 @@ val Pose.transform: Transform
 val Pose.rotation: Rotation
     get() = quaternion.toEulerAngles()
 
-/** The local X axis direction of this [Pose]. */
+/** The local X axis direction of this [Pose]. Non-null per ARCore API contract. */
 val Pose.xDirection: Direction
-    get() = xAxis!!.let { (x, y, z) ->
+    get() = checkNotNull(xAxis) { "Pose.xAxis was null" }.let { (x, y, z) ->
         Direction(x, y, z)
     }
 
-/** The local Y axis direction (up) of this [Pose]. */
+/** The local Y axis direction (up) of this [Pose]. Non-null per ARCore API contract. */
 val Pose.yDirection: Direction
-    get() = yAxis!!.let { (x, y, z) ->
+    get() = checkNotNull(yAxis) { "Pose.yAxis was null" }.let { (x, y, z) ->
         Direction(x, y, z)
     }
 
-/** The local Z axis direction (forward) of this [Pose]. */
+/** The local Z axis direction (forward) of this [Pose]. Non-null per ARCore API contract. */
 val Pose.zDirection: Direction
-    get() = zAxis!!.let { (x, y, z) ->
+    get() = checkNotNull(zAxis) { "Pose.zAxis was null" }.let { (x, y, z) ->
         Direction(x, y, z)
     }
 
