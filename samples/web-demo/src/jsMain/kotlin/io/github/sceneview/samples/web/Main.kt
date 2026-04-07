@@ -11,9 +11,6 @@ import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
-import org.w3c.fetch.RequestInit
-import kotlin.js.Json
-import kotlin.js.json
 
 /**
  * SceneView Web Demo — rewritten showcase application.

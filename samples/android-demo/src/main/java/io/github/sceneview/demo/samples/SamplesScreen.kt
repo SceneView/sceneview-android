@@ -628,7 +628,7 @@ private fun DynamicSkyDemo() {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/space_helmet.glb")
     var timeOfDay by remember { mutableFloatStateOf(16f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -664,7 +664,7 @@ private fun LightingDemo() {
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/seal_statuette.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/seal_statuette.glb")
     var sunIntensity by remember { mutableFloatStateOf(80000f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -703,7 +703,7 @@ private fun DynamicLightingDemo() {
     val environment = rememberEnvironment(environmentLoader) {
         environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/khronos_damaged_helmet.glb")
 
     data class LightColor(val name: String, val r: Float, val g: Float, val b: Float, val chipColor: Color)
     val lightColors = remember {
@@ -777,7 +777,7 @@ private fun CameraControlsDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/iridescence_lamp.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/iridescence_lamp.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -821,7 +821,7 @@ private fun MultiModelDemo() {
         environmentLoader.createHDREnvironment("environments/comfy_cafe_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val sofa = rememberModelInstance(modelLoader, "models/velvet_sofa.glb")
+    val sofa = rememberModelInstance(modelLoader, "$CDN/velvet_sofa.glb")
     val lamp = rememberModelInstance(modelLoader, "models/candle_holder.glb")
     val plant = rememberModelInstance(modelLoader, "models/plant.glb")
     val vase = rememberModelInstance(modelLoader, "models/glass_vase_flowers.glb")
@@ -916,7 +916,7 @@ private fun EnvironmentGalleryDemo() {
             environmentLoader.createHDREnvironment(selectedEnv.second) ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
         }
     }
-    val modelInstance = rememberModelInstance(modelLoader, "models/damaged_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/khronos_damaged_helmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, cameraNode = cameraNode, cameraManipulator = rememberCameraManipulator(orbitHomePosition = Position(z = 2.5f, y = 0.3f), targetPosition = Position(0f, 0f, 0f)), environment = environment) {
@@ -1179,7 +1179,7 @@ private fun ReflectionProbesDemo() {
     val selectedEnv = envs[selectedEnvIndex]
     val cameraNode = rememberCameraNode(engine) { position = Float3(z = 2.5f, y = 0.3f); lookAt(Float3(0f, 0f, 0f)) }
     val environment = key(selectedEnv.second) { rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment(selectedEnv.second) ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! } }
-    val modelInstance = rememberModelInstance(modelLoader, "models/space_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$CDN/space_helmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, cameraNode = cameraNode, cameraManipulator = rememberCameraManipulator(orbitHomePosition = Position(z = 2.5f, y = 0.3f), targetPosition = Position(0f, 0f, 0f)), environment = environment) {
