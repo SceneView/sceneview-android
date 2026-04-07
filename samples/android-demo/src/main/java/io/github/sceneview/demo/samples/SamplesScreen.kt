@@ -134,6 +134,7 @@ import io.github.sceneview.rememberView
 
 /** CDN base URL for on-demand model loading (no bundled assets). */
 private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
+private const val KHRONOS = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models"
 
 private data class SampleDemo(
     val title: String,
@@ -416,7 +417,7 @@ private fun ModelViewerDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$CDN/khronos_toy_car.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -494,7 +495,7 @@ private fun AnimationDemo() {
         environmentLoader.createHDREnvironment("environments/sunset_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$CDN/animated_robot_mantis.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Fox/glTF-Binary/Fox.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(
@@ -531,7 +532,7 @@ private fun AnimationControlDemo() {
         environmentLoader.createHDREnvironment("environments/studio_warm_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$CDN/fox.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/Fox/glTF-Binary/Fox.glb")
 
     var animationSpeed by remember { mutableFloatStateOf(1.0f) }
     var isLooping by remember { mutableStateOf(true) }
@@ -628,7 +629,7 @@ private fun DynamicSkyDemo() {
         environmentLoader.createHDREnvironment("environments/outdoor_cloudy_2k.hdr")
             ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!!
     }
-    val modelInstance = rememberModelInstance(modelLoader, "$CDN/space_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
     var timeOfDay by remember { mutableFloatStateOf(16f) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1179,7 +1180,7 @@ private fun ReflectionProbesDemo() {
     val selectedEnv = envs[selectedEnvIndex]
     val cameraNode = rememberCameraNode(engine) { position = Float3(z = 2.5f, y = 0.3f); lookAt(Float3(0f, 0f, 0f)) }
     val environment = key(selectedEnv.second) { rememberEnvironment(environmentLoader) { environmentLoader.createHDREnvironment(selectedEnv.second) ?: environmentLoader.createHDREnvironment("environments/rooftop_night_2k.hdr")!! } }
-    val modelInstance = rememberModelInstance(modelLoader, "$CDN/space_helmet.glb")
+    val modelInstance = rememberModelInstance(modelLoader, "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb")
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneView(modifier = Modifier.fillMaxSize(), engine = engine, modelLoader = modelLoader, cameraNode = cameraNode, cameraManipulator = rememberCameraManipulator(orbitHomePosition = Position(z = 2.5f, y = 0.3f), targetPosition = Position(0f, 0f, 0f)), environment = environment) {

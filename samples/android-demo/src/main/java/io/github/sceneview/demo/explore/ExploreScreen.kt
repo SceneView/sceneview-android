@@ -105,14 +105,15 @@ private val environments = listOf(
 )
 
 private const val CDN = "https://github.com/sceneview/sceneview/releases/download/assets-v1"
+private const val KHRONOS = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models"
 
 /** A few featured models loaded from CDN on demand -- no bundled assets needed. */
 private val featuredModels = listOf(
-    "Toy Car" to "$CDN/khronos_toy_car.glb",
-    "Damaged Helmet" to "$CDN/khronos_damaged_helmet.glb",
-    "Space Helmet" to "$CDN/space_helmet.glb",
+    "Damaged Helmet" to "$KHRONOS/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
     "Dragon" to "$CDN/animated_dragon.glb",
     "Porsche 911" to "$CDN/porsche_911.glb",
+    "Water Bottle" to "$KHRONOS/WaterBottle/glTF-Binary/WaterBottle.glb",
+    "Avocado" to "$KHRONOS/Avocado/glTF-Binary/Avocado.glb",
 )
 
 // ── Screen ────────────────────────────────────────────────────────────────────
