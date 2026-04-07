@@ -16,11 +16,14 @@ import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Size
 import io.github.sceneview.math.colorOf
+import io.github.sceneview.node.BillboardNode
 import io.github.sceneview.node.CubeNode
 import io.github.sceneview.node.CylinderNode
+import io.github.sceneview.node.ImageNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.PlaneNode
 import io.github.sceneview.node.SphereNode
+import io.github.sceneview.node.TextNode
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
