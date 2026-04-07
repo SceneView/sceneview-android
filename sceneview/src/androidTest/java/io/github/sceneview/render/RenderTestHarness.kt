@@ -6,8 +6,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.google.android.filament.Engine
 import com.google.android.filament.Renderer
 import com.google.android.filament.Scene
-import com.google.android.filament.Skybox
 import com.google.android.filament.SwapChain
+import com.google.android.filament.Texture
 import com.google.android.filament.View
 import com.google.android.filament.Viewport
 import io.github.sceneview.createEglContext
@@ -107,11 +107,13 @@ class RenderTestHarness(
 
         renderer.readPixels(
             0, 0, width, height,
-            Renderer.PixelBufferDescriptor(
+            Texture.PixelBufferDescriptor(
                 buffer,
-                Renderer.PixelDataFormat.RGBA,
-                Renderer.PixelDataType.UBYTE
-            ) { _, _ -> latch.countDown() }
+                Texture.Format.RGBA,
+                Texture.Type.UBYTE,
+                1, 0, 0, 0,
+                null, Runnable { latch.countDown() }
+            )
         )
 
         // Render one more frame to flush the readPixels command

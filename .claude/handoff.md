@@ -4,8 +4,43 @@
 
 ## Last Session Summary
 
-**Date:** 2-3 avril 2026 (session 25 — 55 commits)
+**Date:** 7 avril 2026 (session 26)
 **Branch:** main
+
+## WHAT WAS DONE THIS SESSION (session 26)
+
+### Issues GitHub
+- **#779** (closed) — Filament bumped 1.70.1 → 1.70.2
+- **#780** (documented) — v3.6.1 NOT on Maven Central, need to re-trigger release workflow
+
+### Code quality audit & fixes
+- **Null safety**: CameraComponent, ARCameraStream (!! → checkNotNull), Pose.kt axis directions
+- **HitResult.nodeOrNull**: new safe accessor (non-throwing alternative)
+- **ModelNode.onFrameError**: callback replacing silent Log.e
+- **CameraGestureDetector**: added ReplaceWith to @Deprecated constructor
+- **KDoc**: Component, Model.kt, LightComponent, RenderableComponent interfaces documented
+- **Dead code removed**: ~210 lines (ViewNode, Frame.kt, ARCameraStream, CameraGestureDetector)
+
+### Tests added
+- HitResult: +2 tests (nodeOrNull)
+- ARPermissionFlowTest: +7 integration scenario tests
+- TrackingStateTest: +3 enum contract tests
+
+### Render test infrastructure (new)
+- **RenderTestHarness.kt**: headless Filament setup (EGL pbuffer + offscreen SwapChain + Texture.PixelBufferDescriptor readPixels → Bitmap)
+- **RenderSmokeTest.kt**: 4 pixel spot-check tests (engine init, red/blue skybox, white scene, color differentiation)
+- **GoldenImageComparator.kt**: Filament-style diff (per-channel threshold + max-diff-pixels-percent + diff image generation)
+- **render-tests.yml**: CI workflow (GitHub Actions + Android emulator + SwiftShader GPU)
+
+### Commits
+1. `dbc7842` — Filament 1.70.2
+2. `f02cb69` — Doc Maven Central failure
+3. `358b9e6` — Null safety, KDoc, dead code, AR tests
+4. `a6badcb` — TrackingStateTest resilience fix
+5. `1cf28de` — ModelNode onFrameError, Deprecated ReplaceWith, Pose null safety, KDoc
+6. `159ee7c` — Render test infrastructure + CI workflow
+
+---
 
 ## WHAT WAS DONE THIS SESSION (session 25)
 
