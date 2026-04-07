@@ -165,7 +165,7 @@ Never say "everything is good" without verifying published packages.
 ### Current state (last updated: 2026-04-02, session 25)
 
 - **Active branch**: `main`
-- **Latest release**: v3.6.1 (GitHub Release + Maven Central + npm — ALL PUBLISHED)
+- **Latest release**: v3.6.1 (GitHub Release + npm — published; **Maven Central: NOT YET** — #780)
 - **Android rewrite**: SceneRenderer, NodeGestureDelegate/AnimationDelegate/State, ARPermissionHandler
 - **Demo app**: Material 3 Expressive, 4 tabs, 40 models, 19 sample demos
 - **MCP servers**: sceneview-mcp 3.5.4 on npm (26 tools, 2360 tests), 9 MCPs total
