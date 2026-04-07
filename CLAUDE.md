@@ -176,7 +176,7 @@ Never say "everything is good" without verifying published packages.
 - **Branding**: 22 PNG exports generated, organized in branding/exports/
 - **Open Collective**: logo + cover + tiers (Backer $10, Sponsor $50, Gold $200) + 10 tags
 - **Claude Artifacts**: documented in llms.txt with CDN templates + 26 model URLs
-- **Filament**: 1.70.1 (bumped from 1.70.0, #762 closed)
+- **Filament**: 1.70.2 (bumped from 1.70.1, #779 closed)
 
 For full session history, see memory file `project_session_history.md`.
 For current priorities and next steps, see `.claude/handoff.md`.
