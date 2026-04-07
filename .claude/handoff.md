@@ -63,6 +63,22 @@
 13. `12b190d` — SwapChainFlags.CONFIG_DEFAULT + CLAUDE.md version
 14. `4259f33` — GeometryRenderTest null safety
 15. `cf22861` — Frame.hitTest crash + HitResult.set throwing getter
+16. `4a9cb1a` — Handoff update
+17. `f2f5c93` — maven-publish 0.33 → 0.35 (Central Portal validation)
+
+### PRs merged (7 total + 1 community)
+- #781 gradle/actions 5→6, #783 setup-node 4→6, #784 stale 9→10
+- #786 Material3 alpha16, #787 Dokka 2.2.0, #788 kotlin-math 1.8.0
+- #789 AugmentedFaceNode crash fix (by @LaoNastasy) — APPROVED + MERGED
+
+### PRs closed (2)
+- #785 Filament bump (duplicate)
+- #782 maven-publish 0.36 (replaced by manual 0.35 upgrade)
+
+### State after session
+- **0 open PRs**, **1 open issue** (#780 Maven Central — needs maintainer re-trigger)
+- All Dependabot alerts resolved (21 Vite vulns fixed)
+- All deps up to date: Filament 1.70.2, kotlin-math 1.8.0, Dokka 2.2.0, Material3 alpha16, maven-publish 0.35.0
 
 ### Commits
 1. `dbc7842` — Filament 1.70.2
