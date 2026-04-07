@@ -2,7 +2,7 @@
 
 SceneView is a declarative 3D and AR SDK for Android (Jetpack Compose, Filament, ARCore) and Apple platforms — iOS, macOS, visionOS (SwiftUI, RealityKit, ARKit) — with shared core logic via Kotlin Multiplatform. Each platform uses its native renderer: Filament on Android, RealityKit on Apple.
 
-**Android — Maven artifacts (version 3.6.0):**
+**Android — Maven artifacts (version 3.6.1):**
 - 3D only: `io.github.sceneview:sceneview:3.6.1`
 - AR + 3D: `io.github.sceneview:arsceneview:3.6.1`
 
@@ -253,6 +253,7 @@ ModelNode class properties (available via `apply` block):
 - `setAnimationSpeed(index: Int, speed: Float)`
 - `scaleToUnitCube(units: Float = 1.0f)`
 - `centerOrigin(origin: Position = Position(0f, 0f, 0f))`
+- `onFrameError: ((Exception) -> Unit)?` — callback for frame errors (default: logs via Log.e)
 
 ### LightNode — light source
 **CRITICAL: `apply` is a named parameter (`apply = { ... }`), NOT a trailing lambda.**
@@ -1615,6 +1616,10 @@ collisionSystem.hitTest(ray: Ray): List<HitResult>       // explicit ray
 // @Deprecated — use hitTest() instead
 @Deprecated collisionSystem.raycast(ray): HitResult?         // → hitTest(ray).firstOrNull()
 @Deprecated collisionSystem.raycastAll(ray): List<HitResult> // → hitTest(ray)
+
+// HitResult properties
+hitResult.node: Node        // throws IllegalStateException if reset — use nodeOrNull for safe access
+hitResult.nodeOrNull: Node? // safe alternative — returns null instead of throwing
 ```
 
 ### Triangulation
