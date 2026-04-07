@@ -2046,3 +2046,40 @@ SceneView Web (sceneview.js v3.6.0) — JavaScript API:
 | Desktop | Software renderer | Compose Desktop | `samples/desktop-demo` | Alpha |
 | Flutter | Filament/RealityKit | PlatformView | `samples/flutter-demo` | Alpha |
 | React Native | Filament/RealityKit | Fabric | `samples/react-native-demo` | Alpha |
+
+### Flutter Bridge API
+```dart
+// 3D Scene
+SceneView(onTap: (nodeName) => print(nodeName))
+// AR Scene
+ARSceneView(onTap: (nodeName) => ..., onPlaneDetected: (planeType) => ...)
+// Model with rotation
+ModelNode(url: "model.glb", position: [0, 0, -2], scale: 1.0,
+          rotationX: 45.0, rotationY: 0.0, rotationZ: 0.0)
+```
+
+### React Native Bridge API
+```tsx
+// 3D Scene with geometry + lights
+<SceneView
+  modelNodes={[{ url: "model.glb", position: [0, 0, -2] }]}
+  geometryNodes={[{ type: "cube", size: [1,1,1], color: "#FF0000", position: [0, 0.5, -2] }]}
+  lightNodes={[{ type: "directional", intensity: 100000 }]}
+/>
+// AR Scene
+<ARSceneView
+  planeDetection={true}
+  onTap={(e) => console.log(e.nativeEvent)}
+  onPlaneDetected={(e) => console.log(e.nativeEvent)}
+/>
+// Geometry types: "cube", "sphere", "cylinder", "plane"
+// Light types: "directional", "point", "spot"
+```
+
+### Web Geometry DSL (Kotlin/JS)
+```kotlin
+SceneView.create(canvas) {
+    geometry { cube(); size(1.0, 1.0, 1.0); color(1.0, 0.0, 0.0, 1.0); position(0.0, 0.5, -2.0) }
+    geometry { sphere(); radius(0.5); color(0.0, 0.5, 1.0, 1.0) }
+}
+```
