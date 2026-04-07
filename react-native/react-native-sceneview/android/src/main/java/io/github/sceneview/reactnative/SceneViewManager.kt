@@ -361,7 +361,7 @@ internal fun readRotation(
     )
 }
 
-private fun readScale(
+internal fun readScale(
     map: com.facebook.react.bridge.ReadableMap,
     key: String
 ): Scale {
@@ -380,7 +380,7 @@ private fun readScale(
     }
 }
 
-private fun readDirection(
+internal fun readDirection(
     map: com.facebook.react.bridge.ReadableMap,
     key: String
 ): Direction? {
