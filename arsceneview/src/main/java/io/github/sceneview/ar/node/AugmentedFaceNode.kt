@@ -12,6 +12,7 @@ import com.google.android.filament.VertexBuffer.VertexAttribute.TANGENTS
 import com.google.android.filament.VertexBuffer.VertexAttribute.UV0
 import com.google.ar.core.AugmentedFace
 import com.google.ar.core.AugmentedFace.RegionType
+import com.google.ar.core.Frame
 import com.google.ar.core.Session
 import com.google.ar.core.Trackable
 import com.google.ar.core.TrackingState
@@ -91,31 +92,18 @@ open class AugmentedFaceNode(
      */
     val centerNode = PoseNode(engine).apply { parent = this@AugmentedFaceNode }
 
-    val meshNode = MeshNode(
-        engine = engine,
-        primitiveType = PrimitiveType.TRIANGLES,
-        vertexBuffer = VertexBuffer.Builder()
-            // Position + Normals + UV Coordinates
-            .bufferCount(3)
-            // Position Attribute (x, y, z)
-            .attribute(POSITION, 0, AttributeType.FLOAT3)
-            // Tangents Attribute (Quaternion: x, y, z, w)
-            .attribute(TANGENTS, 1, AttributeType.FLOAT4)
-            .normalized(TANGENTS)
-            // Uv Attribute (x, y)
-            .attribute(UV0, 2, AttributeType.FLOAT2)
-            .build(engine).apply {
-                setBufferAt(engine, 2, augmentedFace.meshTextureCoordinates)
-            },
-        indexBuffer = IndexBuffer.Builder()
-            .bufferType(IndexBuffer.Builder.IndexType.USHORT)
-            .indexCount(augmentedFace.meshTriangleIndices.limit())
-            .build(engine).apply {
-                setBuffer(engine, augmentedFace.meshTriangleIndices)
-            },
-        materialInstance = meshMaterialInstance,
-        builder = builder
-    ).apply { parent = centerNode }
+    /**
+     * The face mesh node, created lazily once ARCore provides valid mesh buffers.
+     *
+     * Returns `null` until the first tracking frame with non-empty mesh data.
+     * Vertex positions and normals are updated every frame while tracking;
+     * UVs and triangle indices are set once (they are static per ARCore docs).
+     */
+    var meshNode: MeshNode? = null
+        private set
+
+    private val faceMaterialInstance = meshMaterialInstance
+    private val meshBuilder = builder
 
     /**
      * The region nodes at the tip of the nose, the detected face's left side of the forehead,
@@ -135,13 +123,98 @@ open class AugmentedFaceNode(
     override fun update(trackable: AugmentedFace?) {
         super.update(trackable)
 
-        if (augmentedFace.trackingState == TrackingState.TRACKING) {
+        if (augmentedFace.trackingState != TrackingState.TRACKING) return
+
+        // Guard: buffers are not yet populated in the very first TRACKING frame.
+        // Building Filament buffers with size 0 triggers a native abort.
+        val indices = augmentedFace.meshTriangleIndices
+        val vertices = augmentedFace.meshVertices
+        val normals = augmentedFace.meshNormals
+        val uvs = augmentedFace.meshTextureCoordinates
+
+        if (indices.limit() == 0 || vertices.limit() == 0) return
+
+        if (meshNode == null) {
+            meshNode = MeshNode(
+                engine = engine,
+                primitiveType = PrimitiveType.TRIANGLES,
+                vertexBuffer = VertexBuffer.Builder()
+                    // Position + Normals + UV Coordinates
+                    .bufferCount(3)
+                    // Position Attribute (x, y, z)
+                    .attribute(POSITION, 0, AttributeType.FLOAT3)
+                    // Tangents Attribute (Quaternion: x, y, z, w)
+                    .attribute(TANGENTS, 1, AttributeType.FLOAT4)
+                    .normalized(TANGENTS)
+                    // Uv Attribute (x, y)
+                    .attribute(UV0, 2, AttributeType.FLOAT2)
+                    .vertexCount(vertices.limit() / 3)
+                    .build(engine).apply {
+                        // Fill all slots before the node becomes visible,
+                        // so Filament can compute a non-empty AABB (build:552)
+                        setBufferAt(engine, 0, vertices) // positions  (dynamic)
+                        setBufferAt(engine, 1, normals)  // normals    (dynamic)
+                        setBufferAt(engine, 2, uvs)      // UVs        (static)
+                    },
+                indexBuffer = IndexBuffer.Builder()
+                    .bufferType(IndexBuffer.Builder.IndexType.USHORT)
+                    .indexCount(indices.limit())
+                    .build(engine).apply {
+                        setBuffer(engine, indices)       // indices    (static)
+                    },
+                materialInstance = faceMaterialInstance,
+                builder = {
+                    // Filament computes AABB asynchronously after vertex buffer upload.
+                    // If a render frame starts before AABB is updated, Filament aborts with
+                    // "AABB can't be empty" (build:552). Disabling culling avoids this race
+                    // condition. For a face mesh this may be acceptable since the mesh is always
+                    // within the camera frustum while tracking.
+                    culling(false)
+                    castShadows(false)
+                    receiveShadows(false)
+                    meshBuilder()
+                }
+            ).apply { parent = centerNode }
+
+            // Early return — buffers already filled above,
+            // next frame will go to the update branch below
             centerNode.pose = augmentedFace.centerPose
-            meshNode.vertexBuffer.setBufferAt(engine, 0, augmentedFace.meshVertices)
-            meshNode.vertexBuffer.setBufferAt(engine, 1, augmentedFace.meshTextureCoordinates)
             regionNodes.forEach { (regionType, regionNode) ->
                 regionNode.pose = augmentedFace.getRegionPose(regionType)
             }
+            return
+        }
+
+        // Update dynamic buffers every frame
+        meshNode?.vertexBuffer?.apply {
+            setBufferAt(engine, 0, vertices) // positions
+            setBufferAt(engine, 1, normals)  // normals
+        }
+
+        centerNode.pose = augmentedFace.centerPose
+
+        regionNodes.forEach { (regionType, regionNode) ->
+            regionNode.pose = augmentedFace.getRegionPose(regionType)
+        }
+    }
+
+    /**
+     * Updates face tracking state each frame.
+     *
+     * Overrides [TrackableNode.update] because [Frame.getUpdatedTrackables] always returns
+     * an empty list for [AugmentedFace] on the front camera. Manually sets [PoseNode] state
+     * (session, frame, cameraTrackingState) since `super` cannot be called without
+     * re-triggering the broken `getUpdatedTrackables` check.
+     */
+    override fun update(session: Session, frame: Frame) {
+        // PoseNode state — set manually since we skip super
+        this.session = session
+        this.frame = frame
+        this.cameraTrackingState = frame.camera.trackingState
+
+        if (augmentedFace.trackingState == TrackingState.TRACKING) {
+            update(augmentedFace)
+            onUpdated?.invoke(augmentedFace)
         }
     }
 }
