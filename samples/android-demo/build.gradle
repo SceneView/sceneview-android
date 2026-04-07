@@ -9,7 +9,8 @@ android {
 
     compileSdk 36
 
-    assetPacks = [":samples:android-demo-assets"]
+    // Asset packs removed — models now loaded on-demand via Sketchfab search
+    // assetPacks = [":samples:android-demo-assets"]
 
     defaultConfig {
         applicationId "io.github.sceneview.demo"
