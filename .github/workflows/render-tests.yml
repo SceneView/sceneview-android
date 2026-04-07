@@ -1,0 +1,75 @@
+name: Render Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sceneview/src/**'
+      - 'arsceneview/src/**'
+      - 'gradle/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sceneview/src/**'
+      - 'arsceneview/src/**'
+      - 'gradle/**'
+  workflow_dispatch:
+
+concurrency:
+  group: render-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  render-smoke:
+    name: Render smoke tests (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        api-level: [30]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - run: chmod +x ./gradlew
+
+      # Enable KVM for hardware acceleration (required for emulator performance)
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build androidTest APK
+        run: ./gradlew :sceneview:assembleDebugAndroidTest --stacktrace
+
+      - name: Run render tests on emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            ./gradlew :sceneview:connectedDebugAndroidTest \
+              -Pandroid.testInstrumentationRunnerArguments.class=io.github.sceneview.render.RenderSmokeTest \
+              --stacktrace
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: render-test-results
+          path: sceneview/build/reports/androidTests/
+          if-no-files-found: ignore
